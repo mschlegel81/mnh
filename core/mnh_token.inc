@@ -149,7 +149,7 @@ FUNCTION T_tokenArray.lastToken:T_token;
 FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
   VAR k:longint;
       lastComment:ansistring='';
-      intrinsicFuncPtr:T_intFuncCallback;
+      intrinsicFuncPtr:P_intFuncCallback;
       nullAdapter:T_adapters;
   begin
     nullAdapter.create;
@@ -699,12 +699,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               aggregatorPresent:=yes_as_expression;
               aggregatorLocation:=t^.location
             end else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
-            tt_intrinsicRule: if (T_intFuncCallback(t^.data)=BUILTIN_MIN) or
-                                 (T_intFuncCallback(t^.data)=BUILTIN_MAX) then begin
+            tt_intrinsicRule: if (P_intFuncCallback(t^.data)=BUILTIN_MIN) or
+                                 (P_intFuncCallback(t^.data)=BUILTIN_MAX) then begin
               aggregatorExpression:=createPrimitiveAggregatorLiteral(t,context);
               aggregatorPresent:=yes_as_expression;
               aggregatorLocation:=t^.location
-            end else if (T_intFuncCallback(t^.data)=BUILTIN_HEAD) then begin
+            end else if (P_intFuncCallback(t^.data)=BUILTIN_HEAD) then begin
               aggregatorPresent:=yes_as_head;
               aggregatorLocation:=t^.location
             end;
@@ -900,23 +900,22 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     begin
       if (eachType=tt_parallelEach) and
-         ((callDepth>=STACK_DEPTH_LIMIT) or
-         not(context.allowDelegation) or
+         ((callDepth>=STACK_DEPTH_LIMIT-16) or
+         not(context.may(cp_spawnWorker)) or
          (workerThreadCount<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
-      {$ifdef fullVersion}
-      if currentlyDebugging and (eachType=tt_parallelEach) then begin
-        eachType:=tt_each;
-        context.adapters^.raiseNote('Not parallelizing pEach during debugging.',eachLocation);
-      end;
-      {$endif}
+
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
       if callDepth>STACK_DEPTH_LIMIT then begin
+        {$ifdef DEBUGMODE}
+        raise Exception.create('Stack overflow in (p)each construct.');
+        {$else}
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
+        {$endif}
         exit;
       end;
       if not(parseBodyOk) then exit;
@@ -1029,7 +1028,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         closingBracket:P_token;
         errorCase:boolean;
         oldAdapters:P_adapters;
-        prev_allowDelegation:boolean;
 
     begin
       bodyParts:=getBodyParts(first,1,context,closingBracket);
@@ -1039,11 +1037,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.adapters^.raiseError('Invalid try-construct; Exactly two arguments (try-clause and except-clause) are expected.',first^.location);
         exit;
       end;
+      oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
 
-      oldAdapters:=context.adapters;
-      prev_allowDelegation:=context.allowDelegation;
-      context.allowDelegation:=false;
-      context.adapters:=oldAdapters^.collectingClone;
+
       reduceExpression(bodyParts[0].first,callDepth+1,context);
       if context.adapters^.noErrors then begin
         context.cascadeDisposeToken(bodyParts[1].first);
@@ -1053,9 +1049,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.cascadeDisposeToken(bodyParts[0].first);
         errorCase:=true;
       end;
-      oldAdapters^.copyDataFromCollectingCloneDisposing(context.adapters,errorCase);
-      context.adapters:=oldAdapters;
-      context.allowDelegation:=prev_allowDelegation;
+      context.leaveTryStatementReassumingPreviousAdapters(oldAdapters,errorCase);
       if errorCase then begin
         first^.tokType:=tt_beginBlock; //mutate try-token to begin
         first^.next:=bodyParts[1].first;
@@ -1065,7 +1059,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         closingBracket^.tokType:=tt_endBlock; //mutate closing bracket to end
         stack.push(first);
         didSubstitution:=true;
-        context.valueStore.scopePush(false);
+        context.scopePush(false);
       end else begin
         first^.tokType:=tt_braceOpen; //mutate try-token to (
         first^.next:=bodyParts[0].first;
@@ -1126,13 +1120,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
-        {$ifdef FULLVERSION}
-        if currentlyDebugging then stepper.steppingIn(BUILTIN_PSEUDO_LOCATION_PREFIX+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
-        {$endif}
-        newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
-        {$ifdef FULLVERSION}
-        if currentlyDebugging then stepper.steppingOut(BUILTIN_PSEUDO_LOCATION_PREFIX+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
-        {$endif}
+
+        context.callStackPush(first^.location,P_intFuncCallback(first^.data),parameterListLiteral);
+        newLiteral:=P_intFuncCallback(first^.data)^.call(parameterListLiteral,first^.location,context);
+        context.callStackPop();
+
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
@@ -1230,7 +1222,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.valueStore.createVariable(first^.txt,newValue,false);
+          context.createVariable(first^.txt,newValue,false);
           first:=context.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
@@ -1483,7 +1475,7 @@ tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression
     stack.popDestroy(context);
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
-    context.valueStore.scopePop;
+    context.scopePop;
     didSubstitution:=true;
   end else begin
     first:=context.disposeToken(first);
@@ -1499,9 +1491,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       didSubstitution:=false;
       initTokTypes;
       //writeln(tokensToString(first,50));      writeln(tokenContextString);
-      {$ifdef fullVersion}
-      if currentlyDebugging then stepper.stepping(first^.location,first,@context,@stack);
-      {$endif}
+      {$ifdef fullVersion} if context.may(cp_debug) then context.stepping(first,@stack); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
@@ -1593,7 +1583,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                 .appendAll(first^.next^.data);
                 disposeLiteral(first^.next^.data);
                 first^.tokType:=tt_intrinsicRule;
-                first^.data:=@get_imp;
+                first^.data:=BUILTIN_GET;
                 first^.txt:='get';
                 first^.next^.tokType:=tt_parList;
                 first^.next^.data:=newLit;        // -> | get (<Lit>|<NewList>) ...
@@ -1628,7 +1618,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               stack.popDestroy(context);
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
-              context.valueStore.scopePop;
+              context.scopePop;
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1648,7 +1638,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
-              context.valueStore.scopePop;
+              context.scopePop;
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1671,7 +1661,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
         end;
         tt_beginBlock,tt_beginRule,tt_beginExpression: begin
-          context.valueStore.scopePush(cTokType[0]=tt_beginRule);
+          context.scopePush(cTokType[0]=tt_beginRule);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1871,4 +1861,11 @@ FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint)
     result:=result+' # '+tokensToString(first,lengthLimit);
   end;
 
+FUNCTION tokenStackToString(CONST stack:pointer; CONST first: P_token; CONST lengthLimit: longint): ansistring;
+  begin
+    result:=P_tokenStack(stack)^.toString(first,lengthLimit);
+  end;
+{$endif}
+{$ifdef include_initialization}
+  tokenStackToStringCallback:=@tokenStackToString;
 {$endif}

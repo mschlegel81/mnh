@@ -3,23 +3,44 @@ INTERFACE
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_basicTypes,mnh_contexts,
      myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  F_PARAM_TOKLOC_CONTEXT_TO_LITERAL=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+
+  P_intFuncCallback=^T_intFuncCallback;
+  T_intFuncCallback=object(T_objectWithIdAndLocation)
+    location:T_tokenLocation;
+    id:T_idString;
+    call:F_PARAM_TOKLOC_CONTEXT_TO_LITERAL;
+    CONSTRUCTOR create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString; CONST func:F_PARAM_TOKLOC_CONTEXT_TO_LITERAL);
+    DESTRUCTOR destroy;
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION getLocation:T_tokenLocation; virtual;
+  end;
+
+  P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
+  T_mnhSystemPseudoPackage=object(T_objectWithPath)
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION getPath:ansistring; virtual;
+  end;
 
 VAR
-  intrinsicRuleMap:specialize G_stringKeyMap<T_intFuncCallback>;
+  intrinsicRuleMap:specialize G_stringKeyMap<P_intFuncCallback>;
   print_cs        :system.TRTLCriticalSection;
 
-PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:F_PARAM_TOKLOC_CONTEXT_TO_LITERAL; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
 VAR mnhParameters:P_listLiteral=nil;
+    uniqueBuiltinFunctions:array of P_intFuncCallback;
+    mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
-PROCEDURE registerRule(CONST namespace: T_namespace; CONST name: ansistring; CONST ptr: T_intFuncCallback; CONST explanation: ansistring; CONST fullNameOnly: boolean);
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: F_PARAM_TOKLOC_CONTEXT_TO_LITERAL; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
   begin
+    new(result,create(namespace,name,ptr));
     if not(fullNameOnly) then
-    intrinsicRuleMap.put(                                                    name,ptr);
-    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,ptr);
+    intrinsicRuleMap.put(                                                  name,result);
+    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
@@ -180,8 +201,55 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;
 
+CONSTRUCTOR T_mnhSystemPseudoPackage.create;
+  begin end;
+
+DESTRUCTOR T_mnhSystemPseudoPackage.destroy;
+  begin end;
+
+FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
+  begin
+    result:='[MNH]';
+  end;
+
+{ T_intFuncCallback }
+
+CONSTRUCTOR T_intFuncCallback.create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString; CONST func:F_PARAM_TOKLOC_CONTEXT_TO_LITERAL);
+  begin
+    id:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
+    call:=func;
+    location.package:=mnhSystemPseudoPackage;
+    location.column:=1;
+    location.line:=length(uniqueBuiltinFunctions)+1;
+    setLength(uniqueBuiltinFunctions,location.line);
+    uniqueBuiltinFunctions[location.line-1]:=@self;
+  end;
+
+DESTRUCTOR T_intFuncCallback.destroy;
+  begin end;
+
+FUNCTION T_intFuncCallback.getId: T_idString;
+  begin
+    result:=id;
+  end;
+
+FUNCTION T_intFuncCallback.getLocation: T_tokenLocation;
+  begin
+    result:=location;
+  end;
+
+PROCEDURE finalizeUniqueBuiltinFunctions;
+  VAR i:longint;
+  begin
+    for i:=0 to length(uniqueBuiltinFunctions)-1 do dispose(uniqueBuiltinFunctions[i],destroy);
+    setLength(uniqueBuiltinFunctions,0);;
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
+  setLength(uniqueBuiltinFunctions,0);
+  new(mnhSystemPseudoPackage,create);
+
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');
@@ -207,6 +275,8 @@ INITIALIZATION
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);
   intrinsicRuleMap.destroy;
+  dispose(mnhSystemPseudoPackage,destroy);
+  finalizeUniqueBuiltinFunctions;
   system.doneCriticalSection(print_cs);
 
 end.

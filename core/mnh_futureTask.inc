@@ -50,7 +50,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
       tempcontext:T_evaluationContext;
   begin
     sleepTime:=0;
-    tempcontext.createNormalContext(nil);
+    tempcontext.createContext(nil,ct_silentlyRunAlone);
     repeat
       currentTask:=pendingTasks.dequeue;
       if currentTask=nil then begin
@@ -68,7 +68,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 
 PROCEDURE ensurePoolThreads();
   begin
-    if (poolThreadsRunning<workerThreadCount) {$ifdef fullVersion} and not(currentlyDebugging) {$endif} then begin
+    if (poolThreadsRunning<workerThreadCount) then begin
       InterLockedIncrement(poolThreadsRunning);
       beginThread(@threadPoolThread);
     end;
@@ -89,16 +89,16 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_token
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext; CONST calledFromWorkerThread:boolean);
   VAR idxLit:P_intLiteral;
   begin
-    if calledFromWorkerThread then context.adopt(scope);
-    context.valueStore.scopePush(false);
+    if calledFromWorkerThread then context.attachWorkerContext(scope);
+    context.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
-    context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
+    context.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
     idxLit^.unreference;
     if context.adapters^.noErrors
     then evaluationResult:=eachRule^.directEvaluateUnary(eachParameter,eachLocation,context,callDepth)
     else evaluationResult:=nil;
-    context.valueStore.scopePop;
-    if calledFromWorkerThread then context.adopt(nil);
+    context.scopePop;
+    if calledFromWorkerThread then context.detachWorkerContext;
     repeat state:=fts_ready until state=fts_ready;
   end;
 

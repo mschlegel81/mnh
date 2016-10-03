@@ -32,7 +32,6 @@ CONST
   ID_QUALIFY_CHARACTER          ='.';
   EACH_INDEX_IDENTIFIER         ='index';
   MAIN_RULE_ID                  ='main';
-  BUILTIN_PSEUDO_LOCATION_PREFIX='builtin';
   ALL_PARAMETERS_TOKEN_TEXT     ='$params';
   ALL_PARAMETERS_PAR_IDX        =maxLongint;
   REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;

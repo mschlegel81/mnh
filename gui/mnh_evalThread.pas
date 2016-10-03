@@ -15,15 +15,20 @@ TYPE
   P_evaluator=^T_evaluator;
   T_evaluator=object
     private
+      //"final" properties
       cs:TRTLCriticalSection;
-      request:T_evalRequest;
-      state:T_evaluationState;
-      package:T_package;
       thread:TThreadFunc;
       adapter:P_adapters;
-      endOfEvaluationText:ansistring;
+      //request variables
+      request:T_evalRequest;
+      requestedContextType:T_contextType;
       mainParameters:T_arrayOfString;
+
+      //internal state variables
+      state:T_evaluationState;
+      package:T_package;
       startOfEvaluation:double;
+      endOfEvaluationText:ansistring;
 
       PROCEDURE ensureThread;
       PROCEDURE threadStarted;
@@ -33,13 +38,14 @@ TYPE
       FUNCTION parametersForMainCall:T_arrayOfString;
       FUNCTION pendingRequest:T_evalRequest;
     public
+      context:T_evaluationContext;
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy;
       PROCEDURE haltEvaluation;
 
-      PROCEDURE reEvaluateWithGUI;
-      PROCEDURE evaluate(CONST path:ansistring; CONST L: TStrings);
-      PROCEDURE callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring);
+      PROCEDURE reEvaluateWithGUI(CONST contextType:T_contextType);
+      PROCEDURE evaluate(CONST path:ansistring; CONST L: TStrings; CONST contextType:T_contextType);
+      PROCEDURE callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
       FUNCTION evaluationRunning: boolean;
       FUNCTION getCodeProvider:P_codeProvider;
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
@@ -68,7 +74,7 @@ TYPE
   end;
 
 VAR runEvaluator:T_evaluator;
-    codeAssistant:T_assistanceEvaluator;
+    assistancEvaluator:T_assistanceEvaluator;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 
@@ -81,63 +87,46 @@ VAR unitIsInitialized:boolean=false;
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
-      mainEvaluationContext:T_evaluationContext;
-
   begin with P_evaluator(p)^ do begin
-    mainEvaluationContext.createNormalContext(adapter);
     result:=0;
     threadStarted;
     repeat
-      case pendingRequest of
-        er_evaluate: begin
-          preEval;
-          sleepTime:=0;
-          package.load(lu_forDirectExecution,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-          postEval;
+      if pendingRequest in [er_evaluate,er_callMain,er_reEvaluateWithGUI] then begin
+        sleepTime:=0;
+        preEval;
+        case pendingRequest of
+          er_evaluate: package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
+          er_callMain: package.load(lu_forCallingMain    ,context,parametersForMainCall);
+          er_reEvaluateWithGUI: begin
+            package.setSourcePath(getFileOrCommandToInterpretFromCommandLine);
+            package.load(lu_forCallingMain,context,parametersForMainCall);
+          end;
         end;
-        er_callMain: begin
-          preEval;
-          sleepTime:=0;
-          package.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
-          postEval;
-        end;
-        er_reEvaluateWithGUI: begin
-          preEval;
-          sleepTime:=0;
-          package.setSourcePath(getFileOrCommandToInterpretFromCommandLine);
-          package.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
-          postEval;
-        end;
-        else begin
-          if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
-          sleep(sleepTime);
-        end;
+        postEval;
+      end else begin
+        if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
+        sleep(sleepTime);
       end;
     until (pendingRequest=er_die);
-    mainEvaluationContext.destroy;
     threadStopped;
   end; end;
 
 FUNCTION docMain(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=100;
-  VAR mainEvaluationContext:T_evaluationContext;
 
   begin with P_assistanceEvaluator(p)^ do begin
     threadStarted;
-    mainEvaluationContext.createNormalContext(adapter);
     result:=0;
     repeat
-      if not(currentlyDebugging) and (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]) then begin
+      if (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]) then begin
+        requestedContextType:=ct_silentlyRunAlone;
         preEval;
-        enterCriticalSection(cs);
-        package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-        leaveCriticalSection(cs);
+        package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
         postEval;
       end;
       ThreadSwitch;
       sleep(MAX_SLEEP_TIME);
     until (pendingRequest=er_die);
-    mainEvaluationContext.destroy;
     threadStopped;
   end; end;
 
@@ -149,8 +138,7 @@ PROCEDURE T_evaluator.ensureThread;
     leaveCriticalSection(cs);
   end;
 
-CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters;
-  threadFunc: TThreadFunc);
+CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
   begin
     system.initCriticalSection(cs);
     request:=er_none;
@@ -159,6 +147,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters;
     endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
     package.create(nil);
     adapter:=adapters;
+    context.createContext(adapter,ct_normal);
   end;
 
 CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters;
@@ -198,9 +187,8 @@ DESTRUCTOR T_assistanceEvaluator.destroy;
 PROCEDURE T_evaluator.haltEvaluation;
   begin
     enterCriticalSection(cs);
-    if state=es_running then stepper.doStop;
+    context.haltEvaluation;
     while not(adapter^.hasMessageOfType[mt_el5_haltMessageReceived]) do begin
-      adapter^.haltEvaluation;
       leaveCriticalSection(cs);
       ThreadSwitch;
       sleep(1);
@@ -210,20 +198,21 @@ PROCEDURE T_evaluator.haltEvaluation;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.reEvaluateWithGUI;
+PROCEDURE T_evaluator.reEvaluateWithGUI(CONST contextType:T_contextType);
   begin
     enterCriticalSection(cs);
     if (state=es_running) or (request<>er_none) then begin
       leaveCriticalSection(cs);
       exit;
     end;
+    requestedContextType:=contextType;
     mainParameters:=mnh_cmdLineInterpretation.mainParameters;
     request:=er_reEvaluateWithGUI;
     ensureThread;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings);
+PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CONST contextType:T_contextType);
   begin
     enterCriticalSection(cs);
     ensureThread;
@@ -231,12 +220,13 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings);
       leaveCriticalSection(cs);
       exit;
     end;
+    requestedContextType:=contextType;
     request:=er_evaluate;
     package.setSourceUTF8AndPath(L,path);
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring);
+PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
   VAR sp:longint;
   begin
     enterCriticalSection(cs);
@@ -244,7 +234,7 @@ PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings; params
       leaveCriticalSection(cs);
       exit;
     end;
-
+    requestedContextType:=contextType;
     setLength(mainParameters,0);
     params:=trim(UTF8ToSys(params));
     while params<>'' do begin
@@ -439,17 +429,18 @@ PROCEDURE T_evaluator.preEval;
     state:=es_running;
     startOfEvaluation:=now;
     adapter^.clearAll;
+    context.resetPrivileges(requestedContextType);
+    context.resetForEvaluation(@package);
     leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.postEval;
   begin
     enterCriticalSection(cs);
+    context.afterEvaluation;
     if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
     then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
     else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
-    while not(adapter^.hasMessageOfType[mt_endOfEvaluation])
-    do adapter^.logEndOfEvaluation;
     state:=es_idle;
     leaveCriticalSection(cs);
   end;
@@ -469,6 +460,7 @@ PROCEDURE T_assistanceEvaluator.postEval;
   VAR i:longint;
   begin
     enterCriticalSection(cs);
+    inherited postEval;
     updateCompletionList;
 
     setLength(localErrors,0);
@@ -487,7 +479,6 @@ PROCEDURE T_assistanceEvaluator.postEval;
     end;
 
     inc(stateCounter);
-    inherited postEval;
     leaveCriticalSection(cs);
   end;
 
@@ -557,7 +548,7 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
     silentAdapters.create;
     new(collector,create(at_unknown,C_collectAllOutputBehavior));
     silentAdapters.addOutAdapter(collector,true);
-    codeAssistant.create(@silentAdapters,@docMain);
+    assistancEvaluator.create(@silentAdapters,@docMain);
     initIntrinsicRuleList;
     unitIsInitialized:=true;
   end;
@@ -565,7 +556,7 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 FINALIZATION
   if unitIsInitialized then begin
     runEvaluator.destroy;
-    codeAssistant.destroy;
+    assistancEvaluator.destroy;
     silentAdapters.destroy;
   end;
 end.

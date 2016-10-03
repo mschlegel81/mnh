@@ -12,9 +12,9 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CO
 
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
+    profilingRun:boolean=false;
     {$ifdef fullVersion}
     reEvaluationWithGUIrequired:boolean=false;
-    profilingRun:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
     {$endif}
 IMPLEMENTATION
@@ -117,9 +117,12 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR context:T_evaluationContext;
         package:P_package;
     begin
-      context.createNormalContext(P_adapters(@consoleAdapters));
+      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling)
+                      else context.createContext(P_adapters(@consoleAdapters),ct_normal);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
+      context.resetForEvaluation(package);
       package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
+      context.afterEvaluation;
       dispose(package,destroy);
       context.destroy;
       consoleAdapters.setExitCode;
@@ -138,8 +141,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package.destroy;
         exit;
       end;
-      context.createNormalContext(P_adapters(@consoleAdapters));
+      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling)
+                      else context.createContext(P_adapters(@consoleAdapters),ct_normal);
+      context.resetForEvaluation(@package);
       package.load(lu_forCallingMain,context,mainParameters);
+      context.afterEvaluation;
       package.destroy;
       {$ifdef fullVersion}
       if context.adapters^.hasNeedGUIerror then begin
@@ -226,14 +232,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       inc(i);
     end;
     setMnhParameters(mnhParameters);
-    {$ifdef fullVersion}
-    if profilingRun then begin
-      time:=t_forcedOn;
-      currentlyDebugging:=true;
-      stepper.clearBreakpoints;
-      stepper.doStart(false);
-    end;
-    {$endif}
+
+    if profilingRun then time:=t_forcedOn;
+
     if fileOrCommandToInterpret=''
     then defaultOutputBehavior:=C_defaultOutputBehavior_interactive
     else defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;

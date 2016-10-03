@@ -167,7 +167,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
 
 CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
   VAR dummyBool:boolean;
-      funcPtr:T_intFuncCallback=nil;
+      funcPtr:P_intFuncCallback=nil;
   begin
     init(srt_inline_for_literal,tok^.location);
     pattern.create;
@@ -181,14 +181,14 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
       with preparedBody[3] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
       with preparedBody[4] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
     end else if (tok^.tokType=tt_intrinsicRule) then begin
-      if (T_intFuncCallback(tok^.data)=BUILTIN_MIN) or
-         (T_intFuncCallback(tok^.data)=BUILTIN_MAX) or
-         (T_intFuncCallback(tok^.data)=BUILTIN_HEAD) then funcPtr:=T_intFuncCallback(tok^.data)
+      if (P_intFuncCallback(tok^.data)=BUILTIN_MIN) or
+         (P_intFuncCallback(tok^.data)=BUILTIN_MAX) or
+         (P_intFuncCallback(tok^.data)=BUILTIN_HEAD) then funcPtr:=P_intFuncCallback(tok^.data)
       else begin
         context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
         exit;
       end;
-      if T_intFuncCallback(tok^.data)=BUILTIN_HEAD then begin
+      if P_intFuncCallback(tok^.data)=BUILTIN_HEAD then begin
         pattern.appendFreeId('$x');
         pattern.appendFreeId('$y');
         setLength(preparedBody,1);
@@ -197,7 +197,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
         pattern.appendFreeId('$x');
         pattern.appendFreeId('$y');
         setLength(preparedBody,6);
-        with preparedBody[0] do begin token.create; token.define(declaredAt,tok^.txt,tt_intrinsicRule,funcPtr); parIdx:=-1; end;
+        with preparedBody[0] do begin token.create; token.define(declaredAt,funcPtr^.getId,tt_intrinsicRule,funcPtr); parIdx:=-1; end;
         with preparedBody[1] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
         with preparedBody[2] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
         with preparedBody[3] do begin token.create; token.define(tok^.location,'',tt_separatorComma);        parIdx:=-1; end;
@@ -538,7 +538,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocat
 FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
   VAR tempcontext:T_evaluationContext;
   begin
-    tempcontext.createNormalContext(P_adapters(@adapters));
+    tempcontext.createContext(P_adapters(@adapters),ct_silentlyRunAlone);
     result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,callLocation,tempcontext,0);
     tempcontext.destroy;
   end;
@@ -853,7 +853,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     subRule:=P_subrule(f^.value);
 
     tempAdapters.create;
-    tempcontext.createNormalContext(@tempAdapters);
+    tempcontext.createContext(@tempAdapters,ct_silentlyRunAlone);
 
     constructInitialTList;
 
@@ -880,5 +880,13 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 {$endif}
 
 
+{$endif}
+{$ifdef include_initialization}
+disposeSubruleCallback :=@disposeSubruleImpl;
+subruleToStringCallback:=@subruleToStringImpl;
+subruleToArityCallback:=@subruleToArityImpl;
+subruleApplyOpCallback :=@subruleApplyOpImpl;
+evaluateCompatorCallback:=@evaluateComparator;
+evaluateSubruleCallback:=@evaluateSubrule;
 {$endif}
 

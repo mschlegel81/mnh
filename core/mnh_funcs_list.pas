@@ -2,8 +2,8 @@ UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
-VAR BUILTIN_HEAD:T_intFuncCallback;
-FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+VAR BUILTIN_HEAD,BUILTIN_GET:P_intFuncCallback;
+
 IMPLEMENTATION
 {$MACRO ON}
 {$define list0:=P_listLiteral(params^.value(0))}
@@ -369,8 +369,8 @@ FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 INITIALIZATION
   //Functions on lists:
   registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);#Returns L with the new element e appended');
+  BUILTIN_HEAD:=
   registerRule(LIST_NAMESPACE,'head',@head_imp,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
-  BUILTIN_HEAD:=@head_imp;
   registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
   registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty');
   registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,'trailing(L);#Returns the last element of L#trailing(L,k);#Returns the last k elements of L');
@@ -389,6 +389,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
   registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
+  BUILTIN_GET:=
   registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');
   registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'mapPut(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');

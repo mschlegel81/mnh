@@ -21,13 +21,13 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
-      sleepUntil:=wallClock.value.elapsed;
+      sleepUntil:=context.wallclockTime;
       result:=newVoidLiteral;
       if params^.value(0)^.literalType=lt_int
       then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
       else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
-      while (wallClock.value.elapsed<sleepUntil) and (context.adapters^.noErrors) do begin
-        sleepInt:=round(900*(sleepUntil-wallClock.value.elapsed));
+      while (context.wallclockTime<sleepUntil) and (context.adapters^.noErrors) do begin
+        sleepInt:=round(900*(sleepUntil-context.wallclockTime));
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
       end;
@@ -264,7 +264,7 @@ FUNCTION getMnhInfo:string;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
       context:T_evaluationContext;
   begin
-    context.createSanboxContext(nil);
+    context.createContext(nil,ct_normal);
     L:=mnhInfo_imp(nil,pseudoLoc,context);
     context.destroy;
     result:=L^.toString();

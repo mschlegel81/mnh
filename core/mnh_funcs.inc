@@ -249,9 +249,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
     begin
-      t:=wallClock.value.elapsed;
+      t:=context.wallclockTime;
       result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(tokenLocation,context,0);
-      t:=wallClock.value.elapsed-t;
+      t:=context.wallclockTime-t;
     end;
 
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
@@ -259,9 +259,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     begin
       first:=context.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
       first^.next:=context.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
-      t:=wallClock.value.elapsed;
+      t:=context.wallclockTime;
       reduceExpression(first,0,context);
-      t:=wallClock.value.elapsed-t;
+      t:=context.wallclockTime-t;
       if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
       then begin result:=first^.data; result^.rereference; end
       else result:=nil;
@@ -271,7 +271,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(wallClock.value.elapsed))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
     else if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
@@ -288,23 +288,21 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 TYPE P_asyncTask=^T_asyncTask;
      T_asyncTask=record
-       adapters:P_adapters;
        task:P_token;
+       context:T_evaluationContext;
      end;
-VAR runningAsyncTasks:longint=0;
 
 FUNCTION doAsync(p:pointer):ptrint;
-  VAR context:T_evaluationContext;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      context.createNormalContext(adapters);
+      context.resetForEvaluation(nil);
       reduceExpression(task,0,context);
       context.cascadeDisposeToken(task);
+      context.afterEvaluation;
       context.destroy;
     end;
     freeMem(p,sizeOf(T_asyncTask));
-    interlockedDecrement(runningAsyncTasks);
   end;
 
 FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -314,17 +312,20 @@ FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       getMem(p,sizeOf(T_asyncTask));
-      p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
-      params^.value(0)^.rereference;
-      if params^.size=2 then begin
-        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
-        params^.value(1)^.rereference;
-      end else
-        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
-      p^.adapters:=context.adapters;
-      InterLockedIncrement(runningAsyncTasks);
-      beginThread(@doAsync,p);
-      result:=newVoidLiteral;
+      if context.canGetNewAsyncContext(p^.context) then begin
+        p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
+        params^.value(0)^.rereference;
+        if params^.size=2 then begin
+          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
+          params^.value(1)^.rereference;
+        end else
+          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
+        beginThread(@doAsync,p);
+        result:=newVoidLiteral;
+      end else begin
+        freeMem(p,sizeOf(T_asyncTask));
+        context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
+      end;
     end;
   end;
 
@@ -461,10 +462,6 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   VAR src:T_arrayOfString;
       i:longint;
   begin
-    if not(context.allowDelegation) then begin
-      context.adapters^.raiseError('sandBoxExecute is not allowed in this context because delegation is disabled.',tokenLocation);
-      exit(newVoidLiteral);
-    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string,lt_stringList]) then begin
       if params^.value(0)^.literalType=lt_string

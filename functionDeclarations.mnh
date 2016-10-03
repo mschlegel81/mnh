@@ -5,11 +5,22 @@ firstString(c:string)->begin
   : c.copy(indexes[0],indexes[1]-indexes[0]-1);
 end;
 
+namespacePart(c:string)->begin
+  local tok:=c.tokenSplit;
+  local idx:=indexOf(tok.matches('NAMESPACE'));
+  tok[idx[0] orElse -1] orElse '?';
+end;
+
 main->allFolders('.')
   .each(f,files(f&['/*.pas','/*.inc']),|)
   .each(file,
     file
     .fileLines
     .each(line,line.matches('registerRule')
-               ? print(file,' ',index,' ',line.firstString)
-               : void),|);
+               ? [file,index,line.firstString,line.namespacePart]
+               : void),|)
+  .sort(2).sort(3)
+  .each(line,line.join("\t"))
+  .join("\n")
+  .print;
+

@@ -12,14 +12,14 @@ getRatios(k)->[0..k]*0+1;
 private maxBetween(i0,i1,L)->begin
   local subList:=L.tail(i0).head(i1-i0);
   local maxIdx:=argMax(subList);
-  format('%17.14f @i=%7d',subList.get(maxIdx),i0+maxIdx);
+  format('%17.14f @i=%7d',subList[maxIdx],i0+maxIdx);
 end;
 
 //*This solves the <a href="http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence"> Hofstadter-Conway $10,000 sequence task from Rosetta Code</a>
 main_(powerOfTwo:int)->begin
   local ratios:=getRatios(2^powerOfTwo.toInt);
   [0..powerOfTwo-1].each(i,printf("range 2^%2d..2^%2d max. a(n)/n=%s",i,i+1,maxBetween(2^i,2^(i+1),ratios)));
-  print("Mallows Number: ",[1..2^powerOfTwo].pEach(i,ratios.get(i)>0.55 ? i : void).max);
+  print("Mallows Number: ",[1..2^powerOfTwo].pEach(i,ratios[i]>0.55 ? i : void,max));
 end;
 
 //*This solves the <a href="http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence"> Hofstadter-Conway $10,000 sequence task from Rosetta Code</a>
