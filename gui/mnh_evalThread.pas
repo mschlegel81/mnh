@@ -87,14 +87,16 @@ VAR unitIsInitialized:boolean=false;
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
+      r:T_evalRequest;
   begin with P_evaluator(p)^ do begin
     result:=0;
     threadStarted;
     repeat
-      if pendingRequest in [er_evaluate,er_callMain,er_reEvaluateWithGUI] then begin
+      r:=pendingRequest;
+      if r in [er_evaluate,er_callMain,er_reEvaluateWithGUI] then begin
         sleepTime:=0;
         preEval;
-        case pendingRequest of
+        case r of
           er_evaluate: package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
           er_callMain: package.load(lu_forCallingMain    ,context,parametersForMainCall);
           er_reEvaluateWithGUI: begin
@@ -154,6 +156,7 @@ CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters;
   threadFunc: TThreadFunc);
   begin
     inherited create(adapters,threadFunc);
+    context.resetOptions(ct_silentlyRunAlone);
     stateCounter:=0;
     setLength(localErrors,0);
     setLength(externalErrors,0);
@@ -429,6 +432,7 @@ PROCEDURE T_evaluator.preEval;
     state:=es_running;
     startOfEvaluation:=now;
     context.resetOptions(requestedContextType);
+    if pendingRequest=er_reEvaluateWithGUI then context.removeOption(cp_clearAdaptersOnStart);
     context.resetForEvaluation(@package);
     leaveCriticalSection(cs);
   end;
