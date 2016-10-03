@@ -487,7 +487,7 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(params, nil, callLocation, firstRep,lastRep,context,false) then begin
-      reduceExpression(firstRep,callDepth+1,context);
+      reduceExpression(firstRep,callDepth,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
