@@ -222,4 +222,8 @@ main(target:string)->
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | VALID_TARGETS).join("\n"));
 //*Several steps in succession
-main(...)->... .each(step,main(step));
+main(...)->... .each(step,
+  print('******************************'),
+  print('* ',step),
+  print('******************************'),
+  main(step));
