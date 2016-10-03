@@ -727,12 +727,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           tokenLocation.package:=@self;
           tokenLocation.line:=codeProvider.numberOfLines+1;
           tokenLocation.column:=1;
-          context.adapters^.raiseNote('Adding default main rule: '+C_defMain,fileTokenLocation(@codeProvider));
-          if profile then context.adapters^.profileTokenizing;
+          context.adapters^.raiseNote('Adding default main rule: '+C_defMain,packageTokenLocation(@self));
+          if profile then context.timeBaseComponent(pc_tokenizing);
           fileTokens.create;
           fileTokens.tokenizeAll(C_defMain,tokenLocation,@self,context.adapters^,false);
           fileTokens.step(@self,lastComment,context.adapters^);
-          if profile then context.adapters^.profileTokenizing;
+          if profile then context.timeBaseComponent(pc_tokenizing);
           processTokens(fileTokens);
         end;
       end;
