@@ -664,11 +664,11 @@ Call with any string parameter for continuous run.
  in> f->{$y^3};
 
  in> f;
-out> {($y^3)}
+out> {$y^3}
  in> f();
-out> {($y^3)}
+out> {$y^3}
  in> f(void);
-out> {($y^3)}
+out> {$y^3}
  in> f(3);
 out> 27
  in> f(3, void);
@@ -680,15 +680,15 @@ out> 27
  in> [3,-2].f;
 out> [27,-8]
  in> f(3, 4);
-Error  Cannot evaluate inline function {($y^3)} with the given number of parameters; Got 2, expected 1
-out> {($y^3)}(3,4)
+Error  Cannot evaluate inline function {$y^3} with the given number of parameters; Got 2, expected 1
+out> {$y^3}(3,4)
 --------------------------------------------------------------------------------
  in> f()->{$y^3};
 
  in> f;
-out> {($y^3)}
+out> {$y^3}
  in> f();
-out> {($y^3)}
+out> {$y^3}
  in> f(3);
 out> 27
  in> 3.f;
@@ -696,32 +696,32 @@ out> 27
  in> [3,-2].f;
 out> [27,-8]
  in> f(3, 4);
-Error  Cannot evaluate inline function {($y^3)} with the given number of parameters; Got 2, expected 1
-out> {($y^3)}(3,4)
+Error  Cannot evaluate inline function {$y^3} with the given number of parameters; Got 2, expected 1
+out> {$y^3}(3,4)
 --------------------------------------------------------------------------------
  in> f(...)->{$y^3};
 
  in> f;
-out> {($y^3)}
+out> {$y^3}
  in> f();
-out> {($y^3)}
+out> {$y^3}
  in> f(3);
-out> {($y^3)}
+out> {$y^3}
  in> 3.f;
-out> {($y^3)}
+out> {$y^3}
  in> [3,-2].f;
-out> {($y^3)}
+out> {$y^3}
  in> f(3, 4);
-out> {($y^3)}
+out> {$y^3}
 --------------------------------------------------------------------------------
  in> f(x)->{$y^3+x};
 
  in> f(3);
-out> {($y^3+3)}
+out> {$y^3+3}
  in> 3.f;
-out> {($y^3+3)}
+out> {$y^3+3}
  in> [3,-2].f;
-out> {($y^3+[3,-2])}
+out> {$y^3+[3,-2]}
  in> f(3, 4);
 out> 67
  in> f;
@@ -1479,8 +1479,8 @@ n=  10000 pi approximated as 3.178
 n= 100000 pi approximated as 3.1466   
 n=1000000 pi approximated as 3.139624 
 ***** numDiff *****
-The approximate taylor expansion of {($t^(1+sin($t)))} around 1 is 
-  {(($x-1)^0*1.0+($x-1)^1*1.8414158821106+($x-1)^2*1.31507305055857+($x-1)^3*0.263118234773477+($x-1)^4*-0.395398412675907+($x-1)^5*-0.309003488253802)}
+The approximate taylor expansion of {$t^(1+sin($t))} around 1 is 
+  {($x-1)^0*1.0+($x-1)^1*1.8414158821106+($x-1)^2*1.31507305055857+($x-1)^3*0.263118234773477+($x-1)^4*-0.395398412675907+($x-1)^5*-0.309003488253802}
 ***** opTest *****
 true and false = false
 true or false = true
@@ -3142,7 +3142,7 @@ out> 2
  in> arity({printf('%s%s',$a,...)});
 out> 1
  in> toExpression('$x-$x^2+$x^3');
-out> {($x-$x^2+$x^3)}
+out> {$x-$x^2+$x^3}
  in> toExpression('');
 Error  The parsed expression appears to be empty
 out> toExpression('')
