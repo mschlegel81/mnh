@@ -296,30 +296,33 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 TYPE P_asyncTask=^T_asyncTask;
      T_asyncTask=record
        task:P_token;
-       context:T_evaluationContext;
+       context:P_evaluationContext;
      end;
 
 FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      context.resetForEvaluation(nil);
-      reduceExpression(task,0,context);
-      context.cascadeDisposeToken(task);
-      context.afterEvaluation;
-      context.destroy;
+      context^.resetForEvaluation(nil);
+      reduceExpression(task,0,context^);
+      context^.cascadeDisposeToken(task);
+      context^.afterEvaluation;
+      dispose(context,destroy);
     end;
     freeMem(p,sizeOf(T_asyncTask));
   end;
 
 FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR p:P_asyncTask;
+      childContext:P_evaluationContext;
   begin
     result:=nil;
     if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
-      getMem(p,sizeOf(T_asyncTask));
-      if context.canGetNewAsyncContext(p^.context) then begin
+      childContext:=context.getNewAsyncContext;
+      if childContext<>nil then begin
+        getMem(p,sizeOf(T_asyncTask));
+        p^.context:=childContext;
         p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
         params^.value(0)^.rereference;
         if params^.size=2 then begin
@@ -330,7 +333,6 @@ FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         beginThread(@doAsync,p);
         result:=newVoidLiteral;
       end else begin
-        freeMem(p,sizeOf(T_asyncTask));
         context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
       end;
     end;
