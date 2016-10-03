@@ -88,15 +88,27 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_token
 
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext; CONST calledFromWorkerThread:boolean);
   VAR idxLit:P_intLiteral;
+      param:P_listLiteral;
+      first,last:P_token;
   begin
     if calledFromWorkerThread then context.attachWorkerContext(scope);
     context.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
     context.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
     idxLit^.unreference;
-    if context.adapters^.noErrors
-    then evaluationResult:=eachRule^.directEvaluateUnary(eachParameter,eachLocation,context,callDepth)
-    else evaluationResult:=nil;
+    evaluationResult:=nil;
+    if context.adapters^.noErrors then begin
+      param:=newOneElementListLiteral(eachParameter,true);
+      if eachRule^.replaces(param,nil,eachLocation,first,last,context,false) then begin
+        reduceExpression(first,callDepth,context);
+        if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal) then begin
+          evaluationResult:=first^.data;
+          evaluationResult^.rereference;
+        end;
+        context.cascadeDisposeToken(first);
+      end;
+      disposeLiteral(param);
+    end;
     context.scopePop;
     if calledFromWorkerThread then context.detachWorkerContext;
     repeat state:=fts_ready until state=fts_ready;
