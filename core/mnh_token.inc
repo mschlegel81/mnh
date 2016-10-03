@@ -1120,11 +1120,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
-
-        context.callStackPush(first^.location,P_intFuncCallback(first^.data),parameterListLiteral,nil);
-        newLiteral:=P_intFuncCallback(first^.data)^.call(parameterListLiteral,first^.location,context);
-        context.callStackPop();
-
+        newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;

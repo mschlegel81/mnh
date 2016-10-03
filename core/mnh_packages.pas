@@ -1117,5 +1117,7 @@ INITIALIZATION
 FINALIZATION
 {$define include_finalization}
   pendingTasks.destroy;
+{$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
+{$include mnh_subrule.inc}
 end.

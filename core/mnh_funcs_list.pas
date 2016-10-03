@@ -5,6 +5,7 @@ USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_con
 VAR BUILTIN_HEAD,BUILTIN_GET:P_intFuncCallback;
 
 IMPLEMENTATION
+VAR builtinLocation_sort:T_identifiedInternalFunction;
 {$MACRO ON}
 {$define list0:=P_listLiteral(params^.value(0))}
 {$define arg0:=params^.value(0)}
@@ -71,7 +72,9 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
+      context.callStackPush(tokenLocation,@builtinLocation_sort,params,nil);
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,context.adapters^);
+      context.callStackPop();
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_validListTypes)
             and (arg1^.literalType=lt_int) then begin
@@ -374,6 +377,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
   registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty');
   registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,'trailing(L);#Returns the last element of L#trailing(L,k);#Returns the last k elements of L');
+  builtinLocation_sort.create(LIST_NAMESPACE,'sort');
   registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
                                                'sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
                                                'sort(L,innerIndex:int);#Returns L sorted by given inner index');
@@ -397,4 +401,7 @@ INITIALIZATION
                                             'mapGet(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
   registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
   registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');
+
+FINALIZATION
+  builtinLocation_sort.destroy;
 end.

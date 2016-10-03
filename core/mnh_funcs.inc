@@ -1,4 +1,9 @@
 {$ifdef include_implementation}
+VAR builtinLocation_group,
+    builtinLocation_time,
+    builtinLocation_printf,
+    builtinLocation_format:T_identifiedInternalFunction;
+
 {$WARN 5024 OFF}
 {$MACRO ON}
 {$define UNARY_NUM_TO_REAL:=
@@ -274,8 +279,10 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
     else if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
       if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
                         else res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
+      context.callStackPop();
       if res<>nil then begin
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
@@ -546,7 +553,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
                           else aggregator:=nil;
-
+      if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,params,nil);
       groupMap.create();
       for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then
         addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
@@ -554,6 +561,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=newListLiteral;
       for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false);
       groupMap.destroy;
+      if aggregator<>nil then context.callStackPop();
     end;
   end;
 
@@ -564,7 +572,9 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_format,params,nil);
       preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
+      context.callStackPop();
       if not(context.adapters^.noErrors) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
@@ -580,7 +590,9 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
       preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
+      context.callStackPop();
       if not(context.adapters^.noErrors) then exit(nil);
       system.enterCriticalSection(print_cs);
       context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
@@ -734,6 +746,7 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision');
   //round might be binary...
   registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
+  builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;#Returns an internal time for time difference measurement.#'+
                                                          'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
@@ -742,11 +755,24 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
+  builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);#Executes the source (string or stringList) and returns created messages');
+  builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'printf(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  builtinLocation_format.create(STRINGS_NAMESPACE,'format');
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'inspect;#Returs information on the current package#inspect(idOrPath:string);#Returns information on an imported package or a specified MNH source file');
+
+
+
+
+{$endif}
+{$ifdef include_finalization}
+  builtinLocation_group .destroy;
+  builtinLocation_time  .destroy;
+  builtinLocation_printf.destroy;
+  builtinLocation_format.destroy;
 {$endif}

@@ -197,7 +197,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
         pattern.appendFreeId('$x');
         pattern.appendFreeId('$y');
         setLength(preparedBody,6);
-        with preparedBody[0] do begin token.create; token.define(declaredAt,funcPtr^.getId,tt_intrinsicRule,funcPtr); parIdx:=-1; end;
+        with preparedBody[0] do begin token.create; token.define(declaredAt,tok^.txt,tt_intrinsicRule,funcPtr); parIdx:=-1; end;
         with preparedBody[1] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
         with preparedBody[2] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
         with preparedBody[3] do begin token.create; token.define(tok^.location,'',tt_separatorComma);        parIdx:=-1; end;
@@ -680,6 +680,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
   end;
 
 {$ifdef FULLVERSION}
+VAR generateRowIdentification:T_identifiedInternalFunction;
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;
   VAR subRule:P_subrule;
 
@@ -882,6 +883,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
 {$endif}
 {$ifdef include_initialization}
+{$ifdef fullVersion}
+generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
+{$endif}
 disposeSubruleCallback :=@disposeSubruleImpl;
 subruleToStringCallback:=@subruleToStringImpl;
 subruleToArityCallback:=@subruleToArityImpl;
@@ -889,4 +893,8 @@ subruleApplyOpCallback :=@subruleApplyOpImpl;
 evaluateCompatorCallback:=@evaluateComparator;
 evaluateSubruleCallback:=@evaluateSubrule;
 {$endif}
-
+{$ifdef include_finalization}
+{$ifdef fullVersion}
+generateRowIdentification.destroy;
+{$endif}
+{$endif}
