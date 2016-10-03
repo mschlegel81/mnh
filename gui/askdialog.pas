@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
+  StdCtrls, mnh_funcs, mnh_litVar, mnh_basicTypes, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
 TYPE
   {$WARN 5024 OFF}
 

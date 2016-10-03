@@ -1,7 +1,7 @@
 UNIT mnh_funcs_files;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
+USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
      sysutils, Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
      LazFileUtils,LazUTF8,mnh_html;
 IMPLEMENTATION

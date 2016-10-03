@@ -1,7 +1,7 @@
 UNIT mnh_funcs_server;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_tokLoc,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics;
+USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics;
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object
@@ -11,15 +11,14 @@ TYPE
     feedbackLocation:T_tokenLocation;
     hasKillRequest:boolean;
     up:boolean;
-    adapters:P_adapters;
+    context:T_evaluationContext;
 
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST parentContext:T_evaluationContext);
+    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST parentContext:T_evaluationContext; OUT creationSuccessful:boolean);
     DESTRUCTOR destroy;
     PROCEDURE serve;
     PROCEDURE killQuickly;
   end;
 
-PROCEDURE killActiveServers;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -33,22 +32,6 @@ IMPLEMENTATION
 
 VAR serverCS:system.TRTLCriticalSection;
     currentUpServers:array of P_microserver;
-PROCEDURE killActiveServers;
-  VAR i:longint;
-      allDone:boolean;
-  begin
-    enterCriticalSection(serverCS);
-    for i:=0 to length(currentUpServers)-1 do currentUpServers[i]^.hasKillRequest:=true;
-    allDone:=length(currentUpServers)<=0;
-    leaveCriticalSection(serverCS);
-    while not(allDone) do begin
-      sleep(100);
-      enterCriticalSection(serverCS);
-      for i:=0 to length(currentUpServers)-1 do currentUpServers[i]^.hasKillRequest:=true;
-      allDone:=length(currentUpServers)<=0;
-      leaveCriticalSection(serverCS);
-    end;
-  end;
 
 FUNCTION wrapTextInHttp_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   CONST serverInfo='MNH5 via Synapse';
@@ -74,22 +57,15 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       timeout:double;
       servingExpression:P_expressionLiteral;
       servingSubrule:P_subrule;
+      creationSuccessful:boolean;
   begin
-    if not(context.allowDelegation) then begin
-      context.adapters^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
-      exit(newVoidLiteral);
-    end;
+    result:=nil;
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.arity<=4) and
        (arg2^.literalType in [lt_int,lt_real]) then begin
-      {$ifdef fullVersion}
-      if currentlyDebugging then begin
-        context.adapters^.raiseError('Cannot start microserver in debug mode. Sorry.',tokenLocation);
-        exit(nil);
-      end;
-      {$endif}
+
       if arg2^.literalType=lt_int then timeout:=int2^.value/(24*60*60)
                                   else timeout:=real2^.value/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
@@ -98,9 +74,11 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         servingExpression:=newExpressionLiteral(servingSubrule);
         servingSubrule^.increaseArity(4);
       end else servingExpression^.rereference;
-      new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,context));
-      result:=newVoidLiteral;
-    end else result:=nil;
+      new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,context,creationSuccessful));
+      if creationSuccessful
+      then result:=newVoidLiteral
+      else context.adapters^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
+    end;
   end;
 
 FUNCTION microserverThread(p:pointer):ptrint;
@@ -110,23 +88,27 @@ FUNCTION microserverThread(p:pointer):ptrint;
     result:=0;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST parentContext: T_evaluationContext);
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST parentContext: T_evaluationContext; OUT creationSuccessful:boolean);
   VAR i:longint;
   begin
-    system.enterCriticalSection(serverCS);
-    ip:=cleanIp(ip_);
-    if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
-    then timeout:=0
-    else timeout:=timeout_;
-    servingExpression:=servingExpression_;
-    feedbackLocation:=feedbackLocation_;
-    adapters:=parentContext.adapters;
-    hasKillRequest:=false;
-    for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]^.ip=ip then currentUpServers[i]^.killQuickly;
-    setLength(currentUpServers,length(currentUpServers)+1);
-    currentUpServers[length(currentUpServers)-1]:=@self;
-    beginThread(@microserverThread,@self);
-    system.leaveCriticalSection(serverCS);
+    if parentContext.canGetNewAsyncContext(context) then begin
+      system.enterCriticalSection(serverCS);
+      ip:=cleanIp(ip_);
+      if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
+      then timeout:=0
+      else timeout:=timeout_;
+      servingExpression:=servingExpression_;
+      feedbackLocation:=feedbackLocation_;
+      hasKillRequest:=false;
+      for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]^.ip=ip then currentUpServers[i]^.killQuickly;
+      setLength(currentUpServers,length(currentUpServers)+1);
+      currentUpServers[length(currentUpServers)-1]:=@self;
+      beginThread(@microserverThread,@self);
+      system.leaveCriticalSection(serverCS);
+      creationSuccessful:=true;
+    end else begin
+      creationSuccessful:=false;
+    end;
   end;
 
 DESTRUCTOR T_microserver.destroy;
@@ -158,7 +140,6 @@ PROCEDURE T_microserver.serve;
       requestLiteral:T_listLiteral;
       sleepTime:longint=minSleepTime;
       socket:T_socketPair;
-      context:T_evaluationContext;
 
   PROCEDURE initRequestLiteral(CONST request:string);
     VAR parts:T_arrayOfString;
@@ -210,7 +191,6 @@ PROCEDURE T_microserver.serve;
 
   begin
     socket.create(ip);
-    context.createNormalContext(adapters);
     context.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
     lastActivity:=now;
@@ -220,7 +200,7 @@ PROCEDURE T_microserver.serve;
         sleepTime:=minSleepTime;
         lastActivity:=now;
         initRequestLiteral(request);
-        response:=servingExpression^.evaluate(@requestLiteral,@context);
+        response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,@context);
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes
@@ -240,6 +220,7 @@ PROCEDURE T_microserver.serve;
     disposeLiteral(servingExpression);
     socket.destroy;
     context.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
+    context.afterEvaluation;
     context.destroy;
     up:=false;
   end;
@@ -257,9 +238,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.');
-  {$ifdef fullVersion}
-  killServersCallback:=@killActiveServers;
-  {$endif}
+
 FINALIZATION
   doneCriticalSection(serverCS);
 

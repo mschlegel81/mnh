@@ -1,4 +1,4 @@
-USE testLog,mnhInfo;
+USE testLog,mnhInfo,formattingUtils;
 
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 type BuildConfig(L:list(7))->L[0].isBoolean AND
@@ -24,7 +24,7 @@ BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,'..\lazarus64\lazbuild.exe
          [false,'FDWin32','bin32/mnh_debug.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
          [true ,'LDLinux','./mnh_light_debug'        ,'lazbuild'                 ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
          [true ,'FDLinux','./mnh_debug'              ,'lazbuild'                 ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]];
-LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]));
+LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
 //Configuration:=====================================================
 private canBuild(B:BuildConfig)->B[0]=isLinux;
 private VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
@@ -123,7 +123,7 @@ private buildExe(B:BuildConfig)->
 private testExe(B:BuildConfig,...)->
   not(B.canBuild)
   ? void
-  : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or not(fileExists(B[2]))
+  : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or needBuilt(B)
     ? void
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(B[2])
@@ -133,12 +133,12 @@ private testExe(B:BuildConfig,...)->
 private showStatus->
   print orElse
   tprint('Current code hash: ',ensureCodeHash,"\n") orElse
-  (['Flavour','Binary','CodeVersion','Compile time','Time for test'].join("\t")|
+  ([['Flavour','Binary','CodeVersion','Compile time','Time for test']]|
   (BUILTS.each(B,[B[1],
                  B[2],
                  canBuild(B) ? needBuilt(B) ? B[2].codeVersion : 'o.k.' : '?' ,
                  B[2].compileTime,
-                 (canBuild(B) ? timeForTest(B[2]) : timeForTest(B[1],ensureCodeHash)) orElse '.'].join("\t")))).join("\n").print
+                 (canBuild(B) ? timeForTest(B[2]) : timeForTest(B[1],ensureCodeHash)) orElse '.']))).formatTable.join("\n").print
   orElse print;
 
 private cleanup->begin
@@ -225,4 +225,8 @@ main(target:string)->
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | VALID_TARGETS).join("\n"));
 //*Several steps in succession
-main(...)->... .each(step,main(step));
+main(...)->... .each(step,
+  print('******************************'),
+  print('* ',step),
+  print('******************************'),
+  main(step));

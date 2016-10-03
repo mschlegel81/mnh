@@ -2,7 +2,8 @@
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cmem, cthreads,{$else}
      {$ifdef DEBUGMODE}heaptrc,{$endif}{$endif}
-     mnh_constants,myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils,mnh_out_adapters;
+     mnh_constants, myGenerics, mnh_cmdLineInterpretation, mnh_packages,
+     mnh_contexts, sysutils, mnh_out_adapters;
 
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;
@@ -26,7 +27,7 @@ PROCEDURE interactiveMode;
     adapters.create;
     adapters.addConsoleOutAdapter();
     setupOutputBehaviourFromCommandLineOptions(adapters,nil);
-    context.createNormalContext(@adapters);
+    context.createContext(@adapters,ct_normal);
     consolePackage.create(nil);
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
@@ -37,6 +38,7 @@ PROCEDURE interactiveMode;
     readInputFromConsole;
     while not(hasExitSignal) do begin
       consolePackage.load(lu_interactiveMode,context,C_EMPTY_STRING_ARRAY);
+      context.afterEvaluation;
       readInputFromConsole;
     end;
     context.destroy;

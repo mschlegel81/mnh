@@ -32,11 +32,8 @@ CONST
   ID_QUALIFY_CHARACTER          ='.';
   EACH_INDEX_IDENTIFIER         ='index';
   MAIN_RULE_ID                  ='main';
-  BUILTIN_PSEUDO_LOCATION_PREFIX='builtin';
-  SELF_TOKEN_TEXT               ='$self';
-  SELF_TOKEN_PAR_IDX            =maxLongint;
   ALL_PARAMETERS_TOKEN_TEXT     ='$params';
-  ALL_PARAMETERS_PAR_IDX        =SELF_TOKEN_PAR_IDX-1;
+  ALL_PARAMETERS_PAR_IDX        =maxLongint;
   REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;
   DOC_COMMENT_PREFIX            ='//*';
   SPECIAL_COMMENT_BLOB_BEGIN    ='//!';
@@ -44,13 +41,6 @@ CONST
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
   {$endif}
 TYPE
-  T_hashInt  =dword;
-  T_idString =string[100];
-  T_myFloat = extended;
-  P_abstractPackage=^T_abstractPackage;
-  T_abstractPackage=object
-    FUNCTION getPath:ansistring; virtual; abstract;
-  end;
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
                        rwc_specialConstruct,
@@ -94,7 +84,7 @@ TYPE
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginFunc, tt_endBlock, tt_endFunc, tt_try, tt_toId, tt_pseudoFuncPointer,
+    tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression, tt_try, tt_toId, tt_pseudoFuncPointer,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -228,17 +218,19 @@ CONST
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
-  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginFunc,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
-  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endFunc,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
+  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
+  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
     {tt_agg}                tt_braceClose,
     {tt_while}              tt_EOL,
     {tt_beginBlock}         tt_endBlock,
-    {tt_beginFunc}          tt_endFunc,
+    {tt_beginRule}          tt_endRule,
+    {tt_beginExpression}    tt_endExpression,
     {tt_endBlock}           tt_EOL,
-    {tt_endFunc}            tt_EOL,
+    {tt_endRule}            tt_EOL,
+    {tt_endExpression}      tt_EOL,
     {tt_try}                tt_EOL,
     {tt_toId}               tt_EOL,
                             tt_EOL,
@@ -279,7 +271,7 @@ CONST
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
   C_modifieableTypeChecks: T_tokenTypeSet=[tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckExpression,tt_typeCheckKeyValueList];
 
-  C_compatibleEnd:array[tt_beginBlock..tt_beginFunc] of T_tokenType=(tt_endBlock,tt_endFunc);
+  C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_tokenInfo:array[T_tokenType] of record
                                  defaultId:string;         reservedWordClass:T_reservedWordClass;  helpText:string; end=(
 {tt_literal}                    (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'A literal'),
@@ -299,9 +291,11 @@ CONST
 {tt_agg}                        (defaultId:'.agg';         reservedWordClass:rwc_specialConstruct; helpText:'Special construct: agg#Used for list aggregation#Syntax: <list>.agg(<aggregator>) - where <aggregator> may be an expression or a simple operator as +'),
 {tt_while}                      (defaultId:'while';        reservedWordClass:rwc_specialConstruct; helpText:'Special construct: while#Used for loops#Syntax: while(<entry condition>,<body>) - where <entry condition> must return a scalar boolean'),
 {tt_beginBlock}                 (defaultId:'begin';        reservedWordClass:rwc_specialConstruct; helpText:'Special construct: begin#Opening delimiter for procedural blocks'),
-{tt_beginFunc}                  (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
+{tt_beginRule}                  (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
+{tt_beginExpression}            (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
 {tt_endBlock}                   (defaultId:'end';          reservedWordClass:rwc_specialConstruct; helpText:'Special construct: end#Closing delimiter for procedural blocks'),
-{tt_endFunc}                    (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
+{tt_endRule}                    (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
+{tt_endExpression}              (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
 {tt_try}                        (defaultId:'try';          reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling#Syntax: try(<body>,<catch body>) - where <catch body> is executed only if evaluation of <body> fails'),
 {tt_toId}                       (defaultId:'toId';         reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
 {tt_pseudoFuncPointer}          (defaultId:'::';           reservedWordClass:rwc_specialConstruct; helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'),
@@ -500,7 +494,7 @@ CONST
 {mt_el2_warning            }             (level: 2; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
 {mt_el3_evalError          }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
 {mt_el3_noMatchingMain     }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
-{mt_el3_stackTrace         }             (level: 3; prefix: 'Error [stack trace]'  ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
+{mt_el3_stackTrace         }             (level: 3; prefix: 'Stack trace '         ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
 {mt_el3_userDefined        }             (level: 3; prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
 {mt_el4_parsingError       }             (level: 4; prefix: 'Parsing Error '       ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),
 {mt_el5_systemError        }             (level: 5; prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false),

@@ -1,8 +1,6 @@
 UNIT mnh_caches;
-
 INTERFACE
-
-USES myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
+USES mnh_basicTypes, myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=1;
       POLISH_FREQUENCY=32;

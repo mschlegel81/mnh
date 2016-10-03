@@ -23,7 +23,6 @@
   P_pattern=^T_pattern;
   T_pattern=object
     sig:array of T_patternElement;
-    containsSelfPointer,
     hasOptionals:boolean;
 
     CONSTRUCTOR create;
@@ -38,8 +37,8 @@
     FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
     FUNCTION idForIndexInline(CONST index:longint):T_idString;
     PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
-    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
-    FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; VAR context:T_evaluationContext):boolean;
+    FUNCTION matchesForFallback(VAR par:T_listLiteral; VAR context:T_evaluationContext):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION toCmdLineHelpStringString:ansistring;
@@ -184,7 +183,6 @@ CONSTRUCTOR T_pattern.create;
 CONSTRUCTOR T_pattern.clone(original: T_pattern);
   VAR i:longint;
   begin
-    containsSelfPointer:=original.containsSelfPointer;
     hasOptionals:=original.hasOptionals;
     setLength(sig,length(original.sig));
     for i:=0 to length(sig)-1 do begin
@@ -196,8 +194,6 @@ CONSTRUCTOR T_pattern.clone(original: T_pattern);
 CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
   VAR i:longint;
   begin
-    containsSelfPointer:=LHSPattern.containsSelfPointer
-                      or RHSPattern.containsSelfPointer;
     hasOptionals:=LHSPattern.hasOptionals
                or RHSPattern.hasOptionals;
     setLength(sig,max(length(LHSPattern.sig),length(RHSPattern.sig)));
@@ -213,7 +209,6 @@ PROCEDURE T_pattern.clear;
   begin
     for i:=0 to length(sig)-1 do sig[i].destroy;
     setLength(sig,0);
-    containsSelfPointer:=false;
     hasOptionals:=false;
   end;
 
@@ -241,7 +236,6 @@ PROCEDURE T_pattern.appendOptional;
 FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
   VAR i:longint;
   begin
-    if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
     if id=ALL_PARAMETERS_TOKEN_TEXT then exit(ALL_PARAMETERS_PAR_IDX);
     for i:=0 to length(sig)-1 do if sig[i].id=id then exit(i);
     result:=-1;
@@ -250,7 +244,6 @@ FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
 FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString): longint;
   VAR i:longint;
   begin
-    if id=SELF_TOKEN_TEXT           then begin containsSelfPointer:=true; exit(SELF_TOKEN_PAR_IDX); end;
     if id=ALL_PARAMETERS_TOKEN_TEXT then begin hasOptionals       :=true; exit(ALL_PARAMETERS_PAR_IDX); end;
     result:=strToIntDef(copy(id,2,length(id)-1),-1);
     if (copy(id,1,1)='$') and (result>=0) then begin
@@ -265,7 +258,6 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString): longint;
 
 FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
   begin
-    if index=SELF_TOKEN_PAR_IDX     then exit(SELF_TOKEN_TEXT);
     if index=ALL_PARAMETERS_PAR_IDX then exit(ALL_PARAMETERS_TOKEN_TEXT);
     result:=sig[index].id;
     if result='' then result:='$'+intToStr(index);
@@ -303,18 +295,17 @@ FUNCTION T_pattern.matchesNilPattern: boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST selfPointerProvided: boolean; VAR context:T_evaluationContext): boolean;
+FUNCTION T_pattern.matches(VAR par: T_listLiteral; VAR context:T_evaluationContext): boolean;
   begin
-    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,selfPointerProvided,context);
+    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,context);
   end;
 
-FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
+FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; VAR context:T_evaluationContext):boolean;
   VAR i:longint;
   begin
     if (par.size<length(sig)) then exit(false);
-    result:=true;
     for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i,context)) then exit(false);
-    result:=selfPointerProvided or not(containsSelfPointer);
+    result:=true;
   end;
 
 FUNCTION T_pattern.toString: ansistring;
@@ -352,7 +343,6 @@ FUNCTION T_pattern.isEquivalent(CONST p: T_pattern): boolean;
   VAR i:longint;
   begin
     result:=(length(sig)=length(p.sig)) and
-            (containsSelfPointer=p.containsSelfPointer) and
             (hasOptionals=p.hasOptionals);
     for i:=0 to length(sig)-1 do result:=result and sig[i].isEquivalent(p.sig[i]);
   end;
@@ -361,7 +351,6 @@ FUNCTION T_pattern.isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
   VAR i:longint;
   begin
     result:=(length(sig)=length(p.sig)) and
-            (containsSelfPointer=p.containsSelfPointer) and
             (hasOptionals=p.hasOptionals);
     for i:=0 to length(sig)-1 do result:=result and (sig[i].typeWhitelist=p.sig[i].typeWhitelist);
   end;
@@ -369,7 +358,7 @@ FUNCTION T_pattern.isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
 FUNCTION T_pattern.isValidMainPattern:boolean;
   VAR i:longint;
   begin
-    result:=not(containsSelfPointer);
+    result:=true;
     for i:=0 to length(sig)-1 do result:=result and (lt_string in sig[i].typeWhitelist);
   end;
 

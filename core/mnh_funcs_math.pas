@@ -1,9 +1,9 @@
 UNIT mnh_funcs_math;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils,mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_adapters,mnh_contexts;
+USES sysutils,mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_adapters,mnh_contexts;
 VAR BUILTIN_MIN,
-    BUILTIN_MAX:T_intFuncCallback;
+    BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
 {$MACRO ON}
 {$define arg0:=params^.value(0)}
@@ -356,8 +356,10 @@ FUNCTION arctan2_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 INITIALIZATION
   registerRule(MATH_NAMESPACE,'pi',@pi_imp,'pi;//Returns pi');
+  BUILTIN_MAX:=
   registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters');
   registerRule(MATH_NAMESPACE,'argMax',@argMax_imp,'argMax(L);//Returns the index of the greatest element out of list L (or the first index if ambiguous)');
+  BUILTIN_MIN:=
   registerRule(MATH_NAMESPACE,'min',@min_imp,'min(L);//Returns the smallest element out of list L#min(x,y,...);//Returns the smallest element out of the given parameters');
   registerRule(MATH_NAMESPACE,'argMin',@argMin_imp,'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
@@ -368,7 +370,4 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'primes',@primes_impl,'primes(pMax:int);//Returns prime numbers up to pMax');
   registerRule(MATH_NAMESPACE,'digits',@digits_impl,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
   registerRule(MATH_NAMESPACE,'arctan2',@arctan2_impl,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
-
-  BUILTIN_MIN:=@min_imp;
-  BUILTIN_MAX:=@max_imp;
 end.

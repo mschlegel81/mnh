@@ -16,7 +16,7 @@
       CONSTRUCTOR create(CONST ruleId:T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
-      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
@@ -107,7 +107,7 @@ FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
     result^.rereference;
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR context:T_evaluationContext): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR context:T_evaluationContext): boolean;
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
 system.leaveCriticalSection(rule_cs);
@@ -142,7 +142,7 @@ exit}
           lastRep:=firstRep;
           CLEAN_EXIT(true);
         end else for useUncurryingFallback:=false to true do
-                 for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
+                 for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
@@ -163,7 +163,7 @@ exit}
       end;
       rt_synchronized: begin
         for useUncurryingFallback:=false to true do
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
           if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
@@ -189,7 +189,7 @@ exit}
       end;
       rt_normal,rt_customTypeCheck: begin
         for useUncurryingFallback:=false to true do
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
           called:=true;
           exit(true);
         end;

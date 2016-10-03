@@ -1,4 +1,9 @@
 {$ifdef include_implementation}
+VAR builtinLocation_group,
+    builtinLocation_time,
+    builtinLocation_printf,
+    builtinLocation_format:T_identifiedInternalFunction;
+
 {$WARN 5024 OFF}
 {$MACRO ON}
 {$define UNARY_NUM_TO_REAL:=
@@ -249,9 +254,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
     begin
-      t:=wallClock.value.elapsed;
-      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,context);
-      t:=wallClock.value.elapsed-t;
+      t:=context.wallclockTime;
+      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(tokenLocation,context,0);
+      t:=context.wallclockTime-t;
     end;
 
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
@@ -259,9 +264,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     begin
       first:=context.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
       first^.next:=context.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
-      t:=wallClock.value.elapsed;
+      t:=context.wallclockTime;
       reduceExpression(first,0,context);
-      t:=wallClock.value.elapsed-t;
+      t:=context.wallclockTime-t;
       if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
       then begin result:=first^.data; result^.rereference; end
       else result:=nil;
@@ -271,11 +276,13 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(wallClock.value.elapsed))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
     else if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
       if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
                         else res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
+      context.callStackPop();
       if res<>nil then begin
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
@@ -288,23 +295,21 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 TYPE P_asyncTask=^T_asyncTask;
      T_asyncTask=record
-       adapters:P_adapters;
        task:P_token;
+       context:T_evaluationContext;
      end;
-VAR runningAsyncTasks:longint=0;
 
 FUNCTION doAsync(p:pointer):ptrint;
-  VAR context:T_evaluationContext;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      context.createNormalContext(adapters);
+      context.resetForEvaluation(nil);
       reduceExpression(task,0,context);
       context.cascadeDisposeToken(task);
+      context.afterEvaluation;
       context.destroy;
     end;
     freeMem(p,sizeOf(T_asyncTask));
-    interlockedDecrement(runningAsyncTasks);
   end;
 
 FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -314,35 +319,19 @@ FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       getMem(p,sizeOf(T_asyncTask));
-      p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
-      params^.value(0)^.rereference;
-      if params^.size=2 then begin
-        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
-        params^.value(1)^.rereference;
-      end else
-        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
-      p^.adapters:=context.adapters;
-      InterLockedIncrement(runningAsyncTasks);
-      beginThread(@doAsync,p);
-      result:=newVoidLiteral;
-    end;
-  end;
-
-FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR sleepUntil:double;
-      sleepInt:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
-      sleepUntil:=wallClock.value.elapsed;
-      result:=newVoidLiteral;
-      if params^.value(0)^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
-      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
-      while (wallClock.value.elapsed<sleepUntil) and (context.adapters^.noErrors) do begin
-        sleepInt:=round(900*(sleepUntil-wallClock.value.elapsed));
-        if sleepInt>100 then sleepInt:=100;
-        if (sleepInt>0) then sleep(sleepInt);
+      if context.canGetNewAsyncContext(p^.context) then begin
+        p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
+        params^.value(0)^.rereference;
+        if params^.size=2 then begin
+          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
+          params^.value(1)^.rereference;
+        end else
+          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
+        beginThread(@doAsync,p);
+        result:=newVoidLiteral;
+      end else begin
+        freeMem(p,sizeOf(T_asyncTask));
+        context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
       end;
     end;
   end;
@@ -480,10 +469,6 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   VAR src:T_arrayOfString;
       i:longint;
   begin
-    if not(context.allowDelegation) then begin
-      context.adapters^.raiseError('sandBoxExecute is not allowed in this context because delegation is disabled.',tokenLocation);
-      exit(newVoidLiteral);
-    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string,lt_stringList]) then begin
       if params^.value(0)^.literalType=lt_string
@@ -538,7 +523,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,context);
+          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,tokenLocation,context,0);
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
@@ -568,7 +553,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
                           else aggregator:=nil;
-
+      if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,params,nil);
       groupMap.create();
       for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then
         addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
@@ -576,6 +561,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=newListLiteral;
       for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false);
       groupMap.destroy;
+      if aggregator<>nil then context.callStackPop();
     end;
   end;
 
@@ -586,7 +572,9 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_format,params,nil);
       preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
+      context.callStackPop();
       if not(context.adapters^.noErrors) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
@@ -602,7 +590,9 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
       preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
+      context.callStackPop();
       if not(context.adapters^.noErrors) then exit(nil);
       system.enterCriticalSection(print_cs);
       context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
@@ -756,20 +746,33 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision');
   //round might be binary...
   registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
+  builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;#Returns an internal time for time difference measurement.#'+
                                                          'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);Calls E asynchronously (without parameters) and returns void.#'+
                                                            'async(E:expression,par:list);#Calls E@par and asynchronously and returns void.#Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
+  builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);#Executes the source (string or stringList) and returns created messages');
+  builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'printf(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  builtinLocation_format.create(STRINGS_NAMESPACE,'format');
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'inspect;#Returs information on the current package#inspect(idOrPath:string);#Returns information on an imported package or a specified MNH source file');
+
+
+
+
+{$endif}
+{$ifdef include_finalization}
+  builtinLocation_group .destroy;
+  builtinLocation_time  .destroy;
+  builtinLocation_printf.destroy;
+  builtinLocation_format.destroy;
 {$endif}

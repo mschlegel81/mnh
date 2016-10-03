@@ -301,7 +301,7 @@ PROCEDURE TSynMnhSyn.next;
         end;
         if tokenTypeMap.containsKey(localId,fTokenId) then begin end
         else if (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
-        else if codeAssistant.isUserRule(localId) then fTokenId := tkUserRule
+        else if assistancEvaluator.isUserRule(localId) then fTokenId := tkUserRule
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
       end;
@@ -389,7 +389,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
-    if (flavour=msf_input) then case codeAssistant.isErrorLocation(fLineNumber,fTokenPos,run) of
+    if (flavour=msf_input) then case assistancEvaluator.isErrorLocation(fLineNumber,fTokenPos,run) of
       2: fTokenSubId:=skError;
       1: fTokenSubId:=skWarn;
     end;

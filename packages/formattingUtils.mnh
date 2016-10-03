@@ -1,0 +1,15 @@
+//*Formats a kust as a table for printout. The result is a stringList
+formatTable(L:list)->begin
+  local columnCount:=0;
+  local txt:=L.each(row,begin
+    columnCount:=max(columnCount,row.size);
+    row.each(entry,entry.toString);
+  end)
+  .{$L.head(1)|[[]]|$L.tail} //insert splitter row
+  .each(row,row.size<columnCount ? row|([row.size+1..columnCount].each(i,'')) : row) //add columns where necessary
+  .each(row,row.join("\t|\t"))
+  .join("\n")
+  .formatTabs;
+  columnCount:=txt.length.max;
+  txt.each(line,index=1 ? line.replace([' ','|'],['-','+'])&repeat('-',columnCount-line.length) : line);
+end;

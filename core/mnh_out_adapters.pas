@@ -1,6 +1,6 @@
 UNIT mnh_out_adapters;
 INTERFACE
-USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif},EpikTimer{$ifdef IMIG},mypics{$endif};
+USES mnh_constants, mnh_basicTypes, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif}{$ifdef IMIG},mypics{$endif};
 TYPE
   T_storedMessage = record
     messageType : T_messageType;
@@ -118,13 +118,6 @@ TYPE
   P_adapters=^T_adapters;
   T_adapters=object
     private
-      profiler:record
-        startOfProfiling,
-        importing,
-        tokenizing,
-        declarations,
-        interpretation:double;
-      end;
       stackTraceCount:longint;
       errorCount:longint;
       maxErrorLevel: shortint;
@@ -185,79 +178,7 @@ TYPE
       PROPERTY doEchoDeclaration:   boolean read someEchoDeclaration  ;
       PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
       PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
-
-      PROCEDURE startProfiling;
-      PROCEDURE profileImporting;
-      PROCEDURE profileTokenizing;
-      PROCEDURE profileDeclarations;
-      PROCEDURE profileInterpretation;
-      PROCEDURE appendTimingInfoIfApplicable;
   end;
-
-  {$ifdef fullVersion}
-  T_timerEntry=record
-    elapsed:extended;
-    into:longint;
-    functionId:string;
-    callCount:longint;
-  end;
-
-  T_TimerMap=specialize G_stringKeyMap<T_timerEntry>;
-
-  T_stepper=object
-    private
-      timerMap:T_TimerMap;
-
-      waitingForGUI:boolean;
-
-      breakpoints:array of T_searchTokenLocation;
-      state:(breakSoonest,
-             breakOnLineChange,
-             breakOnStepOut,
-             breakOnStepIn,
-             runUntilBreakpoint,
-             dontBreakAtAll);
-      stepLevel:longint;
-      lineChanged:boolean;
-      levelChanged:boolean;
-
-      contextPointer:pointer;
-      tokenPointer:pointer;
-      stackPointer:pointer;
-
-      currentLine:T_tokenLocation;
-      currentLevel:longint;
-      cs:TRTLCriticalSection;
-      //Single instance. So this can be private.
-      {$WARN 3018 OFF}{$WARN 3019 OFF}
-      CONSTRUCTOR create;
-      DESTRUCTOR destroy;
-      PROCEDURE clearTimers;
-      PROCEDURE stopAllTimers;
-      PROCEDURE resumeAllTimers;
-    public
-      //To be called by evaluation-loop
-      PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToFirst,pointerToContext,pointerToStack:pointer);
-      PROCEDURE steppingIn (CONST location,functionId:ansistring);
-      PROCEDURE steppingOut(CONST location:ansistring);
-
-      //To be called by GUI
-      PROCEDURE doStart(CONST continue:boolean);
-      PROCEDURE clearBreakpoints;
-      PROCEDURE addBreakpoint(CONST fileName:string; CONST line:longint);
-      PROCEDURE doStepInto;
-      PROCEDURE doStepOut;
-      PROCEDURE doStep;
-      PROCEDURE doMicrostep;
-      PROCEDURE doStop;
-      FUNCTION haltet:boolean;
-      FUNCTION context:pointer;
-      FUNCTION token:pointer;
-      FUNCTION stack:pointer;
-      FUNCTION loc:T_tokenLocation;
-      PROCEDURE showTimeInfo(VAR adapters:T_adapters);
-  end;
-  {$endif}
 
 CONST
   C_defaultOutputBehavior_interactive:T_outputBehaviour=(
@@ -283,11 +204,8 @@ CONST
     minErrorLevel:       1);
 
 VAR
-  wallClock: specialize G_lazyVar<TEpikTimer>;
   defaultOutputBehavior:T_outputBehaviour;
 {$ifdef fullVersion}
-  stepper:T_stepper;
-  currentlyDebugging:boolean=false;
   gui_started:boolean=false;
 {$endif}
 FUNCTION message(CONST messageType  : T_messageType;
@@ -706,13 +624,6 @@ PROCEDURE T_adapters.clearAll;
       hasHtmlAdapter       :=hasHtmlAdapter        or (adapter[i]^.adapterType=at_htmlFile);
       {$endif}
     end;
-    with profiler do begin
-      startOfProfiling:=-1;
-      importing       :=0;
-      tokenizing      :=0;
-      declarations    :=0;
-      interpretation  :=0;
-    end;
   end;
 
 PROCEDURE T_adapters.stopEvaluation;
@@ -893,351 +804,9 @@ PROCEDURE T_adapters.setExitCode;
     if maxErrorLevel>MAX_IGNORED_LEVEL then ExitCode:=maxErrorLevel;
   end;
 
-
-PROCEDURE T_adapters.startProfiling;        begin with profiler do if someShowTimingInfo and (startOfProfiling<0) then startOfProfiling:=wallClock.value.elapsed; end;
-PROCEDURE T_adapters.profileImporting;      begin with profiler do importing     :=wallClock.value.elapsed-importing     ; end;
-PROCEDURE T_adapters.profileTokenizing;     begin with profiler do tokenizing    :=wallClock.value.elapsed-tokenizing    ; end;
-PROCEDURE T_adapters.profileDeclarations;   begin with profiler do declarations  :=wallClock.value.elapsed-declarations  ; end;
-PROCEDURE T_adapters.profileInterpretation; begin with profiler do interpretation:=wallClock.value.elapsed-interpretation; end;
-
-PROCEDURE T_adapters.appendTimingInfoIfApplicable;
-  VAR importing_     ,
-      tokenizing_    ,
-      declarations_  ,
-      interpretation_,
-      unaccounted_   ,
-      total_         ,
-      timeUnit:string;
-      unaccounted,
-      totalTime:double;
-      longest:longint=0;
-      formatString:ansistring;
-
-  FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
-  FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
-  begin
-    with profiler do begin
-      totalTime:=wallClock.value.elapsed-startOfProfiling;
-      unaccounted:=totalTime-importing-tokenizing-declarations-interpretation;
-      if totalTime<1 then begin
-        importing     :=importing     *1000;
-        tokenizing    :=tokenizing    *1000;
-        declarations  :=declarations  *1000;
-        interpretation:=interpretation*1000;
-        unaccounted   :=unaccounted   *1000;
-        totalTime     :=totalTime     *1000;
-        timeUnit:='ms';
-        formatString:='0.000';
-      end else begin
-        timeUnit:='s';
-        formatString:='0.000000';
-      end;
-      importing_     :=fmt(importing     );
-      tokenizing_    :=fmt(tokenizing    );
-      declarations_  :=fmt(declarations  );
-      interpretation_:=fmt(interpretation);
-      unaccounted_   :=fmt(unaccounted   );
-      total_         :=fmt(totalTime     );
-      if importing     >0 then raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),C_nilTokenLocation);
-      if tokenizing    >0 then raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),C_nilTokenLocation);
-      if declarations  >0 then raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),C_nilTokenLocation);
-      if interpretation>0 then raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),C_nilTokenLocation);
-      if unaccounted   >0 then raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),C_nilTokenLocation);
-                               raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))   ),C_nilTokenLocation);
-                               raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),C_nilTokenLocation);
-    end;
-    {$ifdef FULLVERSION}
-    if currentlyDebugging then stepper.showTimeInfo(self);
-    {$endif}
-  end;
-
 //===================================================================:T_adapters
-{$ifdef fullVersion}
-CONSTRUCTOR T_stepper.create;
-  begin
-    timerMap.create();
-    system.initCriticalSection(cs);
-    setLength(breakpoints,0);
-    state:=breakSoonest;
-    contextPointer:=nil;
-    tokenPointer:=nil;
-    stackPointer:=nil;
-  end;
-
-DESTRUCTOR T_stepper.destroy;
-  begin
-    clearTimers;
-    timerMap.destroy;
-    system.doneCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.clearTimers;
-  begin
-    timerMap.clear;
-  end;
-
-PROCEDURE T_stepper.stopAllTimers;
-  begin
-    wallClock.value.stop;
-  end;
-
-PROCEDURE T_stepper.resumeAllTimers;
-  begin
-    wallClock.value.start;
-  end;
-
-PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFirst, pointerToContext, pointerToStack: pointer);
-  FUNCTION breakpointEncountered:boolean;
-    VAR i:longint;
-    begin
-      for i:=0 to length(breakpoints)-1 do
-        if (breakpoints[i].fileName=location.package^.getPath) and
-           (breakpoints[i].line    =location.line            ) then exit(true);
-      result:=false;
-    end;
-
-  begin
-    system.enterCriticalSection(cs);
-    if state=dontBreakAtAll then begin
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    lineChanged:=lineChanged or (currentLine.package<>location.package) or (currentLine.line<>location.line);
-    if (state=breakSoonest) or
-       (state=breakOnStepIn) and (currentLevel>stepLevel) or
-       (state=breakOnStepOut) and (currentLevel<stepLevel) or
-      ((state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and (lineChanged and levelChanged))) or
-      ((lineChanged or levelChanged or (currentLevel<>stepLevel)) and breakpointEncountered) then begin
-      {$ifdef DEBUGMODE}
-      if (state=breakSoonest)                                 then writeln('Break condition met: breakSoonest');
-      if (state=breakOnStepIn) and (currentLevel>stepLevel) then writeln('Break condition met: breakOnStepIn');
-      if (state=breakOnStepOut) and (currentLevel<stepLevel)then writeln('Break condition met: breakOnStepOut');
-      if (state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and (lineChanged and levelChanged)) then writeln('Break condition met: breakOnLineChange');
-      if (lineChanged or levelChanged or (currentLevel<>stepLevel)) and breakpointEncountered then writeln('Break condition met: breakpointEncountered');
-      {$endif}
-      lineChanged:=false;
-      levelChanged:=false;
-      stepLevel:=currentLevel;
-      currentLine:=location;
-      contextPointer:=pointerToContext;
-      tokenPointer:=pointerToFirst;
-      stackPointer:=pointerToStack;
-      stopAllTimers;
-      waitingForGUI:=true;
-      repeat
-        system.leaveCriticalSection(cs);
-        sleep(10);
-        system.enterCriticalSection(cs);
-      until not(waitingForGUI);
-      resumeAllTimers;
-    end;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.steppingIn(CONST location,functionId:ansistring);
-  VAR t:T_timerEntry;
-  begin
-    system.enterCriticalSection(cs);
-    levelChanged:=true;
-    if not(timerMap.containsKey(location,t)) then begin
-      t.elapsed:=wallClock.value.elapsed;
-      t.into:=1;
-      t.callCount:=1;
-      t.functionId:=functionId;
-    end else begin
-      if t.into<=0 then t.elapsed:=wallClock.value.elapsed-t.elapsed;
-      inc(t.callCount);
-      inc(t.into);
-      if t.functionId='' then t.functionId:=functionId;;
-    end;
-    timerMap.put(location,t);
-
-    inc(currentLevel);
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.steppingOut(CONST location:ansistring);
-  VAR t:T_timerEntry;
-  begin
-    system.enterCriticalSection(cs);
-    levelChanged:=true;
-    dec(currentLevel);
-    if timerMap.containsKey(location,t) then begin
-      dec(t.into);
-      if t.into<=0 then t.elapsed:=wallClock.value.elapsed-t.elapsed;
-      timerMap.put(location,t);
-    end;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.doStep;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakOnLineChange;
-    stepLevel:=currentLevel;
-    waitingForGUI:=false;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.doMicrostep;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakSoonest;
-    stepLevel:=currentLevel;
-    waitingForGUI:=false;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.doStop;
-  begin
-    system.enterCriticalSection(cs);
-    state:=dontBreakAtAll;
-    waitingForGUI:=false;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.doStart(CONST continue: boolean);
-  begin
-    system.enterCriticalSection(cs);
-    if not(continue) then begin
-      clearTimers;
-      lineChanged:=true;
-      levelChanged:=true;
-      stepLevel:=0;
-      currentLevel:=0;
-      currentLine.package:=nil;
-      currentLine.column:=0;
-      currentLine.line:=0;
-      state:=runUntilBreakpoint;
-      wallClock.value.clear;
-      wallClock.value.start;
-    end else state:=runUntilBreakpoint;
-    waitingForGUI:=false;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.clearBreakpoints;
-  begin
-    system.enterCriticalSection(cs);
-    setLength(breakpoints,0);
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.addBreakpoint(CONST fileName:string; CONST line: longint);
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    i:=length(breakpoints);
-    setLength(breakpoints,i+1);
-    breakpoints[i].fileName:=fileName;
-    breakpoints[i].line:=line;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.doStepInto;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakOnStepIn;
-    waitingForGUI:=false;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.doStepOut;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakOnStepOut;
-    waitingForGUI:=false;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_stepper.haltet: boolean;
-  begin
-    system.enterCriticalSection(cs);
-    result:=waitingForGUI;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_stepper.context: pointer;
-  begin
-    result:=contextPointer;
-  end;
-
-FUNCTION T_stepper.token: pointer;
-  begin
-    result:=tokenPointer;
-  end;
-
-FUNCTION T_stepper.stack:pointer;
-  begin
-    result:=stackPointer;
-  end;
-
-FUNCTION T_stepper.loc: T_tokenLocation;
-  begin
-    result:=currentLine;
-  end;
-
-PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
-  FUNCTION nicestTime(CONST seconds:double):string;
-    begin
-      if seconds>=10         then result:=formatFloat('0.000',seconds)+C_invisibleTabChar+'s'
-      else if seconds>=10E-3 then result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms'
-      else                        result:=formatFloat('0.000',seconds*1E6)+C_invisibleTabChar+'µs';
-    end;
-
-  CONST headerLine='Location'+C_tabChar+'ID'+C_tabChar+'count'+C_tabChar+'time';
-  VAR entrySet:T_TimerMap.KEY_VALUE_LIST;
-      i,j:longint;
-      swapTemp:T_TimerMap.KEY_VALUE_PAIR;
-      linesToPrint:T_arrayOfString;
-  begin
-    entrySet:=timerMap.entrySet;
-    for j:=1 to length(entrySet)-1 do for i:=0 to j-1 do if entrySet[i].value.elapsed<entrySet[j].value.elapsed then begin
-      swapTemp:=entrySet[i];
-      entrySet[i]:=entrySet[j];
-      entrySet[j]:=swapTemp;
-    end;
-    setLength(linesToPrint,length(entrySet)+1);
-    linesToPrint[0]:=headerLine;
-    for i:=0 to length(entrySet)-1 do begin
-      if startsWith(entrySet[i].key,BUILTIN_PSEUDO_LOCATION_PREFIX)
-      then linesToPrint[i+1]:=BUILTIN_PSEUDO_LOCATION_PREFIX
-      else linesToPrint[i+1]:=entrySet[i].key;
-      linesToPrint[i+1]:=linesToPrint[i+1]+C_tabChar+
-                       entrySet[i].value.functionId+C_tabChar+
-                       intToStr(entrySet[i].value.callCount)+C_tabChar+
-                       nicestTime(entrySet[i].value.elapsed);
-    end;
-    linesToPrint:=formatTabs(linesToPrint);
-
-    adapters.raiseCustomMessage(mt_timing_info,'',C_nilTokenLocation);
-    adapters.raiseCustomMessage(mt_timing_info,'Time spent by locations:',C_nilTokenLocation);
-    for i:=0 to length(linesToPrint)-1 do adapters.raiseCustomMessage(mt_timing_info,linesToPrint[i],C_nilTokenLocation);
-  end;
-{$endif}
-FUNCTION initTimer:TEpikTimer;
-  begin
-    result:=TEpikTimer.create(nil);
-    result.clear;
-    result.start;
-  end;
-
-PROCEDURE disposeTimer(t:TEpikTimer);
-  begin
-    t.destroy;
-  end;
 
 INITIALIZATION
-  wallClock.create(@initTimer,@disposeTimer);
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
-  {$ifdef fullVersion}
-  stepper.create;
-  {$endif}
-
-FINALIZATION
-  wallClock.destroy;
-  {$ifdef fullVersion}
-  stepper.destroy;
-  {$endif}
 
 end.

@@ -1,6 +1,6 @@
 UNIT mnh_html;
 INTERFACE
-USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens,base64;
+USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_basicTypes,FileUtil,mnh_tokens,base64;
 CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head>'+
   '<meta charset="UTF8"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
   'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+

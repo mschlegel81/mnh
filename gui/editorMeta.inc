@@ -310,7 +310,7 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
 PROCEDURE T_editorMeta.setStepperBreakpoints;
   VAR i:longint;
   begin
-    for i:=0 to editor.Marks.count-1 do stepper.addBreakpoint(pseudoName,editor.Marks[i].line);
+    for i:=0 to editor.Marks.count-1 do runEvaluator.context.addBreakpoint(pseudoName,editor.Marks[i].line);
   end;
 
 PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);

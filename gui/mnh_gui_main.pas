@@ -5,13 +5,13 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, SynEdit, SynEditTypes, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
-  SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_tokLoc,
+  SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,SynPluginMultiCaret,
-  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables, openDemoDialog{$ifdef imig},mnh_imig_form{$endif};
+  mnh_plotForm{$ifdef imig},mnh_imig_form{$endif},newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,SynPluginMultiCaret,
+  SynEditMiscClasses, LazUTF8, mnh_tables, openDemoDialog;
 
 TYPE
   {$define includeInterface}
@@ -270,6 +270,7 @@ TYPE
     FUNCTION _doSave_(CONST index:longint):boolean;
     PROCEDURE updateDebugParts;
     PROCEDURE handleBreak;
+    FUNCTION preferredContextType:T_contextType;
   public
     editorMeta:array of T_editorMeta;
     FUNCTION addEditorMetaForNewFile(CONST newFileName: ansistring=''):longint;
@@ -378,7 +379,7 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setMarkedWord(wordText);
     end;
-    if miHelp.Checked or forJump then with editorMeta[PageControl.activePageIndex].editor do codeAssistant.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
+    if miHelp.Checked or forJump then with editorMeta[PageControl.activePageIndex].editor do assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
     if miHelp.Checked then begin
       helpPopupMemo.text:=underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
@@ -431,18 +432,12 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
     end;
     underCursor.tokenText:='';
     if miDebug.Checked or reEvaluating and profilingRun then begin
-      currentlyDebugging:=true;
-      if reEvaluating and profilingRun then stepper.clearBreakpoints;
+      if reEvaluating and profilingRun then runEvaluator.context.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].startDebugging;
-      stepper.doStart(false);
       updateDebugParts;
-    end else begin
-      currentlyDebugging:=false;
-      wallClock.value.clear;
-      wallClock.value.start;
     end;
     breakPointHandlingPending:=true;
-    UpdateTimeTimer.interval:=20;
+    UpdateTimeTimer.interval:=1;
   end;
 
 PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
@@ -554,8 +549,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR i:integer;
   begin
-    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
-    stepper.doStop;
+    if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
+    if assistancEvaluator.evaluationRunning then assistancEvaluator.haltEvaluation;
     for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
   end;
 
@@ -637,7 +632,8 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     UpdateTimeTimer.enabled:=true;
     if reEvaluationWithGUIrequired then begin
       doStartEvaluation(true,true);
-      runEvaluator.reEvaluateWithGUI;
+      if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
+                      else runEvaluator.reEvaluateWithGUI(ct_normal);
       setEditorMode(false);
     end;
   end;
@@ -649,7 +645,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (PageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[PageControl.activePageIndex].sheet.tabVisible)) then exit;
 
-    with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines);
+    with editorMeta[PageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
     editorMeta[PageControl.activePageIndex].changed:=editorMeta[PageControl.activePageIndex].editor.modified;
     caption:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
   end;
@@ -660,7 +656,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
     then inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,false,false);
-    if currentlyDebugging and runEvaluator.evaluationRunning then begin
+    if runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning then begin
       if (key=116) and tbRun      .enabled then tbRunClick(Sender);
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
       if (key=118) and tbStep     .enabled then tbStepClick(Sender);
@@ -699,9 +695,8 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
     end;
     if (command=ecUserDefinedFirst+3) then begin
       editorMeta[PageControl.activePageIndex].toggleBreakpoint;
-      stepper.clearBreakpoints;
+      runEvaluator.context.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setStepperBreakpoints;
-      if runEvaluator.evaluationRunning and not(miDebug.Checked) then runEvaluator.haltEvaluation;
       miDebug.Checked:=true;
       updateDebugParts;
     end;
@@ -715,7 +710,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
       doStartEvaluation(true,false);
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters);
+      with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
@@ -757,12 +752,10 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
 PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
   begin
     runEvaluator.haltEvaluation;
-    stepper.doStop;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   begin
-    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     miDebug.Checked:=not(miDebug.Checked);
     updateDebugParts;
   end;
@@ -789,7 +782,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     if now>evaluation.deferredUntil then begin
       doStartEvaluation(true,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines);
+      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
     end else evaluation.required:=true;
   end;
 
@@ -919,18 +912,22 @@ PROCEDURE TMnhForm.updateDebugParts;
     end;
 
   VAR i:longint;
+      isPaused:boolean;
+      isRunning:boolean;
   begin
     if miDebug.Checked then begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=true;
       DebugToolbar.visible:=true;
       DebugToolbar.enabled:=true;
       DebugToolbar.top:=0;
-      handleButton(tbStop,runEvaluator.evaluationRunning,2);
-      handleButton(tbRun,not(runEvaluator.evaluationRunning) or stepper.haltet,0);
-      handleButton(tbStep,runEvaluator.evaluationRunning and stepper.haltet,4);
-      handleButton(tbStepIn,runEvaluator.evaluationRunning and stepper.haltet,6);
-      handleButton(tbStepOut,runEvaluator.evaluationRunning and stepper.haltet,8);
-      handleButton(tbMicroStep,runEvaluator.evaluationRunning and stepper.haltet,10);
+      isPaused:=runEvaluator.context.paused;
+      isRunning:=runEvaluator.evaluationRunning;
+      handleButton(tbStop     ,    isRunning             ,2);
+      handleButton(tbRun      ,not(isRunning) or isPaused,0);
+      handleButton(tbStep     ,    isRunning and isPaused,4);
+      handleButton(tbStepIn   ,    isRunning and isPaused,6);
+      handleButton(tbStepOut  ,    isRunning and isPaused,8);
+      handleButton(tbMicroStep,    isRunning and isPaused,10);
     end else begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.activePage:=outputTabSheet;
@@ -939,18 +936,28 @@ PROCEDURE TMnhForm.updateDebugParts;
     end;
   end;
 
+FUNCTION TMnhForm.preferredContextType:T_contextType;
+  begin
+    if miDebug.Checked then result:=ct_debugging
+    else if reEvaluationWithGUIrequired and profilingRun
+    then result:=ct_profiling
+    else result:=ct_normal;
+  end;
+
 PROCEDURE TMnhForm.handleBreak;
+  VAR snapshot:T_debuggingSnapshot;
+
   PROCEDURE jumpToFile;
     VAR pageIdx:longint;
         newCaret:TPoint;
     begin
       debugLine.line:=-1;
-      if (stepper.loc.package=nil) then exit;
-      pageIdx:=addOrGetEditorMetaForFile(stepper.loc.package^.getPath);
+      if (snapshot.location.package=nil) then exit;
+      pageIdx:=addOrGetEditorMetaForFile(snapshot.location.package^.getPath);
       if pageIdx>=0 then begin
         PageControl.activePageIndex:=pageIdx;
-        newCaret.x:=stepper.loc.column;
-        newCaret.y:=stepper.loc.line;
+        newCaret.x:=snapshot.location.column;
+        newCaret.y:=snapshot.location.line;
         editorMeta[pageIdx].editor.CaretXY:=newCaret;
         debugLine.editor:=editorMeta[pageIdx].editor;
         debugLine.line:=newCaret.y;
@@ -958,20 +965,20 @@ PROCEDURE TMnhForm.handleBreak;
       end;
     end;
 
-  VAR context:P_evaluationContext;
-      report:T_variableReport;
+  VAR report:T_variableReport;
       i:longint;
-      first:P_token;
-      stack:P_tokenStack;
   begin
-    if not(stepper).haltet then exit;
+    if runEvaluator.context.paused then exit;
+    snapshot:=runEvaluator.context.getDebuggingSnapshot;
+
     breakPointHandlingPending:=false;
     jumpToFile;
 
-    context:=P_evaluationContext(stepper.context);
+
+
     report.create;
     runEvaluator.reportVariables(report);
-    if context<>nil then context^.reportVariables(report);
+    runEvaluator.context.reportVariables(report);
 
     variablesStringGrid.RowCount:=length(report.dat)+1;
     for i:=0 to length(report.dat)-1 do begin
@@ -980,10 +987,8 @@ PROCEDURE TMnhForm.handleBreak;
       variablesStringGrid.Cells[2,length(report.dat)-i]:=report.dat[i].value^.typeString;
       variablesStringGrid.Cells[3,length(report.dat)-i]:=report.dat[i].value^.toString;
     end;
-    first:=stepper.token;
-    stack:=stepper.stack;
     currentExpressionMemo.clear;
-    if first<>nil then currentExpressionMemo.lines.append(stack^.toString(first,120));
+    currentExpressionMemo.lines.append(snapshot.state);
     updateDebugParts;
   end;
 
@@ -1135,7 +1140,7 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
     if PageControl.activePageIndex>=0 then begin
       SynCompletion.editor:=editorMeta[PageControl.activePageIndex].editor;
       settings.value^.activePage:=PageControl.activePageIndex;
-      with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines);
+      with editorMeta[PageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
     end;
   end;
 
@@ -1149,7 +1154,7 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
         exit;
       end;
       if polishHistory then processFileHistory;
-      fileName:=codeAssistant.resolveImport(idOrName);
+      fileName:=assistancEvaluator.resolveImport(idOrName);
       if (fileName<>'') and fileExists(fileName) then PageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
   end;
@@ -1197,7 +1202,7 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
         if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
     end;
-    codeAssistant.extendCompletionList(wordsInEditor);
+    assistancEvaluator.extendCompletionList(wordsInEditor);
     wordsInEditor.unique;
   end;
 
@@ -1231,7 +1236,7 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
 
 PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
   begin
-    stepper.doMicrostep;
+    runEvaluator.context.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
@@ -1254,7 +1259,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         if (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta))
         then begin
           aid:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
-          editorMeta[PageControl.activePageIndex].repaintWithStateCounter(codeAssistant.getStateCounter,codeAssistant.getErrorHints);
+          editorMeta[PageControl.activePageIndex].repaintWithStateCounter(assistancEvaluator.getStateCounter,assistancEvaluator.getErrorHints);
         end else aid:=APP_TITLE;
         if aid<>caption then caption:=aid;
         //-------------------------------------------------------------:Form caption
@@ -1264,8 +1269,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       then aid:=C_tabChar+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretX)
       else aid:='';
       if isEvaluationRunning then begin
-        if currentlyDebugging then begin
-          if stepper.haltet then begin
+        if runEvaluator.context.hasOption(cp_debug) then begin
+          if runEvaluator.context.paused then begin
             StatusBar.SimpleText:='Debugging [HALTED]'+aid;
             if breakPointHandlingPending then handleBreak;
           end else StatusBar.SimpleText:='Debugging...'+aid;
@@ -1309,7 +1314,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if evaluation.required and not(runEvaluator.evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation(false,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines);
+      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
@@ -1426,32 +1431,32 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     if not(runEvaluator.evaluationRunning) then begin
       doStartEvaluation(true,false);
       if lastStart.mainCall then begin
-        with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters);
+        with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,ct_debugging);
       end else begin
-        with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines);
+        with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,ct_debugging);
       end;
-    end else stepper.doStart(true);
+    end else runEvaluator.context.doContinue;
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
   begin
-    stepper.doStepInto;
+    runEvaluator.context.doStepInto;
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
 
 PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
   begin
-    stepper.doStep;
+    runEvaluator.context.doStep;
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
 
 PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
   begin
-    stepper.doStepOut;
+    runEvaluator.context.doStepOut;
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
@@ -1459,12 +1464,11 @@ PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
 PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
   begin
     runEvaluator.haltEvaluation;
-    stepper.doStop;
   end;
 
 PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=currentlyDebugging and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
@@ -1541,7 +1545,7 @@ PROCEDURE TMnhForm.processSettings;
       SettingsForm.ensureFont(OutputEdit.Font);
 
       setLength(editorMeta,length(settings.value^.editorState));
-      stepper.clearBreakpoints;
+      runEvaluator.context.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do begin
         editorMeta[i].create(i,settings.value^.editorState[i]);
         editorMeta[i].setStepperBreakpoints;
@@ -1556,7 +1560,7 @@ PROCEDURE TMnhForm.processSettings;
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta)) then with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines);
+      if not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta)) then with editorMeta[PageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;

@@ -1,25 +1,44 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
+USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_basicTypes,mnh_contexts,
      myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  P_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+
+  P_identifiedInternalFunction=^T_identifiedInternalFunction;
+  T_identifiedInternalFunction=object(T_objectWithIdAndLocation)
+    location:T_tokenLocation;
+    id:T_idString;
+    CONSTRUCTOR create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
+    DESTRUCTOR destroy;
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION getLocation:T_tokenLocation; virtual;
+  end;
+
+  P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
+  T_mnhSystemPseudoPackage=object(T_objectWithPath)
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION getPath:ansistring; virtual;
+  end;
 
 VAR
-  intrinsicRuleMap:specialize G_stringKeyMap<T_intFuncCallback>;
+  intrinsicRuleMap:specialize G_stringKeyMap<P_intFuncCallback>;
   print_cs        :system.TRTLCriticalSection;
 
-PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
 VAR mnhParameters:P_listLiteral=nil;
+    mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
-PROCEDURE registerRule(CONST namespace: T_namespace; CONST name: ansistring; CONST ptr: T_intFuncCallback; CONST explanation: ansistring; CONST fullNameOnly: boolean);
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
   begin
+    result:=ptr;
     if not(fullNameOnly) then
-    intrinsicRuleMap.put(                                                    name,ptr);
-    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,ptr);
+    intrinsicRuleMap.put(                                                  name,result);
+    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
@@ -72,7 +91,7 @@ FUNCTION typeOf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then exit(newStringLiteral(params^.value(0)^.typeString))
-    else exit(newStringLiteral(params^.parameterListTypeString));
+    else exit(newStringLiteral(parameterListTypeString(params)));
   end;
 
 FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -180,8 +199,42 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;
 
+CONSTRUCTOR T_mnhSystemPseudoPackage.create;
+  begin end;
+
+DESTRUCTOR T_mnhSystemPseudoPackage.destroy;
+  begin end;
+
+FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
+  begin
+    result:='[MNH]';
+  end;
+
+CONSTRUCTOR T_identifiedInternalFunction.create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
+  begin
+    id:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
+    location.package:=mnhSystemPseudoPackage;
+    location.column:=1;
+    location.line:=hash(unqualifiedId);
+  end;
+
+DESTRUCTOR T_identifiedInternalFunction.destroy;
+  begin end;
+
+FUNCTION T_identifiedInternalFunction.getId: T_idString;
+  begin
+    result:=id;
+  end;
+
+FUNCTION T_identifiedInternalFunction.getLocation: T_tokenLocation;
+  begin
+    result:=location;
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
+  new(mnhSystemPseudoPackage,create);
+
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');
@@ -207,6 +260,7 @@ INITIALIZATION
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);
   intrinsicRuleMap.destroy;
+  dispose(mnhSystemPseudoPackage,destroy);
   system.doneCriticalSection(print_cs);
 
 end.

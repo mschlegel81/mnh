@@ -3,7 +3,7 @@ UNIT mnh_litVar;
 {$Q-}
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
-USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
+USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes;
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -132,7 +132,7 @@ TYPE
     DESTRUCTOR destroy; virtual;
   public
     FUNCTION value: pointer;
-    FUNCTION evaluate(CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+    FUNCTION evaluate(CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal;
     FUNCTION arity:longint;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
@@ -179,7 +179,6 @@ TYPE
     PROCEDURE modifyType(CONST L:P_literal); inline;
   public
     CONSTRUCTOR create;
-    FUNCTION toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
     FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_listLiteral;
     FUNCTION appendString(CONST s:ansistring):P_listLiteral;
     FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
@@ -203,7 +202,7 @@ TYPE
     FUNCTION value(index: longint): P_literal;
     PROCEDURE sort;
     PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_adapters);
-    PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; VAR adapters:T_adapters);
+    PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; CONST location:T_tokenLocation; VAR adapters:T_adapters);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
     PROCEDURE toKeyValueList;
@@ -222,7 +221,6 @@ TYPE
     FUNCTION get(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION typeString:string; virtual;
-    FUNCTION parameterListTypeString:string;
     FUNCTION transpose:P_listLiteral;
   end;
 
@@ -261,8 +259,8 @@ TYPE
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
   T_pointerToStringCallback = FUNCTION(CONST p: pointer; CONST lengthLimit:longint): string;
   T_pointerToIntCallback = FUNCTION(CONST p: pointer): longint;
-  T_evaluateCompatorCallback = FUNCTION (CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
-  T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral;  CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+  T_evaluateCompatorCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
+  T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST location:T_tokenLocation; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
 
   T_format=packed object
     category:(fmtCat_decimal,
@@ -316,6 +314,8 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression,tryCompressStrings:boolean):ansistring;
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
+FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
+FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
@@ -782,23 +782,27 @@ FUNCTION T_listLiteral.listConstructorToString(CONST lengthLimit:longint=maxLong
   end;
 
 //===================================================================:?.toString
-FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
+FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
   VAR i,remainingLength: longint;
   begin
-    if datFill = 0 then if isFinalized then exit('()')
-                                       else exit('(');
-    remainingLength:=lengthLimit-1;
-    result:='('+dat[0]^.toString(lengthLimit);
-    for i:=1 to datFill-1 do if remainingLength>0 then begin
-      remainingLength:=lengthLimit-length(result);
-      result:=result+','+dat[i]^.toString;
-    end else begin
-      result:=result+',... ';
-      break;
-    end;
-    if isFinalized then result:=result+')'
-                   else result:=result+',';
+    if list<>nil then with list^ do begin
+      if datFill = 0 then if isFinalized then exit('()')
+                                         else exit('(');
+      remainingLength:=lengthLimit-1;
+      result:='('+dat[0]^.toString(lengthLimit);
+      for i:=1 to datFill-1 do if remainingLength>0 then begin
+        remainingLength:=lengthLimit-length(result);
+        result:=result+','+dat[i]^.toString;
+      end else begin
+        result:=result+',... ';
+        break;
+      end;
+      if isFinalized then result:=result+')'
+                     else result:=result+',';
+    end else if isFinalized then exit('()')
+                            else exit('(');
   end;
+
 
 //?.stringForm:=================================================================
 FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
@@ -937,13 +941,15 @@ FUNCTION T_listLiteral.typeString:string;
     result:=C_typeString[literalType]+'('+intToStr(datFill)+')';
   end;
 
-FUNCTION T_listLiteral.parameterListTypeString:string;
+FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
   VAR i:longint;
   begin
-    if datFill<=0 then exit('()');
-    result:='('+dat[0]^.typeString;
-    for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
-    result:=result+')';
+    if (list=nil) or (list^.datFill<=0) then exit('()');
+    with list^ do begin
+      result:='('+dat[0]^.typeString;
+      for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
+      result:=result+')';
+    end;
   end;
 
 FUNCTION T_listLiteral.transpose:P_listLiteral;
@@ -1058,9 +1064,9 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
 
 //=====================================================================:?.equals
 
-FUNCTION T_expressionLiteral.evaluate(CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+FUNCTION T_expressionLiteral.evaluate(CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal;
   begin
-    result:=evaluateSubruleCallback(@self,parameters,context);
+    result:=evaluateSubruleCallback(@self,location,parameters,context);
   end;
 
 FUNCTION T_expressionLiteral.arity:longint;
@@ -1597,11 +1603,11 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:
     dropIndexes;
   end;
 
-PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; VAR adapters: T_adapters);
+PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location:T_tokenLocation; VAR adapters: T_adapters);
   VAR temp: array of P_literal;
       scale: longint;
       i, j0, j1, k: longint;
-  FUNCTION isLeq(a,b:P_literal):boolean; inline; begin result:=evaluateCompatorCallback(leqExpression,a,b,adapters); end;
+  FUNCTION isLeq(a,b:P_literal):boolean; inline; begin result:=evaluateCompatorCallback(leqExpression,a,b,location,adapters); end;
 
   begin
     if datFill<=1 then exit;

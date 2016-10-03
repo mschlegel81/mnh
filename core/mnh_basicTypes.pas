@@ -1,7 +1,16 @@
-UNIT mnh_tokLoc;
+UNIT mnh_basicTypes;
 INTERFACE
-USES sysutils, mnh_fileWrappers,mnh_constants;
+USES sysutils;
 TYPE
+  T_hashInt  =dword;
+  T_idString =shortString;
+  T_myFloat = extended;
+
+  P_objectWithPath=^T_objectWithPath;
+  T_objectWithPath=object
+    FUNCTION getPath:ansistring; virtual; abstract;
+  end;
+
   T_searchTokenLocation = record
     fileName: ansistring;
     line, column: longint;
@@ -10,12 +19,17 @@ CONST
   C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 TYPE
   T_tokenLocation = record
-    package:P_abstractPackage;
+    package:P_objectWithPath;
     line, column: longint;
   end;
 
-FUNCTION fileTokenLocation(CONST provider: P_codeProvider): T_searchTokenLocation;
-FUNCTION packageTokenLocation(CONST package:P_abstractPackage):T_tokenLocation;
+  P_objectWithIdAndLocation=^T_objectWithIdAndLocation;
+  T_objectWithIdAndLocation=object
+    FUNCTION getId:T_idString; virtual; abstract;
+    FUNCTION getLocation:T_tokenLocation; virtual; abstract;
+  end;
+
+FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
 FUNCTION lineLocation(CONST loc:T_tokenLocation):T_tokenLocation;
 OPERATOR := (CONST x: T_tokenLocation): ansistring;
 OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
@@ -23,15 +37,7 @@ OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
 IMPLEMENTATION
-
-FUNCTION fileTokenLocation(CONST provider: P_codeProvider): T_searchTokenLocation;
-  begin
-    result.fileName := provider^.getPath;
-    result.line := 1;
-    result.column := 1;
-  end;
-
-FUNCTION packageTokenLocation(CONST package:P_abstractPackage):T_tokenLocation;
+FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
   begin
     result.package:=package;
     result.line := 1;
@@ -104,3 +110,4 @@ FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithout
   end;
 
 end.
+

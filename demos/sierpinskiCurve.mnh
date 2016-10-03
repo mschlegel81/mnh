@@ -5,21 +5,21 @@ sc(depth)->begin
   local position:=[0.353553390593275,0.707106781186549]*2;
   local direction:=deg45;
   local half:={$level <=0 ? result|=[position+=[cos(direction),sin(direction)]] : begin
-    $self($level-1);
+    half($level-1);
     direction+=deg45;
     result|=[position+=[cos(direction),sin(direction)]*sqrt(2)];
     direction+=deg45;
-    $self($level-1);
+    half($level-1);
 
     direction-=deg45*2;
     result|=[position+=[cos(direction),sin(direction)]];
     direction-=deg45*2;
 
-    $self($level-1);
+    half($level-1);
     direction+=deg45;
     result|=[position+=[cos(direction),sin(direction)]*sqrt(2)];
     direction+=deg45;
-    $self($level-1);
+    half($level-1);
   end};
   [0..1].each(i,begin
     half(depth);

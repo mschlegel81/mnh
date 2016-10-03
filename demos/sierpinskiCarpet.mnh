@@ -1,2 +1,7 @@
+carpet(x:int,y:int)->(x mod 3)<>1 OR (y mod 3)<>1
+                      ? x>2<y
+                        ? carpet(x div 3,y div 3)
+                        : "[]"
+                      : "  ";
 //*See <a href="http://rosettacode.org/wiki/Sierpinski_carpet">http://rosettacode.org/wiki/Sierpinski_carpet</a>
-main->printf("%s", [0..80].each(i,[0..80].each(j,{($ix mod 3)<>1 OR ($iy mod 3)<>1 ? ($ix>2<$iy ? $self($ix div 3,$iy div 3) : "[]") : "  "}(i,j),&)));
+main->printf("%s",[0..80].each(i,[0..80].each(j,carpet(i,j),&)));
