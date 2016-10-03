@@ -131,8 +131,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_customTypeCheck: result:=':'+txt;
       tt_aggregatorExpressionLiteral,
       tt_literal            : result:=P_literal    (data)^.toString(limit);
-      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false,limit);
-      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true ,limit);
+      tt_parList_constructor: result:=toParameterListString(P_listLiteral(data),false,limit);
+      tt_parList            : result:=toParameterListString(P_listLiteral(data),true ,limit);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';

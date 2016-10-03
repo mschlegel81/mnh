@@ -497,7 +497,7 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
       end;
       context.cascadeDisposeToken(firstRep);
     end else begin
-      context.adapters^.raiseError('Cannot apply function to parameters: '+params^.toParameterListString(true),declaredAt);
+      context.adapters^.raiseError('Cannot apply function to parameters: '+toParameterListString(params,true),declaredAt);
       result:=nil;
     end;
   end;
@@ -789,7 +789,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         end;
         //fallback: ensure that new samples are always added
         if length(newTimes)=0 then begin
-          {$ifdef DEBUGMODE}writeln(stderr,'Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
+          {$ifdef DEBUGMODE}writeln(stdErr,'Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
           setLength(newTimes,length(tRow)-1);
           for i:=1 to length(tRow)-1 do begin
             t:=tRow[i]*0.5+tRow[i-1]*0.5;

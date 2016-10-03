@@ -179,7 +179,6 @@ TYPE
     PROCEDURE modifyType(CONST L:P_literal); inline;
   public
     CONSTRUCTOR create;
-    FUNCTION toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
     FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_listLiteral;
     FUNCTION appendString(CONST s:ansistring):P_listLiteral;
     FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
@@ -222,7 +221,6 @@ TYPE
     FUNCTION get(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION typeString:string; virtual;
-    FUNCTION parameterListTypeString:string;
     FUNCTION transpose:P_listLiteral;
   end;
 
@@ -316,6 +314,8 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression,tryCompressStrings:boolean):ansistring;
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
+FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
+FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
@@ -782,23 +782,27 @@ FUNCTION T_listLiteral.listConstructorToString(CONST lengthLimit:longint=maxLong
   end;
 
 //===================================================================:?.toString
-FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
+FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
   VAR i,remainingLength: longint;
   begin
-    if datFill = 0 then if isFinalized then exit('()')
-                                       else exit('(');
-    remainingLength:=lengthLimit-1;
-    result:='('+dat[0]^.toString(lengthLimit);
-    for i:=1 to datFill-1 do if remainingLength>0 then begin
-      remainingLength:=lengthLimit-length(result);
-      result:=result+','+dat[i]^.toString;
-    end else begin
-      result:=result+',... ';
-      break;
-    end;
-    if isFinalized then result:=result+')'
-                   else result:=result+',';
+    if list<>nil then with list^ do begin
+      if datFill = 0 then if isFinalized then exit('()')
+                                         else exit('(');
+      remainingLength:=lengthLimit-1;
+      result:='('+dat[0]^.toString(lengthLimit);
+      for i:=1 to datFill-1 do if remainingLength>0 then begin
+        remainingLength:=lengthLimit-length(result);
+        result:=result+','+dat[i]^.toString;
+      end else begin
+        result:=result+',... ';
+        break;
+      end;
+      if isFinalized then result:=result+')'
+                     else result:=result+',';
+    end else if isFinalized then exit('()')
+                            else exit('(');
   end;
+
 
 //?.stringForm:=================================================================
 FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
@@ -937,13 +941,15 @@ FUNCTION T_listLiteral.typeString:string;
     result:=C_typeString[literalType]+'('+intToStr(datFill)+')';
   end;
 
-FUNCTION T_listLiteral.parameterListTypeString:string;
+FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
   VAR i:longint;
   begin
-    if datFill<=0 then exit('()');
-    result:='('+dat[0]^.typeString;
-    for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
-    result:=result+')';
+    if (list=nil) or (list^.datFill<=0) then exit('()');
+    with list^ do begin
+      result:='('+dat[0]^.typeString;
+      for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
+      result:=result+')';
+    end;
   end;
 
 FUNCTION T_listLiteral.transpose:P_listLiteral;

@@ -93,7 +93,7 @@ FUNCTION typeOf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then exit(newStringLiteral(params^.value(0)^.typeString))
-    else exit(newStringLiteral(params^.parameterListTypeString));
+    else exit(newStringLiteral(parameterListTypeString(params)));
   end;
 
 FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

@@ -697,9 +697,7 @@ PROCEDURE T_evaluationContext.printCallStack(CONST messageType: T_messageType);
   VAR i:longint;
   begin
     for i:=length(callStack)-1 downto 0 do with callStack[i] do
-    if callParameters=nil
-    then adapters^.raiseCustomMessage(messageType,callee^.getId+' ()'                                             ,callerLocation)
-    else adapters^.raiseCustomMessage(messageType,callee^.getId+' '+callParameters^.toParameterListString(true,50),callerLocation);
+    adapters^.raiseCustomMessage(messageType,callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
     if parentContext<>nil then parentContext^.printCallStack(messageType);
   end;
 
