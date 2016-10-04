@@ -124,6 +124,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
 
 FUNCTION T_tokenArray.current: T_token;
   begin
+    if i>=length(t) then raise Exception.create('Invalid call to T_tokenArray.current; Index to query is '+intToStr(i)+'; array length is '+intToStr(length(t)));
     result:=t[i];
   end;
 
