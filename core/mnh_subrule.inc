@@ -670,7 +670,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          P_package(token.location.package)^.resolveRuleId(token,nil);
+          P_package(token.location.package)^.resolveRuleId(token,adapters);
           functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
         end;
       end;

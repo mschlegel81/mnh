@@ -6,18 +6,6 @@ initWorld->intRandom(2,worldHeight*worldWidth);
 private
 printWorld(w:intList)->printf("%s","\f"|copy(join([' ','#'][w]),worldWidth*[0..worldHeight-1],worldWidth));
 
-private xyPos:=[0.. worldHeight-1].each(i,
-               [0.. worldWidth -1].each(j,[j,i]),|);
-
-private
-plotWorld(w:intList)->begin
-  plot([[0,0],[worldWidth+1,worldHeight+1]],'box RGB1,1,1');
-  addPlot([0..size(w)-1].each(i,
-                  w[i]=0 ? void : [xyPos[i],xyPos[i]+1],|),'black box');
-  display;
-  sleep(0.05);
-end;
-
 private memoized
 shift(di,dj)->flatten([0..worldHeight-1].each(i,
                       [0..worldWidth-1].each(j,((i+di+worldHeight) mod worldHeight)*worldWidth+
@@ -36,30 +24,15 @@ step(w,t)->[0..size(w)-1].each(i,t.getInner(i).get(w[i]));
 
 playUntilStatic(w,sleepTime)->begin
   local world:=w;
-  local wantQuit:=false;
-  [
- {while(not(wantQuit),begin
+  async(
+ {while(true,begin
     printWorld(world);
     sleep(sleepTime);
-    local newWorld:=step(world);
-    world==newWorld ? wantQuit:=true : void;
-    world:=newWorld;
+    world:=step(world);
     void;
-  end)},
- {begin
-    ask('Press Enter to quit.');
-    wantQuit:=true;
-  end}].PEach(task,task());
+  end)});
+  ask('Press Enter to quit.');
 end;
-
-
-playGui->begin
-  local living:=true;
-  local world:=initWorld;
-  plotWorld(world);
-  while(plotShowing,plotWorld(world:=step(world)));
-end;
-
 
 playSteps(w,n>0)->begin
   local world:=w;
@@ -70,6 +43,6 @@ playSteps(w,n>0)->begin
   end);
 end;
 
-main->isGuiActive ? playGui : playSteps(initWorld,10);
+main->playSteps(initWorld,10);
 main("-long")->playUntilStatic(initWorld,0.05);
 main(steps)->playSteps(initWorld,softCast(steps));

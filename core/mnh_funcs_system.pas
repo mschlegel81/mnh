@@ -189,12 +189,6 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION isGuiActive_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    if (params=nil) or (params^.size=0) then result:=newBoolLiteral({$ifdef fullVersion}gui_started{$else}false{$endif})
-                                        else result:=nil;
-  end;
-
 FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
   begin new(result,create(at_unknown,C_collectAllOutputBehavior)); end;
 
@@ -255,7 +249,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiActive',@isGuiActive_impl,'isGuiActive;#Returns true if GUI is showing and false otherwise.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput',@collectOutput_impl,'collectOutput;#Starts collecting output messages to be accessed via function collectedOutput');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,'collectedOutput;#Returns messages collected since the last call of collectOutput.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo',@logTo_impl,'logTo(logName:string,appendMode:boolean);#Adds a log with given name and write mode and returns void.');
