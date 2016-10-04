@@ -64,7 +64,7 @@ private scSort_(ax:numeric,ay:numeric,bx:numeric,by:numeric,cx:numeric,cy:numeri
         print('Aboring at ',ax,'  ',ay,' | ',
                             bx,'  ',by,' | ',
                             cx,'  ',cy,' with ',size(x),' points');
-        each(i,[0..size(x)-1],[x.get(i),y.get(i)]);
+        [0..size(x)-1].each(i,[x.get(i),y.get(i)]);
       end)
   : size(x)=1 ? [x|y] : [];
 
