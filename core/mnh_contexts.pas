@@ -40,7 +40,6 @@ TYPE
                    cp_clearAdaptersOnStart,
                    cp_logEndOfEvaluation,
                    cp_notifyParentOfAsyncTaskEnd,
-                   cp_pushProfliningInfoToParent,
                    cp_disposeAdaptersOnDestruction);
   T_contextOptions=set of T_contextOption;
   T_contextType=(ct_normal,ct_profiling{$ifdef fullVersion},ct_debugging{$endif},ct_silentlyRunAlone);
@@ -60,7 +59,8 @@ TYPE
   T_profilingEntry=record
     id:T_idString;
     location:string;
-    timeSpent:double;
+    timeSpent_inclusive,
+    timeSpent_exclusive:double;
     callCount:longint;
   end;
 
@@ -69,7 +69,8 @@ TYPE
     callee:P_objectWithIdAndLocation;
     callParameters:P_listLiteral;
     calleeLiteral:P_expressionLiteral;
-    timeForProfiling:double;
+    timeForProfiling_inclusive,
+    timeForProfiling_exclusive:double;
   end;
   {$ifdef fullVersion}
   T_debuggingSnapshot=record
@@ -82,11 +83,11 @@ TYPE
   T_profilingMap=specialize G_stringKeyMap<T_profilingEntry>;
 
   P_evaluationContext=^T_evaluationContext;
-
-  { T_evaluationContext }
-
   T_evaluationContext=object
     private
+      {$ifdef DEBUGMODE}
+      evaluationIsRunning:boolean;
+      {$endif}
       //privileges and obligations
       options:T_contextOptions;
       //links to other objects
@@ -127,7 +128,7 @@ TYPE
       end;
       {$endif}
 
-      PROCEDURE addToProfilingMap(CONST id:T_idString; CONST location:ansistring; CONST dt:double);
+      PROCEDURE addToProfilingMap(CONST id:T_idString; CONST location:ansistring; CONST dt_inclusive,dt_exclusive:double);
     public
       CONSTRUCTOR createContext(CONST outAdapters:P_adapters; CONST contextType:T_contextType);
       PROCEDURE resetOptions(CONST contextType:T_contextType);
@@ -146,7 +147,6 @@ TYPE
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters:P_adapters; CONST tryBodyFailed:boolean);
       PROCEDURE attachWorkerContext(CONST newParent:P_evaluationContext);
-      PROCEDURE detachWorkerContext;
       //Recycler routines:
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -311,18 +311,24 @@ PROCEDURE disposeTimer(t:TEpikTimer);
     t.destroy;
   end;
 
-PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST location: ansistring; CONST dt: double);
+PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST location: ansistring; CONST dt_inclusive,dt_exclusive:double);
   VAR profilingEntry:T_profilingEntry;
   begin
+    if parentContext<>nil then begin
+      parentContext^.addToProfilingMap(id,location,dt_inclusive,dt_exclusive);
+      exit;
+    end;
     enterCriticalSection(profilingAndDebuggingCriticalSection);
     if profilingMap.containsKey(location,profilingEntry)
     then with profilingEntry do begin
-      timeSpent:=timeSpent+dt;
+      timeSpent_exclusive:=timeSpent_exclusive+dt_exclusive;
+      timeSpent_inclusive:=timeSpent_inclusive+dt_inclusive;
       inc(callCount);
     end else begin
       profilingEntry.id:=id;
       profilingEntry.location:=location;
-      profilingEntry.timeSpent:=dt;
+      profilingEntry.timeSpent_exclusive:=dt_exclusive;
+      profilingEntry.timeSpent_inclusive:=dt_inclusive;
       profilingEntry.callCount:=1;
     end;
     profilingMap.put(location,profilingEntry);
@@ -345,10 +351,16 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
     wallClock.create(@initTimer,@disposeTimer);
     initCriticalSection(profilingAndDebuggingCriticalSection);
     profilingMap.create();
+    {$ifdef DEBUGMODE}
+    evaluationIsRunning:=false;
+    {$endif}
   end;
 
 PROCEDURE T_evaluationContext.resetOptions(CONST contextType: T_contextType);
   begin
+    {$ifdef DEBUGMODE}
+    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
+    {$endif}
     options:=C_defaultOptions[contextType];
   end;
 
@@ -375,6 +387,11 @@ DESTRUCTOR T_evaluationContext.destroy;
 PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath);
   VAR pc:T_profileCategory;
   begin
+    {$ifdef DEBUGMODE}
+    if evaluationIsRunning then raise Exception.create('Evaluation already is running!');
+    evaluationIsRunning:=true;
+    {$endif}
+
     valueStore.clear;
     clearCallStack;
     profilingMap.clear;
@@ -449,9 +466,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
   PROCEDURE logProfilingInfo;
     FUNCTION nicestTime(CONST seconds:double):string;
       begin
-        if seconds>=10         then result:=formatFloat('0.000',seconds)+C_invisibleTabChar+'s'
-        else if seconds>=10E-3 then result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms'
-        else                        result:=formatFloat('0.000',seconds*1E6)+C_invisibleTabChar+'µs';
+         result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms';
       end;
     VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
         swapTemp:T_profilingEntry;
@@ -459,7 +474,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         i,j:longint;
     begin
       profilingData:=profilingMap.valueSet;
-      for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do if profilingData[i].timeSpent<profilingData[j].timeSpent then begin
+      for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do if profilingData[i].timeSpent_inclusive<profilingData[j].timeSpent_inclusive then begin
         swapTemp:=profilingData[i];
         profilingData[i]:=profilingData[j];
         profilingData[j]:=swapTemp;
@@ -468,18 +483,25 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       lines[0]:='Location'+C_tabChar+
                 'id'+C_tabChar+
                 'count'+C_tabChar+
-                'time';
+                'inclusive'+C_invisibleTabChar+' time'+C_tabChar+
+                'exclusive'+C_invisibleTabChar+' time';
 
       for i:=0 to length(profilingData)-1 do with profilingData[i] do
       lines[i+1]:=location+C_tabChar+
                   id+C_tabChar+
                   intToStr(callCount)+C_tabChar+
-                  nicestTime(timeSpent);
+                  nicestTime(timeSpent_inclusive)+C_tabChar+
+                  nicestTime(timeSpent_exclusive);
       lines:=formatTabs(lines);
       for i:=0 to length(lines)-1 do adapters^.raiseCustomMessage(mt_timing_info,lines[i],C_nilTokenLocation);
     end;
 
   begin
+    {$ifdef DEBUGMODE}
+    if not(evaluationIsRunning) then raise Exception.create('Evaluation is not running!');
+    evaluationIsRunning:=false;
+    {$endif}
+
     valueStore.clear;
     clearCallStack;
     if cp_logEndOfEvaluation in options then begin
@@ -499,7 +521,12 @@ FUNCTION T_evaluationContext.hasOption(CONST option: T_contextOption): boolean;
   begin result:=option in options; end;
 
 PROCEDURE T_evaluationContext.removeOption(CONST option:T_contextOption);
-  begin options:=options-[option]; end;
+  begin
+    {$ifdef DEBUGMODE}
+    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
+    {$endif}
+    options:=options-[option];
+  end;
 
 PROCEDURE T_evaluationContext.notifyAsyncTaskEnd;
   begin
@@ -515,7 +542,6 @@ FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
       result^.parentContext:=@self;
       result^.options:=options-[cp_timing,cp_queryParentValueStore];
       result^.options:=[cp_notifyParentOfAsyncTaskEnd];
-      if cp_profile in result^.options then result^.options:=result^.options+[cp_pushProfliningInfoToParent];
     end else begin
       result:=parentContext^.getNewAsyncContext();
     end;
@@ -540,22 +566,6 @@ PROCEDURE T_evaluationContext.attachWorkerContext(
     currentAdapters:=newParent^.currentAdapters;
     parentContext:=newParent;
     options:=parentContext^.options-[cp_timing]+[cp_queryParentValueStore];
-    if cp_profile in options then options:=options+[cp_pushProfliningInfoToParent];
-  end;
-
-PROCEDURE T_evaluationContext.detachWorkerContext;
-  VAR profilingEntries:T_profilingMap.VALUE_TYPE_ARRAY;
-      i:longint;
-  begin
-    if cp_pushProfliningInfoToParent in options then begin
-      enterCriticalSection(profilingAndDebuggingCriticalSection);
-      profilingEntries:=profilingMap.valueSet;
-      for i:=0 to length(profilingEntries)-1 do with profilingEntries[i] do parentContext^.addToProfilingMap(id,location,timeSpent);
-      leaveCriticalSection(profilingAndDebuggingCriticalSection);
-    end;
-    valueStore.clear;
-    clearCallStack;
-    profilingMap.clear;
   end;
 
 FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
@@ -652,8 +662,9 @@ PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation: T_tokenLocatio
     if callParameters<>nil then callParameters^.rereference;
     if expressionLiteral<>nil then expressionLiteral^.rereference;
     if cp_profile in options then begin
-      if topIdx>0 then with callStack[topIdx-1] do timeForProfiling:=wallclockTime-timeForProfiling;
-      callStack[topIdx].timeForProfiling:=wallclockTime;
+      if topIdx>0 then with callStack[topIdx-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
+      callStack[topIdx].timeForProfiling_exclusive:=wallclockTime;
+      callStack[topIdx].timeForProfiling_inclusive:=wallclockTime;
     end;
   end;
 
@@ -664,10 +675,11 @@ PROCEDURE T_evaluationContext.callStackPop;
     if topIdx<0 then exit;
     if cp_profile in options then begin
       with callStack[topIdx] do begin
-        timeForProfiling:=wallclockTime-timeForProfiling;
-        addToProfilingMap(callee^.getId,callee^.getLocation,timeForProfiling);
+        timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
+        timeForProfiling_inclusive:=wallclockTime-timeForProfiling_inclusive;
+        addToProfilingMap(callee^.getId,callee^.getLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
        end;
-      if topIdx>0 then with callStack[topIdx-1] do timeForProfiling:=wallclockTime-timeForProfiling;
+      if topIdx>0 then with callStack[topIdx-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     end;
     with callStack[topIdx] do begin
       if callParameters<>nil then disposeLiteral(callParameters);
@@ -693,20 +705,10 @@ PROCEDURE T_evaluationContext.printCallStack(CONST messageType: T_messageType);
   end;
 
 PROCEDURE T_evaluationContext.clearCallStack;
-  VAR i:longint;
   begin
     //If the evaluation was not finished cleanly, the call stack may not be empty
-    //Make sure that the current top-element is profiled correctly
-    i:=length(callStack)-1;
-    if i<0 then exit;
-    if cp_profile in options then begin
-      with callStack[i] do begin
-        timeForProfiling:=wallclockTime-timeForProfiling;
-        addToProfilingMap(callee^.getId,callee^.getLocation,timeForProfiling);
-      end;
-    end;
-    for i:=0 to length(callStack)-1 do with callStack[i] do if callParameters<>nil then disposeLiteral(callParameters);
-    setLength(callStack,0);
+    //Make sure that the elements are profiled correctly and references to expressions are dropped
+    while length(callStack)>0 do callStackPop();
   end;
 
 FUNCTION T_evaluationContext.wallclockTime: double;
@@ -758,6 +760,7 @@ PROCEDURE T_evaluationContext.stepping(CONST first: P_token; CONST stack: pointe
   VAR lineChanged:boolean;
   begin
     if not(cp_debug in options) or (debuggingStepper.state=dontBreakAtAll) then exit;
+    if parentContext<>nil then parentContext^.stepping(first,stack);
     enterCriticalSection(profilingAndDebuggingCriticalSection);
     wallClock.value.stop;
     with debuggingStepper do begin
