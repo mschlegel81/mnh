@@ -212,7 +212,7 @@ main('distro')->makeDistro;
 //*Deep cleaning, including deleting all executables
 main('CLEAN')->begin
   cleanup;
-  BUILTS.getInner(2).each(binary,deleteFile(binary));
+  files(BUILTS.getInner(2)).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 end;
 
 //*Build one specific target
