@@ -594,12 +594,15 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
       preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
-      context.callStackPop();
-      if not(context.adapters^.noErrors) then exit(nil);
+      if not(context.adapters^.noErrors) then begin
+        context.callStackPop();
+        exit(nil);
+      end;
       system.enterCriticalSection(print_cs);
       context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
+      context.callStackPop();
     end;
   end;
 
