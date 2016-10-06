@@ -123,6 +123,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       context.createContext(P_adapters(@consoleAdapters),ct_normal);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
       context.removeOption(cp_clearAdaptersOnStart);
+      context.addOption(cp_beepOnError);
       context.resetForEvaluation(package);
       package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
@@ -149,6 +150,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       {$endif}
       context.createContext(P_adapters(@consoleAdapters),ct_normal);
       context.removeOption(cp_clearAdaptersOnStart);
+      context.addOption(cp_beepOnError);
       context.resetForEvaluation(@package);
       package.load(lu_forCallingMain,context,mainParameters);
       context.afterEvaluation;

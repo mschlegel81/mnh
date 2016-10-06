@@ -39,6 +39,7 @@ TYPE
                    cp_clearTimerOnStart,
                    cp_clearAdaptersOnStart,
                    cp_logEndOfEvaluation,
+                   cp_beepOnError,
                    cp_notifyParentOfAsyncTaskEnd,
                    cp_disposeAdaptersOnDestruction);
   T_contextOptions=set of T_contextOption;
@@ -144,6 +145,7 @@ TYPE
       PROPERTY adapters:P_adapters read currentAdapters;
       FUNCTION hasOption(CONST option:T_contextOption):boolean; inline;
       PROCEDURE removeOption(CONST option:T_contextOption);
+      PROCEDURE addOption(CONST option:T_contextOption);
       //Delegation routines:
       PROCEDURE notifyAsyncTaskEnd;
       FUNCTION getNewAsyncContext:P_evaluationContext;
@@ -403,9 +405,11 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath
 
     valueStore.clear;
     clearCallStack;
+    {$ifdef fullVersion}
     profilingMap.clear;
+    {$endif}
     if cp_clearTimerOnStart in options then begin
-      if (cp_profile in options) or initialAdapters^.doShowTimingInfo then begin
+      if {$ifdef fullVersion} (cp_profile in options) or {$endif} initialAdapters^.doShowTimingInfo then begin
         wallClock.value.clear;
         wallClock.value.start;
         with timingInfo do begin
@@ -525,6 +529,10 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       {$ifdef fullVersion}
       if (cp_profile in options) and adapters^.doShowTimingInfo then logProfilingInfo;
       {$endif}
+      if (cp_beepOnError in options) then begin
+        adapters^.updateErrorlevel;
+        if not(adapters^.noErrors) then beep;
+      end;
     end;
     if cp_notifyParentOfAsyncTaskEnd in options then parentContext^.notifyAsyncTaskEnd;
   end;
@@ -538,6 +546,14 @@ PROCEDURE T_evaluationContext.removeOption(CONST option:T_contextOption);
     if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
     {$endif}
     options:=options-[option];
+  end;
+
+PROCEDURE T_evaluationContext.addOption(CONST option:T_contextOption);
+  begin
+    {$ifdef DEBUGMODE}
+    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
+    {$endif}
+    options:=options+[option];
   end;
 
 PROCEDURE T_evaluationContext.notifyAsyncTaskEnd;
