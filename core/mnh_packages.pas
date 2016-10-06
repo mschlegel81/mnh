@@ -53,6 +53,7 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
+      PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
@@ -900,6 +901,15 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
     userDefinedRules.addAll(packageRules.keySet);
     userDefinedRules.addAll(importedRules.keySet);
     userDefinedRules.unique;
+  end;
+
+PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
+  VAR r:T_ruleMap.VALUE_TYPE_ARRAY;
+      i:longint;
+  begin
+    r:=packageRules.valueSet;
+    for i:=0 to length(r)-1 do if r[i]^.ruleType=rt_memoized then r[i]^.clearCache;
+    if recurse then for i:=0 to length(secondaryPackages)-1 do secondaryPackages[i]^.clearPackageCache(true);
   end;
 
 FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
