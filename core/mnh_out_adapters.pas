@@ -781,9 +781,11 @@ PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters;
   end;
 
 PROCEDURE T_adapters.setExitCode;
-  CONST MAX_IGNORED_LEVEL=2;
+  VAR mt:T_messageType;
+      code:longint=0;
   begin
-    if maxErrorLevel>MAX_IGNORED_LEVEL then ExitCode:=maxErrorLevel;
+    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
+    ExitCode:=code;
   end;
 
 //===================================================================:T_adapters
