@@ -134,6 +134,7 @@ TYPE
     public
       hasMessageOfType:array[T_messageType] of boolean;
       {$ifdef fullVersion}
+      hasNeedGUIerror:boolean;
       plot:T_plot;
       {$endif}
       {$ifdef IMIG}
@@ -155,7 +156,6 @@ TYPE
       FUNCTION hasHaltMessage: boolean;
       PROCEDURE resetErrorFlags;
       PROCEDURE updateErrorlevel;
-      {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
       PROCEDURE haltEvaluation;
       PROCEDURE logEndOfEvaluation;
       PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
@@ -510,6 +510,9 @@ PROCEDURE T_adapters.clearErrors;
       if   maxErrorLevel>=C_messageTypeMeta[mt].level
       then maxErrorLevel:=C_messageTypeMeta[mt].level-1;
     end;
+    {$ifdef fullVersion}
+    hasNeedGUIerror:=false;
+    {$endif}
     stackTraceCount:=0;
     errorCount:=0;
   end;
@@ -544,6 +547,9 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
     hasMessageOfType[message.messageType]:=true;
+    {$ifdef fullVersion}
+    hasNeedGUIerror:=hasNeedGUIerror or not(gui_started) and C_messageTypeMeta[message.messageType].triggersGuiStartup;
+    {$endif}
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
     if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info]) then exit;
@@ -663,17 +669,6 @@ PROCEDURE T_adapters.updateErrorlevel;
        (C_messageTypeMeta[mt].level>maxErrorLevel) then maxErrorLevel:=C_messageTypeMeta[mt].level;
   end;
 
-{$ifdef fullVersion}
-FUNCTION T_adapters.hasNeedGUIerror: boolean;
-  VAR m:T_messageType;
-  begin
-    if gui_started then exit(false);
-    for m:=low(T_messageType) to high(T_messageType) do
-    if hasMessageOfType[m] and C_messageTypeMeta[m].triggersGuiStartup then exit(true);
-    result:=false;
-  end;
-{$endif}
-
 PROCEDURE T_adapters.haltEvaluation;
   begin
     raiseCustomMessage(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
@@ -747,6 +742,7 @@ PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
       else begin
         new(txtAdapter,create(filenameOrBlank,defaultOutputBehavior,false));
         txtAdapter^.messageTypesToInclude:=[mt_printline];
+        addOutAdapter(txtAdapter,true);
       end;
     end;
   end;

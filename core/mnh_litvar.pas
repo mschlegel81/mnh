@@ -1035,30 +1035,28 @@ FUNCTION T_literal.equals(CONST other: P_literal): boolean;
 
 FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
   begin
-    result:=(@self = other)
-         or (other^.literalType = lt_int) and (P_intLiteral(other)^.value = val);
+    result:=(@self = other) or (other^.literalType = lt_int) and (P_intLiteral(other)^.val = val);
   end;
 
 FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
   begin
     result:=(@self = other)
-           or (other^.literalType = lt_real) and ((P_realLiteral(other)^.value = val)
-                                               or isNan(P_realLiteral(other)^.value) and isNan(val)
-                                               or isInfinite(P_realLiteral(other)^.value) and isInfinite(val));
+           or (other^.literalType = lt_real) and ((P_realLiteral(other)^.val = val)
+                                               or isNan(P_realLiteral(other)^.val) and isNan(val)
+                                               or isInfinite(P_realLiteral(other)^.val) and isInfinite(val));
   end;
 
 FUNCTION T_stringLiteral.equals(CONST other: P_literal): boolean;
   begin
-    result:=(@self = other)
-           or (other^.literalType = lt_string) and (P_stringLiteral(other)^.value = val);
+    result:=(@self = other) or (other^.literalType = lt_string) and (P_stringLiteral(other)^.val = val);
   end;
 
 FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
   VAR i: longint;
   begin
     if (@self = other) then exit(true);
-    if (other^.literalType<>literalType) or (P_listLiteral(other)^.size<>size) then exit(false);
-    for i:=0 to datFill-1 do if not (dat[i]^.equals(P_listLiteral(other)^.dat[i])) then exit(false);
+    if (other^.literalType<>literalType) or (P_listLiteral(other)^.datFill<>datFill) then exit(false);
+    for i:=0 to datFill-1 do if not dat[i]^.equals(P_listLiteral(other)^.dat[i]) then exit(false);
     result:=true;
   end;
 
@@ -2693,7 +2691,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
           exit(newErrorLiteral);
         end;
       end;
-      if not(literalType in [lt_boolean,lt_void,lt_error]) and (length(reusableLiterals)<65535) then begin
+      if not(literalType in [lt_boolean,lt_void,lt_error]) and (length(reusableLiterals)<2097151) then begin
         setLength(reusableLiterals,length(reusableLiterals)+1);
         reusableLiterals[length(reusableLiterals)-1]:=result;
       end;

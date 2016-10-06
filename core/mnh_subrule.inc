@@ -251,30 +251,6 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
 
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
   VAR i:longint;
-      remaining:P_listLiteral=nil;
-
-  FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token; inline;
-    VAR L:P_literal;
-    begin
-      if index>=0 then begin
-        if index=ALL_PARAMETERS_PAR_IDX then L:=param
-        else if index=REMAINING_PARAMETERS_IDX then begin
-          if remaining=nil then begin
-            if param=nil
-            then remaining:=newListLiteral
-            else remaining:=param^.tail(length(pattern.sig));
-            remaining^.unreference;
-          end;
-          L:=remaining;
-        end else L:=param^.value(index);
-        if L=nil then exit(context.newToken(@original));
-        result:=context.newToken(original.location,'',tt_literal,L);
-        L^.rereference;
-      end else begin
-        result:=context.newToken(@original);
-      end;
-    end;
-
   FUNCTION fallbackFeasible:boolean;
     begin
       result:=useUncurryingFallback and
@@ -293,22 +269,37 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
     VAR i:longint;
         b:boolean;
+        L:P_literal;
+        remaining:P_listLiteral=nil;
     begin
       if not(functionIdsReady) then resolveIds(context.adapters);
-
       b:=typ in [srt_normal_private,srt_normal_public];
-
       firstRep:=context.newToken(declaredAt,'',beginToken[b]);
       lastRep:=firstRep;
       for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
-        lastRep^.next:=tokenFromLiteral(token,parIdx);
+        if parIdx>=0 then begin
+          if parIdx=ALL_PARAMETERS_PAR_IDX then L:=param
+          else if parIdx=REMAINING_PARAMETERS_IDX then begin
+            if remaining=nil then begin
+              if param=nil
+              then remaining:=newListLiteral
+              else remaining:=param^.tail(length(pattern.sig));
+              remaining^.unreference;
+            end;
+            L:=remaining;
+          end else L:=param^.value(parIdx);
+          {$ifdef DEBUGMODE}
+          if L=nil then raise Exception.create('Whoops! Unressolved parameter pointer.');
+          {$endif}
+          lastRep^.next:=context.newToken(token.location,'',tt_literal,L);
+          L^.rereference;
+        end else lastRep^.next:=context.newToken(token);
         lastRep:=lastRep^.next;
       end;
       lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
       lastRep:=lastRep^.next;
       lastRep^.next:=context.newToken(declaredAt,'',endToken[b]);
       lastRep:=lastRep^.next;
-      result:=true;
     end;
 
   VAR tempInnerParam:P_listLiteral;
@@ -316,9 +307,11 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,context) then begin
       prepareResult;
+      result:=true;
       context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
     end else if fallbackFeasible then begin
       prepareResult;
+      result:=true;
       context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
       tempInnerParam:=newListLiteral;
       for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^.value(i),true);
