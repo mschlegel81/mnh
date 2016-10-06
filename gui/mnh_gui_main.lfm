@@ -1,12 +1,12 @@
 object MnhForm: TMnhForm
-  Left = 362
+  Left = 276
   Height = 484
-  Top = 104
-  Width = 665
+  Top = 211
+  Width = 631
   AllowDropFiles = True
   Caption = 'MNH5'
   ClientHeight = 464
-  ClientWidth = 665
+  ClientWidth = 631
   Color = clWhite
   Menu = MainMenu1
   OnChangeBounds = FormResize
@@ -22,7 +22,7 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 281
     Top = 160
-    Width = 665
+    Width = 631
     TabStop = False
     ActivePage = outputTabSheet
     Align = alClient
@@ -553,12 +553,12 @@ object MnhForm: TMnhForm
     object outputTabSheet: TTabSheet
       Caption = 'Output'
       ClientHeight = 253
-      ClientWidth = 657
+      ClientWidth = 623
       inline OutputEdit: TSynEdit
         Left = 0
         Height = 253
         Top = 0
-        Width = 657
+        Width = 623
         Align = alClient
         Font.Height = -13
         Font.Name = 'Courier New'
@@ -1040,12 +1040,12 @@ object MnhForm: TMnhForm
     object variablesTabSheet: TTabSheet
       Caption = 'Variables'
       ClientHeight = 253
-      ClientWidth = 657
+      ClientWidth = 623
       object variablesStringGrid: TStringGrid
         Left = 0
         Height = 196
         Top = 57
-        Width = 657
+        Width = 623
         Align = alClient
         AlternateColor = clCream
         AutoEdit = False
@@ -1084,18 +1084,18 @@ object MnhForm: TMnhForm
         Left = 0
         Height = 57
         Top = 0
-        Width = 657
+        Width = 623
         Align = alTop
         Caption = 'Current expression'
         ClientHeight = 37
-        ClientWidth = 653
+        ClientWidth = 619
         TabOrder = 1
         inline currentExpressionMemo: TSynMemo
           Cursor = crIBeam
           Left = 0
           Height = 37
           Top = 0
-          Width = 653
+          Width = 619
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'
@@ -1586,14 +1586,14 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 23
     Top = 441
-    Width = 665
+    Width = 631
     Panels = <>
   end
   object PageControl: TPageControl
     Left = 0
     Height = 125
     Top = 30
-    Width = 665
+    Width = 631
     TabStop = False
     Align = alTop
     TabOrder = 0
@@ -1605,7 +1605,7 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 5
     Top = 155
-    Width = 665
+    Width = 631
     Align = alTop
     OnMoved = Splitter1Moved
     ResizeAnchor = akTop
@@ -2110,7 +2110,7 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 30
     Top = 0
-    Width = 665
+    Width = 631
     ButtonHeight = 30
     ButtonWidth = 30
     Caption = 'DebugToolbar'
@@ -2333,6 +2333,10 @@ object MnhForm: TMnhForm
       object miDebug: TMenuItem
         Caption = 'Debug'
         OnClick = miDebugClick
+      end
+      object miProfile: TMenuItem
+        Caption = 'Profile'
+        OnClick = miProfileClick
       end
     end
     object submenuEditorAppearance: TMenuItem

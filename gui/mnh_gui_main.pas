@@ -24,6 +24,7 @@ TYPE
   TMnhForm = class(TForm)
     debugItemsImageList: TImageList;
     autoSizeImageList: TImageList;
+    miProfile: TMenuItem;
     pmiOpenFile2: TMenuItem;
     pmiOpenFile1: TMenuItem;
     miFileHistory14: TMenuItem;
@@ -178,6 +179,7 @@ TYPE
     PROCEDURE miMinErrorlevel5Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOpenDocumentationPackClick(Sender: TObject);
+    PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
@@ -762,6 +764,7 @@ PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   begin
     miDebug.Checked:=not(miDebug.Checked);
+    if miDebug.Checked then miProfile.Checked:=true;
     updateDebugParts;
   end;
 
@@ -944,7 +947,7 @@ PROCEDURE TMnhForm.updateDebugParts;
 FUNCTION TMnhForm.preferredContextType:T_contextType;
   begin
     if miDebug.Checked then result:=ct_debugging
-    else if reEvaluationWithGUIrequired and profilingRun
+    else if reEvaluationWithGUIrequired and profilingRun or miProfile.Checked
     then result:=ct_profiling
     else result:=ct_normal;
   end;
@@ -1062,6 +1065,11 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
 PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
   begin
     makeAndShowDoc(true);
+  end;
+
+PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
+  begin
+    miProfile.Checked:=not(miProfile.Checked) or miDebug.Checked;
   end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);

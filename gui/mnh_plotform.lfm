@@ -1,7 +1,7 @@
 object plotForm: TplotForm
-  Left = 774
+  Left = 1027
   Height = 240
-  Top = 168
+  Top = 324
   Width = 320
   Caption = 'MNH plot'
   ClientHeight = 220

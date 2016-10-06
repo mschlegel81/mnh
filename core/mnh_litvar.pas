@@ -2691,7 +2691,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
           exit(newErrorLiteral);
         end;
       end;
-      if not(literalType in [lt_boolean,lt_void,lt_error]) and (length(reusableLiterals)<65535) then begin
+      if not(literalType in [lt_boolean,lt_void,lt_error]) and (length(reusableLiterals)<2097151) then begin
         setLength(reusableLiterals,length(reusableLiterals)+1);
         reusableLiterals[length(reusableLiterals)-1]:=result;
       end;

@@ -538,7 +538,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   begin
     hasMessageOfType[message.messageType]:=true;
     {$ifdef fullVersion}
-    hasNeedGUIerror:=hasNeedGUIerror and not(gui_started) and C_messageTypeMeta[message.messageType].triggersGuiStartup;
+    hasNeedGUIerror:=hasNeedGUIerror or not(gui_started) and C_messageTypeMeta[message.messageType].triggersGuiStartup;
     {$endif}
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
@@ -728,6 +728,7 @@ PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
       else begin
         new(txtAdapter,create(filenameOrBlank,defaultOutputBehavior,false));
         txtAdapter^.messageTypesToInclude:=[mt_printline];
+        addOutAdapter(txtAdapter,true);
       end;
     end;
   end;
