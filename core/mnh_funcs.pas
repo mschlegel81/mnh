@@ -68,23 +68,45 @@ FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=newVoidLiteral;
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR stringToPrint:ansistring='';
-      i:longint;
+FUNCTION getStringToPrint(CONST params:P_listLiteral):ansistring; inline;
+  VAR i:longint;
   begin
+    result:='';
     if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
       lt_boolean,
       lt_int,
       lt_real,
       lt_string,
-      lt_expression: stringToPrint:=stringToPrint + P_scalarLiteral(params^.value(i))^.stringForm;
-      lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
+      lt_expression: result:=result + P_scalarLiteral(params^.value(i))^.stringForm;
+      lt_list..lt_listWithError: result:=result + params^.value(i)^.toString;
     end;
+  end;
+
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
     system.enterCriticalSection(print_cs);
-    context.adapters^.printOut(formatTabs(split(stringToPrint)));
+    context.adapters^.printOut(formatTabs(split(getStringToPrint(params))));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
+
+FUNCTION note_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    context.adapters^.raiseNote(getStringToPrint(params),tokenLocation);
+    result:=newVoidLiteral;
+  end;
+
+FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
+    else begin
+      context.adapters^.raiseCustomMessage(mt_el3_userDefined,getStringToPrint(params),tokenLocation);
+      result:=newVoidLiteral;
+    end;
+    result:=nil;
+  end;
+
+
 
 FUNCTION typeOf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
@@ -235,8 +257,10 @@ INITIALIZATION
   intrinsicRuleMap.create;
   new(mnhSystemPseudoPackage,create);
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);//Clears the output and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);//Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note',@note_imp,'note(...);//Raises a note of out the given parameters and returns void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x. Strings will NOT(!) be compressed.#serialize(x,compressStrings:boolean);#Returns a string representing x.');

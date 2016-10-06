@@ -202,18 +202,6 @@ FUNCTION listKeywords_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     end;
   end;
 
-
-FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then begin
-      if arg0^.literalType=lt_string
-      then context.adapters^.raiseCustomMessage(mt_el3_userDefined,str0^.value,tokenLocation)
-      else context.adapters^.raiseCustomMessage(mt_el3_userDefined,arg0^.toString,tokenLocation);
-    end;
-    result:=nil;
-  end;
-
 FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
@@ -283,7 +271,6 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,'listKeywords;#Returns a list of all keywords by category');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;#Raises an exception without a message#fail(message);#Raises an exception with the given message');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord',@ord_imp,'ord(x);#Returns the ordinal value of x');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo',@mnhInfo_imp,'mnhInfo;#Returns a key-value list with info on the currently executing instance of MNH');
 
