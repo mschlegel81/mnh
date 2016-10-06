@@ -728,6 +728,46 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
+FUNCTION clearRuleCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR ruleIdToken:T_token;
+  begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      ruleIdToken.create;
+      ruleIdToken.define(tokenLocation,P_stringLiteral(params^.value(0))^.value,tt_identifier);
+      P_package(tokenLocation.package)^.resolveRuleId(ruleIdToken,context.adapters);
+      if ruleIdToken.tokType in [tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule] then P_rule(ruleIdToken.data)^.clearCache;
+      ruleIdToken.destroy;
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
+FUNCTION clearPackageCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR i:longint;
+      id:string;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      P_package(tokenLocation.package)^.clearPackageCache(false);
+      result:=newVoidLiteral;
+    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      id:=P_stringLiteral(params^.value(0))^.value;
+      with P_package(tokenLocation.package)^ do
+        for i:=0 to length(packageUses)-1 do
+        if (packageUses[i].id=id) or (packageUses[i].path=id)
+        then begin
+          packageUses[i].pack^.clearPackageCache(false);
+        end;
+      context.adapters^.raiseError('Cannot locate package with id or path "'+id+'"',tokenLocation);
+    end else result:=nil;
+  end;
+
+FUNCTION clearAllCaches_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      P_package(tokenLocation.package)^.clearPackageCache(true);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
@@ -770,9 +810,9 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'inspect;#Returs information on the current package#inspect(idOrPath:string);#Returns information on an imported package or a specified MNH source file');
-
-
-
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache',@clearRuleCache_imp,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches',@clearAllCaches_imp,'clearAllCaches;//Clears all memoized rule caches and returns void.');
 
 {$endif}
 {$ifdef include_finalization}

@@ -12,8 +12,8 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CO
 
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
-    profilingRun:boolean=false;
     {$ifdef fullVersion}
+    profilingRun:boolean=false;
     reEvaluationWithGUIrequired:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
     {$endif}
@@ -89,8 +89,8 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.printOut('  -codeHash         show codeHash and exit');
       consoleAdapters.printOut('  -cmd              directly execute the following command');
       consoleAdapters.printOut('  -info             show info; same as -cmd mnhInfo.print');
-      consoleAdapters.printOut('  -profile          do a profiling run - implies +time');
       {$ifdef fullVersion}
+      consoleAdapters.printOut('  -profile          do a profiling run - implies +time');
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
       consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
       {$endif}
@@ -118,10 +118,13 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR context:T_evaluationContext;
         package:P_package;
     begin
-      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling)
-                      else context.createContext(P_adapters(@consoleAdapters),ct_normal);
+      {$ifdef fullVersion}
+      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling) else
+      {$endif}
+      context.createContext(P_adapters(@consoleAdapters),ct_normal);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
       context.removeOption(cp_clearAdaptersOnStart);
+      context.addOption(cp_beepOnError);
       context.resetForEvaluation(package);
       package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
@@ -143,9 +146,12 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package.destroy;
         exit;
       end;
-      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling)
-                      else context.createContext(P_adapters(@consoleAdapters),ct_normal);
+      {$ifdef fullVersion}
+      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling) else
+      {$endif}
+      context.createContext(P_adapters(@consoleAdapters),ct_normal);
       context.removeOption(cp_clearAdaptersOnStart);
+      context.addOption(cp_beepOnError);
       context.resetForEvaluation(@package);
       package.load(lu_forCallingMain,context,mainParameters);
       context.afterEvaluation;
@@ -189,8 +195,8 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           inc(i);
           append(filesToOpenInEditor,paramStr(i));
         end
-        {$endif}
         else if (paramStr(i)='-profile') then profilingRun:=true
+        {$endif}
         else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
           nextAppendMode:=paramStr(i)='+out';
           addParameter(mnhParameters,i);
@@ -237,7 +243,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
     setMnhParameters(mnhParameters);
 
+    {$ifdef fullVersion}
     if profilingRun then time:=t_forcedOn;
+    {$endif}
 
     if fileOrCommandToInterpret=''
     then defaultOutputBehavior:=C_defaultOutputBehavior_interactive

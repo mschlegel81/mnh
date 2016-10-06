@@ -23,7 +23,6 @@ TYPE
 
   TMnhForm = class(TForm)
     debugItemsImageList: TImageList;
-    autoSizeImageList: TImageList;
     miProfile: TMenuItem;
     pmiOpenFile2: TMenuItem;
     pmiOpenFile1: TMenuItem;
@@ -38,7 +37,6 @@ TYPE
     miFileHistory11: TMenuItem;
     miFileHistory12: TMenuItem;
     miFileHistory13: TMenuItem;
-    miAutosize: TMenuItem;
     miOpenDocumentationPack: TMenuItem;
     miWrapEcho: TMenuItem;
     mi_insertFilename: TMenuItem;
@@ -91,7 +89,6 @@ TYPE
     SynCompletion: TSynCompletion;
     assistanceTabSheet: TTabSheet;
     assistanceSynEdit: TSynEdit;
-    dummySheet: TTabSheet;
     tbMicroStep: TToolButton;
     UpdateTimeTimer: TTimer;
     helpPopupMemo: TSynMemo;
@@ -138,7 +135,6 @@ TYPE
     PROCEDURE InputEditProcessUserCommand(Sender: TObject;
       VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     PROCEDURE MenuItem4Click(Sender: TObject);
-    PROCEDURE miAutosizeClick(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miDebugCancelClick(Sender: TObject);
@@ -256,7 +252,6 @@ TYPE
     FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
-    FUNCTION autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
     PROCEDURE ensureWordsInEditorForCompletion;
@@ -294,63 +289,6 @@ VAR guiOutAdapter: T_guiOutAdapter;
 {$include editorMeta.inc}
 {$include guiOutAdapter.inc}
 {$undef includeImplementation}
-
-
-VAR inputHeightSpeed:longint=0;
-FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
-  CONST SAMPLE_TEXT='1!gPQ|';
-  VAR temp,
-      idealInputHeight,
-      idealOutputHeight,
-      availableTotalHeight,
-      scrollbarHeight:longint;
-      inputFocus:boolean;
-  begin
-    result:=false;
-    if miAutosize.Checked and not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) then with editorMeta[PageControl.activePageIndex] do begin
-      scrollbarHeight :=editor.height-editor.ClientHeight;
-      idealInputHeight:=scrollbarHeight+editor.Font.GetTextHeight(SAMPLE_TEXT)*(editor.lines.count+1);
-      if outputPageControl.activePage=variablesTabSheet
-      then idealOutputHeight:=currentExpressionGroupBox.height+variablesStringGrid.RowCount*variablesStringGrid.DefaultRowHeight
-      else if outputPageControl.activePage=assistanceTabSheet
-      then idealOutputHeight:=scrollbarHeight+assistanceSynEdit.Font.GetTextHeight(SAMPLE_TEXT)*(assistanceSynEdit.lines.count+1)
-      else idealOutputHeight:=scrollbarHeight+OutputEdit       .Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit       .lines.count+1);
-      //Are both editors large enough? Then return right now.
-      if (editor.height>=idealInputHeight) and (OutputEdit.height>=idealOutputHeight) then exit;
-
-      availableTotalHeight:=editor.height+outputPageControl.activePage.height;
-      inputFocus:=not(forceOutputFocus or OutputEdit.Focused or assistanceSynEdit.Focused or (outputPageControl.activePage=variablesTabSheet));
-      if (idealInputHeight+idealOutputHeight<=availableTotalHeight) then begin
-        //There is enough space for both -> priorize input before output
-        idealInputHeight:=availableTotalHeight-idealOutputHeight;
-      end else begin
-        //There is not enough space for both
-        temp:=round(0.9*availableTotalHeight);
-        if inputFocus then begin
-          if idealInputHeight>temp then idealInputHeight:=temp; //There is not even enough room for input edit!
-          if idealInputHeight< availableTotalHeight-idealOutputHeight then
-             idealInputHeight:=availableTotalHeight-idealOutputHeight;
-          idealOutputHeight:=availableTotalHeight-idealInputHeight;
-        end else begin
-          if idealOutputHeight>temp then idealOutputHeight:=temp; //There is not even enough room for output edit!
-          if idealOutputHeight< availableTotalHeight-idealInputHeight then
-             idealOutputHeight:=availableTotalHeight-idealInputHeight;
-          idealInputHeight:=availableTotalHeight-idealOutputHeight;
-        end;
-      end;
-      if idealInputHeight<>editor.height then begin
-        if idealInputHeight<editor.height then begin
-          if inputHeightSpeed>=0 then inputHeightSpeed:=-1
-                                 else dec(inputHeightSpeed);
-        end else begin
-          if inputHeightSpeed<=0 then inputHeightSpeed:=1
-                                 else inc(inputHeightSpeed);
-        end;
-        PageControl.height:=PageControl.height+inputHeightSpeed;
-        result:=true;
-      end;
-    end;
-  end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   VAR maxLineLength:longint=0;
@@ -719,13 +657,6 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
       with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
     end else askForm.getLastAnswerReleasing(nil);
-  end;
-
-PROCEDURE TMnhForm.miAutosizeClick(Sender: TObject);
-  begin
-    miAutosize.Checked:=not(miAutosize.Checked);
-    if miAutosize.Checked then dummySheet.ImageIndex:=0
-                          else dummySheet.ImageIndex:=1;
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
@@ -1137,10 +1068,7 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton;
 VAR pageIndexBeforeChange:longint;
 PROCEDURE TMnhForm.outputPageControlChange(Sender: TObject);
   begin
-    if outputPageControl.PageIndex=0 then begin
-      outputPageControl.PageIndex:=pageIndexBeforeChange;
-      miAutosizeClick(Sender);
-    end;
+    if outputPageControl.PageIndex=0 then outputPageControl.PageIndex:=pageIndexBeforeChange;
   end;
 
 PROCEDURE TMnhForm.outputPageControlChanging(Sender: TObject; VAR AllowChange: boolean);
@@ -1191,7 +1119,6 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
-    if miAutosize.Checked then miAutosizeClick(Sender);
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
@@ -1259,8 +1186,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         MAX_INTERVALL=250;
   VAR aid:ansistring;
       isEvaluationRunning:boolean;
-      flushPerformed:boolean;
-      autosizingDone:boolean=false;
+      flushPerformed:boolean=false;
       i,modalRes:longint;
       currentFileAge:double;
   begin
@@ -1297,8 +1223,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         miCallMain.enabled:=not(isEvaluationRunning);
       end;
       //--------------------------------------------------:Halt/Run enabled states
-      autosizingDone:=autosizeBlocks(isEvaluationRunning);
-
       //File checks:------------------------------------------------------------
       if (now>doNotCheckFileBefore) then begin
         doNotCheckFileBefore:=now+1;
@@ -1336,7 +1260,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
        not(runEvaluator.evaluationRunning) then plotForm.doPlot();
 
-    if not(flushPerformed) and not(autosizingDone) then begin
+    if not(flushPerformed) then begin
       UpdateTimeTimer.interval:=UpdateTimeTimer.interval+10;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end else UpdateTimeTimer.interval:=MIN_INTERVALL;
@@ -1501,7 +1425,6 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
       PageControl.enabled:=true;
       reEvaluationWithGUIrequired:=false;
     end else begin
-      miAutosize.Checked:=false;
       PageControl.visible:=false;
       PageControl.enabled:=false;
       Splitter1.visible:=false;

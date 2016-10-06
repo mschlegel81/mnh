@@ -29,9 +29,9 @@ TYPE
 
   T_contextOption=(cp_ask,
                    cp_spawnWorker,
-                   cp_profile,             //granted to child
                    cp_timing,              //not granted to child
                    {$ifdef fullVersion}
+                   cp_profile,             //granted to child
                    cp_debug,
                    {$endif}
                    cp_createDetachedTask,
@@ -39,16 +39,17 @@ TYPE
                    cp_clearTimerOnStart,
                    cp_clearAdaptersOnStart,
                    cp_logEndOfEvaluation,
+                   cp_beepOnError,
                    cp_notifyParentOfAsyncTaskEnd,
                    cp_disposeAdaptersOnDestruction);
   T_contextOptions=set of T_contextOption;
-  T_contextType=(ct_normal,ct_profiling{$ifdef fullVersion},ct_debugging{$endif},ct_silentlyRunAlone);
+  T_contextType=(ct_normal{$ifdef fullVersion},ct_profiling,ct_debugging{$endif},ct_silentlyRunAlone);
 
 CONST
   C_defaultOptions:array[T_contextType] of T_contextOptions=(
   {ct_normal}          [cp_ask,cp_timing,cp_spawnWorker,                    cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
-  {ct_profiling}       [cp_ask,cp_timing,cp_spawnWorker,cp_profile,         cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
   {$ifdef fullVersion}
+  {ct_profiling}       [cp_ask,cp_timing,cp_spawnWorker,cp_profile,         cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
   {ct_debugging}       [cp_ask,cp_timing,               cp_profile,cp_debug,cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
   {$endif}
   {ct_silentlyRunAlone}[                 cp_spawnWorker,                    cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart]);
@@ -69,8 +70,10 @@ TYPE
     callee:P_objectWithIdAndLocation;
     callParameters:P_listLiteral;
     calleeLiteral:P_expressionLiteral;
+    {$ifdef fullVersion}
     timeForProfiling_inclusive,
     timeForProfiling_exclusive:double;
+    {$endif}
   end;
   {$ifdef fullVersion}
   T_debuggingSnapshot=record
@@ -110,9 +113,9 @@ TYPE
         startOfProfiling:double;
         timeSpent:array[pc_importing..pc_interpretation] of double;
       end;
+      {$ifdef fullVersion}
       profilingAndDebuggingCriticalSection:TRTLCriticalSection;
       profilingMap:T_profilingMap;
-      {$ifdef fullVersion}
       debuggingStepper:record
         breakpoints:array of T_searchTokenLocation;
         state:(breakSoonest,
@@ -126,9 +129,10 @@ TYPE
         lastBreakLevel:longint;
         snapshot:T_debuggingSnapshot;
       end;
-      {$endif}
 
       PROCEDURE addToProfilingMap(CONST id:T_idString; CONST location:ansistring; CONST dt_inclusive,dt_exclusive:double);
+      {$endif}
+
     public
       CONSTRUCTOR createContext(CONST outAdapters:P_adapters; CONST contextType:T_contextType);
       PROCEDURE resetOptions(CONST contextType:T_contextType);
@@ -141,6 +145,7 @@ TYPE
       PROPERTY adapters:P_adapters read currentAdapters;
       FUNCTION hasOption(CONST option:T_contextOption):boolean; inline;
       PROCEDURE removeOption(CONST option:T_contextOption);
+      PROCEDURE addOption(CONST option:T_contextOption);
       //Delegation routines:
       PROCEDURE notifyAsyncTaskEnd;
       FUNCTION getNewAsyncContext:P_evaluationContext;
@@ -311,6 +316,7 @@ PROCEDURE disposeTimer(t:TEpikTimer);
     t.destroy;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST location: ansistring; CONST dt_inclusive,dt_exclusive:double);
   VAR profilingEntry:T_profilingEntry;
   begin
@@ -334,6 +340,7 @@ PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST loca
     profilingMap.put(location,profilingEntry);
     leaveCriticalSection(profilingAndDebuggingCriticalSection);
   end;
+{$endif}
 
 CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CONST contextType: T_contextType);
   VAR i:longint;
@@ -349,8 +356,10 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
     currentAdapters:=outAdapters;
     setLength(callStack,0);
     wallClock.create(@initTimer,@disposeTimer);
+    {$ifdef fullVersion}
     initCriticalSection(profilingAndDebuggingCriticalSection);
     profilingMap.create();
+    {$endif}
     {$ifdef DEBUGMODE}
     evaluationIsRunning:=false;
     {$endif}
@@ -380,8 +389,10 @@ DESTRUCTOR T_evaluationContext.destroy;
     clearCallStack;
     wallClock.destroy;
     if cp_disposeAdaptersOnDestruction in options then dispose(adapters,destroy);
+    {$ifdef fullVersion}
     profilingMap.destroy;
     doneCriticalSection(profilingAndDebuggingCriticalSection);
+    {$endif}
   end;
 
 PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath);
@@ -394,9 +405,11 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath
 
     valueStore.clear;
     clearCallStack;
+    {$ifdef fullVersion}
     profilingMap.clear;
+    {$endif}
     if cp_clearTimerOnStart in options then begin
-      if (cp_profile in options) or initialAdapters^.doShowTimingInfo then begin
+      if {$ifdef fullVersion} (cp_profile in options) or {$endif} initialAdapters^.doShowTimingInfo then begin
         wallClock.value.clear;
         wallClock.value.start;
         with timingInfo do begin
@@ -462,7 +475,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         adapters^.raiseCustomMessage(mt_timing_info,                        timeString[cat]  ,C_nilTokenLocation);
       end;
     end;
-
+  {$ifdef fullVersion}
   PROCEDURE logProfilingInfo;
     FUNCTION nicestTime(CONST seconds:double):string;
       begin
@@ -495,6 +508,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       lines:=formatTabs(lines);
       for i:=0 to length(lines)-1 do adapters^.raiseCustomMessage(mt_timing_info,lines[i],C_nilTokenLocation);
     end;
+  {$endif}
 
   begin
     {$ifdef DEBUGMODE}
@@ -512,7 +526,13 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       end;
       initialAdapters^.logEndOfEvaluation;
       if wantBasicTiming then logTimingInfo;
+      {$ifdef fullVersion}
       if (cp_profile in options) and adapters^.doShowTimingInfo then logProfilingInfo;
+      {$endif}
+      if (cp_beepOnError in options) then begin
+        adapters^.updateErrorlevel;
+        if not(adapters^.noErrors) then beep;
+      end;
     end;
     if cp_notifyParentOfAsyncTaskEnd in options then parentContext^.notifyAsyncTaskEnd;
   end;
@@ -526,6 +546,14 @@ PROCEDURE T_evaluationContext.removeOption(CONST option:T_contextOption);
     if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
     {$endif}
     options:=options-[option];
+  end;
+
+PROCEDURE T_evaluationContext.addOption(CONST option:T_contextOption);
+  begin
+    {$ifdef DEBUGMODE}
+    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
+    {$endif}
+    options:=options+[option];
   end;
 
 PROCEDURE T_evaluationContext.notifyAsyncTaskEnd;
@@ -661,11 +689,13 @@ PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation: T_tokenLocatio
     callStack[topIdx].calleeLiteral :=expressionLiteral;
     if callParameters<>nil then callParameters^.rereference;
     if expressionLiteral<>nil then expressionLiteral^.rereference;
+    {$ifdef fullVersion}
     if cp_profile in options then begin
       if topIdx>0 then with callStack[topIdx-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
       callStack[topIdx].timeForProfiling_exclusive:=wallclockTime;
       callStack[topIdx].timeForProfiling_inclusive:=wallclockTime;
     end;
+    {$endif}
   end;
 
 PROCEDURE T_evaluationContext.callStackPop;
@@ -673,6 +703,7 @@ PROCEDURE T_evaluationContext.callStackPop;
   begin
     topIdx:=length(callStack)-1;
     if topIdx<0 then exit;
+    {$ifdef fullVersion}
     if cp_profile in options then begin
       with callStack[topIdx] do begin
         timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
@@ -681,6 +712,7 @@ PROCEDURE T_evaluationContext.callStackPop;
        end;
       if topIdx>0 then with callStack[topIdx-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     end;
+    {$endif}
     with callStack[topIdx] do begin
       if callParameters<>nil then disposeLiteral(callParameters);
       if calleeLiteral <>nil then disposeLiteral(calleeLiteral);

@@ -217,6 +217,8 @@ main('CLEAN')->begin
   cleanup;
   files(BUILTS.getInner(2)).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 end;
+//*Beep - just for notification purposes
+main('beep')->beep;
 
 //*Build one specific target
 main(target:string)->

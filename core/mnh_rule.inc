@@ -16,6 +16,7 @@
       CONSTRUCTOR create(CONST ruleId:T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
+      PROCEDURE clearCache;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
@@ -105,6 +106,14 @@ FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
     leaveCriticalSection(rule_cs);
     result:=param^.value(1);
     result^.rereference;
+  end;
+
+PROCEDURE T_rule.clearCache;
+  begin
+    if not(ruleType=rt_memoized) then exit;
+    enterCriticalSection(rule_cs);
+    cache^.clear;
+    leaveCriticalSection(rule_cs);
   end;
 
 FUNCTION T_rule.replaces(CONST param: P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR context:T_evaluationContext): boolean;
