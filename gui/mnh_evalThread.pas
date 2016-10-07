@@ -176,6 +176,7 @@ DESTRUCTOR T_evaluator.destroy;
       enterCriticalSection(cs);
     until state=es_dead;
     package.destroy;
+    context.destroy;
     leaveCriticalSection(cs);
     system.doneCriticalSection(cs);
   end;

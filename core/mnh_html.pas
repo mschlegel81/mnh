@@ -15,7 +15,7 @@ TYPE
   T_htmlOutAdapter=object(T_abstractFileOutAdapter)
     PROCEDURE flush(); virtual;
   public
-    CONSTRUCTOR create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
+    CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -108,9 +108,9 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
     result:=result+copy(line,i0,i1-i0+1);
   end;
 
-CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
+CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
   begin
-    inherited create(at_htmlFile,fileName,behaviour,forceNewFile);
+    inherited create(at_htmlFile,fileName,messageTypesToInclude_,forceNewFile);
   end;
 
 DESTRUCTOR T_htmlOutAdapter.destroy;

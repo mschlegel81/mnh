@@ -713,8 +713,8 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
     if settingsReady then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
-      guiOutAdapter.doEchoDeclaration:=miDeclarationEcho.Checked;
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
+      guiOutAdapter.enableMessageType(miDeclarationEcho.Checked,[mt_echo_declaration]);
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
     end;
   end;
 
@@ -731,8 +731,8 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
     if settingsReady then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
-      guiOutAdapter.doEchoInput:=miExpressionEcho.Checked;
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
+      guiOutAdapter.enableMessageType(miExpressionEcho.Checked,[mt_echo_input]);
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
     end;
   end;
 
@@ -740,8 +740,8 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
     if settingsReady then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
-      guiOutAdapter.doShowExpressionOut:=miExpressionResult.Checked;
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
+      guiOutAdapter.enableMessageType(miExpressionResult.Checked,[mt_echo_output]);
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
     end;
   end;
 
@@ -795,6 +795,7 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
+  VAR j:longint;
   begin
     if settingsReady then begin
       case i of
@@ -804,8 +805,8 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
         4: miMinErrorlevel4.Checked:=true;
         5: miMinErrorlevel5.Checked:=true;
       end;
-      guiOutAdapter.minErrorLevel:=i;
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
+      for j:=1 to 5 do guiOutAdapter.enableMessageType(j>=i,C_errorMessageTypes[j]);
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
     end;
   end;
 
@@ -1031,8 +1032,8 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
   begin
     if settingsReady then begin
       miTimingInfo.Checked:=not(miTimingInfo.Checked);
-      guiOutAdapter.doShowTimingInfo:=miTimingInfo.Checked;
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
+      guiOutAdapter.enableMessageType(miTimingInfo.Checked,[mt_timing_info]);
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
     end;
   end;
 
@@ -1451,7 +1452,8 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
 
 PROCEDURE TMnhForm.processSettings;
   VAR formPosition:T_formPosition;
-      i:longint;
+      i,j:longint;
+      maxLevel:longint=5;
   begin
     if not(settingsReady) then begin
       formPosition:=settings.value^.mainForm;
@@ -1461,19 +1463,18 @@ PROCEDURE TMnhForm.processSettings;
       height:=formPosition.height;
       if formPosition.isFullscreen then WindowState:=wsMaximized;
 
-      with settings.value^.outputBehaviour do begin
-        miDeclarationEcho.Checked:=doEchoDeclaration;
-        miExpressionEcho.Checked:=doEchoInput;
-        miExpressionResult.Checked:=doShowExpressionOut;
-        miWrapEcho.Checked:=settings.value^.wordWrapEcho;
-        miTimingInfo.Checked:=doShowTimingInfo;
-        miMinErrorlevel1.Checked:=minErrorLevel<=1;
-        miMinErrorlevel2.Checked:=minErrorLevel=2;
-        miMinErrorlevel3.Checked:=minErrorLevel=3;
-        miMinErrorlevel4.Checked:=minErrorLevel=4;
-        miMinErrorlevel5.Checked:=minErrorLevel>=5;
-        guiOutAdapter.outputBehaviour:=settings.value^.outputBehaviour;
-      end;
+      miDeclarationEcho .Checked:=mt_echo_declaration in settings.value^.outputBehaviour;
+      miExpressionEcho  .Checked:=mt_echo_input       in settings.value^.outputBehaviour;
+      miExpressionResult.Checked:=mt_echo_output      in settings.value^.outputBehaviour;
+      miTimingInfo      .Checked:=mt_timing_info      in settings.value^.outputBehaviour;;
+      miWrapEcho.Checked:=settings.value^.wordWrapEcho;
+      for j:=5 downto 1 do if (C_errorMessageTypes[j] * settings.value^.outputBehaviour <> []) then maxLevel:=j;
+      miMinErrorlevel1.Checked:=maxLevel=1;
+      miMinErrorlevel2.Checked:=maxLevel=2;
+      miMinErrorlevel3.Checked:=maxLevel=3;
+      miMinErrorlevel4.Checked:=maxLevel=4;
+      miMinErrorlevel5.Checked:=maxLevel>=5;
+      guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour;
 
       if reEvaluationWithGUIrequired
       then setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter)

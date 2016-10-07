@@ -506,13 +506,22 @@ CONST
 {mt_displayTable                       } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
+  C_errorMessageTypes:array[1..5] of T_messageTypeSet=(
+    [mt_el1_note],
+    [mt_el2_warning],
+    [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_stackTrace,mt_el3_userDefined],
+    [mt_el4_parsingError],
+    [mt_el5_systemError,mt_el5_haltMessageReceived,mt_el5_haltMessageQuiet]);
 
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
 //FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
+OPERATOR :=(CONST x:T_messageTypeSet):qword;
+OPERATOR :=(x:qword):T_messageTypeSet;
 IMPLEMENTATION
+
 FUNCTION isQualified(CONST s:string):boolean;
   begin
     result:=pos(ID_QUALIFY_CHARACTER,s)>0;
@@ -545,6 +554,26 @@ FUNCTION configDir:string;
     {$else}
     result:=GetAppConfigDir(false);
     {$endif}
+  end;
+
+OPERATOR :=(CONST x:T_messageTypeSet):qword;
+  VAR mt:T_messageType;
+  begin
+    result:=0;
+    for mt:=low(T_messageType) to high(T_messageType) do begin
+      if mt in x then inc(result);
+      result:=result shl 1;
+    end;
+  end;
+
+OPERATOR :=(x:qword):T_messageTypeSet;
+  VAR mt:T_messageType;
+  begin
+    result:=[];
+    for mt:=high(T_messageType) downto low(T_messageType) do begin
+      x:=x shr 1;
+      if odd(x) then result:=result+[mt];
+    end;
   end;
 
 INITIALIZATION

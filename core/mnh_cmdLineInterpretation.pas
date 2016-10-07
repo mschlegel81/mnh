@@ -34,7 +34,7 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CO
   VAR i:longint;
   begin
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(adapters,nameAndOption,appending);
-    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehaviour:=defaultOutputBehavior;
+    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
   end;
 
 {$ifdef fullVersion}
@@ -51,9 +51,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
       directExecutionMode:boolean=false;
-      echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
-      time:(t_forcedOn,t_default,t_forcedOff)=t_default;
-      minEL:longint=3;
 
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
@@ -67,50 +64,44 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 
   PROCEDURE displayHelp;
     begin
-      consoleAdapters.printOut('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
+      writeln('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
                       {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
-      consoleAdapters.printOut('compiled on: '+{$I %DATE%});
-      consoleAdapters.printOut('         at: '+{$I %TIME%});
-      consoleAdapters.printOut('FPC version: '+{$I %FPCVERSION%});
-      consoleAdapters.printOut('Target CPU : '+{$I %FPCTARGET%});
-      consoleAdapters.printOut('');
-      consoleAdapters.printOut('Accepted parameters: ');
-      consoleAdapters.printOut('  [-h/-version] [+echo/-echo] [-el#] [(-cmd commandToExecute) | (filename [parameters])]');
-      consoleAdapters.printOut('  filename          if present the file is interpreted; parameters are passed if present');
-      consoleAdapters.printOut('                    if not present, interactive mode is entered');
-      consoleAdapters.printOut('  +echo             force echo on (default for interactive mode)');
-      consoleAdapters.printOut('  -echo             force echo off (default for interpretation mode)');
-      consoleAdapters.printOut('  +time             force time on (default for interactive mode)');
-      consoleAdapters.printOut('  -time             force time off (default for interpretation mode)');
-      consoleAdapters.printOut('  -el#              set minimum error level for output; valid values: [0..5], default=2');
-      consoleAdapters.printOut('  -h                display this help and quit');
-      consoleAdapters.printOut('  -version          show version info and exit');
-      consoleAdapters.printOut('  -codeHash         show codeHash and exit');
-      consoleAdapters.printOut('  -cmd              directly execute the following command');
-      consoleAdapters.printOut('  -info             show info; same as -cmd mnhInfo.print');
+      writeln('compiled on: '+{$I %DATE%});
+      writeln('         at: '+{$I %TIME%});
+      writeln('FPC version: '+{$I %FPCVERSION%});
+      writeln('Target CPU : '+{$I %FPCTARGET%});
+      writeln('');
+      writeln('Accepted parameters: ');
+      writeln('  [mnh_options] [(-cmd commandToExecute) | (filename [parameters])]');
+      writeln('  filename          if present the file is interpreted; parameters are passed if present');
+      writeln('                    if not present, interactive mode is entered');
+      writeln('  -v[options]       verbosity. options can consist of multiple characters.');
+      writeln('                    Lowercase indicates enabling, uppercase indicates disabling.');
+      writeln('                       p/P  : print out');
+      writeln('                       i/I  : input echo');
+      writeln('                       d/D  : declaration echo');
+      writeln('                       o/O  : output echo');
+      writeln('                       e/E  : all echo; same as ido');
+      writeln('                       t/T  : timing info');
+      writeln('                       n/N  : notes (error level 1 only)');
+      writeln('                       w/W  : warnings (error level 2 only)');
+      writeln('                       1..5 : override minimum error level');
+      writeln('                       v    : be verbose; same as pidot1');
+      writeln('  -h                display this help or help on the input file if present and quit');
+      writeln('  -version          show version info and exit');
+      writeln('  -codeHash         show codeHash and exit');
+      writeln('  -cmd              directly execute the following command');
+      writeln('  -info             show info; same as -cmd mnhInfo.print');
       {$ifdef fullVersion}
-      consoleAdapters.printOut('  -profile          do a profiling run - implies +time');
-      consoleAdapters.printOut('  -doc              regenerate and show documentation');
-      consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
+      writeln('  -profile          do a profiling run - implies +time');
+      writeln('  -doc              regenerate and show documentation');
+      writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
       {$endif}
-      consoleAdapters.printOut('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
-      consoleAdapters.printOut('     an html document will be generated, otherwise simple text.');
-      consoleAdapters.printOut('     options can consist of multiple characters interpreted as:');
-      consoleAdapters.printOut('        p    : show print out');
-      consoleAdapters.printOut('        P    : suppress print out');
-      consoleAdapters.printOut('        i    : show input echo');
-      consoleAdapters.printOut('        I    : suppress input echo');
-      consoleAdapters.printOut('        d    : show declaration echo');
-      consoleAdapters.printOut('        D    : suppress declaration echo');
-      consoleAdapters.printOut('        o    : show output echo');
-      consoleAdapters.printOut('        O    : suppress output echo');
-      consoleAdapters.printOut('        t    : show timing info');
-      consoleAdapters.printOut('        T    : suppress timing info');
-      consoleAdapters.printOut('        1..5 : override minimum error level');
-      consoleAdapters.printOut('        v    : be verbose; same as pidot1');
-      consoleAdapters.printOut('     if no options are given, the global output settings will be used');
-      consoleAdapters.printOut('  +out <filename>   As -out but appending to the file if existing.');
-      consoleAdapters.printOut('  -quiet            disable console output');
+      writeln('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
+      writeln('     an html document will be generated, otherwise simple text. Options are verbosity options');
+      writeln('     if no options are given, the global output settings will be used');
+      writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
+      writeln('  -quiet            disable console output');
     end;
 
   PROCEDURE doDirect;
@@ -172,9 +163,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       list[length(list)-1]:=paramStr(index);
     end;
 
+  CONST DEF_VERBOSITY_STRING='&^\';
   VAR i:longint;
       quitImmediate:boolean=false;
       nextAppendMode:boolean;
+      verbosityString:string=DEF_VERBOSITY_STRING;
 
   begin
     consoleAdapters.create;
@@ -184,11 +177,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     i:=1;
     while i<=paramCount do begin
       if (fileOrCommandToInterpret='') or directExecutionMode then begin
-        if      paramStr(i)='+echo' then begin echo:=e_forcedOn;           addParameter(mnhParameters,i); end
-        else if paramStr(i)='-echo' then begin echo:=e_forcedOff;          addParameter(mnhParameters,i); end
-        else if paramStr(i)='+time' then begin time:=t_forcedOn;           addParameter(mnhParameters,i); end
-        else if paramStr(i)='-time' then begin time:=t_forcedOff;          addParameter(mnhParameters,i); end
-        else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
+        if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
         {$ifdef fullVersion}
         else if (paramStr(i)='-edit') then while i<paramCount do begin
           inc(i);
@@ -217,16 +206,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         {$ifdef fullVersion}
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc(false); quitImmediate:=true; end
         {$endif}
-        else if startsWith(paramStr(i),'-el') then begin
-          minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
-          addParameter(mnhParameters,i);
-          if (minEL<=0) or (minEL>5) then begin
-            writeln('Invalid minimum error level given!');
-            writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramStr(i),4,length(paramStr(i))-3));
-            writeln('Allowed values: 1, 2, 3, 4, 5');
-            exit(false);
-          end;
-        end else if directExecutionMode then begin
+        else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
           if fileExists(paramStr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
@@ -241,31 +221,18 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
     setMnhParameters(mnhParameters);
 
-    {$ifdef fullVersion}
-    if profilingRun then time:=t_forcedOn;
-    {$endif}
-
     if fileOrCommandToInterpret=''
     then defaultOutputBehavior:=C_defaultOutputBehavior_interactive
     else defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
-    defaultOutputBehavior.minErrorLevel:=minEL;
-    case echo of
-      e_forcedOn: begin
-        defaultOutputBehavior.doEchoDeclaration  :=true;
-        defaultOutputBehavior.doEchoInput        :=true;
-        defaultOutputBehavior.doShowExpressionOut:=true;
-      end;
-      e_forcedOff: begin
-        defaultOutputBehavior.doEchoDeclaration  :=false;
-        defaultOutputBehavior.doEchoInput        :=false;
-        defaultOutputBehavior.doShowExpressionOut:=false;
-      end;
+    if verbosityString<>DEF_VERBOSITY_STRING then begin
+      if verbosityString='' then verbosityString:='v';
+      defaultOutputBehavior:=verbosityString;
     end;
-    case time of
-      t_forcedOn:  defaultOutputBehavior.doShowTimingInfo:=true;
-      t_forcedOff: defaultOutputBehavior.doShowTimingInfo:=false;
-    end;
+    {$ifdef fullVersion}
+    if profilingRun then defaultOutputBehavior:=defaultOutputBehavior+[mt_timing_info];
+    {$endif}
     //-----------------------------------------------------
+    wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay;
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviourFromCommandLineOptions(consoleAdapters,nil);
     if fileOrCommandToInterpret<>'' then begin

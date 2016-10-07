@@ -1,6 +1,6 @@
 UNIT mnh_settings;
 INTERFACE
-USES myGenerics,myStringUtil,dateutils,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants,serializationUtil;
+USES myGenerics,myStringUtil,dateutils,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants,serializationUtil,typinfo;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -48,7 +48,7 @@ T_settings=object(T_serializable)
   fileHistory: T_listOfString;
   editorState: array of T_editorState;
   activePage:longint;
-  outputBehaviour: T_outputBehaviour;
+  outputBehaviour: T_messageTypeSet;
   saveIntervalIdx:byte;
   textLogName:string;
   logPerRun:boolean;
@@ -127,14 +127,8 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     editorFontname := stream.readAnsiString;
     antialiasedFonts:=stream.readBoolean;
     mainForm.loadFromStream(stream);
-    with outputBehaviour do begin
-      doShowPrint := true;
-      doEchoInput := stream.readBoolean;
-      doEchoDeclaration := stream.readBoolean;
-      doShowExpressionOut := stream.readBoolean;
-      doShowTimingInfo:= stream.readBoolean;
-      minErrorLevel:=stream.readShortint;
-    end;
+    outputBehaviour:=stream.readNaturalNumber;
+    outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
     doResetPlotOnEvaluation := stream.readBoolean;
     fileHistory.clear;
     for i:=0 to FILE_HISTORY_MAX_SIZE-1 do fileHistory.add(stream.readAnsiString);
@@ -171,13 +165,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
     stream.writeAnsiString(editorFontname);
     stream.writeBoolean(antialiasedFonts);
     mainForm.saveToStream(stream);
-    with outputBehaviour do begin
-      stream.writeBoolean(doEchoInput);
-      stream.writeBoolean(doEchoDeclaration);
-      stream.writeBoolean(doShowExpressionOut);
-      stream.writeBoolean(doShowTimingInfo);
-      stream.writeShortint(minErrorLevel);
-    end;
+    stream.writeNaturalNumber(outputBehaviour);
     stream.writeBoolean(doResetPlotOnEvaluation);
     for i:=0 to FILE_HISTORY_MAX_SIZE-1 do stream.writeAnsiString(historyItem(i));
     for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
@@ -208,14 +196,7 @@ PROCEDURE T_settings.initDefaults;
       height := 480;
       isFullscreen := false;
     end;
-    with outputBehaviour do begin
-      doShowPrint := true;
-      doEchoInput := true;
-      doEchoDeclaration := true;
-      doShowExpressionOut := true;
-      doShowTimingInfo:=false;
-      minErrorLevel:=3;
-    end;
+    outputBehaviour:=C_defaultOutputBehavior_interactive;
     doResetPlotOnEvaluation:=true;
     saveIntervalIdx:=0;
     wasLoaded:=false;

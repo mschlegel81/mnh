@@ -25,7 +25,7 @@ object MnhForm: TMnhForm
     Width = 631
     TabStop = False
     ActivePage = debugTabSheet
-    Align = alClient
+    Align = alBottom
     Font.Color = clBlack
     ParentFont = False
     TabIndex = 2
@@ -1651,7 +1651,7 @@ object MnhForm: TMnhForm
     Top = 30
     Width = 631
     TabStop = False
-    Align = alTop
+    Align = alClient
     TabOrder = 0
     OnChange = inputPageControlChange
     Options = [nboShowCloseButtons, nboKeyboardTabSwitch, nboShowAddTabButton]
@@ -1662,9 +1662,9 @@ object MnhForm: TMnhForm
     Height = 5
     Top = 155
     Width = 631
-    Align = alTop
+    Align = alBottom
     OnMoved = Splitter1Moved
-    ResizeAnchor = akTop
+    ResizeAnchor = akBottom
   end
   inline helpPopupMemo: TSynMemo
     Cursor = crIBeam
