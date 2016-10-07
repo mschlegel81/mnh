@@ -170,6 +170,7 @@ TYPE
       PROCEDURE copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean);
 
       PROCEDURE setExitCode;
+      FUNCTION triggersBeep:boolean;
 
       PROPERTY doEchoInput:         boolean read someEchoInput        ;
       PROPERTY doEchoDeclaration:   boolean read someEchoDeclaration  ;
@@ -788,6 +789,12 @@ PROCEDURE T_adapters.setExitCode;
     ExitCode:=code;
   end;
 
+FUNCTION T_adapters.triggersBeep:boolean;
+  VAR mt:T_messageType;
+  begin
+    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>0) then exit(true);
+    result:=false;
+  end;
 //===================================================================:T_adapters
 
 INITIALIZATION

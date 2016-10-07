@@ -857,8 +857,8 @@ PROCEDURE TMnhForm.updateDebugParts;
       isRunning:boolean;
   begin
     if miDebug.Checked then begin
-      debugTabSheet.Visible:=true;
-      debugTabSheet.TabVisible:=true;
+      debugTabSheet.visible:=true;
+      debugTabSheet.tabVisible:=true;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=true;
       DebugToolbar.visible:=true;
       DebugToolbar.enabled:=true;
@@ -872,8 +872,8 @@ PROCEDURE TMnhForm.updateDebugParts;
       handleButton(tbStepOut  ,    isRunning and isPaused,8);
       handleButton(tbMicroStep,    isRunning and isPaused,10);
     end else begin
-      debugTabSheet.Visible:=false;
-      debugTabSheet.TabVisible:=false;
+      debugTabSheet.visible:=false;
+      debugTabSheet.tabVisible:=false;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.activePage:=outputTabSheet;
       DebugToolbar.visible:=false;
@@ -942,7 +942,7 @@ PROCEDURE TMnhForm.handleBreak;
     currentExpressionMemo.clear;
     currentExpressionMemo.lines.append(snapshot.state);
     updateDebugParts;
-    outputPageControl.ActivePage:=debugTabSheet;
+    outputPageControl.activePage:=debugTabSheet;
   end;
 
 FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring): longint;
