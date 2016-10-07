@@ -186,6 +186,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         end
         else if (paramStr(i)='-profile') then profilingRun:=true
         {$endif}
+        else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
         else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
           nextAppendMode:=paramStr(i)='+out';
           addParameter(mnhParameters,i);
