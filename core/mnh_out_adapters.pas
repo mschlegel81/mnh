@@ -9,14 +9,6 @@ TYPE
     location: T_searchTokenLocation;
   end;
   T_storedMessages = array of T_storedMessage;
-  T_outputBehaviour= record
-    doShowPrint:         boolean;
-    doEchoInput:         boolean;
-    doEchoDeclaration:   boolean;
-    doShowExpressionOut: boolean;
-    doShowTimingInfo:    boolean;
-    minErrorLevel:       shortint;
-  end;
   T_adapterType=(at_unknown,
                  at_console,
                  at_textFile,
@@ -44,41 +36,22 @@ TYPE
     private
       autodestruct:boolean;
       messageTypesToInclude:T_messageTypeSet;
-      PROCEDURE enableMessageType(CONST enabled:boolean; CONST mt:T_messageType);
-      FUNCTION  getShowPrint                    : boolean;
-      PROCEDURE setShowPrint        (CONST value: boolean );
-      FUNCTION  getEchoInput                    : boolean;
-      PROCEDURE setEchoInput        (CONST value: boolean );
-      FUNCTION  getEchoDeclaration              : boolean;
-      PROCEDURE setEchoDeclaration  (CONST value: boolean );
-      FUNCTION  getShowExpressionOut            : boolean;
-      PROCEDURE setShowExpressionOut(CONST value: boolean );
-      FUNCTION  getShowTimingInfo               : boolean;
-      PROCEDURE setShowTimingInfo   (CONST value: boolean );
-      FUNCTION  getMinErrorLevel                : shortint;
-      PROCEDURE setMinErrorLevel    (CONST value: shortint);
-      FUNCTION  getOutputBehaviour              : T_outputBehaviour;
-      PROCEDURE setOutputBehaviour  (CONST value: T_outputBehaviour);
+      PROCEDURE setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
+      FUNCTION getOutputBehavior:T_messageTypeSet;
     public
     adapterType:T_adapterType;
 
-    CONSTRUCTOR create(CONST typ:T_adapterType; CONST behaviour:T_outputBehaviour);
+    CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
     DESTRUCTOR destroy; virtual; abstract;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual; abstract;
     PROCEDURE clear; virtual;
-
-    PROPERTY doShowPrint        : boolean        read getShowPrint         write setShowPrint        ;
-    PROPERTY doEchoInput        : boolean        read getEchoInput         write setEchoInput        ;
-    PROPERTY doEchoDeclaration  : boolean        read getEchoDeclaration   write setEchoDeclaration  ;
-    PROPERTY doShowExpressionOut: boolean        read getShowExpressionOut write setShowExpressionOut;
-    PROPERTY doShowTimingInfo   : boolean        read getShowTimingInfo    write setShowTimingInfo   ;
-    PROPERTY minErrorLevel      : shortint       read getMinErrorLevel     write setMinErrorLevel    ;
-    PROPERTY outputBehaviour : T_outputBehaviour read getOutputBehaviour   write setOutputBehaviour;
+    PROPERTY outputBehavior:T_messageTypeSet read getOutputBehavior write setOutputBehavior;
+    PROCEDURE enableMessageType(CONST enabled:boolean; CONST mt:T_messageTypeSet);
   end;
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
   T_consoleOutAdapter = object(T_abstractOutAdapter)
-    CONSTRUCTOR create(CONST behaviour:T_outputBehaviour);
+    CONSTRUCTOR create(CONST messageTypesToInclude_:T_messageTypeSet);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
   end;
@@ -87,7 +60,7 @@ TYPE
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
     cs:TRTLCriticalSection;
-    CONSTRUCTOR create(CONST typ:T_adapterType; CONST behaviour:T_outputBehaviour);
+    CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
     PROCEDURE clear; virtual;
@@ -100,7 +73,7 @@ TYPE
       FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
       PROCEDURE flush; virtual; abstract;
     public
-      CONSTRUCTOR create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
+      CONSTRUCTOR create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message: T_storedMessage):boolean; virtual;
   end;
@@ -111,7 +84,7 @@ TYPE
       FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
       PROCEDURE flush; virtual;
     public
-      CONSTRUCTOR create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
+      CONSTRUCTOR create(CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -173,6 +146,7 @@ TYPE
       PROCEDURE copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean);
 
       PROCEDURE setExitCode;
+      FUNCTION triggersBeep:boolean;
 
       PROPERTY doEchoInput:         boolean read someEchoInput        ;
       PROPERTY doEchoDeclaration:   boolean read someEchoDeclaration  ;
@@ -181,30 +155,31 @@ TYPE
   end;
 
 CONST
-  C_defaultOutputBehavior_interactive:T_outputBehaviour=(
-    doShowPrint:         true;
-    doEchoInput:         true;
-    doEchoDeclaration:   true;
-    doShowExpressionOut: true;
-    doShowTimingInfo:    true;
-    minErrorLevel:       3);
-  C_defaultOutputBehavior_fileMode:T_outputBehaviour=(
-    doShowPrint:         true;
-    doEchoInput:         false;
-    doEchoDeclaration:   false;
-    doShowExpressionOut: false;
-    doShowTimingInfo:    false;
-    minErrorLevel:       3);
-  C_collectAllOutputBehavior:T_outputBehaviour=(
-    doShowPrint:         true;
-    doEchoInput:         true;
-    doEchoDeclaration:   true;
-    doShowExpressionOut: true;
-    doShowTimingInfo:    true;
-    minErrorLevel:       1);
+  C_defaultOutputBehavior_interactive:T_messageTypeSet=[mt_clearConsole,
+    mt_printline,
+    mt_echo_input,
+    mt_echo_declaration,
+    mt_echo_output,
+    mt_echo_continued,
+    mt_el3_evalError..high(T_messageTypeSet)];
+
+  C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_el3_evalError..mt_reloadRequired
+    {$ifdef FULLVERSION},
+    mt_plotFileCreated,
+    mt_plotCreatedWithDeferredDisplay,
+    mt_plotCreatedWithInstantDisplay,
+    mt_plotSettingsChanged,
+    mt_evaluatedStatementInInteractiveMode,
+    mt_displayTable,
+    mt_guiPseudoPackageFound
+    {$endif}
+    {$ifdef imig},
+    mt_displayImage
+    {$endif}];
+  C_collectAllOutputBehavior:T_messageTypeSet=[low(T_messageType)..high(T_messageType)];
 
 VAR
-  defaultOutputBehavior:T_outputBehaviour;
+  defaultOutputBehavior:T_messageTypeSet;
 {$ifdef fullVersion}
   gui_started:boolean=false;
 {$endif}
@@ -213,7 +188,7 @@ FUNCTION message(CONST messageType  : T_messageType;
                  CONST location     : T_searchTokenLocation):T_storedMessage;
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
 FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
-OPERATOR :=(s:string):T_outputBehaviour;
+OPERATOR :=(s:string):T_messageTypeSet;
 IMPLEMENTATION
 FUNCTION message(CONST messageType  : T_messageType;
                  CONST simpleMessage: ansistring;
@@ -242,104 +217,68 @@ FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansis
     end;
   end;
 
-OPERATOR :=(s:string):T_outputBehaviour;
-  VAR i:longint;
+OPERATOR :=(s:string):T_messageTypeSet;
+  VAR i,level:longint;
+      mt:T_messageType;
   begin
     result:=defaultOutputBehavior;
     for i:=1 to length(s) do case s[i] of
-      'v': begin
-             result.minErrorLevel:=1;
-             result.doShowPrint        :=true;
-             result.doEchoInput        :=true;
-             result.doEchoDeclaration  :=true;
-             result.doShowExpressionOut:=true;
-             result.doShowTimingInfo   :=true;
-           end;
-      'p': result.doShowPrint:=true;
-      'P': result.doShowPrint:=false;
-      'i': result.doEchoInput:=true;
-      'I': result.doEchoInput:=false;
-      'd': result.doEchoDeclaration:=true;
-      'D': result.doEchoDeclaration:=false;
-      'o': result.doShowExpressionOut:=true;
-      'O': result.doShowExpressionOut:=false;
-      't': result.doShowTimingInfo:=true;
-      'T': result.doShowTimingInfo:=false;
-      '1': result.minErrorLevel:=1;
-      '2': result.minErrorLevel:=2;
-      '3': result.minErrorLevel:=3;
-      '4': result.minErrorLevel:=4;
-      '5': result.minErrorLevel:=5;
+      'v': result:=C_collectAllOutputBehavior;
+      'p': result:=result+[mt_printline,mt_clearConsole];
+      'P': result:=result-[mt_printline,mt_clearConsole];
+      'i': result:=result+[mt_echo_input];
+      'I': result:=result-[mt_echo_input];
+      'd': result:=result+[mt_echo_declaration];
+      'D': result:=result-[mt_echo_declaration];
+      'o': result:=result+[mt_echo_output];
+      'O': result:=result-[mt_echo_output];
+      't': result:=result+[mt_timing_info];
+      'T': result:=result-[mt_timing_info];
+      'e': result:=result+[mt_echo_input,mt_echo_declaration,mt_echo_output];
+      'E': result:=result-[mt_echo_input,mt_echo_declaration,mt_echo_output];
+      'n': result:=result+[mt_el1_note];
+      'N': result:=result-[mt_el1_note];
+      'w': result:=result+[mt_el2_warning];
+      'W': result:=result-[mt_el2_warning];
+      '1'..'5': begin
+        level:=strToInt(s[i]);
+        for mt:=low(T_messageType) to high(T_messageType) do if C_messageTypeMeta[mt].level>0 then begin
+          if C_messageTypeMeta[mt].level>=level then result:=result+[mt]
+                                                else result:=result-[mt];
+        end;
+      end;
     end;
   end;
 //T_abstractOutAdapter:=========================================================
-PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean; CONST mt: T_messageType);
+PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean; CONST mt: T_messageTypeSet);
   begin
-    if enabled and (mt in C_includableMessages[adapterType])
-    then messageTypesToInclude:=messageTypesToInclude+[mt]
-    else messageTypesToInclude:=messageTypesToInclude-[mt];
+    if enabled
+    then messageTypesToInclude:=(messageTypesToInclude+mt) * C_includableMessages[adapterType]
+    else messageTypesToInclude:=(messageTypesToInclude-mt) * C_includableMessages[adapterType];
   end;
 
-FUNCTION T_abstractOutAdapter.getShowPrint        : boolean; begin result:=mt_printline        in messageTypesToInclude; end;
-FUNCTION T_abstractOutAdapter.getEchoInput        : boolean; begin result:=mt_echo_input       in messageTypesToInclude; end;
-FUNCTION T_abstractOutAdapter.getEchoDeclaration  : boolean; begin result:=mt_echo_declaration in messageTypesToInclude; end;
-FUNCTION T_abstractOutAdapter.getShowExpressionOut: boolean; begin result:=mt_echo_output      in messageTypesToInclude; end;
-FUNCTION T_abstractOutAdapter.getShowTimingInfo   : boolean; begin result:=mt_timing_info      in messageTypesToInclude; end;
-PROCEDURE T_abstractOutAdapter.setShowPrint        (CONST value: boolean); begin enableMessageType(value,mt_printline); enableMessageType(value,mt_clearConsole); end;
-PROCEDURE T_abstractOutAdapter.setEchoInput        (CONST value: boolean); begin enableMessageType(value,mt_echo_input);       end;
-PROCEDURE T_abstractOutAdapter.setEchoDeclaration  (CONST value: boolean); begin enableMessageType(value,mt_echo_declaration); end;
-PROCEDURE T_abstractOutAdapter.setShowExpressionOut(CONST value: boolean); begin enableMessageType(value,mt_echo_output);      end;
-PROCEDURE T_abstractOutAdapter.setShowTimingInfo   (CONST value: boolean); begin enableMessageType(value,mt_timing_info);      end;
-FUNCTION T_abstractOutAdapter.getMinErrorLevel: shortint;
-  VAR mt:T_messageType;
-  begin
-    result:=127;
-    for mt:=low(T_messageType) to high(T_messageType) do
-      if (mt in messageTypesToInclude       ) and
-         (C_messageTypeMeta[mt].level>=0    ) and
-         (C_messageTypeMeta[mt].level<result) then result:=C_messageTypeMeta[mt].level;
-  end;
-
-PROCEDURE T_abstractOutAdapter.setMinErrorLevel(CONST value: shortint);
-  VAR mt:T_messageType;
-  begin
-    for mt:=low(T_messageType) to high(T_messageType) do
-      if (C_messageTypeMeta[mt].level>=0) then enableMessageType(C_messageTypeMeta[mt].level>=value,mt);
-  end;
-
-FUNCTION T_abstractOutAdapter.getOutputBehaviour: T_outputBehaviour;
-  begin
-    result.doShowPrint        :=doShowPrint;
-    result.doEchoInput        :=doEchoInput        ;
-    result.doEchoDeclaration  :=doEchoDeclaration  ;
-    result.doShowExpressionOut:=doShowExpressionOut;
-    result.doShowTimingInfo   :=doShowTimingInfo   ;
-    result.minErrorLevel      :=minErrorLevel      ;
-  end;
-
-PROCEDURE T_abstractOutAdapter.setOutputBehaviour(CONST value: T_outputBehaviour);
-  begin
-    doShowPrint        :=value.doShowPrint        ;
-    doEchoInput        :=value.doEchoInput        ;
-    doEchoDeclaration  :=value.doEchoDeclaration  ;
-    doShowExpressionOut:=value.doShowExpressionOut;
-    doShowTimingInfo   :=value.doShowTimingInfo   ;
-    minErrorLevel      :=value.minErrorLevel      ;
-  end;
-
-CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType; CONST behaviour:T_outputBehaviour);
+CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
   begin
     adapterType:=typ;
-    messageTypesToInclude:=C_includableMessages[typ];
-    setOutputBehaviour(behaviour);
+    setOutputBehavior(messageTypesToInclude_);
   end;
 
 PROCEDURE T_abstractOutAdapter.clear; begin end;
+
+PROCEDURE T_abstractOutAdapter.setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
+  begin
+     messageTypesToInclude:=C_includableMessages[adapterType]*messageTypesToInclude_;
+  end;
+
+FUNCTION T_abstractOutAdapter.getOutputBehavior:T_messageTypeSet;
+  begin
+    result:=messageTypesToInclude;
+  end;
 //=========================================================:T_abstractOutAdapter
 //T_consoleOutAdapter:==========================================================
-CONSTRUCTOR T_consoleOutAdapter.create(CONST behaviour:T_outputBehaviour);
+CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet);
   begin
-    inherited create(at_console,behaviour);
+    inherited create(at_console,messageTypesToInclude_);
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -373,9 +312,9 @@ FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
   end;
 //==========================================================:T_consoleOutAdapter
 //T_collectingOutAdapter:=======================================================
-CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST behaviour:T_outputBehaviour);
+CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
   begin
-    inherited create(typ,behaviour);
+    inherited create(typ,messageTypesToInclude_);
     system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
@@ -405,9 +344,9 @@ PROCEDURE T_collectingOutAdapter.clear;
   end;
 //=======================================================:T_collectingOutAdapter
 //T_abstractFileOutAdapter:=====================================================
-CONSTRUCTOR T_abstractFileOutAdapter.create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
+CONSTRUCTOR T_abstractFileOutAdapter.create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
   begin
-    inherited create(typ,behaviour);
+    inherited create(typ,messageTypesToInclude_);
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
   end;
@@ -465,9 +404,9 @@ PROCEDURE T_textFileOutAdapter.flush;
     end;
   end;
 
-CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
+CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
   begin
-    inherited create(at_textFile,fileName,behaviour,forceNewFile);
+    inherited create(at_textFile,fileName,messageTypesToInclude_,forceNewFile);
   end;
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
@@ -622,10 +561,10 @@ PROCEDURE T_adapters.clearAll;
     {$endif}
     for i:=0 to length(adapter)-1 do begin
       adapter[i]^.clear;
-      someEchoInput        :=someEchoInput         or adapter[i]^.doEchoInput        ;
-      someEchoDeclaration  :=someEchoDeclaration   or adapter[i]^.doEchoDeclaration  ;
-      someShowExpressionOut:=someShowExpressionOut or adapter[i]^.doShowExpressionOut;
-      someShowTimingInfo   :=someShowTimingInfo    or adapter[i]^.doShowTimingInfo   ;
+      someEchoInput        :=someEchoInput         or (mt_echo_input       in adapter[i]^.messageTypesToInclude);
+      someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in adapter[i]^.messageTypesToInclude);
+      someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in adapter[i]^.messageTypesToInclude);
+      someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in adapter[i]^.messageTypesToInclude);
       {$ifdef fullVersion}
       hasHtmlAdapter       :=hasHtmlAdapter        or (adapter[i]^.adapterType=at_htmlFile);
       {$endif}
@@ -692,10 +631,10 @@ PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyI
     {$ifdef fullVersion}
     hasHtmlAdapter:=hasHtmlAdapter or (p^.adapterType=at_htmlFile);
     {$endif}
-    someEchoInput        :=someEchoInput         or p^.doEchoInput        ;
-    someEchoDeclaration  :=someEchoDeclaration   or p^.doEchoDeclaration  ;
-    someShowExpressionOut:=someShowExpressionOut or p^.doShowExpressionOut;
-    someShowTimingInfo   :=someShowTimingInfo    or p^.doShowTimingInfo   ;
+    someEchoInput        :=someEchoInput         or (mt_echo_input       in p^.messageTypesToInclude);
+    someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in p^.messageTypesToInclude);
+    someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in p^.messageTypesToInclude);
+    someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in p^.messageTypesToInclude);
   end;
 
 PROCEDURE T_adapters.addConsoleOutAdapter(CONST verbosity:string='');
@@ -795,11 +734,19 @@ PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters;
   end;
 
 PROCEDURE T_adapters.setExitCode;
-  CONST MAX_IGNORED_LEVEL=2;
+  VAR mt:T_messageType;
+      code:longint=0;
   begin
-    if maxErrorLevel>MAX_IGNORED_LEVEL then ExitCode:=maxErrorLevel;
+    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
+    ExitCode:=code;
   end;
 
+FUNCTION T_adapters.triggersBeep:boolean;
+  VAR mt:T_messageType;
+  begin
+    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>0) then exit(true);
+    result:=false;
+  end;
 //===================================================================:T_adapters
 
 INITIALIZATION

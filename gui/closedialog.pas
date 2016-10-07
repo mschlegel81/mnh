@@ -24,10 +24,16 @@ TYPE
     FUNCTION showOnReEvaluationError:integer;
   end;
 
-VAR
-  closeDialogForm: TcloseDialogForm;
-
+FUNCTION closeDialogForm:TcloseDialogForm;
 IMPLEMENTATION
+VAR
+  myCloseDialogForm: TcloseDialogForm=nil;
+
+FUNCTION closeDialogForm:TcloseDialogForm;
+  begin
+    if myCloseDialogForm=nil then myCloseDialogForm:=TcloseDialogForm.create(nil);
+    result:=myCloseDialogForm;
+  end;
 
 {$R *.lfm}
 
@@ -81,6 +87,9 @@ FUNCTION TcloseDialogForm.showOnReEvaluationError: integer;
     ButtonPanel1.CloseButton.caption := 'Cancel';
     result := ShowModal;
   end;
+
+FINALIZATION
+  if myCloseDialogForm<>nil then FreeAndNil(myCloseDialogForm);
 
 end.
 

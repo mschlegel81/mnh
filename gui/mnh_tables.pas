@@ -63,10 +63,17 @@ TYPE
   end;
 
 VAR
-  tableForm: TtableForm;
   formCycleCallback    : PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
 
+FUNCTION tableForm: TtableForm;
 IMPLEMENTATION
+VAR myTableForm: TtableForm=nil;
+FUNCTION tableForm: TtableForm;
+  begin
+    if myTableForm=nil then myTableForm:=TtableForm.create(nil);
+    result:=myTableForm;
+  end;
+
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
@@ -360,6 +367,9 @@ FUNCTION TtableForm.isDisplayPending: boolean;
 
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);#Shows L in a table with given caption.');
+
+FINALIZATION
+  if myTableForm<>nil then FreeAndNil(myTableForm);
 
 end.
 

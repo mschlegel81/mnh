@@ -20,10 +20,14 @@ TYPE
     selectedFile:string;
   end;
 
-VAR
-  openDemoDialogForm: TopenDemoDialogForm;
-
+FUNCTION openDemoDialogForm: TopenDemoDialogForm;
 IMPLEMENTATION
+VAR myOpenDemoDialogForm: TopenDemoDialogForm=nil;
+FUNCTION openDemoDialogForm: TopenDemoDialogForm;
+  begin
+    if myOpenDemoDialogForm=nil then myOpenDemoDialogForm:=TopenDemoDialogForm.create(nil);
+    result:=myOpenDemoDialogForm;
+  end;
 
 {$R *.lfm}
 
@@ -48,6 +52,9 @@ PROCEDURE TopenDemoDialogForm.FormShow(Sender: TObject);
     for i:=0 to length(files)-1 do ListBox.Items.add(ExtractFileNameOnly(files[i]));
     ListBox.ItemIndex:=-1;
   end;
+
+FINALIZATION
+  if myOpenDemoDialogForm<>nil then FreeAndNil(myOpenDemoDialogForm);
 
 end.
 

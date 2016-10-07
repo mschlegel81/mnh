@@ -529,10 +529,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       {$ifdef fullVersion}
       if (cp_profile in options) and adapters^.doShowTimingInfo then logProfilingInfo;
       {$endif}
-      if (cp_beepOnError in options) then begin
-        adapters^.updateErrorlevel;
-        if not(adapters^.noErrors) then beep;
-      end;
+      if (cp_beepOnError in options) and adapters^.triggersBeep then beep;
     end;
     if cp_notifyParentOfAsyncTaskEnd in options then parentContext^.notifyAsyncTaskEnd;
   end;

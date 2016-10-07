@@ -24,11 +24,16 @@ TYPE
   end;
 
 VAR
-  DisplayImageForm: TDisplayImageForm;
   guiAdapters:P_adapters;
   formCycleCallback: PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
-
+FUNCTION DisplayImageForm: TDisplayImageForm;
 IMPLEMENTATION
+VAR myDisplayImageForm:TDisplayImageForm=nil;
+FUNCTION DisplayImageForm: TDisplayImageForm;
+  begin
+    if myDisplayImageForm=nil then myDisplayImageForm:=TDisplayImageForm.create(nil);
+    result:=myDisplayImageForm;
+  end;
 
 {$R *.lfm}
 
@@ -71,6 +76,9 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
       unlock;
     end;
   end;
+
+FINALIZATION
+  if myDisplayImageForm<>nil then FreeAndNil(myDisplayImageForm);
 
 end.
 
