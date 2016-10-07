@@ -75,16 +75,22 @@ TYPE
     { public declarations }
   end;
 
-VAR
-  plotForm: TplotForm;
-  guiAdapters:P_adapters;
-  formCycleCallback: PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
+VAR guiAdapters:P_adapters;
+    formCycleCallback: PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
 
+FUNCTION plotForm: TplotForm;
 IMPLEMENTATION
 VAR plotSubsystem:record
       mouseUpTriggersPlot:boolean;
       lastMouseX,lastMouseY:longint;
     end;
+    myPlotForm:TplotForm=nil;
+
+FUNCTION plotForm: TplotForm;
+  begin
+    if myPlotForm=nil then myPlotForm:=TplotForm.create(nil);
+    result:=myPlotForm;
+  end;
 
 {$R *.lfm}
 
@@ -329,5 +335,8 @@ FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 INITIALIZATION
   broughtToFront:=0;
   registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,'plotShowing;#Returns true if the plot is currently showing, false otherwise');
+FINALIZATION
+  if myPlotForm<>nil then FreeAndNil(myPlotForm);
+
 end.
 

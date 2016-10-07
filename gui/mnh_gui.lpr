@@ -23,13 +23,6 @@ begin
     Application.initialize;
 
     Application.CreateForm(TMnhForm, MnhForm);
-    Application.CreateForm(TSettingsForm, SettingsForm);
-    Application.CreateForm(TcloseDialogForm, closeDialogForm);
-    Application.CreateForm(TaskForm, askForm);
-    Application.CreateForm(TplotForm, plotForm);
-    Application.CreateForm(TnewCentralPackageForm, newCentralPackageForm);
-    Application.CreateForm(TtableForm, tableForm);
-    Application.CreateForm(TopenDemoDialogForm, openDemoDialogForm);
     Application.run;
     mnh_gui_main.doFinalization;
     showConsole;

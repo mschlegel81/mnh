@@ -51,12 +51,19 @@ TYPE
     PROCEDURE setButtons(CONST enable:boolean; CONST options: T_arrayOfString);
   end;
 
-VAR
-  askForm: TaskForm;
+FUNCTION askForm: TaskForm;
 
 FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
+    myAskForm:TaskForm=nil;
+
+FUNCTION askForm:TaskForm;
+  begin
+    if myAskForm=nil then myAskForm:=TaskForm.create(nil);
+    result:=myAskForm;
+  end;
+
 {$R *.lfm}
 
 { TaskForm }
@@ -223,6 +230,6 @@ INITIALIZATION
 
 FINALIZATION
   system.doneCriticalSection(cs);
-
+  if myAskForm<>nil then FreeAndNil(myAskForm);
 
 end.

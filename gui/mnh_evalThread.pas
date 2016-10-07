@@ -117,8 +117,8 @@ FUNCTION docMain(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=100;
 
   begin with P_assistanceEvaluator(p)^ do begin
-    threadStarted;
     result:=0;
+    threadStarted;
     repeat
       if (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]) then begin
         requestedContextType:=ct_silentlyRunAlone;

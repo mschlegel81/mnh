@@ -35,10 +35,15 @@ TYPE
     { public declarations }
   end;
 
-VAR
-  newCentralPackageForm: TnewCentralPackageForm;
-
+FUNCTION newCentralPackageForm: TnewCentralPackageForm;
 IMPLEMENTATION
+VAR myNewCentralPackageForm: TnewCentralPackageForm=nil;
+FUNCTION newCentralPackageForm: TnewCentralPackageForm;
+  begin
+    if myNewCentralPackageForm=nil then myNewCentralPackageForm:=TnewCentralPackageForm.create(nil);
+    result:=myNewCentralPackageForm;
+  end;
+
 {$R *.lfm}
 FUNCTION packagesFolder:string;
   begin
@@ -101,6 +106,9 @@ PROCEDURE TnewCentralPackageForm.updatePackageList;
     ListBox.ItemIndex:=-1;
     remButton.enabled:=false;
   end;
+
+FINALIZATION
+  if myNewCentralPackageForm<>nil then FreeAndNil(myNewCentralPackageForm);
 
 end.
 

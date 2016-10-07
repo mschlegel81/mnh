@@ -66,10 +66,14 @@ TYPE
     PROCEDURE ensureFont(CONST editorFont:TFont);
   end;
 
-VAR
-  SettingsForm: TSettingsForm;
-
+FUNCTION SettingsForm: TSettingsForm;
 IMPLEMENTATION
+VAR mySettingsForm: TSettingsForm=nil;
+FUNCTION SettingsForm: TSettingsForm;
+  begin
+    if mySettingsForm=nil then mySettingsForm:=TSettingsForm.create(nil);
+    result:=mySettingsForm;
+  end;
 
 {$R *.lfm}
 
@@ -244,5 +248,8 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
       settings.value^.outputLinesLimit:=value;
     end;
   end;
+
+FINALIZATION
+  if mySettingsForm<>nil then FreeAndNil(mySettingsForm);
 
 end.
