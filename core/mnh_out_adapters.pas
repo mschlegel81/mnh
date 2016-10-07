@@ -472,13 +472,13 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
 
   VAR i:longint;
   begin
-    hasMessageOfType[message.messageType]:=true;
     {$ifdef fullVersion}
     hasNeedGUIerror:=hasNeedGUIerror or not(gui_started) and C_messageTypeMeta[message.messageType].triggersGuiStartup;
     {$endif}
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
     if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info]) then exit;
+    hasMessageOfType[message.messageType]:=true;
     if (message.messageType=mt_el3_stackTrace) then begin
       inc(stackTraceCount);
       if stackTraceCount>30 then exit;

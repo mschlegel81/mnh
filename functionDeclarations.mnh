@@ -23,4 +23,3 @@ main->allFolders('.')
   .each(line,line.join("\t"))
   .join("\n")
   .print;
-
