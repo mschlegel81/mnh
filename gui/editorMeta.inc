@@ -49,8 +49,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   begin
     paintedWithState:=-1;
     index:=idx;
-    sheet:=TTabSheet.create(MnhForm.PageControl);
-    sheet.PageControl:=MnhForm.PageControl;
+    sheet:=TTabSheet.create(MnhForm.inputPageControl);
+    sheet.PageControl:=MnhForm.inputPageControl;
 
     editor:=TSynEdit.create(MnhForm);
     editor.parent:=sheet;

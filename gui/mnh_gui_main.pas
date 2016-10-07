@@ -23,7 +23,9 @@ TYPE
 
   TMnhForm = class(TForm)
     debugItemsImageList: TImageList;
+    callStackGroupBox: TGroupBox;
     miProfile: TMenuItem;
+    Panel1: TPanel;
     pmiOpenFile2: TMenuItem;
     pmiOpenFile1: TMenuItem;
     miFileHistory14: TMenuItem;
@@ -32,6 +34,9 @@ TYPE
     miFileHistory17: TMenuItem;
     miFileHistory18: TMenuItem;
     miFileHistory19: TMenuItem;
+    Splitter2: TSplitter;
+    Splitter3: TSplitter;
+    callStackStringGrid: TStringGrid;
     subMenuCode: TMenuItem;
     miFileHistory10: TMenuItem;
     miFileHistory11: TMenuItem;
@@ -83,7 +88,7 @@ TYPE
     miDecFontSize: TMenuItem;
     miIncFontSize: TMenuItem;
     mi_settings: TMenuItem;
-    PageControl: TPageControl;
+    inputPageControl: TPageControl;
     SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     SynCompletion: TSynCompletion;
@@ -111,7 +116,7 @@ TYPE
     breakpointsImagesList: TImageList;
     outputPageControl: TPageControl;
     outputTabSheet: TTabSheet;
-    variablesTabSheet: TTabSheet;
+    debugTabSheet: TTabSheet;
     variablesStringGrid: TStringGrid;
     currentExpressionGroupBox: TGroupBox;
     currentExpressionMemo: TSynMemo;
@@ -188,10 +193,7 @@ TYPE
       Shift: TShiftState; X, Y: integer);
     PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
-    PROCEDURE outputPageControlChange(Sender: TObject);
-    PROCEDURE outputPageControlChanging(Sender: TObject;
-      VAR AllowChange: boolean);
-    PROCEDURE PageControlChange(Sender: TObject);
+    PROCEDURE inputPageControlChange(Sender: TObject);
     PROCEDURE pmiOpenFile(CONST idOrName:string);
     PROCEDURE pmiOpenFile1Click(Sender: TObject);
     PROCEDURE pmiOpenFile2Click(Sender: TObject);
@@ -295,7 +297,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
       i:longint;
       p:TPoint;
   begin
-    p:=editorMeta[PageControl.activePageIndex].caretInMainFormCoordinates;
+    p:=editorMeta[inputPageControl.activePageIndex].caretInMainFormCoordinates;
 
     helpPopupMemo.visible:=true;
     helpPopupMemo.Left:=p.x;
@@ -319,7 +321,7 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setMarkedWord(wordText);
     end;
-    if miHelp.Checked or forJump then with editorMeta[PageControl.activePageIndex].editor do assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
+    if miHelp.Checked or forJump then with editorMeta[inputPageControl.activePageIndex].editor do assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
     if miHelp.Checked then begin
       helpPopupMemo.text:=underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
@@ -338,7 +340,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   begin
     with settings.value^ do begin
       if fileExists(historyItem(historyIdx))
-      then PageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
+      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
       else if polishHistory then processFileHistory;
     end;
   end;
@@ -359,7 +361,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       doConditionalPlotReset;
     end;
     if not(reEvaluating) then begin
-      editorMeta[PageControl.activePageIndex].setWorkingDir;
+      editorMeta[inputPageControl.activePageIndex].setWorkingDir;
       logName:=settings.value^.getLogName;
       if logName<>'' then begin
         if tempAdapter=nil
@@ -385,7 +387,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateM
       newCaret:TPoint;
       pageIdx:longint;
   begin
-    with editorMeta[PageControl.activePageIndex] do begin
+    with editorMeta[inputPageControl.activePageIndex] do begin
       wordUnderCursor:=editor.GetWordAtRowCol(caret);
       setUnderCursor(wordUnderCursor,updateMarker,doJump);
       if not(doJump) then exit;
@@ -394,7 +396,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateM
       if (underCursor.location.fileName='') or (underCursor.location.fileName='?') then exit;
       pageIdx:=addOrGetEditorMetaForFile(underCursor.location.fileName);
       if pageIdx>=0 then begin
-        PageControl.activePageIndex:=pageIdx;
+        inputPageControl.activePageIndex:=pageIdx;
         newCaret.x:=underCursor.location.column;
         newCaret.y:=underCursor.location.line;
         editorMeta[pageIdx].editor.CaretXY:=newCaret;
@@ -420,7 +422,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
     if (loc.fileName='') or (loc.fileName='?') then exit;
     pageIdx:=addOrGetEditorMetaForFile(loc.fileName);
     if pageIdx<0 then exit;
-    PageControl.activePageIndex:=pageIdx;
+    inputPageControl.activePageIndex:=pageIdx;
     with editorMeta[pageIdx] do begin
       editor.SetFocus;
       highlighter.setMarkedToken(loc.line-1,loc.column-1);
@@ -443,7 +445,7 @@ PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: b
     if (loc.fileName='') or (loc.fileName='?') then exit;
     pageIdx:=addOrGetEditorMetaForFile(loc.fileName);
     if pageIdx<0 then exit;
-    PageControl.activePageIndex:=pageIdx;
+    inputPageControl.activePageIndex:=pageIdx;
     with editorMeta[pageIdx] do begin
       editor.SetFocus;
       highlighter.setMarkedToken(loc.line-1,loc.column-1);
@@ -505,7 +507,7 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
       popupFile[1]:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
       popupFile[2]:=OutputEdit.TextBetweenPoints[OutputEdit.BlockBegin,OutputEdit.BlockEnd];
     end else begin
-      with editorMeta[PageControl.activePageIndex] do begin
+      with editorMeta[inputPageControl.activePageIndex] do begin
         popupFile[1]:=editor.GetWordAtRowCol(editor.CaretXY);
         popupFile[2]:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
       end;
@@ -517,7 +519,7 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if ((key=13) and (ssCtrl in Shift)) then assistanceEditReposition(assistanceSynEdit.CaretXY,true);
-    if forceInputEditFocusOnOutputEditMouseUp and (PageControl.activePageIndex>=0) then ActiveControl:=editorMeta[PageControl.activePageIndex].editor;
+    if forceInputEditFocusOnOutputEditMouseUp and (inputPageControl.activePageIndex>=0) then ActiveControl:=editorMeta[inputPageControl.activePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
@@ -531,7 +533,7 @@ PROCEDURE TMnhForm.assistanceSynEditMouseDown(Sender: TObject; button: TMouseBut
 
 PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
-    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[PageControl.activePageIndex].editor;
+    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[inputPageControl.activePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
@@ -549,7 +551,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   VAR i:longint;
   begin
-    for i:=0 to length(FileNames)-1 do PageControl.activePageIndex:=addOrGetEditorMetaForFile(FileNames[i]);
+    for i:=0 to length(FileNames)-1 do inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(FileNames[i]);
   end;
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -586,21 +588,21 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if not(settingsReady) or
-       (PageControl.activePageIndex<0) or
-       (PageControl.activePageIndex>=length(editorMeta)) or
-       (not(editorMeta[PageControl.activePageIndex].sheet.tabVisible)) then exit;
+       (inputPageControl.activePageIndex<0) or
+       (inputPageControl.activePageIndex>=length(editorMeta)) or
+       (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
 
-    with editorMeta[PageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
-    editorMeta[PageControl.activePageIndex].changed:=editorMeta[PageControl.activePageIndex].editor.modified;
-    caption:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
+    with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
+    editorMeta[inputPageControl.activePageIndex].changed:=editorMeta[inputPageControl.activePageIndex].editor.modified;
+    caption:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
   end;
 
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
-    then inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,ssCtrl in Shift,true)
-    else inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,false,false);
+    then inputEditReposition(editorMeta[inputPageControl.activePageIndex].editor.CaretXY,ssCtrl in Shift,true)
+    else inputEditReposition(editorMeta[inputPageControl.activePageIndex].editor.CaretXY,false,false);
     if runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning then begin
       if (key=116) and tbRun      .enabled then tbRunClick(Sender);
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
@@ -616,30 +618,30 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton;
   begin
     point.x:=x;
     point.y:=y;
-    inputEditReposition(editorMeta[PageControl.activePageIndex].editor.PixelsToRowColumn(point),ssCtrl in Shift,true);
+    inputEditReposition(editorMeta[inputPageControl.activePageIndex].editor.PixelsToRowColumn(point),ssCtrl in Shift,true);
   end;
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
   VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   VAR i:longint;
   begin
-    if command=ecUserDefinedFirst then editorMeta[PageControl.activePageIndex].toggleComment;
+    if command=ecUserDefinedFirst then editorMeta[inputPageControl.activePageIndex].toggleComment;
     if command=ecUserDefinedFirst+1 then begin
-      for i:=1 to length(editorMeta)-1 do if editorMeta[(i+PageControl.activePageIndex) mod length(editorMeta)].sheet.tabVisible then begin
-        PageControl.activePageIndex:=(i+PageControl.activePageIndex) mod length(editorMeta);
-        editorMeta[PageControl.activePageIndex].editor.SetFocus;
+      for i:=1 to length(editorMeta)-1 do if editorMeta[(i+inputPageControl.activePageIndex) mod length(editorMeta)].sheet.tabVisible then begin
+        inputPageControl.activePageIndex:=(i+inputPageControl.activePageIndex) mod length(editorMeta);
+        editorMeta[inputPageControl.activePageIndex].editor.SetFocus;
         exit;
       end;
     end;
     if command=ecUserDefinedFirst+2 then begin
-      for i:=length(editorMeta)-1 downto 1 do if editorMeta[(i+PageControl.activePageIndex) mod length(editorMeta)].sheet.tabVisible then begin
-        PageControl.activePageIndex:=(i+PageControl.activePageIndex) mod length(editorMeta);
-        editorMeta[PageControl.activePageIndex].editor.SetFocus;
+      for i:=length(editorMeta)-1 downto 1 do if editorMeta[(i+inputPageControl.activePageIndex) mod length(editorMeta)].sheet.tabVisible then begin
+        inputPageControl.activePageIndex:=(i+inputPageControl.activePageIndex) mod length(editorMeta);
+        editorMeta[inputPageControl.activePageIndex].editor.SetFocus;
         exit;
       end;
     end;
     if (command=ecUserDefinedFirst+3) then begin
-      editorMeta[PageControl.activePageIndex].toggleBreakpoint;
+      editorMeta[inputPageControl.activePageIndex].toggleBreakpoint;
       runEvaluator.context.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setStepperBreakpoints;
       miDebug.Checked:=true;
@@ -649,29 +651,29 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
 
 PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
   begin
-    if PageControl.activePageIndex<0 then exit;
+    if inputPageControl.activePageIndex<0 then exit;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk then begin
       doStartEvaluation(true,false);
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
+      with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   begin
-    PageControl.activePageIndex:=addEditorMetaForNewFile();
+    inputPageControl.activePageIndex:=addEditorMetaForNewFile();
   end;
 
 PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
   VAR i,mr:longint;
   begin
-    if (PageControl.activePageIndex<0) or (PageControl.activePageIndex>=length(editorMeta)) then exit;
-    with editorMeta[PageControl.activePageIndex] do begin
+    if (inputPageControl.activePageIndex<0) or (inputPageControl.activePageIndex>=length(editorMeta)) then exit;
+    with editorMeta[inputPageControl.activePageIndex] do begin
       if changed then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOk then if not(_doSave_(PageControl.activePageIndex)) then exit;
+        if mr=mrOk then if not(_doSave_(inputPageControl.activePageIndex)) then exit;
         if mr=mrCancel then exit;
       end;
       if filePath<>'' then begin
@@ -683,8 +685,8 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
 
     mr:=-1;
     for i:=0 to length(editorMeta)-1 do if editorMeta[i].sheet.tabVisible then mr:=i;
-    if mr=-1 then PageControl.activePageIndex:=addEditorMetaForNewFile()
-             else PageControl.activePageIndex:=mr;
+    if mr=-1 then inputPageControl.activePageIndex:=addEditorMetaForNewFile()
+             else inputPageControl.activePageIndex:=mr;
   end;
 
 PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
@@ -721,7 +723,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     if now>evaluation.deferredUntil then begin
       doStartEvaluation(true,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
+      with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
     end else evaluation.required:=true;
   end;
 
@@ -775,7 +777,7 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
     if not(miHelp.Checked) then helpPopupMemo.visible:=false
                            else begin
                              helpPopupMemo.visible:=true;
-                             inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,false,false);
+                             inputEditReposition(editorMeta[inputPageControl.activePageIndex].editor.CaretXY,false,false);
                            end;
   end;
 
@@ -855,6 +857,8 @@ PROCEDURE TMnhForm.updateDebugParts;
       isRunning:boolean;
   begin
     if miDebug.Checked then begin
+      debugTabSheet.Visible:=true;
+      debugTabSheet.TabVisible:=true;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=true;
       DebugToolbar.visible:=true;
       DebugToolbar.enabled:=true;
@@ -868,6 +872,8 @@ PROCEDURE TMnhForm.updateDebugParts;
       handleButton(tbStepOut  ,    isRunning and isPaused,8);
       handleButton(tbMicroStep,    isRunning and isPaused,10);
     end else begin
+      debugTabSheet.Visible:=false;
+      debugTabSheet.TabVisible:=false;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.activePage:=outputTabSheet;
       DebugToolbar.visible:=false;
@@ -894,7 +900,7 @@ PROCEDURE TMnhForm.handleBreak;
       if (snapshot.location.package=nil) then exit;
       pageIdx:=addOrGetEditorMetaForFile(snapshot.location.package^.getPath);
       if pageIdx>=0 then begin
-        PageControl.activePageIndex:=pageIdx;
+        inputPageControl.activePageIndex:=pageIdx;
         newCaret.x:=snapshot.location.column;
         newCaret.y:=snapshot.location.line;
         editorMeta[pageIdx].editor.CaretXY:=newCaret;
@@ -907,13 +913,11 @@ PROCEDURE TMnhForm.handleBreak;
   VAR report:T_variableReport;
       i:longint;
   begin
-    if runEvaluator.context.paused then exit;
+    if not(runEvaluator.context.paused) then exit;
     snapshot:=runEvaluator.context.getDebuggingSnapshot;
 
     breakPointHandlingPending:=false;
     jumpToFile;
-
-
 
     report.create;
     runEvaluator.reportVariables(report);
@@ -926,9 +930,19 @@ PROCEDURE TMnhForm.handleBreak;
       variablesStringGrid.Cells[2,length(report.dat)-i]:=report.dat[i].value^.typeString;
       variablesStringGrid.Cells[3,length(report.dat)-i]:=report.dat[i].value^.toString;
     end;
+
+    callStackStringGrid.RowCount:=length(snapshot.callStack)+1;
+    for i:=0 to length(snapshot.callStack)-1 do begin
+      callStackStringGrid.Cells[0,i+1]:=snapshot.callStack[i].callerLocation;
+      callStackStringGrid.Cells[1,i+1]:=snapshot.callStack[i].callee^.getLocation;
+      callStackStringGrid.Cells[2,i+1]:=snapshot.callStack[i].callee^.getId;
+      callStackStringGrid.Cells[3,i+1]:=toParameterListString(snapshot.callStack[i].callParameters,true);
+    end;
+
     currentExpressionMemo.clear;
     currentExpressionMemo.lines.append(snapshot.state);
     updateDebugParts;
+    outputPageControl.ActivePage:=debugTabSheet;
   end;
 
 FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring): longint;
@@ -990,7 +1004,7 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
     OpenDialog.title:='Open file';
     if OpenDialog.execute and fileExists(OpenDialog.fileName)
-    then PageControl.activePageIndex:=addOrGetEditorMetaForFile(OpenDialog.fileName);
+    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(OpenDialog.fileName);
   end;
 
 PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
@@ -1005,12 +1019,12 @@ PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
-    _doSaveAs_(PageControl.activePageIndex);
+    _doSaveAs_(inputPageControl.activePageIndex);
   end;
 
 PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
-    _doSave_(PageControl.activePageIndex);
+    _doSave_(inputPageControl.activePageIndex);
   end;
 
 PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
@@ -1032,7 +1046,7 @@ PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
   begin
     OpenDialog.FilterIndex:=2;
     OpenDialog.options:=OpenDialog.options-[ofPathMustExist,ofFileMustExist];
-    if OpenDialog.execute then editorMeta[PageControl.activePageIndex].insertText(escapeString(OpenDialog.fileName));
+    if OpenDialog.execute then editorMeta[inputPageControl.activePageIndex].insertText(escapeString(OpenDialog.fileName));
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
@@ -1045,7 +1059,7 @@ PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
     if ((key=13) and (ssCtrl in Shift)) then outputEditReposition(OutputEdit.CaretXY,true);
-    if forceInputEditFocusOnOutputEditMouseUp and (PageControl.activePageIndex>=0) then ActiveControl:=editorMeta[PageControl.activePageIndex].editor;
+    if forceInputEditFocusOnOutputEditMouseUp and (inputPageControl.activePageIndex>=0) then ActiveControl:=editorMeta[inputPageControl.activePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
@@ -1061,27 +1075,16 @@ PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton;
 PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
   begin
-    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[PageControl.activePageIndex].editor;
+    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[inputPageControl.activePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
-VAR pageIndexBeforeChange:longint;
-PROCEDURE TMnhForm.outputPageControlChange(Sender: TObject);
+PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
   begin
-    if outputPageControl.PageIndex=0 then outputPageControl.PageIndex:=pageIndexBeforeChange;
-  end;
-
-PROCEDURE TMnhForm.outputPageControlChanging(Sender: TObject; VAR AllowChange: boolean);
-  begin
-    pageIndexBeforeChange:=outputPageControl.PageIndex;
-  end;
-
-PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
-  begin
-    if PageControl.activePageIndex>=0 then begin
-      SynCompletion.editor:=editorMeta[PageControl.activePageIndex].editor;
-      settings.value^.activePage:=PageControl.activePageIndex;
-      with editorMeta[PageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
+    if inputPageControl.activePageIndex>=0 then begin
+      SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
+      settings.value^.activePage:=inputPageControl.activePageIndex;
+      with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
     end;
   end;
 
@@ -1091,12 +1094,12 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
     with settings.value^ do begin
       if fileExists(idOrName)
       then begin
-        PageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
+        inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
         exit;
       end;
       if polishHistory then processFileHistory;
       fileName:=assistancEvaluator.resolveImport(idOrName);
-      if (fileName<>'') and fileExists(fileName) then PageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
+      if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
   end;
 
@@ -1133,11 +1136,11 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
       i:longint;
   begin
-    with editorMeta[PageControl.activePageIndex] do caret:=editor.CaretXY;
+    with editorMeta[inputPageControl.activePageIndex] do caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
     lastWordsCaret:=caret.y;
     wordsInEditor.clear;
-    with editorMeta[PageControl.activePageIndex] do begin
+    with editorMeta[inputPageControl.activePageIndex] do begin
       for i:=0 to caret.y-1 do
         if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
@@ -1195,17 +1198,17 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if showing then begin
       if not (reEvaluationWithGUIrequired) then begin
         //Form caption:-------------------------------------------------------------
-        if (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta))
+        if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
         then begin
-          aid:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
-          editorMeta[PageControl.activePageIndex].repaintWithStateCounter(assistancEvaluator.getStateCounter,assistancEvaluator.getErrorHints);
+          aid:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
+          editorMeta[inputPageControl.activePageIndex].repaintWithStateCounter(assistancEvaluator.getStateCounter,assistancEvaluator.getErrorHints);
         end else aid:=APP_TITLE;
         if aid<>caption then caption:=aid;
         //-------------------------------------------------------------:Form caption
       end;
       //progress time:------------------------------------------------------------
-      if PageControl.activePageIndex>=0
-      then aid:=C_tabChar+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretX)
+      if inputPageControl.activePageIndex>=0
+      then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
       else aid:='';
       if isEvaluationRunning then begin
         if runEvaluator.context.hasOption(cp_debug) then begin
@@ -1251,7 +1254,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if evaluation.required and not(runEvaluator.evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation(false,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
+      with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
@@ -1274,13 +1277,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
   begin
     if openDemoDialogForm.ShowModal=mrOk then
-       PageControl.activePageIndex:=addOrGetEditorMetaForFile(openDemoDialogForm.selectedFile);
+       inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(openDemoDialogForm.selectedFile);
   end;
 
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
   begin
     if newCentralPackageForm.ShowModal=mrOk then
-      PageControl.activePageIndex:=addOrGetEditorMetaForFile(newCentralPackageForm.fileNameEdit.text);
+      inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(newCentralPackageForm.fileNameEdit.text);
   end;
 
 PROCEDURE TMnhForm.miFindClick(Sender: TObject);
@@ -1292,7 +1295,7 @@ PROCEDURE TMnhForm.miFindClick(Sender: TObject);
       if wordUnderCursor='' then wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
       outputFocusedOnFind:=true;
     end else begin
-      with editorMeta[PageControl.activePageIndex] do begin
+      with editorMeta[inputPageControl.activePageIndex] do begin
         wordUnderCursor:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
         if wordUnderCursor='' then wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
       end;
@@ -1312,7 +1315,7 @@ PROCEDURE TMnhForm.miReplaceClick(Sender: TObject);
       if wordUnderCursor='' then wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
       outputFocusedOnFind:=true;
     end else begin
-      with editorMeta[PageControl.activePageIndex] do begin
+      with editorMeta[inputPageControl.activePageIndex] do begin
         wordUnderCursor:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
         if wordUnderCursor='' then wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
       end;
@@ -1368,9 +1371,9 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     if not(runEvaluator.evaluationRunning) then begin
       doStartEvaluation(true,false);
       if lastStart.mainCall then begin
-        with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,ct_debugging);
+        with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,ct_debugging);
       end else begin
-        with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,ct_debugging);
+        with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,ct_debugging);
       end;
     end else runEvaluator.context.doContinue;
     updateDebugParts;
@@ -1411,8 +1414,8 @@ PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VA
 FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
   begin
     if outputFocusedOnFind and not(replacing) then exit(OutputEdit);
-    if (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta))
-    then result:=editorMeta[PageControl.activePageIndex].editor
+    if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
+    then result:=editorMeta[inputPageControl.activePageIndex].editor
     else exit(OutputEdit); //not nice, but a valid fallback
   end;
 
@@ -1421,12 +1424,12 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
     if enable then begin
       Splitter1.visible:=true;
       Splitter1.enabled:=true;
-      PageControl.visible:=true;
-      PageControl.enabled:=true;
+      inputPageControl.visible:=true;
+      inputPageControl.enabled:=true;
       reEvaluationWithGUIrequired:=false;
     end else begin
-      PageControl.visible:=false;
-      PageControl.enabled:=false;
+      inputPageControl.visible:=false;
+      inputPageControl.enabled:=false;
       Splitter1.visible:=false;
       Splitter1.enabled:=false;
       caption:=APP_TITLE+' '+getFileOrCommandToInterpretFromCommandLine;
@@ -1488,15 +1491,15 @@ PROCEDURE TMnhForm.processSettings;
       end;
 
       i:=settings.value^.activePage;
-      PageControl.activePageIndex:=i;
-      if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[PageControl.activePageIndex].editor;
+      inputPageControl.activePageIndex:=i;
+      if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       {$ifdef UNIX}
       miIncFontSize.ShortCut:=16605;
       {$endif}
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta)) then with editorMeta[PageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
+      if not(reEvaluationWithGUIrequired) and (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
