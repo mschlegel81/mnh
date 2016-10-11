@@ -20,7 +20,7 @@ TYPE
   {$include mnh_futureTask.inc}
   {$include mnh_procBlock.inc}
   {$include mnh_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
+  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
 
   T_packageReference=object
     id,path:ansistring;
@@ -35,16 +35,16 @@ TYPE
     private
       mainPackage:P_package;
       secondaryPackages:array of P_package;
-
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
-      ready:boolean;
+      ready:T_packageLoadUsecase;
+      loadedAtCodeHash:T_hashInt;
       codeProvider:T_codeProvider;
       statementHashes:array of T_hashInt;
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
-      FUNCTION needReload:boolean;
+      FUNCTION needReload(CONST usecase:T_packageLoadUsecase):boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
       PROCEDURE loadForDocumentation;
       PROCEDURE clear(CONST includeSecondaries:boolean);
@@ -62,7 +62,7 @@ TYPE
       PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
-      FUNCTION isReady:boolean;
+//      FUNCTION isReady:boolean;
       FUNCTION isMain:boolean;
       FUNCTION getPath:ansistring; virtual;
       PROCEDURE setSourcePath(CONST path:ansistring);
@@ -182,8 +182,8 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
     with containingPackage^.mainPackage^ do begin
       for i:=0 to length(secondaryPackages)-1 do
         if secondaryPackages[i]^.codeProvider.id = id then begin
-          if secondaryPackages[i]^.ready then begin
-            if secondaryPackages[i]^.needReload then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+          if secondaryPackages[i]^.ready<>lu_NONE then begin
+            if secondaryPackages[i]^.needReload(lu_forImport) then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -614,7 +614,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         t:P_token;
         i:longint;
     begin
-      if not(ready) or not(context.adapters^.noErrors) then exit;
+      if not(ready=lu_forCallingMain) or not(context.adapters^.noErrors) then exit;
       if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
@@ -718,6 +718,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
   begin
+    if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
     if isMain then context.adapters^.clearErrors;
     profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]);
 
@@ -725,7 +726,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then clear(false)
     else reloadAllPackages(packageTokenLocation(@self));
 
-    if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
+    if ((usecase=lu_forCallingMain) or not(isMain)) and needReload(usecase) then codeProvider.load;
+    loadedAtCodeHash:=codeProvider.contentHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
@@ -733,7 +735,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if profile then context.timeBaseComponent(pc_tokenizing);
     processTokens(fileTokens);
 
-    ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
+    ready:=usecase;
     case usecase of
       lu_forCodeAssistance,
       lu_forDocGeneration: resolveRuleIds(context.adapters);
@@ -777,11 +779,12 @@ CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
     packageRules.create(@disposeRule);
     importedRules.create;
     setLength(statementHashes,0);
+    loadedAtCodeHash:=0;
   end;
 
-FUNCTION T_package.needReload: boolean;
+FUNCTION T_package.needReload(CONST usecase:T_packageLoadUsecase): boolean;
   begin
-    result:=codeProvider.fileHasChanged;
+    result:=(ready<>usecase) or (loadedAtCodeHash<>codeProvider.contentHash);
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
@@ -795,7 +798,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
     setLength(packageUses,0);
     packageRules.clear;
     importedRules.clear;
-    ready:=false;
+    ready:=lu_none;
   end;
 
 PROCEDURE T_package.finalize(VAR adapters:T_adapters);
@@ -991,7 +994,7 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_ad
     result.create(codeProvider.getPath,'',packageTokenLocation(@self),adapters);
   end;
 
-FUNCTION T_package.isReady:boolean; begin result:=ready; end;
+//FUNCTION T_package.isReady:boolean; begin result:=ready; end;
 FUNCTION T_package.getPath:ansistring; begin result:=codeProvider.getPath; end;
 FUNCTION T_package.isMain:boolean; begin result:=(@self=mainPackage); end;
 PROCEDURE T_package.setSourcePath(CONST path:ansistring);

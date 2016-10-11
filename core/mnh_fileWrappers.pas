@@ -30,6 +30,7 @@ TYPE
     FUNCTION fileName: ansistring;
     FUNCTION fileHasChanged: boolean;
     FUNCTION fileIsOutOfSync: boolean;
+    FUNCTION contentHash:T_hashInt;
     FUNCTION id: ansistring;
     PROCEDURE clear;
   end;
@@ -466,6 +467,15 @@ FUNCTION T_codeProvider.fileHasChanged: boolean;
 FUNCTION T_codeProvider.fileIsOutOfSync: boolean;
   begin
     result:=(filePath<>'') and outOfSync;
+  end;
+
+FUNCTION T_codeProvider.contentHash:T_hashInt;
+  VAR i:longint;
+  begin
+    {$Q-}{$R-}
+    result:=length(lineData);
+    for i:=0 to length(lineData)-1 do result:=result*31+hashOfAnsiString(lineData[i]);
+    {$Q+}{$R+}
   end;
 
 FUNCTION T_codeProvider.id: ansistring;
