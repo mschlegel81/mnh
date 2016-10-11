@@ -120,7 +120,6 @@ private analyzeFlavour(data,flavour:string)->begin
 end;
 
 private compareFlavours(data,flavour1:string,flavour2:string)->begin
-  print('Comparing flavours: ',flavour1,' and ',flavour2);
   local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local tableData:=dat1.getInner(0).union(dat2.getInner(0))

@@ -5,6 +5,7 @@ UNIT askDialog;
 INTERFACE
 
 USES
+  mnhFormHandler,
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs,
   StdCtrls, mnh_funcs, mnh_litVar, mnh_basicTypes, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
 TYPE
@@ -62,6 +63,7 @@ FUNCTION askForm:TaskForm;
   begin
     if myAskForm=nil then myAskForm:=TaskForm.create(nil);
     result:=myAskForm;
+    registerForm(myAskForm,false,false);
   end;
 
 {$R *.lfm}

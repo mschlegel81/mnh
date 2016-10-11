@@ -5,6 +5,7 @@ UNIT mnh_imig_form;
 INTERFACE
 
 USES
+  mnhFormHandler,
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls, mnh_out_adapters, mypics;
 
 TYPE
@@ -25,13 +26,16 @@ TYPE
 
 VAR
   guiAdapters:P_adapters;
-  formCycleCallback: PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
+
 FUNCTION DisplayImageForm: TDisplayImageForm;
 IMPLEMENTATION
 VAR myDisplayImageForm:TDisplayImageForm=nil;
 FUNCTION DisplayImageForm: TDisplayImageForm;
   begin
-    if myDisplayImageForm=nil then myDisplayImageForm:=TDisplayImageForm.create(nil);
+    if myDisplayImageForm=nil then begin
+      myDisplayImageForm:=TDisplayImageForm.create(nil);
+      registerForm(myDisplayImageForm,false,true);
+    end;
     result:=myDisplayImageForm;
   end;
 
@@ -41,7 +45,7 @@ FUNCTION DisplayImageForm: TDisplayImageForm;
 
 PROCEDURE TDisplayImageForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(3,ssShift in Shift);
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
 
 PROCEDURE TDisplayImageForm.FormResize(Sender: TObject);

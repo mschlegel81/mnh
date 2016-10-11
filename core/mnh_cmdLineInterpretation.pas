@@ -146,6 +146,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       context.addOption(cp_beepOnError);
       context.resetForEvaluation(@package);
       package.load(lu_forCallingMain,context,mainParameters);
+      {$ifdef fullVersion} if not(context.adapters^.hasNeedGUIerror) then {$endif}
       context.afterEvaluation;
       package.destroy;
       {$ifdef fullVersion}

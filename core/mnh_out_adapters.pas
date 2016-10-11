@@ -134,7 +134,7 @@ TYPE
       PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
 
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
-      PROCEDURE addConsoleOutAdapter(CONST verbosity:string='');
+      FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       PROCEDURE removeOutAdapter(CONST index:longint);
       PROCEDURE setPrintTextFileAdapter(CONST filenameOrBlank:string);
@@ -169,7 +169,6 @@ CONST
     mt_plotCreatedWithDeferredDisplay,
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
-    mt_evaluatedStatementInInteractiveMode,
     mt_displayTable,
     mt_guiPseudoPackageFound
     {$endif}
@@ -637,11 +636,12 @@ PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyI
     someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in p^.messageTypesToInclude);
   end;
 
-PROCEDURE T_adapters.addConsoleOutAdapter(CONST verbosity:string='');
+FUNCTION T_adapters.addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
   begin
     new(consoleOutAdapter,create(verbosity));
     addOutAdapter(consoleOutAdapter,true);
+    result:=consoleOutAdapter;
   end;
 
 PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);

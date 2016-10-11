@@ -1,6 +1,5 @@
 {$ifdef includeInterface}
 T_guiOutAdapter=object(T_collectingOutAdapter)
-  lineIndexPerEvaluatedStatement:array of longint;
   CONSTRUCTOR create;
   DESTRUCTOR destroy; virtual;
   FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
@@ -11,7 +10,6 @@ end;
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
     inherited create(at_gui,C_collectAllOutputBehavior);
-    setLength(lineIndexPerEvaluatedStatement,0);
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
@@ -20,8 +18,10 @@ DESTRUCTOR T_guiOutAdapter.destroy;
   end;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
-  VAR i,j,lineIndex,k:longint;
+  VAR i,j:longint;
       outputLinesLimit:longint;
+      wroteToSyn:boolean=false;
+
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
         tokens:T_arrayOfString;
@@ -45,6 +45,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           first:=false;
         end;
       end else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+message);
+      wroteToSyn:=true;
     end;
 
   begin
@@ -52,21 +53,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     result:=length(storedMessages)>0;
     if result then outputLinesLimit:=settings.value^.outputLinesLimit;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
+      {$ifdef DEBUGMODE}
+      writeln(stdErr,'guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
+      {$endif}
       case messageType of
-        mt_evaluatedStatementInInteractiveMode: begin
-          j:=strToIntDef(simpleMessage,-1);
-          if (j<0) then syn.lines.clear
-          else if j<length(lineIndexPerEvaluatedStatement) then begin
-            lineIndex:=lineIndexPerEvaluatedStatement[j];
-            for k:=syn.lines.count-1 downto lineIndex do syn.lines.delete(k);
-            setLength(lineIndexPerEvaluatedStatement,j+1);
-            lineIndexPerEvaluatedStatement[j]:=syn.lines.count;
-          end else begin
-            if j=0 then syn.lines.clear;
-            setLength(lineIndexPerEvaluatedStatement,j+1);
-            lineIndexPerEvaluatedStatement[j]:=syn.lines.count;
-          end;
-        end;
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
         mt_plotCreatedWithInstantDisplay: begin
@@ -80,6 +70,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
+            wroteToSyn:=true;
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
               syn.lines.clear;
               for j:=1 to length(multiMessage)-1 do begin
@@ -99,14 +90,25 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,simpleMessage);
-        mt_timing_info: syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+simpleMessage);
-        else begin syn.lines.append(UTF8_ZERO_WIDTH_SPACE+defaultFormatting(storedMessages[i]));
+        mt_timing_info: begin
+          wroteToSyn:=true;
+          syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+simpleMessage);
+        end
+        else begin
+          wroteToSyn:=true;
+          syn.lines.append(UTF8_ZERO_WIDTH_SPACE+defaultFormatting(storedMessages[i]));
         end;
       end;
       while syn.lines.count>outputLinesLimit do syn.lines.delete(0);
     end;
-    clear;
-    if result then begin
+    if result then clear;
+    if wroteToSyn then begin
+      if not(MnhForm.showing) then begin
+        MnhForm.Show;
+        {$ifdef DEBUGMODE}
+        writeln(stdErr,'mnh form show triggered');
+        {$endif}
+      end;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
@@ -131,7 +133,6 @@ PROCEDURE T_guiOutAdapter.flushClear;
     system.enterCriticalSection(cs);
     clear;
     append(message(mt_clearConsole,'',C_nilTokenLocation));
-    setLength(lineIndexPerEvaluatedStatement,0);
     system.leaveCriticalSection(cs);
   end;
 {$endif}

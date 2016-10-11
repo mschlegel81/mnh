@@ -555,9 +555,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         evaluateAll:=true;
         if (statementCounter>=length(statementHashes)) then setLength(statementHashes,statementCounter+1);
         statementHashes[statementCounter]:=statementHash;
-        {$ifdef fullVersion}
-        context.adapters^.raiseCustomMessage(mt_evaluatedStatementInInteractiveMode,intToStr(statementCounter),first^.location);
-        {$endif}
       end;
       inc(statementCounter);
 
