@@ -50,7 +50,7 @@ TYPE
       firstIsHeader:boolean;
     end;
     displayPending:boolean;
-    Sorted:record
+    sorted:record
       ascending:boolean;
       byColumn:longint;
     end;
@@ -86,7 +86,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
     if (params<>nil) and
        (params^.size>0) and
        (params^.value(0)^.literalType in C_validListTypes) then begin
-      for i:=1 to 2 do  if params^.size>i then begin
+      for i:=1 to 2 do if params^.size>i then begin
         case params^.value(i)^.literalType of
           lt_string: caption:=P_stringLiteral(params^.value(i))^.value;
           lt_boolean: header:=P_boolLiteral(params^.value(i))^.value;
@@ -207,7 +207,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
     dummyLocation.column:=0;
     dummyLocation.line:=0;
     if not(IsColumn) or (current.firstIsHeader and mi_transpose.Checked) then exit;
-    with Sorted do if byColumn=index then begin
+    with sorted do if byColumn=index then begin
       byColumn:=index;
       ascending:=not(ascending);
 
@@ -237,7 +237,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
       headerLiteral:P_listLiteral;
   begin
     enterCriticalSection(cs);
-    with Sorted do begin
+    with sorted do begin
       ascending:=false;
       byColumn:=-1;
     end;
@@ -290,8 +290,8 @@ PROCEDURE TtableForm.fillTable;
   FUNCTION getHeaderCell(CONST i:longint):string;
     begin
       if (current.firstIsHeader) and (i>=0) and (i<length(current.headerData)) then result:=current.headerData[i] else result:='';
-      if not(mi_transpose.Checked) and (Sorted.byColumn=i) then begin
-        if Sorted.ascending then result:=result+' v'
+      if not(mi_transpose.Checked) and (sorted.byColumn=i) then begin
+        if sorted.ascending then result:=result+' v'
                             else result:=result+' ^';
       end;
     end;

@@ -135,6 +135,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package.loadForDocumentation;
         package.printHelpOnMain(consoleAdapters);
         package.destroy;
+        wantHelpDisplay:=false;
         exit;
       end;
       {$ifdef fullVersion}

@@ -592,7 +592,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (inputPageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
 
-    with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
+    with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
     editorMeta[inputPageControl.activePageIndex].changed:=editorMeta[inputPageControl.activePageIndex].editor.modified;
     caption:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
   end;
@@ -1085,7 +1085,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
     if inputPageControl.activePageIndex>=0 then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       settings.value^.activePage:=inputPageControl.activePageIndex;
-      with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
+      with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
     end;
   end;
 
@@ -1500,7 +1500,7 @@ PROCEDURE TMnhForm.processSettings;
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if not(reEvaluationWithGUIrequired) and (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines,ct_silentlyRunAlone);
+      if not(reEvaluationWithGUIrequired) and (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
