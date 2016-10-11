@@ -8,6 +8,7 @@ object plotForm: TplotForm
   ClientWidth = 320
   Menu = MainMenu
   OnClose = FormClose
+  OnCreate = FormCreate
   OnKeyPress = FormKeyPress
   OnKeyUp = FormKeyUp
   OnResize = FormResize

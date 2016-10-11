@@ -52,7 +52,6 @@ CONST tokenKindForMt:array[T_messageType] of T_tokenKind=(
 {mt_plotCreatedWithDeferredDisplay,    } tkNote,
 {mt_plotCreatedWithInstantDisplay,     } tkNote,
 {mt_plotSettingsChanged,               } tkNote,
-{mt_evaluatedStatementInInteractiveMode} tkNote,
 {mt_displayTable                       } tkNote,
 {mt_guiPseudoPackageFound              } tkNote);
 

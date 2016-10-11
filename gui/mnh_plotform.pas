@@ -5,6 +5,7 @@ UNIT mnh_plotForm;
 INTERFACE
 {$WARN 5024 OFF}
 USES
+  mnhFormHandler,
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   Menus, ComCtrls, mnh_plotData, mnh_constants, mnh_out_adapters, mnh_evalThread,
   mnh_cmdLineInterpretation, mnh_basicTypes, mnh_settings, mnh_litVar, mnh_funcs, mnh_contexts;
@@ -42,6 +43,7 @@ TYPE
     miAntiAliasing5: TMenuItem;
     plotImage: TImage;
     StatusBar: TStatusBar;
+    PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
@@ -76,9 +78,9 @@ TYPE
   end;
 
 VAR guiAdapters:P_adapters;
-    formCycleCallback: PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
 
 FUNCTION plotForm: TplotForm;
+FUNCTION plotFormIsInitialized:boolean;
 IMPLEMENTATION
 VAR plotSubsystem:record
       mouseUpTriggersPlot:boolean;
@@ -88,8 +90,17 @@ VAR plotSubsystem:record
 
 FUNCTION plotForm: TplotForm;
   begin
-    if myPlotForm=nil then myPlotForm:=TplotForm.create(nil);
+    if myPlotForm=nil then begin
+      myPlotForm:=TplotForm.create(nil);
+      myPlotForm.pullPlotSettingsToGui();
+      registerForm(myPlotForm,false,true);
+    end;
     result:=myPlotForm;
+  end;
+
+FUNCTION plotFormIsInitialized:boolean;
+  begin
+    result:=myPlotForm<>nil;
   end;
 
 {$R *.lfm}
@@ -106,9 +117,14 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
     end;
   end;
 
+PROCEDURE TplotForm.FormCreate(Sender: TObject);
+  begin
+    miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
+  end;
+
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1,ssShift in Shift);
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);
@@ -312,7 +328,7 @@ VAR broughtToFront:double;
 PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
-    if not(showing) and guiAdapters^.noErrors then Show;
+    if not(showing) then Show;
     if (now-broughtToFront)>5/(24*60*60) then begin
       BringToFront;
       broughtToFront:=now;

@@ -158,7 +158,8 @@ private executeMainCall(import:string,doLog:boolean,...)->begin
   toId(import&'.main')@...;
   local dt:=time-t0;
   doLog ? runTimes|=[[import,flavour(executor),dt]]
-        : void;
+        : print('Time for ',import,': ',dt);
+  clearPackageCache(import);
   void;
 end;
 

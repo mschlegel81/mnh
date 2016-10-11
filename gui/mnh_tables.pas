@@ -5,6 +5,7 @@ UNIT mnh_tables;
 INTERFACE
 
 USES
+  mnhFormHandler,
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
   mnh_litVar, mnh_funcs,mnh_constants,mnh_contexts,mnh_out_adapters,mnh_basicTypes,
   myGenerics,myStringUtil,mnh_fileWrappers;
@@ -62,15 +63,15 @@ TYPE
     PROCEDURE fillTable;
   end;
 
-VAR
-  formCycleCallback    : PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
-
 FUNCTION tableForm: TtableForm;
 IMPLEMENTATION
 VAR myTableForm: TtableForm=nil;
 FUNCTION tableForm: TtableForm;
   begin
-    if myTableForm=nil then myTableForm:=TtableForm.create(nil);
+    if myTableForm=nil then begin
+      myTableForm:=TtableForm.create(nil);
+      registerForm(myTableForm,false,true);
+    end;
     result:=myTableForm;
   end;
 
@@ -130,7 +131,7 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2,ssShift in Shift);
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
     if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=Rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
   end;
 
@@ -277,6 +278,9 @@ PROCEDURE TtableForm.conditionalDoShow;
       fillTable;
     end;
     leaveCriticalSection(cs);
+    {$ifdef DEBUGMODE}
+    writeln(stdErr,'TtableForm.conditionalDoShow finished');
+    {$endif}
   end;
 
 PROCEDURE TtableForm.fillTable;

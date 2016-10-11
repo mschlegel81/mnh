@@ -461,7 +461,6 @@ TYPE
     mt_plotCreatedWithDeferredDisplay,
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
-    mt_evaluatedStatementInInteractiveMode,
     mt_displayTable,
     mt_guiPseudoPackageFound
     {$endif});
@@ -502,7 +501,6 @@ CONST
 {mt_plotCreatedWithDeferredDisplay     } (level:-1; prefix: 'Deferred plot request'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plotCreatedWithInstantDisplay      } (level:-1; prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_plotSettingsChanged                } (level:-1; prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_evaluatedStatementInInteractiveMode} (level:-1; prefix: 'Statement No.'        ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_displayTable                       } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});

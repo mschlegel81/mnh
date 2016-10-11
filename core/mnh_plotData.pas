@@ -778,10 +778,8 @@ FUNCTION T_plot.olxy(CONST xy:T_dataRow):T_dataRow;
 FUNCTION T_plot.isSampleValid(CONST sample: T_point): boolean;
   begin
     with scalingOptions do
-    result:=not(isNan(sample[0])) and not(isInfinite(sample[0])) and
-      (not(logscale['x']) or (sample[0]>=1E-100)) and not
-      (isNan(sample[1])) and not(isInfinite(sample[1])) and
-      (not(logscale['y']) or (sample[1]>=1E-100));
+    result:=not(isNan(sample[0])) and not(isInfinite(sample[0])) and (not(logscale['x']) or (sample[0]>=1E-100)) and
+            not(isNan(sample[1])) and not(isInfinite(sample[1])) and (not(logscale['y']) or (sample[1]>=1E-100));
   end;
 
 PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);

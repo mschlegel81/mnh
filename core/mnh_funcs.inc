@@ -745,19 +745,21 @@ FUNCTION clearPackageCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T
   VAR i:longint;
       id:string;
   begin
+    result:=nil;
     if (params=nil) or (params^.size=0) then begin
       P_package(tokenLocation.package)^.clearPackageCache(false);
       result:=newVoidLiteral;
     end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       id:=P_stringLiteral(params^.value(0))^.value;
       with P_package(tokenLocation.package)^ do
-        for i:=0 to length(packageUses)-1 do
-        if (packageUses[i].id=id) or (packageUses[i].path=id)
-        then begin
-          packageUses[i].pack^.clearPackageCache(false);
+        for i:=0 to length(packageUses)-1 do begin
+          if (packageUses[i].id=id) or (packageUses[i].path=id) then begin
+            packageUses[i].pack^.clearPackageCache(false);
+            if result=nil then result:=newVoidLiteral;
+          end;
         end;
-      context.adapters^.raiseError('Cannot locate package with id or path "'+id+'"',tokenLocation);
-    end else result:=nil;
+      if result=nil then context.adapters^.raiseError('Cannot locate package with id or path "'+id+'"',tokenLocation);
+    end;
   end;
 
 FUNCTION clearAllCaches_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

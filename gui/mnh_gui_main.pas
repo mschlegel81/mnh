@@ -3,6 +3,7 @@ UNIT mnh_gui_main;
 {$mode objfpc}{$H+}
 INTERFACE
 USES
+  mnhFormHandler,
   Classes, sysutils, FileUtil, SynEdit, SynEditTypes, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
   SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
@@ -280,7 +281,6 @@ VAR MnhForm: TMnhForm;
 
 PROCEDURE lateInitialization;
 PROCEDURE doFinalization;
-PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
@@ -330,9 +330,9 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
 
 PROCEDURE TMnhForm.doConditionalPlotReset;
   begin
-    if plotForm.miAutoReset.Checked then begin
+    if settings.value^.doResetPlotOnEvaluation then begin
       guiAdapters.plot.setDefaults;
-      plotForm.pullPlotSettingsToGui();
+      if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
     end;
   end;
 
@@ -459,6 +459,7 @@ PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: b
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
+    registerForm(self,true,true);
     lastWordsCaret:=maxLongint;
     wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
@@ -487,7 +488,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     assistanceSynEdit.clearAll;
     for i:=0 to length(LOGO)-1 do assistanceSynEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
-    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter;
+    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
     mnh_out_adapters.gui_started:=true;
     updateDebugParts;
@@ -556,7 +557,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) then formCycle(0,ssShift in Shift)
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift)
     else if (key=87) and (Shift=[ssCtrl]) then miCloseClick(Sender);
   end;
 
@@ -568,26 +569,29 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
       mainForm.width :=width;
       mainForm.height:=height;
       mainForm.isFullscreen:=(WindowState=wsMaximized);
-    end else plotForm.pullPlotSettingsToGui();
+    end;
     if helpPopupMemo.visible then positionHelpNotifier;
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
-    if not(settingsReady) then processSettings;
-    KeyPreview:=true;
-    UpdateTimeTimer.enabled:=true;
-    if reEvaluationWithGUIrequired then begin
-      doStartEvaluation(true,true);
-      if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
-                      else runEvaluator.reEvaluateWithGUI(ct_normal);
-      setEditorMode(false);
+    if not(settingsReady) then begin
+      processSettings;
+      KeyPreview:=true;
+      UpdateTimeTimer.enabled:=true;
+      if reEvaluationWithGUIrequired then begin
+        doStartEvaluation(true,true);
+        if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
+                        else runEvaluator.reEvaluateWithGUI(ct_normal);
+        setEditorMode(false);
+      end;
     end;
   end;
 
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if not(settingsReady) or
+       reEvaluationWithGUIrequired or
        (inputPageControl.activePageIndex<0) or
        (inputPageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
@@ -1082,7 +1086,7 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
   begin
-    if inputPageControl.activePageIndex>=0 then begin
+    if (inputPageControl.activePageIndex>=0) and not(reEvaluationWithGUIrequired) then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       settings.value^.activePage:=inputPageControl.activePageIndex;
       with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
@@ -1273,6 +1277,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
       saveSettings;
     end;
+
+    if reEvaluationWithGUIrequired and not(runEvaluator.evaluationRunning) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
@@ -1423,17 +1429,21 @@ FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
 PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
   begin
     if enable then begin
+      outputPageControl.Align:=alBottom;
       Splitter1.visible:=true;
       Splitter1.enabled:=true;
       inputPageControl.visible:=true;
       inputPageControl.enabled:=true;
       reEvaluationWithGUIrequired:=false;
+      Show;
     end else begin
       inputPageControl.visible:=false;
       inputPageControl.enabled:=false;
+      outputPageControl.Align:=alClient;
       Splitter1.visible:=false;
       Splitter1.enabled:=false;
       caption:=APP_TITLE+' '+getFileOrCommandToInterpretFromCommandLine;
+      Hide;
     end;
     subMenuFile.enabled:=enable;
     subMenuFile.visible:=enable;
@@ -1480,7 +1490,6 @@ PROCEDURE TMnhForm.processSettings;
       then setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter)
       else setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
 
-      plotForm.miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
       processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
 
@@ -1557,22 +1566,6 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   end;
 
-PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
-  VAR newId:byte;
-      form:TForm;
-  begin
-    if next then newId:=(ownId and 255+1) mod 3
-            else newId:=(ownId and 255+2) mod 3;
-    case newId of
-      1: form:=plotForm;
-      2: form:=tableForm;
-    else form:=MnhForm;
-    end;
-    form.Show;
-    form.BringToFront;
-    form.SetFocus;
-  end;
-
 PROCEDURE lateInitialization;
   begin
     SynHighlighterMnh.initLists;
@@ -1583,8 +1576,6 @@ PROCEDURE lateInitialization;
     tempAdapter:=nil;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
-    mnh_plotForm.formCycleCallback:=@formCycle;
-    mnh_tables.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit(@guiAdapters);
   end;
