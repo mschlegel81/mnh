@@ -28,6 +28,7 @@ T_editorState=object(T_serializable)
   changed:boolean;
   lines:T_arrayOfString;
   markedLines:T_arrayOfLongint;
+  caret:array['x'..'y'] of longint;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -339,6 +340,8 @@ FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
     end;
     setLength(markedLines,stream.readNaturalNumber);
     for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
+    caret['x']:=stream.readNaturalNumber;
+    caret['y']:=stream.readNaturalNumber;
     result:=stream.allOkay;
   end;
 
@@ -356,6 +359,8 @@ PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper);
     end;
     stream.writeNaturalNumber(length(markedLines));
     for i:=0 to length(markedLines)-1 do stream.writeLongint(markedLines[i]);
+    stream.writeNaturalNumber(caret['x']);
+    stream.writeNaturalNumber(caret['y']);
   end;
 
 FUNCTION obtainSettings:P_Settings;
