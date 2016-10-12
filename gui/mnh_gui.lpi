@@ -240,6 +240,7 @@
       <Unit31>
         <Filename Value="..\core\mnh_packages.pas"/>
         <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
       </Unit31>
       <Unit32>
         <Filename Value="..\core\mnh_contexts.pas"/>

@@ -159,6 +159,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; CONST state: T_editorState);
     filePath     :=state.filePath;
     state.getLines(editor.lines);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
+    editor.CaretX:=state.caret['x'];
+    editor.CaretY:=state.caret['y'];
     updateSheetCaption;
   end;
 
@@ -264,6 +266,8 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
     settings^.editorState[index].changed:=changed;
     setLength(settings^.editorState[index].lines,editor.lines.count);
     for i:=0 to length(settings^.editorState[index].lines)-1 do settings^.editorState[index].lines[i]:=editor.lines[i];
+    settings^.editorState[index].caret['x']:=editor.Caretx;
+    settings^.editorState[index].caret['y']:=editor.CaretY;
   end;
 
 PROCEDURE T_editorMeta.toggleComment;
