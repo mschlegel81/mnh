@@ -44,7 +44,6 @@ TYPE
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
-      FUNCTION needReload(CONST usecase:T_packageLoadUsecase):boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
       PROCEDURE loadForDocumentation;
       PROCEDURE clear(CONST includeSecondaries:boolean);
@@ -62,7 +61,6 @@ TYPE
       PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
-//      FUNCTION isReady:boolean;
       FUNCTION isMain:boolean;
       FUNCTION getPath:ansistring; virtual;
       PROCEDURE setSourcePath(CONST path:ansistring);
@@ -183,7 +181,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
       for i:=0 to length(secondaryPackages)-1 do
         if secondaryPackages[i]^.codeProvider.id = id then begin
           if secondaryPackages[i]^.ready<>lu_NONE then begin
-            if secondaryPackages[i]^.needReload(lu_forImport) then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+            if secondaryPackages[i]^.ready<>lu_forImport then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -745,7 +743,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then clear(false)
     else reloadAllPackages(packageTokenLocation(@self));
 
-    if ((usecase=lu_forCallingMain) or not(isMain)) and needReload(usecase) then codeProvider.load;
+    if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
     loadedAtCodeHash:=codeProvider.contentHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;
@@ -803,11 +801,6 @@ CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
     importedRules.create;
     setLength(statementHashes,0);
     loadedAtCodeHash:=0;
-  end;
-
-FUNCTION T_package.needReload(CONST usecase:T_packageLoadUsecase): boolean;
-  begin
-    result:=(ready<>usecase) or (loadedAtCodeHash<>codeProvider.contentHash);
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries:boolean);

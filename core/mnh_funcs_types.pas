@@ -1,7 +1,7 @@
 UNIT mnh_funcs_types;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
+USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,mnh_out_adapters,mnh_html,mnh_contexts;
 
 IMPLEMENTATION
 {$MACRO ON}

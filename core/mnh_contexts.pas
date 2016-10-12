@@ -1,6 +1,6 @@
 UNIT mnh_contexts;
 INTERFACE
-USES sysutils,mnh_constants,mnh_tokens,mnh_basicTypes, mnh_out_adapters,mnh_litVar,myGenerics,EpikTimer,myStringUtil;
+USES sysutils,mnh_constants,mnh_tokens,mnh_basicTypes, mnh_out_adapters,mnh_litVar,myGenerics,EpikTimer{$ifdef fullVersion},myStringUtil{$endif};
 TYPE
   T_valueStoreMarker=(vsm_none,vsm_nonBlockingVoid,vsm_blockingVoid,vsm_nonBlockingFirst,vsm_blockingFirst);
 CONST
