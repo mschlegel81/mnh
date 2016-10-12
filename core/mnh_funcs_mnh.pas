@@ -34,108 +34,6 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      case x^.literalType of
-        lt_string: result:=P_stringLiteral(x)^.softCast;
-        lt_list..lt_listWithError: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
-        end;
-        else begin
-          x^.rereference;
-          result:=x;
-        end;
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(arg0);
-  end;
-
-FUNCTION toString_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      if arg0^.literalType=lt_string then begin
-        result:=arg0;
-        result^.rereference;
-      end else result:=newStringLiteral(arg0^.toString);
-    end;
-  end;
-
-FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      case arg0^.literalType of
-        lt_boolean: begin result:=arg0; result^.rereference; exit(result); end;
-        lt_string: if lowercase(str0^.value) = LITERAL_BOOL_TEXT[false] then exit(newBoolLiteral(false))
-              else if lowercase(str0^.value) = LITERAL_BOOL_TEXT[true]  then exit(newBoolLiteral(true));
-        lt_int: if int0^.value=0 then exit(newBoolLiteral(false))
-           else if int0^.value=1 then exit(newBoolLiteral(true));
-        lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
-            else if real0^.value=1 then exit(newBoolLiteral(true));
-      end;
-      context.adapters^.raiseError(arg0^.toString+' cannot be cast to boolean',tokenLocation);
-    end;
-  end;
-
-FUNCTION toInt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR len:longint;
-      i:int64;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      case arg0^.literalType of
-        lt_int: begin result:=arg0; result^.rereference; exit(result); end;
-        lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-        lt_real: if real0^.value=round(real0^.value) then exit(newIntLiteral(round(real0^.value)));
-        lt_string: begin
-          result:=parseNumber(str0^.value,1,false,len);
-          if (result=nil) or (result^.literalType=lt_int) then exit(result);
-          //parsed a real number
-          if P_realLiteral(result)^.value=round(P_realLiteral(result)^.value) then begin
-            i:=round(P_realLiteral(result)^.value);
-            disposeLiteral(result);
-            exit(newIntLiteral(i));
-          end else begin
-            disposeLiteral(result);
-            result:=nil;
-          end;
-        end;
-      end;
-      context.adapters^.raiseError(arg0^.toString+' cannot be cast to int',tokenLocation);
-    end;
-  end;
-
-FUNCTION toReal_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR len:longint;
-      x:T_myFloat;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      case arg0^.literalType of
-        lt_real: begin result:=arg0; result^.rereference; exit(result); end;
-        lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-        lt_int: exit(newRealLiteral(int0^.value));
-        lt_string: begin
-          result:=parseNumber(str0^.value,1,false,len);
-          if (result=nil) or (result^.literalType=lt_real) then exit(result);
-          //parsed an integer
-          x:=P_intLiteral(result)^.value;
-          disposeLiteral(result);
-          exit(newRealLiteral(x));
-        end;
-      end;
-      context.adapters^.raiseError(arg0^.toString+' cannot be cast to real',tokenLocation);
-    end;
-  end;
-
 FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
@@ -261,11 +159,6 @@ FUNCTION getMnhInfo:string;
 
 INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'softCast',@softCast_imp,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
-  registerRule(TYPECAST_NAMESPACE,'toString',@toString_imp,'toString(X);#Casts X to string');
-  registerRule(TYPECAST_NAMESPACE,'toBoolean',@toBoolean_imp,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toInt',@toInt_imp,'toInt(X);#Casts X to int or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toReal',@toReal_imp,'toReal(X);#Casts X to real or throws an error if not possible');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath',@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
