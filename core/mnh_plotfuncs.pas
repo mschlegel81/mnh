@@ -75,7 +75,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
-         (params^.value(0)^.literalType=lt_expression) and (P_expressionLiteral(params^.value(0))^.arity=1) and
+         (params^.value(0)^.literalType=lt_expression) and (P_expressionLiteral(params^.value(0))^.canApplyToNumberOfParameters(1)) and
          (params^.value(1)^.literalType in [lt_int,lt_real]) and
          (params^.value(2)^.literalType in [lt_int,lt_real]) and (params^.value(2)^.isInRelationTo(tt_comparatorGrt,params^.value(1))) and
          (params^.value(3)^.literalType=lt_int) and (P_intLiteral(params^.value(3))^.value>=2) then begin

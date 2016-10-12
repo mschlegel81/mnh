@@ -707,9 +707,10 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
   end;
 
 FUNCTION T_plot.realToScreen(CONST p: T_point): T_point;
-  begin
-    result:=realToScreen(p[0], p[1]);
-  end;
+  begin with scalingOptions do begin
+    result[0]:=(olx(p[0])-range['x',0])/(range['x',1]-range['x',0])* (screenWidth-xOffset)+xOffset;
+    result[1]:=(oly(p[1])-range['y',0])/(range['y',1]-range['y',0])* (-yOffset)+yOffset;
+  end; end;
 
 FUNCTION T_plot.realToScreen(CONST x, y: double): T_point;
   begin with scalingOptions do begin

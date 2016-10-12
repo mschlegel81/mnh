@@ -134,6 +134,7 @@ TYPE
     FUNCTION value: pointer;
     FUNCTION evaluate(CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal;
     FUNCTION arity:longint;
+    FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
@@ -259,6 +260,7 @@ TYPE
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
   T_pointerToStringCallback = FUNCTION(CONST p: pointer; CONST lengthLimit:longint): string;
   T_pointerToIntCallback = FUNCTION(CONST p: pointer): longint;
+  T_pointerAndIntToBooleanCallback = FUNCTION(CONST p: pointer; CONST i:longint): boolean;
   T_evaluateCompatorCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
   T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST location:T_tokenLocation; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
 
@@ -282,6 +284,7 @@ VAR
   disposeSubruleCallback: T_disposeSubruleCallback;
   subruleToStringCallback: T_pointerToStringCallback;
   subruleToArityCallback: T_pointerToIntCallback;
+  subruleAcceptParCountCallback: T_pointerAndIntToBooleanCallback;
   subruleApplyOpCallback: T_subruleApplyOpCallback;
   evaluateCompatorCallback: T_evaluateCompatorCallback;
   evaluateSubruleCallback:T_evaluateSubruleCallback;
@@ -1070,6 +1073,11 @@ FUNCTION T_expressionLiteral.evaluate(CONST parameters:P_listLiteral; CONST loca
 FUNCTION T_expressionLiteral.arity:longint;
   begin
     result:=subruleToArityCallback(val);
+  end;
+
+FUNCTION T_expressionLiteral.canApplyToNumberOfParameters(CONST parCount:longint):boolean;
+  begin
+    result:=subruleAcceptParCountCallback(val,parCount);
   end;
 
 FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;

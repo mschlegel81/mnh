@@ -2,10 +2,10 @@ UNIT mnh_packages;
 INTERFACE
 USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
-     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
-     {$ifdef fullVersion}mnh_doc,Classes,mnh_plotData,mnh_plotFuncs,{$endif}
-     mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_files,
-     mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif},mnh_datastores;
+     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
+     {$ifdef fullVersion}mnh_doc,Classes,mnh_plotData,mnh_plotFuncs,mnh_settings,{$else}mySys,{$endif}
+     mnh_funcs_mnh, mnh_funcs_types, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_files,
+     mnh_funcs_regex,mnh_datastores;
 
 {$define include_interface}
 TYPE

@@ -11,7 +11,7 @@ namespacePart(c:string)->begin
   tok[idx[0] orElse -1] orElse '?';
 end;
 
-main->allFolders('.')
+obtainData->allFolders('.')
   .each(f,files(f&['/*.pas','/*.inc']),|)
   .each(file,
     file
@@ -19,7 +19,11 @@ main->allFolders('.')
     .each(line,line.matches('registerRule')
                ? [file,index,line.firstString,line.namespacePart]
                : void),|)
-  .sort(2).sort(3)
+  .sort(2).sort(3);
+
+main->obtainData
   .each(line,line.join("\t"))
   .join("\n")
   .print;
+
+main('GUI')->obtainData.showTable;

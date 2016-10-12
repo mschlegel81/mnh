@@ -71,7 +71,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     L:=parameterList.value(ownIndex);
     if not(L^.literalType in typeWhitelist) then exit(false);
     if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.accept(L,context));
-    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) and (P_expressionLiteral(L)^.arity<>restrictionIdx) then exit(false);
+    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) and not(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx)) then exit(false);
     if (restrictionIdx>=0) and (restrictionType in [tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList])
       and (P_listLiteral(L)^.size<>restrictionIdx) then exit(false);
     result:=true;

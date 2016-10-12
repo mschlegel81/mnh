@@ -476,6 +476,11 @@ FUNCTION subruleToArityImpl(CONST p:pointer):longint;
     result:=P_subrule(p)^.arity;
   end;
 
+FUNCTION subruleAcceptsParCount(CONST p:pointer; CONST parCount:longint):boolean;
+  begin
+    result:=(P_subrule(p)^.arity<=parCount) and (P_subrule(p)^.pattern.hasOptionals or (P_subrule(p)^.arity=parCount));
+  end;
+
 FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
@@ -882,6 +887,7 @@ generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
 disposeSubruleCallback :=@disposeSubruleImpl;
 subruleToStringCallback:=@subruleToStringImpl;
 subruleToArityCallback:=@subruleToArityImpl;
+subruleAcceptParCountCallback:=@subruleAcceptsParCount;
 subruleApplyOpCallback :=@subruleApplyOpImpl;
 evaluateCompatorCallback:=@evaluateComparator;
 evaluateSubruleCallback:=@evaluateSubrule;
