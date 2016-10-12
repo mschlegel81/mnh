@@ -266,7 +266,7 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
     settings^.editorState[index].changed:=changed;
     setLength(settings^.editorState[index].lines,editor.lines.count);
     for i:=0 to length(settings^.editorState[index].lines)-1 do settings^.editorState[index].lines[i]:=editor.lines[i];
-    settings^.editorState[index].caret['x']:=editor.Caretx;
+    settings^.editorState[index].caret['x']:=editor.CaretX;
     settings^.editorState[index].caret['y']:=editor.CaretY;
   end;
 
