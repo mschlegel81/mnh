@@ -846,6 +846,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         first^.next:=context.disposeToken(bracketClosingEach);
       end;
 
+    {$ifndef fullVersion}
+    FUNCTION workerThreadCount:longint;
+      begin
+        result:=getNumberOfCPUs-1;
+        if result<0 then result:=0;
+      end;
+    {$endif}
+
     PROCEDURE initFutures;
       VAR future:array of P_futureTask;
           nextFuture:longint=0;

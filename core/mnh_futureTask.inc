@@ -68,7 +68,11 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 
 PROCEDURE ensurePoolThreads();
   begin
+    {$ifdef fullVersion}
     if (poolThreadsRunning<workerThreadCount) then begin
+    {$else}
+    if (poolThreadsRunning<getNumberOfCPUs-1) then begin
+    {$endif}
       InterLockedIncrement(poolThreadsRunning);
       beginThread(@threadPoolThread);
     end;

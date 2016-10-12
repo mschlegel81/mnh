@@ -158,6 +158,7 @@ private cleanup->begin
   .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;
   currentCodeHash:=void;
+  clearAllCaches;
 end;
 
 private call7z(fileList,suffix)->isLinux ? void : begin

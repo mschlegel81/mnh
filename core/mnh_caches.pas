@@ -1,6 +1,6 @@
 UNIT mnh_caches;
 INTERFACE
-USES mnh_basicTypes, myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
+USES mnh_basicTypes, myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys{$ifdef fullVersion},mnh_settings{$endif};
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=1;
       POLISH_FREQUENCY=32;
@@ -33,7 +33,15 @@ TYPE
   end;
 
 IMPLEMENTATION
-VAR globalMemoryLimit:int64=-1;
+VAR globalMemoryLimit:int64={$ifdef WINDOWS}
+                              {$ifdef CPU32}
+                              1000000000;
+                              {$else}
+                              int64(maxLongint)*2;
+                              {$endif}
+                            {$else}
+                            1000000000;
+                            {$endif}
     allCaches:specialize G_list<P_cache>;
 
 PROCEDURE polishAllCaches;
@@ -48,7 +56,7 @@ PROCEDURE polishAllCaches;
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
   begin
     criticalSection:=ruleCS;
-    globalMemoryLimit:=settings.value^.memoryLimit;
+    {$ifdef fullVersion}globalMemoryLimit:=settings.value^.memoryLimit;{$endif}
     fill := 0;
     setLength(cached,MIN_BIN_COUNT);
     allCaches.add(@self);
