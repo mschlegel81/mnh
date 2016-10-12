@@ -1,10 +1,11 @@
 private timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]).sort(0);
 private changeToContent(L:list)->L.each(el,el[1]='deleted' ? void : el[[0,2]]).sort(0);
 private
-waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,initialContent)->begin
+waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSeconds:numeric,initialContent)->begin
   local scanInterval:=-1;
   local currentContent:=initialContent;
-  while(currentContent==initialContent,begin
+  local timeout:=time+timeoutInSeconds;
+  while(currentContent==initialContent AND time<timeout,begin
     sleep(scanInterval:=min(scanInterval+1,maxSleepTimeInSeconds));
     currentContent:=timedFolderContent(folderPath);
   end);
@@ -25,7 +26,9 @@ changeSymbol:=[['',''],['modified','*'],['deleted','-'],['new','+']];
 //*[[filename,changetype,fileInfo],...]
 //*where changetype is one of ['new','deleted','modified',''].
 //*If the file is deleted, fileInfo is the info of the old file
-waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,timedFolderContent(folderPath));
+waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,timeoutInSeconds,timedFolderContent(folderPath));
+//*As above but without timeout
+waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,2^31);
 
 //*Returns a list as waitForFolderChange but without waiting
 pseudoFolderChange(folderPath:string)->timedFolderContent(folderPath).each(e,[e[0],'',e[1]]);
@@ -51,3 +54,10 @@ tempFile(pattern:string)->
       while(fileExists(replace(pattern,'#',tmpFileIndex)),tmpFileIndex+=1);
       replace(pattern,'#',tmpFileIndex);
     end;
+
+//*Returns the file time of the newest file in the subTree or -1 if there is no file
+//*Optional parameters indicate patterns
+maxFileTime(folder,...)->allFiles(folder,...==[] ? void : ...).fileInfo.getInner('time').agg(max) orElse -1;
+
+//*Returns the file time of the given file
+fileTime(file)->file.fileInfo['time'] orElse -1;
