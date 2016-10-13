@@ -684,24 +684,28 @@ FUNCTION isAscii_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 FUNCTION utf8ToAnsi_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(Utf8ToAnsi(str0^.value));
   end;
 
 FUNCTION ansiToUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(AnsiToUtf8(str0^.value));
   end;
 
 FUNCTION base64encode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(EncodeStringBase64(str0^.value));
   end;
 
 FUNCTION base64decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(DecodeStringBase64(str0^.value));
   end;
