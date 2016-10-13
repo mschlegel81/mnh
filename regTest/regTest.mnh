@@ -148,8 +148,6 @@ main(examplesFile:string)->main_impl(examplesFile,false,true);
 //*Retest with examples file
 main(examplesFile:string,'retest')->main_impl(examplesFile,true,true);
 //*Retest with examples file - supressing result times logging
-main(examplesFile:string,'retest')->main_impl(examplesFile,true,true);
-//*Retest with examples file - supressing result times logging
 main(examplesFile:string,'noLog')->main_impl(examplesFile,true,false);
 
 private executeMainCall(import:string,doLog:boolean,...)->begin

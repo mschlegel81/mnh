@@ -26,8 +26,8 @@ validateCollectedOutput(doLog:boolean)->begin
       : begin
           lastResultName.writeFileLines(printOut);
           stateMessage:='NOT OK';
-          print("Result is not okay!\nPlease compare "&lastResultName
-                                  &"\n           and "&expectedResultName);
+          fail("Result is not okay!\nPlease compare "&lastResultName
+                                 &"\n           and "&expectedResultName);
         end;
     end
   : begin
