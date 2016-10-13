@@ -38,7 +38,7 @@ watchFolder(folderPath:string,onChange:expression,maxSleepTimeInSeconds:numeric)
   async({begin
     local contents:=timedFolderContent(folderPath);
     while(true,begin
-      contents:=waitForFolderChange(folderPath,maxSleepTimeInSeconds,contents);
+      contents:=waitForFolderChange(folderPath,maxSleepTimeInSeconds,2^31,contents);
       onChange(contents);
       contents:=contents.changeToContent;
     end);
