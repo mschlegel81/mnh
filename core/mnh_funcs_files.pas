@@ -222,7 +222,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         while tempProcess.running and context.adapters^.noErrors do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           if not(includeStdErr) then begin
-            while tempProcess.Stderr.NumBytesAvailable>0 do
+            while tempProcess.stdErr.NumBytesAvailable>0 do
             tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
           end;
           if tempProcess.running then begin
@@ -279,7 +279,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       end;
       executable:=str0^.value;
       processExitCode:=runCommand(executable,cmdLinePar,output,includeStdErr);
-      outputLit:=newListLiteral(output.Count);
+      outputLit:=newListLiteral(output.count);
       for i:=0 to output.count-1 do outputLit^.appendString(output[i]);
       result:=newListLiteral(2)^.append(outputLit,false,false)^.appendInt(processExitCode);
       output.free;

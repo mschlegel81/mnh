@@ -282,7 +282,7 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
   VAR tempProcess: TProcessUTF8;
       i: longint;
   begin
-    result := $FFFFFFFF;
+    result := $ffffffff;
     try
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
@@ -294,7 +294,7 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
                 else result:=tempProcess.ExitCode;
       tempProcess.free;
     except
-      result := $FFFFFFFF;
+      result := $ffffffff;
     end;
   end;
 
