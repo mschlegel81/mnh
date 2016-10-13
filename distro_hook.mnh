@@ -7,4 +7,12 @@ main->begin
       : fail('Copy mnh.exe -> C:\bin\mnh.exe failed');
     end
   : void;
+  fileExists('mnh_imig.exe')
+  ? begin
+      deleteFile('C:\bin\mnh_imig.exe');
+      copyFile('mnh_imig.exe','C:\bin\mnh_imig.exe')
+      ? print('Copied mnh_imig.exe -> C:\bin\mnh_imig.exe')
+      : fail('Copy mnh_imig.exe -> C:\bin\mnh_imig.exe failed');
+    end
+  : void;
 end;
