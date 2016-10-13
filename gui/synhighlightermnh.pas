@@ -246,8 +246,11 @@ PROCEDURE TSynMnhSyn.next;
       end;
       if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
         i:=0;
-        while (fLine[i]<>#0) and (fLine[i]<>';') do inc(i);
-        if fLine[i]=';' then specialLineCase:=mt_echo_input;
+        if startsWith(' in>') or startsWith('out>') then specialLineCase:=mt_echo_input;
+        while (fLine[i]<>#0) and (specialLineCase=mt_clearConsole) do begin
+          if (fLine[i]=';') or ((fLine[i]='/') and (fLine[i+1]='/')) then specialLineCase:=mt_echo_input;
+          inc(i);
+        end;
         i:=-1;
       end;
       if i>=0 then run:=i+1;
