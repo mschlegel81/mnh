@@ -196,7 +196,7 @@ FUNCTION appendFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_
   begin result:=writeOrAppendFileLines(params,tokenLocation,context,true); end;
 
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): boolean;
+  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): int64;
     CONST
       READ_BYTES = 2048;
     VAR
@@ -221,10 +221,19 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         tempProcess.CloseInput;
         while tempProcess.running and context.adapters^.noErrors do begin
           memStream.SetSize(BytesRead+READ_BYTES);
-          if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
-          n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
-          if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
-                 else begin inc(sleepTime); sleep(sleepTime); end;
+          if not(includeStdErr) then begin
+            while tempProcess.Stderr.NumBytesAvailable>0 do
+            tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
+          end;
+          if tempProcess.running then begin
+            if tempProcess.output.NumBytesAvailable>0
+            then n:=tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES)
+            else n:=0;
+          end;
+          if tempProcess.running then begin
+            if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
+                   else begin inc(sleepTime); sleep(sleepTime); end;
+          end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
@@ -233,9 +242,9 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
-        result := (tempProcess.exitStatus = 0);
+        result := tempProcess.exitStatus;
       except
-        result := false;
+        result := MAXDWORD;
       end;
       tempProcess.free;
       memStream.SetSize(BytesRead);
@@ -247,8 +256,10 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       output:TStringList;
+      outputLit:P_listLiteral;
       i:longint;
       includeStdErr:boolean=true;
+      processExitCode:int64;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
@@ -267,12 +278,10 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         else exit(nil);
       end;
       executable:=str0^.value;
-      runCommand(executable,
-                 cmdLinePar,
-                 output,
-                 includeStdErr);
-      result:=newListLiteral;
-      for i:=0 to output.count-1 do P_listLiteral(result)^.appendString(output[i]);
+      processExitCode:=runCommand(executable,cmdLinePar,output,includeStdErr);
+      outputLit:=newListLiteral(output.Count);
+      for i:=0 to output.count-1 do outputLit^.appendString(output[i]);
+      result:=newListLiteral(2)^.append(outputLit,false,false)^.appendInt(processExitCode);
       output.free;
     end;
   end;
@@ -281,6 +290,7 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       i:longint;
+      processExitCode:int64;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
@@ -293,10 +303,13 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
           cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
       end;
       showConsole;
-      runCommandAsyncOrPipeless(executable,
-                                cmdLinePar,doAsynch);
-      hideConsole;
-      result:=newBoolLiteral(true);
+      processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch);
+      if doAsynch then
+        result:=newVoidLiteral
+      else begin
+        hideConsole;
+        result:=newIntLiteral(processExitCode);
+      end;
     end;
   end;
 
@@ -509,35 +522,35 @@ FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T
   end;
 
 INITIALIZATION
-  registerRule(FILES_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
-  registerRule(FILES_BUILTIN_NAMESPACE,'allFiles',@allFiles_impl,'allFiles(root);#Returns a list of all files below root (string or stringList)#'+
-                                                                  'allFiles(root,pattern);#Returns a list of all files matching pattern(s) (string or stringList)#'+
-                                                                  'allFiles(root,pattern,recurse=false);#As above but without recursing subfolders');
-  registerRule(FILES_BUILTIN_NAMESPACE,'folders',@folders_impl,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
-  registerRule(FILES_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(rootFolder:string);#Returns a list of all folders below and including a given root directory');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileExists',@fileExists_impl,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'folderExists',@folderExists_impl,'folderExists(foldername:string);#Returns true if the specified folder exists and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileContents',@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileLines',@fileLines_impl,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost');
-  registerRule(FILES_BUILTIN_NAMESPACE,'writeFile',@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
-  registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
-                                                                              'writeFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
-  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,'appendFileLines(filename:string, content:stringList);#Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
-                                                                              'appendFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
-  registerRule(FILES_BUILTIN_NAMESPACE,'exec',@execSync_impl,'exec(programPath:string);#Executes the specified program and returns the text output including stdErr output#'+
-                                                              'exec(programPath:string,parameters:flatList);#Executes the specified program with given command line parameters and returns the text output including stdErr output#'+
-                                                              'exec(programPath:string,includeStdErr:boolean);#Executes the specified program and returns the text output optionally including stdErr output#'+
-                                                              'exec(programPath:string,parameters:flatList,parameters:flatList);#Executes the specified program with given command line parameters and returns the text output optionally including stdErr output');
-  registerRule(FILES_BUILTIN_NAMESPACE,'execAsync',@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
-  registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless',@execPipeless_impl,'execPipeless(programPath:string,parameters ...);#Executes the specified program, waiting for exit and returning true');
-  registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile',@deleteFile_imp,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir',@deleteDir_imp,'deleteDir(directoryname:string);#Deletes the given directory, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'copyFile',@copyFile_imp,'copyFile(source:string,dest:string);#Copies a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);#Moves a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats',@fileStats_imp,'fileStats(filename:string);#Retuns a triplet [lineCount,wordCount,byteCount,hash].');
-  registerRule(FILES_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
-  registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt',@changeFileExtension_imp,'changeFileExt(filename,newExtension);#Returns the path of file with the new extension');
-  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);#Returns the path of file relative to reference');
+  registerRule(FILES_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);//Returns a list of files matching the given search pattern');
+  registerRule(FILES_BUILTIN_NAMESPACE,'allFiles',@allFiles_impl,'allFiles(root);//Returns a list of all files below root (string or stringList)#'+
+                                                                  'allFiles(root,pattern);//Returns a list of all files matching pattern(s) (string or stringList)#'+
+                                                                  'allFiles(root,pattern,recurse=false);//As above but without recursing subfolders');
+  registerRule(FILES_BUILTIN_NAMESPACE,'folders',@folders_impl,'folders(searchPattern:string);//Returns a list of folders matching the given search pattern');
+  registerRule(FILES_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(rootFolder:string);//Returns a list of all folders below and including a given root directory');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileExists',@fileExists_impl,'fileExists(filename:string);//Returns true if the specified file exists and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'folderExists',@folderExists_impl,'folderExists(foldername:string);//Returns true if the specified folder exists and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileContents',@fileContents_impl,'fileContents(filename:string);//Returns the contents of the specified file as one string');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileLines',@fileLines_impl,'fileLines(filename:string);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost');
+  registerRule(FILES_BUILTIN_NAMESPACE,'writeFile',@writeFile_impl,'writeFile(filename:string, content:string);//Writes the specified content to the specified file and returns true');
+  registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                              'writeFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending');
+  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,'appendFileLines(filename:string, content:stringList);//Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                              'appendFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending (will be used only if a new file is created)');
+  registerRule(FILES_BUILTIN_NAMESPACE,'exec',@execSync_impl,'exec(programPath:string);//Executes the specified program and returns the text output including stdErr output and the exitcode as a nested list: [[output,...],exitCode]#'+
+                                                              'exec(programPath:string,parameters:flatList);//Executes the specified program with given command line parameters#'+
+                                                              'exec(programPath:string,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
+                                                              'exec(programPath:string,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output');
+  registerRule(FILES_BUILTIN_NAMESPACE,'execAsync',@execAsync_impl,'execAsync(programPath:string,parameters ...);//Starts the specified program and returns void');
+  registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless',@execPipeless_impl,'execPipeless(programPath:string,parameters ...);//Executes the specified program, waiting for exit and returns the exit code');
+  registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile',@deleteFile_imp,'deleteFile(filename:string);//Deletes the given file, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir',@deleteDir_imp,'deleteDir(directoryname:string);//Deletes the given directory, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'copyFile',@copyFile_imp,'copyFile(source:string,dest:string);//Copies a file from source to dest, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);//Moves a file from source to dest, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);//Retuns file info as a key-value-list');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats',@fileStats_imp,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].');
+  registerRule(FILES_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);//Returns various representations and parts of the given name');
+  registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt',@changeFileExtension_imp,'changeFileExt(filename,newExtension);//Returns the path of file with the new extension');
+  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);//Returns the path of file relative to reference');
 
 end.
