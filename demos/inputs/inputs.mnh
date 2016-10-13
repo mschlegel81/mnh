@@ -1,7 +1,13 @@
 private ensureFile(path,URL)->fileExists(path) ? path : begin
+  note('Fetching ',URL);
   writeFile(path,httpGet(URL));
   path;
 end;
 
-kjv ->ensureFile(splitFileName(myPath)['directory']&"/kjv.txt"     ,'http://www.ccel.org/ccel/bible/kjv.txt');
+kjv ->ensureFile(splitFileName(myPath)['directory']&"/kjv.txt"     ,'http://www.gutenberg.org/cache/epub/10/pg10.txt');
 dict->ensureFile(splitFileName(myPath)['directory']&"/unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');
+
+main->begin
+  kjv;
+  dict;
+end;

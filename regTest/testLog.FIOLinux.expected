@@ -2859,60 +2859,60 @@ C
  480 METHINKT IT IS LIKE A WEASEL (  1)
  490 METHINKS IT IS LIKE A WEASEL
 ***** wordCount *****
-Words total:    948069
-Distinct words: 15107
+Words total:    794914
+Distinct words: 12892
 Most frequent:
 word   count %
-the    74518 7.86
-and    60838 6.42
-of     40634 4.29
-to     16780 1.77
-that   16091 1.7
-in     15112 1.59
-he     12510 1.32
-for    11036 1.16
-shall  10953 1.16
-his    10139 1.07
-a      10137 1.07
-unto   10136 1.07
-i       9841 1.04
-they    9115 0.96
-lord    8762 0.92
-be      8497 0.9
-is      8402 0.89
-them    7945 0.84
-him     7902 0.83
-not     7902 0.83
-with    7463 0.79
-it      7175 0.76
-all     6777 0.71
-thou    6411 0.68
-was     5491 0.58
-thy     5354 0.56
-which   5085 0.54
-god     5006 0.53
-their   4954 0.52
-my      4849 0.51
-but     4846 0.51
-have    4561 0.48
-as      4540 0.48
-me      4524 0.48
-will    4414 0.47
-said    4405 0.46
-thee    4370 0.46
-from    4334 0.46
-ye      4282 0.45
-are     3561 0.38
-were    3529 0.37
-when    3459 0.36
-upon    3351 0.35
-this    3265 0.34
-man     3237 0.34
-out     3207 0.34
-by      3186 0.34
-king    3035 0.32
-israel  2816 0.3
-you     2814 0.3
+the    64204 8.08
+and    51764 6.51
+of     34789 4.38
+to     13660 1.72
+that   12927 1.63
+in     12725 1.6
+he     10422 1.31
+shall   9840 1.24
+for     8997 1.13
+unto    8997 1.13
+i       8854 1.11
+his     8473 1.07
+a       8235 1.04
+lord    7964 1.0
+they    7379 0.93
+be      7032 0.88
+is      7015 0.88
+him     6659 0.84
+not     6617 0.83
+them    6430 0.81
+it      6144 0.77
+with    6059 0.76
+all     5638 0.71
+thou    5474 0.69
+thy     4600 0.58
+was     4524 0.57
+god     4472 0.56
+which   4420 0.56
+my      4368 0.55
+me      4096 0.52
+said    3999 0.5
+but     3997 0.5
+ye      3983 0.5
+their   3942 0.5
+have    3909 0.49
+will    3843 0.48
+thee    3827 0.48
+from    3657 0.46
+as      3531 0.44
+are     2970 0.37
+when    2835 0.36
+this    2833 0.36
+out     2776 0.35
+were    2772 0.35
+upon    2750 0.35
+man     2735 0.34
+you     2687 0.34
+by      2644 0.33
+israel  2575 0.32
+king    2548 0.32
 ***** y *****
 0 1 1
 1 1 1
@@ -3132,7 +3132,7 @@ Hash of regTest/../demos/turtleGfx.png is FB769509
 ***** heart *****
 Hash of regTest/../demos/heart.png is 88B30F70
 ***** examples from file *****
-Examples file has 584 lines
+Examples file has 660 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3624,7 +3624,7 @@ out> '1101111000000000000000000000000000000000000000000000000000000000'
 Note  Creating new rule: input
  in> serialized :=input.serialize;
 Note  Creating new rule: serialized
- in> print(input.toString.length,' > ', serialized.length);
+ in> print(input.toString.byteLength,' > ', serialized.byteLength);
 211 > 192
 out> void
  in> input==serialized.deserialize;
@@ -3633,20 +3633,12 @@ out> true
 out> [7,11,13]
  in> formatTabs("\v-2\n3\t4.3");
 out> ['  -2','3  4.3']
- in> utf8ToSys('Ã„Ã–Ãœ').chars.ord;
-out> [195,132,195,150,195,156]
- in> sysToUtf8('TÄTÜ');
-out> 'TÄTÜ'
  in> typeOf(3);
 out> 'int'
  in> typeOf([1..5, 7.5]);
 out> 'numericList(6)'
  in> typeOf({$x^2+$y});
 out> 'expression(2)'
- in> 'Test something'.base92encode;
-out> '!&NY>fdTx<$-h|;T*=u_'
- in> '!&NY> fdTx< $-h|; T*=u_'.base92decode;
-out> 'Test something'
  in> x :=transpose([1,[1, 2, 3],[1, 2]]);
 Note  Creating new rule: x
  in> x;
@@ -3665,3 +3657,75 @@ out> [0,1,3,2,2,0,4,5,5,6]
 out> 0.528894921531901
  in> random(3);
 out> [0.479977171402425,0.568044563755393,0.392784793162718]
+ in> note('Note that this is a note');
+Note  Note that this is a note
+out> void
+ in> warn('Warning: I intend to say something important here');
+Warning  Warning: I intend to say something important here
+out> void
+ in> isScalar(1);
+out> true
+ in> isBoolean(false);
+out> true
+ in> isBoolean(1);
+out> false
+ in> isInt(false);
+out> false
+ in> isInt(1);
+out> true
+ in> isInt(1.0);
+out> false
+ in> isReal(false);
+out> false
+ in> isReal(1);
+out> false
+ in> isReal(1.0);
+out> true
+ in> isNumeric(false);
+out> false
+ in> isNumeric(1);
+out> true
+ in> isNumeric(1.0);
+out> true
+ in> isList([]);
+out> true
+ in> isList([], 0);
+out> true
+ in> isList([], 1);
+out> false
+ in> isList(['x'], 1);
+out> true
+ in> isString('Test');
+out> true
+ in> isString(true);
+out> false
+ in> isKeyValueList([['a', 1],['b', 2, 3]]);
+out> false
+ in> isKeyValueList([['a', 1],['b', 2]]);
+out> true
+ in> isExpression(:: sin);
+out> true
+ in> isExpression(:: sin, 1);
+out> true
+ in> isExpression(:: sin, 2);
+out> true
+ in> digits(123);
+out> [1,2,3]
+ in> digits(123, 3);
+out> [1,1,1,2,0]
+ in> arctan2(1, 1);
+out> 0.785398163397448
+ in> charSet('abcba');
+out> ['a','b','c','b','a']
+ in> bytes('ö').ord;
+out> [246]
+ in> base64encode('Test');
+out> 'VGVzdA=='
+ in> base64decode('VGVzdA==');
+out> 'Test'
+ in> changeFileExt('file.extension','.newExtension');
+out> 'file.newExtension'
+ in> changeFileExt('file.2.extension','.newExtension');
+out> 'file.2.newExtension'
+ in> httpError;
+out> "HTTP/1.0 404\r\n"

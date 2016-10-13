@@ -797,8 +797,8 @@ FUNCTION clearAllCaches_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;#Returns an internal time for time difference measurement.#'+
                                                          'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);Calls E asynchronously (without parameters) and returns void.#'+
-                                                           'async(E:expression,par:list);#Calls E@par and asynchronously and returns void.#Asynchronous tasks are killed at the end of (synchonous) evaluation.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
+                                                           'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
   registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');

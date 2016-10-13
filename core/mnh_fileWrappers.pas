@@ -290,8 +290,8 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
       if not(asynch)                     then tempProcess.options:=tempProcess.options +[poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
       tempProcess.execute;
-      if asynch then result:=0
-                else result:=tempProcess.ExitCode;
+      while not(asynch) and tempProcess.running do sleep(1);
+      result:=tempProcess.exitStatus;
       tempProcess.free;
     except
       result := $ffffffff;
