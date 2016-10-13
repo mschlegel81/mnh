@@ -1,7 +1,7 @@
 UNIT mnh_funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8;
+USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -181,6 +181,44 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
     end;
   end;
+
+FUNCTION charSet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
+    VAR charIndex,
+        byteIndex:longint;
+        i:longint;
+        txt:ansistring;
+        sub:ansistring;
+        charSet:T_listOfString;
+    begin
+      charSet.create;
+      txt:=P_stringLiteral(input)^.value;
+      byteIndex:=1;
+      for charIndex:=1 to UTF8Length(txt) do begin
+        sub:='';
+        for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+          sub:=sub+txt[byteIndex];
+          inc(byteIndex)
+        end;
+        charSet.add(sub);
+      end;
+      charSet.unique;
+      result:=newListLiteral(charSet.size);
+      for i:=0 to charSet.size-1 do result^.appendString(charSet[i]);
+      charSet.destroy;
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      result:=chars_internal(arg0);
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
+      result:=newListLiteral;
+      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false);
+    end;
+  end;
+
 
 FUNCTION bytes_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
@@ -482,11 +520,15 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       whiteList:=[];
       for i:=0 to list1^.size-1 do begin
         tmp:=P_stringLiteral(list1^.value(i))^.value;
-        if length(tmp)=1 then include(whiteList,tmp[1])
+        if (length(tmp)=1) and (tmp[1]<=#127) then include(whiteList,tmp[1])
         else begin
-          context.adapters^.raiseError('Built in function clean expects a list of single-character strings as whitelist (second argument)',tokenLocation);
+          context.adapters^.raiseError('Built in function clean expects a list of ASCII characters as whitelist (second argument)',tokenLocation);
           exit(nil);
         end;
+      end;
+      if length(str2^.value)<>1 then begin
+        context.adapters^.raiseError('Built in function clean expects an ASCII characters as instead (third argument)',tokenLocation);
+        exit(nil);
       end;
       instead:=str2^.value[1];
       if arg0^.literalType=lt_string then begin
@@ -626,40 +668,6 @@ diffStatOrDiff_impl;
 FUNCTION diffStats_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 diffStatOrDiff_impl;
 
-//FUNCTION sysToUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-//  VAR i:longint;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-//      lt_string: result:=newStringLiteral(WinCPToUTF8(str0^.value));
-//      lt_stringList: begin
-//        result:=newListLiteral;
-//        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(WinCPToUTF8(P_stringLiteral(value(i))^.value));
-//      end;
-//      lt_emptyList: begin
-//        result:=arg0;
-//        result^.rereference;
-//      end;
-//    end;
-//  end;
-//
-//FUNCTION utf8ToSys_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-//  VAR i:longint;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-//      lt_string: result:=newStringLiteral(UTF8ToWinCP(str0^.value));
-//      lt_stringList: begin
-//        result:=newListLiteral;
-//        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(UTF8ToWinCP(P_stringLiteral(value(i))^.value));
-//      end;
-//      lt_emptyList: begin
-//        result:=arg0;
-//        result^.rereference;
-//      end;
-//    end;
-//  end;
-
 FUNCTION isUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
@@ -672,6 +680,30 @@ FUNCTION isAscii_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newBoolLiteral(isAsciiEncoded(str0^.value));
+  end;
+
+FUNCTION utf8ToAnsi_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(Utf8ToAnsi(str0^.value));
+  end;
+
+FUNCTION ansiToUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(AnsiToUtf8(str0^.value));
+  end;
+
+FUNCTION base64encode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(EncodeStringBase64(str0^.value));
+  end;
+
+FUNCTION base64decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(DecodeStringBase64(str0^.value));
   end;
 
 FUNCTION compress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -719,6 +751,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'pos',@pos_imp,'pos(subString,searchInString);//Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule(STRINGS_NAMESPACE,'copy',@copy_imp,'copy(S,start,length)://Returns the substring of S starting at index start and having specified length');
   registerRule(STRINGS_NAMESPACE,'chars',@chars_imp,'chars(S);//Returns the characters in S as a list#chars;//Returns all possible single-byte characters in natural ordering');
+  registerRule(STRINGS_NAMESPACE,'charSet',@chars_imp,'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)');
   registerRule(STRINGS_NAMESPACE,'bytes',@bytes_imp,'bytes(S);//Returns the bytes in S as a list of strings');
   registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string,splitter:string);//Returns a list of strings obtained by splitting S at the specified splitters#//The splitters themselves are not contained in the result');
   registerRule(STRINGS_NAMESPACE,'join',@join_impl,'join(L:list);//Returns a string-concatenation of all elements in L#join(L:list,joiner:string);//Returns a string-concatenation of all elements, with joiner between.');
@@ -727,20 +760,23 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'trimRight',@trimRight_imp,'trimRight(S:string);//Returns string S without trailing spaces');
   registerRule(STRINGS_NAMESPACE,'upper',@upper_imp,'upper(S:string);//Returns an uppercase representation of S');
   registerRule(STRINGS_NAMESPACE,'lower',@lower_imp,'lower(S:string);//Returns an lowercase representation of S');
-  registerRule(STRINGS_NAMESPACE,'unbrace',@unbrace_imp,'unbrace(S:string);#Returns an unbraced representation of S');
-  registerRule(STRINGS_NAMESPACE,'escape',@escape_imp,'escape(S:string);#Returns an escaped representation of S');
-  registerRule(STRINGS_NAMESPACE,'replaceOne',@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
-  registerRule(STRINGS_NAMESPACE,'replace',@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
-  registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
-  registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character');
-  registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
-  registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed');
-  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script for strings A and B or string lists A and B');
-  registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);#Shows diff statistics for strings A and B or string lists A and B');
-  //registerRule(STRINGS_NAMESPACE,'utf8ToSys',@utf8ToSys_impl,'utf8ToSys(S);#Converts a string or a string list from UTF-8 to the system encoding');
-  //registerRule(STRINGS_NAMESPACE,'sysToUtf8',@sysToUtf8_impl,'sysToUtf8(S);#Converts a string or a string list from the system encoding to UTF-8');
-  registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);#Returns true if S is UTF8 encoded and false otherwise');
-  registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);#Returns true if S is ASCII encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);//Replaces all characters in s which are not in whitelist by instead.#//Whitelist must be a list of ASCII characters, instead must be an ASCII character');
+  registerRule(STRINGS_NAMESPACE,'unbrace',@unbrace_imp,'unbrace(S:string);//Returns an unbraced representation of S');
+  registerRule(STRINGS_NAMESPACE,'escape',@escape_imp,'escape(S:string);//Returns an escaped representation of S');
+  registerRule(STRINGS_NAMESPACE,'replaceOne',@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);//Replaces the first occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
+  registerRule(STRINGS_NAMESPACE,'replace',@replace_impl,'replace(source:string,lookFor,replaceBy);//Recursively replaces all occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
+  registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);//Returns a string containing s repeated k times');
+  registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);//reverseString(S:stringList);//Returns returns S reversed (character wise not bytewise)');
+  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);//Shows diff statistics and edit script for strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);//Shows diff statistics for strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);//Returns true if S is UTF8 encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);//Returns true if S is ASCII encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'utf8ToAnsi',@utf8ToAnsi_impl,'utf8ToAnsi(S:string);//Converts a UTF8 encoded string to an ANSI encoded string.');
+  registerRule(STRINGS_NAMESPACE,'ansiToUtf8',@ansiToUtf8_impl,'ansiToUtf8(S:string);//Converts an ANSI encoded string to a UTF8 encoded string.');
+  registerRule(STRINGS_NAMESPACE,'base64encode',@base64encode_impl,'base64encode(S:string);//Converts a string to a base64 encoded string.');
+  registerRule(STRINGS_NAMESPACE,'base64decode',@base64decode_impl,'base64decode(S:string);//Converts a base64 encoded string to a string.');
+
   registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#'+
                                                            'As above but with a specified algorithm:#'+
                                                            '  1: deflate#'+
