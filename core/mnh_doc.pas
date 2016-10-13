@@ -349,6 +349,9 @@ CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
 
 DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
+    {$ifdef debugMode}
+    if (length(example)=0) and functionDocExamplesReady then writeln(stdErr,'               undocumented builtin function: ',id);
+    {$endif}
     id:='';
     description:='';
     setLength(example,0);

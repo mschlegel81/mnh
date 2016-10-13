@@ -180,7 +180,8 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     i:=1;
     while i<=paramCount do begin
       if (fileOrCommandToInterpret='') or directExecutionMode then begin
-        if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
+        if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
+        else if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
         {$ifdef fullVersion}
         else if (paramStr(i)='-edit') then while i<paramCount do begin
           inc(i);
@@ -202,7 +203,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         end
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
-        else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
         else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                        {$ifdef IMIG}'I'{$else}''{$endif},

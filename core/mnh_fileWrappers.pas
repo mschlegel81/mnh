@@ -46,7 +46,7 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_arrayOfString;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 
 IMPLEMENTATION
@@ -278,11 +278,11 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
     sysutils.FindClose(info);
   end;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
   VAR tempProcess: TProcessUTF8;
       i: longint;
   begin
-    result := true;
+    result := $ffffffff;
     try
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
@@ -290,9 +290,11 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
       if not(asynch)                     then tempProcess.options:=tempProcess.options +[poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
       tempProcess.execute;
+      if asynch then result:=0
+                else result:=tempProcess.ExitCode;
       tempProcess.free;
     except
-      result := false;
+      result := $ffffffff;
     end;
   end;
 

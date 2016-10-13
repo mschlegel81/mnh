@@ -48,7 +48,7 @@ private templateToInc(inFile,outFile<>inFile)->begin
   local pasId:=clean(inFile.splitFileName['filename'],['a'..'z','A'..'Z'],'_');
   local outText:=
   'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
-  inLines.each(line,line='' ? "''" : join('#'&(line.chars.ord))).join(",\n")&');';
+  inLines.each(line,line='' ? "''" : join('#'&(line.bytes.ord))).join(",\n")&');';
   outFile.fileContents==outText
   ? void
   : writeFile(outFile,outText);
@@ -106,7 +106,7 @@ private buildExe(B:BuildConfig)->
   B.needBuilt
   ? begin
       tprint('Building ',B[2]);
-      local compilerOutput:=B[3].exec(B[4]);
+      local compilerOutput:=B[3].exec(B[4]).head;
       local sepLine:=repeat('-',compilerOutput.each(line,line.length,max));
       compilerOutput:=sepLine|
                       (B[3]|B[4]).join(' ')|
@@ -126,7 +126,7 @@ private testExe(B:BuildConfig,...)->
   : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or needBuilt(B)
     ? void
     : tprint('Testing ',B[2]) orElse
-      B[2].execPipeless(['-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(B[2])
+      B[2].execPipeless(['-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...)=0
       ? tprint('Test passed')
       : fail('Test failed');
 

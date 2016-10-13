@@ -1,7 +1,7 @@
 private memoized memExeInfo(exe,exeFileInfo)->
   exe=executor
   ? mnh.mnhInfo
-  : (exe.exec(['-info'],false)[0] orElse '[]').toExpression()();
+  : (exe.exec(['-info'],false)[0,0] orElse '[]').toExpression()();
 
 private exeInfo(executable:string)->memExeInfo(executable,fileInfo(executable)[['time','size']]);
 
