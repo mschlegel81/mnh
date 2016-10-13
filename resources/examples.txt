@@ -503,27 +503,18 @@ bits(123).ord.join
 //Test serialization
 input:=[[1..10],random,'test',random(9)];
 serialized:=input.serialize;
-print(input.toString.length,' > ',serialized.length);
+print(input.toString.byteLength,' > ',serialized.byteLength);
 input==serialized.deserialize;
 
 factorize(1001);
 
 formatTabs("\v-2\n3\t4.3");
 
-//#utf8ToSys
-utf8ToSys('ÄÖÜ').chars.ord;
-
-sysToUtf8('T'#196'T'#220);
-
 typeOf(3);
 
 typeOf([1..5,7.5]);
 
 typeOf({$x^2+$y});
-
-'Test something'.base92encode;
-
-'!&NY> fdTx< $-h|; T*=u_'.base92decode;
 
 x:=transpose([1,[1,2,3],[1,2]]);
 x;

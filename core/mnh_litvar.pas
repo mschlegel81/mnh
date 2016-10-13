@@ -3,7 +3,7 @@ UNIT mnh_litVar;
 {$Q-}
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
-USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes;
+USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes,LazUTF8;
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -165,7 +165,6 @@ TYPE
   T_literalKeyLongintValueMap=specialize G_literalKeyMap<longint>;
   P_stringKeyLiteralValueMap=^T_stringKeyLiteralValueMap;
   T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
-
 
   T_listLiteral = packed object(T_literal)
   private
@@ -1302,7 +1301,7 @@ FUNCTION T_stringLiteral.trimRight: P_stringLiteral;
 FUNCTION T_stringLiteral.upper: P_stringLiteral;
   VAR rs: string;
   begin
-    rs:=uppercase(val);
+    rs:=UTF8UpperCase(val);
     if rs = val then begin
       result:=@self;
       rereference;
@@ -1312,7 +1311,7 @@ FUNCTION T_stringLiteral.upper: P_stringLiteral;
 FUNCTION T_stringLiteral.lower: P_stringLiteral;
   VAR rs: string;
   begin
-    rs:=lowercase(val);
+    rs:=UTF8LowerCase(val);
     if rs = val then begin
       result:=@self;
       rereference;

@@ -10,7 +10,7 @@ end;
 
 private lengthTable:=length(words).relativeFrequency;
 private firstTable:=words.copy(0,1).relativeFrequency;
-private followerTable:=words.each(word,word.copy([0..length(word)-2],2)).flatten.each(s,s.chars).group(0).each(g,[g[0,0],g.getInner(1).relativeFrequency]);
+private followerTable:=words.each(word,word.length<2 ? void : word.copy([0..length(word)-2],2)).flatten.each(s,s.chars).group(0).each(g,[g[0,0],g.getInner(1).relativeFrequency]);
 
 private randomFromTable(T:list)->begin
   local index:=intRandom(T.size);

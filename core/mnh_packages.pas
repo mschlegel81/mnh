@@ -788,7 +788,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
     setLength(packageUses,0);
     packageRules.clear;
     importedRules.clear;
-    ready:=lu_none;
+    ready:=lu_NONE;
   end;
 
 PROCEDURE T_package.finalize(VAR adapters:T_adapters);

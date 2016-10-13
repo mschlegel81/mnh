@@ -3114,7 +3114,7 @@ Root found at   4.18837195873177E-244
 Root found at   1.0
 Root found at   2.0
 ***** examples from file *****
-Examples file has 584 lines
+Examples file has 575 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3603,7 +3603,7 @@ out> '1101111000000000000000000000000000000000000000000000000000000000'
 Note  Creating new rule: input
  in> serialized :=input.serialize;
 Note  Creating new rule: serialized
- in> print(input.toString.length,' > ', serialized.length);
+ in> print(input.toString.byteLength,' > ', serialized.byteLength);
 213 > 192
 out> void
  in> input==serialized.deserialize;
@@ -3612,20 +3612,12 @@ out> true
 out> [7,11,13]
  in> formatTabs("\v-2\n3\t4.3");
 out> ['  -2','3  4.3']
- in> utf8ToSys('Ã„Ã–Ãœ').chars.ord;
-out> [195,132,195,150,195,156]
- in> sysToUtf8('TÄTÜ');
-out> 'TÄTÜ'
  in> typeOf(3);
 out> 'int'
  in> typeOf([1..5, 7.5]);
 out> 'numericList(6)'
  in> typeOf({$x^2+$y});
 out> 'expression(2)'
- in> 'Test something'.base92encode;
-out> '!&NY>fdTx<$-h|;T*=u_'
- in> '!&NY> fdTx< $-h|; T*=u_'.base92decode;
-out> 'Test something'
  in> x :=transpose([1,[1, 2, 3],[1, 2]]);
 Note  Creating new rule: x
  in> x;
