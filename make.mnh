@@ -120,7 +120,7 @@ private buildExe(B:BuildConfig)->
 private testExe(B:BuildConfig,...)->
   not(B.canBuild)
   ? void
-  : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or needBuilt(B)
+  : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuilt(B)
     ? void
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...)=0
@@ -201,7 +201,7 @@ main('build')->BUILTS.each(B,B.buildExe);
 //*Test all targets - non-debug versions will be built if necessary
 main('test')->BUILTS.each(B,B.testExe);
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
-main('test')->BUILTS.each(B,B.testExe('retest'));
+main('retest')->BUILTS.each(B,B.testExe('retest'));
 //*Show the current built status
 main('status')->showStatus;
 //*Show the current built status
