@@ -533,6 +533,78 @@ random;
 
 random(3);
 
+note('Note that this is a note');
+
+warn('Warning: I intend to say something important here');
+
+isScalar(1);
+
+isBoolean(false);
+
+isBoolean(1);
+
+isInt(false);
+
+isInt(1);
+
+isInt(1.0);
+
+isReal(false);
+
+isReal(1);
+
+isReal(1.0);
+
+isNumeric(false);
+
+isNumeric(1);
+
+isNumeric(1.0);
+
+isList([]);
+
+isList([],0);
+
+isList([],1);
+
+isList(['x'],1);
+
+isString('Test');
+
+isString(true);
+
+isKeyValueList([['a',1],['b',2,3]]);
+
+isKeyValueList([['a',1],['b',2]]);
+
+isExpression(::sin);
+
+isExpression(::sin,1);
+
+//Note: the :: operator produces a generic function call accepting an arbitrary number of parameters
+isExpression(::sin,2);
+
+digits(123);
+
+//Digits to base 3
+digits(123,3);
+
+arctan2(1,1);
+
+charSet('abcba');
+
+bytes('ö').ord;
+
+base64encode('Test');
+
+base64decode('VGVzdA==');
+
+changeFileExt('file.extension','.newExtension');
+
+changeFileExt('file.2.extension','.newExtension');
+
+httpError;
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');
@@ -573,3 +645,16 @@ inspect('sudoku').{
   .join("\n")
   .print};
   
+files('*.mnh')
+
+folders('*');
+
+allFolders('.');
+
+fileExists('testLog.mnh');
+
+folderExists('folderName');
+
+mnhInfo;
+
+driveInfo;
