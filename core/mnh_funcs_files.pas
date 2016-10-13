@@ -242,9 +242,9 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
-        result := tempProcess.exitStatus;
+        result := tempProcess.ExitCode;
       except
-        result := MAXDWORD;
+        result := $ffffffff;
       end;
       tempProcess.free;
       memStream.SetSize(BytesRead);
