@@ -96,6 +96,12 @@ FUNCTION note_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=newVoidLiteral;
   end;
 
+FUNCTION warn_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    context.adapters^.raiseWarning(getStringToPrint(params),tokenLocation);
+    result:=newVoidLiteral;
+  end;
+
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
@@ -183,6 +189,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);//Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);//Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note',@note_imp,'note(...);//Raises a note of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn',@warn_imp,'warn(...);//Raises a warning of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x. Strings will NOT(!) be compressed.#serialize(x,compressStrings:boolean);#Returns a string representing x.');
