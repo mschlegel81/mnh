@@ -1,4 +1,4 @@
-UNIT mnh_plotFuncs;
+UNIT mnh_funcs_plot;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils, mnh_funcs,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts;
@@ -6,6 +6,8 @@ TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; 
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
 IMPLEMENTATION
+{$i mnh_func_defines.inc}
+
 FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
     if x = nil then result:=Nan else case X^.literalType of
@@ -48,7 +50,7 @@ FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
     end;
   end;
 
-FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
   begin
@@ -61,28 +63,28 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
         options:='';
         sizeWithoutOptions:=params^.size;
       end;
-      if (sizeWithoutOptions = 1) and (params^.value(0)^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
-        context.adapters^.plot.addRow(options,newDataRow(P_listLiteral(params^.value(0))));
+      if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
+        context.adapters^.plot.addRow(options,newDataRow(list0));
         context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 2) and
-         (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) and
-         (params^.value(1)^.literalType in [lt_intList, lt_realList, lt_numList]) and
-         (P_listLiteral(params^.value(0))^.size=P_listLiteral(params^.value(1))^.size) then begin
-        context.adapters^.plot.addRow(options,newDataRow(P_listLiteral(params^.value(0)),P_listLiteral(params^.value(1))));
+         (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
+         (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
+         (list0^.size=P_listLiteral(arg1)^.size) then begin
+        context.adapters^.plot.addRow(options,newDataRow(list0,P_listLiteral(arg1)));
         context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
-         (params^.value(0)^.literalType=lt_expression) and (P_expressionLiteral(params^.value(0))^.canApplyToNumberOfParameters(1)) and
-         (params^.value(1)^.literalType in [lt_int,lt_real]) and
-         (params^.value(2)^.literalType in [lt_int,lt_real]) and (params^.value(2)^.isInRelationTo(tt_comparatorGrt,params^.value(1))) and
-         (params^.value(3)^.literalType=lt_int) and (P_intLiteral(params^.value(3))^.value>=2) then begin
-        context.adapters^.plot.addRow(options,generateRow(P_expressionLiteral(params^.value(0)),
-                                                          fReal(params^.value(1)),
-                                                          fReal(params^.value(2)),
-                                                          P_intLiteral(params^.value(3))^.value,
+         (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
+         (arg1^.literalType in [lt_int,lt_real]) and
+         (arg2^.literalType in [lt_int,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
+         (arg3^.literalType=lt_int) and (int3^.value>=2) then begin
+        context.adapters^.plot.addRow(options,generateRow(P_expressionLiteral(arg0),
+                                                          fReal(arg1),
+                                                          fReal(arg2),
+                                                          int3^.value,
                                                           tokenLocation,
                                                           context));
         if context.adapters^.noErrors then context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
@@ -91,15 +93,15 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION plot intFuncSignature;
   begin
     context.adapters^.plot.clear;
-    if (params=nil) or (params^.size=0) or (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
+    if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,context);
   end;
 
-FUNCTION getOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION getOptions intFuncSignature;
   VAR opt:T_scalingOptions;
   begin
     result:=nil;
@@ -122,7 +124,7 @@ FUNCTION getOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION setOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION setOptions intFuncSignature;
   VAR opt:T_scalingOptions;
       allOkay:boolean=true;
   PROCEDURE matchKey(CONST key:string; CONST value:P_literal);
@@ -179,17 +181,17 @@ FUNCTION setOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoca
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_keyValueList) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_keyValueList) then begin
       opt:=context.adapters^.plot.options;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
-        pair:=P_listLiteral(P_listLiteral(params^.value(0))^.value(i));
+      for i:=0 to list0^.size-1 do begin
+        pair:=P_listLiteral(list0^.value(i));
         matchKey(P_stringLiteral(pair^.value(0))^.value,
                                  pair^.value(1));
       end;
       result:=newBoolLiteral(allOkay);
-    end else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType in [lt_real,lt_int,lt_boolean]) then begin
+    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_int,lt_boolean]) then begin
       opt:=context.adapters^.plot.options;
-      matchKey(P_stringLiteral(params^.value(0))^.value,params^.value(1));
+      matchKey(str0^.value,arg1);
       result:=newBoolLiteral(allOkay);
     end else allOkay:=false;
     if allOkay then begin
@@ -198,7 +200,7 @@ FUNCTION setOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION resetOptions_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION resetOptions_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       context.adapters^.plot.setDefaults;
@@ -206,21 +208,21 @@ FUNCTION resetOptions_impl(CONST params: P_listLiteral; CONST tokenLocation:T_to
     end else result:=nil;
   end;
 
-FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION renderToFile_impl intFuncSignature;
   VAR fileName: ansistring;
       width, height, supersampling: longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=3) and
-      (params^.value(0)^.literalType = lt_string) and
-      (params^.value(1)^.literalType = lt_int) and
-      (params^.value(2)^.literalType = lt_int) and
+      (arg0^.literalType = lt_string) and
+      (arg1^.literalType = lt_int) and
+      (arg2^.literalType = lt_int) and
       ((params^.size = 3) or (params^.size = 4) and
-      (params^.value(3)^.literalType = lt_int)) then begin
-      fileName:=P_stringLiteral(params^.value(0))^.value;
-      width:=P_intLiteral(params^.value(1))^.value;
-      height:=P_intLiteral(params^.value(2))^.value;
-      if params^.size>3 then supersampling:=P_intLiteral(params^.value(3))^.value
+      (arg3^.literalType = lt_int)) then begin
+      fileName:=str0^.value;
+      width:=int1^.value;
+      height:=int2^.value;
+      if params^.size>3 then supersampling:=int3^.value
                         else supersampling:=1;
       if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
         context.adapters^.raiseError(
@@ -241,18 +243,18 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_to
     end;
   end;
 
-FUNCTION renderToString_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION renderToString_impl intFuncSignature;
   VAR width, height, supersampling: longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and
-      (params^.value(0)^.literalType = lt_int) and
-      (params^.value(1)^.literalType = lt_int) and
+      (arg0^.literalType = lt_int) and
+      (arg1^.literalType = lt_int) and
       ((params^.size = 2) or (params^.size = 3) and
-      (params^.value(2)^.literalType = lt_int)) then begin
-      width:=P_intLiteral(params^.value(0))^.value;
-      height:=P_intLiteral(params^.value(1))^.value;
-      if params^.size>2 then supersampling:=P_intLiteral(params^.value(2))^.value
+      (arg2^.literalType = lt_int)) then begin
+      width:=int0^.value;
+      height:=int1^.value;
+      if params^.size>2 then supersampling:=int2^.value
                         else supersampling:=1;
       if  (width<1) or (height<1) or (supersampling<1) then begin
         context.adapters^.raiseError(
@@ -264,7 +266,7 @@ FUNCTION renderToString_impl(CONST params: P_listLiteral; CONST tokenLocation:T_
     end;
   end;
 
-FUNCTION display_imp(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION display_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       context.adapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;

@@ -5,23 +5,14 @@ USES sysutils,mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_ad
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
-{$MACRO ON}
-{$define arg0:=params^.value(0)}
-{$define arg1:=params^.value(1)}
-{$define real0:=P_realLiteral(params^.value(0))}
-{$define real1:=P_realLiteral(params^.value(1))}
-{$define int0:=P_intLiteral(params^.value(0))}
-{$define int1:=P_intLiteral(params^.value(1))}
-{$define bool0:=P_boolLiteral(params^.value(0))}
-{$define str0:=P_stringLiteral(params^.value(0))}
-{$define list0:=P_listLiteral(params^.value(0))}
+{$i mnh_func_defines.inc}
 
-FUNCTION pi_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION pi_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then result:=newRealLiteral(pi) else result:=nil;
   end;
 
-FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION max_imp intFuncSignature;
   VAR x:P_literal;
       i:longint;
   begin
@@ -36,7 +27,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else if (x<>nil) and (x^.literalType in [lt_emptyList]) then exit(newVoidLiteral);
   end;
 
-FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION argMax_imp intFuncSignature;
   VAR x,xMin:P_scalarLiteral;
       L:P_listLiteral;
       i,iMin:longint;
@@ -57,7 +48,7 @@ FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION min_imp intFuncSignature;
   VAR x:P_literal;
       i:longint;
   begin
@@ -72,7 +63,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else if (x<>nil) and (x^.literalType in [lt_emptyList]) then exit(newVoidLiteral);
   end;
 
-FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION argMin_imp intFuncSignature;
   VAR x,xMin:P_scalarLiteral;
       L:P_listLiteral;
       i,iMin:longint;
@@ -93,7 +84,7 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION isNan_impl intFuncSignature;
   VAR i:longint;
       L:P_listLiteral;
       x:P_literal;
@@ -107,21 +98,21 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         lt_intList: begin
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
-            P_listLiteral(result)^.appendBool(false);
+            lResult^.appendBool(false);
         end;
         else begin
           L:=list0;
           result:=newListLiteral;
           for i:=0 to L^.size-1 do begin
             x:=L^.value(i);
-            P_listLiteral(result)^.appendBool((x^.literalType=lt_real) and isNan(P_realLiteral(x)^.value));
+            lResult^.appendBool((x^.literalType=lt_real) and isNan(P_realLiteral(x)^.value));
           end;
         end;
       end;
     end;
   end;
 
-FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION isInfinite_impl intFuncSignature;
   VAR i:longint;
       L:P_listLiteral;
       x:P_literal;
@@ -135,21 +126,21 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         lt_intList: begin
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
-            P_listLiteral(result)^.appendBool(false);
+            lResult^.appendBool(false);
         end;
         else begin
           L:=list0;
           result:=newListLiteral;
           for i:=0 to L^.size-1 do begin
             x:=L^.value(i);
-            P_listLiteral(result)^.appendBool((x^.literalType=lt_real) and isInfinite(P_realLiteral(x)^.value));
+            lResult^.appendBool((x^.literalType=lt_real) and isInfinite(P_realLiteral(x)^.value));
           end;
         end;
       end;
     end;
   end;
 
-FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION subSets_impl intFuncSignature;
   VAR sets:specialize G_literalKeyMap<byte>;
   PROCEDURE recurseBuildSets(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
@@ -188,7 +179,7 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         recurseBuildSets(mustContain,mightContain);
         mustContain:=sets.keySet;
         result:=newListLiteral;
-        for i:=0 to length(mustContain)-1 do P_listLiteral(result)^.append(mustContain[i],false);
+        for i:=0 to length(mustContain)-1 do lResult^.append(mustContain[i],false);
         sets.destroy;
       end else begin
         result:=newListLiteral^.append(newListLiteral                     ,false)
@@ -197,7 +188,7 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION permutations_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION permutations_impl intFuncSignature;
   VAR mustContain,mightContain:T_arrayOfLiteral;
       i:longint;
   PROCEDURE recurseBuildPermutations(CONST mustContain,mightContain:T_arrayOfLiteral);
@@ -222,7 +213,7 @@ FUNCTION permutations_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       end else begin
         newSet:=newListLiteral;
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
-        P_listLiteral(result)^.append(newSet,false);
+        lResult^.append(newSet,false);
       end;
     end;
 
@@ -237,8 +228,8 @@ FUNCTION permutations_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end;
   end;
 
-FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; P_listLiteral(result)^.appendInt(p); end}
+FUNCTION factorize_impl intFuncSignature;
+  {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; lResult^.appendInt(p); end}
   VAR n,p:int64;
   begin
     result:=nil;
@@ -248,7 +239,7 @@ FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       result:=newListLiteral;
       if n<0 then begin
         n:=-n;
-        P_listLiteral(result)^.appendInt(-1);
+        lResult^.appendInt(-1);
       end;
       p:=2; DIVIDE_THROUGH;
       p:=3; DIVIDE_THROUGH;
@@ -264,11 +255,11 @@ FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         DIVIDE_THROUGH; inc(p,2);
         DIVIDE_THROUGH; inc(p,6);
       end;
-      if n>1 then P_listLiteral(result)^.appendInt(n);
+      if n>1 then lResult^.appendInt(n);
     end;
   end;
 
-FUNCTION primes_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION primes_impl intFuncSignature;
   FUNCTION sievePrimes(CONST pMax:int64):P_listLiteral;
     VAR isPrime:array of boolean;
         i,p:longint;
@@ -300,7 +291,7 @@ FUNCTION primes_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     else result:=nil;
   end;
 
-FUNCTION digits_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION digits_impl intFuncSignature;
   VAR base:int64=10;
   FUNCTION digitsOf(i:int64):P_listLiteral;
     VAR digit:array[0..63] of int64;
@@ -336,11 +327,11 @@ FUNCTION digits_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       end;
       if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
       result:=newListLiteral(list0^.size);
-      for j:=0 to list0^.size-1 do P_listLiteral(result)^.append(digitsOf(P_intLiteral(list0^.value(j))^.value),false);
+      for j:=0 to list0^.size-1 do lResult^.append(digitsOf(P_intLiteral(list0^.value(j))^.value),false);
     end;
   end;
 
-FUNCTION arctan2_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION arctan2_impl intFuncSignature;
   VAR x,y:T_myFloat;
   begin
     if (params<>nil) and (params^.size=2) and

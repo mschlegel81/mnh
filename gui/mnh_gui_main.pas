@@ -10,7 +10,7 @@ USES
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
-  myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
+  myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_cmdLineInterpretation,
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,SynPluginMultiCaret,
   SynEditMiscClasses, LazUTF8, mnh_tables, openDemoDialog;
 

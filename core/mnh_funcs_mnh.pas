@@ -4,28 +4,19 @@ INTERFACE
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
 FUNCTION getMnhInfo:string;
 IMPLEMENTATION
-{$MACRO ON}
-{$define str0:=P_stringLiteral(params^.value(0))}
-{$define str1:=P_stringLiteral(params^.value(1))}
-{$define list0:=P_listLiteral(params^.value(0))}
-{$define list1:=P_listLiteral(params^.value(1))}
-{$define int0:=P_intLiteral(params^.value(0))}
-{$define real0:=P_realLiteral(params^.value(0))}
-{$define bool0:=P_boolLiteral(params^.value(0))}
-{$define arg0:=params^.value(0)}
-{$define arg1:=params^.value(1)}
+{$i mnh_func_defines.inc}
 
-FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION sleep_imp intFuncSignature;
   VAR sleepUntil:double;
       sleepInt:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) then begin
       sleepUntil:=context.wallclockTime;
       result:=newVoidLiteral;
-      if params^.value(0)^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
-      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
+      if arg0^.literalType=lt_int
+      then sleepUntil:=sleepUntil+P_intLiteral (arg0)^.value
+      else sleepUntil:=sleepUntil+P_realLiteral(arg0)^.value;
       while (context.wallclockTime<sleepUntil) and (context.adapters^.noErrors) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime));
         if sleepInt>100 then sleepInt:=100;
@@ -34,7 +25,7 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION myPath_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
@@ -43,21 +34,21 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION executor_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=newStringLiteral(paramStr(0));
   end;
 
-FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION hash_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=newIntLiteral(arg0^.hash);
   end;
 
-FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION listBuiltin_imp intFuncSignature;
   VAR keys:T_arrayOfString;
       i:longint;
   begin
@@ -65,12 +56,12 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params=nil) or (params^.size=0) then begin
       keys:=intrinsicRuleMap.keySet;
       result:=newListLiteral;
-      for i:=0 to length(keys)-1 do P_listLiteral(result)^.appendString(keys[i]);
+      for i:=0 to length(keys)-1 do lResult^.appendString(keys[i]);
       setLength(keys,0);
     end;
   end;
 
-FUNCTION listKeywords_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION listKeywords_imp intFuncSignature;
   VAR i:longint;
       tt:T_tokenType;
       subList:array[T_reservedWordClass] of P_listLiteral;
@@ -100,7 +91,7 @@ FUNCTION listKeywords_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     end;
   end;
 
-FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION ord_imp intFuncSignature;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -116,7 +107,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         else begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+            lResult^.append(recurse(P_listLiteral(x)^.value(i)),false);
         end;
       end;
     end;
@@ -127,7 +118,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then result:=recurse(arg0);
   end;
 
-FUNCTION mnhInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then
     result:=newListLiteral(9)^

@@ -5,28 +5,16 @@ USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGener
      sysutils, Classes,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
      LazFileUtils,LazUTF8,mnh_html;
 IMPLEMENTATION
-{$MACRO ON}
-{$define str0:=P_stringLiteral(params^.value(0))}
-{$define str1:=P_stringLiteral(params^.value(1))}
-{$define str2:=P_stringLiteral(params^.value(2))}
-{$define list0:=P_listLiteral(params^.value(0))}
-{$define list1:=P_listLiteral(params^.value(1))}
-{$define int0:=P_intLiteral(params^.value(0))}
-{$define int1:=P_intLiteral(params^.value(1))}
-{$define int2:=P_intLiteral(params^.value(2))}
-{$define real2:=P_realLiteral(params^.value(2))}
-{$define arg0:=params^.value(0)}
-{$define arg1:=params^.value(1)}
-{$define arg2:=params^.value(2)}
+{$i mnh_func_defines.inc}
 
-FUNCTION resetRandom_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION resetRandom_impl intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin randseed:=0; result:=newVoidLiteral; end else
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin randseed:=int0^.value; result:=newVoidLiteral; end;
   end;
 
-FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
@@ -34,14 +22,14 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       count:=int0^.value;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do P_listLiteral(result)^.appendReal(random);
+        for i:=1 to count do lResult^.appendReal(random);
         exit(result);
       end;
     end;
     result:=nil;
   end;
 
-FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION intRandom_imp intFuncSignature;
   VAR i,count:longint;
   begin
      if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(random(int0^.value)))
@@ -49,21 +37,21 @@ FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       count:=int1^.value;
       if count>=0 then begin
         result:=newListLiteral;
-        for i:=1 to count do P_listLiteral(result)^.appendInt(random(int0^.value));
+        for i:=1 to count do lResult^.appendInt(random(int0^.value));
         exit(result);
       end;
     end;
     result:=nil;
   end;
 
-FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION systime_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
     then exit(newRealLiteral(now));
   end;
 
-FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION httpGet_imp intFuncSignature;
   VAR resultText:ansistring;
   begin
     result:=nil;
@@ -80,14 +68,14 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION openUrl_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION openUrl_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newBoolLiteral(OpenURL(str0^.value))
     else result:=nil;
   end;
 
-FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION beep_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
@@ -102,7 +90,7 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 {$ifdef Windows}
-FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION driveInfo_imp intFuncSignature;
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: ansistring;
         driveType:longint;
@@ -120,7 +108,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         result:=newListLiteral;
       end else exit(newVoidLiteral);
       infoMap:=newListLiteral;
-      P_listLiteral(result)^.appendString(drive)^.append(infoMap,false);
+      lResult^.appendString(drive)^.append(infoMap,false);
 
       infoPair:=newListLiteral;
       infoPair^.appendString('type');
@@ -154,12 +142,12 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
-      for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false);
+      for c:='A' to 'Z' do lResult^.append(infoForLetter(c),false);
     end;
   end;
 {$endif}
 
-FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION getEnv_impl intFuncSignature;
   VAR e:T_arrayOfString;
       i:longint;
   FUNCTION environmentPair(CONST envString:ansistring):P_listLiteral;
@@ -184,7 +172,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     if (params=nil) or (params^.size=0) then begin
       e:=getEnvironment;
       result:=newListLiteral;
-      for i:=0 to length(e)-1 do P_listLiteral(result)^.append(environmentPair(e[i]),false);
+      for i:=0 to length(e)-1 do lResult^.append(environmentPair(e[i]),false);
       setLength(e,0);
     end;
   end;
@@ -193,7 +181,7 @@ FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
   begin new(result,create(at_unknown,C_collectAllOutputBehavior)); end;
 
 VAR collector: specialize G_lazyVar<P_collectingOutAdapter> ;
-FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION collectOutput_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       if collector.isObtained
@@ -203,23 +191,23 @@ FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end else result:=nil;
   end;
 
-FUNCTION collectedOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION collectedOutput_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0)
     then result:=messagesToLiteralForSandbox(collector.value^.storedMessages)
     else result:=nil;
   end;
 
-FUNCTION logTo_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION logTo_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_boolean)  then begin
-      addOutfile(context.adapters^,str0^.value,P_boolLiteral(arg1)^.value);
+      addOutfile(context.adapters^,str0^.value,bool1^.value);
       result:=newVoidLiteral;
     end;
   end;
 
-FUNCTION printTo_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION printTo_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)  then begin
@@ -228,7 +216,7 @@ FUNCTION printTo_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION setExitCode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION setExitCode_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       ExitCode:=int0^.value;

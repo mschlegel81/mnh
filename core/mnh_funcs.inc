@@ -4,8 +4,8 @@ VAR builtinLocation_group,
     builtinLocation_printf,
     builtinLocation_format:T_identifiedInternalFunction;
 
-{$WARN 5024 OFF}
-{$MACRO ON}
+{$i mnh_func_defines.inc}
+
 {$define UNARY_NUM_TO_REAL:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
   VAR i:longint;
@@ -27,57 +27,57 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
 begin
   result:=nil;
   if (params<>nil) and (params^.size=1)
-  then result:=recurse(params^.value(0));
+  then result:=recurse(arg0);
 end}
 
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION sqrt_imp intFuncSignature;
 {$define CALL_MACRO:=sqrt}
 {$define ID_MACRO:='sqrt'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION sin_imp intFuncSignature;
 {$define CALL_MACRO:=sin}
 {$define ID_MACRO:='sin'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION arcsin_imp intFuncSignature;
 {$define CALL_MACRO:=arcsin}
 {$define ID_MACRO:='arcsin'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION cos_imp intFuncSignature;
 {$define CALL_MACRO:=cos}
 {$define ID_MACRO:='cos'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION arccos_imp intFuncSignature;
 {$define CALL_MACRO:=arccos}
 {$define ID_MACRO:='arccos'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION tan_imp intFuncSignature;
 {$define CALL_MACRO:=tan}
 {$define ID_MACRO:='tan'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION arctan_imp intFuncSignature;
 {$define CALL_MACRO:=arctan}
 {$define ID_MACRO:='arctan'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION exp_imp intFuncSignature;
 {$define CALL_MACRO:=exp}
 {$define ID_MACRO:='exp'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION ln_imp intFuncSignature;
 {$define CALL_MACRO:=ln}
 {$define ID_MACRO:='ln'}
 UNARY_NUM_TO_REAL;
 
 {$undef UNARY_NUM_TO_REAL}
 
-FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION not_imp intFuncSignature;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -98,7 +98,7 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=not_rec(params^.value(0));
+    then result:=not_rec(arg0);
   end;
 
 {$define UNARY_NUM_TO_SAME:=
@@ -122,15 +122,15 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
 begin
   result:=nil;
   if (params<>nil) and (params^.size=1)
-  then result:=recurse(params^.value(0));
+  then result:=recurse(arg0);
 end}
 
-FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION abs_imp intFuncSignature;
 {$define CALL_MACRO:=abs}
 {$define ID_MACRO:='abs'}
 UNARY_NUM_TO_SAME;
 
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION sqr_imp intFuncSignature;
 {$define CALL_MACRO:=sqr}
 {$define ID_MACRO:='sqr'}
 UNARY_NUM_TO_SAME;
@@ -199,27 +199,27 @@ UNARY_NUM_TO_SAME;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=recurse1(params^.value(0)) else
-    if (params<>nil) and (params^.size=2) then result:=recurse2(params^.value(0),params^.value(1));
+    if (params<>nil) and (params^.size=1) then result:=recurse1(arg0) else
+    if (params<>nil) and (params^.size=2) then result:=recurse2(arg0,arg1);
   end}
 
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION round_imp intFuncSignature;
 {$define CALL_MACRO:=round}
 {$define ID_MACRO:='round'}
 ROUND_IMPLEMENTATION;
 
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION ceil_imp intFuncSignature;
 {$define CALL_MACRO:=ceil}
 {$define ID_MACRO:='ceil'}
 ROUND_IMPLEMENTATION;
 
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION floor_imp intFuncSignature;
 {$define CALL_MACRO:=floor}
 {$define ID_MACRO:='floor'}
 ROUND_IMPLEMENTATION;
 {$undef ROUND_IMPLEMENTATION}
 
-FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION sign_imp intFuncSignature;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -240,10 +240,10 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=sign_rec(params^.value(0));
+    then result:=sign_rec(arg0);
   end;
 
-FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION time_imp intFuncSignature;
   VAR res:P_literal;
       t:double;
 
@@ -277,15 +277,15 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
-    else if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
-      ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
+    else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+      ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_validListTypes)) then begin
       context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
-      if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
-                        else res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
+      if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
+                        else res:=evaluateNullary(P_expressionLiteral(arg0));
       context.callStackPop();
       if res<>nil then begin
         result:=newListLiteral;
-        appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
+        appendPair(result,'expression',newStringLiteral(arg0^.toString));
         if res^.literalType<>lt_void then appendPair(result,'result',res)
                                      else disposeLiteral(res);
         appendPair(result,'time'  ,newRealLiteral(t));
@@ -312,22 +312,22 @@ FUNCTION doAsync(p:pointer):ptrint;
     freeMem(p,sizeOf(T_asyncTask));
   end;
 
-FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION async_imp intFuncSignature;
   VAR p:P_asyncTask;
       childContext:P_evaluationContext;
   begin
     result:=nil;
-    if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
-       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_validListTypes)) then begin
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         getMem(p,sizeOf(T_asyncTask));
         p^.context:=childContext;
-        p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
-        params^.value(0)^.rereference;
+        p^.task:=context.newToken(tokenLocation,'',tt_literal,arg0);
+        arg0^.rereference;
         if params^.size=2 then begin
-          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
-          params^.value(1)^.rereference;
+          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,arg1);
+          arg1^.rereference;
         end else
           p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
         beginThread(@doAsync,p);
@@ -401,7 +401,7 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
     context.disposeToken(first);
   end;
 
-FUNCTION toExpression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toExpression_imp intFuncSignature;
   FUNCTION primitiveExpression(CONST l:P_literal):P_expressionLiteral;
     VAR first:P_token;
     begin
@@ -438,7 +438,7 @@ FUNCTION toExpression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then begin
-      result:=expression_rec(params^.value(0));
+      result:=expression_rec(arg0);
       if (result<>nil) and (result^.literalType=lt_listWithError) then begin
         disposeLiteral(result);
         result:=newErrorLiteral;
@@ -446,14 +446,14 @@ FUNCTION toExpression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     end;
   end;
 
-FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression)
-    then result:=newIntLiteral(P_subrule (P_expressionLiteral(params^.value(0))^.value)^.arity);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
+    then result:=newIntLiteral(P_subrule (P_expressionLiteral(arg0)^.value)^.arity);
   end;
 
-FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION parameterNames_imp intFuncSignature;
   FUNCTION getNames(CONST subRule:P_subrule):P_listLiteral;
     VAR i:longint;
     begin
@@ -463,27 +463,27 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression)
-    then result:=getNames(P_subrule(P_expressionLiteral(params^.value(0))^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
+    then result:=getNames(P_subrule(P_expressionLiteral(arg0)^.value));
   end;
 
-FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string,lt_stringList]) then begin
-      if params^.value(0)^.literalType=lt_string
-      then src:=P_stringLiteral(params^.value(0))^.value
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string,lt_stringList]) then begin
+      if arg0^.literalType=lt_string
+      then src:=P_stringLiteral(arg0)^.value
       else begin
         setLength(src,0);
-        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do append(src,P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value);
+        for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value(i))^.value);
       end;
       result:=messagesToLiteralForSandbox(runAlone(src));
     end;
   end;
 
-FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION group_imp intFuncSignature;
   TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
   VAR listToGroup:P_listLiteral;
       keyList:array of P_literal;
@@ -542,16 +542,16 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
-       (params^.value(0)^.literalType in C_validListTypes) and
-      ((params^.value(1)^.literalType in C_validListTypes) and (P_listLiteral(params^.value(1))^.size=P_listLiteral(params^.value(0))^.size) or (params^.value(1)^.literalType=lt_int)) and
+       (arg0^.literalType in C_validListTypes) and
+      ((arg1^.literalType in C_validListTypes) and (list1^.size=P_listLiteral(arg0)^.size) or (arg1^.literalType=lt_int)) and
       ((params^.size=2) or (params^.value(2)^.literalType=lt_expression))
     then begin
       setLength(keyList,0);
-      listToGroup:=P_listLiteral(params^.value(0));
+      listToGroup:=P_listLiteral(arg0);
 
-      if params^.value(1)^.literalType=lt_int
-      then makeKeysByIndex(P_intLiteral(params^.value(1))^.value)
-      else makeKeysByList(P_listLiteral(params^.value(1)));
+      if arg1^.literalType=lt_int
+      then makeKeysByIndex(P_intLiteral(arg1)^.value)
+      else makeKeysByList(list1);
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
                           else aggregator:=nil;
@@ -567,15 +567,15 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION format_imp intFuncSignature;
   VAR txt:T_arrayOfString;
       i:longint;
       preparedStatement:P_preparedFormatStatement;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       context.callStackPush(tokenLocation,@builtinLocation_format,params,nil);
-      preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
+      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       context.callStackPop();
       if not(context.adapters^.noErrors) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
@@ -587,13 +587,13 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION printf_imp intFuncSignature;
   VAR preparedStatement:P_preparedFormatStatement;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
-      preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,context);
+      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.adapters^.noErrors) then begin
         context.callStackPop();
         exit(nil);
@@ -606,7 +606,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION formatTime_imp intFuncSignature;
   VAR L:P_listLiteral;
       i:longint;
       fmt:ansistring='';
@@ -617,15 +617,15 @@ FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) then begin
-      fmt:=P_stringLiteral(params^.value(0))^.value;
-      case params^.value(1)^.literalType of
-        lt_int:  result:=fmtIt(P_intLiteral (params^.value(1))^.value);
-        lt_real: result:=fmtIt(P_realLiteral(params^.value(1))^.value);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
+      fmt:=P_stringLiteral(arg0)^.value;
+      case arg1^.literalType of
+        lt_int:  result:=fmtIt(P_intLiteral (arg1)^.value);
+        lt_real: result:=fmtIt(P_realLiteral(arg1)^.value);
         lt_emptyList: result:=newListLiteral;
         lt_realList,lt_intList,lt_numList: begin
           result:=newListLiteral;
-          L:=P_listLiteral(params^.value(1));
+          L:=list1;
           for i:=0 to L^.size-1 do case(L^.value(i)^.literalType) of
             lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value(i))^.value),false);
             lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value(i))^.value),false);
@@ -635,7 +635,7 @@ FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
-FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION parseTime_imp intFuncSignature;
   VAR format:ansistring;
   FUNCTION encodeDateTime(input:ansistring):double;
     CONST digits:charSet=['0'..'9'];
@@ -685,27 +685,27 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) then begin
-      format:= uppercase(P_stringLiteral(params^.value(0))^.value);
-      if (params^.value(1)^.literalType=lt_string) then
-        result:=newRealLiteral(encodeDateTime(P_stringLiteral(params^.value(1))^.value))
-      else if (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
+      format:= uppercase(P_stringLiteral(arg0)^.value);
+      if (arg1^.literalType=lt_string) then
+        result:=newRealLiteral(encodeDateTime(P_stringLiteral(arg1)^.value))
+      else if (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value));
+        for i:=0 to list1^.size-1 do
+          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^.value(i))^.value));
       end;
     end;
   end;
 
-FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
       tempPackage:T_package;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
-    else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      id:=P_stringLiteral(params^.value(0))^.value;
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      id:=P_stringLiteral(arg0)^.value;
 
       with P_package(tokenLocation.package)^ do
         for i:=0 to length(packageUses)-1 do
@@ -728,12 +728,12 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION clearRuleCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION clearRuleCache_imp intFuncSignature;
   VAR ruleIdToken:T_token;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       ruleIdToken.create;
-      ruleIdToken.define(tokenLocation,P_stringLiteral(params^.value(0))^.value,tt_identifier);
+      ruleIdToken.define(tokenLocation,P_stringLiteral(arg0)^.value,tt_identifier);
       P_package(tokenLocation.package)^.resolveRuleId(ruleIdToken,context.adapters);
       if ruleIdToken.tokType in [tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule] then P_rule(ruleIdToken.data)^.clearCache;
       ruleIdToken.destroy;
@@ -741,7 +741,7 @@ FUNCTION clearRuleCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end else result:=nil;
   end;
 
-FUNCTION clearPackageCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION clearPackageCache_imp intFuncSignature;
   VAR i:longint;
       id:string;
   begin
@@ -749,8 +749,8 @@ FUNCTION clearPackageCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T
     if (params=nil) or (params^.size=0) then begin
       P_package(tokenLocation.package)^.clearPackageCache(false);
       result:=newVoidLiteral;
-    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      id:=P_stringLiteral(params^.value(0))^.value;
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      id:=P_stringLiteral(arg0)^.value;
       with P_package(tokenLocation.package)^ do
         for i:=0 to length(packageUses)-1 do begin
           if (packageUses[i].id=id) or (packageUses[i].path=id) then begin
@@ -762,7 +762,7 @@ FUNCTION clearPackageCache_imp(CONST params:P_listLiteral; CONST tokenLocation:T
     end;
   end;
 
-FUNCTION clearAllCaches_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION clearAllCaches_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       P_package(tokenLocation.package)^.clearPackageCache(true);
