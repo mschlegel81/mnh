@@ -208,10 +208,22 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       end;
     end;
 
-  FUNCTION startsWith(CONST c:char):boolean;
+  FUNCTION startsWith(CONST c:char):boolean; inline;
     begin result:=line[lineLocation.column]=c; end;
-  FUNCTION startsWith(CONST prefix:string):boolean;
+  FUNCTION startsWith(CONST prefix:string):boolean;  inline;
     begin result:=copy(line,lineLocation.column,length(prefix))=prefix; end;
+  FUNCTION startsWith(CONST t:T_tokenType):boolean; inline;
+    begin result:=copy(line,lineLocation.column,length(C_tokenInfo[t].defaultId))=C_tokenInfo[t].defaultId; end;
+  PROCEDURE apply(CONST t:T_tokenType); inline;
+    begin
+      result.tokType:=t;
+      parsedLength:=length(C_tokenInfo[t].defaultId);
+    end;
+  PROCEDURE apply(CONST len:longint; CONST t:T_tokenType); inline;
+    begin
+      result.tokType:=t;
+      parsedLength:=len;
+    end;
 
   VAR id:ansistring='';
       stringValue:ansistring='';
@@ -321,94 +333,54 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
             end else blob.closer:='''';
           end;
         end;
-      end else if startsWith(C_tokenInfo[tt_cso_assignDiv].defaultId) then begin
-        parsedLength:=2;
-        result.tokType:=tt_cso_assignDiv;
-      end else begin
-        parsedLength:=1;
-        result.tokType:=tt_operatorDivReal;
-      end;
-      '.': if startsWith(C_tokenInfo[tt_each].defaultId) then begin
-        parsedLength:=length(C_tokenInfo[tt_each].defaultId);
-        result.tokType:=tt_each;
-      end else if startsWith(C_tokenInfo[tt_parallelEach].defaultId) then begin
-        parsedLength:=length(C_tokenInfo[tt_parallelEach].defaultId);
-        result.tokType:=tt_parallelEach;
-      end else if startsWith(C_tokenInfo[tt_agg].defaultId) then begin
-        parsedLength:=length(C_tokenInfo[tt_agg].defaultId);
-        result.tokType:=tt_agg;
-      end else if startsWith(C_tokenInfo[tt_optionalParameters].defaultId) then begin
-        parsedLength:=length(C_tokenInfo[tt_optionalParameters].defaultId);
-        result.tokType:=tt_optionalParameters;
-      end else if startsWith(C_tokenInfo[tt_separatorCnt].defaultId) then begin
-        parsedLength:=length(C_tokenInfo[tt_separatorCnt].defaultId);
-        result.tokType:=tt_separatorCnt;
-      end else begin
-        result.tokType:=tt_ponFlipper;
-        parsedLength:=1;
-      end;
-      ':': if startsWith(C_tokenInfo[tt_assign].defaultId) then begin
-        parsedLength:=2;
-        result.tokType:=tt_assign;
-      end else if startsWith(C_tokenInfo[tt_pseudoFuncPointer].defaultId) then begin
-        parsedLength:=2;
-        result.tokType:=tt_pseudoFuncPointer;
-      end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
+      end else if startsWith(tt_cso_assignDiv) then apply(tt_cso_assignDiv)
+                                               else apply(tt_operatorDivReal);
+      ':': if startsWith(tt_assign)            then apply(tt_assign)
+      else if startsWith(tt_pseudoFuncPointer) then apply(tt_pseudoFuncPointer)
+      else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k','f']) then begin
         id:=leadingId;
-        if      id=C_tokenInfo[tt_typeCheckBoolList  ].defaultId then result.tokType:=tt_typeCheckBoolList
-        else if id=C_tokenInfo[tt_typeCheckBoolean   ].defaultId then result.tokType:=tt_typeCheckBoolean
-        else if id=C_tokenInfo[tt_typeCheckExpression].defaultId then result.tokType:=tt_typeCheckExpression
-        else if id=C_tokenInfo[tt_typeCheckIntList   ].defaultId then result.tokType:=tt_typeCheckIntList
-        else if id=C_tokenInfo[tt_typeCheckInt       ].defaultId then result.tokType:=tt_typeCheckInt
-        else if id=C_tokenInfo[tt_typeCheckList      ].defaultId then result.tokType:=tt_typeCheckList
-        else if id=C_tokenInfo[tt_typeCheckNumList   ].defaultId then result.tokType:=tt_typeCheckNumList
-        else if id=C_tokenInfo[tt_typeCheckNumeric   ].defaultId then result.tokType:=tt_typeCheckNumeric
-        else if id=C_tokenInfo[tt_typeCheckStringList].defaultId then result.tokType:=tt_typeCheckStringList
-        else if id=C_tokenInfo[tt_typeCheckScalar    ].defaultId then result.tokType:=tt_typeCheckScalar
-        else if id=C_tokenInfo[tt_typeCheckString    ].defaultId then result.tokType:=tt_typeCheckString
-        else if id=C_tokenInfo[tt_typeCheckRealList  ].defaultId then result.tokType:=tt_typeCheckRealList
-        else if id=C_tokenInfo[tt_typeCheckReal      ].defaultId then result.tokType:=tt_typeCheckReal
-        else if id=C_tokenInfo[tt_typeCheckKeyValueList].defaultId then result.tokType:=tt_typeCheckKeyValueList
-        else begin
-          parsedLength:=1;
-          result.tokType:=tt_iifElse;
-        end;
-      end else begin
-        parsedLength:=1;
         result.tokType:=tt_iifElse;
-      end;
-      ';':                                                        begin parsedLength:=1; result.tokType:=tt_semicolon;             end;
-      '}':                                                        begin parsedLength:=1; result.tokType:=tt_expBraceClose;         end;
-      '{':                                                        begin parsedLength:=1; result.tokType:=tt_expBraceOpen;          end;
-      '^':                                                        begin parsedLength:=1; result.tokType:=tt_operatorPot;           end;
-      ']':                                                        begin parsedLength:=1; result.tokType:=tt_listBraceClose;        end;
-      '[':                                                        begin parsedLength:=1; result.tokType:=tt_listBraceOpen;         end;
-      '?':                                                        begin parsedLength:=1; result.tokType:=tt_iifCheck;              end;
-      ',':                                                        begin parsedLength:=1; result.tokType:=tt_separatorComma;        end;
-      '@':                                                        begin parsedLength:=1; result.tokType:=tt_listToParameterList;   end;
-      ')':                                                        begin parsedLength:=1; result.tokType:=tt_braceClose;            end;
-      '(':                                                        begin parsedLength:=1; result.tokType:=tt_braceOpen;             end;
-      '|': if startsWith(C_tokenInfo[tt_cso_assignAppend].defaultId)    then begin parsedLength:=2; result.tokType:=tt_cso_assignAppend;      end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorConcat;        end;
-      '+': if startsWith(C_tokenInfo[tt_cso_assignPlus].defaultId)      then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus;        end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorPlus;          end;
-      '&': if startsWith(C_tokenInfo[tt_cso_assignStrConcat].defaultId) then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat;   end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat;     end;
-      '-': if startsWith(C_tokenInfo[tt_declare].defaultId)             then begin parsedLength:=2; result.tokType:=tt_declare;               end else
-           if startsWith(C_tokenInfo[tt_cso_assignMinus].defaultId)     then begin parsedLength:=2; result.tokType:=tt_cso_assignMinus;       end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorMinus;         end;
-      '*': if startsWith('**')                                          then begin parsedLength:=2; result.tokType:=tt_operatorPot;           end else
-           if startsWith(C_tokenInfo[tt_cso_assignMult].defaultId)      then begin parsedLength:=2; result.tokType:=tt_cso_assignMult;        end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorMult;          end;
-      '>': if startsWith(C_tokenInfo[tt_comparatorGeq].defaultId)       then begin parsedLength:=2; result.tokType:=tt_comparatorGeq;         end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_comparatorGrt;         end;
-      '=': if startsWith(C_tokenInfo[tt_comparatorListEq].defaultId)    then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
-                                                                        else begin parsedLength:=1; result.tokType:=tt_comparatorEq;          end;
-      '<': if startsWith('<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
-           if startsWith('<=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorLeq;         end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_comparatorLss;         end;
-      '!': if startsWith('!=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end
-                                                                  else begin fail('Cannot parse: '+copy(line,lineLocation.column,20)+' (first char is "'+line[lineLocation.column]+'"=#'+intToStr(ord(line[lineLocation.column]))+')'); lineLocation.column:=length(line)+1; end;
+        for tt in C_typeChecks do if id=C_tokenInfo[tt].defaultId then result.tokType:=tt;
+        if result.tokType=tt_iifElse then parsedLength:=1;
+      end else apply(tt_iifElse);
+      '.': if      startsWith(tt_each)           then apply(tt_each) else
+           if startsWith(tt_parallelEach)        then apply(tt_parallelEach) else
+           if startsWith(tt_agg)                 then apply(tt_agg) else
+           if startsWith(tt_optionalParameters)  then apply(tt_optionalParameters) else
+           if startsWith(tt_separatorCnt)        then apply(tt_separatorCnt)
+                                                 else apply(tt_ponFlipper);
+      ';':                                            apply(tt_semicolon);
+      '}':                                            apply(tt_expBraceClose);
+      '{':                                            apply(tt_expBraceOpen);
+      '^':                                            apply(tt_operatorPot);
+      ']':                                            apply(tt_listBraceClose);
+      '[':                                            apply(tt_listBraceOpen);
+      '?':                                            apply(tt_iifCheck);
+      ',':                                            apply(tt_separatorComma);
+      '@':                                            apply(tt_listToParameterList);
+      ')':                                            apply(tt_braceClose);
+      '(':                                            apply(tt_braceOpen);
+      '|': if startsWith(tt_cso_assignAppend)    then apply(tt_cso_assignAppend)
+                                                 else apply(tt_operatorConcat);
+      '+': if startsWith(tt_cso_assignPlus)      then apply(tt_cso_assignPlus)
+                                                 else apply(tt_operatorPlus);
+      '&': if startsWith(tt_cso_assignStrConcat) then apply(tt_cso_assignStrConcat)
+                                                 else apply(tt_operatorStrConcat);
+      '-': if startsWith(tt_declare)             then apply(tt_declare) else
+           if startsWith(tt_cso_assignMinus)     then apply(tt_cso_assignMinus)
+                                                 else apply(tt_operatorMinus);
+      '*': if startsWith('**')                   then apply(2,tt_operatorPot) else
+           if startsWith(tt_cso_assignMult)      then apply(tt_cso_assignMult)
+                                                 else apply(tt_operatorMult);
+      '>': if startsWith(tt_comparatorGeq)       then apply(tt_comparatorGeq)
+                                                 else apply(tt_comparatorGrt);
+      '=': if startsWith(tt_comparatorListEq)    then apply(tt_comparatorListEq)
+                                                 else apply(tt_comparatorEq);
+      '<': if startsWith(tt_comparatorNeq)       then apply(tt_comparatorNeq) else
+           if startsWith(tt_comparatorLeq)       then apply(tt_comparatorLeq)
+                                                 else apply(tt_comparatorLss);
+      '!': if startsWith('!=')                   then apply(2,tt_comparatorNeq)
+           else begin fail('Cannot parse: '+copy(line,lineLocation.column,20)+' (first char is "'+line[lineLocation.column]+'"=#'+intToStr(ord(line[lineLocation.column]))+')'); lineLocation.column:=length(line)+1; end;
       else begin
         fail('Cannot parse: '+copy(line,lineLocation.column,20)+' (first char is "'+line[lineLocation.column]+'"=#'+intToStr(ord(line[lineLocation.column]))+')');
         lineLocation.column:=length(line)+1;

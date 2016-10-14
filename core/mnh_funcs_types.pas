@@ -4,14 +4,9 @@ INTERFACE
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,mnh_out_adapters,mnh_html,mnh_contexts;
 
 IMPLEMENTATION
-{$MACRO ON}
-{$define arg0:=params^.value(0)}
-{$define str0:=P_stringLiteral(params^.value(0))}
-{$define int0:=P_intLiteral(params^.value(0))}
-{$define real0:=P_realLiteral(params^.value(0))}
-{$define bool0:=P_boolLiteral(params^.value(0))}
+{$i mnh_func_defines.inc}
 
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION softCast_imp intFuncSignature;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -20,7 +15,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         lt_list..lt_listWithError: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
+            lResult^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
         end;
         else begin
           x^.rereference;
@@ -34,7 +29,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=1) then result:=softCastRecurse(arg0);
   end;
 
-FUNCTION toString_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toString_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -45,7 +40,7 @@ FUNCTION toString_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toBoolean_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -62,7 +57,7 @@ FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end;
   end;
 
-FUNCTION toInt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toInt_imp intFuncSignature;
   VAR len:longint;
       i:int64;
   begin
@@ -90,7 +85,7 @@ FUNCTION toInt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION toReal_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toReal_imp intFuncSignature;
   VAR len:longint;
       x:T_myFloat;
   begin
@@ -117,15 +112,15 @@ FUNCTION toReal_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 {$define FUNC_ID:=isScalar}
 {$define TYPE_CHECK:=tt_typeCheckScalar}
 {$define GENERIC_TYPE_CHECK:=
-FUNCTION FUNC_ID (CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION FUNC_ID  intFuncSignature;
   begin
     result:=nil;              ;
     if (params<>nil) and (params^.size=1) then
-    result:=newBoolLiteral(params^.value(0)^.literalType in C_matchingTypes[TYPE_CHECK])
-    else if (TYPE_CHECK in C_modifieableTypeChecks) and (params^.size=2) and (params^.value(1)^.literalType=lt_int) then
-    result:=newBoolLiteral((params^.value(0)^.literalType in C_matchingTypes[TYPE_CHECK])
-       and (   (params^.value(0)^.literalType<>lt_expression     ) or (P_expressionLiteral(params^.value(0))^.canApplyToNumberOfParameters(P_intLiteral(params^.value(1))^.value)))
-       and (not(params^.value(0)^.literalType in C_validListTypes) or (P_listLiteral      (params^.value(0))^.size =P_intLiteral(params^.value(1))^.value)));
+    result:=newBoolLiteral(arg0^.literalType in C_matchingTypes[TYPE_CHECK])
+    else if (TYPE_CHECK in C_modifieableTypeChecks) and (params^.size=2) and (arg1^.literalType=lt_int) then
+    result:=newBoolLiteral((arg0^.literalType in C_matchingTypes[TYPE_CHECK])
+       and (   (arg0^.literalType<>lt_expression     ) or (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(P_intLiteral(arg1)^.value)))
+       and (not(arg0^.literalType in C_validListTypes) or (P_listLiteral      (arg0)^.size =P_intLiteral(arg1)^.value)));
   end}
 GENERIC_TYPE_CHECK;
 
@@ -177,15 +172,20 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckKeyValueList}
 GENERIC_TYPE_CHECK;
 
+{$define FUNC_ID:=isFlatList}
+{$define TYPE_CHECK:=tt_typeCheckKeyValueList}
+GENERIC_TYPE_CHECK;
+
+
 {$define FUNC_ID:=isExpression}
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;
 
-FUNCTION typeOf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION typeOf_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then exit(newStringLiteral(params^.value(0)^.typeString))
+    then exit(newStringLiteral(arg0^.typeString))
     else exit(newStringLiteral(parameterListTypeString(params)));
   end;
 
@@ -207,6 +207,7 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'isRealList',@isRealList          ,'isRealList(x);//Returns true if x is a realList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isStringList',@isStringList      ,'isStringList(x);//Returns true if x is a stringList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isNumList',@isNumList            ,'isNumList(x);//Returns true if x is a numList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isFlatList',@isFlatList          ,'isFlatList(x);//Returns true if x is a flat list. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isKeyValueList',@isKeyValueList  ,'isKeyValueList(x);//Returns true if x is a keyValueList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isExpression',@isExpression      ,'isExpression(x);//Returns true if x is an expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
   registerRule(TYPECAST_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');

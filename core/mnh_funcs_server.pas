@@ -20,20 +20,12 @@ TYPE
   end;
 
 IMPLEMENTATION
-{$MACRO ON}
-{$define str0:=P_stringLiteral(params^.value(0))}
-{$define str1:=P_stringLiteral(params^.value(1))}
-{$define int0:=P_intLiteral(params^.value(0))}
-{$define int2:=P_intLiteral(params^.value(2))}
-{$define real2:=P_realLiteral(params^.value(2))}
-{$define arg0:=params^.value(0)}
-{$define arg1:=params^.value(1)}
-{$define arg2:=params^.value(2)}
+{$i mnh_func_defines.inc}
 
 VAR serverCS:system.TRTLCriticalSection;
     currentUpServers:array of P_microserver;
 
-FUNCTION wrapTextInHttp_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
   begin
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
@@ -43,7 +35,7 @@ FUNCTION wrapTextInHttp_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
     end else result:=nil;
   end;
 
-FUNCTION httpError_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION httpError_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
     then result:=newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
@@ -52,7 +44,7 @@ FUNCTION httpError_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     else result:=nil;
   end;
 
-FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION startServer_impl intFuncSignature;
   VAR microserver:P_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;

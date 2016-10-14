@@ -3,6 +3,7 @@ INTERFACE
 USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_basicTypes,sysutils,mnh_out_adapters,mnh_contexts;
 
 IMPLEMENTATION
+{$i mnh_func_defines.inc}
 TYPE T_triplet=record
        x,y,z:ansistring;
      end;
@@ -43,7 +44,7 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
     end;
   end;
 
-FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION regexMatch_imp intFuncSignature;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
     VAR regex:TRegExpr;
     begin
@@ -63,17 +64,17 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      i1:=listSize(params^.value(0),params^.value(1),nil);
+      i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
-      else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(params^.value(1),params^.value(0),nil,0)))
+      else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(regexMatches(triplet(params^.value(1),params^.value(0),nil,i)));
+        for i:=0 to i1-1 do lResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
       end;
     end;
   end;
 
-FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION regexMatchComposite_imp intFuncSignature;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
     VAR regex:TRegExpr;
         i:longint;
@@ -104,17 +105,17 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      i1:=listSize(params^.value(0),params^.value(1),nil);
+      i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
-      else if i1=0 then result:=regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,0))
+      else if i1=0 then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false);
+        for i:=0 to i1-1 do lResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
       end;
     end;
   end;
 
-FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION regexSplit_imp intFuncSignature;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
     VAR regex:TRegExpr;
         i:longint;
@@ -140,17 +141,17 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      i1:=listSize(params^.value(0),params^.value(1),nil);
+      i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
-      else if i1=0 then result:=regexSplit(triplet(params^.value(1),params^.value(0),nil,0))
+      else if i1=0 then result:=regexSplit(triplet(arg1,arg0,nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false);
+        for i:=0 to i1-1 do lResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
       end;
     end;
   end;
 
-FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION regexReplace_imp intFuncSignature;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
     VAR regex:TRegExpr;
     begin
@@ -170,12 +171,12 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) then begin
-      i1:=listSize(params^.value(0),params^.value(1),params^.value(2));
+      i1:=listSize(arg0,arg1,arg2);
       if i1<0 then exit(nil)
-      else if i1=0 then result:=newStringLiteral(regexReplace(triplet(params^.value(1),params^.value(0),params^.value(2),0)))
+      else if i1=0 then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.appendString(regexReplace(triplet(params^.value(1),params^.value(0),params^.value(2),i)));
+        for i:=0 to i1-1 do lResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
       end;
     end;
   end;

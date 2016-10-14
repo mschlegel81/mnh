@@ -53,8 +53,9 @@ TYPE
   end;
 
 FUNCTION askForm: TaskForm;
+{$i mnh_func_defines.inc}
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
+FUNCTION ask_impl intFuncSignature;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
     myAskForm:TaskForm=nil;
@@ -202,26 +203,26 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
     end;
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
+FUNCTION ask_impl intFuncSignature;
   VAR opt: T_arrayOfString;
       i: longint;
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and
-      (params^.value(0)^.literalType = lt_string) then begin
+      (arg0^.literalType = lt_string) then begin
       system.enterCriticalSection(cs);
-      askForm.initWithQuestion(P_stringLiteral(params^.value(0))^.value);
+      askForm.initWithQuestion(str0^.value);
       result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
       system.leaveCriticalSection(cs);
     end
     else if (params<>nil) and (params^.size = 2) and
-      (params^.value(0)^.literalType = lt_string) and
-      (params^.value(1)^.literalType = lt_stringList) then begin
+      (arg0^.literalType = lt_string) and
+      (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
-      setLength(opt, P_listLiteral(params^.value(1))^.size);
+      setLength(opt, list1^.size);
       for i := 0 to length(opt)-1 do
-        opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-      askForm.initWithQuestionAndOptions(P_stringLiteral(params^.value(0))^.value, opt);
+        opt[i] := P_stringLiteral(list1^.value(i))^.value;
+      askForm.initWithQuestionAndOptions(str0^.value, opt);
       result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
       system.leaveCriticalSection(cs);
     end;

@@ -119,6 +119,7 @@ TYPE
     tt_typeCheckReal, tt_typeCheckRealList,
     tt_typeCheckString, tt_typeCheckStringList,
     tt_typeCheckNumeric, tt_typeCheckNumList,
+    tt_typeCheckFlatList,
     tt_typeCheckExpression,
     tt_typeCheckKeyValueList,
     tt_customTypeCheck,
@@ -198,6 +199,7 @@ CONST
     tt_typeCheckReal, tt_typeCheckRealList,
     tt_typeCheckString, tt_typeCheckStringList,
     tt_typeCheckNumeric, tt_typeCheckNumList,
+    tt_typeCheckFlatList,
     tt_typeCheckExpression,
     tt_typeCheckKeyValueList,
     tt_customTypeCheck,
@@ -217,6 +219,7 @@ CONST
   C_validScalarTypes: T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
+  C_patternElementComparators: T_tokenTypeSet=[tt_comparatorEq..tt_comparatorListEq,tt_operatorIn];
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
   C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
@@ -267,9 +270,10 @@ CONST
     {tt_typeCheckStringList}   [lt_stringList, lt_emptyList],
     {tt_typeCheckNumeric}      [lt_int, lt_real],
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
+    {tt_typeCheckFlatList}     [lt_intList, lt_realList, lt_numList, lt_stringList,lt_booleanList,lt_flatList,lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
-  C_modifieableTypeChecks: T_tokenTypeSet=[tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckExpression,tt_typeCheckKeyValueList];
+  C_modifieableTypeChecks: T_tokenTypeSet=[tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckFlatList,tt_typeCheckExpression,tt_typeCheckKeyValueList];
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_tokenInfo:array[T_tokenType] of record
@@ -361,6 +365,7 @@ CONST
 {tt_typeCheckStringList}        (defaultId:':stringList';  reservedWordClass:rwc_typeCheck;        helpText:'Type check string list;#Matches on lists of strings and empty lists'),
 {tt_typeCheckNumeric}           (defaultId:':numeric';     reservedWordClass:rwc_typeCheck;        helpText:'Type check numeric;#Matches on scalar integers and reals'),
 {tt_typeCheckNumList}           (defaultId:':numericList'; reservedWordClass:rwc_typeCheck;        helpText:'Type check numeric list;#Matches on lists of integers and reals (mixing is allowed) and empty lists'),
+{tt_typeCheckFlatList}          (defaultId:':flatList';    reservedWordClass:rwc_typeCheck;        helpText:'Type check flat list;#Matches on flat (i.e. not nested) lists and empty lists'),
 {tt_typeCheckExpression}        (defaultId:':expression';  reservedWordClass:rwc_typeCheck;        helpText:'Type check expression;#Matches on expressions#In patterns it can be modified to match only on expressions with a given arity'),
 {tt_typeCheckKeyValueList}      (defaultId:':keyValueList';reservedWordClass:rwc_typeCheck;        helpText:'Type check key-value-list;#Matches on key-value-lists and empty lists#A key-value list only consists of sub-lists of size 2 whose first element is a string'),
 {tt_customTypeCheck}            (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'Custom type check'),

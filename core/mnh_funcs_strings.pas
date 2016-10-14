@@ -3,20 +3,9 @@ INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64;
 IMPLEMENTATION
-{$MACRO ON}
-{$define str0:=P_stringLiteral(params^.value(0))}
-{$define str1:=P_stringLiteral(params^.value(1))}
-{$define str2:=P_stringLiteral(params^.value(2))}
-{$define list0:=P_listLiteral(params^.value(0))}
-{$define list1:=P_listLiteral(params^.value(1))}
-{$define list2:=P_listLiteral(params^.value(2))}
-{$define int1:=P_intLiteral(params^.value(1))}
-{$define int2:=P_intLiteral(params^.value(2))}
-{$define arg0:=params^.value(0)}
-{$define arg1:=params^.value(1)}
-{$define arg2:=params^.value(2)}
+{$i mnh_func_defines.inc}
 
-FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION length_imp intFuncSignature;
   VAR i:longint;
   begin
     result:=nil;
@@ -26,12 +15,12 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       lt_stringList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to list0^.size-1 do
-          P_listLiteral(result)^.appendInt(UTF8Length(P_stringLiteral(list0^.value(i))^.value));
+          lResult^.appendInt(UTF8Length(P_stringLiteral(list0^.value(i))^.value));
       end;
     end;
   end;
 
-FUNCTION byteLength_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION byteLength_imp intFuncSignature;
   VAR i:longint;
   begin
     result:=nil;
@@ -41,12 +30,12 @@ FUNCTION byteLength_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       lt_stringList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to list0^.size-1 do
-          P_listLiteral(result)^.appendInt(length(P_stringLiteral(list0^.value(i))^.value));
+          lResult^.appendInt(length(P_stringLiteral(list0^.value(i))^.value));
       end;
     end;
   end;
 
-FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION pos_imp intFuncSignature;
   FUNCTION posInt(x,y:P_literal):P_intLiteral;
     begin
       result:=newIntLiteral(int64(UTF8Pos(P_stringLiteral(x)^.value,
@@ -66,19 +55,19 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         end else begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            P_listLiteral(result)^.append(posInt(arg0,list1^.value(i)),false);
+            lResult^.append(posInt(arg0,list1^.value(i)),false);
         end;
       end else begin
         if arg1^.literalType=lt_string then begin
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
-            P_listLiteral(result)^.append(posInt(list0^.value(i),
+            lResult^.append(posInt(list0^.value(i),
                                                                arg1           ),false);
         end else begin
           if list0^.size=list1^.size then begin
             result:=newListLiteral;
             for i:=0 to list0^.size-1 do
-              P_listLiteral(result)^.append(posInt(list0^.value(i),
+              lResult^.append(posInt(list0^.value(i),
                                                    list1^.value(i)),false);
           end else context.adapters^.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
@@ -86,7 +75,7 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end;
   end;
 
-FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION copy_imp intFuncSignature;
   VAR anyList:boolean=false;
       allOkay:boolean=true;
       i1:longint=0;
@@ -139,7 +128,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
-          P_listLiteral(result)^.appendString(
+          lResult^.appendString(
               UTF8Copy(safeString(i),
                        safeStart(i),
                        safeLen(i)));
@@ -147,7 +136,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION chars_imp intFuncSignature;
   FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
     VAR charIndex,
         byteIndex:longint;
@@ -175,14 +164,14 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do lResult^.append(chars_internal(list0^.value(i)),false);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
-      for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
+      for i:=0 to 255 do lResult^.appendString(chr(i));
     end;
   end;
 
-FUNCTION charSet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION charSet_imp intFuncSignature;
   FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
     VAR charIndex,
         byteIndex:longint;
@@ -215,12 +204,12 @@ FUNCTION charSet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do lResult^.append(chars_internal(list0^.value(i)),false);
     end;
   end;
 
 
-FUNCTION bytes_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION bytes_imp intFuncSignature;
   FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
     VAR i:longint;
         txt:ansistring;
@@ -237,11 +226,11 @@ FUNCTION bytes_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do lResult^.append(chars_internal(list0^.value(i)),false);
     end;
   end;
 
-FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION split_imp intFuncSignature;
   VAR splitters:T_arrayOfString;
   PROCEDURE initSplitters;
     VAR i:longint;
@@ -293,7 +282,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         lt_list,lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(p)^.size-1 do if context.adapters^.noErrors then
-            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
+            lResult^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
         end
        else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation,context.adapters^);
       end;
@@ -309,7 +298,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION join_impl intFuncSignature;
   FUNCTION stringOfLit(CONST L:P_literal):ansistring;
     begin
       case L^.literalType of
@@ -351,7 +340,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_list,lt_stringList,lt_emptyList:  begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+          lResult^.append(recurse(P_listLiteral(x)^.value(i)),false);
         if result^.literalType = lt_listWithError then begin
           disposeLiteral(result);
           result:=newErrorLiteral;
@@ -368,37 +357,37 @@ begin
 end}
 
 
-FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION trim_imp intFuncSignature;
 {$define CALL_MACRO:=trim}
 {$define ID_MACRO:='trim'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION trimLeft_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION trimLeft_imp intFuncSignature;
 {$define CALL_MACRO:=trimLeft}
 {$define ID_MACRO:='trimLeft'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION trimRight_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION trimRight_imp intFuncSignature;
 {$define CALL_MACRO:=trimRight}
 {$define ID_MACRO:='trimRight'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION upper_imp intFuncSignature;
 {$define CALL_MACRO:=upper}
 {$define ID_MACRO:='upper'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION lower_imp intFuncSignature;
 {$define CALL_MACRO:=lower}
 {$define ID_MACRO:='lower'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION unbrace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION unbrace_imp intFuncSignature;
 {$define CALL_MACRO:=unbrace}
 {$define ID_MACRO:='unbrace'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION escape_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION escape_imp intFuncSignature;
 {$define CALL_MACRO:=escape}
 {$define ID_MACRO:='escape'}
 STRINGLITERAL_ROUTINE;
@@ -460,13 +449,13 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     else begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do
-        P_listLiteral(result)^.appendString(modify(P_stringLiteral(list0^.value(i))^.value));
+        lResult^.appendString(modify(P_stringLiteral(list0^.value(i))^.value));
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
   end;
 
-FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION replaceOne_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -477,7 +466,7 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION replace_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -488,7 +477,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION repeat_impl intFuncSignature;
   VAR sub,res:ansistring;
       i:longint;
   begin
@@ -503,7 +492,7 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION clean_impl intFuncSignature;
   //clean(input,whitelist,instead)
   VAR whiteList:charSet;
       instead:char;
@@ -536,12 +525,12 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       end else begin
         result:=newListLiteral;
         for i:=0 to list0^.size-1 do
-        P_listLiteral(result)^.appendString(cleanString(P_stringLiteral(list0^.value(i))^.value,whiteList,instead));
+        lResult^.appendString(cleanString(P_stringLiteral(list0^.value(i))^.value,whiteList,instead));
       end;
     end;
   end;
 
-FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION tokenSplit_impl intFuncSignature;
   VAR language:string='MNH';
       stringToSplit:ansistring;
       tokens:T_arrayOfString;
@@ -558,11 +547,11 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       stringToSplit:=str0^.value;
       tokens:=tokenSplit(stringToSplit,language);
       result:=newListLiteral;
-      for i:=0 to length(tokens)-1 do result:=P_listLiteral(result)^.appendString(tokens[i]);
+      for i:=0 to length(tokens)-1 do result:=lResult^.appendString(tokens[i]);
     end;
   end;
 
-FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION reverseString_impl intFuncSignature;
   FUNCTION rev(CONST input:P_literal):ansistring;
     VAR charIndex,
         byteIndex:longint;
@@ -591,7 +580,7 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
       lt_stringList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to list0^.size-1 do
-          P_listLiteral(result)^.appendString(rev(list0^.value(i)));
+          lResult^.appendString(rev(list0^.value(i)));
       end;
     end;
   end;
@@ -656,61 +645,61 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
           ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
         end;
       end;
-      P_listLiteral(result)^.append(newListLiteral^.appendString('edit')^.append(comp,false),false);
+      lResult^.append(newListLiteral^.appendString('edit')^.append(comp,false),false);
       {$endif}
       diff.destroy;
     end;
   end}
 {$define withEditScript}
-FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION diff_impl intFuncSignature;
 diffStatOrDiff_impl;
 {$undef withEditScript}
-FUNCTION diffStats_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION diffStats_impl intFuncSignature;
 diffStatOrDiff_impl;
 
-FUNCTION isUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION isUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newBoolLiteral(isUtf8Encoded(str0^.value));
   end;
 
-FUNCTION isAscii_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION isAscii_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newBoolLiteral(isAsciiEncoded(str0^.value));
   end;
 
-FUNCTION utf8ToAnsi_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION utf8ToAnsi_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(Utf8ToAnsi(str0^.value));
   end;
 
-FUNCTION ansiToUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION ansiToUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(AnsiToUtf8(str0^.value));
   end;
 
-FUNCTION base64encode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION base64encode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(EncodeStringBase64(str0^.value));
   end;
 
-FUNCTION base64decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION base64decode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(DecodeStringBase64(str0^.value));
   end;
 
-FUNCTION compress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION compress_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
@@ -719,7 +708,7 @@ FUNCTION compress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       then result:=newStringLiteral(compressString(str0^.value,int1^.value))
   end;
 
-FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION decompress_impl intFuncSignature;
   VAR resultString:ansistring;
   begin
     result:=nil;
@@ -735,7 +724,7 @@ FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION formatTabs_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION formatTabs_impl intFuncSignature;
   VAR arr:T_arrayOfString;
       i:longint;
   begin
@@ -743,7 +732,7 @@ FUNCTION formatTabs_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       arr:=formatTabs(split(str0^.value));
       result:=newListLiteral;
-      for i:=0 to length(arr)-1 do P_listLiteral(result)^.appendString(arr[i]);
+      for i:=0 to length(arr)-1 do lResult^.appendString(arr[i]);
       setLength(arr,0);
     end;
   end;

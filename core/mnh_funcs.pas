@@ -1,9 +1,10 @@
 UNIT mnh_funcs;
 INTERFACE
+{$i mnh_func_defines.inc}
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_basicTypes,mnh_contexts,
      myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
-  P_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  P_intFuncCallback=FUNCTION intFuncSignature;
 
   P_identifiedInternalFunction=^T_identifiedInternalFunction;
   T_identifiedInternalFunction=object(T_objectWithIdAndLocation)
@@ -30,6 +31,7 @@ FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
+
 VAR mnhParameters:P_listLiteral=nil;
     mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
@@ -59,7 +61,7 @@ PROCEDURE setMnhParameters(CONST p: T_arrayOfString);
 
 {$undef INNER_FORMATTING}
 {$WARN 5024 OFF}
-FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION clearPrint_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
     system.enterCriticalSection(print_cs);
@@ -82,7 +84,7 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral):ansistring; inline;
     end;
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION print_imp intFuncSignature;
   begin
     system.enterCriticalSection(print_cs);
     context.adapters^.printOut(formatTabs(split(getStringToPrint(params))));
@@ -90,19 +92,19 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=newVoidLiteral;
   end;
 
-FUNCTION note_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION note_imp intFuncSignature;
   begin
     context.adapters^.raiseNote(getStringToPrint(params),tokenLocation);
     result:=newVoidLiteral;
   end;
 
-FUNCTION warn_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION warn_imp intFuncSignature;
   begin
     context.adapters^.raiseWarning(getStringToPrint(params),tokenLocation);
     result:=newVoidLiteral;
   end;
 
-FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION fail_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
     else begin
@@ -112,7 +114,7 @@ FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=nil;
   end;
 
-FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION mnhParameters_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       if mnhParameters=nil then mnhParameters:=newListLiteral;
@@ -121,31 +123,31 @@ FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else result:=nil;
   end;
 
-FUNCTION serialize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION serialize_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=newStringLiteral(serialize(params^.value(0),tokenLocation,context.adapters,false,false))
-    else if (params<>nil) and (params^.size=2) and (params^.value(1)^.literalType=lt_boolean)
-    then result:=newStringLiteral(serialize(params^.value(0),tokenLocation,context.adapters,false,P_boolLiteral(params^.value(1))^.value))
+    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters,false,false))
+    else if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_boolean)
+    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters,false,P_boolLiteral(arg1)^.value))
     else result:=nil;
   end;
 
-FUNCTION deserialize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION deserialize_impl intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
-    then result:=deserialize(P_stringLiteral(params^.value(0))^.value,tokenLocation,context.adapters,2)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context.adapters,2)
     else result:=nil;
   end;
 
-FUNCTION bits_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION bits_impl intFuncSignature;
   VAR bits:bitpacked array [0..63] of boolean;
       k:longint;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       initialize(bits);
-      move(P_intLiteral(params^.value(0))^.value,bits,8);
+      move(P_intLiteral(arg0)^.value,bits,8);
       result:=newListLiteral;
-      for k:=0 to 63 do P_listLiteral(result)^.appendBool(bits[k]);
+      for k:=0 to 63 do lResult^.appendBool(bits[k]);
     end else result:=nil;
   end;
 
