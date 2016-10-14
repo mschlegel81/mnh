@@ -393,6 +393,19 @@ FUNCTION escape_imp intFuncSignature;
 STRINGLITERAL_ROUTINE;
 {$undef STRINGLITERAL_ROUTINE}
 
+FUNCTION escapePascal_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(escapeString(str0^.value,es_strictPascalStyle));
+  end;
+
+FUNCTION escapeJava_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(escapeString(str0^.value,es_javaStyle));
+  end;
+
+
 FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
   VAR lookFor,replaceBy:T_arrayOfString;
       i:longint;
@@ -756,6 +769,8 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);//Replaces all characters in s which are not in whitelist by instead.#//Whitelist must be a list of ASCII characters, instead must be an ASCII character');
   registerRule(STRINGS_NAMESPACE,'unbrace',@unbrace_imp,'unbrace(S:string);//Returns an unbraced representation of S');
   registerRule(STRINGS_NAMESPACE,'escape',@escape_imp,'escape(S:string);//Returns an escaped representation of S');
+  registerRule(STRINGS_NAMESPACE,'escapePascal',@escapePascal_imp,'escapePascal(S:string);//Returns an escaped representation of S for use in Pascal source code');
+  registerRule(STRINGS_NAMESPACE,'escapeJava',@escapeJava_imp,'escapeJava(S:string);//Returns an escaped representation of S for use in Java source code');
   registerRule(STRINGS_NAMESPACE,'replaceOne',@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);//Replaces the first occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
   registerRule(STRINGS_NAMESPACE,'replace',@replace_impl,'replace(source:string,lookFor,replaceBy);//Recursively replaces all occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
   registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);//Returns a string containing s repeated k times');

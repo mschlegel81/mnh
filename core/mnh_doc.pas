@@ -58,7 +58,7 @@ PROCEDURE ensureDemos;
   begin
     setLength(code,length(ensurePackages_mnh));
     for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
-    append(code,'('+escapeString(configDir)+')');
+    append(code,'('+escapeString(configDir,es_dontCare)+')');
     demoCodeToHtmlCallback(code);
   end;
 

@@ -744,7 +744,7 @@ FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ans
 FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val];   end;
 FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=intToStr(val);     end;
 FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
-FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=escapeString(val); end;
+FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=escapeString(val,es_pickShortest); end;
 FUNCTION T_expressionLiteral.toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=subruleToStringCallback(val,lengthLimit); end;
 FUNCTION T_listLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   VAR i,remainingLength: longint;
@@ -1330,7 +1330,7 @@ FUNCTION T_stringLiteral.unbrace: P_stringLiteral;
 
 FUNCTION T_stringLiteral.escape: P_stringLiteral;
   begin
-    result:=newStringLiteral(escapeString(val));
+    result:=newStringLiteral(escapeString(val,es_pickShortest));
   end;
 
 PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
