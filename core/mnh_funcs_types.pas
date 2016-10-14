@@ -177,6 +177,11 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckKeyValueList}
 GENERIC_TYPE_CHECK;
 
+{$define FUNC_ID:=isFlatList}
+{$define TYPE_CHECK:=tt_typeCheckKeyValueList}
+GENERIC_TYPE_CHECK;
+
+
 {$define FUNC_ID:=isExpression}
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;
@@ -207,6 +212,7 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'isRealList',@isRealList          ,'isRealList(x);//Returns true if x is a realList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isStringList',@isStringList      ,'isStringList(x);//Returns true if x is a stringList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isNumList',@isNumList            ,'isNumList(x);//Returns true if x is a numList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isFlatList',@isFlatList          ,'isFlatList(x);//Returns true if x is a flat list. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isKeyValueList',@isKeyValueList  ,'isKeyValueList(x);//Returns true if x is a keyValueList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isExpression',@isExpression      ,'isExpression(x);//Returns true if x is an expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
   registerRule(TYPECAST_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');

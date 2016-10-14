@@ -215,6 +215,7 @@ PROCEDURE TSynMnhSyn.next;
       i: longint;
       lc:T_messageType;
       specialLineCase:T_messageType;
+      tt: T_tokenType;
 
   FUNCTION continuesWith(CONST part:shortString; CONST offset:longint):boolean;
     VAR k:longint;
@@ -336,31 +337,18 @@ PROCEDURE TSynMnhSyn.next;
       ':': begin
         inc(run);
         case fLine [run] of
-          'b', 'e', 'i', 'l', 'n', 's', 'r', 'k': begin
+          'b', 'e', 'i', 'l', 'n', 's', 'r', 'k', 'f': begin
             localId := ':';
             i:=run;
             while fLine [i] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
               localId := localId+fLine [i];
               inc(i);
             end;
-            if (localId=C_tokenInfo[tt_typeCheckScalar      ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckList        ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckBoolean     ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckBoolList    ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckInt         ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckIntList     ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckReal        ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckRealList    ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckString      ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckStringList  ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckNumeric     ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckNumList     ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckExpression  ].defaultId) or
-               (localId=C_tokenInfo[tt_typeCheckKeyValueList].defaultId) then begin
+            for tt in C_typeChecks do if (fTokenId<>tkOperator) and (localId=C_tokenInfo[tt].defaultId) then begin
               fTokenId := tkOperator;
               run:=i;
-            end
-            else begin
+            end;
+            if fTokenId<>tkOperator then begin
               fTokenId := tkOperator;
               inc(run);
             end;

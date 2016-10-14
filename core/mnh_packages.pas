@@ -398,31 +398,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                 rulePatternElement.create(parts[i].first^.txt);
                 parts[i].first:=context.disposeToken(parts[i].first);
                 if (parts[i].first<>nil) then begin
-                  if (parts[i].first^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn,
-                                                  tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList,
-                                                  tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList,
-                                                  tt_typeCheckExpression, tt_typeCheckKeyValueList]) then
-                  begin
+                  if (parts[i].first^.tokType in C_typeChecks) then begin
                     rulePatternElement.restrictionType:=parts[i].first^.tokType;
                     parts[i].first:=context.disposeToken(parts[i].first);
-                    if rulePatternElement.restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn]
-                    then begin
-                      //Identified, restricted parameter: f(x>?)->
-                      if (parts[i].first=nil) then fail(parts[i].first) else
-                      if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
-                        rulePatternElement.restrictionId:=parts[i].first^.txt;
-                        parts[i].first:=context.disposeToken(parts[i].first);
-                        assertNil(parts[i].first);
-                      end else begin
-                        reduceExpression(parts[i].first,0,context);
-                        if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
-                          rulePatternElement.restrictionValue:=parts[i].first^.data;
-                          rulePatternElement.restrictionValue^.rereference;
-                          parts[i].first:=context.disposeToken(parts[i].first);
-                          assertNil(parts[i].first);
-                        end else fail(parts[i].first);
-                      end;
-                    end else if rulePatternElement.restrictionType in C_modifieableTypeChecks then begin
+
+                    if rulePatternElement.restrictionType in C_modifieableTypeChecks then begin
                       if (parts[i].first=nil) then begin end else
                       if (parts[i].first^.tokType=tt_braceOpen) and
                          (parts[i].first^.next<>nil) and
@@ -436,10 +416,31 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                         context.cascadeDisposeToken(parts[i].first);
                       end else fail(parts[i].first);
                     end else assertNil(parts[i].first);
+
+                  end else if (parts[i].first^.tokType in C_patternElementComparators) then begin
+                    rulePatternElement.restrictionType:=parts[i].first^.tokType;
+                    parts[i].first:=context.disposeToken(parts[i].first);
+
+                    if (parts[i].first=nil) then fail(parts[i].first) else
+                    if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
+                      rulePatternElement.restrictionId:=parts[i].first^.txt;
+                      parts[i].first:=context.disposeToken(parts[i].first);
+                      assertNil(parts[i].first);
+                    end else begin
+                      reduceExpression(parts[i].first,0,context);
+                      if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
+                        rulePatternElement.restrictionValue:=parts[i].first^.data;
+                        rulePatternElement.restrictionValue^.rereference;
+                        parts[i].first:=context.disposeToken(parts[i].first);
+                        assertNil(parts[i].first);
+                      end else fail(parts[i].first);
+                    end;
+
                   end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
-                    rulePatternElement.restrictionType:=tt_customTypeCheck;
+                    rulePatternElement.restrictionType:=parts[i].first^.tokType;
                     rulePatternElement.customTypeCheck:=P_rule(parts[i].first^.data)^.subrules[0];
                     parts[i].first:=context.disposeToken(parts[i].first);
+
                     assertNil(parts[i].first);
                   end else fail(parts[i].first);
                 end;
