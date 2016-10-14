@@ -1051,7 +1051,7 @@ PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
   begin
     OpenDialog.FilterIndex:=3;
     OpenDialog.options:=OpenDialog.options-[ofPathMustExist,ofFileMustExist];
-    if OpenDialog.execute then editorMeta[inputPageControl.activePageIndex].insertText(escapeString(OpenDialog.fileName));
+    if OpenDialog.execute then editorMeta[inputPageControl.activePageIndex].insertText(escapeString(OpenDialog.fileName,es_pickShortest));
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
