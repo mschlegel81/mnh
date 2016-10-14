@@ -293,13 +293,13 @@ FUNCTION unflatten_imp intFuncSignature;
         exit(arg0);
       end;
       if (arg1^.literalType in C_matchingTypes[tt_typeCheckFlatList]) then begin
-        SetLength(openerCloser,list1^.size);
+        setLength(openerCloser,list1^.size);
         for i:=0 to list1^.size-1 do begin
           openerCloser[i,0]:=list1^.value(i);
           openerCloser[i,1]:=list2^.value(i);
         end;
       end else begin
-        SetLength(openerCloser,1);
+        setLength(openerCloser,1);
         openerCloser[0,0]:=arg1;
         openerCloser[0,1]:=arg2;
       end;
@@ -308,7 +308,7 @@ FUNCTION unflatten_imp intFuncSignature;
         disposeLiteral(result);
         context.adapters^.raiseError('Error in unflatten: unbalanced paranthesis found',tokenLocation);
       end;
-      SetLength(openerCloser,0);
+      setLength(openerCloser,0);
     end;
   end;
 
