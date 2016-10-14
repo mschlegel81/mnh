@@ -265,8 +265,8 @@ CONST
     {tt_typeCheckString}       [lt_string],
     {tt_typeCheckStringList}   [lt_stringList, lt_emptyList],
     {tt_typeCheckNumeric}      [lt_int, lt_real],
-    {tt_typeCheckFlatList}     [lt_intList, lt_realList, lt_numList, lt_stringList,lt_booleanList,lt_flatList,lt_emptyList],
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
+    {tt_typeCheckFlatList}     [lt_intList, lt_realList, lt_numList, lt_stringList,lt_booleanList,lt_flatList,lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
   C_modifieableTypeChecks: T_tokenTypeSet=[tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckFlatList,tt_typeCheckExpression,tt_typeCheckKeyValueList];
