@@ -12,15 +12,15 @@ type BuildConfig(L:list(7))->L[0].isBoolean AND
 //BUILTS  linux, flavour , binary                    , compiler                  , compilerOptions                                 , compilerOutput
 BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,'..\lazarus64\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
          [false,'FOWin64','./mnh.exe'                ,'..\lazarus64\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
-         [false,'LOWin32','bin32/mnh_light.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],         
-         [false,'FOWin32','bin32/mnh.exe'            ,'..\lazarus32\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],         
+         [false,'LOWin32','bin32/mnh_light.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
+         [false,'FOWin32','bin32/mnh.exe'            ,'..\lazarus32\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
          [true ,'LOLinux','./mnh_light'              ,'lazbuild'                 ,['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light'          ,false],
          [true ,'FOLinux','./mnh'                    ,'lazbuild'                 ,['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh'                     ,false],
          [false,'LDWin64','./mnh_light_debug.exe'    ,'..\lazarus64\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
          [false,'FDWin64','./mnh_debug.exe'          ,'..\lazarus64\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
          [false,'LDWin32','bin32/mnh_light_debug.exe','..\lazarus32\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
-         [false,'FDWin32','bin32/mnh_debug.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],         
-         [true ,'LDLinux','./mnh_light_debug'        ,'lazbuild'                 ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],         
+         [false,'FDWin32','bin32/mnh_debug.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
+         [true ,'LDLinux','./mnh_light_debug'        ,'lazbuild'                 ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
          [true ,'FDLinux','./mnh_debug'              ,'lazbuild'                 ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]];
 LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
 //Configuration:=====================================================

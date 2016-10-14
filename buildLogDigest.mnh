@@ -12,5 +12,3 @@ main->'build.log'.fileLines
 .each(line,line[1].replace(line[0],"\t"&line[0]))
 .join("\n")
 .print;
-
-
