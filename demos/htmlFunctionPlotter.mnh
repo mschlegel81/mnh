@@ -1,6 +1,6 @@
 private FIELD_FMT:='<tr><td>%s:</td><td><INPUT TYPE="text" NAME="%s" VALUE="%s" SIZE=50 onkeydown="if (event.keyCode == 13) { this.form.submit(); return false; }"></td></tr>';
 
-private isValidReal(x)->x:numeric AND not(x.isNan) and not(x.isInfinite);
+private isValidReal(x)->x.isNumeric AND not(x.isNan) and not(x.isInfinite);
 memoized
 pageSet(rawParameters,parameters)->begin
   //extract parameters in string form
@@ -12,17 +12,17 @@ pageSet(rawParameters,parameters)->begin
   local validationMessages:=[];
   //transform function in string form to expression
   local f:=void;
-  try(begin
+  try({begin
         //replace "x" by valid expression variable "$x"
         f:=f_.replace('x','$x').toExpression;
         f.arity==1
         ? void
         : validationMessages|='Function must unary.';
-        f(random):numeric
+        f(random).isNumeric
         ? void
         : validationMessages|='Function must return a numeric value.';
-      end,
-      validationMessages|=(escape(f_)&' is not a valid function.'));
+      end},
+      {validationMessages|=(escape(f_)&' is not a valid function.')});
 
   isValidReal(local x0:=softCast(x0_))
   ? void
@@ -33,7 +33,7 @@ pageSet(rawParameters,parameters)->begin
   : validationMessages|=(escape(x1_)&' is not a valid value for x1.');
 
   local sp:=softCast(sp_);
-  sp:int AND 2<=sp<=10000
+  sp.isInt AND 2<=sp<=10000
   ? void
   : validationMessages|=(escape(sp_)&' is not a valid value for samples.');
 
