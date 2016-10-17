@@ -180,6 +180,7 @@ PROCEDURE T_microserver.serve;
 
   begin
     socket.create(ip);
+    context^.resetForEvaluation(nil);
     context^.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
     lastActivity:=now;
