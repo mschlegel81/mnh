@@ -1368,6 +1368,28 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               getEnumName(TypeInfo(cTokType[ 2]),ord(cTokType[ 2]));
     end;
 
+  PROCEDURE cleanupStackAndExpression;
+    VAR clean:boolean=true;
+    begin
+      while (first<>nil) and clean do begin
+        case first^.tokType of
+          tt_beginBlock,tt_beginExpression,tt_beginRule: context.scopePush( first^.tokType=tt_beginRule);
+          tt_endBlock,tt_endExpression,tt_endRule: begin
+            while (stack.topIndex>=0) and not(stack.dat[stack.topIndex]^.tokType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
+            stack.popDestroy(context);
+            if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.dat[stack.topIndex]^.tokType]) then begin
+              if (stack.dat[stack.topIndex]^.tokType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
+              stack.popDestroy(context);
+              context.scopePop;
+            end else clean:=false;
+          end;
+        end;
+        first:=context.disposeToken(first);
+      end;
+      while (stack.topIndex>=0) do stack.popDestroy(context);
+      if first<>nil then context.cascadeDisposeToken(first);
+    end;
+
 {$MACRO ON}
 {$define COMMON_CASES:=
 tt_listBraceOpen: begin
@@ -1701,8 +1723,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
-        context.clearCallStack;
-        if first=nil then while (stack.topIndex>=0) do stack.popLink(first);
+        cleanupStackAndExpression;
       end;
     end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
                  context.adapters^.hasMessageOfType[mt_el5_systemError] or
@@ -1714,9 +1735,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
-     if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
-     context.clearCallStack;
-     while (stack.topIndex>=0) do stack.popLink(first);
+      if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+      cleanupStackAndExpression;
     end;
     stack.destroy;
   end;

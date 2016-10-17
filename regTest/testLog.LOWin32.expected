@@ -681,7 +681,6 @@ out> 27
 out> [27,-8]
  in> f(3, 4);
 Error  Cannot evaluate inline function {$y^3} with the given number of parameters; Got 2, expected 1
-out> {$y^3}(3,4)
 --------------------------------------------------------------------------------
  in> f()->{$y^3};
 
@@ -697,7 +696,6 @@ out> 27
 out> [27,-8]
  in> f(3, 4);
 Error  Cannot evaluate inline function {$y^3} with the given number of parameters; Got 2, expected 1
-out> {$y^3}(3,4)
 --------------------------------------------------------------------------------
  in> f(...)->{$y^3};
 
@@ -726,7 +724,6 @@ out> {$y^3+[3,-2]}
 out> 67
  in> f;
 Error  Cannot apply user defined rule f to empty parameter list
-out> f
 ***** countTheCoins *****
 There are 293 ways to make a dollar from coins
   and 4563 ways to make a euro from coins.
@@ -3131,7 +3128,6 @@ out> 1
 out> {$x-$x^2+$x^3}
  in> toExpression('');
 Error  The parsed expression appears to be empty
-out> toExpression('')
  in> not(true);
 out> false
  in> not([true, false, true]);
@@ -3158,7 +3154,6 @@ out> 65
 out> -1
  in> ord(2.1);
 Error  ord can only be applied to booleans, ints and strings
-out> <ERR>
  in> softCast('A');
 out> 'A'
  in> softCast('"B"');
@@ -3315,10 +3310,8 @@ out> '"\t"'
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in> fail;
 User-Error  Fail.
-out> fail
  in> fail("Told you this wouldn't work!");
 User-Error  Told you this wouldn't work!
-out> fail("Told you this wouldn't work!")
  in> hash(1);
 out> 3
  in> hash([1..3]);
@@ -3361,7 +3354,6 @@ out> ['TEXT','ABC']
 Note  Creating new rule: t
  in> plot(t, sin(t));
 Error  Unresolved identifier "plot"
-out> plot(t, sin(t))
  in> abs(3);
 out> 3
  in> abs(-5/7);
@@ -3547,14 +3539,12 @@ out> true
 out> true
  in> toBoolean(3);
 Error  3 cannot be cast to boolean
-out> toBoolean(3)
  in> toInt('32');
 out> 32
  in> toInt(3.0);
 out> 3
  in> toInt(3.1);
 Error  3.1 cannot be cast to int
-out> toInt(3.1)
  in> toInt(false);
 out> 0
  in> toReal('3.212');
@@ -3565,7 +3555,6 @@ out> 1
 out> 3.0
  in> getOptions;
 Error  Unresolved identifier "getOptions"
-out> getOptions
  in> executor;
 out> '\bin32\mnh_light.exe'
  in> print("1\n2.0\n03.45");
@@ -3712,4 +3701,3 @@ out> 'file.newExtension'
 out> 'file.2.newExtension'
  in> httpError;
 Error  Unresolved identifier "httpError"
-out> httpError
