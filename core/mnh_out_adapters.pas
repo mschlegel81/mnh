@@ -359,11 +359,16 @@ FUNCTION T_abstractFileOutAdapter.append(CONST message: T_storedMessage):boolean
 FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
   VAR newFullFileName:string;
   begin
+    enterCriticalSection(cs);
     newFullFileName:=expandFileName(newFileName);
-    if newFileName=outputFileName then exit(false);
+    if newFileName=outputFileName then begin
+      leaveCriticalSection(cs);
+      exit(false);
+    end;
     flush();
     outputFileName:=newFullFileName;
     result:=true;
+    leaveCriticalSection(cs);
   end;
 //=====================================================:T_abstractFileOutAdapter
 //T_textFileOutAdapter:=========================================================
@@ -377,8 +382,8 @@ PROCEDURE T_textFileOutAdapter.flush;
       handle:text;
 
   begin
+    enterCriticalSection(cs);
     if length(storedMessages)>0 then begin
-      enterCriticalSection(cs);
       try
         assign(handle,outputFileName);
         if fileExists(outputFileName) and not(forceRewrite)
@@ -391,10 +396,10 @@ PROCEDURE T_textFileOutAdapter.flush;
         end;
         clear;
         close(handle);
-      finally
-        leaveCriticalSection(cs);
+      except
       end;
     end;
+    leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST messageTypesToInclude_:T_messageTypeSet; CONST forceNewFile:boolean);
@@ -663,6 +668,7 @@ PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
       if currentAdapterIndex>=0 then P_textFileOutAdapter(adapter[currentAdapterIndex])^.switchFile(filenameOrBlank)
       else begin
         new(txtAdapter,create(filenameOrBlank,defaultOutputBehavior,false));
+        txtAdapter^.adapterType:=at_printTextFileAtRuntime;
         txtAdapter^.messageTypesToInclude:=[mt_printline];
         addOutAdapter(txtAdapter,true);
       end;
