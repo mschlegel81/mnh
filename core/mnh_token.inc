@@ -1021,7 +1021,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
             else begin
               if (P_rule(first^.data)^.id=MAIN_RULE_ID)
-              then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true),first^.location)
+              then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true)+LineEnding+P_rule(first^.data)^.getCmdLineHelpText,first^.location)
               else context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+toParameterListString(parameterListLiteral,true),first^.location);
             end;
             exit;

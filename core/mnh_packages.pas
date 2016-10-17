@@ -58,7 +58,7 @@ TYPE
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       FUNCTION getDoc:P_userPackageDocumentation;
       {$endif}
-      PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
+      FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
       FUNCTION isMain:boolean;
@@ -635,12 +635,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
         end;
         //----------------------:special handling if main returns an expression
-        if context.adapters^.hasMessageOfType[mt_el3_noMatchingMain] then begin
-          context.adapters^.printOut('');
-          context.adapters^.printOut('Try one of the following:');
-          context.adapters^.printOut('');
-          printHelpOnMain(context.adapters^);
-        end;
         context.cascadeDisposeToken(t);
         disposeLiteral(parametersForMain);
         parametersForMain:=nil;
@@ -954,18 +948,19 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
   end;
 {$endif}
 
-PROCEDURE T_package.printHelpOnMain(VAR adapters:T_adapters);
+FUNCTION T_package.getHelpOnMain:ansistring;
   VAR mainRule:P_rule;
       docText:T_arrayOfString;
       i:longint;
   begin
     if not(packageRules.containsKey(MAIN_RULE_ID,mainRule))
-    then adapters.printOut('The package contains no main rule')
+    then exit('The package contains no main rule')
     else begin
+      result:='Try one of the following:'+LineEnding;
       docText:=split(mainRule^.getCmdLineHelpText,C_lineBreakChar);
-      for i:=0 to 1 do adapters.printOut(docText[i]);
+      for i:=0 to 1 do result:=result+LineEnding+docText[i];
       dropFirst(docText,2);
-      adapters.printOut(formatTabs(docText));
+      result:=result+LineEnding+join(formatTabs(docText),LineEnding);
     end;
   end;
 

@@ -132,7 +132,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 
       if wantHelpDisplay then begin
         package.loadForDocumentation;
-        package.printHelpOnMain(consoleAdapters);
+        writeln(package.getHelpOnMain);
         package.destroy;
         wantHelpDisplay:=false;
         exit;
