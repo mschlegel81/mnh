@@ -1,7 +1,7 @@
 tolerantParseTime(input:string)->
-  try(parseTime('hh:nn:ss',input),
-  try(parseTime('hh:nn',input),
-  false));
+  try({parseTime('hh:nn:ss',input)},
+      {try({parseTime('hh:nn',input)},
+           false)});
 
 readTimeOrInterval(questionPrefix:string)->begin
   local result:=false;
