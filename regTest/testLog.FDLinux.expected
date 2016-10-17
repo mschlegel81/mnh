@@ -1372,6 +1372,10 @@ See http://rosettacode.org/wiki/Huffman_coding
 Prisoners: 41
 Step size: 3
 Survivors: [30]
+***** json *****
+['Reiten','Golfen','Lesen']
+2000000.0
+{"Herausgeber":"Xema","Nummer":"1234-5678-9012-3456","Deckung":2000000.0}
 ***** lastSundays *****
 25.01.2015
 22.02.2015

@@ -1,0 +1,39 @@
+private castWarning(s:string)->(s=='null' ? warn("Mapping null JSON value to empty string") orElse '' : s.softCast);
+private unescapeKey(s:string)->begin
+  local result:=s.softCast;
+  (result==s) OR not(result.isString)
+  ? fail('Invalid json key ',escape(s))
+  : void;
+  result;
+end;
+
+private joinJsonKeyValuePairs(L:list)->begin
+  local pairJoinerIndex   :=L.each(e,e==':' ? index : void);
+  local pairSeparatorIndex:=L.each(e,e==',' ? index : void);
+  pairJoinerIndex==[]
+  ? L //JSON array
+    .each(e,e==',' ? void : e.isList ? e.joinJsonKeyValuePairs : e.castWarning)
+  : begin
+      //JSON Object
+      (pairJoinerIndex.head==1 AND pairJoinerIndex.tail==pairSeparatorIndex+2) ? void : fail('Occurrences of ":" and "," do not match. Joiners: ',pairJoinerIndex,'; Separators: ',pairSeparatorIndex);
+      pairJoinerIndex
+      .each(i,L[[i-1,i+1]])
+      .each(pair,[pair[0].unescapeKey,pair[1].isList ? pair[1].joinJsonKeyValuePairs : pair[1].castWarning]);
+    end;
+end;
+
+parseJson(S:stringList)->parseJson(S.join);
+parseJson(s:string)->begin
+  local tokenized:=s
+    .tokenSplit('java')
+    .each(tok,tok.trim)
+    .each(tok,tok=='' ? void : tok);
+  (tokenized.head=='{' AND tokenized.trailing=='}') ? void : fail('Input does not contain a valid JSON Object.');
+  tokenized:=tokenized.unflatten(['[','{'],[']','}'])[0];
+  joinJsonKeyValuePairs(tokenized);
+end;
+
+formatJson(s:string)->s.escapeJava;
+formatJson(s:scalar)->toString(s);
+formatJson(L:keyValueList)->'{'&L.each(pair,pair[0].escapeJava&':'&formatJson(pair[1])).join(",")&'}';
+formatJson(L:list)->'['&L.each(entry,entry.formatJson).join(',')&']';
