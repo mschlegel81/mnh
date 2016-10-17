@@ -300,27 +300,34 @@ FUNCTION try_imp intFuncSignature;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
-      ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_expression)) then begin
+      ((params^.size=1) or (params^.size=2)) then begin
       context.callStackPush(tokenLocation,@builtinLocation_try,params,nil);
       oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
       result:=P_subrule(P_expressionLiteral(arg0)^.value)^.directEvaluateNullary(tokenLocation,context,0);
-      if context.adapters^.noErrors then begin
-        errorCase:=false;
-      end else begin
+      if context.adapters^.noErrors
+      then errorCase:=false
+      else begin
         if result<>nil then disposeLiteral(result);
         messages:=messagesToLiteralForSandbox(P_collectingOutAdapter(context.adapters^.getAdapter(0))^.storedMessages);
         errorCase:=true;
       end;
       context.leaveTryStatementReassumingPreviousAdapters(oldAdapters,errorCase);
       if errorCase then begin
-        if params^.size=2 then result:=P_subrule(P_expressionLiteral(arg1)^.value)^.directEvaluateUnary(messages,tokenLocation,context,0)
-                          else result:=newVoidLiteral;
+        if params^.size=2 then begin
+          if arg1^.literalType=lt_expression then begin
+            if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)
+            then result:=P_subrule(P_expressionLiteral(arg1)^.value)^.directEvaluateUnary(messages,tokenLocation,context,0)
+            else result:=P_subrule(P_expressionLiteral(arg1)^.value)^.directEvaluateNullary       (tokenLocation,context,0);
+          end else begin
+            result:=arg1;
+            result^.rereference;
+          end;
+        end else result:=newVoidLiteral;
         disposeLiteral(messages);
       end;
       context.callStackPop();
     end;
   end;
-
 
 TYPE P_asyncTask=^T_asyncTask;
      T_asyncTask=record
@@ -828,7 +835,9 @@ FUNCTION clearAllCaches_imp intFuncSignature;
                                                          'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
   builtinLocation_try.create(SYSTEM_BUILTIN_NAMESPACE,'try');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,'try(E:expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
-                                                       'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).');
+                                                       'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
+                                                       'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
+                                                       'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                                                            'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
   registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);//Returns an expression parsed from S');
