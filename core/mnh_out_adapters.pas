@@ -20,8 +20,8 @@ CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
     {at_console}  [mt_clearConsole..mt_el5_haltMessageReceived,mt_timing_info],
-    {at_textFile} [mt_printline..mt_el5_haltMessageReceived,mt_timing_info,mt_endOfEvaluation],
-    {at_htmlFile} [mt_echo_input..mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithInstantDisplay{$endif}],
+    {at_textFile} [mt_printline..mt_el5_haltMessageReceived,mt_timing_info],
+    {at_htmlFile} [mt_echo_input..mt_el5_haltMessageQuiet,mt_timing_info{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithInstantDisplay{$endif}],
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);

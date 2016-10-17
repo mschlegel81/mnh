@@ -84,7 +84,7 @@ TYPE
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression, tt_try, tt_toId, tt_pseudoFuncPointer,
+    tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression, tt_toId, tt_pseudoFuncPointer,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -234,7 +234,6 @@ CONST
     {tt_endBlock}           tt_EOL,
     {tt_endRule}            tt_EOL,
     {tt_endExpression}      tt_EOL,
-    {tt_try}                tt_EOL,
     {tt_toId}               tt_EOL,
                             tt_EOL,
     {tt_braceOpen}          tt_braceClose,
@@ -300,7 +299,6 @@ CONST
 {tt_endBlock}                   (defaultId:'end';          reservedWordClass:rwc_specialConstruct; helpText:'Special construct: end#Closing delimiter for procedural blocks'),
 {tt_endRule}                    (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
 {tt_endExpression}              (defaultId:'';             reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
-{tt_try}                        (defaultId:'try';          reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling#Syntax: try(<body>,<catch body>) - where <catch body> is executed only if evaluation of <body> fails'),
 {tt_toId}                       (defaultId:'toId';         reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
 {tt_pseudoFuncPointer}          (defaultId:'::';           reservedWordClass:rwc_specialConstruct; helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'),
 {tt_braceOpen}                  (defaultId:'(';            reservedWordClass:rwc_not_reserved;     helpText:'Opening round bracket#Used as in default mathematical syntax.'),

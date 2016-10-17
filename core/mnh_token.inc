@@ -582,10 +582,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
 
-  PROCEDURE initTokTypes; inline;
+  PROCEDURE initTokTypes; {$ifndef debugMode}inline;{$endif}
     begin
       if stack.topIndex>=0 then cTokType[-1]:=stack.dat[stack.topIndex]^.tokType
-                       else cTokType[-1]:=tt_EOL;
+                           else cTokType[-1]:=tt_EOL;
       if first<>nil then begin
         cTokType[0]:=first^.tokType;
         if first^.next<>nil then begin
@@ -1001,52 +1001,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       dispose(headRule,destroy);
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
-      didSubstitution:=true;
-    end;
-
-  PROCEDURE resolveTry;
-    VAR bodyParts:T_bodyParts;
-        closingBracket:P_token;
-        errorCase:boolean;
-        oldAdapters:P_adapters;
-
-    begin
-      bodyParts:=getBodyParts(first,1,context,closingBracket);
-      if closingBracket=nil then exit;
-
-      if length(bodyParts)<>2 then begin
-        context.adapters^.raiseError('Invalid try-construct; Exactly two arguments (try-clause and except-clause) are expected.',first^.location);
-        exit;
-      end;
-      oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
-
-
-      reduceExpression(bodyParts[0].first,callDepth+1,context);
-      if context.adapters^.noErrors then begin
-        context.cascadeDisposeToken(bodyParts[1].first);
-        bodyParts[0].last:=bodyParts[0].first^.last;
-        errorCase:=false;
-      end else begin
-        context.cascadeDisposeToken(bodyParts[0].first);
-        errorCase:=true;
-      end;
-      context.leaveTryStatementReassumingPreviousAdapters(oldAdapters,errorCase);
-      if errorCase then begin
-        first^.tokType:=tt_beginBlock; //mutate try-token to begin
-        first^.next:=bodyParts[1].first;
-        bodyParts[1].last^.next:=context.newToken(bodyParts[1].last^.location,'',tt_semicolon);
-        bodyParts[1].last:=bodyParts[1].last^.next;
-        bodyParts[1].last^.next:=closingBracket;
-        closingBracket^.tokType:=tt_endBlock; //mutate closing bracket to end
-        stack.push(first);
-        didSubstitution:=true;
-        context.scopePush(false);
-      end else begin
-        first^.tokType:=tt_braceOpen; //mutate try-token to (
-        first^.next:=bodyParts[0].first;
-        bodyParts[0].last^.next:=closingBracket;
-      end;
-      setLength(bodyParts,0);
       didSubstitution:=true;
     end;
 
@@ -1727,10 +1681,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);
           resolveWhile;
-        end;
-        tt_try: if (cTokType[1]=tt_braceOpen) then begin
-          first^.next:=context.disposeToken(first^.next);
-          resolveTry;
         end;
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)

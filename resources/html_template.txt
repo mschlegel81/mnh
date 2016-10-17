@@ -1152,7 +1152,6 @@ out> [2,5,8]
 </ul>
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
-<li><h4><a href="#try">try</a></h4></li>
 <li><h4><a href="#async">async</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
@@ -1324,31 +1323,6 @@ Where <code>condition</code> is an expression returning a boolean value and body
        end;
  in> greatestCommonDivisor(12,102);
 out> 6
-<!--end-->
-</code>
-
-<h3><a name="try">try</a></h3>
-The <code>try</code> construct can be used for basic exception handling.<br>
-Syntax:<code>
-<!--mnh-->
-  try(body,exceptionHandling);
-<!--end-->
-</code>
-First <code>body</code> is executed. If no exception is encountered, <code>exceptionHandling</code> is ignored.<br>
-If there is an exception, <code>exceptionHandling</code> is executed.
-Note that only a message of level 3 or higher will lead to execution of the <code>exceptionHandling</code> block.<br>
-Example:<code>
-<!--mnh-->
-   in> safeParse(s:string)->
-         try(toExpression(s),
-             print('Parsing failed - returning fallback result.') orElse {0});
-   in> safeParse('!');
-<!--end-->
-  Parsing failed - returning fallback result.
-<!--mnh-->
-  out> {0}
-   in> safeParse('2+$x^2');
-  out> {(2+$x^2)}
 <!--end-->
 </code>
 
