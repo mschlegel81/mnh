@@ -71,8 +71,8 @@ FUNCTION addPlot intFuncSignature;
       if (sizeWithoutOptions = 2) and
          (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
-         (list0^.size=P_listLiteral(arg1)^.size) then begin
-        context.adapters^.plot.addRow(options,newDataRow(list0,P_listLiteral(arg1)));
+         (list0^.size=list1^.size) then begin
+        context.adapters^.plot.addRow(options,newDataRow(list1,list0));
         context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         exit(newVoidLiteral);
       end;
