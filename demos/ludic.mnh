@@ -1,24 +1,24 @@
-memoized
-ludics_gen(1)->[1];
-ludics_gen(2)->[1,2];
-ludics_gen(n>2)->begin
-  print('Generating @',n);
-  local L:=ludics_gen(n-1);
-  local X:=[2..max(L)*4];
-  L.tail.each(ludic,X:=X[[0..size(X)-1] mod ludic<>0]);
-  L|X;
-end;
-
-ludics_by_size(resultSize)->begin
-  local genIndex:=1;
-  local result:=ludics_gen(genIndex);
-  while(result.size<resultSize,result:=ludics_gen(genIndex+=1));
-  head(result,resultSize);
+sieve->begin
+  local candidates:=[2..21511];
+  local L:=[1];
+  while(not(candidates==[]),begin
+    local next:=head(candidates);
+    next>candidates.size
+    ? begin
+        L|=candidates;
+        candidates:=[];
+      end
+    : begin
+        candidates:=candidates[[0..candidates.size-1] mod next<>0];
+        L|=next;
+      end;
+  end);
+  L;
 end;
 
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
 main->begin
-  local LUDICS:=ludics_by_size(2005);
+  local LUDICS:=sieve;
   local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);
   print("Ludic Numbers",
       "\n  The first 25 are: ",LUDICS.head(25),'.',
