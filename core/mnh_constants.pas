@@ -1,10 +1,6 @@
 UNIT mnh_constants;
 INTERFACE
 USES sysutils;
-{$ifdef CPU32}
-//This directive seems to be beneficial only for 32bit targets
-{$PACKENUM 1}
-{$endif}
 CONST
   {$i code_hash.inc}
   LOGO:array[0..6] of string=(
