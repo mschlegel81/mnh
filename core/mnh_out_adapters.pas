@@ -1,6 +1,6 @@
 UNIT mnh_out_adapters;
 INTERFACE
-USES mnh_constants, mnh_basicTypes, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif}{$ifdef IMIG},mypics{$endif};
+USES mnh_constants, mnh_basicTypes, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif}{$ifdef imig},mypics{$endif};
 TYPE
   T_storedMessage = record
     messageType : T_messageType;
@@ -110,7 +110,7 @@ TYPE
       hasNeedGUIerror:boolean;
       plot:T_plot;
       {$endif}
-      {$ifdef IMIG}
+      {$ifdef imig}
       picture:specialize G_safeVar<P_rawImage>;
       {$endif}
       CONSTRUCTOR create;
@@ -164,7 +164,7 @@ CONST
     mt_el3_evalError..high(T_messageTypeSet)];
 
   C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_el3_evalError..mt_reloadRequired
-    {$ifdef FULLVERSION},
+    {$ifdef fullVersion},
     mt_plotFileCreated,
     mt_plotCreatedWithDeferredDisplay,
     mt_plotCreatedWithInstantDisplay,
@@ -424,7 +424,7 @@ CONSTRUCTOR T_adapters.create;
     {$ifdef fullVersion}
     plot.createWithDefaults;
     {$endif}
-    {$ifdef IMIG}
+    {$ifdef imig}
     picture.create(nil);
     {$endif}
     setLength(adapter,0);
@@ -439,7 +439,7 @@ DESTRUCTOR T_adapters.destroy;
     {$ifdef fullVersion}
     plot.destroy;
     {$endif}
-    {$ifdef IMIG}
+    {$ifdef imig}
     if (picture.value<>nil) then dispose(picture.value,destroy);
     picture.destroy;
     {$endif}

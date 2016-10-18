@@ -7,7 +7,7 @@ pipingBat(command:string)->begin
   local name:=tempFile('temp#.bat');
   name.writeFileLines([command&' 2>> '&log]);
   local code:='cmd'.execPipeless(['/C',name]);
-  code==0 
+  code==0
   ? void
   : failedTests|=command;
   deleteFile(name);
@@ -19,7 +19,7 @@ mnhParameter(demo)->
 demoParamter(demo)->
   demo.matches('24\.mnh'  ) ? ' demo' :
   demo.matches('diff\.mnh') ? ' test' :
-  demo.matches('emptyFolders\.mnh' ) OR demo.matches('findDuplicates\.mnh')  ? ' .' :  
+  demo.matches('emptyFolders\.mnh' ) OR demo.matches('findDuplicates\.mnh')  ? ' .' :
   demo.matches('grep\.mnh') ? ' group demos/*.mnh' :
   '';
 
@@ -32,11 +32,10 @@ main->begin
     : log.appendFileLines([task]);
     pipingBat(task);
   end);
-  failedTests==[] 
+  failedTests==[]
   ? print('All runs terminated with status 0')
-  : begin 
+  : begin
       print('Tests with nonzero exit status: ');
       printf('  %s',failedTests);
     end;
 end;
-

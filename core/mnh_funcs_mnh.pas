@@ -131,7 +131,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .append(newListLiteral(2)^.appendString('targetOs'       )^.appendString( {$I %FPCTargetOS%}                         ),false)^
       .append(newListLiteral(2)^.appendString('codeVersion'    )^.appendString( CODE_HASH                                  ),false)^
       .append(newListLiteral(2)^.appendString('flavour'        )^.appendString({$ifdef fullVersion}'F'{$else}'L'{$endif}+
-                                                                               {$ifdef IMIG}'I'{$else}''{$endif}+
+                                                                               {$ifdef imig}'I'{$else}''{$endif}+
                                                                                {$ifdef debugMode}  'D'{$else}'O'{$endif}+
                                                                                {$I %FPCTargetOS%}                          ),false)
     else result:=nil;

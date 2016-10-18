@@ -1,10 +1,10 @@
-{$ifdef windows}{$MAXSTACKSIZE 100000000}{$endif}
+{$ifdef Windows}{$MAXSTACKSIZE 100000000}{$endif}
 PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-USES {$IFDEF UNIX} cthreads, {$else}
-  {$ifdef DEBUGMODE}heaptrc,{$endif}{$ENDIF}
+USES {$ifdef UNIX} cthreads, {$else}
+  {$ifdef debugMode}heaptrc,{$endif}{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mnh_gui_main,

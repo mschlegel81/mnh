@@ -67,7 +67,7 @@ DESTRUCTOR T_token.destroy;
   end;
 
 PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: T_idString; CONST tokenType: T_tokenType; CONST ptr: pointer);
-  {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
+  {$ifdef debugMode}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=tokenLocation;
     if (tokenText='') and (C_tokenInfo[tokenType].defaultId<>'')
@@ -75,14 +75,14 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
       else txt:=tokenText;
     tokType:=tokenType;
     data:=ptr;
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if (ptr=nil) and (tokenType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
 PROCEDURE T_token.define(CONST original: T_token);
-  {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
+  {$ifdef debugMode}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=original.location;
     txt     :=original.txt;
@@ -93,7 +93,7 @@ PROCEDURE T_token.define(CONST original: T_token);
       tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
     end;
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if (data=nil) and (tokType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     if location.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}

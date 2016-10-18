@@ -13,8 +13,8 @@ CONST
   '|___| \/ |___|___| \___|___| |___| |_____/');
 
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;
-  APP_NAME             ='MNH' {$ifdef IMIG}+'_IMIG'{$endif};
-  APP_TITLE            ='MNH5'{$ifdef IMIG}+'+IMIG'{$endif};
+  APP_NAME             ='MNH' {$ifdef imig}+'_IMIG'{$endif};
+  APP_TITLE            ='MNH5'{$ifdef imig}+'+IMIG'{$endif};
   SCRIPT_EXTENSION     ='.mnh';
 
   LITERAL_TEXT_VOID    = 'void';
@@ -53,7 +53,7 @@ TYPE
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE
                {$ifdef fullVersion},PLOT_NAMESPACE{$endif}
-               {$ifdef IMIG},IMIG_NAMESPACE{$endif}
+               {$ifdef imig},IMIG_NAMESPACE{$endif}
                );
 
 
@@ -68,7 +68,7 @@ CONST
     'files',
     'typecast'
     {$ifdef fullVersion},'plot'{$endif}
-    {$ifdef IMIG},'imig'{$endif}
+    {$ifdef imig},'imig'{$endif}
     );
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
@@ -467,7 +467,7 @@ TYPE
     mt_displayTable,
     mt_guiPseudoPackageFound
     {$endif}
-    {$ifdef IMIG},
+    {$ifdef imig},
     mt_displayImage
     {$endif});
 
@@ -555,7 +555,7 @@ FUNCTION getAppName: string;
 FUNCTION configDir:string;
   begin
     OnGetApplicationName:=@getAppName;
-    {$ifdef WINDOWS}
+    {$ifdef Windows}
     result:=GetAppConfigDir(true);
     {$else}
     result:=GetAppConfigDir(false);

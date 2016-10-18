@@ -53,7 +53,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     result:=length(storedMessages)>0;
     if result then outputLinesLimit:=settings.value^.outputLinesLimit;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
-      {$ifdef DEBUGMODE}
+      {$ifdef debugMode}
       writeln(stdErr,'guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
       {$endif}
       case messageType of
@@ -105,7 +105,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     if wroteToSyn then begin
       if not(MnhForm.showing) then begin
         MnhForm.Show;
-        {$ifdef DEBUGMODE}
+        {$ifdef debugMode}
         writeln(stdErr,'mnh form show triggered');
         {$endif}
       end;

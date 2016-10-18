@@ -582,7 +582,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
 
-  PROCEDURE initTokTypes; {$ifndef debugMode}inline;{$endif}
+  PROCEDURE initTokTypes; {$ifndef DEBUGMODE}inline;{$endif}
     begin
       if stack.topIndex>=0 then cTokType[-1]:=stack.dat[stack.topIndex]^.tokType
                            else cTokType[-1]:=tt_EOL;
@@ -892,7 +892,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         exit
       end;
       if callDepth>STACK_DEPTH_LIMIT then begin
-        {$ifdef DEBUGMODE}
+        {$ifdef debugMode}
         raise Exception.create('Stack overflow in (p)each construct.');
         {$else}
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);

@@ -205,7 +205,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
-                                                                       {$ifdef IMIG}'I'{$else}''{$endif},
+                                                                       {$ifdef imig}'I'{$else}''{$endif},
                                                                        {$ifdef debugMode}'D'{$else}'O'{$endif},
                                                                        {$I %FPCTargetOS%},':',CODE_HASH); quitImmediate:=true; end
         {$ifdef fullVersion}

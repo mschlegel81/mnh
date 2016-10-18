@@ -1,7 +1,7 @@
-{$ifdef WINDOWS}{$MAXSTACKSIZE 100000000}{$endif}
+{$ifdef Windows}{$MAXSTACKSIZE 100000000}{$endif}
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cmem, cthreads,{$else}
-     {$ifdef DEBUGMODE}heaptrc,{$endif}{$endif}
+     {$ifdef debugMode}heaptrc,{$endif}{$endif}
      mnh_constants, myGenerics, mnh_cmdLineInterpretation, mnh_packages,
      mnh_contexts, sysutils, mnh_out_adapters;
 
