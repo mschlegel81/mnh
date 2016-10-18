@@ -8,7 +8,7 @@ TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
   T_arrayOfLiteral=array of P_literal;
-  T_literal = packed object
+  T_literal = object
   private
     numberOfReferences: longint;
     CONSTRUCTOR init(CONST lt:T_literalType);
@@ -29,12 +29,12 @@ TYPE
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
-  T_scalarLiteral = packed object(T_literal)
+  T_scalarLiteral = object(T_literal)
     FUNCTION stringForm: ansistring; virtual;
   end;
 
   P_voidLiteral = ^T_voidLiteral;
-  T_voidLiteral = packed object(T_scalarLiteral)
+  T_voidLiteral = object(T_scalarLiteral)
     private
       CONSTRUCTOR create();
     public
@@ -43,7 +43,7 @@ TYPE
   end;
 
   P_boolLiteral = ^T_boolLiteral;
-  T_boolLiteral = packed object(T_scalarLiteral)
+  T_boolLiteral = object(T_scalarLiteral)
   private
     val: boolean;
     CONSTRUCTOR create(CONST value: boolean);
@@ -60,7 +60,7 @@ TYPE
 
   P_intLiteral = ^T_intLiteral;
 
-  T_intLiteral = packed object(T_scalarLiteral)
+  T_intLiteral = object(T_scalarLiteral)
   private
     val: int64;
     CONSTRUCTOR create(CONST value: int64);
@@ -78,7 +78,7 @@ TYPE
 
   P_realLiteral = ^T_realLiteral;
 
-  T_realLiteral = packed object(T_scalarLiteral)
+  T_realLiteral = object(T_scalarLiteral)
   private
     val: T_myFloat;
     CONSTRUCTOR create(CONST value: T_myFloat);
@@ -96,7 +96,7 @@ TYPE
 
   P_stringLiteral = ^T_stringLiteral;
 
-  T_stringLiteral = packed object(T_scalarLiteral)
+  T_stringLiteral = object(T_scalarLiteral)
   private
     val: ansistring;
     CONSTRUCTOR create(CONST value: ansistring);
@@ -125,7 +125,7 @@ TYPE
 
   P_listLiteral = ^T_listLiteral;
   P_expressionLiteral = ^T_expressionLiteral;
-  T_expressionLiteral = packed object(T_scalarLiteral)
+  T_expressionLiteral = object(T_scalarLiteral)
   private
     val: pointer;
     CONSTRUCTOR create(CONST value: pointer);
@@ -144,7 +144,7 @@ TYPE
     FUNCTION typeString:string; virtual;
   end;
 
-  GENERIC G_literalKeyMap<VALUE_TYPE>=packed object
+  GENERIC G_literalKeyMap<VALUE_TYPE>= object
     TYPE CACHE_ENTRY=record
            key:P_literal;
            value:VALUE_TYPE;
@@ -166,7 +166,7 @@ TYPE
   P_stringKeyLiteralValueMap=^T_stringKeyLiteralValueMap;
   T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
 
-  T_listLiteral = packed object(T_literal)
+  T_listLiteral = object(T_literal)
   private
     dat: array of P_literal;
     datFill:longint;
@@ -263,7 +263,7 @@ TYPE
   T_evaluateCompatorCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
   T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST location:T_tokenLocation; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
 
-  T_format=packed object
+  T_format=object
     category:(fmtCat_decimal,
               fmtCat_scientific,
               fmtCat_fixedPoint,
@@ -1416,7 +1416,7 @@ FUNCTION T_listLiteral.appendString(CONST s: ansistring): P_listLiteral;
 
 FUNCTION T_listLiteral.appendBool(CONST b: boolean): P_listLiteral;
   begin
-    result:=append(newBoolLiteral(b),false);
+    result:=append(@boolLit[b],true);
   end;
 
 FUNCTION T_listLiteral.appendInt(CONST i: int64): P_listLiteral;
@@ -1441,6 +1441,7 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
     last: P_literal;
     i0, i1: int64;
     c0, c1: char;
+    newLen: longint;
   begin
     if not (nextAppendIsRange) then begin
       append(L, true);
@@ -1458,6 +1459,8 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
       begin
       i0:=P_intLiteral(last)^.val;
       i1:=P_intLiteral(L)^.val;
+      newLen:=datFill+abs(i1-i0)+1;
+      if newLen>length(dat) then setLength(dat,newLen);
       while (i0<i1) and adapters.noErrors do
         begin
         inc(i0);
@@ -1475,6 +1478,8 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
       begin
       c0:=P_stringLiteral(last)^.val [1];
       c1:=P_stringLiteral(L)^.val [1];
+      newLen:=datFill+abs(ord(c1)-ord(c0))+1;
+      if newLen>length(dat) then setLength(dat,newLen);
       while c0<c1 do
         begin
         inc(c0);
