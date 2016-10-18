@@ -102,12 +102,12 @@ FUNCTION main(p:pointer):ptrint;
   VAR sleepTime:longint=0;
       r:T_evalRequest;
   begin with P_runEvaluator(p)^ do begin
-    {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' handles main evaluation loop');{$endif}
+    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles main evaluation loop');{$endif}
     result:=0;
     repeat
       r:=pendingRequest;
       if r in [er_evaluate,er_callMain,er_reEvaluateWithGUI] then begin
-        {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' handles main evaluation request ',r);{$endif}
+        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles main evaluation request ',r);{$endif}
         sleepTime:=0;
         preEval;
         case r of
@@ -119,35 +119,35 @@ FUNCTION main(p:pointer):ptrint;
           end;
         end;
         postEval;
-        {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' finished main evaluation request ',r);{$endif}
+        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' finished main evaluation request ',r);{$endif}
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         sleep(sleepTime);
       end;
     until (pendingRequest=er_die);
     threadStopped;
-    {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' stopped main evaluation loop');{$endif}
+    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' stopped main evaluation loop');{$endif}
   end; end;
 
 FUNCTION docMain(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=100;
   begin with P_assistanceEvaluator(p)^ do begin
-    {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation loop');{$endif}
+    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation loop');{$endif}
     result:=0;
     repeat
       if (pendingRequest in [er_evaluate,er_callMain,er_reEvaluateWithGUI])  then begin
-        {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation request');{$endif}
+        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation request');{$endif}
         preEval;
         package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
         postEval;
-        {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' finished assistance evaluation request');{$endif}
+        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' finished assistance evaluation request');{$endif}
       end;
       ThreadSwitch;
       sleep(MAX_SLEEP_TIME);
       ThreadSwitch;
     until (pendingRequest=er_die);
     threadStopped;
-    {$ifdef DEBUGMODE} writeln(stdErr,'Thread ',ThreadID,' stopped assistance evaluation loop');{$endif}
+    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' stopped assistance evaluation loop');{$endif}
   end; end;
 
 

@@ -21,7 +21,7 @@ TYPE
     PROCEDURE scopePop;
     FUNCTION getVariable(CONST id:T_idString):P_namedVariable;
     PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
-    {$ifdef FULLVERSION}
+    {$ifdef fullVersion}
     //For debugging:
     PROCEDURE reportVariables(VAR variableReport:T_variableReport);
     {$endif}
@@ -88,7 +88,7 @@ TYPE
   P_evaluationContext=^T_evaluationContext;
   T_evaluationContext=object
     private
-      {$ifdef DEBUGMODE}
+      {$ifdef debugMode}
       evaluationIsRunning:boolean;
       {$endif}
       //privileges and obligations
@@ -167,7 +167,7 @@ TYPE
       //call stack routines
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
       PROCEDURE callStackPop();
-      {$ifdef FULLVERSION}
+      {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
       PROCEDURE printCallStack(CONST messageType:T_messageType);
@@ -283,7 +283,7 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal
     system.leaveCriticalSection(cs);
   end;
 
-{$ifdef FULLVERSION}
+{$ifdef fullVersion}
 PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i :longint;
       i0:longint=0;
@@ -360,14 +360,14 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
     initCriticalSection(profilingAndDebuggingCriticalSection);
     profilingMap.create();
     {$endif}
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     evaluationIsRunning:=false;
     {$endif}
   end;
 
 PROCEDURE T_evaluationContext.resetOptions(CONST contextType: T_contextType);
   begin
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
     {$endif}
     options:=C_defaultOptions[contextType];
@@ -398,7 +398,7 @@ DESTRUCTOR T_evaluationContext.destroy;
 PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath);
   VAR pc:T_profileCategory;
   begin
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if evaluationIsRunning then raise Exception.create('Evaluation already is running!');
     evaluationIsRunning:=true;
     {$endif}
@@ -511,7 +511,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
   {$endif}
 
   begin
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if not(evaluationIsRunning) then raise Exception.create('Evaluation is not running!');
     evaluationIsRunning:=false;
     {$endif}
@@ -539,7 +539,7 @@ FUNCTION T_evaluationContext.hasOption(CONST option: T_contextOption): boolean;
 
 PROCEDURE T_evaluationContext.removeOption(CONST option:T_contextOption);
   begin
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
     {$endif}
     options:=options-[option];
@@ -547,7 +547,7 @@ PROCEDURE T_evaluationContext.removeOption(CONST option:T_contextOption);
 
 PROCEDURE T_evaluationContext.addOption(CONST option:T_contextOption);
   begin
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
     {$endif}
     options:=options+[option];
@@ -716,7 +716,7 @@ PROCEDURE T_evaluationContext.callStackPop;
     end;
     setLength(callStack,topIdx);
   end;
-{$ifdef FULLVERSION}
+{$ifdef fullVersion}
 PROCEDURE T_evaluationContext.reportVariables(
   VAR variableReport: T_variableReport);
   begin

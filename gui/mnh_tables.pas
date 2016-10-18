@@ -278,7 +278,7 @@ PROCEDURE TtableForm.conditionalDoShow;
       fillTable;
     end;
     leaveCriticalSection(cs);
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     writeln(stdErr,'TtableForm.conditionalDoShow finished');
     {$endif}
   end;

@@ -288,7 +288,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
             end;
             L:=remaining;
           end else L:=param^.value(parIdx);
-          {$ifdef DEBUGMODE}
+          {$ifdef debugMode}
           if L=nil then raise Exception.create('Whoops! Unressolved parameter pointer.');
           {$endif}
           lastRep^.next:=context.newToken(token.location,'',tt_literal,L);
@@ -677,7 +677,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     leaveCriticalSection(firstCallCs);
   end;
 
-{$ifdef FULLVERSION}
+{$ifdef fullVersion}
 VAR generateRowIdentification:T_identifiedInternalFunction;
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;
   VAR subRule:P_subrule;
@@ -788,7 +788,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         end;
         //fallback: ensure that new samples are always added
         if length(newTimes)=0 then begin
-          {$ifdef DEBUGMODE}writeln(stdErr,'Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
+          {$ifdef debugMode}writeln(stdErr,'Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
           setLength(newTimes,length(tRow)-1);
           for i:=1 to length(tRow)-1 do begin
             t:=tRow[i]*0.5+tRow[i-1]*0.5;
@@ -812,7 +812,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           for i:=0 to length(oldTimes)-1 do oldTimes[i]:=tRow[i];
           setLength(dataRow,length(oldRow  )+length(newRow  ));
           setLength(tRow   ,length(oldTimes)+length(newTimes));
-          {$ifdef DEBUGMODE}
+          {$ifdef debugMode}
           writeln('Merging samples of size ',length(oldRow),'+',length(newRow),'->',length(dataRow));
           writeln('                        ',length(oldTimes),'+',length(newTimes),'->',length(tRow));
           {$endif}

@@ -207,7 +207,7 @@ PROCEDURE T_settings.initDefaults;
     editorState[0].create;
     textLogName:='';
     logPerRun:=false;
-    memoryLimit:={$ifdef WINDOWS}
+    memoryLimit:={$ifdef Windows}
                    {$ifdef CPU32}
                    1000000000;
                    {$else}

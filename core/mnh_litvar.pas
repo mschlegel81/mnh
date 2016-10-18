@@ -240,7 +240,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
   end;
 
- {$ifdef FULLVERSION}
+ {$ifdef fullVersion}
   T_variableReport=object
     dat:array of record
           id:ansistring;

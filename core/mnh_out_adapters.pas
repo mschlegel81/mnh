@@ -161,7 +161,7 @@ CONST
     mt_el3_evalError..high(T_messageTypeSet)];
 
   C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_el3_evalError..mt_reloadRequired
-    {$ifdef FULLVERSION},
+    {$ifdef fullVersion},
     mt_plotFileCreated,
     mt_plotCreatedWithDeferredDisplay,
     mt_plotCreatedWithInstantDisplay,

@@ -91,7 +91,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 
 {$undef include_interface}
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT={$ifdef WINDOWS}60000{$else}3000{$endif};
+CONST STACK_DEPTH_LIMIT={$ifdef Windows}60000{$else}3000{$endif};
 VAR pendingTasks     :T_taskQueue;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -270,7 +270,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           j:=-1;
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
-            {$ifdef FULLVERSION}
+            {$ifdef fullVersion}
             if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
               if not(gui_started) then context.adapters^.raiseCustomMessage(mt_guiPseudoPackageFound,'',locationForErrorFeedback);
             end else

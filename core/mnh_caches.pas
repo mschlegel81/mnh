@@ -33,7 +33,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-VAR globalMemoryLimit:int64={$ifdef WINDOWS}
+VAR globalMemoryLimit:int64={$ifdef Windows}
                               {$ifdef CPU32}
                               1000000000;
                               {$else}

@@ -120,7 +120,7 @@ PROCEDURE ensureBuiltinDocExamples;
         i:longint;
         leadingIdLine:boolean=false;
         doc:P_intrinsicFunctionDocumentation;
-        {$ifdef DEBUGMODE} first:boolean=true; j:longint; {$endif}
+        {$ifdef debugMode} first:boolean=true; j:longint; {$endif}
     begin
       ids.create;
       if copy(exampleSource[0],1,3)='//#' then begin
@@ -133,7 +133,7 @@ PROCEDURE ensureBuiltinDocExamples;
       end;
       ids.unique;
       for i:=0 to ids.size-1 do if functionDocMap.containsKey(ids[i],doc) then begin
-        {$ifdef DEBUGMODE}
+        {$ifdef debugMode}
         if first then first:=false else begin
           write('The following example is not uniquely assignable. IDs: ');
           for j:=0 to ids.size-1 do write(ids[j],' ');

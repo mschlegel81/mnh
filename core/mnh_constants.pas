@@ -546,7 +546,7 @@ FUNCTION getAppName: string;
 FUNCTION configDir:string;
   begin
     OnGetApplicationName:=@getAppName;
-    {$ifdef WINDOWS}
+    {$ifdef Windows}
     result:=GetAppConfigDir(true);
     {$else}
     result:=GetAppConfigDir(false);
