@@ -140,7 +140,7 @@ private showStatus->
 
 private cleanup->begin
   tprint('Cleaning');
-  allFolders('..')
+  allFolders('.')
   .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
   .each(f,begin
            tprint('Deleting ',f);
