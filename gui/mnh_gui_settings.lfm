@@ -17,9 +17,9 @@ object SettingsForm: TSettingsForm
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet_display
+    ActivePage = TabSheet_global
     Align = alClient
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
@@ -137,52 +137,6 @@ object SettingsForm: TSettingsForm
         OnChange = autosaveComboBoxChange
         Style = csDropDownList
         TabOrder = 2
-      end
-      object rbLogOff: TRadioButton
-        Left = 8
-        Height = 19
-        Top = 104
-        Width = 110
-        Caption = 'no additional log'
-        Checked = True
-        OnChange = rbLogOffChange
-        TabOrder = 3
-        TabStop = True
-      end
-      object rbLogPerProgramStart: TRadioButton
-        Left = 8
-        Height = 19
-        Top = 120
-        Width = 155
-        Caption = 'one log per program start'
-        OnChange = rbLogOffChange
-        TabOrder = 4
-      end
-      object rbLogPerRun: TRadioButton
-        Left = 8
-        Height = 19
-        Top = 136
-        Width = 134
-        Caption = 'one log per execution'
-        OnChange = rbLogOffChange
-        TabOrder = 5
-      end
-      object Label5: TLabel
-        Left = 8
-        Height = 15
-        Top = 160
-        Width = 250
-        Caption = 'Log name (use ? as placeholder for timestamp):'
-        ParentColor = False
-      end
-      object logNameEdit: TEdit
-        Left = 72
-        Height = 23
-        Top = 176
-        Width = 232
-        OnChange = logNameEditChange
-        TabOrder = 6
-        Text = 'logNameEdit'
       end
       object Label6: TLabel
         Left = 8

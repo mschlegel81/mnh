@@ -21,18 +21,13 @@ TYPE
     Label7: TLabel;
     memLimitEdit: TEdit;
     Label6: TLabel;
-    logNameEdit: TEdit;
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
     FontSizeEdit: TEdit;
     EditorFontDialog: TFontDialog;
     Label2: TLabel;
     Label3: TLabel;
-    Label5: TLabel;
     PageControl: TPageControl;
-    rbLogOff: TRadioButton;
-    rbLogPerProgramStart: TRadioButton;
-    rbLogPerRun: TRadioButton;
     TabSheet_display: TTabSheet;
     Label8: TLabel;
     TabSheet_install: TTabSheet;
@@ -48,10 +43,8 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
-    PROCEDURE logNameEditChange(Sender: TObject);
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
-    PROCEDURE rbLogOffChange(Sender: TObject);
     PROCEDURE uninstallButtonClick(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
@@ -108,11 +101,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       end;
     end;
     settings.value^.polishHistory;
-    logNameEdit.text:=settings.value^.textLogName;
-    if logNameEdit.text=''            then rbLogOff.Checked:=true
-    else if settings.value^.logPerRun then rbLogPerRun.Checked:=true
-                                      else rbLogPerProgramStart.Checked:=true;
-
     autosaveComboBox.Items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
@@ -173,14 +161,6 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
     {$endif}
   end;
 
-PROCEDURE TSettingsForm.logNameEditChange(Sender: TObject);
-  begin
-    settings.value^.textLogName:=logNameEdit.text;
-    if settings.value^.getLogName='' then rbLogOff.Checked:=true
-    else if settings.value^.logPerRun then rbLogPerRun.Checked:=true
-                                      else rbLogPerProgramStart.Checked:=true;
-  end;
-
 PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
   begin
     settings.value^.memoryLimit:=StrToInt64Def(trim(memLimitEdit.text),1) shl 20;
@@ -190,17 +170,6 @@ PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.outputSizeLimitEditingDone(Sender: TObject);
   begin
     setOutputLimit(getOutputLimit);
-  end;
-
-PROCEDURE TSettingsForm.rbLogOffChange(Sender: TObject);
-  begin
-    if rbLogOff.Checked then begin
-      logNameEdit.text:='';
-      settings.value^.textLogName:='';
-    end else begin
-      settings.value^.logPerRun:=rbLogPerRun.Checked;
-      if not(rbLogOff.Checked) and (settings.value^.getLogName='') then rbLogOff.Checked:=true;
-    end;
   end;
 
 PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);

@@ -284,7 +284,6 @@ PROCEDURE doFinalization;
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
-    tempAdapter: P_abstractOutAdapter;
     closeGuiFlag:boolean=false;
 {$R *.lfm}
 {$define includeImplementation}
@@ -360,18 +359,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       UpdateTimeTimerTimer(self);
       doConditionalPlotReset;
     end;
-    if not(reEvaluating) then begin
-      editorMeta[inputPageControl.activePageIndex].setWorkingDir;
-      logName:=settings.value^.getLogName;
-      if logName<>'' then begin
-        if tempAdapter=nil
-        then tempAdapter:=addOutfile(guiAdapters,logName)
-        else if settings.value^.logPerRun then begin
-          guiAdapters.removeOutAdapter(tempAdapter);
-          tempAdapter:=addOutfile(guiAdapters,logName);
-        end;
-      end;
-    end;
+    if not(reEvaluating) then editorMeta[inputPageControl.activePageIndex].setWorkingDir;
     underCursor.tokenText:='';
     if miDebug.Checked or reEvaluating and profilingRun then begin
       if reEvaluating and profilingRun then runEvaluator.context.clearBreakpoints;
@@ -1523,8 +1511,6 @@ PROCEDURE TMnhForm.processSettings;
     assistanceSynEdit.Font:=OutputEdit.Font;
     helpPopupMemo.Font:=OutputEdit.Font;
     helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
-
-    if (tempAdapter<>nil) and not(settings.value^.getLogName<>'') then guiAdapters.removeOutAdapter(tempAdapter);
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
@@ -1573,7 +1559,6 @@ PROCEDURE lateInitialization;
     guiOutAdapter.create;
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
-    tempAdapter:=nil;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
