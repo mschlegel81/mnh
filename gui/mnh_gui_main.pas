@@ -337,7 +337,7 @@ PROCEDURE TMnhForm.doConditionalPlotReset;
 
 PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   begin
-    with settings.value^ do begin
+    with settings.value^.fileHistory do begin
       if fileExists(historyItem(historyIdx))
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
       else if polishHistory then processFileHistory;
@@ -346,7 +346,6 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
   VAR i:longint;
-      logName:string;
   begin
     if closeGuiFlag then close;
     with evaluation do begin
@@ -669,7 +668,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
         if mr=mrCancel then exit;
       end;
       if filePath<>'' then begin
-        settings.value^.fileClosed(filePath);
+        settings.value^.fileHistory.fileClosed(filePath);
         processFileHistory;
       end;
       closeEditor;
@@ -1090,7 +1089,7 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
         inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
         exit;
       end;
-      if polishHistory then processFileHistory;
+      if fileHistory.polishHistory then processFileHistory;
       fileName:=assistancEvaluator.resolveImport(idOrName);
       if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
@@ -1542,13 +1541,13 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   VAR i:longint;
   begin
-    for i:=0 to 19 do if settings.value^.historyItem(i)='' then begin
+    for i:=0 to 19 do if settings.value^.fileHistory.historyItem(i)='' then begin
       historyMenuItem(i).enabled:=false;
       historyMenuItem(i).visible:=false;
     end else begin
       historyMenuItem(i).enabled:=true;
       historyMenuItem(i).visible:=true;
-      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.historyItem(i);
+      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.fileHistory.historyItem(i);
     end;
   end;
 

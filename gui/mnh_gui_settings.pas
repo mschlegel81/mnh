@@ -100,7 +100,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         height := 480;
       end;
     end;
-    settings.value^.polishHistory;
+    settings.value^.fileHistory.polishHistory;
     autosaveComboBox.Items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
