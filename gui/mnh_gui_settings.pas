@@ -80,7 +80,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
     setFontSize(settings.value^.fontSize);
     setOutputLimit(settings.value^.outputLinesLimit);
-    if not(settings.value^.wasLoaded) then begin
+    if not(settings.value^.loaded) then begin
       settings.value^.activePage:=0;
       ensureDemos;
     end;
@@ -101,8 +101,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       end;
     end;
     settings.value^.fileHistory.polishHistory;
-    autosaveComboBox.Items.clear;
-    for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
+    autosaveComboBox.items.clear;
+    for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
   end;
 

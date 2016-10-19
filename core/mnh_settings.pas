@@ -53,21 +53,27 @@ end;
 
 P_Settings=^T_settings;
 T_settings=object(T_serializable)
+  private
+    //Nonpersistent:
+    wasLoaded:boolean;
+    savedAt:double;
+  public
+  //Global:
+  memoryLimit:int64;
   cpuCount:longint;
+  saveIntervalIdx:byte;
   editorFontname: string;
   fontSize:longint;
   antialiasedFonts:boolean;
   mainForm:T_formPosition;
+
+  //Workspace:
   doResetPlotOnEvaluation: boolean;
   fileHistory:T_fileHistory;
   editorState: array of T_editorState;
   activePage:longint;
   outputBehaviour: T_messageTypeSet;
-  saveIntervalIdx:byte;
-  wasLoaded:boolean;
-  savedAt:double;
   wordWrapEcho:boolean;
-  memoryLimit:int64;
   outputLinesLimit:longint;
 
   CONSTRUCTOR create;
@@ -78,6 +84,7 @@ T_settings=object(T_serializable)
   PROCEDURE initDefaults;
 
   FUNCTION savingRequested:boolean;
+  PROPERTY loaded:boolean read wasLoaded;
 end;
 
 PROCEDURE saveSettings;
