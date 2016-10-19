@@ -129,9 +129,11 @@ FUNCTION workerThreadCount:longint;
 
 FUNCTION T_settings.getSerialVersion:dword; begin result:=1644235074; end;
 FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
+  {$MACRO ON}
+  {$define cleanExit:=begin initDefaults; exit(false) end}
   VAR i:longint;
   begin
-    if not inherited loadFromStream(stream) then exit(false);
+    if not inherited loadFromStream(stream) then cleanExit;
 
     cpuCount:=stream.readLongint;
     if cpuCount<=0 then begin
@@ -145,9 +147,9 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     outputBehaviour:=stream.readNaturalNumber;
     outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
     doResetPlotOnEvaluation := stream.readBoolean;
-    if not(fileHistory.loadFromStream(stream)) then exit(false);
+    if not(fileHistory.loadFromStream(stream)) then cleanExit;
     setLength(editorState,stream.readNaturalNumber);
-    if not(stream.allOkay) then exit(false);
+    if not(stream.allOkay) then cleanExit;
     for i:=0 to length(editorState)-1 do begin
       editorState[i].create;
       editorState[i].loadFromStream(stream);
@@ -157,11 +159,7 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     wordWrapEcho:=stream.readBoolean;
     memoryLimit:=stream.readInt64;
     outputLinesLimit:=stream.readLongint;
-    if stream.allOkay then result:=true
-    else begin
-      initDefaults;
-      result:=false;
-    end;
+    if not(stream.allOkay) then cleanExit else result:=true;
     savedAt:=now;
     wasLoaded:=result;
   end;
