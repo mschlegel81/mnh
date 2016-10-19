@@ -1,3 +1,0 @@
-..\..\lazarus64\fpc\3.0.0\bin\x86_64-win64\fpc.exe test.pas -MObjFPC -Sah -Cirot -g -gl -l -vewnhibq -Filib\x86_64-win64 -Fi..\core -Fu..\core -Fu..\..\common -Fu..\..\common\synapse -Fu..\..\lazarus64\components\tachart\lib\x86_64-win64\win32 -Fu..\..\lazarus64\components\ideintf\units\x86_64-win64\win32 -Fu..\..\lazarus64\components\synedit\units\x86_64-win64\win32 -Fu..\..\lazarus64\components\lazcontrols\lib\x86_64-win64\win32 -Fu..\..\lazarus64\lcl\units\x86_64-win64\win32 -Fu..\..\lazarus64\lcl\units\x86_64-win64 -Fu..\..\lazarus64\components\lazutils\lib\x86_64-win64 -Fu..\..\lazarus64\packager\units\x86_64-win64 -Fu. -dLCL -dLCLwin32 -ddebugMode 
-
- 
