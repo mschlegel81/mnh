@@ -1,10 +1,13 @@
 {$ifdef includeInterface}
 T_editorMeta=object
   index:longint;
-  filePath:ansistring;
-  fileAccessAge:double;
-  changed:boolean;
   paintedWithState:longint;
+  fileInfo:record
+    filePath:ansistring;
+    fileAccessAge:double;
+    isChanged:boolean;
+  end;
+
 
   sheet       : TTabSheet;
   editor      : TSynEdit;
@@ -28,10 +31,15 @@ T_editorMeta=object
   PROCEDURE insertText(CONST s:string);
   PROCEDURE toggleBreakpoint;
   FUNCTION pseudoName(CONST short:boolean=false):ansistring;
+  FUNCTION isFile:boolean;
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
   PROCEDURE repaintWithStateCounter(CONST stateCounter:longint; CONST errorHints:T_arrayOfString);
+  FUNCTION changed:boolean;
+  FUNCTION saveFile(CONST fileName:string=''):string;
+  FUNCTION fileIsDeleted:boolean;
+  FUNCTION fileIsModifiedOnFileSystem:boolean;
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -154,9 +162,11 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; CONST state: T_editorState);
   begin
     create(idx);
     sheet.tabVisible:=true;
-    changed      :=state.changed;
-    fileAccessAge:=state.fileAccessAge;
-    filePath     :=state.filePath;
+    with fileInfo do begin
+      isChanged    :=state.changed;
+      fileAccessAge:=state.fileAccessAge;
+      filePath     :=state.filePath;
+    end;
     state.getLines(editor.lines);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
     editor.CaretX:=state.caret['x'];
@@ -184,23 +194,27 @@ PROCEDURE T_editorMeta.closeEditor;
   begin
     sheet.tabVisible:=false;
     editor.clearAll;
-    filePath:='';
-    changed:=false;
+    with fileInfo do begin
+      filePath:='';
+      isChanged:=false;
+    end;
+    editor.modified:=false;
   end;
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
     sheet.tabVisible:=true;
-    filePath:=fileName;
+    fileInfo.filePath:=fileName;
     editor.clearAll;
     try
-      editor.lines.loadFromFile(filePath);
-      fileAge(filePath,fileAccessAge);
-      changed:=false;
+      editor.lines.loadFromFile(fileInfo.filePath);
+      fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
+      fileInfo.isChanged:=false;
+      editor.modified:=false;
     except
       editor.lines.clear;
-      changed:=true;
-      fileAccessAge:=0;
+      fileInfo.isChanged:=true;
+      fileInfo.fileAccessAge:=0;
     end;
     updateSheetCaption;
   end;
@@ -208,23 +222,26 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
 PROCEDURE T_editorMeta.initForNewFile;
   begin
     sheet.tabVisible:=true;
-    changed      :=false;
-    fileAccessAge:=0;
-    filePath     :='';
+    with fileInfo do begin
+      ischanged       :=false;
+      fileAccessAge:=0;
+      filePath     :='';
+    end;
     editor.clearAll;
+    editor.modified:=false;
     updateSheetCaption;
   end;
 
 PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
   begin
-    if sheet.tabVisible and (filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
-      editor.lines.loadFromFile(filePath);
-      fileAge(filePath,fileAccessAge);
+    if sheet.tabVisible and (fileInfo.filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
+      editor.lines.loadFromFile(fileInfo.filePath);
+      fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=false;
-      changed:=false;
+      fileInfo.isChanged:=false;
     end else if sheet.tabVisible and (fileName=pseudoName) and (runEvaluator.getCodeProvider^.getPath=pseudoName) then begin
       runEvaluator.getCodeProvider^.getLinesUTF8(editor.lines);
-      fileAge(filePath,fileAccessAge);
+      fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=changed;
     end;
   end;
@@ -243,8 +260,8 @@ PROCEDURE T_editorMeta.setMarkedWord(CONST wordText: string);
 
 PROCEDURE T_editorMeta.setWorkingDir;
   begin
-    if filePath='' then SetCurrentDir(ExtractFileDir(paramStr(0)))
-                   else SetCurrentDir(ExtractFileDir(filePath));
+    if fileInfo.filePath='' then SetCurrentDir(ExtractFileDir(paramStr(0)))
+                            else SetCurrentDir(ExtractFileDir(fileInfo.filePath));
   end;
 
 PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
@@ -261,8 +278,8 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
     setLength(settings^.editorState[index].markedLines,0);
     for i:=0 to editor.Marks.count-1 do appendIfNew(settings^.editorState[index].markedLines,editor.Marks[i].line);
 
-    settings^.editorState[index].filePath:=filePath;
-    settings^.editorState[index].fileAccessAge:=fileAccessAge;
+    settings^.editorState[index].filePath:=fileInfo.filePath;
+    settings^.editorState[index].fileAccessAge:=fileInfo.fileAccessAge;
     settings^.editorState[index].changed:=changed;
     setLength(settings^.editorState[index].lines,editor.lines.count);
     for i:=0 to length(settings^.editorState[index].lines)-1 do settings^.editorState[index].lines[i]:=editor.lines[i];
@@ -283,7 +300,7 @@ PROCEDURE T_editorMeta.toggleComment;
                  else for i:=i0 to i1 do editor.lines[i]:='//'+editor.lines[i];
   end;
 
-PROCEDURE T_editorMeta.insertText(CONST s:string);
+PROCEDURE T_editorMeta.insertText(CONST s: string);
   VAR lineIdx,colIdx:longint;
   begin
     lineIdx:=editor.CaretY-1;
@@ -302,13 +319,17 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
     _add_breakpoint_(editor.CaretY);
   end;
 
+FUNCTION T_editorMeta.isFile: boolean;
+  begin
+    result:=fileInfo.filePath<>'';
+  end;
+
 FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
   begin
-    if filePath<>'' then begin
-                           if short then result:=extractFileName(filePath)
-                                    else result:=filePath;
-                         end
-                    else result:='<new '+intToStr(index)+'>';
+    if fileInfo.filePath<>'' then begin
+      if short then result:=extractFileName(fileInfo.filePath)
+               else result:=fileInfo.filePath;
+    end else result:='<new '+intToStr(index)+'>';
   end;
 
 PROCEDURE T_editorMeta.setStepperBreakpoints;
@@ -336,7 +357,8 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHints:T_arrayOfString);
+PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter: longint;
+  CONST errorHints: T_arrayOfString);
   VAR i:longint;
   begin
     if (stateCounter<>paintedWithState) then begin
@@ -346,6 +368,40 @@ PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST
       MnhForm.assistanceSynEdit.lines.clear;
       for i:=0 to length(errorHints)-1 do MnhForm.assistanceSynEdit.lines.add(errorHints[i]);
     end;
+  end;
+
+FUNCTION T_editorMeta.changed: boolean;
+  begin
+    result:=fileInfo.isChanged or editor.modified;
+  end;
+
+FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
+  VAR arr:T_arrayOfString;
+      i:longint;
+  begin
+    if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
+    setLength(arr,editor.lines.count);
+    for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
+    with fileInfo do begin
+      writeFileLines(filePath,arr,'',false);
+      fileAge(filePath,fileAccessAge);
+      isChanged:=false;
+      editor.modified:=false;
+    end;
+    result:=updateSheetCaption;
+  end;
+
+FUNCTION T_editorMeta.fileIsDeleted:boolean;
+  begin
+    result:=sheet.tabVisible and isFile and not(fileExists(fileInfo.filePath));
+  end;
+
+FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
+  VAR currentFileAge:double;
+  begin
+    if not(sheet.tabVisible and isFile) then exit(false);
+    fileAge(fileinfo.filePath,currentFileAge);
+    result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
 
 {$endif}

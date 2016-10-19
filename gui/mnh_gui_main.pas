@@ -284,7 +284,6 @@ PROCEDURE doFinalization;
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
-    tempAdapter: P_abstractOutAdapter;
     closeGuiFlag:boolean=false;
 {$R *.lfm}
 {$define includeImplementation}
@@ -338,7 +337,7 @@ PROCEDURE TMnhForm.doConditionalPlotReset;
 
 PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   begin
-    with settings.value^ do begin
+    with settings.value^.fileHistory do begin
       if fileExists(historyItem(historyIdx))
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
       else if polishHistory then processFileHistory;
@@ -347,7 +346,6 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
   VAR i:longint;
-      logName:string;
   begin
     if closeGuiFlag then close;
     with evaluation do begin
@@ -360,18 +358,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       UpdateTimeTimerTimer(self);
       doConditionalPlotReset;
     end;
-    if not(reEvaluating) then begin
-      editorMeta[inputPageControl.activePageIndex].setWorkingDir;
-      logName:=settings.value^.getLogName;
-      if logName<>'' then begin
-        if tempAdapter=nil
-        then tempAdapter:=addOutfile(guiAdapters,logName)
-        else if settings.value^.logPerRun then begin
-          guiAdapters.removeOutAdapter(tempAdapter);
-          tempAdapter:=addOutfile(guiAdapters,logName);
-        end;
-      end;
-    end;
+    if not(reEvaluating) then editorMeta[inputPageControl.activePageIndex].setWorkingDir;
     underCursor.tokenText:='';
     if miDebug.Checked or reEvaluating and profilingRun then begin
       if reEvaluating and profilingRun then runEvaluator.context.clearBreakpoints;
@@ -557,8 +544,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift)
-    else if (key=87) and (Shift=[ssCtrl]) then miCloseClick(Sender);
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
@@ -597,7 +583,6 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
 
     with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
-    editorMeta[inputPageControl.activePageIndex].changed:=editorMeta[inputPageControl.activePageIndex].editor.modified;
     caption:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
   end;
 
@@ -680,8 +665,8 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
         if mr=mrOk then if not(_doSave_(inputPageControl.activePageIndex)) then exit;
         if mr=mrCancel then exit;
       end;
-      if filePath<>'' then begin
-        settings.value^.fileClosed(filePath);
+      if isFile then begin
+        settings.value^.fileHistory.fileClosed(fileInfo.filePath);
         processFileHistory;
       end;
       closeEditor;
@@ -815,36 +800,21 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
   end;
 
 FUNCTION TMnhForm._doSaveAs_(CONST index: longint): boolean;
-  VAR arr:T_arrayOfString;
-      i:longint;
   begin
     if index<0 then exit(false);
     if SaveDialog.execute then with editorMeta[index] do begin
-      filePath:=expandFileName(SaveDialog.fileName);
-      setLength(arr,editor.lines.count);
-      for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
-      writeFileLines(filePath,arr,'',false);
-      fileAge(filePath,fileAccessAge);
-      changed:=false;
+      caption:=saveFile(SaveDialog.fileName);
       result:=true;
-      caption:=editorMeta[index].updateSheetCaption;
     end else result:=false;
   end;
 
 FUNCTION TMnhForm._doSave_(CONST index: longint): boolean;
-  VAR arr:T_arrayOfString;
-      i:longint;
   begin
     if index<0 then exit(false);
-    with editorMeta[index] do if filePath='' then result:=_doSaveAs_(index)
+    with editorMeta[index] do if not(isFile) then result:=_doSaveAs_(index)
     else begin
-      setLength(arr,editor.lines.count);
-      for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
-      writeFileLines(filePath,arr,'',false);
-      fileAge(filePath,fileAccessAge);
-      changed:=false;
+      caption:=saveFile();
       result:=true;
-      caption:=editorMeta[index].updateSheetCaption;
     end;
   end;
 
@@ -990,7 +960,7 @@ FUNCTION TMnhForm.addOrGetEditorMetaForFile(CONST fileName: ansistring): longint
       result:=-1;
     end else begin
       filePath:=expandFileName(fileName);
-      for i:=0 to length(editorMeta)-1 do if (editorMeta[i].sheet.tabVisible) and (editorMeta[i].filePath=filePath) then exit(i);
+      for i:=0 to length(editorMeta)-1 do if (editorMeta[i].sheet.tabVisible) and (editorMeta[i].fileInfo.filePath=filePath) then exit(i);
       result:=addEditorMetaForNewFile();
       editorMeta[result].setFile(filePath);
       editorMeta[result].editor.Font:=OutputEdit.Font;
@@ -1102,7 +1072,7 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
         inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
         exit;
       end;
-      if polishHistory then processFileHistory;
+      if fileHistory.polishHistory then processFileHistory;
       fileName:=assistancEvaluator.resolveImport(idOrName);
       if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
@@ -1196,7 +1166,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       isEvaluationRunning:boolean;
       flushPerformed:boolean=false;
       i,modalRes:longint;
-      currentFileAge:double;
   begin
     isEvaluationRunning:=runEvaluator.evaluationRunning;
     if askForm.displayPending then askForm.Show;
@@ -1234,21 +1203,18 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       //File checks:------------------------------------------------------------
       if (now>doNotCheckFileBefore) then begin
         doNotCheckFileBefore:=now+1;
-        for i:=0 to length(editorMeta)-1 do with editorMeta[i] do if sheet.tabVisible and (filePath<>'') and not(changed) then begin
-          if not(fileExists(filePath)) then begin
-            modalRes:=closeDialogForm.showOnDeleted(filePath);
-            if modalRes=mrOk then closeEditor;
-            if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
-            changed:=true;
-            continue;
-          end;
-          fileAge(filePath,currentFileAge);
-          if currentFileAge<>fileAccessAge then begin
-            modalRes:=closeDialogForm.showOnOutOfSync(filePath);
-            if modalRes=mrOk then reloadFile(filePath);
-            if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
-            changed:=true;
-          end;
+        for i:=0 to length(editorMeta)-1 do with editorMeta[i] do
+        if fileIsDeleted then begin
+          modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
+          if modalRes=mrOk then closeEditor;
+          if modalRes=mrClose then begin if not(_doSave_(i)) then fileInfo.isChanged:=true; end else
+          fileInfo.isChanged:=true;
+          continue;
+        end else if fileIsModifiedOnFileSystem then begin
+          modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
+          if modalRes=mrOk then reloadFile(fileInfo.filePath);
+          if modalRes=mrClose then begin if not(_doSave_(i)) then fileInfo.isChanged:=true; end else
+          fileInfo.isChanged:=true;
         end;
         doNotCheckFileBefore:=now+ONE_SECOND;
       end;
@@ -1523,8 +1489,6 @@ PROCEDURE TMnhForm.processSettings;
     assistanceSynEdit.Font:=OutputEdit.Font;
     helpPopupMemo.Font:=OutputEdit.Font;
     helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
-
-    if (tempAdapter<>nil) and not(settings.value^.getLogName<>'') then guiAdapters.removeOutAdapter(tempAdapter);
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
@@ -1556,13 +1520,13 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   VAR i:longint;
   begin
-    for i:=0 to 19 do if settings.value^.historyItem(i)='' then begin
+    for i:=0 to 19 do if settings.value^.fileHistory.historyItem(i)='' then begin
       historyMenuItem(i).enabled:=false;
       historyMenuItem(i).visible:=false;
     end else begin
       historyMenuItem(i).enabled:=true;
       historyMenuItem(i).visible:=true;
-      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.historyItem(i);
+      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.fileHistory.historyItem(i);
     end;
   end;
 
@@ -1576,7 +1540,6 @@ PROCEDURE lateInitialization;
     {$ifdef imig}
     mnh_imig_form.guiAdapters:=@guiAdapters;
     {$endif}
-    tempAdapter:=nil;
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit(@guiAdapters);

@@ -65,7 +65,7 @@ PROCEDURE TnewCentralPackageForm.ListBoxClick(Sender: TObject);
 
 PROCEDURE TnewCentralPackageForm.ListBoxDblClick(Sender: TObject);
   begin
-    fileNameEdit.text:=packagesFolder+ListBox.Items[ListBox.ItemIndex]+'.mnh';
+    fileNameEdit.text:=packagesFolder+ListBox.items[ListBox.ItemIndex]+'.mnh';
     ModalResult:=mrOk;
   end;
 
@@ -101,8 +101,8 @@ PROCEDURE TnewCentralPackageForm.updatePackageList;
       i:longint;
   begin
     files:=find(packagesFolder+'*.mnh',true,false);
-    ListBox.Items.clear;
-    for i:=0 to length(files)-1 do ListBox.Items.add(ExtractFileNameOnly(files[i]));
+    ListBox.items.clear;
+    for i:=0 to length(files)-1 do ListBox.items.add(ExtractFileNameOnly(files[i]));
     ListBox.ItemIndex:=-1;
     remButton.enabled:=false;
   end;

@@ -38,7 +38,7 @@ FUNCTION demosFolder:string;
 
 PROCEDURE TopenDemoDialogForm.ListBoxDblClick(Sender: TObject);
   begin
-    selectedFile:=demosFolder+ListBox.Items[ListBox.ItemIndex]+'.mnh';
+    selectedFile:=demosFolder+ListBox.items[ListBox.ItemIndex]+'.mnh';
     ModalResult:=mrOk;
   end;
 
@@ -48,8 +48,8 @@ PROCEDURE TopenDemoDialogForm.FormShow(Sender: TObject);
   begin
     ensureDemos;
     files:=find(demosFolder+'*.mnh',true,false);
-    ListBox.Items.clear;
-    for i:=0 to length(files)-1 do ListBox.Items.add(ExtractFileNameOnly(files[i]));
+    ListBox.items.clear;
+    for i:=0 to length(files)-1 do ListBox.items.add(ExtractFileNameOnly(files[i]));
     ListBox.ItemIndex:=-1;
   end;
 
