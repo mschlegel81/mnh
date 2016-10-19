@@ -94,13 +94,13 @@ FUNCTION print_imp intFuncSignature;
 
 FUNCTION note_imp intFuncSignature;
   begin
-    context.adapters^.raiseNote(getStringToPrint(params),tokenLocation);
+    context.adapters^.raiseCustomMessage(mt_el1_userNote,getStringToPrint(params),tokenLocation);
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
-    context.adapters^.raiseWarning(getStringToPrint(params),tokenLocation);
+    context.adapters^.raiseCustomMessage(mt_el2_userWarning,getStringToPrint(params),tokenLocation);
     result:=newVoidLiteral;
   end;
 

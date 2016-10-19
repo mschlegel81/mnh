@@ -443,7 +443,9 @@ TYPE
     mt_echo_output,
     mt_echo_continued,
     mt_el1_note,
+    mt_el1_userNote,
     mt_el2_warning,
+    mt_el2_userWarning,
     mt_el3_evalError,
     mt_el3_noMatchingMain,
     mt_el3_stackTrace,
@@ -483,7 +485,9 @@ CONST
 {mt_echo_output            }             (level:-1; prefix: 'out>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_echo_continued         }             (level:-1; prefix: '...>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_el1_note               }             (level: 1; prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el1_userNote           }             (level: 1; prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_el2_warning            }             (level: 2; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el2_userWarning        }             (level: 2; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_el3_evalError          }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:3),
 {mt_el3_noMatchingMain     }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:1),
 {mt_el3_stackTrace         }             (level: 3; prefix: 'Stack trace '         ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
@@ -504,8 +508,8 @@ CONST
 {mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
   C_errorMessageTypes:array[1..5] of T_messageTypeSet=(
-    [mt_el1_note],
-    [mt_el2_warning],
+    [mt_el1_note,mt_el1_userNote],
+    [mt_el2_warning,mt_el2_userWarning],
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_stackTrace,mt_el3_userDefined],
     [mt_el4_parsingError],
     [mt_el5_systemError,mt_el5_haltMessageReceived,mt_el5_haltMessageQuiet]);
