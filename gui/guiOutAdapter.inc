@@ -53,8 +53,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
-       {$ifdef debugMode}writeln(stderr,'Already flushing!');{$endif}
-      system.LeaveCriticalsection(cs);
+       {$ifdef debugMode}writeln(stdErr,'Already flushing!');{$endif}
+      system.leaveCriticalSection(cs);
       exit;
     end;
     flushing:=true;
