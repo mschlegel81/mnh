@@ -1,6 +1,8 @@
 USE testLog,mnhInfo,
     '../demos/24.mnh',
     '../demos/diff.mnh',
+    '../demos/grep.mnh',
+    '../demos/emptyFolders.mnh',
     '../demos/100doors.mnh',
     '../demos/12_statements.mnh',
     '../demos/99bottles.mnh',
@@ -144,6 +146,17 @@ end;
 main->main_impl('',false,true);
 //*Retest without examples file
 main('retest')->main_impl('',true,true);
+//*Display info on mssing test cases
+main('info')->begin
+  local untested:=files('../demos/*.mnh').splitFileName.getInner('expanded').minus(
+              inspect['uses'].getInner(1).splitFileName.getInner('expanded'));
+  untested==[]
+  ? print('All demos are covered by tests')
+  : begin
+      print('Untested demos: ');
+      printf('  %s',untested);
+    end;
+end;
 //*Test with examples file
 main(examplesFile:string)->main_impl(examplesFile,false,true);
 //*Retest with examples file
@@ -156,8 +169,8 @@ private executeMainCall(import:string,doLog:boolean,...)->begin
   local t0:=time;
   toId(import&'.main')@...;
   local dt:=time-t0;
-  doLog ? runTimes|=[[import,flavour(executor),dt]]
-        : print('Time for ',import,': ',dt);
+  doLog ? runTimes|=[[import,flavour(executor),dt]] : void;
+  note('Time for ',import,': ',dt);
   clearPackageCache(import);
   void;
 end;
@@ -168,7 +181,9 @@ begin
   collectOutput;
   executeMainCall('24',doLog,'demo');
   executeMainCall('diff',doLog,'test');
-  inspect['uses'].getInner(0).leading(plotDemoCount).tail(4).each(import,executeMainCall(import,doLog));
+  executeMainCall('grep',doLog,'\Wtry\W','*.mnh');
+  executeMainCall('emptyFolders',doLog,'demos');
+  inspect['uses'].getInner(0).leading(plotDemoCount).tail(6).each(import,executeMainCall(import,doLog));
   canPlot
   ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting(import,doLog,'../demos/'&import&'.png'))
   : void;

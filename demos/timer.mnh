@@ -14,26 +14,30 @@ readInterval->readTimeOrInterval('Enter interval') - parseTime('hh:nn:ss','00:00
 readTime    ->readTimeOrInterval('Enter time');
 mutable endTime:=void;
 mutable keypressed:=false;
+mutable beepOnce:=false;
+
+private timerLoop->begin
+  async({begin
+    ask('Press enter to cancel');
+    keypressed:=true;
+  end});
+
+  while(systime<endTime AND not(keypressed),begin
+    clearPrint;
+    print('Timer set for: ',formatTime('hh:nn:ss',endTime        ));
+    print('    remaining: ',formatTime('hh:nn:ss',endTime-systime));
+    sleep(1);
+  end);
+  beepOnce ? beep :
+  while(not(keypressed),begin
+    beep;
+    sleep(1);
+  end);
+end;
 
 main->begin
   endTime:=[['t',{readTime}],['i',{readInterval}],['a',{false}]][ask('Timer: [t]ime, [i]nterval or [a]bort?',['t','i','a'])]();
   endTime.isNumeric
-  ? begin
-      async({begin
-        ask('Press enter to cancel');
-        keypressed:=true;
-      end});
-
-      while(systime<endTime AND not(keypressed),begin
-        clearPrint;
-        print('Timer set for: ',formatTime('hh:nn:ss',endTime        ));
-        print('    remaining: ',formatTime('hh:nn:ss',endTime-systime));
-        sleep(1);
-      end);
-      while(not(keypressed),begin
-        beep;
-        sleep(1);
-      end);
-    end
+  ? timerLoop
   : void;
 end;

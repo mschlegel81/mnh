@@ -347,7 +347,6 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
   VAR i:longint;
   begin
-    if closeGuiFlag then close;
     with evaluation do begin
       required:=false;
       deferredUntil:=now+0.1*ONE_SECOND;
@@ -1244,7 +1243,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       saveSettings;
     end;
 
-    if reEvaluationWithGUIrequired and not(runEvaluator.evaluationRunning) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
+    if closeGuiFlag or reEvaluationWithGUIrequired and not(runEvaluator.evaluationRunning) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
