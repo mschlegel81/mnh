@@ -1,5 +1,6 @@
 {$ifdef includeInterface}
 T_guiOutAdapter=object(T_collectingOutAdapter)
+  flushing:boolean;
   CONSTRUCTOR create;
   DESTRUCTOR destroy; virtual;
   FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
@@ -10,6 +11,7 @@ end;
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
     inherited create(at_gui,C_collectAllOutputBehavior);
+    flushing:=false;
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
@@ -50,6 +52,12 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
 
   begin
     system.enterCriticalSection(cs);
+    if flushing then begin
+       {$ifdef debugMode}writeln(stderr,'Already flushing!');{$endif}
+      system.LeaveCriticalsection(cs);
+      exit;
+    end;
+    flushing:=true;
     result:=length(storedMessages)>0;
     if result then outputLinesLimit:=settings.value^.outputLinesLimit;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
@@ -122,6 +130,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         if j=mrClose then closeGuiFlag:=true;
       end;
     end;
+    flushing:=false;
     system.leaveCriticalSection(cs);
   end;
 
