@@ -152,6 +152,7 @@ TYPE
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters:P_adapters; CONST tryBodyFailed:boolean);
       PROCEDURE attachWorkerContext(CONST newParent:P_evaluationContext);
+      PROCEDURE detachWorkerContext(CONST expectedParent:P_evaluationContext);
       //Recycler routines:
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -162,8 +163,9 @@ TYPE
       PROCEDURE scopePush(CONST blocking:boolean); inline;
       PROCEDURE scopePop; inline;
       PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean); inline;
-      FUNCTION getVariable(CONST id:T_idString):P_namedVariable;
       FUNCTION getVariableValue(CONST id:T_idString):P_literal; inline;
+      PROCEDURE setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation);
+      FUNCTION mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       //call stack routines
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
       PROCEDURE callStackPop();
@@ -584,14 +586,22 @@ PROCEDURE T_evaluationContext.leaveTryStatementReassumingPreviousAdapters(CONST 
     currentAdapters:=previousAdapters;
   end;
 
-PROCEDURE T_evaluationContext.attachWorkerContext(
-  CONST newParent: P_evaluationContext);
+PROCEDURE T_evaluationContext.attachWorkerContext(CONST newParent: P_evaluationContext);
   begin
     initialAdapters:=newParent^.initialAdapters;
     currentAdapters:=newParent^.currentAdapters;
     parentContext:=newParent;
     options:=parentContext^.options-[cp_timing]+[cp_queryParentValueStore];
   end;
+
+PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evaluationContext);
+  begin
+    {$ifdef debugMode}
+    if parentContext<>expectedParent then raise Exception.create('Detaching excepts another context');
+    {$endif}
+    parentContext:=nil;
+  end;
+
 
 FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
   begin with recycler do begin
@@ -651,26 +661,44 @@ PROCEDURE T_evaluationContext.scopePop;
     valueStore.scopePop;
   end;
 
-PROCEDURE T_evaluationContext.createVariable(CONST id: T_idString;
-  CONST value: P_literal; CONST readonly: boolean);
+PROCEDURE T_evaluationContext.createVariable(CONST id: T_idString; CONST value: P_literal; CONST readonly: boolean);
   begin
     valueStore.createVariable(id,value,readonly);
-  end;
-
-FUNCTION T_evaluationContext.getVariable(CONST id: T_idString): P_namedVariable;
-  begin
-    result:=valueStore.getVariable(id);
-    if (result=nil) and (parentContext<>nil) and (cp_queryParentValueStore in options) then result:=parentContext^.getVariable(id);
   end;
 
 FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
   VAR named:P_namedVariable;
   begin
-    named:=getVariable(id);
-    if named=nil then result:=nil
-                 else begin
-      result:=named^.getValue;
-    end;
+    system.enterCriticalSection(valueStore.cs);
+    named:=valueStore.getVariable(id);
+    if named<>nil then result:=named^.getValue
+    else if (parentContext<>nil) and (cp_queryParentValueStore in options) then
+      result:=parentContext^.getVariableValue(id)
+    else result:=nil;
+    system.leaveCriticalSection(valueStore.cs);
+  end;
+
+PROCEDURE T_evaluationContext.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation);
+  VAR named:P_namedVariable;
+  begin
+    system.enterCriticalSection(valueStore.cs);
+    named:=valueStore.getVariable(id);
+    if named=nil then adapters^.raiseError('Cannot assign value to unknown local variable '+id,location)
+                 else named^.setValue(value);
+    system.leaveCriticalSection(valueStore.cs);
+  end;
+
+FUNCTION T_evaluationContext.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  VAR named:P_namedVariable;
+  begin
+    system.enterCriticalSection(valueStore.cs);
+    named:=valueStore.getVariable(id);
+    if named=nil then begin
+                        adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
+                        result:=nil;
+                      end
+                 else result:=named^.mutate(mutation,RHS,location,adapters^);
+    system.leaveCriticalSection(valueStore.cs);
   end;
 
 PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
