@@ -223,7 +223,7 @@ PROCEDURE T_editorMeta.initForNewFile;
   begin
     sheet.tabVisible:=true;
     with fileInfo do begin
-      ischanged       :=false;
+      isChanged       :=false;
       fileAccessAge:=0;
       filePath     :='';
     end;
@@ -400,7 +400,7 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
   VAR currentFileAge:double;
   begin
     if not(sheet.tabVisible and isFile) then exit(false);
-    fileAge(fileinfo.filePath,currentFileAge);
+    fileAge(fileInfo.filePath,currentFileAge);
     result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
 
