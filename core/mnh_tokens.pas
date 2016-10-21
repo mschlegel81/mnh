@@ -245,7 +245,7 @@ FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
       end;
       if t^.tokType      in C_openingBrackets then inc(level)
       else if t^.tokType in C_closingBrackets then dec(level);
-      if (level=0) and (t^.tokType in [tt_declare,tt_assign]) then exit(t);
+      if (level=0) and (t^.tokType=tt_assign) or (t^.tokType=tt_declare) then exit(t);
       t:=t^.next;
     end;
     result:=nil;
