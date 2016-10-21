@@ -3,6 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
 FUNCTION getMnhInfo:string;
+VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorIn] of P_intFuncCallback;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -149,6 +150,55 @@ FUNCTION getMnhInfo:string;
     disposeLiteral(L);
   end;
 
+
+{$MACRO ON}
+{$define funcForOp:=intFuncSignature; begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^) else result:=nil; end}
+{$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      funcForOp;
+{$define OP:=tt_comparatorNeq    } FUNCTION funcFor_comparatorNeq     funcForOp;
+{$define OP:=tt_comparatorLeq    } FUNCTION funcFor_comparatorLeq     funcForOp;
+{$define OP:=tt_comparatorGeq    } FUNCTION funcFor_comparatorGeq     funcForOp;
+{$define OP:=tt_comparatorLss    } FUNCTION funcFor_comparatorLss     funcForOp;
+{$define OP:=tt_comparatorGrt    } FUNCTION funcFor_comparatorGrt     funcForOp;
+{$define OP:=tt_comparatorListEq } FUNCTION funcFor_comparatorListEq  funcForOp;
+{$define OP:=tt_operatorAnd      } FUNCTION funcFor_operatorAnd       funcForOp;
+{$define OP:=tt_operatorOr       } FUNCTION funcFor_operatorOr        funcForOp;
+{$define OP:=tt_operatorXor      } FUNCTION funcFor_operatorXor       funcForOp;
+FUNCTION funcFor_operatorLazyAnd intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_boolean) then begin
+      if bool0^.value then result:=arg1 else result:=arg0;
+      result^.rereference;
+    end else result:=nil;
+  end;
+
+FUNCTION funcFor_operatorLazyOr  intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_boolean) then begin
+      if bool0^.value then result:=arg0 else result:=arg1;
+      result^.rereference;
+    end else result:=nil;
+  end;
+{$define OP:=tt_operatorPlus     } FUNCTION funcFor_operatorPlus      funcForOp;
+{$define OP:=tt_operatorMinus    } FUNCTION funcFor_operatorMinus     funcForOp;
+{$define OP:=tt_operatorMult     } FUNCTION funcFor_operatorMult      funcForOp;
+{$define OP:=tt_operatorDivReal  } FUNCTION funcFor_operatorDivReal   funcForOp;
+{$define OP:=tt_operatorDivInt   } FUNCTION funcFor_operatorDivInt    funcForOp;
+{$define OP:=tt_operatorMod      } FUNCTION funcFor_operatorMod       funcForOp;
+{$define OP:=tt_operatorPot      } FUNCTION funcFor_operatorPot       funcForOp;
+{$define OP:=tt_unaryOpPlus      } FUNCTION funcFor_unaryOpPlus       funcForOp;
+{$define OP:=tt_unaryOpMinus     } FUNCTION funcFor_unaryOpMinus      funcForOp;
+{$define OP:=tt_operatorStrConcat} FUNCTION funcFor_operatorStrConcat funcForOp;
+FUNCTION funcFor_operatorOrElse intFuncSignature;
+  begin
+    if (params<>nil) and ((params^.size=1) or (params^.size=2)) then begin
+      result:=arg0;
+      result^.rereference;
+    end else result:=nil;
+  end;
+{$define OP:=tt_operatorConcat   } FUNCTION funcFor_operatorConcat    funcForOp;
+{$define OP:=tt_operatorIn       } FUNCTION funcFor_operatorIn        funcForOp;
+{$undef OP}
+{$undef funcForOp}
 INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath',@myPath_impl,'myPath;#returns the path to the current package');
@@ -158,5 +208,30 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,'listKeywords;#Returns a list of all keywords by category');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord',@ord_imp,'ord(x);#Returns the ordinal value of x');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo',@mnhInfo_imp,'mnhInfo;#Returns a key-value list with info on the currently executing instance of MNH');
+  intFuncForOperator[tt_comparatorEq     ]:=@funcFor_comparatorEq     ;
+  intFuncForOperator[tt_comparatorNeq    ]:=@funcFor_comparatorNeq    ;
+  intFuncForOperator[tt_comparatorLeq    ]:=@funcFor_comparatorLeq    ;
+  intFuncForOperator[tt_comparatorGeq    ]:=@funcFor_comparatorGeq    ;
+  intFuncForOperator[tt_comparatorLss    ]:=@funcFor_comparatorLss    ;
+  intFuncForOperator[tt_comparatorGrt    ]:=@funcFor_comparatorGrt    ;
+  intFuncForOperator[tt_comparatorListEq ]:=@funcFor_comparatorListEq ;
+  intFuncForOperator[tt_operatorAnd      ]:=@funcFor_operatorAnd      ;
+  intFuncForOperator[tt_operatorOr       ]:=@funcFor_operatorOr       ;
+  intFuncForOperator[tt_operatorXor      ]:=@funcFor_operatorXor      ;
+  intFuncForOperator[tt_operatorLazyAnd  ]:=@funcFor_operatorLazyAnd  ;
+  intFuncForOperator[tt_operatorLazyOr   ]:=@funcFor_operatorLazyOr   ;
+  intFuncForOperator[tt_operatorPlus     ]:=@funcFor_operatorPlus     ;
+  intFuncForOperator[tt_operatorMinus    ]:=@funcFor_operatorMinus    ;
+  intFuncForOperator[tt_operatorMult     ]:=@funcFor_operatorMult     ;
+  intFuncForOperator[tt_operatorDivReal  ]:=@funcFor_operatorDivReal  ;
+  intFuncForOperator[tt_operatorDivInt   ]:=@funcFor_operatorDivInt   ;
+  intFuncForOperator[tt_operatorMod      ]:=@funcFor_operatorMod      ;
+  intFuncForOperator[tt_operatorPot      ]:=@funcFor_operatorPot      ;
+  intFuncForOperator[tt_unaryOpPlus      ]:=@funcFor_unaryOpPlus      ;
+  intFuncForOperator[tt_unaryOpMinus     ]:=@funcFor_unaryOpMinus     ;
+  intFuncForOperator[tt_operatorStrConcat]:=@funcFor_operatorStrConcat;
+  intFuncForOperator[tt_operatorOrElse   ]:=@funcFor_operatorOrElse   ;
+  intFuncForOperator[tt_operatorConcat   ]:=@funcFor_operatorConcat   ;
+  intFuncForOperator[tt_operatorIn       ]:=@funcFor_operatorIn       ;
 
 end.

@@ -876,8 +876,20 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
     result:=dataRow;
   end;
-{$endif}
 
+{$endif}
+FUNCTION expressionToTokens(CONST subruleLiteral:P_expressionLiteral):P_listLiteral;
+  VAR sub:P_subrule;
+      i:longint;
+  begin
+    sub:=P_subrule(subruleLiteral^.value);
+    result:=newListLiteral(length(sub^.preparedBody));
+    for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
+      if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
+      then result^.append(token.data,true)
+      else result^.appendString(safeTokenToString(@token));
+    end;
+  end;
 
 {$endif}
 {$ifdef include_initialization}
@@ -891,6 +903,7 @@ subruleAcceptParCountCallback:=@subruleAcceptsParCount;
 subruleApplyOpCallback :=@subruleApplyOpImpl;
 evaluateCompatorCallback:=@evaluateComparator;
 evaluateSubruleCallback:=@evaluateSubrule;
+expressionToTokensCallback:=@expressionToTokens;
 {$endif}
 {$ifdef include_finalization}
 {$ifdef fullVersion}

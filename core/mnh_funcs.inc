@@ -401,12 +401,37 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
     exTokens.destroy;
   end;
 
-FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_scalarLiteral;
-  VAR first,temp:P_token;
+FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_token;
+  VAR last:P_token=nil;
+      i:longint;
+      subTokens:P_token;
+  begin
+    result:=nil;
+    for i:=0 to L^.size-1 do begin
+      if L^.value(i)^.literalType=lt_string
+      then subTokens:=stringToTokens(P_stringLiteral(L^.value(i))^.value,location,package,context)
+      else begin
+        subTokens:=context.newToken(location,'',tt_literal,L^.value(i));
+        L^.value(i)^.rereference;
+      end;
+      if subTokens=nil then begin
+        if result<>nil then context.cascadeDisposeToken(result);
+        exit(nil);
+      end;
+      if result=nil then result:=subTokens
+                    else last^.next:=subTokens;
+      last:=subTokens^.last;
+    end;
+  end;
+
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_scalarLiteral;
+  VAR first:P_token=nil;
+      temp:P_token;
       package:P_package;
   begin
     package:=P_package(location.package);
-    first:=stringToTokens(s,location,package,context);
+    if      L^.literalType=lt_string           then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
+    else if L^.literalType in C_validListTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
     if first=nil then exit(nil);
 
     if not(first^.areBracketsPlausible(context.adapters^)) then begin
@@ -453,32 +478,13 @@ FUNCTION toExpression_imp intFuncSignature;
       context.disposeToken(first);
     end;
 
-  FUNCTION expression_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_string: result:=stringToExpression(P_stringLiteral(x)^.value,tokenLocation,context);
-        lt_list,lt_stringList,lt_emptyList,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_keyValueList,lt_flatList:  begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        lt_expression: begin result:=x; x^.rereference; end;
-        lt_boolean,lt_int,lt_real: result:=primitiveExpression(x);
-        else result:=newErrorLiteralRaising('Cannot apply "toExpression" to literal of type '+C_typeString[x^.literalType],tokenLocation,context.adapters^);
-      end;
-    end;
-
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then begin
-      result:=expression_rec(arg0);
-      if (result<>nil) and (result^.literalType=lt_listWithError) then begin
-        disposeLiteral(result);
-        result:=newErrorLiteral;
-      end;
+    then case arg0^.literalType of
+      lt_expression:  begin result:=arg0; arg0^.rereference; end;
+      lt_boolean,lt_int,lt_real: result:=primitiveExpression(arg0);
+      else result:=stringOrListToExpression(arg0,tokenLocation,context);
     end;
   end;
 

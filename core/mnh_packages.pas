@@ -51,10 +51,10 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
-      PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
+      PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       FUNCTION getDoc:P_userPackageDocumentation;
       {$endif}
@@ -840,9 +840,17 @@ DESTRUCTOR T_package.destroy;
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adapters);
+  FUNCTION isTypeToType(CONST id:T_idString):T_idString;
+    begin
+      if (length(id)>=3) and (id[1]='i') and (id[2]='s') and (id[3] in ['A'..'Z']) then begin
+        result:=copy(id,3,length(id)-2);
+        result[1]:=lowercase(result[1]);
+      end else result:='';
+    end;
+
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
-      ruleId:ansistring;
+      ruleId:T_idString;
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
@@ -865,6 +873,21 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;
+    end;
+    ruleId:=isTypeToType(ruleId);
+    if ruleId<>'' then begin
+      if packageRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+        token.tokType:=tt_customTypeRule;
+        token.data:=userRule;
+        userRule^.idResolved:=true;
+        exit;
+      end;
+      if importedRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+        token.tokType:=tt_customTypeRule;
+        token.data:=userRule;
+        userRule^.idResolved:=true;
+        exit;
+      end;
     end;
     if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
@@ -897,24 +920,16 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
       end;
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
-      adapters.raiseCustomMessage(mt_el1_note,'Creating new rule: '+ruleId,ruleDeclarationStart);
+      adapters.raiseNote('Creating new rule: '+ruleId,ruleDeclarationStart);
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
       if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
       else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
       then adapters.raiseCustomMessage(mt_el4_parsingError,C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
-      else adapters.raiseCustomMessage(mt_el1_note,'Extending rule: '+ruleId,ruleDeclarationStart);
+      else adapters.raiseNote('Extending rule: '+ruleId,ruleDeclarationStart);
     end;
     result^.declarationEnd:=ruleDeclarationEnd;
-  end;
-
-PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
-  begin
-    userDefinedRules.clear;
-    userDefinedRules.addAll(packageRules.keySet);
-    userDefinedRules.addAll(importedRules.keySet);
-    userDefinedRules.unique;
   end;
 
 PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
@@ -943,6 +958,28 @@ PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
   end;
 
 {$ifdef fullVersion}
+PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
+  FUNCTION typeToIsType(CONST id:T_idString):T_idString;
+    begin
+      result:=id;
+      result[1]:=upCase(result[1]);
+      result:='is'+result;
+    end;
+
+  VAR rule:P_rule;
+  begin
+    userDefinedRules.clear;
+    for rule in packageRules.valueSet do begin
+      userDefinedRules.add(rule^.id);
+      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.add(typeToIsType(rule^.id));
+    end;
+    for rule in importedRules.valueSet do  begin
+      userDefinedRules.add(rule^.id);
+      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.add(typeToIsType(rule^.id));
+    end;
+    userDefinedRules.unique;
+  end;
+
 PROCEDURE T_package.complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
   VAR ruleList:array of P_rule;
       i:longint;

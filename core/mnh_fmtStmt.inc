@@ -97,6 +97,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
     VAR i,k:longint;
         needSubRule:boolean=false;
         expressionString:ansistring;
+        tempStringLiteral:P_stringLiteral;
 
     PROCEDURE splitPart(VAR part:ansistring; CONST index:longint);
       VAR expPart:ansistring;
@@ -132,9 +133,13 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         end;
       end;
       if context.adapters^.noErrors
-      then result:=stringToExpression('{'+expressionString+']}',
-                                      tokenLocation,
-                                      context)
+      then begin
+        tempStringLiteral:=newStringLiteral('{'+expressionString+']}');
+        result:=stringOrListToExpression(tempStringLiteral,
+                                         tokenLocation,
+                                         context);
+        disposeLiteral(tempStringLiteral);
+      end
       else result:=nil;
     end;
 

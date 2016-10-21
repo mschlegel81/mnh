@@ -1212,6 +1212,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               ruleIdResolved:=true;
             end;
           end;
+        end else if tokType in [tt_comparatorEq..tt_operatorIn] then begin
+          txt:=C_tokenInfo[tokType].defaultId;
+          data:=intFuncForOperator[tokType];
+          tokType:=tt_intrinsicRule;
+          ruleIdResolved:=true;
         end;
       end;
       if ruleIdResolved then begin
