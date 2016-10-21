@@ -283,24 +283,16 @@ DESTRUCTOR T_consoleOutAdapter.destroy;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
   VAR i:longint;
-      compound:ansistring;
   begin
     result:=message.messageType in messageTypesToInclude;
     if result then with message do case messageType of
       mt_clearConsole: mySys.clearConsole;
       mt_printline: begin
         if not(mySys.isConsoleShowing) then mySys.showConsole;
-        if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
-          mySys.clearConsole;
-          if length(multiMessage)>1 then begin
-            compound:=multiMessage[1];
-            for i:=2 to length(multiMessage)-1 do compound:=compound+LineEnding+multiMessage[i];
-            writeln(compound);
-          end;
-        end else if length(multiMessage)>0 then begin
-          compound:=multiMessage[0];
-          for i:=1 to length(multiMessage)-1 do compound:=compound+LineEnding+multiMessage[i];
-          writeln(compound);
+        for i:=0 to length(multiMessage)-1 do begin
+          if multiMessage[i]=C_formFeedChar
+          then mySys.clearConsole
+          else writeln(multiMessage[i]);
         end;
       end
       else writeln(stdErr,defaultFormatting(message));
