@@ -1155,11 +1155,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           first:=context.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.getVariable(first^.txt)^.setValue(newValue);
+          context.setVariableValue(first^.txt,newValue,first^.location);
           first:=context.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin
-          newValue:=context.getVariable(first^.txt)^.mutate(kind,newValue,first^.location,context.adapters^);
+          newValue:=context.mutateVariableValue(first^.txt,kind,newValue,first^.location);
           if context.adapters^.noErrors then begin
             first:=context.disposeToken(first);
             disposeLiteral(first^.data);

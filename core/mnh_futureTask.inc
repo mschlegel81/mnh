@@ -102,6 +102,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
     then evaluationResult:=eachRule^.directEvaluateUnary(eachParameter,eachLocation,context,callDepth)
     else evaluationResult:=nil;
     context.scopePop;
+    if calledFromWorkerThread then context.detachWorkerContext(scope);
     repeat state:=fts_ready until state=fts_ready;
   end;
 
