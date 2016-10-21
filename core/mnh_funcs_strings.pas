@@ -555,12 +555,16 @@ FUNCTION tokenSplit_impl intFuncSignature;
       then language:=str1^.value
       else exit(nil);
     end;
-    if (params<>nil) and (params^.size>=1) and
-       (arg0^.literalType=lt_string) then begin
-      stringToSplit:=str0^.value;
-      tokens:=tokenSplit(stringToSplit,language);
-      result:=newListLiteral;
-      for i:=0 to length(tokens)-1 do result:=lResult^.appendString(tokens[i]);
+    if (params<>nil) and (params^.size>=1) then
+    case arg0^.literalType of
+      lt_string:begin
+        stringToSplit:=str0^.value;
+        tokens:=tokenSplit(stringToSplit,language);
+        result:=newListLiteral;
+        for i:=0 to length(tokens)-1 do result:=lResult^.appendString(tokens[i]);
+      end;
+      lt_expression: if uppercase(language)='MNH' then
+        result:=expressionToTokensCallback(P_expressionLiteral(arg0));
     end;
   end;
 

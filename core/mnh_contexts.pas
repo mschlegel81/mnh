@@ -611,9 +611,7 @@ PROCEDURE T_evaluationContext.cascadeDisposeToken(VAR p: P_token);
     while p<>nil do p:=disposeToken(p);
   end;
 
-FUNCTION T_evaluationContext.newToken(CONST tokenLocation: T_tokenLocation;
-  CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer
-  ): P_token;
+FUNCTION T_evaluationContext.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
   begin with recycler do begin
     if (fill>0) then begin
       dec(fill);

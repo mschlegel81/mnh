@@ -262,6 +262,7 @@ TYPE
   T_pointerAndIntToBooleanCallback = FUNCTION(CONST p: pointer; CONST i:longint): boolean;
   T_evaluateCompatorCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
   T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral; CONST location:T_tokenLocation; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+  T_expressionToTokensCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral):P_listLiteral;
 
   T_format=object
     category:(fmtCat_decimal,
@@ -287,6 +288,7 @@ VAR
   subruleApplyOpCallback: T_subruleApplyOpCallback;
   evaluateCompatorCallback: T_evaluateCompatorCallback;
   evaluateSubruleCallback:T_evaluateSubruleCallback;
+  expressionToTokensCallback:T_expressionToTokensCallback;
 
 FUNCTION exp(CONST x:double):double; inline;
 

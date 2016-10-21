@@ -818,7 +818,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     begin
       if (length(id)>=3) and (id[1]='i') and (id[2]='s') and (id[3] in ['A'..'Z']) then begin
         result:=copy(id,3,length(id)-2);
-        result[1]:=lowerCase(result[1]);
+        result[1]:=lowercase(result[1]);
       end else result:='';
     end;
 
