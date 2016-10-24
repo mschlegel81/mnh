@@ -1816,6 +1816,4 @@ FUNCTION tokenStackToString(CONST stack:pointer; CONST first: P_token; CONST len
     result:=P_tokenStack(stack)^.toString(first,lengthLimit);
   end;
 {$endif}
-{$ifdef include_initialization}
-  tokenStackToStringCallback:=@tokenStackToString;
-{$endif}
+

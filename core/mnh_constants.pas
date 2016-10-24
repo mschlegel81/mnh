@@ -208,6 +208,7 @@ CONST
     tt_blank];
   C_validNonVoidTypes: T_literalTypeSet=[lt_boolean..lt_flatList];
   C_validListTypes: T_literalTypeSet=[lt_list..lt_flatList];
+  C_allListTypes: T_literalTypeSet=[lt_list..lt_listWithError];
   C_validScalarTypes: T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];

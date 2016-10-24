@@ -78,7 +78,8 @@ TYPE
   {$ifdef fullVersion}
   T_debuggingSnapshot=record
     location:T_tokenLocation;
-    state:string;
+    tokenStack:pointer;
+    first:pointer;
     callStack:T_callStack;
   end;
   {$endif}
@@ -197,7 +198,7 @@ TYPE
       {$endif}
   end;
 
-VAR tokenStackToStringCallback:FUNCTION(CONST stack:pointer; CONST first:P_token; CONST lengthLimit:longint):ansistring;
+//VAR tokenStackToStringCallback:FUNCTION(CONST stack:pointer; CONST first:P_token; CONST lengthLimit:longint):ansistring;
 IMPLEMENTATION
 CONSTRUCTOR T_valueStore.create;
   begin
@@ -807,7 +808,8 @@ PROCEDURE T_evaluationContext.stepping(CONST first: P_token; CONST stack: pointe
     VAR i:longint;
     begin
       debuggingStepper.snapshot.location:=first^.location;
-      debuggingStepper.snapshot.state:=tokenStackToStringCallback(stack,first,100);
+      debuggingStepper.snapshot.tokenStack:=stack;
+      debuggingStepper.snapshot.first:=first;
       setLength(debuggingStepper.snapshot.callStack,length(callStack));
       for i:=0 to length(callStack)-1 do debuggingStepper.snapshot.callStack[i]:=callStack[i];
     end;
