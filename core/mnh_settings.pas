@@ -29,6 +29,7 @@ T_editorState=object(T_serializable)
   lines:T_arrayOfString;
   markedLines:T_arrayOfLongint;
   caret:array['x'..'y'] of longint;
+  language:byte;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -351,7 +352,7 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
     for i:=0 to length(lines)-1 do dat.append(lines[i]);
   end;
 
-FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366165; end;
+FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366166; end;
 
 FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
   VAR i:longint;
@@ -373,6 +374,7 @@ FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
     for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
     caret['x']:=stream.readNaturalNumber;
     caret['y']:=stream.readNaturalNumber;
+    language:=stream.readByte;
     result:=stream.allOkay;
   end;
 
@@ -392,6 +394,7 @@ PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper);
     for i:=0 to length(markedLines)-1 do stream.writeLongint(markedLines[i]);
     stream.writeNaturalNumber(caret['x']);
     stream.writeNaturalNumber(caret['y']);
+    stream.writeByte(language);
   end;
 
 FUNCTION obtainSettings:P_Settings;

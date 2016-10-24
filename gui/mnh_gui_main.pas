@@ -3,16 +3,46 @@ UNIT mnh_gui_main;
 {$mode objfpc}{$H+}
 INTERFACE
 USES
-  mnhFormHandler,
-  Classes, sysutils, FileUtil, SynEdit, SynEditTypes, SynCompletion, Forms, Controls,
-  Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
-  SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
-  mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
-  mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
-  myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,SynPluginMultiCaret,
-  SynEditMiscClasses, LazUTF8, mnh_tables, openDemoDialog;
+  mnhFormHandler, Classes, sysutils, FileUtil, SynEdit, SynEditTypes,
+  SynCompletion, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls,
+  Grids, SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
+  mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants, types, LCLType,
+  mnh_plotData, mnh_funcs, mnh_litVar, mnh_doc, lclintf, StdCtrls, mnh_packages,
+  closeDialog, askDialog, SynEditKeyCmds, SynMemo, myGenerics, mnh_fileWrappers,
+  mySys, mnh_html, mnh_cmdLineInterpretation, mnh_plotForm,
+  newCentralPackageDialog, SynGutterMarks, SynEditMarks, mnh_contexts,
+  SynPluginMultiCaret, SynEditMiscClasses, SynHighlighterMulti,
+  SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
+  SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
+  SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
+  SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
+  SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
+  LazUTF8, mnh_tables,  openDemoDialog;
+
+CONST LANG_MNH   = 0;
+      LANG_CPP   = 1;
+      LANG_CSS   = 2;
+      LANG_DIFF  = 3;
+      LANG_HTML  = 4;
+      LANG_INI   = 5;
+      LANG_JAVA  = 6;
+      LANG_JS    = 7;
+      LANG_PAS   = 8;
+      LANG_PERL  = 9;
+      LANG_PHP   =10;
+      LANG_PYTHON=11;
+      LANG_SHELL =12;
+      LANG_SQL   =13;
+      LANG_VB    =14;
+      LANG_BAT   =15;
+      LANG_XML   =16;
+
+VAR fileTypeMeta:array of record
+      extension:string;
+      language:byte;
+      highlighter:TSynCustomHighlighter;
+      menuItem:TMenuItem;
+    end;
 
 TYPE
   {$define includeInterface}
@@ -26,6 +56,25 @@ TYPE
     debugItemsImageList: TImageList;
     callStackGroupBox: TGroupBox;
     callStackList: TListBox;
+    MenuItem1: TMenuItem;
+    miLangPython: TMenuItem;
+    miLangXml: TMenuItem;
+    miLangDiff: TMenuItem;
+    miLangShell: TMenuItem;
+    miLangCss: TMenuItem;
+    miLangPhp: TMenuItem;
+    miLangSql: TMenuItem;
+    miLangVb: TMenuItem;
+    miLangBat: TMenuItem;
+    miLangIni: TMenuItem;
+    miLangMnh: TMenuItem;
+    miLangPascal: TMenuItem;
+    miLangCpp: TMenuItem;
+    miLangJava: TMenuItem;
+    miLangJS: TMenuItem;
+    miLangPerl: TMenuItem;
+    miLangHtml: TMenuItem;
+    miFullscreen: TMenuItem;
     miProfile: TMenuItem;
     Panel1: TPanel;
     Panel2: TPanel;
@@ -94,9 +143,25 @@ TYPE
     inputPageControl: TPageControl;
     SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
+    SynBatSyn1: TSynBatSyn;
     SynCompletion: TSynCompletion;
     assistanceTabSheet: TTabSheet;
     assistanceSynEdit: TSynEdit;
+    SynCppSyn1: TSynCppSyn;
+    SynCssSyn1: TSynCssSyn;
+    SynDiffSyn1: TSynDiffSyn;
+    SynFreePascalSyn1: TSynFreePascalSyn;
+    SynHTMLSyn1: TSynHTMLSyn;
+    SynIniSyn1: TSynIniSyn;
+    SynJavaSyn1: TSynJavaSyn;
+    SynJScriptSyn1: TSynJScriptSyn;
+    SynPerlSyn1: TSynPerlSyn;
+    SynPHPSyn1: TSynPHPSyn;
+    SynPythonSyn1: TSynPythonSyn;
+    SynSQLSyn1: TSynSQLSyn;
+    SynUNIXShellScriptSyn1: TSynUNIXShellScriptSyn;
+    SynVBSyn1: TSynVBSyn;
+    SynXMLSyn1: TSynXMLSyn;
     tbMicroStep: TToolButton;
     variablesTreeView: TTreeView;
     UpdateTimeTimer: TTimer;
@@ -173,10 +238,12 @@ TYPE
     PROCEDURE miFileHistory7Click(Sender: TObject);
     PROCEDURE miFileHistory8Click(Sender: TObject);
     PROCEDURE miFileHistory9Click(Sender: TObject);
+    PROCEDURE miFullscreenClick(Sender: TObject);
     PROCEDURE miHaltEvalutaionClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
+    PROCEDURE miLangMnhClick(Sender: TObject);
     PROCEDURE miMinErrorlevel1Click(Sender: TObject);
     PROCEDURE miMinErrorlevel2Click(Sender: TObject);
     PROCEDURE miMinErrorlevel3Click(Sender: TObject);
@@ -277,6 +344,7 @@ TYPE
     editorMeta:array of T_editorMeta;
     FUNCTION addEditorMetaForNewFile(CONST newFileName: ansistring=''):longint;
     FUNCTION addOrGetEditorMetaForFile(CONST fileName: ansistring):longint;
+    PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
   end;
 
 VAR MnhForm: TMnhForm;
@@ -439,8 +507,43 @@ PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: b
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
+  PROCEDURE initFileTypes;
+    PROCEDURE addFileType(CONST extension:string; CONST language:byte; CONST highlighter:TSynCustomHighlighter; CONST menuItem:TMenuItem);
+      begin
+        setLength(fileTypeMeta,length(fileTypeMeta)+1);
+        fileTypeMeta[length(fileTypeMeta)-1].extension  :='.'+uppercase(extension);
+        fileTypeMeta[length(fileTypeMeta)-1].language   :=language;
+        fileTypeMeta[length(fileTypeMeta)-1].highlighter:=highlighter;
+        fileTypeMeta[length(fileTypeMeta)-1].menuItem   :=menuItem;
+      end;
+
+    begin
+      addFileType('mnh',LANG_MNH,nil,miLangMnh);
+      addFileType('cpp',LANG_CPP,SynCppSyn1,miLangCpp);
+      addFileType('c',LANG_CPP,SynCppSyn1,miLangCpp);
+      addFileType('h',LANG_CPP,SynCppSyn1,miLangCpp);
+      addFileType('hh',LANG_CPP,SynCppSyn1,miLangCpp);
+      addFileType('css',LANG_CSS,SynCssSyn1,miLangCss);
+      addFileType('diff',LANG_DIFF,SynDiffSyn1,miLangDiff);
+      addFileType('html',LANG_HTML,SynHTMLSyn1,miLangHtml);
+      addFileType('ini',LANG_INI,SynIniSyn1,miLangIni);
+      addFileType('java',LANG_JAVA,SynJavaSyn1,miLangJava);
+      addFileType('js',LANG_JS,SynJScriptSyn1,miLangJS);
+      addFileType('json',LANG_JS,SynJScriptSyn1,miLangJS);
+      addFileType('pas',LANG_PAS,SynFreePascalSyn1,miLangPascal);
+      addFileType('perl',LANG_PERL,SynPerlSyn1,miLangPerl);
+      addFileType('php',LANG_PHP,SynPHPSyn1,miLangPhp);
+      addFileType('py',LANG_PYTHON,SynPythonSyn1,miLangPython);
+      addFileType('sh',LANG_SHELL,SynUNIXShellScriptSyn1,miLangShell);
+      addFileType('sql',LANG_SQL,SynSQLSyn1,miLangSql);
+      addFileType('vb',LANG_VB,SynVBSyn1,miLangVb);
+      addFileType('bat',LANG_BAT,SynBatSyn1,miLangBat);
+      addFileType('xml',LANG_XML,SynXMLSyn1,miLangXml);
+    end;
+
   VAR i:longint;
   begin
+    initFileTypes;
     registerForm(self,true,true);
     lastWordsCaret:=maxLongint;
     wordsInEditor.create;
@@ -587,7 +690,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
       if (key=118) and tbStep     .enabled then tbStepClick(Sender);
       if (key=119) and tbStepOut  .enabled then tbStepOutClick(Sender);
-      if (key=122) and tbMicroStep.enabled then tbMicroStepClick(Sender);
+      if (key=121) and tbMicroStep.enabled then tbMicroStepClick(Sender);
     end;
   end;
 
@@ -734,6 +837,18 @@ PROCEDURE TMnhForm.miFileHistory6Click(Sender: TObject); begin openFromHistory(6
 PROCEDURE TMnhForm.miFileHistory7Click(Sender: TObject); begin openFromHistory(7); end;
 PROCEDURE TMnhForm.miFileHistory8Click(Sender: TObject); begin openFromHistory(8); end;
 PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9); end;
+
+PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
+begin
+  if BorderStyle=bsSizeable then begin
+    BorderStyle:=bsNone;
+    WindowState:=wsFullScreen;
+  end else begin
+    BorderStyle:=bsSizeable;
+    WindowState:=wsMaximized;
+  end;
+end;
+
 PROCEDURE TMnhForm.miFileHistory10Click(Sender: TObject); begin openFromHistory(10); end;
 PROCEDURE TMnhForm.miFileHistory11Click(Sender: TObject); begin openFromHistory(11); end;
 PROCEDURE TMnhForm.miFileHistory12Click(Sender: TObject); begin openFromHistory(12); end;
@@ -770,6 +885,17 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
     if settingsReady then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
       processSettings;
+    end;
+  end;
+
+PROCEDURE TMnhForm.miLangMnhClick(Sender: TObject);
+  VAR i,editorIdx:longint;
+  begin
+    editorIdx:=inputPageControl.PageIndex;
+    if (editorIdx<0) or (editorIdx>=length(editorMeta)) then exit;
+    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].menuItem.Checked then begin
+      editorMeta[editorIdx].setLanguage(fileTypeMeta[i].language);
+      exit;
     end;
   end;
 
@@ -1045,7 +1171,14 @@ FUNCTION TMnhForm.addOrGetEditorMetaForFile(CONST fileName: ansistring): longint
       result:=addEditorMetaForNewFile();
       editorMeta[result].setFile(filePath);
       editorMeta[result].editor.Font:=OutputEdit.Font;
+      enableMenuForLanguage(editorMeta[result].language);
     end;
+  end;
+
+PROCEDURE TMnhForm.enableMenuForLanguage(CONST languageIndex:byte);
+  VAR i:longint;
+  begin
+    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=languageIndex then fileTypeMeta[i].menuItem.Checked:=true;
   end;
 
 PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin _setErrorlevel_(1); end;
@@ -1140,7 +1273,8 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
     if (inputPageControl.activePageIndex>=0) and not(reEvaluationWithGUIrequired) then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       settings.value^.activePage:=inputPageControl.activePageIndex;
-      with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
+      with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(pseudoName,editor.lines);
+      enableMenuForLanguage(editorMeta[inputPageControl.activePageIndex].language);
     end;
   end;
 
@@ -1251,6 +1385,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   VAR aid:ansistring;
       isEvaluationRunning:boolean;
       flushPerformed:boolean=false;
+      canRun:boolean;
       i,modalRes:longint;
   begin
     isEvaluationRunning:=runEvaluator.evaluationRunning;
@@ -1281,9 +1416,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       //------------------------------------------------------------:progress time
       //Halt/Run enabled states:--------------------------------------------------
       if isEvaluationRunning<>miHaltEvalutaion.enabled then miHaltEvalutaion.enabled:=isEvaluationRunning;
-      if not(isEvaluationRunning)<>miEvaluateNow.enabled then begin
-        miEvaluateNow.enabled:=not(isEvaluationRunning);
-        miCallMain.enabled:=not(isEvaluationRunning);
+      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(isEvaluationRunning);
+      if canRun<>miEvaluateNow.enabled then begin
+        miEvaluateNow.enabled:=canRun;
+        miCallMain.enabled:=canRun;
       end;
       //--------------------------------------------------:Halt/Run enabled states
       //File checks:------------------------------------------------------------
