@@ -25,8 +25,10 @@ TYPE
   TMnhForm = class(TForm)
     debugItemsImageList: TImageList;
     callStackGroupBox: TGroupBox;
+    callStackList: TListBox;
     miProfile: TMenuItem;
     Panel1: TPanel;
+    Panel2: TPanel;
     pmiOpenFile2: TMenuItem;
     pmiOpenFile1: TMenuItem;
     miFileHistory14: TMenuItem;
@@ -37,7 +39,7 @@ TYPE
     miFileHistory19: TMenuItem;
     Splitter2: TSplitter;
     Splitter3: TSplitter;
-    callStackStringGrid: TStringGrid;
+    callStackInfoStringGrid: TStringGrid;
     subMenuCode: TMenuItem;
     miFileHistory10: TMenuItem;
     miFileHistory11: TMenuItem;
@@ -96,6 +98,7 @@ TYPE
     assistanceTabSheet: TTabSheet;
     assistanceSynEdit: TSynEdit;
     tbMicroStep: TToolButton;
+    variablesTreeView: TTreeView;
     UpdateTimeTimer: TTimer;
     helpPopupMemo: TSynMemo;
     miOpenDemo: TMenuItem;
@@ -118,7 +121,6 @@ TYPE
     outputPageControl: TPageControl;
     outputTabSheet: TTabSheet;
     debugTabSheet: TTabSheet;
-    variablesStringGrid: TStringGrid;
     currentExpressionGroupBox: TGroupBox;
     currentExpressionMemo: TSynMemo;
     PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word;
@@ -127,6 +129,7 @@ TYPE
       Shift: TShiftState; X, Y: integer);
     PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
+    PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
     PROCEDURE EditorPopupMenuPopup(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -200,6 +203,7 @@ TYPE
     PROCEDURE pmiOpenFile2Click(Sender: TObject);
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE Splitter1Moved(Sender: TObject);
+    PROCEDURE Splitter3Moved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
       sourceValue: string; VAR SourceStart, SourceEnd: TPoint;
       KeyChar: TUTF8Char; Shift: TShiftState);
@@ -222,6 +226,8 @@ TYPE
     PROCEDURE tbStepOutClick(Sender: TObject);
     PROCEDURE tbStopClick(Sender: TObject);
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+    PROCEDURE variablesTreeViewExpanding(Sender: TObject; node: TTreeNode;
+      VAR AllowExpansion: boolean);
 
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
@@ -270,6 +276,7 @@ TYPE
     FUNCTION _doSave_(CONST index:longint):boolean;
     PROCEDURE updateDebugParts;
     PROCEDURE handleBreak;
+    PROCEDURE updateExpressionMemo;
     FUNCTION preferredContextType:T_contextType;
   public
     editorMeta:array of T_editorMeta;
@@ -863,6 +870,76 @@ FUNCTION TMnhForm.preferredContextType:T_contextType;
     else result:=ct_normal;
   end;
 
+FUNCTION treeLit_canExpand(L:P_literal):boolean;
+  begin
+    result:=(L^.literalType in C_allListTypes) and (length(L^.toString(100))>=100);
+  end;
+
+FUNCTION treeLit_toString(L:P_literal):string;
+  begin
+    if treeLit_canExpand(L) then result:=L^.typeString
+                            else result:=L^.toString();
+  end;
+
+PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
+  PROCEDURE addChildren(node2:TTreeNode);
+    VAR k:longint;
+        L:P_literal;
+    begin
+      for k:=0 to P_listLiteral(node2.data)^.size-1 do begin
+        L:=P_listLiteral(node2.data)^.value(k);
+        variablesTreeView.items.AddChild(node2,treeLit_toString(L)).data:=L;
+      end;
+    end;
+
+  VAR i:longint;
+  begin
+    AllowExpansion:=treeLit_canExpand(node.data);
+    if not(AllowExpansion) then exit;
+    for i:=0 to node.count-1 do
+    if not(node.items[i].HasChildren) and (treeLit_canExpand(node.items[i].data)) then addChildren(node.items[i]);
+  end;
+
+PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
+  VAR snapshot:T_debuggingSnapshot;
+      stackIdx:longint;
+      report:T_variableReport;
+      i:longint;
+  PROCEDURE addVariable(CONST id:string; CONST value:P_literal);
+    VAR newNode:TTreeNode;
+        i:longint;
+    begin
+      newNode:=variablesTreeView.items.add(nil,id+'='+treeLit_toString(value));
+      newNode.data:=value;
+      if treeLit_canExpand(value) then for i:=0 to P_listLiteral(value)^.size-1 do
+        variablesTreeView.items.AddChild(newNode,treeLit_toString(P_listLiteral(value)^.value(i))).data:=P_listLiteral(value)^.value(i);
+    end;
+
+  begin
+    if not(runEvaluator.context.paused and runEvaluator.evaluationRunning) then exit;
+    snapshot:=runEvaluator.context.getDebuggingSnapshot;
+    stackIdx:=length(snapshot.callStack)-1-callStackList.ItemIndex;
+    variablesTreeView.items.clear;
+
+    if (stackIdx>=0) and (stackIdx<length(snapshot.callStack)) then begin
+      callStackInfoStringGrid.Cells[1,0]:=ansistring(snapshot.callStack[stackIdx].callerLocation);
+      if snapshot.callStack[stackIdx].calleeLiteral=nil
+      then callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack[stackIdx].callee^.getId
+      else callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack[stackIdx].calleeLiteral^.toString(200);
+      callStackInfoStringGrid.Cells[1,2]:=ansistring(snapshot.callStack[stackIdx].callee^.getLocation);
+      addVariable('$params',snapshot.callStack[stackIdx].callParameters);
+    end;
+
+    if (callStackList.ItemIndex<=0) then begin
+      report.create;
+      runEvaluator.reportVariables(report);
+      runEvaluator.context.reportVariables(report);
+      for i:=length(report.dat)-1 downto 0 do
+        addVariable(report.dat[i].id+' ['+report.dat[i].location+']',report.dat[i].value);
+      report.destroy;
+    end;
+  end;
+
 PROCEDURE TMnhForm.handleBreak;
   VAR snapshot:T_debuggingSnapshot;
 
@@ -884,39 +961,60 @@ PROCEDURE TMnhForm.handleBreak;
       end;
     end;
 
-  VAR report:T_variableReport;
-      i:longint;
+  VAR i:longint;
   begin
     if not(runEvaluator.context.paused) then exit;
+    updateDebugParts;
+
     snapshot:=runEvaluator.context.getDebuggingSnapshot;
 
     breakPointHandlingPending:=false;
     jumpToFile;
 
-    report.create;
-    runEvaluator.reportVariables(report);
-    runEvaluator.context.reportVariables(report);
 
-    variablesStringGrid.RowCount:=length(report.dat)+1;
-    for i:=0 to length(report.dat)-1 do begin
-      variablesStringGrid.Cells[0,length(report.dat)-i]:=report.dat[i].location;
-      variablesStringGrid.Cells[1,length(report.dat)-i]:=report.dat[i].id;
-      variablesStringGrid.Cells[2,length(report.dat)-i]:=report.dat[i].value^.typeString;
-      variablesStringGrid.Cells[3,length(report.dat)-i]:=report.dat[i].value^.toString;
-    end;
+    variablesTreeView.items.clear;
+    for i:=0 to callStackInfoStringGrid.RowCount-1 do callStackInfoStringGrid.Cells[1,i]:='';
 
-    callStackStringGrid.RowCount:=length(snapshot.callStack)+1;
-    for i:=0 to length(snapshot.callStack)-1 do begin
-      callStackStringGrid.Cells[0,i+1]:=snapshot.callStack[i].callerLocation;
-      callStackStringGrid.Cells[1,i+1]:=snapshot.callStack[i].callee^.getLocation;
-      callStackStringGrid.Cells[2,i+1]:=snapshot.callStack[i].callee^.getId;
-      callStackStringGrid.Cells[3,i+1]:=toParameterListString(snapshot.callStack[i].callParameters,true);
-    end;
+    callStackList.items.clear;
+    for i:=length(snapshot.callStack)-1 downto 0 do
+    callStackList.items.add(snapshot.callStack[i].callee^.getId);
+    callStackList.ItemIndex:=0;
+    updateExpressionMemo;
 
-    currentExpressionMemo.clear;
-    currentExpressionMemo.lines.append(snapshot.state);
-    updateDebugParts;
     outputPageControl.activePage:=debugTabSheet;
+  end;
+
+PROCEDURE TMnhForm.updateExpressionMemo;
+  VAR lines,chars:longint;
+      snapshot:T_debuggingSnapshot;
+      tokens:T_arrayOfString;
+      txt:ansistring;
+      k:longint=0;
+      firstInLine:boolean;
+  begin
+    if not(runEvaluator.context.paused and runEvaluator.evaluationRunning) then exit;
+    snapshot:=runEvaluator.context.getDebuggingSnapshot;
+    lines:=currentExpressionMemo.LinesInWindow;
+    chars:=currentExpressionMemo.charsInWindow;
+    if (lines*chars<50) then begin
+      lines:=1;
+      chars:=50;
+    end;
+
+    currentExpressionMemo.lines.clear;
+    tokens:=tokenSplit(tokenStackToString(snapshot.tokenStack,snapshot.first,round(lines*chars*0.9)));
+
+    while k<length(tokens) do begin
+      txt:='';
+      firstInLine:=true;
+      while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=chars)) do begin
+        txt:=txt+tokens[k];
+        inc(k);
+        firstInLine:=false;
+      end;
+      currentExpressionMemo.lines.append(txt);
+    end;
+    setLength(tokens,0);
   end;
 
 FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring): longint;
@@ -1096,6 +1194,11 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
+  end;
+
+PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
+  begin
+    updateExpressionMemo;
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;

@@ -89,6 +89,7 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evalu
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
 
+FUNCTION tokenStackToString(CONST stack:pointer; CONST first: P_token; CONST lengthLimit: longint): ansistring;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT={$ifdef Windows}60000{$else}3000{$endif};
