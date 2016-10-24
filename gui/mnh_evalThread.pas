@@ -38,6 +38,7 @@ TYPE
       PROCEDURE haltEvaluation;
 
       FUNCTION evaluationRunning: boolean;
+      FUNCTION evaluationRunningOrPending: boolean;
       FUNCTION getCodeProvider:P_codeProvider;
       PROCEDURE reportVariables(VAR report:T_variableReport);
   end;
@@ -305,6 +306,11 @@ PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; par
 FUNCTION T_evaluator.evaluationRunning: boolean;
   begin
     result:=state=es_running;
+  end;
+
+FUNCTION T_evaluator.evaluationRunningOrPending: boolean;
+  begin
+    result:=(state=es_running) or (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]);
   end;
 
 FUNCTION T_evaluator.getCodeProvider: P_codeProvider;

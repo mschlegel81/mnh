@@ -233,11 +233,6 @@ TYPE
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
     settingsReady:boolean;
-    evaluation:record
-      required:boolean;
-      start:double;
-      deferredUntil:double;
-    end;
     lastStart:record
       mainCall:boolean;
       parameters:string;
@@ -267,7 +262,7 @@ TYPE
 
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
-    PROCEDURE doStartEvaluation(CONST clearOutput,reEvaluating:boolean);
+    PROCEDURE doStartEvaluation(CONST reEvaluating:boolean);
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE assistanceEditReposition(CONST caret:TPoint; CONST doJump:boolean);
@@ -351,19 +346,13 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     end;
   end;
 
-PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
+PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating: boolean);
   VAR i:longint;
   begin
-    with evaluation do begin
-      required:=false;
-      deferredUntil:=now+0.1*ONE_SECOND;
-      start:=now;
-    end;
-    if clearOutput then begin
-      guiOutAdapter.flushClear;
-      UpdateTimeTimerTimer(self);
-      doConditionalPlotReset;
-    end;
+    guiOutAdapter.flushClear;
+    UpdateTimeTimerTimer(self);
+    doConditionalPlotReset;
+    resetTableForms;
     if not(reEvaluating) then editorMeta[inputPageControl.activePageIndex].setWorkingDir;
     underCursor.tokenText:='';
     if miDebug.Checked or reEvaluating and profilingRun then begin
@@ -457,11 +446,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
     settingsReady:=false;
-    with evaluation do begin
-      required:=false;
-      deferredUntil:=now;
-      start:=now;
-    end;
     lastStart.mainCall:=false;
     doNotMarkWordBefore:=now;
     doNotCheckFileBefore:=now+ONE_SECOND;
@@ -572,7 +556,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       KeyPreview:=true;
       UpdateTimeTimer.enabled:=true;
       if reEvaluationWithGUIrequired then begin
-        doStartEvaluation(true,true);
+        doStartEvaluation(true);
         if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
                         else runEvaluator.reEvaluateWithGUI(ct_normal);
         setEditorMode(false);
@@ -649,7 +633,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     if inputPageControl.activePageIndex<0 then exit;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk then begin
-      doStartEvaluation(true,false);
+      doStartEvaluation(false);
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
       with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
@@ -715,11 +699,11 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
-    if now>evaluation.deferredUntil then begin
-      doStartEvaluation(true,false);
+    if not(runEvaluator.evaluationRunningOrPending) then begin
+      doStartEvaluation(false);
       lastStart.mainCall:=false;
       with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
-    end else evaluation.required:=true;
+    end;
   end;
 
 PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
@@ -1292,7 +1276,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
             StatusBar.SimpleText:='Debugging [HALTED]'+aid;
             if breakPointHandlingPending then handleBreak;
           end else StatusBar.SimpleText:='Debugging...'+aid;
-        end else StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)+aid;
+        end else StatusBar.SimpleText:='Evaluating...'+aid;
       end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
       //------------------------------------------------------------:progress time
       //Halt/Run enabled states:--------------------------------------------------
@@ -1321,14 +1305,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         doNotCheckFileBefore:=now+ONE_SECOND;
       end;
       //-----------------------------------------------------------.:File checks
-    end;
-
-    if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
-    if evaluation.required and not(runEvaluator.evaluationRunning) and (now>evaluation.deferredUntil) then begin
-      doStartEvaluation(false,false);
-      lastStart.mainCall:=false;
-      with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
-      UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
@@ -1444,7 +1420,7 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
     if not(runEvaluator.evaluationRunning) then begin
-      doStartEvaluation(true,false);
+      doStartEvaluation(false);
       if lastStart.mainCall then begin
         with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,ct_debugging);
       end else begin
@@ -1645,6 +1621,7 @@ PROCEDURE lateInitialization;
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit(@guiAdapters);
+    setupCallbacks;
   end;
 
 PROCEDURE doFinalization;

@@ -71,10 +71,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           plotForm.doPlot();
           guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
         end;
+        mt_displayTable: conditionalShowTables;
         {$ifdef imig}
         mt_displayImage: DisplayImageForm.displayCurrentImage;
         {$endif}
-        mt_displayTable: tableForm.conditionalDoShow;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
