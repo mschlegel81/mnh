@@ -163,6 +163,7 @@ FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
 PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfString);
   FUNCTION button(CONST index:byte):TButton;
     begin
+      result:=nil;
       case index of
         0: result:=Button1;
         1: result:=Button2;
@@ -229,6 +230,7 @@ FUNCTION ask_impl intFuncSignature;
   end;
 
 INITIALIZATION
+  initialize(cs);
   system.initCriticalSection(cs);
 
 FINALIZATION

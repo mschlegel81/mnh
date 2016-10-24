@@ -231,7 +231,7 @@ DESTRUCTOR T_packageReference.destroy;
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
   VAR statementCounter:longint=0;
       evaluateAll:boolean=false;
-      lastComment:ansistring;
+      lastComment:ansistring='';
       profile:boolean=false;
 
   PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
@@ -485,7 +485,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
         if context.adapters^.noErrors then begin
           ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,semicolonPosition,context.adapters^);
-          if (ruleGroup^.ruleType in C_mutableRuleTypes) and not(hasTrivialPattern) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
+          if (context.adapters^.noErrors) and (ruleGroup^.ruleType in C_mutableRuleTypes) and not(hasTrivialPattern) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
             subRule^.comment:=lastComment; lastComment:='';
@@ -910,7 +910,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
     if i<length(C_validModifierCombinations) then ruleType:=C_validModifierCombinations[i].ruleType
     else begin
       raiseModifierComplaint;
-      exit;
+      exit(nil);
     end;
     if not(packageRules.containsKey(ruleId,result)) then begin
       if (ruleId=MAIN_RULE_ID) then begin

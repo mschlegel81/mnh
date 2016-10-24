@@ -103,6 +103,7 @@ TYPE
     PROCEDURE SetLine(CONST newValue: ansistring; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
     PROCEDURE setMarkedToken(CONST line,column:longint);
+    FUNCTION getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
   end;
 
 PROCEDURE initLists;
@@ -210,6 +211,11 @@ PROCEDURE TSynMnhSyn.setMarkedToken(CONST line,column:longint);
   begin
     markedToken.line:=line;
     markedToken.column:=column;
+  end;
+
+FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
+  begin
+    result:=styleTable[kind,skNormal];
   end;
 
 PROCEDURE TSynMnhSyn.next;

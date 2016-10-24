@@ -693,7 +693,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
           end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
-
+        result:=true;
         if aggregatorPresent<>no then begin
           context.disposeToken(bodyParts[lastPart].first);
           setLength(bodyParts,length(bodyParts)-1);
@@ -707,7 +707,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         for i:=0 to length(bodyParts)-1 do
           new(bodyRule[i],createForEachBody(eachToken^.txt,bodyParts[i].first,context));
         //---------------------------------------------process other body parts (if any)
-        result:=true;
       end;
 
     VAR itList:P_listLiteral;
@@ -886,6 +885,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
          (workerThreadCount<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
+      initialize(bodyRule);
 
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
@@ -938,6 +938,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           bodyParts:T_bodyParts;
           emptyPattern:T_pattern;
       begin
+        result:=false;
         //first token is <while>-Token
         //find closing bracket and body parts
         bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
