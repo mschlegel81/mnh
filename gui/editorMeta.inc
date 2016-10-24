@@ -7,7 +7,7 @@ T_editorMeta=object
     fileAccessAge:double;
     isChanged:boolean;
   end;
-
+  language:byte;
 
   sheet       : TTabSheet;
   editor      : TSynEdit;
@@ -20,6 +20,8 @@ T_editorMeta=object
   PROCEDURE startDebugging;
   PROCEDURE doneDebugging;
   PROCEDURE closeEditor;
+  PROCEDURE setLanguage(CONST languageIndex:byte);
+  PROCEDURE guessLanguage;
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
   PROCEDURE reloadFile(CONST fileName:string);
@@ -171,6 +173,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; CONST state: T_editorState);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
     editor.CaretX:=state.caret['x'];
     editor.CaretY:=state.caret['y'];
+    setLanguage(state.language);
     updateSheetCaption;
   end;
 
@@ -201,6 +204,33 @@ PROCEDURE T_editorMeta.closeEditor;
     editor.modified:=false;
   end;
 
+PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
+  VAR metaIdx:longint;
+  begin
+    language:=languageIndex;
+    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].language=languageIndex then begin
+      if fileTypeMeta[metaIdx].highlighter=nil
+      then editor.highlighter:=highlighter
+      else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
+      exit;
+    end;
+  end;
+
+PROCEDURE T_editorMeta.guessLanguage();
+  VAR metaIdx:longint;
+      ext:string;
+  begin
+    ext:=uppercase(extractFileExt(fileInfo.filePath));
+    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
+      language:=fileTypeMeta[metaIdx].language;
+      if fileTypeMeta[metaIdx].highlighter=nil
+      then editor.highlighter:=highlighter
+      else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
+      exit;
+    end;
+    setLanguage(0);
+  end;
+
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
     sheet.tabVisible:=true;
@@ -216,6 +246,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
       fileInfo.isChanged:=true;
       fileInfo.fileAccessAge:=0;
     end;
+    guessLanguage;
     updateSheetCaption;
   end;
 
@@ -229,6 +260,7 @@ PROCEDURE T_editorMeta.initForNewFile;
     end;
     editor.clearAll;
     editor.modified:=false;
+    setLanguage(0);
     updateSheetCaption;
   end;
 
@@ -285,6 +317,7 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
     for i:=0 to length(settings^.editorState[index].lines)-1 do settings^.editorState[index].lines[i]:=editor.lines[i];
     settings^.editorState[index].caret['x']:=editor.CaretX;
     settings^.editorState[index].caret['y']:=editor.CaretY;
+    settings^.editorState[index].language:=language;
   end;
 
 PROCEDURE T_editorMeta.toggleComment;

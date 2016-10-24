@@ -130,7 +130,7 @@ private compareFlavours(data,flavour1:string,flavour2:string)->begin
   showTable([['case','avg. '&flavour1,'last '&flavour1,
                      'avg. '&flavour2,'last '&flavour2,
                      'rel.avg. (%)'  ,'rel.last (%)',
-                     'Delta.avg. (%)'  ,'Delta.last (%)']]|tableData,'Flavour comparison',true);
+                     'Delta.avg.'  ,'Delta.last']]|tableData,'Flavour comparison',true);
 end;
 
 private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,i[2]<0 ? void : i);
