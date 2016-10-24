@@ -198,7 +198,8 @@ TYPE
       {$endif}
   end;
 
-//VAR tokenStackToStringCallback:FUNCTION(CONST stack:pointer; CONST first:P_token; CONST lengthLimit:longint):ansistring;
+
+VAR showProfilingTableCallback:PROCEDURE(CONST L:P_listLiteral)=nil;
 IMPLEMENTATION
 CONSTRUCTOR T_valueStore.create;
   begin
@@ -484,10 +485,21 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       begin
          result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms';
       end;
+
     VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
+        data:P_listLiteral;
         swapTemp:T_profilingEntry;
         lines:T_arrayOfString;
         i,j:longint;
+
+    FUNCTION showTableMessage:T_storedMessage;
+      begin
+        result.messageType:=mt_displayTable;
+        result.location:=C_nilTokenLocation;
+        result.simpleMessage:='';
+        result.multiMessage:=C_EMPTY_STRING_ARRAY;
+      end;
+
     begin
       profilingData:=profilingMap.valueSet;
       for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do if profilingData[i].timeSpent_inclusive<profilingData[j].timeSpent_inclusive then begin
@@ -496,19 +508,39 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         profilingData[j]:=swapTemp;
       end;
       setLength(lines,length(profilingData)+1);
+      if Assigned(showProfilingTableCallback) then
+      data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
+            .appendString('Location')^
+            .appendString('id')^
+            .appendString('count')^
+            .appendString('inclusive (ms)')^
+            .appendString('exclusive (ms)'),false);
       lines[0]:='Location'+C_tabChar+
                 'id'+C_tabChar+
                 'count'+C_tabChar+
                 'inclusive'+C_invisibleTabChar+' time'+C_tabChar+
                 'exclusive'+C_invisibleTabChar+' time';
 
-      for i:=0 to length(profilingData)-1 do with profilingData[i] do
-      lines[i+1]:=location+C_tabChar+
-                  id+C_tabChar+
-                  intToStr(callCount)+C_tabChar+
-                  nicestTime(timeSpent_inclusive)+C_tabChar+
-                  nicestTime(timeSpent_exclusive);
+      for i:=0 to length(profilingData)-1 do with profilingData[i] do begin
+        lines[i+1]:=location+C_tabChar+
+                    id+C_tabChar+
+                    intToStr(callCount)+C_tabChar+
+                    nicestTime(timeSpent_inclusive)+C_tabChar+
+                    nicestTime(timeSpent_exclusive);
+        if Assigned(showProfilingTableCallback)
+        then data^.append(newListLiteral(5)^
+                          .appendString(location)^
+                          .appendString(id)^
+                          .appendInt(callCount)^
+                          .appendReal(timeSpent_inclusive*1E3)^
+                          .appendReal(timeSpent_exclusive*1E3),false);
+      end;
       lines:=formatTabs(lines);
+      if Assigned(showProfilingTableCallback) then begin
+        showProfilingTableCallback(data);
+        disposeLiteral(data);
+        for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then adapters^.getAdapter(j)^.append(showTableMessage);
+      end;
       for i:=0 to length(lines)-1 do adapters^.raiseCustomMessage(mt_timing_info,lines[i],C_nilTokenLocation);
     end;
   {$endif}

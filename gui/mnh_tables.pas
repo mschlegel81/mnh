@@ -43,7 +43,6 @@ TYPE
     PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     { private declarations }
-    cs:TRTLCriticalSection;
     requested,current:record
       literal:P_listLiteral;
       headerData:T_arrayOfString;
@@ -58,24 +57,44 @@ TYPE
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
-    FUNCTION isDisplayPending:boolean;
     PROCEDURE conditionalDoShow;
     PROCEDURE fillTable;
   end;
 
-FUNCTION tableForm: TtableForm;
+PROCEDURE resetTableForms;
+PROCEDURE conditionalShowTables;
+PROCEDURE setupCallbacks;
 IMPLEMENTATION
-VAR myTableForm: TtableForm=nil;
-FUNCTION tableForm: TtableForm;
+VAR tableForms: array of TtableForm;
+    tableFormCs:TRTLCriticalSection;
+
+PROCEDURE resetTableForms;
+  VAR i:longint;
   begin
-    if myTableForm=nil then begin
-      myTableForm:=TtableForm.create(nil);
-      registerForm(myTableForm,false,true);
+    for i:=0 to length(tableForms)-1 do begin
+      unregisterForm(tableForms[i]);
+      FreeAndNil(tableForms[i]);
     end;
-    result:=myTableForm;
+    setLength(tableForms,0);
+  end;
+
+FUNCTION newTableForm:TtableForm;
+  begin
+    result:=TtableForm.create(nil);
+    setLength(tableForms,length(tableForms)+1);
+    tableForms[length(tableForms)-1]:=result;
+    registerForm(result,false,true);
   end;
 
 {$R *.lfm}
+
+PROCEDURE conditionalShowTables;
+  VAR i:longint;
+  begin
+    enterCriticalSection(tableFormCs);
+    for i:=0 to length(tableForms)-1 do tableForms[i].conditionalDoShow;
+    leaveCriticalSection(tableFormCs);
+  end;
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
   VAR caption:string='MNH table';
@@ -94,26 +113,37 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
           else exit(nil);
         end;
       end;
-      tableForm.initWithLiteral(P_listLiteral(params^.value(0)),caption,header);
+      enterCriticalSection(tableFormCs);
+      newTableForm.initWithLiteral(P_listLiteral(params^.value(0)),caption,header);
+      leaveCriticalSection(tableFormCs);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
+PROCEDURE showProfilingTable(CONST data: P_listLiteral);
+  begin
+    enterCriticalSection(tableFormCs);
+    newTableForm.initWithLiteral(data,'Profiling info',true);
+    leaveCriticalSection(tableFormCs);
+  end;
+
+PROCEDURE setupCallbacks;
+  begin
+    mnh_contexts.showProfilingTableCallback:=@showProfilingTable;
+  end;
+
 PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
-    initCriticalSection(cs);
     current.literal:=nil;
     requested.literal:=nil;
   end;
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    enterCriticalSection(cs);
     if current.literal<>nil then begin
       disposeLiteral(current.literal);
       current.literal:=nil;
     end;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
@@ -126,7 +156,6 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
       disposeLiteral(requested.literal);
       requested.literal:=nil;
     end;
-    doneCriticalSection(cs);
   end;
 
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -237,7 +266,6 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
-    enterCriticalSection(cs);
     with sorted do begin
       ascending:=false;
       byColumn:=-1;
@@ -262,12 +290,10 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
 
     displayPending:=true;
     requested.caption:=newCaption;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE TtableForm.conditionalDoShow;
   begin
-    enterCriticalSection(cs);
     if displayPending then begin
       displayPending:=false;
       caption:=requested.caption;
@@ -277,10 +303,6 @@ PROCEDURE TtableForm.conditionalDoShow;
       Show;
       fillTable;
     end;
-    leaveCriticalSection(cs);
-    {$ifdef debugMode}
-    writeln(stdErr,'TtableForm.conditionalDoShow finished');
-    {$endif}
   end;
 
 PROCEDURE TtableForm.fillTable;
@@ -362,18 +384,13 @@ PROCEDURE TtableForm.fillTable;
     StringGrid.AutoSizeColumns;
   end;
 
-FUNCTION TtableForm.isDisplayPending: boolean;
-  begin
-    enterCriticalSection(cs);
-    result:=displayPending;
-    leaveCriticalSection(cs);
-  end;
-
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);#Shows L in a table with given caption.');
-
+  setLength(tableForms,0);
+  initCriticalSection(tableFormCs);
 FINALIZATION
-  if myTableForm<>nil then FreeAndNil(myTableForm);
+  resetTableForms;
+  doneCriticalSection(tableFormCs);
 
 end.
 
