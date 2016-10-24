@@ -139,7 +139,6 @@ private showStatus->
   orElse print;
 
 private cleanup->begin
-  tprint('Cleaning');
   allFolders('.')
   .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
   .each(f,begin
@@ -207,13 +206,14 @@ main('status')->showStatus;
 //*Show the current built status
 main('prepare')->ensureCodeHash;
 //*Clean the output files
-main('clean')->cleanup;
+main('clean')->tprint('Cleaning') orElse cleanup;
 //*Create 7z distro
 main('distro')->makeDistro;
 //*Deep cleaning, including deleting all executables
 main('CLEAN')->begin
+  tprint('Deep cleaning')
   cleanup;
-  files(BUILTS.getInner(2)).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  files('versions/*').|(files(BUILTS.getInner(2))).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 end;
 //*Beep - just for notification purposes
 main('beep')->beep;
