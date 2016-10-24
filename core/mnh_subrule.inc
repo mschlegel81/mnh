@@ -304,6 +304,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
 
   VAR tempInnerParam:P_listLiteral;
   begin
+    lastRep:=nil;
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,context) then begin
       prepareResult;
@@ -633,6 +634,7 @@ FUNCTION T_subrule.inspect:P_listLiteral;
         srt_inline_for_literal: result:='for_literal';
         srt_inline_for_each   : result:='for_each';
         srt_inline_for_while  : result:='for_while';
+        else result:='';
       end;
     end;
 
@@ -869,7 +871,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       refineDataRow;
     end else begin
       context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
-      setLength(result,0);
+      setLength(dataRow,0);
     end;
     tempAdapters.destroy;
     tempcontext.destroy;

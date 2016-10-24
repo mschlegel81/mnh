@@ -429,6 +429,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
       temp:P_token;
       package:P_package;
   begin
+    result:=nil;
     package:=P_package(location.package);
     if      L^.literalType=lt_string           then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
     else if L^.literalType in C_validListTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);

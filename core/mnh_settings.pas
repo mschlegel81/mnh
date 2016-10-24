@@ -245,7 +245,7 @@ FUNCTION T_fileHistory.getSerialVersion:dword; begin result:=176454893; end;
 FUNCTION T_fileHistory.loadFromStream(VAR stream:T_streamWrapper):boolean;
   VAR i,count:longint;
   begin
-    if not(inherited loadFromStream(stream)) then exit;
+    if not(inherited loadFromStream(stream)) then exit(false);
     items.clear;
     count:=stream.readNaturalNumber;
     if count>FILE_HISTORY_MAX_SIZE then exit(false);

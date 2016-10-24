@@ -139,6 +139,7 @@ exit}
     end;
 
   begin
+    result:=false;
     case ruleType of
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral

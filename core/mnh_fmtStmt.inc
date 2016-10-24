@@ -16,7 +16,7 @@ VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
   begin;
-    if not(context.adapters^.noErrors) then exit;
+    if not(context.adapters^.noErrors) then exit(nil);
     system.enterCriticalSection(cachedFormatCS);
     if cachedFormats.containsKey(formatString,result) then begin
       system.leaveCriticalSection(cachedFormatCS);
@@ -220,7 +220,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       if listSize=-1 then listSize:=P_listLiteral(params^.value(i))^.size
                   else if listSize<>P_listLiteral(params^.value(i))^.size then begin
         context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^.value(i))^.size)+' for formatting.',tokenLocation);
-        exit;
+        exit(C_EMPTY_STRING_ARRAY);
       end;
     end;
     if listSize=-1 then listSize:=1;
@@ -235,7 +235,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         disposeLiteral(formatSubrule);
         formatSubrule:=nil;
       end;
-      exit;
+      exit(C_EMPTY_STRING_ARRAY);
     end;
     setLength(result,listSize);
     for i:=0 to listSize-1 do if (context.adapters^.noErrors) then result[i]:=getFormattedString(i);
@@ -257,6 +257,7 @@ PROCEDURE clearCachedFormats;
 {$endif}
 {$ifdef include_initialization}
 cachedFormats.create;
+initialize(cachedFormatCS);
 system.initCriticalSection(cachedFormatCS);
 {$endif}
 {$ifdef include_finalization}

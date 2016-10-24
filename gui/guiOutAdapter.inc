@@ -21,7 +21,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j:longint;
-      outputLinesLimit:longint;
+      outputLinesLimit:longint=0;
       wroteToSyn:boolean=false;
 
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
@@ -55,7 +55,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     if flushing then begin
        {$ifdef debugMode}writeln(stdErr,'Already flushing!');{$endif}
       system.leaveCriticalSection(cs);
-      exit;
+      exit(false);
     end;
     flushing:=true;
     result:=length(storedMessages)>0;
