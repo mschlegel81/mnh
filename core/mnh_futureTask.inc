@@ -134,7 +134,8 @@ DESTRUCTOR T_taskQueue.destroy;
   begin
     while poolThreadsRunning>0 do begin
       destructionPending:=true;
-      sleep(5);
+      sleep(1);
+      ThreadSwitch;
     end;
     system.doneCriticalSection(cs);
   end;
