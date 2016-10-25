@@ -2237,8 +2237,12 @@ object MnhForm: TMnhForm
         OnClick = mi_settingsClick
       end
       object miNewCentralPackage: TMenuItem
-        Caption = 'Manage central utility packages'
+        Caption = 'Manage central &utility packages'
         OnClick = miNewCentralPackageClick
+      end
+      object miWorkspaces: TMenuItem
+        Caption = 'Manage &workspaces'
+        OnClick = miWorkspacesClick
       end
       object miClear: TMenuItem
         Caption = 'New'

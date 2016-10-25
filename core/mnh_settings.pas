@@ -36,7 +36,7 @@ T_editorState=object(T_serializable)
   PROCEDURE getLines(CONST dat: TStrings);
   FUNCTION getSerialVersion:dword; virtual;
   FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
+  PROCEDURE saveToStream(VAR stream:T_streamWrapper; CONST saveAll:boolean);
 end;
 
 T_fileHistory=object(T_serializable)
@@ -52,12 +52,39 @@ T_fileHistory=object(T_serializable)
   FUNCTION historyItem(CONST index:longint):ansistring;
 end;
 
+T_workspaceMeta=record
+  fileName:string;
+  name:string;
+end;
+T_workspaceMetaArray=array of T_workspaceMeta;
+
+T_workspace=object(T_serializable)
+  exporting:boolean;
+
+  name:string;
+  fileHistory:T_fileHistory;
+  editorState: array of T_editorState;
+  activePage:longint;
+
+  CONSTRUCTOR create;
+  DESTRUCTOR destroy;
+  FUNCTION getSerialVersion:dword; virtual;
+  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  FUNCTION loadNameOnly(CONST fileName:string):boolean;
+  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
+  PROCEDURE initDefaults(CONST withEditor:boolean);
+end;
+
 P_Settings=^T_settings;
+
+{ T_settings }
+
 T_settings=object(T_serializable)
   private
     //Nonpersistent:
     wasLoaded:boolean;
     savedAt:double;
+    workspaceFileName:string;
   public
   //Global:
   memoryLimit:int64;
@@ -67,15 +94,14 @@ T_settings=object(T_serializable)
   fontSize:longint;
   antialiasedFonts:boolean;
   mainForm:T_formPosition;
-
-  //Workspace:
-  doResetPlotOnEvaluation: boolean;
-  fileHistory:T_fileHistory;
-  editorState: array of T_editorState;
-  activePage:longint;
   outputBehaviour: T_messageTypeSet;
   wordWrapEcho:boolean;
   outputLinesLimit:longint;
+  doResetPlotOnEvaluation: boolean;
+
+  //Workspace:
+  workspace:T_workspace;
+  FUNCTION currentWorkspaceFilename:string;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -86,16 +112,56 @@ T_settings=object(T_serializable)
 
   FUNCTION savingRequested:boolean;
   PROPERTY loaded:boolean read wasLoaded;
+
+  PROCEDURE createNewWorkspace;
+  FUNCTION importWorkspace(CONST fileName:string):boolean;
+  PROCEDURE exportWorkspace(CONST fileName:string);
+  PROCEDURE switchWorkspace(CONST fileName:string);
+  FUNCTION deleteWorkspace:boolean;
 end;
 
 PROCEDURE saveSettings;
 FUNCTION workerThreadCount:longint;
+FUNCTION avaliableWorkspaces:T_workspaceMetaArray;
 VAR settings:specialize G_lazyVar<P_Settings>;
 IMPLEMENTATION
 
 FUNCTION settingsFileName: string;
   begin
-    result:=configDir+'mnh_gui.settings';
+    result:=configDir+'mnh.settings';
+  end;
+
+FUNCTION defaultWorkspaceFileName: string;
+  begin
+    result:=configDir+'workspace.0';
+  end;
+
+FUNCTION newWorkspaceFileName: string;
+  VAR i:longint;
+  begin
+    for i:=1 to maxLongint do begin
+      result:=ChangeFileExt(defaultWorkspaceFileName,'.'+intToStr(i));
+      if not(fileExists(result)) then exit(result);
+    end;
+    result:='';
+  end;
+
+FUNCTION avaliableWorkspaces:T_workspaceMetaArray;
+  VAR files:T_arrayOfString;
+      w:T_workspace;
+      i:longint;
+  begin
+    files:=find(configDir+'workspace.*',true,false);
+    w.create;
+    setLength(result,0);
+    for i:=0 to length(files)-1 do if w.loadNameOnly(files[i]) then begin
+      setLength(result,length(result)+1);
+      with result[length(result)-1] do begin
+        fileName:=files[i];
+        name:=w.name;
+      end;
+    end;
+    w.destroy;
   end;
 
 PROCEDURE saveSettings;
@@ -103,20 +169,101 @@ PROCEDURE saveSettings;
     settings.value^.saveToFile(settingsFileName);
   end;
 
+CONSTRUCTOR T_workspace.create;
+  begin
+    fileHistory.create;
+    setLength(editorState,0);
+    initDefaults(false);
+  end;
+
+DESTRUCTOR T_workspace.destroy;
+  begin
+    initDefaults(false);
+    fileHistory.destroy;
+    setLength(editorState,0);
+  end;
+
+FUNCTION T_workspace.getSerialVersion: dword;
+  begin
+    result:=2661226500;
+  end;
+
+FUNCTION T_workspace.loadFromStream(VAR stream: T_streamWrapper): boolean;
+  VAR i:longint;
+  begin
+    if not(inherited loadFromStream(stream)) then exit(false);
+    initDefaults(false);
+    name:=stream.readAnsiString;
+    if not(fileHistory.loadFromStream(stream)) then exit(false);
+    setLength(editorState,stream.readNaturalNumber);
+    result:=stream.allOkay;
+    for i:=0 to length(editorState)-1 do begin
+      editorState[i].create;
+      result:=result and editorState[i].loadFromStream(stream);
+    end;
+    activePage:=stream.readLongint;
+    result:=result and stream.allOkay;
+    if not(result) then initDefaults(true);
+  end;
+
+FUNCTION T_workspace.loadNameOnly(CONST fileName:string): boolean;
+  VAR stream:T_streamWrapper;
+  begin
+    stream.createToReadFromFile(fileName);
+    result:=stream.allOkay and inherited loadFromStream(stream);
+    if result then name:=stream.readAnsiString;
+    result:=stream.allOkay;
+    stream.destroy;
+  end;
+
+PROCEDURE T_workspace.saveToStream(VAR stream: T_streamWrapper);
+  VAR i:longint;
+      visibleEditorCount:longint=0;
+  begin
+    inherited saveToStream(stream);
+    stream.writeAnsiString(name);
+    fileHistory.saveToStream(stream);
+    for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
+    stream.writeNaturalNumber(visibleEditorCount);
+    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToStream(stream,exporting);
+    stream.writeLongint(activePage);
+  end;
+
+PROCEDURE T_workspace.initDefaults(CONST withEditor:boolean);
+  VAR i:longint;
+  begin
+    name:='';
+    fileHistory.items.clear;
+    for i:=0 to length(editorState)-1 do editorState[i].destroy;
+    if withEditor then begin
+      setLength(editorState,1);
+      editorState[0].create;
+      activePage:=0;
+    end else begin
+      setLength(editorState,0);
+      activePage:=-1;
+    end;
+    exporting:=false;
+  end;
+
+FUNCTION T_settings.currentWorkspaceFilename: string;
+  begin
+    if workspaceFileName=''
+    then result:=defaultWorkspaceFileName
+    else result:=workspaceFileName;
+  end;
+
 CONSTRUCTOR T_settings.create;
   begin
-    cpuCount:=0;
+    cpuCount:=getNumberOfCPUs;
     mainForm.create;
-    setLength(editorState,0);
-    fileHistory.create;
+    workspace.create;
     wasLoaded:=false;
   end;
 
 DESTRUCTOR T_settings.destroy;
-  VAR i:longint;
   begin
-    for i:=0 to length(editorState)-1 do editorState[i].destroy;
-    setLength(editorState,0);
+    workspace.destroy;
   end;
 
 FUNCTION workerThreadCount:longint;
@@ -128,11 +275,10 @@ FUNCTION workerThreadCount:longint;
     settings.value^.cpuCount:=result+1;
   end;
 
-FUNCTION T_settings.getSerialVersion:dword; begin result:=1644235074; end;
-FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235075; end;
+FUNCTION T_settings.loadFromStream(VAR stream: T_streamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
-  VAR i:longint;
   begin
     if not inherited loadFromStream(stream) then cleanExit;
 
@@ -148,26 +294,21 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     outputBehaviour:=stream.readNaturalNumber;
     outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
     doResetPlotOnEvaluation := stream.readBoolean;
-    if not(fileHistory.loadFromStream(stream)) then cleanExit;
-    setLength(editorState,stream.readNaturalNumber);
-    if not(stream.allOkay) then cleanExit;
-    for i:=0 to length(editorState)-1 do begin
-      editorState[i].create;
-      editorState[i].loadFromStream(stream);
-    end;
-    activePage:=stream.readLongint;
     saveIntervalIdx:=stream.readByte;
     wordWrapEcho:=stream.readBoolean;
     memoryLimit:=stream.readInt64;
     outputLinesLimit:=stream.readLongint;
+    workspaceFileName:=stream.readAnsiString;
     if not(stream.allOkay) then cleanExit else result:=true;
+    if result then begin
+      if not(fileExists(currentWorkspaceFilename)) then workspaceFileName:='';
+      if not(workspace.loadFromFile(currentWorkspaceFilename)) then workspace.initDefaults(true);
+    end;
     savedAt:=now;
     wasLoaded:=result;
   end;
 
-PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
-  VAR i:longint;
-      visibleEditorCount:longint=0;
+PROCEDURE T_settings.saveToStream(VAR stream: T_streamWrapper);
   begin
     inherited saveToStream(stream);
     stream.writeLongint(cpuCount);
@@ -177,20 +318,16 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
     mainForm.saveToStream(stream);
     stream.writeNaturalNumber(outputBehaviour);
     stream.writeBoolean(doResetPlotOnEvaluation);
-    fileHistory.saveToStream(stream);
-    for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
-    stream.writeNaturalNumber(visibleEditorCount);
-    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToStream(stream);
-    stream.writeLongint(activePage);
     stream.writeByte(saveIntervalIdx);
     stream.writeBoolean(wordWrapEcho);
     stream.writeInt64(memoryLimit);
     stream.writeLongint(outputLinesLimit);
+    stream.writeAnsiString(workspaceFileName);
+    workspace.saveToFile(currentWorkspaceFilename);
     savedAt:=now;
   end;
 
 PROCEDURE T_settings.initDefaults;
-  VAR i:longint;
   begin
     wordWrapEcho:=false;
     cpuCount:=getNumberOfCPUs;
@@ -209,9 +346,7 @@ PROCEDURE T_settings.initDefaults;
     saveIntervalIdx:=0;
     wasLoaded:=false;
     savedAt:=now;
-    for i:=0 to length(editorState)-1 do editorState[i].destroy;
-    setLength(editorState,1);
-    editorState[0].create;
+    workspace.initDefaults(true);
     memoryLimit:={$ifdef Windows}
                    {$ifdef CPU32}
                    1000000000;
@@ -229,6 +364,50 @@ FUNCTION T_settings.savingRequested: boolean;
     result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
   end;
 
+PROCEDURE T_settings.createNewWorkspace;
+  begin
+    workspace.saveToFile(currentWorkspaceFilename);
+    workspace.initDefaults(true);
+    workspaceFileName:=newWorkspaceFileName;
+  end;
+
+FUNCTION T_settings.importWorkspace(CONST fileName: string):boolean;
+  begin
+    workspace.saveToFile(currentWorkspaceFilename);
+    result:=workspace.loadFromFile(fileName);
+    if result then workspaceFileName:=newWorkspaceFileName
+              else workspace.loadFromFile(currentWorkspaceFilename);
+  end;
+
+PROCEDURE T_settings.exportWorkspace(CONST fileName: string);
+  begin
+    workspace.exporting:=true;
+    workspace.saveToFile(fileName);
+    workspace.exporting:=false;
+  end;
+
+PROCEDURE T_settings.switchWorkspace(CONST fileName: string);
+  begin
+    workspace.saveToFile(currentWorkspaceFilename);
+    if fileName='' then begin
+      if not(workspace.loadFromFile(defaultWorkspaceFileName)) then workspace.initDefaults(true);
+    end else begin
+      if fileExists(fileName) and workspace.loadFromFile(fileName)
+      then workspaceFileName:=fileName
+      else workspace.loadFromFile(currentWorkspaceFilename);
+    end;
+  end;
+
+FUNCTION T_settings.deleteWorkspace: boolean;
+  VAR toDelete:string;
+  begin
+    result:=(workspaceFileName<>'') and (fileExists(workspaceFileName));
+    if result then begin
+      toDelete:=workspaceFileName;
+      switchWorkspace('');
+      DeleteFile(toDelete);
+    end;
+  end;
 
 CONSTRUCTOR T_fileHistory.create;
   begin
@@ -378,14 +557,14 @@ FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
     result:=stream.allOkay;
   end;
 
-PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper);
+PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper; CONST saveAll:boolean);
   VAR i:longint;
   begin
     inherited saveToStream(stream);
     if filePath<>'' then filePath:=expandFileName(filePath);
     stream.writeAnsiString(filePath);
     stream.writeBoolean(changed);
-    if changed then begin
+    if changed or saveAll then begin
       stream.writeDouble(fileAccessAge);
       stream.writeNaturalNumber(length(lines));
       for i:=0 to length(lines)-1 do stream.writeAnsiString(lines[i]);

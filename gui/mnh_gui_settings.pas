@@ -81,7 +81,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     setFontSize(settings.value^.fontSize);
     setOutputLimit(settings.value^.outputLinesLimit);
     if not(settings.value^.loaded) then begin
-      settings.value^.activePage:=0;
+      settings.value^.workspace.activePage:=0;
       ensureDemos;
     end;
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
@@ -100,7 +100,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         height := 480;
       end;
     end;
-    settings.value^.fileHistory.polishHistory;
+    settings.value^.workspace.fileHistory.polishHistory;
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;

@@ -15,6 +15,7 @@ T_editorMeta=object
   highlighter : TSynMnhSyn;
   CONSTRUCTOR create(CONST idx:longint);
   CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
+  PROCEDURE initWithState(VAR state:T_editorState);
   DESTRUCTOR destroy;
 
   PROCEDURE startDebugging;
@@ -160,9 +161,14 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   end;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
-  VAR i:longint;
   begin
     create(idx);
+    initWithState(state);
+  end;
+
+PROCEDURE T_editorMeta.initWithState(VAR state:T_editorState);
+  VAR i:longint;
+  begin
     sheet.tabVisible:=true;
     with fileInfo do begin
       isChanged    :=state.changed;
@@ -299,25 +305,25 @@ PROCEDURE T_editorMeta.setWorkingDir;
 PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
   VAR i:longint;
   begin
-    i:=length(settings^.editorState);
+    i:=length(settings^.workspace.editorState);
     while i<=index do begin
-      setLength(settings^.editorState,i+1);
-      settings^.editorState[i].create;
+      setLength(settings^.workspace.editorState,i+1);
+      settings^.workspace.editorState[i].create;
       inc(i);
     end;
-    settings^.editorState[index].visible:=sheet.tabVisible;
-    if not(settings^.editorState[index].visible) then exit;
-    setLength(settings^.editorState[index].markedLines,0);
-    for i:=0 to editor.Marks.count-1 do appendIfNew(settings^.editorState[index].markedLines,editor.Marks[i].line);
+    settings^.workspace.editorState[index].visible:=sheet.tabVisible;
+    if not(settings^.workspace.editorState[index].visible) then exit;
+    setLength(settings^.workspace.editorState[index].markedLines,0);
+    for i:=0 to editor.Marks.count-1 do appendIfNew(settings^.workspace.editorState[index].markedLines,editor.Marks[i].line);
 
-    settings^.editorState[index].filePath:=fileInfo.filePath;
-    settings^.editorState[index].fileAccessAge:=fileInfo.fileAccessAge;
-    settings^.editorState[index].changed:=changed;
-    setLength(settings^.editorState[index].lines,editor.lines.count);
-    for i:=0 to length(settings^.editorState[index].lines)-1 do settings^.editorState[index].lines[i]:=editor.lines[i];
-    settings^.editorState[index].caret['x']:=editor.CaretX;
-    settings^.editorState[index].caret['y']:=editor.CaretY;
-    settings^.editorState[index].language:=language;
+    settings^.workspace.editorState[index].filePath:=fileInfo.filePath;
+    settings^.workspace.editorState[index].fileAccessAge:=fileInfo.fileAccessAge;
+    settings^.workspace.editorState[index].changed:=changed;
+    setLength(settings^.workspace.editorState[index].lines,editor.lines.count);
+    for i:=0 to length(settings^.workspace.editorState[index].lines)-1 do settings^.workspace.editorState[index].lines[i]:=editor.lines[i];
+    settings^.workspace.editorState[index].caret['x']:=editor.CaretX;
+    settings^.workspace.editorState[index].caret['y']:=editor.CaretY;
+    settings^.workspace.editorState[index].language:=language;
   end;
 
 PROCEDURE T_editorMeta.toggleComment;

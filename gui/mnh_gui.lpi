@@ -122,7 +122,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="55">
+    <Units Count="56">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -375,6 +375,13 @@
         <Filename Value="..\core\res_removeAssoc_imig.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit54>
+      <Unit55>
+        <Filename Value="mnh_workspaces.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="workspacesForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit55>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
