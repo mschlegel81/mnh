@@ -1,0 +1,117 @@
+object workspacesForm: TworkspacesForm
+  Left = 405
+  Height = 280
+  Top = 264
+  Width = 320
+  Caption = 'MNH - Manage workspaces'
+  ClientHeight = 280
+  ClientWidth = 320
+  OnShow = FormShow
+  LCLVersion = '1.6.0.4'
+  object workspaceListBox: TListBox
+    Left = 0
+    Height = 210
+    Top = 0
+    Width = 320
+    Align = alClient
+    ItemHeight = 0
+    OnDblClick = workspaceListBoxDblClick
+    TabOrder = 0
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 70
+    Top = 210
+    Width = 320
+    Align = alBottom
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 70
+    ClientWidth = 320
+    TabOrder = 1
+    object workspaceNameEdit: TEdit
+      Left = 66
+      Height = 70
+      Top = 0
+      Width = 183
+      Align = alClient
+      TabOrder = 0
+      Text = 'workspaceNameEdit'
+    end
+    object Panel2: TPanel
+      Left = 0
+      Height = 70
+      Top = 0
+      Width = 66
+      Align = alLeft
+      AutoSize = True
+      BevelOuter = bvNone
+      ClientHeight = 70
+      ClientWidth = 66
+      TabOrder = 1
+      object renameButton: TButton
+        Left = 0
+        Height = 25
+        Top = 0
+        Width = 66
+        Align = alTop
+        AutoSize = True
+        Caption = 'rename'
+        OnClick = renameButtonClick
+        TabOrder = 0
+      end
+      object newWorkspaceButton: TButton
+        Left = 0
+        Height = 45
+        Top = 25
+        Width = 66
+        Align = alClient
+        AutoSize = True
+        Caption = 'new'
+        OnClick = newWorkspaceButtonClick
+        TabOrder = 1
+      end
+    end
+    object GroupBox1: TGroupBox
+      Left = 249
+      Height = 70
+      Top = 0
+      Width = 71
+      Align = alRight
+      AutoSize = True
+      Caption = 'current'
+      ClientHeight = 50
+      ClientWidth = 67
+      TabOrder = 2
+      object exportWorkspaceButton: TButton
+        Left = 0
+        Height = 25
+        Top = 25
+        Width = 67
+        Align = alClient
+        Caption = 'export'#10
+        OnClick = exportWorkspaceButtonClick
+        TabOrder = 0
+      end
+      object importWorkspaceButton: TButton
+        Left = 0
+        Height = 25
+        Top = 0
+        Width = 67
+        Align = alTop
+        AutoSize = True
+        Caption = 'import'
+        OnClick = importWorkspaceButtonClick
+        TabOrder = 1
+      end
+    end
+  end
+  object openDialog: TOpenDialog
+    left = 232
+    top = 8
+  end
+  object saveDialog: TSaveDialog
+    left = 232
+    top = 48
+  end
+end

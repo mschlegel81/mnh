@@ -17,7 +17,7 @@ USES
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
-  LazUTF8, mnh_tables,  openDemoDialog;
+  LazUTF8, mnh_tables,  openDemoDialog, mnh_workspaces;
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -57,6 +57,7 @@ TYPE
     callStackGroupBox: TGroupBox;
     callStackList: TListBox;
     MenuItem1: TMenuItem;
+    miWorkspaces: TMenuItem;
     miLangPython: TMenuItem;
     miLangXml: TMenuItem;
     miLangDiff: TMenuItem;
@@ -255,6 +256,7 @@ TYPE
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
+    PROCEDURE miWorkspacesClick(Sender: TObject);
     PROCEDURE miWrapEchoClick(Sender: TObject);
     PROCEDURE mi_insertFilenameClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
@@ -615,6 +617,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
   VAR i:longint;
   begin
+    setLength(editorMeta,0);
     initFileTypes;
     registerForm(self,true,true);
     lastWordsCaret:=maxLongint;
@@ -1295,6 +1298,26 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
       miTimingInfo.Checked:=not(miTimingInfo.Checked);
       guiOutAdapter.enableMessageType(miTimingInfo.Checked,[mt_timing_info]);
       settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
+    end;
+  end;
+
+PROCEDURE TMnhForm.miWorkspacesClick(Sender: TObject);
+  VAR i:longint;
+  begin
+    if runEvaluator.evaluationRunning then exit;
+    for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
+    if switchWorkspace then begin
+      for i:=0 to length(editorMeta)-1 do editorMeta[i].closeEditor;
+      for i:=0 to length(settings.value^.workspace.editorState)-1 do begin
+        if i>=length(editorMeta) then begin
+          setLength(editorMeta,i+1);
+          editorMeta[i].create(i,settings.value^.workspace.editorState[i]);
+        end else editorMeta[i].initWithState(settings.value^.workspace.editorState[i]);
+        editorMeta[i].setStepperBreakpoints;
+      end;
+      i:=settings.value^.workspace.activePage;
+      inputPageControl.activePageIndex:=i;
+      if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
     end;
   end;
 

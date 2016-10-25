@@ -84,7 +84,7 @@ T_settings=object(T_serializable)
     //Nonpersistent:
     wasLoaded:boolean;
     savedAt:double;
-    FUNCTION currentWorkspaceFilename:string;
+    workspaceFileName:string;
   public
   //Global:
   memoryLimit:int64;
@@ -98,10 +98,10 @@ T_settings=object(T_serializable)
   wordWrapEcho:boolean;
   outputLinesLimit:longint;
   doResetPlotOnEvaluation: boolean;
-  workspaceFileName:string;
 
   //Workspace:
   workspace:T_workspace;
+  FUNCTION currentWorkspaceFilename:string;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -122,6 +122,7 @@ end;
 
 PROCEDURE saveSettings;
 FUNCTION workerThreadCount:longint;
+FUNCTION avaliableWorkspaces:T_workspaceMetaArray;
 VAR settings:specialize G_lazyVar<P_Settings>;
 IMPLEMENTATION
 
@@ -150,10 +151,10 @@ FUNCTION avaliableWorkspaces:T_workspaceMetaArray;
       w:T_workspace;
       i:longint;
   begin
-    files:=find(configDir+DirectorySeparator+'workspace.*',true,false);
+    files:=find(configDir+'workspace.*',true,false);
     w.create;
     setLength(result,0);
-    for i:=0 to length(result)-1 do if w.loadNameOnly(files[i]) then begin
+    for i:=0 to length(files)-1 do if w.loadNameOnly(files[i]) then begin
       setLength(result,length(result)+1);
       with result[length(result)-1] do begin
         fileName:=files[i];
@@ -321,6 +322,7 @@ PROCEDURE T_settings.saveToStream(VAR stream: T_streamWrapper);
     stream.writeBoolean(wordWrapEcho);
     stream.writeInt64(memoryLimit);
     stream.writeLongint(outputLinesLimit);
+    stream.writeAnsiString(workspaceFileName);
     workspace.saveToFile(currentWorkspaceFilename);
     savedAt:=now;
   end;

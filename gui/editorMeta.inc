@@ -15,6 +15,7 @@ T_editorMeta=object
   highlighter : TSynMnhSyn;
   CONSTRUCTOR create(CONST idx:longint);
   CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
+  PROCEDURE initWithState(VAR state:T_editorState);
   DESTRUCTOR destroy;
 
   PROCEDURE startDebugging;
@@ -160,9 +161,14 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   end;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
-  VAR i:longint;
   begin
     create(idx);
+    initWithState(state);
+  end;
+
+PROCEDURE T_editorMeta.initWithState(VAR state:T_editorState);
+  VAR i:longint;
+  begin
     sheet.tabVisible:=true;
     with fileInfo do begin
       isChanged    :=state.changed;
