@@ -1009,9 +1009,9 @@ FUNCTION TMnhForm._doSave_(CONST index: longint): boolean;
 
 PROCEDURE TMnhForm.updateDebugParts;
 
-  PROCEDURE handleButton(VAR button:TToolButton; CONST enabled:boolean; CONST enabledImageIndex:longint);
+  PROCEDURE handleButton(VAR button:TToolButton; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways:boolean=false);
     begin
-      button.enabled:=enabled;
+      button.enabled:=enabled or enableAlways;
       if enabled then button.ImageIndex:=enabledImageIndex
                  else button.ImageIndex:=enabledImageIndex+1;
     end;
@@ -1030,7 +1030,7 @@ PROCEDURE TMnhForm.updateDebugParts;
       isPaused:=runEvaluator.context.paused;
       isRunning:=runEvaluator.evaluationRunning;
       handleButton(tbStop     ,    isRunning             ,2);
-      handleButton(tbRun      ,not(isRunning) or isPaused,0);
+      handleButton(tbRun      ,not(isRunning) or isPaused,0,true);
       handleButton(tbStep     ,    isRunning and isPaused,4);
       handleButton(tbStepIn   ,    isRunning and isPaused,6);
       handleButton(tbStepOut  ,    isRunning and isPaused,8);
@@ -1635,7 +1635,8 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
       end else begin
         with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,ct_debugging);
       end;
-    end else runEvaluator.context.doContinue;
+    end else if runEvaluator.context.paused then runEvaluator.context.doContinue
+                                            else runEvaluator.context.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
