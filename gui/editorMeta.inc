@@ -14,7 +14,7 @@ T_editorMeta=object
   plugin      : TSynPluginMultiCaret;
   highlighter : TSynMnhSyn;
   CONSTRUCTOR create(CONST idx:longint);
-  CONSTRUCTOR create(CONST idx:longint; CONST state:T_editorState);
+  CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
   DESTRUCTOR destroy;
 
   PROCEDURE startDebugging;
@@ -159,7 +159,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     initForNewFile;
   end;
 
-CONSTRUCTOR T_editorMeta.create(CONST idx: longint; CONST state: T_editorState);
+CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
   VAR i:longint;
   begin
     create(idx);

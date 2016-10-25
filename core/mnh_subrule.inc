@@ -682,12 +682,13 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
 {$ifdef fullVersion}
 VAR generateRowIdentification:T_identifiedInternalFunction;
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;
-  VAR subRule:P_subrule;
+  VAR subRule:P_subrule=nil;
 
-      firstRep,lastRep:P_token;
+      firstRep:P_token=nil;
+      lastRep:P_token=nil;
 
       tRow :T_arrayOfDouble;
-      TList:P_listLiteral;
+      TList:P_listLiteral=nil;
       dataRow:T_dataRow;
 
       resultLiteral:P_listLiteral;

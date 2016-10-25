@@ -524,39 +524,38 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         profilingData[j]:=swapTemp;
       end;
       setLength(lines,length(profilingData)+1);
-      if Assigned(showProfilingTableCallback) then
-      data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
-            .appendString('Location')^
-            .appendString('id')^
-            .appendString('count')^
-            .appendString('inclusive (ms)')^
-            .appendString('exclusive (ms)'),false);
       lines[0]:='Location'+C_tabChar+
                 'id'+C_tabChar+
                 'count'+C_tabChar+
                 'inclusive'+C_invisibleTabChar+' time'+C_tabChar+
                 'exclusive'+C_invisibleTabChar+' time';
 
-      for i:=0 to length(profilingData)-1 do with profilingData[i] do begin
+      for i:=0 to length(profilingData)-1 do with profilingData[i] do
         lines[i+1]:=location+C_tabChar+
                     id+C_tabChar+
                     intToStr(callCount)+C_tabChar+
                     nicestTime(timeSpent_inclusive)+C_tabChar+
                     nicestTime(timeSpent_exclusive);
-        if Assigned(showProfilingTableCallback)
-        then data^.append(newListLiteral(5)^
-                          .appendString(location)^
-                          .appendString(id)^
-                          .appendInt(callCount)^
-                          .appendReal(timeSpent_inclusive*1E3)^
-                          .appendReal(timeSpent_exclusive*1E3),false);
-      end;
       lines:=formatTabs(lines);
       if Assigned(showProfilingTableCallback) then begin
+        data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
+              .appendString('Location')^
+              .appendString('id')^
+              .appendString('count')^
+              .appendString('inclusive (ms)')^
+              .appendString('exclusive (ms)'),false);
+        for i:=0 to length(profilingData)-1 do with profilingData[i] do
+          data^.append(newListLiteral(5)^
+                      .appendString(location)^
+                      .appendString(id)^
+                      .appendInt(callCount)^
+                      .appendReal(timeSpent_inclusive*1E3)^
+                      .appendReal(timeSpent_exclusive*1E3),false);
         showProfilingTableCallback(data);
         disposeLiteral(data);
         for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then adapters^.getAdapter(j)^.append(showTableMessage);
       end;
+
       for i:=0 to length(lines)-1 do adapters^.raiseCustomMessage(mt_timing_info,lines[i],C_nilTokenLocation);
     end;
   {$endif}

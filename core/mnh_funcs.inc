@@ -246,7 +246,7 @@ FUNCTION sign_imp intFuncSignature;
 
 FUNCTION time_imp intFuncSignature;
   VAR res:P_literal;
-      t:double;
+      t:double=0;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     begin
@@ -296,7 +296,7 @@ FUNCTION time_imp intFuncSignature;
 FUNCTION try_imp intFuncSignature;
   VAR oldAdapters:P_adapters;
       errorCase:boolean;
-      messages:P_literal;
+      messages:P_literal=nil;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
@@ -652,8 +652,8 @@ FUNCTION printf_imp intFuncSignature;
 FUNCTION formatTime_imp intFuncSignature;
   VAR L:P_listLiteral;
       i:longint;
-      fmt:ansistring='';
-  FUNCTION fmtIt(CONST t:double):P_stringLiteral; inline;
+      fmt:ansistring;
+  FUNCTION fmtIt(CONST t:double):P_stringLiteral;
     begin
       result:=newStringLiteral(FormatDateTime(fmt,t));
     end;

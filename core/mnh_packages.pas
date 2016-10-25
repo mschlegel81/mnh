@@ -265,6 +265,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           locationForErrorFeedback:T_tokenLocation;
           newId:string;
       begin
+        initialize(newId);
         locationForErrorFeedback:=first^.location;
         first:=context.disposeToken(first);
         while first<>nil do begin

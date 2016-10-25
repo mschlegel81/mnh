@@ -609,11 +609,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     end;
 
   PROCEDURE resolveEach(eachType:T_tokenType);
-    VAR bracketClosingEach:P_token;
+    VAR bracketClosingEach:P_token=nil;
         bodyRule:array of P_subrule;
         aggregatorLocation:T_tokenLocation;
-        aggregatorToken:T_tokenType;
-        aggregatorExpression:P_expressionLiteral;
+        aggregatorToken:T_tokenType=tt_EOL;
+        aggregatorExpression:P_expressionLiteral=nil;
         aggregatorPresent:(no,yes_as_operator,yes_as_expression,yes_as_head)=no;
         maxFutureForwardInitialization:longint=16;
         eachToken:P_token;
@@ -712,11 +712,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR itList:P_listLiteral;
         i:longint;
         eachLocation:T_tokenLocation;
-        resultLiteral:P_literal;
-        booleanResult:boolean;
+        resultLiteral:P_literal=nil;
+        booleanResult:boolean=false;
         lazyAbort:boolean=false;
 
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
+    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean);
       VAR newLit:P_literal;
       begin
         if not(context.adapters^.noErrors) then begin
@@ -796,7 +796,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if doDispose then disposeLiteral(L);
       end;
 
-    PROCEDURE finalizeAggregation; inline;
+    PROCEDURE finalizeAggregation;
       begin
         first^.tokType:=tt_literal;
         if (resultLiteral=nil) and (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr]) then begin
@@ -905,7 +905,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else itList:=newOneElementListLiteral(first^.data,false);
 
       first^.next:=context.disposeToken(first^.next);
-      resultLiteral:=nil;
       //iterate over itList----------------------------------------------------------
       if (aggregatorPresent<>no) and (itList^.size=0) then begin
         resultLiteral:=newVoidLiteral;
@@ -929,9 +928,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     end;
 
   PROCEDURE resolveWhile;
-    VAR bracketClosingWhile:P_token;
-        headRule:P_subrule;
-        bodyRule:P_subrule;
+    VAR bracketClosingWhile:P_token=nil;
+        headRule:P_subrule=nil;
+        bodyRule:P_subrule=nil;
 
     FUNCTION parseBodyOk:boolean;
       VAR i:longint;
