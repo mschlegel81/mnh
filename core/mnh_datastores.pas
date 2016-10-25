@@ -85,7 +85,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     tryObtainName(true);
     wrapper.createToWriteToFile(fileName);
     wrapper.writeAnsiString(ruleId);
-    writeLiteralToStream(L,wrapper,location,adapters,false);
+    writeLiteralToStream(L,wrapper,location,adapters);
     wrapper.destroy;
   end;
 

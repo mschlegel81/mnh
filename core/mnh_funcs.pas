@@ -126,16 +126,14 @@ FUNCTION mnhParameters_imp intFuncSignature;
 FUNCTION serialize_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters,false,false))
-    else if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_boolean)
-    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters,false,P_boolLiteral(arg1)^.value))
+    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters,false))
     else result:=nil;
   end;
 
 FUNCTION deserialize_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context.adapters,2)
+    then result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context.adapters)
     else result:=nil;
   end;
 
@@ -194,7 +192,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn',@warn_imp,'warn(...);//Raises a warning of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x. Strings will NOT(!) be compressed.#serialize(x,compressStrings:boolean);#Returns a string representing x.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize',@deserialize_impl,'deserialize(s:string);#Returns the literal represented by s which was created using serialize(x)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits',@bits_impl,'bits(i:int);#Returns the bits of i');
   system.initCriticalSection(print_cs);
