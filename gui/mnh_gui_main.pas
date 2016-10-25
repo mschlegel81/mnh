@@ -407,7 +407,7 @@ PROCEDURE TMnhForm.doConditionalPlotReset;
 
 PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   begin
-    with settings.value^.fileHistory do begin
+    with settings.value^.workspace.fileHistory do begin
       if fileExists(historyItem(historyIdx))
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
       else if polishHistory then processFileHistory;
@@ -832,7 +832,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
         if mr=mrCancel then exit;
       end;
       if isFile then begin
-        settings.value^.fileHistory.fileClosed(fileInfo.filePath);
+        settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
         processFileHistory;
       end;
       closeEditor;
@@ -1345,7 +1345,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
   begin
     if (inputPageControl.activePageIndex>=0) and not(reEvaluationWithGUIrequired) then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
-      settings.value^.activePage:=inputPageControl.activePageIndex;
+      settings.value^.workspace.activePage:=inputPageControl.activePageIndex;
       with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(pseudoName,editor.lines);
       enableMenuForLanguage(editorMeta[inputPageControl.activePageIndex].language);
     end;
@@ -1360,7 +1360,7 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
         inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
         exit;
       end;
-      if fileHistory.polishHistory then processFileHistory;
+      if workspace.fileHistory.polishHistory then processFileHistory;
       fileName:=assistancEvaluator.resolveImport(idOrName);
       if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
@@ -1747,14 +1747,14 @@ PROCEDURE TMnhForm.processSettings;
       processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
 
-      setLength(editorMeta,length(settings.value^.editorState));
+      setLength(editorMeta,length(settings.value^.workspace.editorState));
       runEvaluator.context.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do begin
-        editorMeta[i].create(i,settings.value^.editorState[i]);
+        editorMeta[i].create(i,settings.value^.workspace.editorState[i]);
         editorMeta[i].setStepperBreakpoints;
       end;
 
-      i:=settings.value^.activePage;
+      i:=settings.value^.workspace.activePage;
       inputPageControl.activePageIndex:=i;
       if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       {$ifdef UNIX}
@@ -1808,13 +1808,13 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   VAR i:longint;
   begin
-    for i:=0 to 19 do if settings.value^.fileHistory.historyItem(i)='' then begin
+    for i:=0 to 19 do if settings.value^.workspace.fileHistory.historyItem(i)='' then begin
       historyMenuItem(i).enabled:=false;
       historyMenuItem(i).visible:=false;
     end else begin
       historyMenuItem(i).enabled:=true;
       historyMenuItem(i).visible:=true;
-      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.fileHistory.historyItem(i);
+      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.workspace.fileHistory.historyItem(i);
     end;
   end;
 
