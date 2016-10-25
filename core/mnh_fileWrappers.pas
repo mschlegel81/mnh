@@ -476,7 +476,7 @@ FUNCTION T_codeProvider.contentHash:T_hashInt;
   begin
     {$Q-}{$R-}
     result:=length(lineData);
-    for i:=0 to length(lineData)-1 do result:=result*31+hashOfAnsiString(lineData[i]);
+    for i:=0 to length(lineData)-1 do result:=result*T_hashInt(31)+T_hashInt(hashOfAnsiString(lineData[i]));
     {$Q+}{$R+}
   end;
 

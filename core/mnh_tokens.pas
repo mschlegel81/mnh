@@ -268,7 +268,7 @@ FUNCTION T_token.hash:T_hashInt;
       with pt^ do begin
         case tokType of
           tt_identifier,    tt_localUserRule    ,tt_importedUserRule    ,tt_intrinsicRule    : result:=result*31+longint(tt_identifier);
-          else result:=result*31+longint(tokType);
+          else result:=result*T_hashInt(31)+T_hashInt(tokType);
         end;
         result:=result*31+length(txt);
         for i:=1 to length(txt) do result:=result*31+ord(txt[i]);
