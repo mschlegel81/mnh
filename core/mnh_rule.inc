@@ -331,7 +331,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):
           L:=namedValue.getValue;
           code:=code+
                 C_tokenInfo[tt_assign].defaultId+
-                serialize(L,declarationStart,@adapters,true,false)+
+                serialize(L,declarationStart,@adapters,true)+
                 C_tokenInfo[tt_semicolon].defaultId;
           disposeLiteral(L);
           provider.replaceCode(

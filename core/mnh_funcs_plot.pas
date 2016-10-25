@@ -181,8 +181,8 @@ FUNCTION setOptions intFuncSignature;
       i:longint;
   begin
     result:=nil;
+    opt:=context.adapters^.plot.options;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_keyValueList) then begin
-      opt:=context.adapters^.plot.options;
       for i:=0 to list0^.size-1 do begin
         pair:=P_listLiteral(list0^.value(i));
         matchKey(P_stringLiteral(pair^.value(0))^.value,
@@ -190,7 +190,6 @@ FUNCTION setOptions intFuncSignature;
       end;
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_int,lt_boolean]) then begin
-      opt:=context.adapters^.plot.options;
       matchKey(str0^.value,arg1);
       result:=newBoolLiteral(allOkay);
     end else allOkay:=false;

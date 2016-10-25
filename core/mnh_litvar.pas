@@ -314,10 +314,10 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST tryCompressStrings:boolean);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression,tryCompressStrings:boolean):ansistring;
-FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
+FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 IMPLEMENTATION
@@ -2717,10 +2717,10 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
     setLength(reusableLiterals,0);
   end;
 
-PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST tryCompressStrings:boolean);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR reusableMap:specialize G_literalKeyMap<longint>;
-      stringCompression:byte;
-  PROCEDURE writeLiteral(CONST L:P_literal);
+
+ PROCEDURE writeLiteral(CONST L:P_literal);
     VAR i:longint;
         reusableIndex:longint;
     begin
@@ -2739,7 +2739,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
         lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
         lt_int:stream.writeInt64(P_intLiteral(L)^.val);
         lt_real:stream.writeDouble(P_realLiteral(L)^.val);
-        lt_string:stream.writeAnsiString(compressString(P_stringLiteral(L)^.val,stringCompression));
+        lt_string:stream.writeAnsiString(P_stringLiteral(L)^.val);
         lt_list,
         lt_booleanList,
         lt_intList,
@@ -2760,7 +2760,6 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
     end;
 
   begin
-    if tryCompressStrings then stringCompression:=0 else stringCompression:=255;
     reusableMap.create();
     writeLiteral(L);
     reusableMap.destroy;
@@ -2813,27 +2812,23 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
     end;
   end;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression,tryCompressStrings:boolean):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
   VAR wrapper:T_streamWrapper;
       stream:TStringStream;
   begin
     if asExpression then exit(serialize(L,location,adapters));
     stream:= TStringStream.create('');
     wrapper.create(stream);
-    writeLiteralToStream(L,wrapper,location,adapters,tryCompressStrings);
+    writeLiteralToStream(L,wrapper,location,adapters);
     stream.position:=0;
     result:=stream.DataString;
     wrapper.destroy; //implicitly destroys stream
   end;
 
-FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
+FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
   VAR wrapper:T_streamWrapper;
       stream:TStringStream;
   begin
-    if level=0 then begin
-      adapters^.raiseError('Cannot deserialize a stream created with level 0. Use default parsing instead.',location);
-      exit(newErrorLiteral);
-    end;
     stream:=TStringStream.create(Source);
     wrapper.create(stream);
     stream.position:=0;

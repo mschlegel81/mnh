@@ -286,7 +286,7 @@ PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; par
     end;
     requestedContextType:=contextType;
     setLength(mainParameters,0);
-    params:=trim(UTF8ToSys(params));
+    params:=trim(params);
     while params<>'' do begin
       sp:=pos(' ',params);
       if sp<=0 then begin

@@ -8,23 +8,26 @@ CONST
   C_firstOfVoid   :array[vsm_nonBlockingVoid..vsm_blockingVoid] of T_valueStoreMarker=(vsm_nonBlockingFirst,vsm_blockingFirst);
 TYPE
   T_valueStore=object
-    cs:TRTLCriticalSection;
-    data:array of record
-      marker:T_valueStoreMarker;
-      v:P_namedVariable;
-    end;
+    private
+      cs:TRTLCriticalSection;
+      data:array of record
+        marker:T_valueStoreMarker;
+        v:P_namedVariable;
+      end;
+      PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
+      FUNCTION getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
+      PROCEDURE scopePush(CONST blocking:boolean);
+      PROCEDURE scopePop;
 
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE clear;
-    PROCEDURE scopePush(CONST blocking:boolean);
-    PROCEDURE scopePop;
-    FUNCTION getVariable(CONST id:T_idString):P_namedVariable;
-    PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
-    {$ifdef fullVersion}
-    //For debugging:
-    PROCEDURE reportVariables(VAR variableReport:T_variableReport);
-    {$endif}
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      {$ifdef fullVersion}
+      //For debugging:
+      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+      PROCEDURE writeStore;
+      {$endif}
   end;
 
   T_contextOption=(cp_ask,
@@ -251,21 +254,19 @@ PROCEDURE T_valueStore.scopePop;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_valueStore.getVariable(CONST id:T_idString):P_namedVariable;
+FUNCTION T_valueStore.getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
   VAR i:longint;
   begin
-    system.enterCriticalSection(cs);
+    blockEncountered:=false;
     result:=nil;
     for i:=length(data)-1 downto 0 do with data[i] do
     if (v<>nil) and (v^.getId=id) then begin
       result:=v;
-      system.leaveCriticalSection(cs);
       exit(result);
     end else if marker in [vsm_blockingFirst,vsm_blockingVoid] then begin
-      system.leaveCriticalSection(cs);
+      blockEncountered:=true;
       exit(nil);
     end;
-    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
@@ -307,6 +308,21 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
     end;
     system.leaveCriticalSection(cs);
   end;
+
+PROCEDURE T_valueStore.writeStore;
+  FUNCTION vts(CONST v:P_namedVariable):string;
+    begin
+      if v=nil then result:='<nil>'
+               else result:=v^.toString(100);
+    end;
+
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    for i:=0 to length(data)-1 do writeln(data[i].marker,' ',vts(data[i].v));
+    system.leaveCriticalSection(cs);
+  end;
+
 {$endif}
 FUNCTION initTimer:TEpikTimer;
   begin
@@ -342,7 +358,7 @@ PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST loca
       profilingEntry.callCount:=1;
     end;
     profilingMap.put(location,profilingEntry);
-    leaveCriticalSection(profilingAndDebuggingCriticalSection);
+    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
   end;
 {$endif}
 
@@ -361,7 +377,7 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
     setLength(callStack,0);
     wallClock.create(@initTimer,@disposeTimer);
     {$ifdef fullVersion}
-    initCriticalSection(profilingAndDebuggingCriticalSection);
+    system.initCriticalSection(profilingAndDebuggingCriticalSection);
     profilingMap.create();
     {$endif}
     {$ifdef debugMode}
@@ -395,7 +411,7 @@ DESTRUCTOR T_evaluationContext.destroy;
     if cp_disposeAdaptersOnDestruction in options then dispose(adapters,destroy);
     {$ifdef fullVersion}
     profilingMap.destroy;
-    doneCriticalSection(profilingAndDebuggingCriticalSection);
+    system.doneCriticalSection(profilingAndDebuggingCriticalSection);
     {$endif}
   end;
 
@@ -508,39 +524,38 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         profilingData[j]:=swapTemp;
       end;
       setLength(lines,length(profilingData)+1);
-      if Assigned(showProfilingTableCallback) then
-      data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
-            .appendString('Location')^
-            .appendString('id')^
-            .appendString('count')^
-            .appendString('inclusive (ms)')^
-            .appendString('exclusive (ms)'),false);
       lines[0]:='Location'+C_tabChar+
                 'id'+C_tabChar+
                 'count'+C_tabChar+
                 'inclusive'+C_invisibleTabChar+' time'+C_tabChar+
                 'exclusive'+C_invisibleTabChar+' time';
 
-      for i:=0 to length(profilingData)-1 do with profilingData[i] do begin
+      for i:=0 to length(profilingData)-1 do with profilingData[i] do
         lines[i+1]:=location+C_tabChar+
                     id+C_tabChar+
                     intToStr(callCount)+C_tabChar+
                     nicestTime(timeSpent_inclusive)+C_tabChar+
                     nicestTime(timeSpent_exclusive);
-        if Assigned(showProfilingTableCallback)
-        then data^.append(newListLiteral(5)^
-                          .appendString(location)^
-                          .appendString(id)^
-                          .appendInt(callCount)^
-                          .appendReal(timeSpent_inclusive*1E3)^
-                          .appendReal(timeSpent_exclusive*1E3),false);
-      end;
       lines:=formatTabs(lines);
       if Assigned(showProfilingTableCallback) then begin
+        data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
+              .appendString('Location')^
+              .appendString('id')^
+              .appendString('count')^
+              .appendString('inclusive (ms)')^
+              .appendString('exclusive (ms)'),false);
+        for i:=0 to length(profilingData)-1 do with profilingData[i] do
+          data^.append(newListLiteral(5)^
+                      .appendString(location)^
+                      .appendString(id)^
+                      .appendInt(callCount)^
+                      .appendReal(timeSpent_inclusive*1E3)^
+                      .appendReal(timeSpent_exclusive*1E3),false);
         showProfilingTableCallback(data);
         disposeLiteral(data);
         for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then adapters^.getAdapter(j)^.append(showTableMessage);
       end;
+
       for i:=0 to length(lines)-1 do adapters^.raiseCustomMessage(mt_timing_info,lines[i],C_nilTokenLocation);
     end;
   {$endif}
@@ -633,6 +648,7 @@ PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evalua
     if parentContext<>expectedParent then raise Exception.create('Detaching excepts another context');
     {$endif}
     parentContext:=nil;
+    options:=options-[cp_queryParentValueStore];
   end;
 
 
@@ -701,36 +717,40 @@ PROCEDURE T_evaluationContext.createVariable(CONST id: T_idString; CONST value: 
 
 FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
   VAR named:P_namedVariable;
+      blocked:boolean;
   begin
     system.enterCriticalSection(valueStore.cs);
-    named:=valueStore.getVariable(id);
+    named:=valueStore.getVariable(id,blocked);
     if named<>nil then result:=named^.getValue
-    else if (parentContext<>nil) and (cp_queryParentValueStore in options) then
-      result:=parentContext^.getVariableValue(id)
+    else if not(blocked) and (parentContext<>nil) and (cp_queryParentValueStore in options) then result:=parentContext^.getVariableValue(id)
     else result:=nil;
     system.leaveCriticalSection(valueStore.cs);
   end;
 
 PROCEDURE T_evaluationContext.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation);
   VAR named:P_namedVariable;
+      blocked:boolean;
   begin
     system.enterCriticalSection(valueStore.cs);
-    named:=valueStore.getVariable(id);
-    if named=nil then adapters^.raiseError('Cannot assign value to unknown local variable '+id,location)
-                 else named^.setValue(value);
+    named:=valueStore.getVariable(id,blocked);
+    if named<>nil then named^.setValue(value)
+    else if not(blocked) and (parentContext<>nil) and (cp_queryParentValueStore in options) then parentContext^.setVariableValue(id,value,location)
+    else adapters^.raiseError('Cannot assign value to unknown local variable '+id,location);
     system.leaveCriticalSection(valueStore.cs);
   end;
 
 FUNCTION T_evaluationContext.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   VAR named:P_namedVariable;
+      blocked:boolean;
   begin
     system.enterCriticalSection(valueStore.cs);
-    named:=valueStore.getVariable(id);
-    if named=nil then begin
-                        adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
-                        result:=nil;
-                      end
-                 else result:=named^.mutate(mutation,RHS,location,adapters^);
+    named:=valueStore.getVariable(id,blocked);
+    if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^)
+    else if not(blocked) and (parentContext<>nil) and (cp_queryParentValueStore in options) then result:=parentContext^.mutateVariableValue(id,mutation,RHS,location)
+    else begin
+      adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
+      result:=nil;
+    end;
     system.leaveCriticalSection(valueStore.cs);
   end;
 
@@ -786,10 +806,13 @@ PROCEDURE T_evaluationContext.reportVariables(
 
 PROCEDURE T_evaluationContext.printCallStack(CONST messageType: T_messageType);
   VAR i:longint;
+      p:P_evaluationContext;
   begin
+    p:=parentContext;
+    if adapters=nil then exit;
     for i:=length(callStack)-1 downto 0 do with callStack[i] do
     adapters^.raiseCustomMessage(messageType,callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
-    if parentContext<>nil then parentContext^.printCallStack(messageType);
+    if p<>nil then p^.printCallStack(messageType);
   end;
 
 PROCEDURE T_evaluationContext.clearCallStack;
@@ -850,7 +873,7 @@ PROCEDURE T_evaluationContext.stepping(CONST first: P_token; CONST stack: pointe
   begin
     if not(cp_debug in options) or (debuggingStepper.state=dontBreakAtAll) then exit;
     if parentContext<>nil then parentContext^.stepping(first,stack);
-    enterCriticalSection(profilingAndDebuggingCriticalSection);
+    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
     wallClock.value.stop;
     with debuggingStepper do begin
       if state=breakSoonest then state:=waitingForGUI
@@ -876,16 +899,16 @@ PROCEDURE T_evaluationContext.stepping(CONST first: P_token; CONST stack: pointe
       end;
     end;
     wallClock.value.start;
-    leaveCriticalSection(profilingAndDebuggingCriticalSection);
+    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
   end;
 
 PROCEDURE T_evaluationContext.haltEvaluation;
   begin
     adapters^.haltEvaluation;
     if cp_debug in options then begin
-      enterCriticalSection(profilingAndDebuggingCriticalSection);
+      system.enterCriticalSection(profilingAndDebuggingCriticalSection);
       debuggingStepper.state:=dontBreakAtAll;
-      leaveCriticalSection(profilingAndDebuggingCriticalSection);
+      system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
     end;
   end;
 
