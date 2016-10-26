@@ -253,7 +253,7 @@ TYPE
     PROCEDURE miMinErrorlevel5Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOpenDocumentationPackClick(Sender: TObject);
-    procedure miOpenImportedClick(Sender: TObject);
+    PROCEDURE miOpenImportedClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
@@ -1279,12 +1279,12 @@ PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
     makeAndShowDoc(true);
   end;
 
-procedure TMnhForm.miOpenImportedClick(Sender: TObject);
+PROCEDURE TMnhForm.miOpenImportedClick(Sender: TObject);
   begin
     if (inputPageControl.PageIndex>=0) and
        (inputPageControl.PageIndex<length(editorMeta)) and
        (editorMeta[inputPageControl.PageIndex].language=LANG_MNH) then
-    FormDropFiles(sender,assistancEvaluator.getAllUsedFiles);
+    FormDropFiles(Sender,assistancEvaluator.getAllUsedFiles);
   end;
 
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);

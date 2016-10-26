@@ -711,8 +711,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
   begin
-    {$ifdef debugmode}
-    writeln(stderr,'Loading ',getPath,' as ',usecase);
+    {$ifdef debugMode}
+    writeln(stdErr,'Loading ',getPath,' as ',usecase);
     {$endif}
     if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
     if isMain then context.adapters^.clearErrors;

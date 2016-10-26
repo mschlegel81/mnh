@@ -408,9 +408,9 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
 
 FUNCTION T_assistanceEvaluator.getAllUsedFiles:T_arrayOfString;
   begin
-    EnterCriticalsection(cs);
+    enterCriticalSection(cs);
     result:=package.getPackageFileNameList;
-    LeaveCriticalsection(cs);
+    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
