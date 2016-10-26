@@ -7,4 +7,3 @@ main->['mnh.exe','mnh_light.exe'].each(file,
       : fail('Copy ',file,' -> C:\bin\',file,' failed');
     end
   : void);
-
