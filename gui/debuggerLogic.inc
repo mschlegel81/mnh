@@ -4,11 +4,14 @@ PROCEDURE tbStepInClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
 PROCEDURE tbStepOutClick(Sender: TObject);
 PROCEDURE tbStopClick(Sender: TObject);
+PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
 PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 PROCEDURE handleBreak;
 PROCEDURE updateDebugParts;
 PROCEDURE updateExpressionMemo;
+PROCEDURE miDebugCancelClick(Sender: TObject);
+PROCEDURE miDebugClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
@@ -50,6 +53,13 @@ PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
 PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
   begin
     runEvaluator.haltEvaluation;
+  end;
+
+PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
+  begin
+    runEvaluator.context.doMicrostep;
+    updateDebugParts;
+    breakPointHandlingPending:=true;
   end;
 
 FUNCTION treeLit_canExpand(L:P_literal):boolean;
@@ -235,4 +245,17 @@ PROCEDURE TMnhForm.updateDebugParts;
       DebugToolbar.enabled:=false;
     end;
   end;
+
+PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
+  begin
+    runEvaluator.haltEvaluation;
+  end;
+
+PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
+  begin
+    miDebug.Checked:=not(miDebug.Checked);
+    if miDebug.Checked then miProfile.Checked:=true;
+    updateDebugParts;
+  end;
+
 {$endif}
