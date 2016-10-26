@@ -67,6 +67,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+      FUNCTION getPackageFileNameList:T_arrayOfString;
       {$else}
       PROCEDURE clearSource;
       PROCEDURE appendSource(CONST line:string);
@@ -732,6 +733,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     {$endif}
 
   begin
+    {$ifdef debugMode}
+    writeln(stdErr,'Loading ',getPath,' as ',usecase);
+    {$endif}
     if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
     if isMain then context.adapters^.clearErrors;
     profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]);
@@ -1084,6 +1088,13 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
     r:=packageRules.valueSet;
     for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
     setLength(r,0);
+  end;
+
+FUNCTION T_package.getPackageFileNameList:T_arrayOfString;
+  VAR i:longint;
+  begin
+    setLength(result,0);
+    for i:=0 to length(secondaryPackages)-1 do append(result,secondaryPackages[i]^.getPath);
   end;
 {$endif}
 

@@ -85,6 +85,7 @@ TYPE
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_listOfString);
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
+      FUNCTION getAllUsedFiles:T_arrayOfString;
   end;
 
 VAR runEvaluator:T_runEvaluator;
@@ -402,6 +403,13 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
     end;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_assistanceEvaluator.getAllUsedFiles:T_arrayOfString;
+  begin
+    enterCriticalSection(cs);
+    result:=package.getPackageFileNameList;
     leaveCriticalSection(cs);
   end;
 
