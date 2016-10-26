@@ -57,6 +57,7 @@ TYPE
     callStackGroupBox: TGroupBox;
     callStackList: TListBox;
     MenuItem1: TMenuItem;
+    miOpenImported: TMenuItem;
     miWorkspaces: TMenuItem;
     miLangPython: TMenuItem;
     miLangXml: TMenuItem;
@@ -252,6 +253,7 @@ TYPE
     PROCEDURE miMinErrorlevel5Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOpenDocumentationPackClick(Sender: TObject);
+    procedure miOpenImportedClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
@@ -1277,6 +1279,14 @@ PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
     makeAndShowDoc(true);
   end;
 
+procedure TMnhForm.miOpenImportedClick(Sender: TObject);
+  begin
+    if (inputPageControl.PageIndex>=0) and
+       (inputPageControl.PageIndex<length(editorMeta)) and
+       (editorMeta[inputPageControl.PageIndex].language=LANG_MNH) then
+    FormDropFiles(sender,assistancEvaluator.getAllUsedFiles);
+  end;
+
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
     miProfile.Checked:=not(miProfile.Checked) or miDebug.Checked;
@@ -1435,8 +1445,8 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
       for i:=0 to caret.y-1 do
         if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+      if language=LANG_MNH then assistancEvaluator.extendCompletionList(wordsInEditor);
     end;
-    assistancEvaluator.extendCompletionList(wordsInEditor);
     wordsInEditor.unique;
   end;
 

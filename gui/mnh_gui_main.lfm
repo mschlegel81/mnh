@@ -1,11 +1,11 @@
 object MnhForm: TMnhForm
-  Left = 761
-  Height = 796
-  Top = 97
+  Left = 633
+  Height = 733
+  Top = 0
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
-  ClientHeight = 776
+  ClientHeight = 713
   ClientWidth = 717
   Color = clWhite
   Menu = MainMenu1
@@ -21,7 +21,7 @@ object MnhForm: TMnhForm
   object outputPageControl: TPageControl
     Left = 0
     Height = 337
-    Top = 416
+    Top = 353
     Width = 717
     TabStop = False
     ActivePage = debugTabSheet
@@ -1641,26 +1641,27 @@ object MnhForm: TMnhForm
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
-    Top = 753
+    Top = 690
     Width = 717
     Panels = <>
   end
   object inputPageControl: TPageControl
     Left = 0
-    Height = 378
+    Height = 315
     Top = 30
     Width = 717
     TabStop = False
     Align = alClient
+    MultiLine = True
     TabOrder = 0
     OnChange = inputPageControlChange
-    Options = [nboShowCloseButtons, nboKeyboardTabSwitch, nboShowAddTabButton]
+    Options = [nboMultiLine, nboKeyboardTabSwitch]
   end
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
     Height = 8
-    Top = 408
+    Top = 345
     Width = 717
     Align = alBottom
     OnMoved = Splitter1Moved
@@ -2602,6 +2603,10 @@ object MnhForm: TMnhForm
       object mi_insertFilename: TMenuItem
         Caption = 'Insert &Filename'
         OnClick = mi_insertFilenameClick
+      end
+      object miOpenImported: TMenuItem
+        Caption = 'Open all imported files'
+        OnClick = miOpenImportedClick
       end
     end
   end

@@ -85,6 +85,7 @@ TYPE
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_listOfString);
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
+      FUNCTION getAllUsedFiles:T_arrayOfString;
   end;
 
 VAR runEvaluator:T_runEvaluator;
@@ -403,6 +404,13 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       end;
     end;
     leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_assistanceEvaluator.getAllUsedFiles:T_arrayOfString;
+  begin
+    EnterCriticalsection(cs);
+    result:=package.getPackageFileNameList;
+    LeaveCriticalsection(cs);
   end;
 
 PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
