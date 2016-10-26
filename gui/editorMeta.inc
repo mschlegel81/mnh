@@ -438,7 +438,7 @@ FUNCTION T_editorMeta.fileIsDeleted:boolean;
 FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
   VAR currentFileAge:double;
   begin
-    if not(sheet.tabVisible and isFile) then exit(false);
+    if not(sheet.tabVisible and isFile) or changed then exit(false);
     fileAge(fileInfo.filePath,currentFileAge);
     result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
