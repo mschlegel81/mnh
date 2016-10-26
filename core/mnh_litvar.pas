@@ -2654,6 +2654,17 @@ DESTRUCTOR T_format.destroy;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
   VAR reusableLiterals:array of P_literal;
+  PROCEDURE errorOrException(CONST message:string);
+    begin
+      if adapters<>nil then adapters^.raiseError(message,location)
+                       else raise Exception.create(message);
+    end;
+
+  FUNCTION typeStringOrNone(CONST t:T_literalType):string;
+    begin
+      if (t>=low(T_literalType)) and (t<=high(T_literalType)) then result:=C_typeString[t] else result:='';
+    end;
+
   FUNCTION literalFromStream:P_literal;
     VAR literalType:T_literalType;
         reusableIndex:longint;
@@ -2670,8 +2681,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         end else begin
           result:=newErrorLiteral;
           stream.logWrongTypeError;
-          if adapters<>nil then adapters^.raiseError('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.',location)
-                           else raise Exception.create('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
+          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
         end;
         exit(result);
       end;
@@ -2681,7 +2691,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         lt_boolean:result:=newBoolLiteral(stream.readBoolean);
         lt_int:result:=newIntLiteral(stream.readInt64);
         lt_real:result:=newRealLiteral(stream.readDouble);
-        lt_string:result:=newStringLiteral(decompressString(stream.readAnsiString));
+        lt_string:result:=newStringLiteral(stream.readAnsiString);
         lt_list,
         lt_booleanList,
         lt_intList,
@@ -2700,7 +2710,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         end;
         lt_void:result:=newVoidLiteral;
         else begin
-          if adapters<>nil then adapters^.raiseError('Read invalid literal type! Abort.',location);
+          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(literalByte)+') ! Abort.');
           stream.logWrongTypeError;
           exit(newErrorLiteral);
         end;
