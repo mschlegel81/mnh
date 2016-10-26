@@ -1,18 +1,9 @@
-main->begin
-  fileExists('mnh.exe')
+main->['mnh.exe','mnh_light.exe','mnh_imig.exe'].each(file,
+  fileExists(file)
   ? begin
-      deleteFile('C:\bin\mnh.exe');
-      copyFile('mnh.exe','C:\bin\mnh.exe')
-      ? print('Copied mnh.exe -> C:\bin\mnh.exe')
-      : fail('Copy mnh.exe -> C:\bin\mnh.exe failed');
+      deleteFile('C:\bin\'&file);
+      copyFile(file,'C:\bin\'&file)
+      ? print('Copied ',file,' -> C:\bin\',file)
+      : fail('Copy ',file,' -> C:\bin\',file,' failed');
     end
-  : void;
-  fileExists('mnh_imig.exe')
-  ? begin
-      deleteFile('C:\bin\mnh_imig.exe');
-      copyFile('mnh_imig.exe','C:\bin\mnh_imig.exe')
-      ? print('Copied mnh_imig.exe -> C:\bin\mnh_imig.exe')
-      : fail('Copy mnh_imig.exe -> C:\bin\mnh_imig.exe failed');
-    end
-  : void;
-end;
+  : void);
