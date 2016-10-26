@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+PROCEDURE miHaltEvalutaionClick(Sender: TObject);
 PROCEDURE MenuItem4Click(Sender: TObject);
 PROCEDURE doStartEvaluation(CONST reEvaluating:boolean);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
@@ -6,6 +7,11 @@ FUNCTION preferredContextType:T_contextType;
 PROCEDURE doConditionalPlotReset;
 {$endif}
 {$ifdef includeImplementation}
+PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+  begin
+    runEvaluator.haltEvaluation;
+  end;
+
 PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating: boolean);
   VAR i:longint;
   begin

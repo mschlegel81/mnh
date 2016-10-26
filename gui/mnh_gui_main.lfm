@@ -2260,6 +2260,14 @@ object MnhForm: TMnhForm
         ShortCut = 16471
         OnClick = miCloseClick
       end
+      object miCloseAllButCurrent: TMenuItem
+        Caption = 'Close all but current'
+        OnClick = miCloseAllButCurrentClick
+      end
+      object miCloseAllUnmodified: TMenuItem
+        Caption = 'Close all unmodified files'
+        OnClick = miCloseAllUnmodifiedClick
+      end
       object miSave: TMenuItem
         Caption = 'Save'
         ShortCut = 16467
