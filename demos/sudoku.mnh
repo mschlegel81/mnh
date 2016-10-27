@@ -1,5 +1,5 @@
 private drop(list:intList,toDrop:int)->list[list!=toDrop];
-private drop(list:intList,toDrop:intList)->list.minus(toDrop);
+private drop(list:intList,toDrop:intList)->list.minus(toDrop).sort;
 
 private
 COMPONENTS:=[0..8].each(i,i+[0..8]*9)|
@@ -13,7 +13,7 @@ private memoized components(i)->COMPONENTS.each(c,i in c ? drop(c,i) : void);
 private isSolved(Board)->COMPONENTS.each(c,Board[c].sort==[1..9],AND);
 //*A board is valid when all components may contain all numbers [1..9]
 private isValid(Board)->Board.each(cell,not(cell==[]),AND) AND
-                        COMPONENTS.each(c,Board[c].flatten.unique==[1..9],AND);
+                        COMPONENTS.each(c,Board[c].flatten.unique.sort==[1..9],AND);
 //*A board's difficulty is given by the number of cells to fill
 private difficulty(Board)->Board.each(cell,cell.isInt ? 0 : 1,+);
 
