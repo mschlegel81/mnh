@@ -99,7 +99,7 @@ FUNCTION unique_imp intFuncSignature;
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
-      lResult^.unique;
+      lResult^.toSet;
     end;
   end;
 
@@ -155,83 +155,6 @@ FUNCTION getElementFreqency intFuncSignature;
 
     lResult^.sortBySubIndex(1,tokenLocation,context.adapters^);
     freqMap.destroy;
-  end;
-
-FUNCTION setUnion intFuncSignature;
-  TYPE T_set=specialize G_literalKeyMap<boolean>;
-  VAR resultSet:T_set;
-      resultList:T_set.KEY_VALUE_LIST;
-      i,j:longint;
-  begin
-    if not((params<>nil) and (params^.size>=1)) then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^.value(i)^.literalType in C_validListTypes) then exit(nil);
-    if params^.size=1 then begin
-      result:=arg0;
-      result^.rereference;
-    end;
-
-    resultSet.create;
-    for i:=0 to params^.size-1 do
-      with P_listLiteral(params^.value(i))^ do
-        for j:=0 to size-1 do resultSet.put(value(j),true);
-
-    result:=newListLiteral;
-    resultList:=resultSet.keyValueList;
-    for i:=0 to length(resultList)-1 do lResult^.append(resultList[i].key,true);
-    lResult^.unique;
-    setLength(resultList,0);
-    resultSet.destroy;
-  end;
-
-FUNCTION setIntersect intFuncSignature;
-  TYPE T_set=specialize G_literalKeyMap<longint>;
-  VAR resultSet:T_set;
-      resultList:T_set.KEY_VALUE_LIST;
-      i,j:longint;
-  begin
-    if not((params<>nil) and (params^.size>=1)) then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^.value(i)^.literalType in C_validListTypes) then exit(nil);
-    if params^.size=1 then begin
-      result:=arg0;
-      result^.rereference;
-    end;
-
-    resultSet.create;
-    for i:=0 to params^.size-1 do
-      with P_listLiteral(params^.value(i))^ do
-        for j:=0 to size-1 do if resultSet.get(value(j),0)=i then resultSet.put(value(j),i+1);
-
-    i:=params^.size;
-    resultList:=resultSet.keyValueList;
-    result:=newListLiteral;
-    for j:=0 to length(resultList)-1 do if resultList[j].value=i then
-      lResult^.append(resultList[j].key,true);
-    lResult^.unique;
-    setLength(resultList,0);
-    resultSet.destroy;
-  end;
-
-FUNCTION setMinus intFuncSignature;
-  VAR rhsSet:specialize G_literalKeyMap<boolean>;
-      i:longint;
-      LHS,RHS:P_listLiteral;
-  begin
-    if not((params<>nil) and
-           (params^.size=2) and
-           (arg0^.literalType in C_validListTypes) and
-           (arg1^.literalType in C_validListTypes))
-    then exit(nil);
-
-    LHS:=P_listLiteral(arg0);
-    RHS:=P_listLiteral(arg1);
-    rhsSet.create;
-    for i:=0 to RHS^.size-1 do rhsSet.put(RHS^.value(i),true);
-    result:=newListLiteral;
-    for i:=0 to LHS^.size-1 do
-      if not(rhsSet.get(LHS^.value(i),false))
-      then lResult^.append(LHS^.value(i),true);
-    lResult^.unique;
-    rhsSet.destroy;
   end;
 
 FUNCTION flatten_imp intFuncSignature;
@@ -354,20 +277,12 @@ FUNCTION reverseList_impl intFuncSignature;
     end;
   end;
 
-FUNCTION mapPut_imp intFuncSignature;
-  begin
-    result:=mapPut(params,tokenLocation,context.adapters^);
-  end;
-
-FUNCTION mapGet_imp intFuncSignature;
-  begin
-    result:=mapGet(params,tokenLocation,context.adapters^);
-  end;
-
-FUNCTION mapDrop_imp intFuncSignature;
-  begin
-    result:=mapDrop(params,tokenLocation,context.adapters^);
-  end;
+FUNCTION mapPut_imp       intFuncSignature; begin result:=mapPut(params); end;
+FUNCTION mapGet_imp       intFuncSignature; begin result:=mapGet(params); end;
+FUNCTION mapDrop_imp      intFuncSignature; begin result:=mapDrop(params); end;
+FUNCTION setUnion_imp     intFuncSignature; begin result:=setUnion(params); end;
+FUNCTION setIntersect_imp intFuncSignature; begin result:=setIntersect(params); end;
+FUNCTION setMinus_imp     intFuncSignature; begin result:=setMinus(params); end;
 
 FUNCTION get_imp intFuncSignature;
   VAR tmpPar:T_listLiteral;
@@ -446,9 +361,9 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'toMap',@mapOf_imp,'toMap(L:keyValueList);//Returns key L without duplicate keys and enhanced for faster lookup');
   registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
   registerRule(LIST_NAMESPACE,'transpose',@transpose_imp,'transpose(L);//Returns list L transposed.');
-  registerRule(LIST_NAMESPACE,'union',@setUnion,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'intersect',@setIntersect,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'minus',@setMinus,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'union',@setUnion_imp,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'intersect',@setIntersect_imp,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'minus',@setMinus_imp,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);//Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'unflatten',@unflatten_imp,'unflatten(L,openers,closers);//Returns L expanded to a nexted list using openers and closers.');
   registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);//Returns the number of elements in list L');

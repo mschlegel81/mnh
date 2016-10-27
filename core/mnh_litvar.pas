@@ -59,7 +59,6 @@ TYPE
   end;
 
   P_intLiteral = ^T_intLiteral;
-
   T_intLiteral = object(T_scalarLiteral)
   private
     val: int64;
@@ -77,7 +76,6 @@ TYPE
   end;
 
   P_realLiteral = ^T_realLiteral;
-
   T_realLiteral = object(T_scalarLiteral)
   private
     val: T_myFloat;
@@ -95,7 +93,6 @@ TYPE
   end;
 
   P_stringLiteral = ^T_stringLiteral;
-
   T_stringLiteral = object(T_scalarLiteral)
   private
     val: ansistring;
@@ -150,19 +147,22 @@ TYPE
            value:VALUE_TYPE;
          end;
          KEY_VALUE_LIST=array of CACHE_ENTRY;
+         MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
     VAR dat:array of KEY_VALUE_LIST;
         fill:longint;
     CONSTRUCTOR create();
+    CONSTRUCTOR createClone(VAR map:MY_TYPE);
     DESTRUCTOR destroy;
     PROCEDURE rehashGrowing;
     FUNCTION put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
+    PROCEDURE drop(CONST key:P_literal);
     FUNCTION keyValueList:KEY_VALUE_LIST;
     FUNCTION keySet:T_arrayOfLiteral;
   end;
 
-  P_literalKeyLongintValueMap=^T_literalKeyLongintValueMap;
-  T_literalKeyLongintValueMap=specialize G_literalKeyMap<longint>;
+  P_literalKeyBooleanValueMap=^T_literalKeyBooleanValueMap;
+  T_literalKeyBooleanValueMap=specialize G_literalKeyMap<boolean>;
   P_stringKeyLiteralValueMap=^T_stringKeyLiteralValueMap;
   T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
 
@@ -172,10 +172,10 @@ TYPE
     datFill:longint;
     nextAppendIsRange: boolean;
 
-    indexBacking:record
-      setBack:P_literalKeyLongintValueMap;
-      mapBack:P_stringKeyLiteralValueMap;
-    end;
+    lockCs:TRTLCriticalSection;
+    setMap     :P_literalKeyBooleanValueMap;
+    keyValueMap:P_stringKeyLiteralValueMap;
+
     PROCEDURE modifyType(CONST L:P_literal); inline;
   public
     CONSTRUCTOR create;
@@ -204,7 +204,7 @@ TYPE
     PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_adapters);
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; CONST location:T_tokenLocation; VAR adapters:T_adapters);
     FUNCTION sortPerm: P_listLiteral;
-    PROCEDURE unique;
+    PROCEDURE toSet;
     PROCEDURE toKeyValueList;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isKeyValuePair: boolean;
@@ -307,9 +307,12 @@ FUNCTION newVoidLiteral: P_voidLiteral; inline;
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
-FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapPut      (CONST params:P_listLiteral):P_listLiteral;
+FUNCTION mapGet      (CONST params:P_listLiteral):P_literal;
+FUNCTION mapDrop     (CONST params:P_listLiteral):P_listLiteral;
+FUNCTION setUnion    (CONST params:P_listLiteral):P_listLiteral;
+FUNCTION setIntersect(CONST params:P_listLiteral):P_listLiteral;
+FUNCTION setMinus    (CONST params:P_listLiteral):P_listLiteral;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
@@ -444,9 +447,9 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
   begin
     result:=floatToStr(x);
     if (pos('E', uppercase(result))<=0) and //occurs in exponents
-      (pos('N', uppercase(result))<=0) and //occurs in "Nan or Inf"
-      (pos('.', result)<=0) then
-      result:=result+'.0';
+       (pos('N', uppercase(result))<=0) and //occurs in "Nan or Inf"
+       (pos('.', result)<=0) then
+       result:=result+'.0';
   end;
 
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
@@ -528,9 +531,20 @@ PROCEDURE T_variableReport.addSubReport(VAR sub:T_variableReport; CONST pseudoLo
 CONSTRUCTOR G_literalKeyMap.create();
   VAR i:longint;
   begin
-    setLength(dat,256);
+    setLength(dat,16);
     for i:=0 to length(dat)-1 do setLength(dat[i],0);
     fill:=0;
+  end;
+
+CONSTRUCTOR G_literalKeyMap.createClone(VAR map:MY_TYPE);
+  VAR i,j:longint;
+  begin
+    setLength(dat,length(map.dat));
+    for i:=0 to length(dat)-1 do begin
+      setLength(dat[i],length(map.dat[i]));
+      for j:=0 to length(dat[i])-1 do dat[i,j]:=map.dat[i,j];
+    end;
+    fill:=map.fill;
   end;
 
 DESTRUCTOR G_literalKeyMap.destroy;
@@ -594,6 +608,19 @@ FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE
     for j:=0 to length(dat[binIdx])-1 do if dat[binIdx,j].key^.equals(key) then exit(dat[binIdx,j].value);
   end;
 
+PROCEDURE G_literalKeyMap.drop(CONST key:P_literal);
+  VAR binIdx:longint;
+      j,i:longint;
+  begin
+    binIdx:=key^.hash and (length(dat)-1);
+    for j:=0 to length(dat[binIdx])-1 do if dat[binIdx,j].key^.equals(key) then begin
+      i:=length(dat[binIdx])-1;
+      if (j<i) then dat[binIdx,j]:=dat[binIdx,i];
+      setLength(dat[binIdx],i);
+      exit;
+    end;
+  end;
+
 FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
   VAR i,j,k:longint;
   begin
@@ -650,10 +677,9 @@ CONSTRUCTOR T_listLiteral.create;
     setLength(dat, 0);
     datFill:=0;
     nextAppendIsRange:=false;
-    with indexBacking do begin
-      setBack:=nil;
-      mapBack:=nil;
-    end;
+    setMap:=nil;
+    keyValueMap:=nil;
+    system.initCriticalSection(lockCs);
   end;
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
@@ -672,6 +698,7 @@ DESTRUCTOR T_listLiteral.destroy;
     dropIndexes;
     for i:=0 to datFill-1 do if dat[i]<>nil then disposeLiteral(dat[i]);
     setLength(dat,0);
+    system.doneCriticalSection(lockCs);
   end;
 //==================================================================:DESTRUCTORS
 //?.value:======================================================================
@@ -1084,7 +1111,13 @@ FUNCTION T_expressionLiteral.canApplyToNumberOfParameters(CONST parCount:longint
 FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;
   VAR i:longint;
   begin
-    with indexBacking do if setBack<>nil then exit(setBack^.get(other,-1)>=0);
+    system.enterCriticalSection(lockCs);
+    if setMap<>nil then begin
+      result:=setMap^.get(other,false);
+      system.leaveCriticalSection(lockCs);
+      exit(result);
+    end;
+    system.leaveCriticalSection(lockCs);
     result:=false;
     for i:=0 to datFill-1 do if dat[i]^.equals(other) then exit(true);
   end;
@@ -1133,11 +1166,14 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         checkedExit;
       end;
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
-        if indexBacking.mapBack<>nil then begin
-          if not(indexBacking.mapBack^.containsKey(P_stringLiteral(other)^.val,result)) then exit(newVoidLiteral);
+        system.enterCriticalSection(lockCs);
+        if keyValueMap<>nil then begin
+          if not(keyValueMap^.containsKey(P_stringLiteral(other)^.val,result)) then result:=@voidLit;
+          system.leaveCriticalSection(lockCs);
           result^.rereference;
           exit(result);
         end else begin
+          system.leaveCriticalSection(lockCs);
           key:=P_stringLiteral(other)^.val;
           for i:=0 to datFill-1 do
           if P_stringLiteral(P_listLiteral(dat[i])^.dat[0])^.val = key then begin
@@ -1154,14 +1190,14 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       lt_stringList: if literalType in [lt_keyValueList,lt_emptyList] then begin
         result:=newListLiteral;
         setLength(P_listLiteral(result)^.dat,P_listLiteral(other)^.size);
-        if indexBacking.mapBack<>nil then begin
-          for j:=0 to P_listLiteral(other)^.size-1 do begin
-            if indexBacking.mapBack^.containsKey(P_stringLiteral(P_listLiteral(other)^.dat[j])^.val,L) then begin
-              P_listLiteral(result)^.append(L,true);
-              break;
-            end;
-          end;
+        system.enterCriticalSection(lockCs);
+        if keyValueMap<>nil then begin
+          for j:=0 to P_listLiteral(other)^.size-1 do
+            if keyValueMap^.containsKey(P_stringLiteral(P_listLiteral(other)^.dat[j])^.val,L)
+            then P_listLiteral(result)^.append(L,true);
+          system.leaveCriticalSection(lockCs);
         end else begin
+          system.leaveCriticalSection(lockCs);
           for j:=0 to P_listLiteral(other)^.size-1 do begin
             key:=P_stringLiteral(P_listLiteral(other)^.dat[j])^.value;
             i:=0; while i<datFill do
@@ -1408,7 +1444,25 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
     inc(datFill);
     if incRefs then L^.rereference;
     modifyType(L);
-    dropIndexes;
+    system.enterCriticalSection(lockCs);
+    if (setMap<>nil) and (setMap^.put(L,true)) then begin
+      dispose(setMap,destroy);
+      setMap:=nil;
+      //if the list is not unique, it cannot be a map
+      if (keyValueMap<>nil) then begin
+        dispose(keyValueMap,destroy);
+        keyValueMap:=nil;
+      end;
+    end;
+    if (keyValueMap<>nil) then begin
+      if (literalType<>lt_keyValueList) or (keyValueMap^.containsKey(P_stringLiteral(P_listLiteral(L)^.value(0))^.val)) then begin
+        dispose(keyValueMap,destroy);
+        keyValueMap:=nil;
+      end else
+        keyValueMap^.put(P_stringLiteral(P_listLiteral(L)^.value(0))^.val,
+                                         P_listLiteral(L)^.value(1));
+    end;
+    system.leaveCriticalSection(lockCs);
   end;
 
 FUNCTION T_listLiteral.appendString(CONST s: ansistring): P_listLiteral;
@@ -1457,43 +1511,35 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
       exit;
     end;
     last:=dat[datFill-1];
-    if (last^.literalType = lt_int) and (L^.literalType = lt_int) then
-      begin
+    if (last^.literalType = lt_int) and (L^.literalType = lt_int) then begin
       i0:=P_intLiteral(last)^.val;
       i1:=P_intLiteral(L)^.val;
       newLen:=datFill+abs(i1-i0)+1;
       if newLen>length(dat) then setLength(dat,newLen);
-      while (i0<i1) and adapters.noErrors do
-        begin
+      while (i0<i1) and adapters.noErrors do begin
         inc(i0);
         appendInt(i0);
-        end;
-      while (i0>i1) and adapters.noErrors do
-        begin
+      end;
+      while (i0>i1) and adapters.noErrors do begin
         dec(i0);
         appendInt(i0);
-        end;
-      end
-    else if (last^.literalType = lt_string) and
+      end;
+    end else if (last^.literalType = lt_string) and
       (length(P_stringLiteral(last)^.val) = 1) and (L^.literalType = lt_string) and
-      (length(P_stringLiteral(L)^.val) = 1) then
-      begin
+      (length(P_stringLiteral(L   )^.val) = 1) then begin
       c0:=P_stringLiteral(last)^.val [1];
       c1:=P_stringLiteral(L)^.val [1];
       newLen:=datFill+abs(ord(c1)-ord(c0))+1;
       if newLen>length(dat) then setLength(dat,newLen);
-      while c0<c1 do
-        begin
+      while c0<c1 do begin
         inc(c0);
         appendString(c0);
-        end;
-      while c0>c1 do
-        begin
+      end;
+      while c0>c1 do begin
         dec(c0);
         appendString(c0);
-        end;
-      end
-    else begin
+      end;
+    end else begin
       literalType:=lt_listWithError;
       adapters.raiseError('Invalid range expression '+
         last^.toString+'..'+L^.toString, tokenLocation);
@@ -1507,12 +1553,10 @@ PROCEDURE T_listLiteral.setRangeAppend;
 
 PROCEDURE T_listLiteral.dropIndexes;
   begin
-    with indexBacking do begin
-      if setBack<>nil then dispose(setBack,destroy);
-      if mapBack<>nil then dispose(mapBack,destroy);
-      setBack:=nil;
-      mapBack:=nil;
-    end;
+    system.enterCriticalSection(lockCs);
+    if setMap     <>nil then dispose(setMap     ,destroy); setMap     :=nil;
+    if keyValueMap<>nil then dispose(keyValueMap,destroy); keyValueMap:=nil;
+    system.leaveCriticalSection(lockCs);
   end;
 
 PROCEDURE T_listLiteral.sort;
@@ -1556,7 +1600,6 @@ PROCEDURE T_listLiteral.sort;
       end else for k:=0 to datFill-1 do dat[k]:=temp[k];
     end;
     setLength(temp, 0);
-    dropIndexes;
   end;
 
 PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_adapters);
@@ -1612,7 +1655,6 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:
       end else for k:=0 to datFill-1 do dat[k]:=temp [k];
     end;
     setLength(temp, 0);
-    dropIndexes;
   end;
 
 PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location:T_tokenLocation; VAR adapters: T_adapters);
@@ -1659,7 +1701,6 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
       end else for k:=0 to datFill-1 do dat[k]:=temp [k];
     end;
     setLength(temp, 0);
-    dropIndexes;
   end;
 
 FUNCTION T_listLiteral.sortPerm: P_listLiteral;
@@ -1716,28 +1757,30 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
     setLength(temp1, 0);
   end;
 
-PROCEDURE T_listLiteral.unique;
+PROCEDURE T_listLiteral.toSet;
   VAR i, j: longint;
   begin
-    with indexBacking do begin
-      if setBack<>nil then exit;
-      if mapBack<>nil then begin
-        dispose(mapBack,destroy);
-        mapBack:=nil;
+    system.enterCriticalSection(lockCs);
+    if setMap=nil then begin
+      new(setMap,create());
+      if keyValueMap<>nil then begin
+        //If a key-value-map is present, the list is uniqe
+        for i:=0 to datFill-1 do setMap^.put(dat[i],true);
+      end else begin
+        j:=0;
+        for i:=0 to datFill-1 do
+        if setMap^.get(dat[i],false)
+        then disposeLiteral(dat[i])
+        else begin
+          setMap^.put(dat[i],true);
+          dat[j]:=dat[i];
+          inc(j);
+        end;
+        setLength(dat,j);
+        datFill:=j;
       end;
-      sort;
-      j:=0;
-      new(setBack,create);
-      for i:=0 to datFill-1 do
-      if setBack^.get(dat[i],-1)=-1
-      then begin
-        setBack^.put(dat[i],i);
-        dat[j]:=dat[i];
-        inc(j);
-      end else disposeLiteral(dat[i]);
-      setLength(dat,j);
-      datFill:=j;
     end;
+    system.leaveCriticalSection(lockCs);
   end;
 
 PROCEDURE T_listLiteral.toKeyValueList;
@@ -1745,26 +1788,26 @@ PROCEDURE T_listLiteral.toKeyValueList;
       key:ansistring;
       val:P_literal;
   begin
-    with indexBacking do begin
-      if (literalType<>lt_keyValueList) or (mapBack<>nil) then exit;
-      if setBack<>nil then begin
-        dispose(setBack,destroy);
-        setBack:=nil;
-      end;
+    system.enterCriticalSection(lockCs);
+    if (keyValueMap=nil) and (literalType in [lt_keyValueList,lt_emptyList]) then begin
+      new(keyValueMap,create());
       j:=0;
-      new(mapBack,create());
       for i:=0 to datFill-1 do begin
         key:=P_stringLiteral(P_listLiteral(dat[i])^.dat[0])^.val;
         val:=                P_listLiteral(dat[i])^.dat[1];
-        if not(mapBack^.containsKey(key)) then begin
-          mapBack^.put(key,val);
+        if not(keyValueMap^.containsKey(key)) then begin
+          keyValueMap^.put(key,val);
           dat[j]:=dat[i];
           inc(j);
-        end else disposeLiteral(dat[i]);
+        end else begin
+          if setMap<>nil then setMap^.drop(dat[i]);
+          disposeLiteral(dat[i]);
+        end;
       end;
       setLength(dat,j);
       datFill:=j;
     end;
+    system.leaveCriticalSection(lockCs);
   end;
 
 FUNCTION T_listLiteral.isKeyValuePair: boolean;
@@ -1776,6 +1819,9 @@ FUNCTION T_listLiteral.isKeyValuePair: boolean;
 FUNCTION T_listLiteral.clone: P_listLiteral;
   VAR i:longint;
   begin
+    {$ifdef debugMode}
+    writeln(stdErr,'Cloning ',typeString,'; refCount=',numberOfReferences,'; set/map-backing: ',setMap<>nil,'/',keyValueMap<>nil);
+    {$endif}
     result:=newListLiteral;
     setLength(result^.dat,datFill);
     result^.datFill:=datFill;
@@ -1785,10 +1831,10 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
     end;
     result^.literalType:=literalType;
     result^.nextAppendIsRange:=nextAppendIsRange;
-    with indexBacking do begin
-      if mapBack<>nil then result^.unique;
-      if setBack<>nil then result^.toKeyValueList;
-    end;
+    system.enterCriticalSection(lockCs);
+    if keyValueMap<>nil then new(result^.keyValueMap,createClone(keyValueMap^));
+    if setMap     <>nil then new(result^.setMap     ,createClone(setMap     ^));
+    system.leaveCriticalSection(lockCs);
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
@@ -2449,9 +2495,10 @@ FUNCTION T_namedVariable.toString(CONST lengthLimit:longint=maxLongint):ansistri
     result:=id+'='+value^.toString(lengthLimit-1-length(id));
   end;
 
-FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapPut(CONST params:P_listLiteral):P_listLiteral;
   VAR map,keyValuePair:P_listLiteral;
-      key:P_stringLiteral;
+      keyLit:P_stringLiteral;
+      key:string;
       value:P_literal;
       i:longint;
   begin
@@ -2463,26 +2510,30 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       if map^.numberOfReferences=1
       then map^.rereference
       else map:=map^.clone;
-      key:=P_stringLiteral(params^.dat[1]);
+      system.enterCriticalSection(map^.lockCs);
+      if (map^.keyValueMap=nil) then map^.toKeyValueList;
+      keyLit:=P_stringLiteral(params^.dat[1]);
+      key:=keyLit^.val;
       value:=params^.dat[2];
-      for i:=0 to map^.datFill-1 do begin
-        keyValuePair:=P_listLiteral(map^.dat[i]);
-        if keyValuePair^.dat[0]^.equals(key) then begin
-          disposeLiteral(keyValuePair^.dat[1]);
-          keyValuePair^.dat[1]:=value;
-          value^.rereference;
-          exit(map);
+      if map^.keyValueMap^.containsKey(key) then begin
+        for i:=0 to map^.datFill-1 do begin
+          keyValuePair:=P_listLiteral(map^.dat[i]);
+          if keyValuePair^.dat[0]^.equals(keyLit) then begin
+            disposeLiteral(keyValuePair^.dat[1]);
+            keyValuePair^.dat[1]:=value;
+            value^.rereference;
+            break;
+          end;
         end;
-      end;
-      map^.append(
-        newListLiteral^
-       .append(key  ,true)^
-       .append(value,true),false);
+      end else map^.append(newListLiteral(2)^
+                           .append(keyLit,true)^
+                           .append(value ,true),false);
+      system.leaveCriticalSection(map^.lockCs);
       result:=map;
     end;
   end;
 
-FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
   VAR map,keyValuePair,keyList,fallbackList,resultList:P_listLiteral;
       key:P_stringLiteral;
       fallback:P_literal;
@@ -2500,7 +2551,8 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
                            else fallback:=nil;
       if params^.dat[1]^.literalType in [lt_stringList,lt_emptyList] then begin
         keyList:=P_listLiteral(params^.dat[1]);
-        back:=map^.indexBacking.mapBack;
+        system.enterCriticalSection(map^.lockCs);
+        back:=map^.keyValueMap;
         if back=nil then begin
           tempBack:=true;
           new(back,create);
@@ -2522,11 +2574,14 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
           end;
         end;
         if tempBack then dispose(back,destroy);
+        system.leaveCriticalSection(map^.lockCs);
         result:=resultList;
       end else begin
-        back:=map^.indexBacking.mapBack;
+        system.enterCriticalSection(map^.lockCs);
+        back:=map^.keyValueMap;
         key:=P_stringLiteral(params^.dat[1]);
         if back=nil then begin
+          system.leaveCriticalSection(map^.lockCs);
           for i:=0 to map^.datFill-1 do begin
             keyValuePair:=P_listLiteral(map^.dat[i]);
             if keyValuePair^.dat[0]^.equals(key) then begin
@@ -2539,6 +2594,7 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
           if back^.containsKey(P_stringLiteral(key)^.val,result)
           then begin
             result^.rereference;
+            system.leaveCriticalSection(map^.lockCs);
             exit(result);
           end;
         end;
@@ -2549,23 +2605,127 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
     end;
   end;
 
-FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapDrop(CONST params:P_listLiteral):P_listLiteral;
   VAR map,keyValuePair:P_listLiteral;
-      key:P_stringLiteral;
-      i:longint;
+      key:string;
+      keyLit:P_stringLiteral;
+      i,j:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.datFill=2) and
        (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
        (params^.dat[1]^.literalType=lt_string) then begin
       map:=P_listLiteral(params^.dat[0]);
-      result:=newListLiteral;
-      key:=P_stringLiteral(params^.dat[1]);
-      for i:=0 to map^.datFill-1 do begin
-        keyValuePair:=P_listLiteral(map^.dat[i]);
-        if not(keyValuePair^.dat[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true);
+      system.enterCriticalSection(map^.lockCs);
+      result:=map^.clone;
+      if result^.keyValueMap=nil then result^.toKeyValueList;
+      keyLit:=P_stringLiteral(params^.dat[1]);
+      key:=keyLit^.val;
+      if result^.keyValueMap^.containsKey(key) then begin
+        result^.keyValueMap^.dropKey(key);
+        for i:=0 to result^.datFill-1 do begin
+          keyValuePair:=P_listLiteral(map^.dat[i]);
+          if keyValuePair^.value(0)^.equals(keyLit) then begin
+            disposeLiteral(keyValuePair);
+            for j:=i to result^.datFill-2 do result^.dat[i]:=result^.dat[i+1];
+            result^.dat[result^.datFill-1]:=nil;
+            dec(result^.datFill);
+            break;
+          end;
+        end;
       end;
+      system.leaveCriticalSection(map^.lockCs);
     end;
+  end;
+
+FUNCTION setUnion(CONST params:P_listLiteral):P_listLiteral;
+  VAR i,j:longint;
+  begin
+    if not((params<>nil) and (params^.size>=1)) then exit(nil);
+    for i:=0 to params^.size-1 do if not(params^.value(i)^.literalType in C_validListTypes) then exit(nil);
+    if params^.size=1 then begin
+      if (P_listLiteral(params^.value(0))^.getReferenceCount=1) then begin
+        result:=P_listLiteral(params^.value(0));
+        result^.rereference;
+      end else result:=P_listLiteral(params^.value(0))^.clone;
+      result^.toSet;
+      exit(result);
+    end;
+    result:=newListLiteral();
+    new(result^.setMap,create);
+    for i:=0 to params^.size-1 do
+    with P_listLiteral(params^.value(i))^ do
+    for j:=0 to size-1 do if result^.setMap^.put(value(j),true) then begin
+      if length(result^.dat)<=result^.datFill then setLength(result^.dat,result^.datFill+16);
+      result^.dat[result^.datFill]:=value(j);
+      inc(result^.datFill);
+      value(j)^.rereference;
+      result^.modifyType(value(j));
+    end;
+  end;
+
+FUNCTION setIntersect(CONST params:P_listLiteral):P_listLiteral;
+  TYPE T_occurenceCount=specialize G_literalKeyMap<longint>;
+  VAR resultSet:T_occurenceCount;
+      resultList:T_occurenceCount.KEY_VALUE_LIST;
+      i,j:longint;
+  begin
+    if not((params<>nil) and (params^.size>=1)) then exit(nil);
+    for i:=0 to params^.size-1 do if not(params^.value(i)^.literalType in C_validListTypes) then exit(nil);
+    if params^.size=1 then begin
+      if (P_listLiteral(params^.value(0))^.getReferenceCount=1) then begin
+        result:=P_listLiteral(params^.value(0));
+        result^.rereference;
+      end else result:=P_listLiteral(params^.value(0))^.clone;
+      result^.toSet;
+      exit(result);
+    end;
+
+    resultSet.create;
+    for i:=0 to params^.size-1 do
+      with P_listLiteral(params^.value(i))^ do
+        for j:=0 to size-1 do if resultSet.get(value(j),0)=i then resultSet.put(value(j),i+1);
+
+    i:=params^.size;
+    resultList:=resultSet.keyValueList;
+    result:=newListLiteral;
+    new(result^.setMap,create);
+    for j:=0 to length(resultList)-1 do if resultList[j].value=i then begin
+      if length(result^.dat)<=result^.datFill then setLength(result^.dat,result^.datFill+16);
+      result^.dat[result^.datFill]:=resultList[j].key;
+      inc(result^.datFill);
+      resultList[j].key^.rereference;
+      result^.modifyType(resultList[j].key)
+    end;
+    setLength(resultList,0);
+    resultSet.destroy;
+  end;
+
+FUNCTION setMinus(CONST params:P_listLiteral):P_listLiteral;
+  VAR i:longint;
+      LHS,RHS:P_listLiteral;
+      kvl:T_literalKeyBooleanValueMap.KEY_VALUE_LIST;
+  begin
+    if not((params<>nil) and
+           (params^.size=2) and
+           (params^.value(0)^.literalType in C_validListTypes) and
+           (params^.value(1)^.literalType in C_validListTypes))
+    then exit(nil);
+
+    LHS:=P_listLiteral(params^.value(0));
+    RHS:=P_listLiteral(params^.value(1));
+    new(result,create);
+    new(result^.setMap,create);
+    for i:=0 to LHS^.datFill-1 do result^.setMap^.put (LHS^.dat[i],true);
+    for i:=0 to RHS^.datFill-1 do result^.setMap^.drop(RHS^.dat[i]);
+    kvl:=result^.setMap^.keyValueList;
+    setLength(result^.dat,length(kvl));
+    result^.datFill     :=length(kvl);
+    for i:=0 to length(kvl)-1 do begin
+      result^.dat[i]:=kvl[i].key;
+      result^.dat[i]^.rereference;
+    end;
+    setLength(kvl,0);
   end;
 
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);

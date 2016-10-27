@@ -6,14 +6,14 @@ private consolidate(s:string)->unpack(s).consolidate.pack;
 private consolidate(ListOfSets<>[])->
   size(ListOfSets)=1
   ? ListOfSets
-  : consolidate(ListOfSets,unique(flatten(ListOfSets)));
+  : consolidate(ListOfSets,flatten(ListOfSets).unique.sort);
 
 private consolidate(ListOfSets,consolidationPoints)->
   consolidationPoints==[]
   ? ListOfSets
   : begin
       local mask:=ListOfSets.each(set,consolidationPoints.head in set);
-      consolidate([ListOfSets.get(mask).flatten.unique]|ListOfSets.get(not(mask)),consolidationPoints.tail);
+      consolidate([ListOfSets.get(mask).flatten.unique.sort]|ListOfSets.get(not(mask)),consolidationPoints.tail);
     end;
 
 private examples:=["[{A,B} {C,D}]","[{A,B} {B,C}]","[{A,B} {C,D} {D,B}]","[{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]"];
