@@ -516,6 +516,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     PROCEDURE parseDataStore;
       VAR ruleModifiers:T_modifierSet=[];
+          loc:T_tokenLocation;
       begin
         if (codeProvider.isPseudoFile) then begin
           context.adapters^.raiseError('data stores require the package to be saved to a file.',first^.location);
@@ -524,11 +525,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
         while (first<>nil) and (first^.tokType in C_ruleModifiers) do begin
           include(ruleModifiers,first^.tokType);
+          loc:=first^.location;
           first:=context.disposeToken(first);
         end;
         if (first=nil) or not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
            (first^.next<>nil) then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid datastore definition: '+tokensToString(first),first^.location);
+          if first<>nil then loc:=first^.location;
+          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid datastore definition: '+tokensToString(first),loc);
           context.cascadeDisposeToken(first);
           exit;
         end;
