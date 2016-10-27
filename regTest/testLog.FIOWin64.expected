@@ -1432,57 +1432,57 @@ Ludic Numbers
 The magic number is 4641
 ***** maze *****
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-|   |           |   |               |                       |   |               |
-+---+   +---+   +---+   +---+---+---+   +---+---+---+---+   +   +   +---+---+---+
-|       |   |           |           |       |   |       |   |   |   |           |
-+   +---+   +---+---+---+   +---+   +---+   +   +   +---+---+---+---+   +---+   +
-|   |       |       |   |   |   |       |   |   |                       |   |   |
-+   +   +---+---+---+   +   +   +---+   +   +   +---+---+---+---+---+---+   +   +
-|   |   |   |           |       |   |       |   |       |   |           |       |
-+   +   +   +   +---+---+---+---+   +---+---+   +   +---+   +---+---+---+---+---+
-|   |       |           |       |       |   |   |           |                   |
-+   +---+---+---+---+   +---+   +---+   +---+   +---+---+---+   +---+---+---+   +
-|           |       |       |   |   |       |   |   |       |       |       |   |
-+---+---+---+   +   +---+   +---+---+---+   +   +---+   +   +---+   +   +   +---+
-|           |   |       |   |               |       |   |   |   |       |   |   |
-+   +---+   +   +---+   +   +   +---+---+---+---+   +   +   +---+---+---+   +   +
-|   |       |   |       |       |       |       |   |   |           |   |       |
-+   +   +---+   +---+---+---+---+   +   +   +   +   +---+---+---+   +---+---+---+
-|   |       |                   |   |       |   |       |       |       |       |
-+   +---+   +---+---+---+---+   +   +---+---+---+---+   +---+---+---+---+---+---+
-|       |   |       |       |   |       |               |       |   |           |
-+---+   +   +---+   +---+---+   +---+   +   +---+---+---+   +   +---+---+---+   +
-|   |   |           |       |       |       |   |   |   |   |       |           |
-+   +   +---+---+---+   +   +---+   +---+---+   +   +---+   +---+   +---+---+---+
-|   |   |               |       |   |       |   |   |   |   |   |       |       |
-+---+   +   +---+---+---+---+---+   +   +   +   +   +   +   +---+---+   +   +   +
-|   |   |       |   |           |   |   |   |   |   |   |       |       |   |   |
-+   +   +---+   +---+   +---+   +   +   +   +---+   +---+---+   +---+---+---+---+
-|   |   |       |       |       |   |   |       |   |       |               |   |
-+   +   +---+---+   +---+   +---+   +   +---+   +   +   +---+---+---+---+   +   +
-|   |   |           |   |   |   |   |   |   |       |   |           |       |   |
-+   +   +   +---+---+   +   +---+   +   +   +---+---+   +   +---+---+   +---+---+
-|   |       |   |       |           |   |           |   |       |       |       |
-+   +---+---+   +---+---+---+---+---+   +---+---+---+---+---+---+   +---+   +   +
-|               |                   |   |                       |           |   |
-+---+---+---+---+   +---+---+---+   +   +   +---+---+---+---+   +---+---+---+   +
-|       |       |       |           |       |       |       |           |       |
-+---+---+   +   +---+   +   +---+---+---+---+   +   +---+   +---+---+   +   +---+
-|           |           |           |       |   |           |       |   |   |   |
-+   +---+---+---+---+---+---+---+   +---+---+   +---+---+---+   +   +   +   +   +
-|               |           |   |               |       |       |   |       |   |
+|           |           |       |                       |   |           |   |   |
++---+---+   +   +---+   +   +---+   +---+---+---+---+   +   +   +---+   +   +   +
+|           |   |   |   |       |               |   |   |   |       |   |   |   |
++   +---+---+   +   +   +---+---+---+---+---+   +   +   +   +---+---+   +   +   +
+|   |       |   |   |           |           |   |   |   |   |           |       |
++---+   +   +   +   +---+---+   +---+---+---+   +   +   +---+   +---+---+---+---+
+|   |   |       |   |       |   |       |       |   |       |   |               |
++---+   +---+---+   +   +---+   +   +   +   +---+---+---+   +   +   +---+---+---+
+|       |           |   |       |   |   |               |   |   |   |       |   |
++   +---+   +---+---+   +---+---+   +---+---+---+---+   +   +   +   +   +   +   +
+|       |           |   |   |       |               |   |       |       |   |   |
++---+   +---+---+   +---+---+   +---+   +---+---+   +   +---+---+---+---+   +---+
+|   |       |   |   |           |   |   |       |   |   |       |       |       |
++   +---+   +   +   +   +---+---+---+   +   +---+   +   +---+---+   +   +---+   +
+|       |   |   |   |   |               |           |               |   |   |   |
++---+---+   +---+   +   +---+---+---+---+---+---+---+---+---+---+---+   +---+   +
+|       |   |   |   |       |           |       |               |       |       |
++   +   +   +---+   +---+   +   +---+   +   +   +   +---+---+   +   +---+   +---+
+|   |   |       |       |       |       |   |   |       |   |   |       |       |
++---+   +---+   +---+   +---+---+   +---+   +   +---+   +   +---+---+   +---+   +
+|   |       |           |       |   |       |   |   |       |       |   |       |
++   +---+   +---+---+---+---+---+   +   +---+   +---+---+---+   +---+   +   +---+
+|           |                   |   |   |   |   |       |       |   |       |   |
++---+---+---+   +---+---+---+   +---+   +   +   +---+   +   +---+---+---+---+---+
+|               |   |           |       |   |       |   |   |       |           |
++   +---+---+---+---+   +---+---+   +---+   +---+   +   +   +   +   +---+---+   +
+|   |           |       |       |   |       |   |   |   |       |       |   |   |
++   +---+---+   +   +---+   +   +   +   +---+   +   +   +---+---+---+   +---+   +
+|           |   |   |       |   |   |   |       |   |               |           |
++---+---+   +---+   +   +---+   +   +   +---+---+   +---+---+---+---+---+---+---+
+|   |   |   |       |   |   |       |       |       |       |       |       |   |
++   +---+   +   +---+   +   +---+---+---+   +   +---+---+---+   +   +   +   +   +
+|   |       |           |   |           |   |                   |       |   |   |
++   +   +---+---+---+---+---+---+---+   +   +---+---+---+---+---+---+---+   +---+
+|   |   |           |   |       |   |       |       |               |       |   |
++   +   +   +---+   +   +   +   +   +---+---+   +   +   +---+---+   +   +---+   +
+|   |   |   |   |   |   |   |       |       |   |       |   |       |           |
++   +   +   +   +   +---+---+---+---+---+---+   +---+---+---+   +---+---+---+---+
+|   |       |   |                               |               |               |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 ***** memoization *****
 The memoized function retuns 196418 and has been called     27 times
 The normal function retuns   196418 and has been called 392835 times
 ***** monteCarloPi *****
 See http://rosettacode.org/wiki/Monte_Carlo_methods
-n=     10 pi approximated as 3.6      
+n=     10 pi approximated as 2.4      
 n=    100 pi approximated as 3.04     
-n=   1000 pi approximated as 3.148    
-n=  10000 pi approximated as 3.178    
-n= 100000 pi approximated as 3.1466   
-n=1000000 pi approximated as 3.139624 
+n=   1000 pi approximated as 3.144    
+n=  10000 pi approximated as 3.1792   
+n= 100000 pi approximated as 3.14656  
+n=1000000 pi approximated as 3.139568 
 ***** numDiff *****
 The approximate taylor expansion of {$t^(1+sin($t))} around 1 is 
   {($x-1)^0*1.0+($x-1)^1*1.841552734375+($x-1)^2*1.31510925292969+($x-1)^3*0.26312255859375+($x-1)^4*-0.395398457845052+($x-1)^5*-0.309002653757731}
@@ -1581,22 +1581,22 @@ MNH form:
   can be represented as [0..2,4,6..8,11..12,14..25,27..33,35..39]
   and be re-expanded to [0,1,2,4,6,7,8,11,12,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,35,36,37,38,39]
 ***** randomWords *****
-shedo
-tenstimon
-sisop
-masoglu'd
-ki
-secenx
-sessh
-anerb
-heryrsh
-jiamu
-eabifiigr
-matia
-gicororyarr
+shedofi
+gywhe
+lenglu
+phe'dare
+secenxte
+muint
+dweryrshwy
+neabifiigrl
+whoump
 shinnde
 raneliv
 vicoun
+smin
+susies
+tritrubl
+havan
 ***** roman *****
 MMXV       (roman)  =       2015 (arabic)
 MCMXC      (roman)  =       1990 (arabic)
@@ -1610,11 +1610,11 @@ MDCLXVI    (roman)  =       1666 (arabic)
 0099, 2029, 102219, 10212219, 10313219, 1031122319, 1041222319, 103132131419, 105112331419, 10511223141519, 10612213142519, 1051321314151619, 1071122314251619, 106132131415161719, 108112231415261719, 10713213141516171819, 10911223141516271819, 10813213141516171829, 10812223141516172819, 10714213141516172819, 10812213241516271819
 ***** semordnilap *****
 Found 166 Semordnilaps
-Examples: ['even','neve']
-          ['gar','rag']
-          ['and','dna']
-          ['abut','tuba']
-          ['gum','mug']
+Examples: ['and','dna']
+          ['dog','god']
+          ['pit','tip']
+          ['avid','diva']
+          ['eel','lee']
 ***** setConsolidation *****
 Consolidation of [{A,B} {C,D}]
               is [{C,D},{A,B}]
@@ -2747,18 +2747,18 @@ A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
 221 : 512932792
 222 : 539453717
 ***** sudoku *****
-Generated a riddle with difficulty: 56
- 2  6    | 8  1  5 |         
-         |         | 2       
- 4       |    2    |    6    
+Generated a riddle with difficulty: 55
+    9    | 8       | 5  7    
+    5    | 7       | 4  8  2 
+ 2       |    3    |    6    
 ---------+---------+---------
- 6       |         | 3  5  9 
-         |    5    |    8    
-         | 9       |       1 
+    6    |       2 |         
+         | 4       |         
+ 4       |       8 |         
 ---------+---------+---------
- 1     3 |         | 8       
-         |       7 |       6 
-         |       9 |    4  5 
+       8 |         | 1     4 
+       9 |       3 |         
+ 6  4    |         |    3  7 
 ***** ulam *****
           XX                                        XX          XX                      XX          XX                  
                    XX                XX          XX    XX          XX                                        XX         
@@ -2802,10 +2802,10 @@ Generated a riddle with difficulty: 56
  XX          XX    XX          XX                XX                                  XX                                 
 ***** unbiasedRandom *****
 I biased unbiased
-3 33.09% 51.06%
-4 25.91% 49.80%
-5 20.55% 50.08%
-6 16.34% 49.71%
+3 33.18% 48.86%
+4 25.88% 50.25%
+5 20.59% 49.89%
+6 16.39% 50.26%
 ***** vampire *****
 1260 is a vampire. It's fangs are: [60,21]
 1395 is a vampire. It's fangs are: [93,15]
@@ -2838,31 +2838,29 @@ A
 B
 C
 ***** weasel *****
-  20 NEPHKTAP RO WT WXNI CDHESHIH (178)
-  40 NKWWKQAW UQ WT MFKI CDYEDTFH (131)
-  60 NFWDJQLT LQ FT MLEI HDTEDNFJ ( 96)
-  80 NFVGJPLT GV FT MJMC ADWEBNFJ ( 69)
- 100 NFUGJPLT GT FT MJMC AAWEBWFJ ( 62)
- 120 NFTGJPLT GT JT MIMD AAWEBSFM ( 52)
- 140 NFTGJPKT IT JQ LIKD A WEBSFM ( 14)
- 160 MFTGJPKT IT JQ LIKD A WEBSEM ( 12)
- 180 MFTHIPKT IT JS LIKD A WEBSEL (  7)
- 200 MFTHIPKT IT IS LIKE A WEBSEL (  5)
- 220 METHIPKT IT IS LIKE A WEASEL (  3)
- 240 METHINKT IT IS LIKE A WEASEL (  1)
- 260 METHINKT IT IS LIKE A WEASEL (  1)
- 280 METHINKT IT IS LIKE A WEASEL (  1)
- 300 METHINKT IT IS LIKE A WEASEL (  1)
- 320 METHINKT IT IS LIKE A WEASEL (  1)
- 340 METHINKT IT IS LIKE A WEASEL (  1)
- 360 METHINKT IT IS LIKE A WEASEL (  1)
- 380 METHINKT IT IS LIKE A WEASEL (  1)
- 400 METHINKT IT IS LIKE A WEASEL (  1)
- 420 METHINKT IT IS LIKE A WEASEL (  1)
- 440 METHINKT IT IS LIKE A WEASEL (  1)
- 460 METHINKT IT IS LIKE A WEASEL (  1)
- 480 METHINKT IT IS LIKE A WEASEL (  1)
- 490 METHINKS IT IS LIKE A WEASEL
+  20 KFWADPMOJGS JAUZSNCAA ZFGWNM (229)
+  40 SEVDDKDL NVAJUIKIOI A PDBUJM (144)
+  60 SEVDINOL IX JUHKIOB A ZDBRDL ( 85)
+  80 MESDINNS IX JS KIOB A TEBRDL ( 27)
+ 100 METJINNS IX JS KIIB A WEBRDL ( 19)
+ 120 METJINNS IU JS KIIE A WEBRDL ( 13)
+ 140 METJINLS IU JS KIIE A WEBRDL ( 11)
+ 160 METJINKS IU JS KIIE A WEBRDL ( 10)
+ 180 METJINKS IU IS KIIE A WEBRDL (  9)
+ 200 METJINKS IT IS KIJE A WEARDL (  6)
+ 220 METIINKS IT IS KIJE A WEARDL (  5)
+ 240 METHINKS IT IS KIJE A WEASEL (  2)
+ 260 METHINKS IT IS KIJE A WEASEL (  2)
+ 280 METHINKS IT IS LIJE A WEASEL (  1)
+ 300 METHINKS IT IS LIJE A WEASEL (  1)
+ 320 METHINKS IT IS LIJE A WEASEL (  1)
+ 340 METHINKS IT IS LIJE A WEASEL (  1)
+ 360 METHINKS IT IS LIJE A WEASEL (  1)
+ 380 METHINKS IT IS LIJE A WEASEL (  1)
+ 400 METHINKS IT IS LIJE A WEASEL (  1)
+ 420 METHINKS IT IS LIJE A WEASEL (  1)
+ 440 METHINKS IT IS LIJE A WEASEL (  1)
+ 454 METHINKS IT IS LIKE A WEASEL
 ***** wordCount *****
 Words total:    794914
 Distinct words: 12892
@@ -3115,11 +3113,11 @@ time approximation                      error error with step size control
 ***** root *****
 See http://rosettacode.org/wiki/Roots_of_a_function
 Analyzing $x^3-3*$x^2+2*$x
-Root found at   4.18837195872894E-244
+Root found at   1.29578534367463E-234
 Root found at   1.0
 Root found at   2.0
 ***** barnsleyFern *****
-Hash of regTest/../demos/barnsleyFern.png is 3231F4CB
+Hash of regTest/../demos/barnsleyFern.png is EB5C3B8
 ***** fractalPlant *****
 Hash of regTest/../demos/fractalPlant.png is D2104128
 ***** kochCurve *****
@@ -3450,19 +3448,19 @@ out> 'Z'
  in> trailing(['A'..'Z'], 3);
 out> ['X','Y','Z']
  in> minus([1..10]^2, 2*[0..50]);
-out> [1,9,25,49,81]
+out> [1,49,81,9,25]
  in> sort(intRandom(10, 5));
-out> [0,3,4,6,9]
+out> [0,4,6,6,8]
  in> sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
 out> ['01','1','10','010','100']
  in> sortPerm(random(10));
-out> [5,2,4,9,0,7,6,3,1,8]
+out> [2,8,4,0,7,1,9,3,5,6]
  in> sortPerm(['a'..'c'..'a']);
 out> [0,4,1,3,2]
  in> intersect([0..1000]^2,[0..1000]^3);
-out> [0,1,64,729,4096,15625,46656,117649,262144,531441,1000000]
+out> [0,4096,262144,1,15625,64,46656,1000000,117649,729,531441]
  in> union(1/[1..5], 2/[2..6]);
-out> [0.2,0.25,0.333333333333333,0.4,0.5,0.666666666666667,1.0]
+out> [1.0,0.5,0.333333333333333,0.25,0.2,0.666666666666667,0.4]
  in> deleteFile('plotDemo1.png');
 out> true
  in> drop([['A', 1],['B', 2],['C', 0]],'B');
@@ -3504,7 +3502,7 @@ out> [['A',1],['B',2],['C',0]]
  in> trueCount(10<[0..10]^2<50);
 out> 4
  in> unique([3, 1, 2, 1, 4, 1, 5]);
-out> [1,2,3,4,5]
+out> [3,1,2,4,5]
  in> compress('Test');
 out> 'Test'
  in> compress('Test').decompress;
@@ -3525,7 +3523,7 @@ out> '../other/example.txt'
  in> primes(20);
 out> [2,3,5,7,11,13,17,19]
  in> subSets([1, 2, 1]);
-out> [[],[1,2],[1,1],[2],[1],[1,1,2]]
+out> [[1,2],[],[1,1,2],[1,1],[2],[1]]
  in> diff('encode','decode');
 out> [['adds',1],['deletes',1],['matches',5],['modifies',0],['edit',[['+',-1,0],['.',0,1],['-',1,1],['.',2,2],['.',3,3],['.',4,4],['.',5,5]]]]
  in> diffStats('encode','decode');
@@ -3624,7 +3622,7 @@ Note  Creating new rule: input
  in> serialized :=input.serialize;
 Note  Creating new rule: serialized
  in> print(input.toString.byteLength,' > ', serialized.byteLength);
-211 > 192
+213 > 192
 out> void
  in> input==serialized.deserialize;
 out> true
