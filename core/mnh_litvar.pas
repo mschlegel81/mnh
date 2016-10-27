@@ -1789,7 +1789,7 @@ PROCEDURE T_listLiteral.toKeyValueList;
       val:P_literal;
   begin
     system.enterCriticalSection(lockCs);
-    if (keyValueMap=nil) and (literalType=lt_keyValueList) then begin
+    if (keyValueMap=nil) and (literalType in [lt_keyValueList,lt_emptyList]) then begin
       new(keyValueMap,create());
       j:=0;
       for i:=0 to datFill-1 do begin
