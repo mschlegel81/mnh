@@ -1820,7 +1820,7 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
   VAR i:longint;
   begin
     {$ifdef debugMode}
-    writeln(stdErr,'Cloning ',typeString,'; refCount=',numberOfReferences);
+    writeln(stdErr,'Cloning ',typeString,'; refCount=',numberOfReferences,'; set/map-backing: ',setMap<>nil,'/',keyValueMap<>nil);
     {$endif}
     result:=newListLiteral;
     setLength(result^.dat,datFill);
@@ -2497,7 +2497,8 @@ FUNCTION T_namedVariable.toString(CONST lengthLimit:longint=maxLongint):ansistri
 
 FUNCTION mapPut(CONST params:P_listLiteral):P_listLiteral;
   VAR map,keyValuePair:P_listLiteral;
-      key:P_stringLiteral;
+      keyLit:P_stringLiteral;
+      key:string;
       value:P_literal;
       i:longint;
   begin
@@ -2509,21 +2510,25 @@ FUNCTION mapPut(CONST params:P_listLiteral):P_listLiteral;
       if map^.numberOfReferences=1
       then map^.rereference
       else map:=map^.clone;
-      key:=P_stringLiteral(params^.dat[1]);
+      system.enterCriticalSection(map^.lockCs);
+      if (map^.keyValueMap=nil) then map^.toKeyValueList;
+      keyLit:=P_stringLiteral(params^.dat[1]);
+      key:=keyLit^.val;
       value:=params^.dat[2];
-      for i:=0 to map^.datFill-1 do begin
-        keyValuePair:=P_listLiteral(map^.dat[i]);
-        if keyValuePair^.dat[0]^.equals(key) then begin
-          disposeLiteral(keyValuePair^.dat[1]);
-          keyValuePair^.dat[1]:=value;
-          value^.rereference;
-          exit(map);
+      if map^.keyValueMap^.containsKey(key) then begin
+        for i:=0 to map^.datFill-1 do begin
+          keyValuePair:=P_listLiteral(map^.dat[i]);
+          if keyValuePair^.dat[0]^.equals(keyLit) then begin
+            disposeLiteral(keyValuePair^.dat[1]);
+            keyValuePair^.dat[1]:=value;
+            value^.rereference;
+            break;
+          end;
         end;
-      end;
-      map^.append(
-        newListLiteral^
-       .append(key  ,true)^
-       .append(value,true),false);
+      end else map^.append(newListLiteral(2)^
+                           .append(keyLit,true)^
+                           .append(value ,true),false);
+      system.leaveCriticalSection(map^.lockCs);
       result:=map;
     end;
   end;
@@ -2602,8 +2607,9 @@ FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
 
 FUNCTION mapDrop(CONST params:P_listLiteral):P_listLiteral;
   VAR map,keyValuePair:P_listLiteral;
-      key:P_stringLiteral;
-      i:longint;
+      key:string;
+      keyLit:P_stringLiteral;
+      i,j:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.datFill=2) and
@@ -2611,11 +2617,22 @@ FUNCTION mapDrop(CONST params:P_listLiteral):P_listLiteral;
        (params^.dat[1]^.literalType=lt_string) then begin
       map:=P_listLiteral(params^.dat[0]);
       system.enterCriticalSection(map^.lockCs);
-      result:=newListLiteral;
-      key:=P_stringLiteral(params^.dat[1]);
-      for i:=0 to map^.datFill-1 do begin
-        keyValuePair:=P_listLiteral(map^.dat[i]);
-        if not(keyValuePair^.dat[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true);
+      result:=map^.clone;
+      if result^.keyValueMap=nil then result^.toKeyValueList;
+      keyLit:=P_stringLiteral(params^.dat[1]);
+      key:=keyLit^.val;
+      if result^.keyValueMap^.containsKey(key) then begin
+        result^.keyValueMap^.dropKey(key);
+        for i:=0 to result^.datFill-1 do begin
+          keyValuePair:=P_listLiteral(map^.dat[i]);
+          if keyValuePair^.value(0)^.equals(keyLit) then begin
+            disposeLiteral(keyValuePair);
+            for j:=i to result^.datFill-2 do result^.dat[i]:=result^.dat[i+1];
+            result^.dat[result^.datFill-1]:=nil;
+            dec(result^.datFill);
+            break;
+          end;
+        end;
       end;
       system.leaveCriticalSection(map^.lockCs);
     end;
