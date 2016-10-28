@@ -1727,6 +1727,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$endif}
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
+        context.adapters^.raiseError('Irreducible expression: '+tokenStackToString(@stack,first,100),first^.location);
         if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
         cleanupStackAndExpression;
       end;
