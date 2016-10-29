@@ -173,8 +173,8 @@ TYPE
     nextAppendIsRange: boolean;
 
     lockCs:TRTLCriticalSection;
-    setMap     :P_literalKeyBooleanValueMap;
-    keyValueMap:P_stringKeyLiteralValueMap;
+    setMap           :P_literalKeyBooleanValueMap;
+    keyValuePairByKey:P_stringKeyLiteralValueMap;
 
     PROCEDURE modifyType(CONST L:P_literal); inline;
   public
@@ -205,7 +205,7 @@ TYPE
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; CONST location:T_tokenLocation; VAR adapters:T_adapters);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE toSet;
-    PROCEDURE toKeyValueList;
+    PROCEDURE toKeyValueList(CONST tryRetainingAll:boolean);
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isKeyValuePair: boolean;
     FUNCTION clone:P_listLiteral;
@@ -307,9 +307,7 @@ FUNCTION newVoidLiteral: P_voidLiteral; inline;
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
-FUNCTION mapPut      (CONST params:P_listLiteral):P_listLiteral;
 FUNCTION mapGet      (CONST params:P_listLiteral):P_literal;
-FUNCTION mapDrop     (CONST params:P_listLiteral):P_listLiteral;
 FUNCTION setUnion    (CONST params:P_listLiteral):P_listLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_listLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_listLiteral;
@@ -678,7 +676,7 @@ CONSTRUCTOR T_listLiteral.create;
     datFill:=0;
     nextAppendIsRange:=false;
     setMap:=nil;
-    keyValueMap:=nil;
+    keyValuePairByKey:=nil;
     system.initCriticalSection(lockCs);
   end;
 //=================================================================:CONSTRUCTORS
@@ -1172,8 +1170,10 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       end;
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
         system.enterCriticalSection(lockCs);
-        if keyValueMap<>nil then begin
-          if not(keyValueMap^.containsKey(P_stringLiteral(other)^.val,result)) then result:=@voidLit;
+        if keyValuePairByKey<>nil then begin
+          if not(keyValuePairByKey^.containsKey(P_stringLiteral(other)^.val,result))
+          then result:=@voidLit
+          else result:=P_listLiteral(result)^.dat[1];
           system.leaveCriticalSection(lockCs);
           result^.rereference;
           exit(result);
@@ -1196,10 +1196,10 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         result:=newListLiteral;
         setLength(P_listLiteral(result)^.dat,P_listLiteral(other)^.size);
         system.enterCriticalSection(lockCs);
-        if keyValueMap<>nil then begin
+        if keyValuePairByKey<>nil then begin
           for j:=0 to P_listLiteral(other)^.size-1 do
-            if keyValueMap^.containsKey(P_stringLiteral(P_listLiteral(other)^.dat[j])^.val,L)
-            then P_listLiteral(result)^.append(L,true);
+            if keyValuePairByKey^.containsKey(P_stringLiteral(P_listLiteral(other)^.dat[j])^.val,L)
+            then P_listLiteral(result)^.append(P_listLiteral(L)^.dat[1],true);
           system.leaveCriticalSection(lockCs);
         end else begin
           system.leaveCriticalSection(lockCs);
@@ -1454,18 +1454,17 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
       dispose(setMap,destroy);
       setMap:=nil;
       //if the list is not unique, it cannot be a map
-      if (keyValueMap<>nil) then begin
-        dispose(keyValueMap,destroy);
-        keyValueMap:=nil;
+      if (keyValuePairByKey<>nil) then begin
+        dispose(keyValuePairByKey,destroy);
+        keyValuePairByKey:=nil;
       end;
     end;
-    if (keyValueMap<>nil) then begin
-      if (literalType<>lt_keyValueList) or (keyValueMap^.containsKey(P_stringLiteral(P_listLiteral(L)^.value(0))^.val)) then begin
-        dispose(keyValueMap,destroy);
-        keyValueMap:=nil;
+    if (keyValuePairByKey<>nil) then begin
+      if (literalType<>lt_keyValueList) or (keyValuePairByKey^.containsKey(P_stringLiteral(P_listLiteral(L)^.value(0))^.val)) then begin
+        dispose(keyValuePairByKey,destroy);
+        keyValuePairByKey:=nil;
       end else
-        keyValueMap^.put(P_stringLiteral(P_listLiteral(L)^.value(0))^.val,
-                                         P_listLiteral(L)^.value(1));
+        keyValuePairByKey^.put(P_stringLiteral(P_listLiteral(L)^.value(0))^.val,L);
     end;
     system.leaveCriticalSection(lockCs);
   end;
@@ -1559,8 +1558,8 @@ PROCEDURE T_listLiteral.setRangeAppend;
 PROCEDURE T_listLiteral.dropIndexes;
   begin
     system.enterCriticalSection(lockCs);
-    if setMap     <>nil then dispose(setMap     ,destroy); setMap     :=nil;
-    if keyValueMap<>nil then dispose(keyValueMap,destroy); keyValueMap:=nil;
+    if setMap           <>nil then dispose(setMap           ,destroy); setMap           :=nil;
+    if keyValuePairByKey<>nil then dispose(keyValuePairByKey,destroy); keyValuePairByKey:=nil;
     system.leaveCriticalSection(lockCs);
   end;
 
@@ -1768,7 +1767,7 @@ PROCEDURE T_listLiteral.toSet;
     system.enterCriticalSection(lockCs);
     if setMap=nil then begin
       new(setMap,create());
-      if keyValueMap<>nil then begin
+      if keyValuePairByKey<>nil then begin
         //If a key-value-map is present, the list is uniqe
         for i:=0 to datFill-1 do setMap^.put(dat[i],true);
       end else begin
@@ -1788,23 +1787,28 @@ PROCEDURE T_listLiteral.toSet;
     system.leaveCriticalSection(lockCs);
   end;
 
-PROCEDURE T_listLiteral.toKeyValueList;
+PROCEDURE T_listLiteral.toKeyValueList(CONST tryRetainingAll:boolean);
   VAR i,j:longint;
       key:ansistring;
       val:P_literal;
   begin
     system.enterCriticalSection(lockCs);
-    if (keyValueMap=nil) and (literalType in [lt_keyValueList,lt_emptyList]) then begin
-      new(keyValueMap,create());
+    if (keyValuePairByKey=nil) and (literalType in [lt_keyValueList,lt_emptyList]) then begin
+      new(keyValuePairByKey,create());
       j:=0;
       for i:=0 to datFill-1 do begin
         key:=P_stringLiteral(P_listLiteral(dat[i])^.dat[0])^.val;
-        val:=                P_listLiteral(dat[i])^.dat[1];
-        if not(keyValueMap^.containsKey(key)) then begin
-          keyValueMap^.put(key,val);
+        val:=                              dat[i];
+        if not(keyValuePairByKey^.containsKey(key)) then begin
+          keyValuePairByKey^.put(key,val);
           dat[j]:=dat[i];
           inc(j);
         end else begin
+          if tryRetainingAll then begin
+            dispose(keyValuePairByKey,destroy);
+            keyValuePairByKey:=nil;
+            exit;
+          end;
           if setMap<>nil then setMap^.drop(dat[i]);
           disposeLiteral(dat[i]);
         end;
@@ -1825,7 +1829,7 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
   VAR i:longint;
   begin
     {$ifdef debugMode}
-    writeln(stdErr,'Cloning ',typeString,'; refCount=',numberOfReferences,'; set/map-backing: ',setMap<>nil,'/',keyValueMap<>nil);
+    writeln(stdErr,'Cloning ',typeString,'; refCount=',numberOfReferences,'; set/map-backing: ',setMap<>nil,'/',keyValuePairByKey<>nil);
     {$endif}
     result:=newListLiteral;
     setLength(result^.dat,datFill);
@@ -1836,10 +1840,6 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
     end;
     result^.literalType:=literalType;
     result^.nextAppendIsRange:=nextAppendIsRange;
-    system.enterCriticalSection(lockCs);
-    if keyValueMap<>nil then new(result^.keyValueMap,createClone(keyValueMap^));
-    if setMap     <>nil then new(result^.setMap     ,createClone(setMap     ^));
-    system.leaveCriticalSection(lockCs);
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
@@ -2444,9 +2444,52 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
 
 FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
+  PROCEDURE drop_impl(CONST keyLit:P_stringLiteral);
+    VAR oldPair:P_listLiteral;
+        i,j:longint;
+    begin
+      with P_listLiteral(value)^ do
+      if keyValuePairByKey^.containsKey(P_stringLiteral(keyLit)^.val,oldPair) then
+      for i:=0 to length(dat)-1 do if dat[i]^.equals(oldPair) then begin
+        for j:=i to datFill-2 do dat[j]:=dat[j+1];
+        dat[datFill-1]:=nil;
+        dec(datFill);
+        disposeLiteral(oldPair);
+        if (datFill=0) then literalType:=lt_emptyList;
+        exit;
+      end;
+    end;
+
+  PROCEDURE put_impl(CONST keyValuePair:P_listLiteral);
+    VAR oldPair:P_listLiteral;
+    begin
+      with P_listLiteral(value)^ do if keyValuePairByKey^.containsKey(P_stringLiteral(keyValuePair^.dat[0])^.val,oldPair) then begin
+        if oldPair^.numberOfReferences>1 then begin
+          drop_impl(P_stringLiteral(keyValuePair^.dat[0]));
+          put_impl(keyValuePair);
+        end else begin
+          disposeLiteral(oldPair^.dat[1]);
+          oldPair^.dat[1]:=keyValuePair^.dat[1];
+          keyValuePair^.dat[1]^.rereference;
+        end;
+      end else begin
+        if (datFill>=length(dat)) then setLength(dat,datFill+16);
+        dat[datFill]:=keyValuePair;
+        keyValuePair^.rereference;
+        keyValuePairByKey^.put(P_stringLiteral(keyValuePair^.dat[0])^.val,keyValuePair);
+        inc(datFill);
+        if literalType=lt_emptyList then literalType:=lt_keyValueList;
+      end;
+    end;
+
+
   VAR oldValue:P_literal;
+      i:longint;
   begin
-    if readonly then adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
+    if readonly then begin
+      adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
+      exit(newVoidLiteral);
+    end;
     oldValue:=value;
     case mutation of
       tt_cso_assignPlus..tt_cso_assignDiv: begin
@@ -2481,6 +2524,35 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
           value:=result;
         end;
       end;
+      tt_cso_mapPut, tt_cso_mapDrop: begin
+        if not(value^.literalType in [lt_emptyList,lt_keyValueList]) then begin
+          adapters.raiseError('Operators << and >> expect a keyValueList variable (local or mutable) on the left-hand-side',location);
+          exit(newVoidLiteral);
+        end;
+        if (mutation=tt_cso_mapDrop) and not(RHS^.literalType in [lt_string,lt_emptyList,lt_stringList]) then begin
+          adapters.raiseError('Operator >> expect a string or stringList on the right-hand-side',location);
+          exit(newVoidLiteral);
+        end;
+        if (mutation=tt_cso_mapPut) and not((RHS^.literalType in [lt_keyValueList,lt_emptyList]) or (RHS^.literalType in C_validListTypes) and (P_listLiteral(RHS)^.isKeyValuePair)) then begin
+          adapters.raiseError('Operator << expect a keyValueList or keyValuePair on the right-hand-side',location);
+          exit(newVoidLiteral);
+        end;
+        if value^.getReferenceCount>1 then begin
+          value:=P_listLiteral(oldValue)^.clone;
+          dispose(oldValue,destroy);
+        end;
+        P_listLiteral(value)^.toKeyValueList(false);
+        if mutation=tt_cso_mapPut then begin
+          if RHS^.literalType in [lt_keyValueList,lt_emptyList]
+          then for i:=0 to P_listLiteral(RHS)^.datFill-1 do put_impl(P_listLiteral(P_listLiteral(RHS)^.value(i)))
+          else                                              put_impl(P_listLiteral(              RHS           ));
+        end else if mutation=tt_cso_mapDrop then begin
+          if RHS^.literalType in [lt_emptyList,lt_stringList]
+          then for i:=0 to P_listLiteral(RHS)^.datFill-1 do drop_impl(P_stringLiteral(P_listLiteral(RHS)^.value(i)))
+          else                                              drop_impl(P_stringLiteral(              RHS           ));
+        end;
+        result:=newVoidLiteral;
+      end;
     end;
   end;
 
@@ -2500,44 +2572,6 @@ FUNCTION T_namedVariable.toString(CONST lengthLimit:longint=maxLongint):ansistri
     result:=id+'='+value^.toString(lengthLimit-1-length(id));
   end;
 
-FUNCTION mapPut(CONST params:P_listLiteral):P_listLiteral;
-  VAR map,keyValuePair:P_listLiteral;
-      keyLit:P_stringLiteral;
-      key:string;
-      value:P_literal;
-      i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.datFill=3) and
-       (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
-       (params^.dat[1]^.literalType=lt_string) then begin
-      map:=P_listLiteral(params^.dat[0]);
-      if map^.numberOfReferences=1
-      then map^.rereference
-      else map:=map^.clone;
-      system.enterCriticalSection(map^.lockCs);
-      if (map^.keyValueMap=nil) then map^.toKeyValueList;
-      keyLit:=P_stringLiteral(params^.dat[1]);
-      key:=keyLit^.val;
-      value:=params^.dat[2];
-      if map^.keyValueMap^.containsKey(key) then begin
-        for i:=0 to map^.datFill-1 do begin
-          keyValuePair:=P_listLiteral(map^.dat[i]);
-          if keyValuePair^.dat[0]^.equals(keyLit) then begin
-            disposeLiteral(keyValuePair^.dat[1]);
-            keyValuePair^.dat[1]:=value;
-            value^.rereference;
-            break;
-          end;
-        end;
-      end else map^.append(newListLiteral(2)^
-                           .append(keyLit,true)^
-                           .append(value ,true),false);
-      system.leaveCriticalSection(map^.lockCs);
-      result:=map;
-    end;
-  end;
-
 FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
   VAR map,keyValuePair,keyList,fallbackList,resultList:P_listLiteral;
       key:P_stringLiteral;
@@ -2552,30 +2586,35 @@ FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
        (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
        (params^.dat[1]^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       map:=P_listLiteral(params^.dat[0]);
+      map^.toKeyValueList(true);
       if params^.datFill=3 then fallback:=params^.dat[2]
                            else fallback:=nil;
       if params^.dat[1]^.literalType in [lt_stringList,lt_emptyList] then begin
         keyList:=P_listLiteral(params^.dat[1]);
         system.enterCriticalSection(map^.lockCs);
-        back:=map^.keyValueMap;
+        back:=map^.keyValuePairByKey;
         if back=nil then begin
           tempBack:=true;
           new(back,create);
           for i:=0 to map^.datFill-1 do begin
             keyValuePair:=P_listLiteral(map^.dat[i]);
-            back^.put(P_stringLiteral(keyValuePair^.dat[0])^.val,keyValuePair^.dat[1]);
+            back^.put(P_stringLiteral(keyValuePair^.dat[0])^.val,keyValuePair);
           end;
         end;
         resultList:=newListLiteral;
         if (fallback<>nil) and (fallback^.literalType in C_validListTypes) and (P_listLiteral(fallback)^.size=keyList^.size) then begin
           fallbackList:=P_listLiteral(fallback);
           for i:=0 to keyList^.size-1 do if back^.containsKey(P_stringLiteral(keyList^.dat[i])^.val,nextElement)
-          then resultList^.append(nextElement         ,true)
+          then resultList^.append(P_listLiteral(nextElement)^.dat[1],true)
           else resultList^.append(fallbackList^.dat[i],true);
+        end else if (fallback<>nil) then begin
+          for i:=0 to keyList^.size-1 do if back^.containsKey(P_stringLiteral(keyList^.dat[i])^.val,nextElement)
+          then resultList^.append(P_listLiteral(nextElement)^.dat[1],true)
+          else resultList^.append(fallback,true);
         end else begin
           for i:=0 to keyList^.size-1 do begin
             if back^.containsKey(P_stringLiteral(keyList^.dat[i])^.val,nextElement)
-            then resultList^.append(nextElement,true);
+            then resultList^.append(P_listLiteral(nextElement)^.dat[1],true);
           end;
         end;
         if tempBack then dispose(back,destroy);
@@ -2583,7 +2622,7 @@ FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
         result:=resultList;
       end else begin
         system.enterCriticalSection(map^.lockCs);
-        back:=map^.keyValueMap;
+        back:=map^.keyValuePairByKey;
         key:=P_stringLiteral(params^.dat[1]);
         if back=nil then begin
           system.leaveCriticalSection(map^.lockCs);
@@ -2596,8 +2635,9 @@ FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
             end;
           end;
         end else begin
-          if back^.containsKey(P_stringLiteral(key)^.val,result)
+          if back^.containsKey(P_stringLiteral(key)^.val,nextElement)
           then begin
+            result:=P_listLiteral(nextElement)^.dat[1];
             result^.rereference;
             system.leaveCriticalSection(map^.lockCs);
             exit(result);
@@ -2609,40 +2649,6 @@ FUNCTION mapGet(CONST params:P_listLiteral):P_literal;
       end;
     end;
   end;
-
-FUNCTION mapDrop(CONST params:P_listLiteral):P_listLiteral;
-  VAR map,keyValuePair:P_listLiteral;
-      key:string;
-      keyLit:P_stringLiteral;
-      i,j:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.datFill=2) and
-       (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
-       (params^.dat[1]^.literalType=lt_string) then begin
-      map:=P_listLiteral(params^.dat[0]);
-      system.enterCriticalSection(map^.lockCs);
-      result:=map^.clone;
-      if result^.keyValueMap=nil then result^.toKeyValueList;
-      keyLit:=P_stringLiteral(params^.dat[1]);
-      key:=keyLit^.val;
-      if result^.keyValueMap^.containsKey(key) then begin
-        result^.keyValueMap^.dropKey(key);
-        for i:=0 to result^.datFill-1 do begin
-          keyValuePair:=P_listLiteral(map^.dat[i]);
-          if keyValuePair^.value(0)^.equals(keyLit) then begin
-            disposeLiteral(keyValuePair);
-            for j:=i to result^.datFill-2 do result^.dat[i]:=result^.dat[i+1];
-            result^.dat[result^.datFill-1]:=nil;
-            dec(result^.datFill);
-            break;
-          end;
-        end;
-      end;
-      system.leaveCriticalSection(map^.lockCs);
-    end;
-  end;
-
 FUNCTION setUnion(CONST params:P_listLiteral):P_listLiteral;
   VAR i,j:longint;
   begin

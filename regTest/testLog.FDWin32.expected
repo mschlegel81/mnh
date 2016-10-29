@@ -3135,7 +3135,7 @@ Hash of regTest/../demos/turtleGfx.png is 427DABDB
 ***** heart *****
 Hash of regTest/../demos/heart.png is 9B4CB332
 ***** examples from file *****
-Examples file has 660 lines
+Examples file has 656 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3463,8 +3463,6 @@ out> [0,4096,262144,1,15625,64,46656,1000000,117649,729,531441]
 out> [1.0,0.5,0.333333333333333,0.25,0.2,0.666666666666667,0.4]
  in> deleteFile('plotDemo1.png');
 out> true
- in> drop([['A', 1],['B', 2],['C', 0]],'B');
-out> [['A',1],['C',0]]
  in> get(['a'..'f'], 3);
 out> 'd'
  in> get(['a'..'f'],[3, 1, 2]);
@@ -3489,10 +3487,8 @@ out> void
 out> 2
  in> mapGet([['A', 1],['B', 2],['C', 0]],'D',-1);
 out> -1
- in> mapPut([['A', 1],['B', 2],['C', 0]],'A', 0);
-out> [['A',0],['B',2],['C',0]]
- in> mapPut([['A', 1],['B', 2],['C', 0]],'D', 3);
-out> [['A',1],['B',2],['C',0],['D',3]]
+ in> mapGet([['A', 1],['B', 2],['C', 0]],['A','D'],-1);
+out> [1,-1]
  in> reverseList([1..5]);
 out> [5,4,3,2,1]
  in> size([0.5, 0.1, 0.2]);

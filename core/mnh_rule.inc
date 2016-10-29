@@ -189,8 +189,8 @@ exit}
       rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
         result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
-          if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
           system.enterCriticalSection(rule_cs);
+          if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
           firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;

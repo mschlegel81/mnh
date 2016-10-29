@@ -1,8 +1,10 @@
-LevenshteinDistance(A:string,B:string)->
-  diffStats(A,B)   //caculate the diff
-  .drop('matches') //drop the matches
+LevenshteinDistance(A:string,B:string)->begin
+  local result:=diffStats(A,B);   //caculate the diff
+  result>>'matches'; //drop the matches
+  result
   .getInner(1)     //get the values to be summed up
   .agg(+);         //aggregate via +
+end;
 
 
 //*Prints out the Levenshtein distance of strings A and B

@@ -110,7 +110,7 @@ FUNCTION mapOf_imp intFuncSignature;
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
-      lResult^.toKeyValueList;
+      lResult^.toKeyValueList(false);
     end;
   end;
 
@@ -276,9 +276,7 @@ FUNCTION reverseList_impl intFuncSignature;
     end;
   end;
 
-FUNCTION mapPut_imp       intFuncSignature; begin result:=mapPut(params); end;
 FUNCTION mapGet_imp       intFuncSignature; begin result:=mapGet(params); end;
-FUNCTION mapDrop_imp      intFuncSignature; begin result:=mapDrop(params); end;
 FUNCTION setUnion_imp     intFuncSignature; begin result:=setUnion(params); end;
 FUNCTION setIntersect_imp intFuncSignature; begin result:=setIntersect(params); end;
 FUNCTION setMinus_imp     intFuncSignature; begin result:=setMinus(params); end;
@@ -371,10 +369,8 @@ INITIALIZATION
   BUILTIN_GET:=
   registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');
-  registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'mapPut(L:keyValueList,key:string,value);//Returns L with an additional or modified key-value-pair [key,value].');
   registerRule(LIST_NAMESPACE,'mapGet',@mapGet_imp,'mapGet(L:keyValueList,key:string);//Returns the element with matching key or the empty list if no such element was found.#'+
                                             'mapGet(L:keyValueList,key:string,fallback);//Returns the element with matching key or fallback if no such element was found.');
-  registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);//Returns L without [key,?].');
   registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
 
 FINALIZATION

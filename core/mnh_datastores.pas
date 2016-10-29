@@ -67,8 +67,8 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapter
   VAR wrapper:T_streamWrapper;
   begin
     tryObtainName(false);
+    {$ifdef debugMode} writeln(stdErr,'Reading datastore ',fileName,' for rule ',ruleId); {$endif}
     if fileName='' then exit(newVoidLiteral);
-    fileAge(fileName,fileReadAt);
     wrapper.createToReadFromFile(fileName);
     wrapper.readAnsiString;
     result:=newLiteralFromStream(wrapper,location,adapters);
@@ -77,6 +77,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapter
       result:=nil;
     end;
     wrapper.destroy;
+    fileAge(fileName,fileReadAt);
   end;
 
 PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters);

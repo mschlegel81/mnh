@@ -52,6 +52,7 @@
             <Debugging>
               <GenerateDebugInfo Value="False"/>
               <UseValgrind Value="True"/>
+              <StripSymbols Value="True"/>
             </Debugging>
             <LinkSmart Value="True"/>
           </Linking>
