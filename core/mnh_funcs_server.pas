@@ -173,7 +173,7 @@ PROCEDURE T_microserver.serve;
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
-        parameters^.toKeyValueList;
+        parameters^.toKeyValueList(false);
       end;
       requestLiteral.append(parameters,false);
     end;

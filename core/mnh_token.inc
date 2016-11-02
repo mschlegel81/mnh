@@ -372,11 +372,13 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       '*': if startsWith('**')                   then apply(2,tt_operatorPot) else
            if startsWith(tt_cso_assignMult)      then apply(tt_cso_assignMult)
                                                  else apply(tt_operatorMult);
-      '>': if startsWith(tt_comparatorGeq)       then apply(tt_comparatorGeq)
+      '>': if startsWith(tt_comparatorGeq)       then apply(tt_comparatorGeq) else
+           if startsWith(tt_cso_mapDrop)         then apply(tt_cso_mapDrop)
                                                  else apply(tt_comparatorGrt);
       '=': if startsWith(tt_comparatorListEq)    then apply(tt_comparatorListEq)
                                                  else apply(tt_comparatorEq);
       '<': if startsWith(tt_comparatorNeq)       then apply(tt_comparatorNeq) else
+           if startsWith(tt_cso_mapPut)          then apply(tt_cso_mapPut) else
            if startsWith(tt_comparatorLeq)       then apply(tt_comparatorLeq)
                                                  else apply(tt_comparatorLss);
       '!': if startsWith('!=')                   then apply(2,tt_comparatorNeq)
@@ -500,7 +502,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
       case t^.tokType of
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
-          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
+          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
             inPackage^.resolveRuleId(t^,nil);
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
@@ -527,7 +529,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
           t^.tokType:=tt_assignExistingBlockLocal;
           t^.data:=nil;
           t^.next:=context.disposeToken(t^.next);
-        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_assignAppend]) then begin
+        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
           t^.tokType:=t^.next^.tokType;
           t^.data:=nil;
           t^.next:=context.disposeToken(t^.next);
@@ -1158,7 +1160,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           context.setVariableValue(first^.txt,newValue,first^.location);
           first:=context.disposeToken(first);
         end;
-        tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin
+        tt_cso_assignPlus..tt_cso_mapDrop: if first^.data=nil then begin
           newValue:=context.mutateVariableValue(first^.txt,kind,newValue,first^.location);
           if context.adapters^.noErrors then begin
             first:=context.disposeToken(first);
@@ -1588,7 +1590,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
+          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.disposeToken(first);
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
@@ -1621,7 +1623,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: begin
+        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: begin
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1727,6 +1729,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$endif}
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
+        context.adapters^.raiseError('Irreducible expression: '+tokenStackToString(@stack,first,100),first^.location);
         if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
         cleanupStackAndExpression;
       end;

@@ -348,8 +348,6 @@ union(1/[1..5],2/[2..6]);
 
 deleteFile('plotDemo1.png');
 
-drop([['A',1],['B',2],['C',0]],'B');
-
 //See <a href="types.html#lists">List types</a> for further information
 get(['a'..'f'],3);
 
@@ -376,9 +374,7 @@ mapGet([['A',1],['B',2],['C',0]],'B',-1);
 
 mapGet([['A',1],['B',2],['C',0]],'D',-1);
 
-mapPut([['A',1],['B',2],['C',0]],'A',0);
-
-mapPut([['A',1],['B',2],['C',0]],'D',3);         
+mapGet([['A',1],['B',2],['C',0]],['A','D'],-1);
 
 reverseList([1..5]);
 

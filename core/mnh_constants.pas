@@ -108,6 +108,7 @@ TYPE
     //assignment operators:
     tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
     tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend, //+= -= *= /= &= |=
+    tt_cso_mapPut,tt_cso_mapDrop, //<< >>
     //type checks:
     tt_typeCheckScalar, tt_typeCheckList,
     tt_typeCheckBoolean, tt_typeCheckBoolList,
@@ -136,7 +137,7 @@ TYPE
 
   T_tokenTypeSet  =set of T_tokenType;
   T_modifier      =tt_modifier_private..tt_modifier_customType;
-  T_cStyleOperator=tt_cso_assignPlus..tt_cso_assignAppend;
+  T_cStyleOperator=tt_cso_assignPlus..tt_cso_mapDrop;
 CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized,tt_modifier_customType];
 TYPE
   T_modifierSet=set of T_modifier;
@@ -348,6 +349,8 @@ CONST
 {tt_cso_assignDiv}              (defaultId:'/=';           reservedWordClass:rwc_operator;         helpText:'C-Style assign-divide operator'),
 {tt_cso_assignStrConcat}        (defaultId:'&=';           reservedWordClass:rwc_operator;         helpText:'C-Style assign-(string-)concatenate operator'),
 {tt_cso_assignAppend}           (defaultId:'|=';           reservedWordClass:rwc_operator;         helpText:'C-Style assign-(list-)concatenate operator'),
+{tt_cso_mapPut}                 (defaultId:'<<';           reservedWordClass:rwc_operator;         helpText:'Map put-assign operator'),
+{tt_cso_mapDrop}                (defaultId:'>>';           reservedWordClass:rwc_operator;         helpText:'Map drop-assign operator'),
 {tt_typeCheckScalar}            (defaultId:':scalar';      reservedWordClass:rwc_typeCheck;        helpText:'Type check scalar;#Matches on all non-lists'),
 {tt_typeCheckList}              (defaultId:':list';        reservedWordClass:rwc_typeCheck;        helpText:'Type check list;#Matches on all lists#In patterns it can be modified to match only lists of a given size'),
 {tt_typeCheckBoolean}           (defaultId:':boolean';     reservedWordClass:rwc_typeCheck;        helpText:'Type check boolean;#Matches on scalar booleans'),
