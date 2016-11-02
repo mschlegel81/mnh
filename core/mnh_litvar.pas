@@ -2825,6 +2825,10 @@ DESTRUCTOR T_format.destroy;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
   VAR reusableLiterals:array of P_literal;
+      encodingMethod:byte=0;
+      {$ifdef debugMode}
+      start:double;
+      {$endif}
   PROCEDURE errorOrException(CONST message:string);
     begin
       if adapters<>nil then adapters^.raiseError(message,location)
@@ -2836,7 +2840,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       if (t>=low(T_literalType)) and (t<=high(T_literalType)) then result:=C_typeString[t] else result:='';
     end;
 
-  FUNCTION literalFromStream:P_literal;
+  FUNCTION literalFromStream0:P_literal;
     VAR literalType:T_literalType;
         reusableIndex:longint;
         literalByte:byte;
@@ -2876,7 +2880,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
           listSize:=stream.readNaturalNumber;
           result:=newListLiteral;
           setLength(P_listLiteral(result)^.dat,listSize);
-          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream(),false);
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream0(),false);
           if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
         end;
         lt_void:result:=newVoidLiteral;
@@ -2892,10 +2896,107 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       end;
     end;
 
+  FUNCTION literalFromStream255:P_literal;
+    VAR literalType:T_literalType;
+        reusableIndex:longint;
+        literalByte:byte;
+        listSize:longint;
+        i:longint;
+    begin
+      literalByte:=stream.readByte;
+      if literalByte=255 then begin
+        reusableIndex:=stream.readNaturalNumber;
+        if (reusableIndex<length(reusableLiterals)) then begin
+          result:=reusableLiterals[reusableIndex];
+          result^.rereference;
+        end else begin
+          result:=newErrorLiteral;
+          stream.logWrongTypeError;
+          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
+        end;
+        exit(result);
+      end;
+      literalType:=T_literalType(literalByte);
+      case literalType of
+        lt_error:result:=newErrorLiteral;
+        lt_boolean:result:=newBoolLiteral(stream.readBoolean);
+        lt_int:result:=newIntLiteral(stream.readInt64);
+        lt_real:result:=newRealLiteral(stream.readDouble);
+        lt_string:result:=newStringLiteral(stream.readAnsiString);
+        lt_booleanList: begin
+          listSize:=stream.readNaturalNumber;
+          result:=newListLiteral;
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendBool(stream.readBoolean);
+        end;
+        lt_intList: begin
+          listSize:=stream.readNaturalNumber;
+          result:=newListLiteral;
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendInt(stream.readInt64);
+        end;
+        lt_realList: begin
+          listSize:=stream.readNaturalNumber;
+          result:=newListLiteral;
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendReal(stream.readDouble);
+        end;
+        lt_stringList: begin
+          listSize:=stream.readNaturalNumber;
+          result:=newListLiteral;
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendString(stream.readAnsiString);
+        end;
+        lt_keyValueList: begin
+          listSize:=stream.readNaturalNumber;
+          result:=newListLiteral;
+          for i:=0 to listSize-1 do if stream.allOkay then
+            P_listLiteral(result)^.append(newListLiteral(2)^.appendString(stream.readAnsiString)^.append(literalFromStream255(),false),false);
+        end;
+        lt_emptyList: result:=newListLiteral(0);
+        lt_list,
+        lt_numList,
+        lt_flatList,
+        lt_listWithError:begin
+          listSize:=stream.readNaturalNumber;
+          result:=newListLiteral;
+          setLength(P_listLiteral(result)^.dat,listSize);
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream255(),false);
+          if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
+        end;
+        lt_void:result:=newVoidLiteral;
+        else begin
+          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(literalByte)+') ! Abort.');
+          stream.logWrongTypeError;
+          exit(newErrorLiteral);
+        end;
+      end;
+      if ((literalType=lt_string) or (literalType in C_validListTypes)) and (length(reusableLiterals)<2097151) then begin
+        setLength(reusableLiterals,length(reusableLiterals)+1);
+        reusableLiterals[length(reusableLiterals)-1]:=result;
+      end;
+    end;
+
+  VAR p:int64;
   begin
+    {$ifdef debugMode}start:=now;{$endif}
+
     setLength(reusableLiterals,0);
-    result:=literalFromStream;
+    p:=stream.streamPosition;
+    encodingMethod:=stream.readByte;
+    if (encodingMethod>=byte(low(T_literalType))) and (encodingMethod<=byte(high(T_literalType))) then begin
+      stream.jumpToStreamPosition(p);
+      encodingMethod:=0;
+    end;
+    case encodingMethod of
+      0  : result:=literalFromStream0;
+      255: result:=literalFromStream255;
+      else begin
+        errorOrException('Invalid literal encoding type '+IntToStr(encodingMethod));
+        result:=newErrorLiteral;
+      end;
+    end;
+
     setLength(reusableLiterals,0);
+    {$ifdef DEBUGMODE}
+    writeln(stderr,'Read literal in ',(now-start)*24*60*60:0:3,'s');
+    {$endif}
   end;
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
@@ -2921,27 +3022,45 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
         lt_int:stream.writeInt64(P_intLiteral(L)^.val);
         lt_real:stream.writeDouble(P_realLiteral(L)^.val);
         lt_string:stream.writeAnsiString(P_stringLiteral(L)^.val);
+        lt_booleanList:begin
+          stream.writeNaturalNumber(P_listLiteral(L)^.size);
+          for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream.writeBoolean(P_boolLiteral(P_listLiteral(L)^.value(i))^.val);
+        end;
+        lt_intList:begin
+          stream.writeNaturalNumber(P_listLiteral(L)^.size);
+          for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream.writeInt64(P_intLiteral(P_listLiteral(L)^.value(i))^.val);
+        end;
+        lt_realList:begin
+          stream.writeNaturalNumber(P_listLiteral(L)^.size);
+          for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream.writeDouble(P_realLiteral(P_listLiteral(L)^.value(i))^.val);
+        end;
+        lt_stringList:begin
+          stream.writeNaturalNumber(P_listLiteral(L)^.size);
+          for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream.writeAnsiString(P_stringLiteral(P_listLiteral(L)^.value(i))^.val);
+        end;
+        lt_keyValueList:begin
+          stream.writeNaturalNumber(P_listLiteral(L)^.size);
+          for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then begin
+            stream.writeAnsiString(P_stringLiteral(P_listLiteral(P_listLiteral(L)^.value(i))^.dat[0])^.val);
+            writeLiteral(                          P_listLiteral(P_listLiteral(L)^.value(i))^.dat[1]);
+          end;
+        end;
         lt_list,
-        lt_booleanList,
-        lt_intList,
-        lt_realList,
         lt_numList,
-        lt_stringList,
         lt_emptyList,
-        lt_keyValueList,
         lt_flatList,
         lt_listWithError:begin
           stream.writeNaturalNumber(P_listLiteral(L)^.size);
           for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_listLiteral(L)^.value(i));
         end;
       end;
-      if (reusableMap.fill<2097151) and not(L^.literalType in [lt_boolean,lt_void,lt_error]) then begin
+      if (reusableMap.fill<2097151) and ((L^.literalType=lt_string) or (L^.literalType in C_validListTypes)) then
         reusableMap.put(L,reusableMap.fill);
-      end;
     end;
 
   begin
     reusableMap.create();
+    stream.writeByte(255);
     writeLiteral(L);
     reusableMap.destroy;
   end;
