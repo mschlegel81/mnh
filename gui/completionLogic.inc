@@ -14,7 +14,7 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
     lastWordsCaret:=caret.y;
     wordsInEditor.clear;
     with editorMeta[inputPageControl.activePageIndex] do begin
-      for i:=0 to caret.y-1 do
+      for i:=0 to editor.lines.count-1 do
         if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
       if language=LANG_MNH then assistancEvaluator.extendCompletionList(wordsInEditor);
