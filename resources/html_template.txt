@@ -637,6 +637,7 @@ It can also be used to assign a value to a mutable rule or a block-local variabl
 </table>
 
 <h3><a name="cStyleOps"> C-Style operators</a></h3>
+<i>C-Style</i> operators assign a new value to the right-hand-side.<br>
 The following C-Style operators are supported: <ul>
   <li> <code>+=</code> Adds the right-hand-side to the left-hand-side and returns the new value. </li>
   <li> <code>-=</code> Subtracts the right-hand-side from the left-hand-side and returns the new value. </li>
@@ -644,9 +645,11 @@ The following C-Style operators are supported: <ul>
   <li> <code>/=</code> Divides the right-hand-side by the left-hand-side and returns the new value. </li>
   <li> <code>&=</code> String-Concatenates the right-hand-side with the left-hand-side and returns the new value. </li>
   <li> <code>|=</code> Append the left-hand-side to the right-hand-side and returns the new value. </li>
+  <li> <code><<</code> Puts a key-value-pair (right-hand-side) to the map on the left-hand-side. The left-hand-side will be a map afterwards.</li>
+  <li> <code>>></code> Drops a key (right-hand-side) from the map on the left-hand-side. The left-hand-side will be a map afterwards.</li>
 </ul>
 While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
-the latter 2 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
+the latter 4 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
 </div>
 <!--commonFoot-->
 <!--file functions.html-->

@@ -1,13 +1,8 @@
-LevenshteinDistance(A:string,B:string)->begin
-  local result:=diffStats(A,B);   //caculate the diff
-  result>>'matches'; //drop the matches
-  result
-  .getInner(1)     //get the values to be summed up
-  .agg(+);         //aggregate via +
-end;
-
+LevenshteinDistance(A:string,B:string)->diffStats(A,B)[['adds','deletes','modifies']].agg(+);
 
 //*Prints out the Levenshtein distance of strings A and B
 main(A,B)->LevenshteinDistance(A,B).print;
 //*This solves the Levenshtein distance task: http://rosettacode.org/wiki/Levenshtein_distance
 main->main('kitten','sitting');
+
+diffStats('kitten','sitting')[['adds','deletes','modifies']].agg(+);
