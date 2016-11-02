@@ -9,8 +9,7 @@ USES {$ifdef UNIX} cthreads, {$else}
   Forms,
   mnh_gui_main,mnh_gui_settings,closeDialog,askDialog,mnh_plotForm, newCentralPackageDialog, mnh_tables, //actual Forms
   mnh_cmdLineInterpretation, mnh_basicTypes, mnh_funcs_files,
-  mnh_funcs_server, mnh_packages, mnh_settings, openDemoDialog, mySys,
-mnh_workspaces;
+  mnh_funcs_server, mnh_packages, mnh_settings, openDemoDialog, mySys;
 
 {$R *.res}
 

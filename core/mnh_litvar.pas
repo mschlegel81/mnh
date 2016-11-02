@@ -2988,14 +2988,14 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       0  : result:=literalFromStream0;
       255: result:=literalFromStream255;
       else begin
-        errorOrException('Invalid literal encoding type '+IntToStr(encodingMethod));
+        errorOrException('Invalid literal encoding type '+intToStr(encodingMethod));
         result:=newErrorLiteral;
       end;
     end;
 
     setLength(reusableLiterals,0);
-    {$ifdef DEBUGMODE}
-    writeln(stderr,'Read literal in ',(now-start)*24*60*60:0:3,'s');
+    {$ifdef debugMode}
+    writeln(stdErr,'Read literal in ',(now-start)*24*60*60:0:3,'s');
     {$endif}
   end;
 

@@ -3595,7 +3595,7 @@ Note  Creating new rule: input
  in> serialized :=input.serialize;
 Note  Creating new rule: serialized
  in> print(input.toString.byteLength,' > ', serialized.byteLength);
-213 > 192
+213 > 174
 out> void
  in> input==serialized.deserialize;
 out> true
