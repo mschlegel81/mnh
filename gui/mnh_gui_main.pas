@@ -276,6 +276,23 @@ VAR guiOutAdapter: T_guiOutAdapter;
 {$include searchLogic.inc}
 {$include completionLogic.inc}
 {$undef includeImplementation}
+{$i mnh_func_defines.inc}
+FUNCTION editors_impl intFuncSignature;
+  VAR meta:T_editorMeta;
+  begin
+    result:=newListLiteral();
+    for meta in MnhForm.editorMeta do if meta.sheet.tabVisible then lResult^.appendString(meta.pseudoName());
+  end;
+
+FUNCTION editorContent_impl intFuncSignature;
+  VAR meta:T_editorMeta;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      for meta in MnhForm.editorMeta do if meta.sheet.tabVisible then exit(newStringLiteral(meta.editor.text));
+      result:=newVoidLiteral;
+    end;
+  end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   VAR maxLineLength:longint=0;
@@ -796,14 +813,16 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
 
 PROCEDURE lateInitialization;
   begin
-    SynHighlighterMnh.initLists;
-
     guiOutAdapter.create;
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
+    registerRule(SYSTEM_BUILTIN_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
+    registerRule(SYSTEM_BUILTIN_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+    SynHighlighterMnh.initLists;
+
     mnh_evalThread.initUnit(@guiAdapters);
     setupCallbacks;
   end;
