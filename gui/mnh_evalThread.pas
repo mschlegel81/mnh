@@ -337,6 +337,7 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       tokenToExplain:T_token;
       loc:T_tokenLocation;
       i:longint;
+      comments,attributes:T_arrayOfString;
       lastComment:ansistring='';
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
@@ -354,9 +355,11 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
     loc.package:=@package;
     adapter^.clearAll;
     tokens.tokenizeAll(fullLine,loc,@package,adapter^,false);
-    tokens.step(@package,lastComment,adapter^);
+    comments  :=C_EMPTY_STRING_ARRAY;
+    attributes:=C_EMPTY_STRING_ARRAY;
+    tokens.step(@package,comments,attributes,adapter^);
 
-    while not(tokens.atEnd) and (tokens.current.location.column<CaretX) do tokens.step(@package,lastComment,adapter^);
+    while not(tokens.atEnd) and (tokens.current.location.column<CaretX) do tokens.step(@package,comments,attributes,adapter^);
     if tokens.atEnd then begin
       tokenToExplain:=tokens.lastToken;
       info.startLoc:=tokenToExplain.location;

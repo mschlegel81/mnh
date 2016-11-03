@@ -13,7 +13,7 @@ T_tokenArray=object
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE append(CONST newTok:T_token);
-    PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring; VAR adapters:T_adapters);
+    PROCEDURE step(CONST package:P_package; VAR comments,attributes:T_arrayOfString; VAR adapters:T_adapters);
     FUNCTION current:T_token;
     PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
     FUNCTION atEnd:boolean;
@@ -57,18 +57,15 @@ PROCEDURE T_tokenArray.append(CONST newTok: T_token);
     t[length(t)-1]:=newTok;
   end;
 
-PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistring; VAR adapters: T_adapters);
+PROCEDURE T_tokenArray.step(CONST package: P_package; VAR comments,attributes:T_arrayOfString; VAR adapters: T_adapters);
   VAR fullText:ansistring;
       line:longint;
   begin
     repeat
       inc(i);
       if (i<length(t)) then case t[i].tokType of
-        tt_EOL: if (t[i].txt<>'') then begin
-           if lastComment=''
-           then lastComment:=t[i].txt
-           else lastComment:=lastComment+C_lineBreakChar+t[i].txt;
-        end;
+        tt_docComment: myGenerics.append(comments,t[i].txt);
+        tt_attributeComment: if (t[i].txt<>'') then myGenerics.append(attributes,t[i].txt);
         tt_literal: if (P_literal(t[i].data)^.literalType=lt_string) and (i<length(t)-1)
                    and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string)
                    and (t[i].location.line=t[i+1].location.line)
@@ -119,7 +116,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
         end;
       end; //case //end if
     until (i>=length(t)) or
-          (t[i].tokType<>tt_EOL);
+          not(t[i].tokType in [tt_EOL,tt_docComment,tt_attributeComment]);
   end;
 
 FUNCTION T_tokenArray.current: T_token;
@@ -149,14 +146,17 @@ FUNCTION T_tokenArray.lastToken:T_token;
 
 FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
   VAR k:longint;
-      lastComment:ansistring='';
+      commentDummy,
+      attributeDummy:T_arrayOfString;
       intrinsicFuncPtr:P_intFuncCallback;
       nullAdapter:T_adapters;
   begin
+    commentDummy  :=C_EMPTY_STRING_ARRAY;
+    attributeDummy:=C_EMPTY_STRING_ARRAY;
     nullAdapter.create;
     setLength(result,0);
     repeat
-      step(nil,lastComment,nullAdapter);
+      step(nil,commentDummy,attributeDummy,nullAdapter);
       if not(atEnd) then begin
         setLength(result,length(result)+1);
         result[length(result)-1]:=current.getRawToken;
@@ -314,7 +314,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           end;
         end;
       end;
-      '/': if startsWith('//') then begin //comments
+      '/': if startsWith(COMMENT_PREFIX) then begin //comments
         parsedLength:=2;
         while (parsedLength+lineLocation.column<=length(line)) and not(line[parsedLength+lineLocation.column] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
         if retainBlanks then begin
@@ -322,8 +322,13 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           result.txt:=copy(line,lineLocation.column,length(line));
         end else begin
           result.tokType:=tt_EOL;
-          if      startsWith(DOC_COMMENT_PREFIX)         then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column))
-          else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then begin
+          if startsWith(DOC_COMMENT_PREFIX) then begin
+            result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column));
+            result.tokType:=tt_docComment;
+          end else if startsWith(ATTRIBUTE_COMMENT_PREFIX) then begin
+            result.txt:=trim(copy(line,length(ATTRIBUTE_COMMENT_PREFIX)+lineLocation.column,length(line)-length(ATTRIBUTE_COMMENT_PREFIX)+1-lineLocation.column));
+            result.tokType:=tt_attributeComment;
+          end else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then begin
             result.txt:=SPECIAL_COMMENT_BLOB_BEGIN;
             blob.start:=lineLocation;
             if length(line)>=lineLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)

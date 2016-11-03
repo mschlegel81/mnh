@@ -4,13 +4,20 @@
                  srt_inline_for_literal,
                  srt_inline_for_each,
                  srt_inline_for_while);
+  T_subruleAttribute=record
+    key,value:string;
+  end;
+
   T_preparedToken=record
     parIdx:longint;
     token:T_token;
   end;
 
+  T_subruleArray=array of P_subrule;
+
   T_subrule=object(T_objectWithIdAndLocation)
     private
+      attributes:array of T_subruleAttribute;
       firstCallCs:TRTLCriticalSection;
       functionIdsReady:boolean;
 
@@ -55,6 +62,8 @@
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_listLiteral;
+      FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
   end;
 
 {$endif}
@@ -90,6 +99,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
 CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_rule=nil);
   begin
     initCriticalSection(firstCallCs);
+    setLength(attributes,0);
     functionIdsReady:=false;
     comment:='';
     parent:=parentRule;
@@ -233,6 +243,7 @@ DESTRUCTOR T_subrule.destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
+    setLength(attributes,0);
     doneCriticalSection(firstCallCs);
   end;
 
@@ -573,7 +584,7 @@ FUNCTION T_subrule.getInlineValue:P_literal;
 FUNCTION T_subrule.getCmdLineHelpText:ansistring;
   begin
     result:='  '+pattern.toCmdLineHelpStringString;
-    if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
+    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+COMMENT_PREFIX);
   end;
 
 FUNCTION T_subrule.getDocTxt():ansistring;
@@ -581,7 +592,7 @@ FUNCTION T_subrule.getDocTxt():ansistring;
     result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+getId+';';
-    if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
+    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+COMMENT_PREFIX);
   end;
 
 FUNCTION T_subrule.getDocHtml():ansistring;
@@ -629,8 +640,8 @@ FUNCTION T_subrule.inspect:P_listLiteral;
   FUNCTION typeString:string;
     begin
       case typ of
-        srt_normal_public     : result:='public';
-        srt_normal_private    : result:='private';
+        srt_normal_public     : result:=PUBLIC_TEXT;
+        srt_normal_private    : result:=C_tokenInfo[tt_modifier_private].defaultId;
         srt_inline_for_literal: result:='for_literal';
         srt_inline_for_each   : result:='for_each';
         srt_inline_for_while  : result:='for_while';
@@ -638,13 +649,61 @@ FUNCTION T_subrule.inspect:P_listLiteral;
       end;
     end;
 
+  FUNCTION attributeList:P_listLiteral;
+    VAR attrib:T_subruleAttribute;
+    begin
+      result:=newListLiteral(length(attributes));
+      for attrib in attributes do result^.append(newListLiteral(2)^.appendString(attrib.key)^.appendString(attrib.value),false);
+    end;
+
   begin
-    result:=newListLiteral^
-      .append(newListLiteral^.appendString('pattern')^.appendString(pattern.toString),false)^
-      .append(newListLiteral^.appendString('location')^.appendString(declaredAt),false)^
-      .append(newListLiteral^.appendString('type')^.appendString(typeString),false)^
-      .append(newListLiteral^.appendString('comment')^.appendString(comment),false)^
-      .append(newListLiteral^.appendString('body')^.appendString(toString(false)),false);
+    result:=newListLiteral(6)^
+      .append(newListLiteral(2)^.appendString('pattern')^.appendString(pattern.toString),false)^
+      .append(newListLiteral(2)^.appendString('location')^.appendString(declaredAt),false)^
+      .append(newListLiteral(2)^.appendString('type')^.appendString(typeString),false)^
+      .append(newListLiteral(2)^.appendString('comment')^.appendString(comment),false)^
+      .append(newListLiteral(2)^.appendString('attributes')^.append(attributeList,false),false)^
+      .append(newListLiteral(2)^.appendString('body')^.appendString(toString(false)),false);
+  end;
+
+FUNCTION T_subrule.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+  VAR attrib:T_subruleAttribute;
+      useKey:string;
+  begin
+    result:=false;
+    if caseSensitive then begin
+      if (attributeKey=C_tokenInfo[tt_modifier_private].defaultId) and (typ=srt_normal_private) then exit(true);
+      if (attributeKey=PUBLIC_TEXT                               ) and (typ=srt_normal_public ) then exit(true);
+      for attrib in attributes do if attrib.key=attributeKey then exit(true);
+    end else begin
+      useKey:=uppercase(attributeKey);
+      if (useKey=uppercase(C_tokenInfo[tt_modifier_private].defaultId)) and (typ=srt_normal_private) then exit(true);
+      if (useKey=uppercase(PUBLIC_TEXT                               )) and (typ=srt_normal_public ) then exit(true);
+      for attrib in attributes do if attrib.key=useKey then exit(true);
+    end;
+  end;
+
+PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
+  VAR line:string;
+      parts:T_arrayOfString;
+      part:string;
+
+  PROCEDURE addAttribute(CONST key:ansistring);
+    begin
+      setLength(attributes,length(attributes)+1);
+      attributes[length(attributes)-1].key:=key;
+    end;
+
+  begin
+    setLength(attributes,0);
+    for line in attributeLines do begin
+      parts:=split(trim(line),'=');
+      if length(parts)>0 then begin
+        addAttribute(trim(parts[0]));
+        dropFirst(parts,1);
+        attributes[length(attributes)-1].value:=trim(join(parts,'='));
+      end;
+    end;
   end;
 
 PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
