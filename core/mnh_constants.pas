@@ -539,7 +539,7 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
-//FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
+
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
 OPERATOR :=(x:qword):T_messageTypeSet;
 IMPLEMENTATION

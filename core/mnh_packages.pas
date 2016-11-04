@@ -703,28 +703,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       else context.cascadeDisposeToken(first);
     end;
 
-    {$ifdef imig}
-    PROCEDURE addDefaultMainRule;
-      CONST C_defMain='main("wf")->workflow.flatten.join("\n").print; '+
-                      'main(...)->workflow.executeWorkflow@softCast(...);';
-      VAR lastComment:ansistring;
-          tokenLocation:T_tokenLocation;
-      begin
-        if not(packageRules.containsKey('main')) and (packageRules.containsKey('workflow')) then begin
-          tokenLocation.package:=@self;
-          tokenLocation.line:=codeProvider.numberOfLines+1;
-          tokenLocation.column:=1;
-          context.adapters^.raiseNote('Adding default main rule: '+C_defMain,packageTokenLocation(@self));
-          if profile then context.timeBaseComponent(pc_tokenizing);
-          fileTokens.create;
-          fileTokens.tokenizeAll(C_defMain,tokenLocation,@self,context.adapters^,false);
-          fileTokens.step(@self,lastComment,context.adapters^);
-          if profile then context.timeBaseComponent(pc_tokenizing);
-          processTokens(fileTokens);
-        end;
-      end;
-    {$endif}
-
   begin
     if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
     if isMain then context.adapters^.clearErrors;
@@ -741,10 +719,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     fileTokens.step(@self,commentLines,attributeLines,context.adapters^);
     if profile then context.timeBaseComponent(pc_tokenizing);
     processTokens(fileTokens);
-
-    {$ifdef imig}
-    if context.adapters^.noErrors then addDefaultMainRule;
-    {$endif}
 
     ready:=usecase;
     case usecase of
