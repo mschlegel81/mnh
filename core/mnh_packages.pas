@@ -20,7 +20,7 @@ TYPE
   {$include mnh_futureTask.inc}
   {$include mnh_procBlock.inc}
   {$include mnh_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
+  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance);
 
   T_packageReference=object
     id,path:ansistring;
@@ -38,9 +38,8 @@ TYPE
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
       ready:T_packageLoadUsecase;
-      loadedAtCodeHash:T_hashInt;
       codeProvider:T_codeProvider;
-      statementHashes:array of T_hashInt;
+
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
@@ -232,7 +231,6 @@ DESTRUCTOR T_packageReference.destroy;
 
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
   VAR statementCounter:longint=0;
-      evaluateAll:boolean=false;
       commentLines,
       attributeLines:T_arrayOfString;
       profile:boolean=false;
@@ -545,7 +543,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                      first^.location,first^.location,context.adapters^);
       end;
 
-    VAR statementHash:T_hashInt;
     begin
       if first=nil then exit;
       if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
@@ -553,18 +550,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       if not(context.adapters^.noErrors) then begin
         context.cascadeDisposeToken(first);
         exit;
-      end;
-      //conditional skipping for interactive mode
-      if (usecase=lu_interactiveMode) then begin
-        statementHash:=first^.hash;
-        if (statementCounter<length(statementHashes)) and (statementHashes[statementCounter]=statementHash) and not(evaluateAll) then begin
-          context.cascadeDisposeToken(first);
-          inc(statementCounter);
-          exit;
-        end;
-        evaluateAll:=true;
-        if (statementCounter>=length(statementHashes)) then setLength(statementHashes,statementCounter+1);
-        statementHashes[statementCounter]:=statementHash;
       end;
       inc(statementCounter);
 
@@ -596,7 +581,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parseDataStore;
         if profile then context.timeBaseComponent(pc_declaration);
       end else if context.adapters^.noErrors then begin
-        if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
+        if (usecase=lu_forDirectExecution) then begin
           if profile then context.timeBaseComponent(pc_interpretation);
           if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
@@ -721,14 +706,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   begin
     if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
     if isMain then context.adapters^.clearErrors;
-    profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]);
+    profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
+    clear(false);
 
-    if usecase<>lu_interactiveMode
-    then clear(false)
-    else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
-    loadedAtCodeHash:=codeProvider.contentHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
@@ -781,8 +763,6 @@ CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
     codeProvider.create;
     packageRules.create(@disposeRule);
     importedRules.create;
-    setLength(statementHashes,0);
-    loadedAtCodeHash:=0;
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries:boolean);

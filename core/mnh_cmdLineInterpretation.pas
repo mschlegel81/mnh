@@ -9,6 +9,7 @@ PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 {$endif}
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
+PROCEDURE displayHelp;
 
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
@@ -46,6 +47,49 @@ PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
   end;
 {$endif}
 
+PROCEDURE displayHelp;
+  begin
+    writeln('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
+                    {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
+    writeln('compiled on: '+{$I %DATE%});
+    writeln('         at: '+{$I %TIME%});
+    writeln('FPC version: '+{$I %FPCVERSION%});
+    writeln('Target CPU : '+{$I %FPCTARGET%});
+    writeln('');
+    writeln('Accepted parameters: ');
+    writeln('  [mnh_options] [(-cmd commandToExecute) | (filename [parameters])]');
+    writeln('  filename          if present the file is interpreted; parameters are passed if present');
+    writeln('                    if not present, interactive mode is entered');
+    writeln('  -v[options]       verbosity. options can consist of multiple characters.');
+    writeln('                    Lowercase indicates enabling, uppercase indicates disabling.');
+    writeln('                       p/P  : print out');
+    writeln('                       i/I  : input echo');
+    writeln('                       d/D  : declaration echo');
+    writeln('                       o/O  : output echo');
+    writeln('                       e/E  : all echo; same as ido');
+    writeln('                       t/T  : timing info');
+    writeln('                       n/N  : notes (error level 1 only)');
+    writeln('                       w/W  : warnings (error level 2 only)');
+    writeln('                       u/U  : user defined notes, warnings and errors');
+    writeln('                       1..5 : override minimum error level');
+    writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
+    writeln('  -h                display this help or help on the input file if present and quit');
+    writeln('  -version          show version info and exit');
+    writeln('  -codeHash         show codeHash and exit');
+    writeln('  -cmd              directly execute the following command');
+    writeln('  -info             show info; same as -cmd mnhInfo.print');
+    {$ifdef fullVersion}
+    writeln('  -profile          do a profiling run - implies +time');
+    writeln('  -doc              regenerate and show documentation');
+    writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
+    {$endif}
+    writeln('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
+    writeln('     an html document will be generated, otherwise simple text. Options are verbosity options');
+    writeln('     if no options are given, the global output settings will be used');
+    writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
+    writeln('  -quiet            disable console output');
+  end;
+
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR consoleAdapters:T_adapters;
       mnhParameters:T_arrayOfString;
@@ -60,49 +104,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
                   ' ',{$I %TIME%},
                   ' FPC',{$I %FPCVERSION%},
                   ' for ',{$I %FPCTARGET%},' ',{$I %FPCTargetOS%});
-    end;
-
-  PROCEDURE displayHelp;
-    begin
-      writeln('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
-                      {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
-      writeln('compiled on: '+{$I %DATE%});
-      writeln('         at: '+{$I %TIME%});
-      writeln('FPC version: '+{$I %FPCVERSION%});
-      writeln('Target CPU : '+{$I %FPCTARGET%});
-      writeln('');
-      writeln('Accepted parameters: ');
-      writeln('  [mnh_options] [(-cmd commandToExecute) | (filename [parameters])]');
-      writeln('  filename          if present the file is interpreted; parameters are passed if present');
-      writeln('                    if not present, interactive mode is entered');
-      writeln('  -v[options]       verbosity. options can consist of multiple characters.');
-      writeln('                    Lowercase indicates enabling, uppercase indicates disabling.');
-      writeln('                       p/P  : print out');
-      writeln('                       i/I  : input echo');
-      writeln('                       d/D  : declaration echo');
-      writeln('                       o/O  : output echo');
-      writeln('                       e/E  : all echo; same as ido');
-      writeln('                       t/T  : timing info');
-      writeln('                       n/N  : notes (error level 1 only)');
-      writeln('                       w/W  : warnings (error level 2 only)');
-      writeln('                       u/U  : user defined notes, warnings and errors');
-      writeln('                       1..5 : override minimum error level');
-      writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
-      writeln('  -h                display this help or help on the input file if present and quit');
-      writeln('  -version          show version info and exit');
-      writeln('  -codeHash         show codeHash and exit');
-      writeln('  -cmd              directly execute the following command');
-      writeln('  -info             show info; same as -cmd mnhInfo.print');
-      {$ifdef fullVersion}
-      writeln('  -profile          do a profiling run - implies +time');
-      writeln('  -doc              regenerate and show documentation');
-      writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
-      {$endif}
-      writeln('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
-      writeln('     an html document will be generated, otherwise simple text. Options are verbosity options');
-      writeln('     if no options are given, the global output settings will be used');
-      writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
-      writeln('  -quiet            disable console output');
     end;
 
   PROCEDURE doDirect;

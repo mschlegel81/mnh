@@ -338,7 +338,6 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       loc:T_tokenLocation;
       i:longint;
       comments,attributes:T_arrayOfString;
-      lastComment:ansistring='';
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     system.enterCriticalSection(cs);

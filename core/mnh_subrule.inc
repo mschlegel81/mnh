@@ -701,7 +701,6 @@ FUNCTION T_subrule.getAttribute(CONST attributeKey:string; CONST caseSensitive:b
 PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
   VAR line:string;
       parts:T_arrayOfString;
-      part:string;
 
   PROCEDURE addAttribute(CONST key:ansistring);
     begin
