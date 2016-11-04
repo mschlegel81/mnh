@@ -155,12 +155,12 @@ FUNCTION docMain(p:pointer):ptrint;
 
 PROCEDURE T_evaluator.ensureThread;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     if state=es_dead then begin
       beginThread(thread,@self);
       state:=es_idle;
     end;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
@@ -193,18 +193,18 @@ CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc:
 
 DESTRUCTOR T_evaluator.destroy;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     if state=es_running then adapter^.haltEvaluation;
     repeat
       request:=er_die;
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       ThreadSwitch;
       sleep(1);
-      enterCriticalSection(cs);
+      system.enterCriticalSection(cs);
     until state=es_dead;
     package.destroy;
     context.destroy;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
     system.doneCriticalSection(cs);
   end;
 
@@ -223,66 +223,66 @@ DESTRUCTOR T_assistanceEvaluator.destroy;
 
 PROCEDURE T_evaluator.haltEvaluation;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     context.haltEvaluation;
     while not(adapter^.hasMessageOfType[mt_el5_haltMessageReceived]) do begin
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       ThreadSwitch;
       sleep(1);
-      enterCriticalSection(cs);
+      system.enterCriticalSection(cs);
     end;
     request:=er_none;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_runEvaluator.reEvaluateWithGUI(CONST contextType:T_contextType);
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     if (state=es_running) or (request<>er_none) then begin
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       exit;
     end;
     requestedContextType:=contextType;
     mainParameters:=mnh_cmdLineInterpretation.mainParameters;
     request:=er_reEvaluateWithGUI;
     ensureThread;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_runEvaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CONST contextType:T_contextType);
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     ensureThread;
     if (state=es_running) then begin
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       exit;
     end;
     requestedContextType:=contextType;
     request:=er_evaluate;
     package.setSourceUTF8AndPath(L,path);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_assistanceEvaluator.evaluate(CONST path: ansistring; CONST L: TStrings);
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     ensureThread;
     if (state=es_running) then begin
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       exit;
     end;
     request:=er_evaluate;
     package.setSourceUTF8AndPath(L,path);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 
 PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
   VAR sp:longint;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     if (state=es_running) or (request<>er_none) then begin
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       exit;
     end;
     requestedContextType:=contextType;
@@ -301,7 +301,7 @@ PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; par
     package.setSourceUTF8AndPath(L,path);
     request:=er_callMain;
     ensureThread;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_evaluator.evaluationRunning: boolean;
@@ -316,9 +316,9 @@ FUNCTION T_evaluator.evaluationRunningOrPending: boolean;
 
 FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=package.getCodeProvider;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
@@ -337,15 +337,15 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       tokenToExplain:T_token;
       loc:T_tokenLocation;
       i:longint;
-      lastComment:ansistring='';
+      comments,attributes:T_arrayOfString;
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     while (state=es_running) do begin
-      leaveCriticalSection(cs);
+      system.leaveCriticalSection(cs);
       ThreadSwitch;
       sleep(1);
-      enterCriticalSection(cs);
+      system.enterCriticalSection(cs);
     end;
 
     tokens.create;
@@ -354,9 +354,11 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
     loc.package:=@package;
     adapter^.clearAll;
     tokens.tokenizeAll(fullLine,loc,@package,adapter^,false);
-    tokens.step(@package,lastComment,adapter^);
+    comments  :=C_EMPTY_STRING_ARRAY;
+    attributes:=C_EMPTY_STRING_ARRAY;
+    tokens.step(@package,comments,attributes,adapter^);
 
-    while not(tokens.atEnd) and (tokens.current.location.column<CaretX) do tokens.step(@package,lastComment,adapter^);
+    while not(tokens.atEnd) and (tokens.current.location.column<CaretX) do tokens.step(@package,comments,attributes,adapter^);
     if tokens.atEnd then begin
       tokenToExplain:=tokens.lastToken;
       info.startLoc:=tokenToExplain.location;
@@ -403,40 +405,40 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
     end;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.getAllUsedFiles:T_arrayOfString;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=package.getPackageFileNameList;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     package.reportVariables(report);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_runEvaluator.getEndOfEvaluationText: ansistring;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=endOfEvaluationText;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   VAR i:longint;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=0;
     for i:=0 to length(localErrors)-1 do with localErrors[i] do
     if (result=0) and (lineIndex=location.line-1) and ((location.column<0) or (tokenStart<=location.column-1) and (tokenEnd>location.column-1)) then begin
       if C_messageTypeMeta[messageType].level>2 then result:=2 else result:=1;
     end;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
@@ -451,66 +453,66 @@ FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
     end;
 
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     setLength(result,length(localErrors)+length(externalErrors));
     k:=0;
     addErrors(localErrors);
     addErrors(externalErrors);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 
 FUNCTION T_evaluator.pendingRequest: T_evalRequest;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     if state=es_idle
     then result:=request
     else result:=er_none;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.threadStopped;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     state:=es_dead;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.preEval;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     request:=er_none;
     state:=es_running;
     if pendingRequest=er_reEvaluateWithGUI then context.removeOption(cp_clearAdaptersOnStart);
     context.resetForEvaluation(@package);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_runEvaluator.preEval;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     context.resetOptions(requestedContextType);
     inherited preEval;
     startOfEvaluation:=now;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.postEval;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     context.afterEvaluation;
     state:=es_idle;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_runEvaluator.postEval;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     inherited postEval;
     if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
     then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
     else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_assistanceEvaluator.postEval;
@@ -527,7 +529,7 @@ PROCEDURE T_assistanceEvaluator.postEval;
 
   VAR i:longint;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     inherited postEval;
     updateCompletionList;
 
@@ -547,28 +549,28 @@ PROCEDURE T_assistanceEvaluator.postEval;
     end;
 
     inc(stateCounter);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=mainParameters;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.getStateCounter: longint;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=stateCounter;
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.isUserRule(CONST id:string):boolean;
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     result:=userRules.contains(id);
-    leaveCriticalSection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.resolveImport(CONST id: string): string;
@@ -578,7 +580,7 @@ FUNCTION T_assistanceEvaluator.resolveImport(CONST id: string): string;
 
 PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list: T_listOfString);
   begin
-    enterCriticalSection(cs);
+    system.enterCriticalSection(cs);
     list.addAll(completionList.elementArray);
     leaveCriticalSection(cs);
   end;

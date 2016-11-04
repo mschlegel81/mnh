@@ -367,7 +367,7 @@ FUNCTION T_rule.isReportable(OUT value:P_literal):boolean;
 FUNCTION T_rule.inspect:P_listLiteral;
   FUNCTION privateOrPublic:string;
     begin
-      if ruleType in C_publicRuleTypes then result:='public'
+      if ruleType in C_publicRuleTypes then result:=PUBLIC_TEXT
                                        else result:=C_tokenInfo[tt_modifier_private].defaultId;
     end;
 
@@ -377,12 +377,12 @@ FUNCTION T_rule.inspect:P_listLiteral;
     begin
       if ruleType in C_mutableRuleTypes then begin
         value:=namedValue.getValue;
-        result:=newListLiteral^.append(newListLiteral^
-          .append(newListLiteral^.appendString('pattern')^.appendString('()'),false)^
-          .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
-          .append(newListLiteral^.appendString('type')^.appendString(privateOrPublic),false)^
-          .append(newListLiteral^.appendString('comment')^.appendString(''),false)^
-          .append(newListLiteral^.appendString('body')^.appendString(value^.toString),false),false);
+        result:=newListLiteral^.append(newListLiteral(5)^
+          .append(newListLiteral(2)^.appendString('pattern' )^.appendString('()'            ),false)^
+          .append(newListLiteral(2)^.appendString('location')^.appendString(declarationStart),false)^
+          .append(newListLiteral(2)^.appendString('type'    )^.appendString(privateOrPublic ),false)^
+          .append(newListLiteral(2)^.appendString('comment' )^.appendString(''              ),false)^
+          .append(newListLiteral(2)^.appendString('body'    )^.appendString(value^.toString ),false),false);
         value^.unreference;
       end else begin
         result:=newListLiteral;
@@ -392,10 +392,10 @@ FUNCTION T_rule.inspect:P_listLiteral;
     end;
 
   begin
-    result:=newListLiteral^.appendString(id)^.append(newListLiteral^
-      .append(newListLiteral^.appendString('type')^.appendString(C_ruleTypeText[ruleType]),false)^
-      .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
-      .append(newListLiteral^.appendString('subrules')^.append(subrulesList,false),false),false);
+    result:=newListLiteral(2)^.appendString(id)^.append(newListLiteral^
+      .append(newListLiteral(2)^.appendString('type'    )^.appendString(C_ruleTypeText[ruleType]),false)^
+      .append(newListLiteral(2)^.appendString('location')^.appendString(declarationStart        ),false)^
+      .append(newListLiteral(2)^.appendString('subrules')^.append      (subrulesList,false      ),false),false);
   end;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);

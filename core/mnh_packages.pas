@@ -20,7 +20,7 @@ TYPE
   {$include mnh_futureTask.inc}
   {$include mnh_procBlock.inc}
   {$include mnh_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
+  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance);
 
   T_packageReference=object
     id,path:ansistring;
@@ -38,9 +38,8 @@ TYPE
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
       ready:T_packageLoadUsecase;
-      loadedAtCodeHash:T_hashInt;
       codeProvider:T_codeProvider;
-      statementHashes:array of T_hashInt;
+
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
@@ -74,6 +73,7 @@ TYPE
       {$endif}
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_listLiteral;
+      FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -139,7 +139,7 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
     setLength(result,0);
     for i:=0 to length(input)-1 do begin
       tmp:=trim(input[i]);
-      if copy(tmp,1,2)='//'
+      if startsWith(tmp,COMMENT_PREFIX)
       then append(result,StringOfChar(' ',length(C_messageTypeMeta[mt_echo_input].prefix)+1)+toHtmlCode(tmp))
       else append(result,                        C_messageTypeMeta[mt_echo_input].prefix+' '+toHtmlCode(tmp));
     end;
@@ -231,8 +231,8 @@ DESTRUCTOR T_packageReference.destroy;
 
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
   VAR statementCounter:longint=0;
-      evaluateAll:boolean=false;
-      lastComment:ansistring='';
+      commentLines,
+      attributeLines:T_arrayOfString;
       profile:boolean=false;
 
   PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
@@ -490,7 +490,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if (context.adapters^.noErrors) and (ruleGroup^.ruleType in C_mutableRuleTypes) and not(hasTrivialPattern) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
-            subRule^.comment:=lastComment; lastComment:='';
+            subRule^.comment:=join(commentLines,C_lineBreakChar);
+            commentLines:=C_EMPTY_STRING_ARRAY;
+            subRule^.setAttributes(attributeLines);
+            attributeLines:=C_EMPTY_STRING_ARRAY;
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
             if (ruleGroup^.ruleType in C_mutableRuleTypes)
             then begin
@@ -540,7 +543,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                      first^.location,first^.location,context.adapters^);
       end;
 
-    VAR statementHash:T_hashInt;
     begin
       if first=nil then exit;
       if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
@@ -548,18 +550,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       if not(context.adapters^.noErrors) then begin
         context.cascadeDisposeToken(first);
         exit;
-      end;
-      //conditional skipping for interactive mode
-      if (usecase=lu_interactiveMode) then begin
-        statementHash:=first^.hash;
-        if (statementCounter<length(statementHashes)) and (statementHashes[statementCounter]=statementHash) and not(evaluateAll) then begin
-          context.cascadeDisposeToken(first);
-          inc(statementCounter);
-          exit;
-        end;
-        evaluateAll:=true;
-        if (statementCounter>=length(statementHashes)) then setLength(statementHashes,statementCounter+1);
-        statementHashes[statementCounter]:=statementHash;
       end;
       inc(statementCounter);
 
@@ -591,7 +581,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parseDataStore;
         if profile then context.timeBaseComponent(pc_declaration);
       end else if context.adapters^.noErrors then begin
-        if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
+        if (usecase=lu_forDirectExecution) then begin
           if profile then context.timeBaseComponent(pc_interpretation);
           if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
@@ -649,7 +639,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
   {$define stepToken:=
     if profile then context.timeBaseComponent(pc_tokenizing);
-    fileTokens.step(@self,lastComment,context.adapters^);
+    fileTokens.step(@self,commentLines,attributeLines,context.adapters^);
     if profile then context.timeBaseComponent(pc_tokenizing)}
 
   PROCEDURE processTokens(VAR fileTokens:T_tokenArray);
@@ -738,18 +728,17 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   begin
     if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
     if isMain then context.adapters^.clearErrors;
-    profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]);
+    profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
+    clear(false);
 
-    if usecase<>lu_interactiveMode
-    then clear(false)
-    else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
-    loadedAtCodeHash:=codeProvider.contentHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
-    fileTokens.step(@self,lastComment,context.adapters^);
+    commentLines  :=C_EMPTY_STRING_ARRAY;
+    attributeLines:=C_EMPTY_STRING_ARRAY;
+    fileTokens.step(@self,commentLines,attributeLines,context.adapters^);
     if profile then context.timeBaseComponent(pc_tokenizing);
     processTokens(fileTokens);
 
@@ -800,8 +789,6 @@ CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
     codeProvider.create;
     packageRules.create(@disposeRule);
     importedRules.create;
-    setLength(statementHashes,0);
-    loadedAtCodeHash:=0;
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
@@ -1112,32 +1099,49 @@ FUNCTION T_package.inspect:P_listLiteral;
     end;
 
   FUNCTION rulesList:P_listLiteral;
-    VAR i:longint;
-        allRules:array of P_rule;
+    VAR allRules:array of P_rule;
+        rule:P_rule;
     begin
       allRules:=packageRules.valueSet;
-      result:=newListLiteral;
-      for i:=0 to length(allRules)-1 do
-        result^.append(allRules[i]^.inspect,false);
+      result:=newListLiteral(length(allRules));
+      for rule in allRules do result^.append(rule^.inspect,false);
     end;
 
   begin
-    result:=newListLiteral^
-      .append(newListLiteral^
+    result:=newListLiteral(5)^
+      .append(newListLiteral(2)^
               .appendString('id')^
               .appendString(codeProvider.id),false)^
-      .append(newListLiteral^
+      .append(newListLiteral(2)^
               .appendString('path')^
               .appendString(getPath),false)^
-      .append(newListLiteral^
+      .append(newListLiteral(2)^
               .appendString('source')^
               .appendString(join(codeProvider.getLines,C_lineBreakChar)),false)^
-      .append(newListLiteral^
+      .append(newListLiteral(2)^
               .appendString('uses')^
               .append(usesList,false),false)^
-      .append(newListLiteral^
+      .append(newListLiteral(2)^
               .appendString('declares')^
               .append(rulesList,false),false);
+  end;
+
+FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
+  VAR rule:P_rule;
+      subRule:P_subrule;
+      matchesAll:boolean;
+      key:string;
+  begin
+    setLength(result,0);
+    for rule in packageRules.valueSet do
+    for subRule in rule^.subrules do begin
+      matchesAll:=true;
+      for key in attributeKeys do matchesAll:=matchesAll and subRule^.hasAttribute(key,caseSensitive);
+      if matchesAll then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=subRule;
+      end;
+    end;
   end;
 
 {$ifdef fullVersion}

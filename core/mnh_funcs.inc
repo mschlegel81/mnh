@@ -376,12 +376,15 @@ FUNCTION async_imp intFuncSignature;
 
 FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_token;
   VAR exTokens:T_tokenArray;
-      dummyForLastComment:ansistring='';
+      commentDummy,
+      attributeDummy:T_arrayOfString;
       last:P_token;
   begin
+    commentDummy  :=C_EMPTY_STRING_ARRAY;
+    attributeDummy:=C_EMPTY_STRING_ARRAY;
     exTokens.create;
     exTokens.tokenizeAll(s,location,package,context.adapters^,false);
-    exTokens.step(package,dummyForLastComment,context.adapters^);
+    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
     if exTokens.atEnd then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);
       exTokens.destroy;
@@ -392,11 +395,11 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
     end;
     result:=context.newToken(exTokens.current); exTokens.current.undefine;
     last:=result;
-    exTokens.step(package,dummyForLastComment,context.adapters^);
+    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
     while not(exTokens.atEnd) do begin
       last^.next:=context.newToken(exTokens.current);  exTokens.current.undefine;
       last:=last^.next;
-      exTokens.step(package,dummyForLastComment,context.adapters^);
+      exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
     end;
     exTokens.destroy;
   end;

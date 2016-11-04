@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+P_editorMeta=^T_editorMeta;
 T_editorMeta=object
   index:longint;
   paintedWithState:longint;
@@ -330,13 +331,15 @@ PROCEDURE T_editorMeta.toggleComment;
   VAR i0,i1,i:longint;
       commented:boolean=true;
   begin
+    editor.BeginUndoBlock;
     if (editor.BlockBegin.y<1) then exit;
     i0:=editor.BlockBegin.y-1;
     i1:=editor.BlockEnd.y-1;
     if editor.BlockEnd.x<=1 then dec(i1);
-    for i:=i0 to i1 do commented:=commented and (copy(trim(editor.lines[i]),1,2)='//');
-    if commented then for i:=i0 to i1 do editor.lines[i]:=replaceOne(editor.lines[i],'//','')
-                 else for i:=i0 to i1 do editor.lines[i]:='//'+editor.lines[i];
+    for i:=i0 to i1 do commented:=commented and (copy(trim(editor.lines[i]),1,2)=COMMENT_PREFIX);
+    if commented then for i:=i0 to i1 do editor.lines[i]:=replaceOne(editor.lines[i],COMMENT_PREFIX,'')
+                 else for i:=i0 to i1 do editor.lines[i]:=COMMENT_PREFIX+editor.lines[i];
+    editor.EndUndoBlock;
   end;
 
 PROCEDURE T_editorMeta.insertText(CONST s: string);

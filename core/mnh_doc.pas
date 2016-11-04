@@ -126,7 +126,7 @@ PROCEDURE ensureBuiltinDocExamples;
       if copy(exampleSource[0],1,3)='//#' then begin
         ids.add(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
         leadingIdLine:=true;
-      end else for i:=0 to length(exampleSource)-1 do if (copy(trim(exampleSource[i]),1,2)<>'//') then begin
+      end else for i:=0 to length(exampleSource)-1 do if (copy(trim(exampleSource[i]),1,2)<>COMMENT_PREFIX) then begin
         words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
         ids.addAll(words);
         ids.addAll(split(join(words,'.'),'.'));

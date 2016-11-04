@@ -29,10 +29,14 @@ CONST
   EACH_INDEX_IDENTIFIER         ='index';
   MAIN_RULE_ID                  ='main';
   ALL_PARAMETERS_TOKEN_TEXT     ='$params';
+  PUBLIC_TEXT                   ='public';
+  PRIVATE_TEXT                  ='private';
   ALL_PARAMETERS_PAR_IDX        =maxLongint;
   REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;
-  DOC_COMMENT_PREFIX            ='//*';
-  SPECIAL_COMMENT_BLOB_BEGIN    ='//!';
+  COMMENT_PREFIX                ='//';
+  DOC_COMMENT_PREFIX            =COMMENT_PREFIX+'*';
+  ATTRIBUTE_COMMENT_PREFIX      =COMMENT_PREFIX+'@';
+  SPECIAL_COMMENT_BLOB_BEGIN    =COMMENT_PREFIX+'!';
   {$ifdef fullVersion}
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
   {$endif}
@@ -133,6 +137,8 @@ TYPE
     tt_modifier_customType,
     //special: [E]nd [O]f [L]ine
     tt_EOL,
+    tt_docComment,
+    tt_attributeComment,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -369,7 +375,7 @@ CONST
 {tt_customTypeCheck}            (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'Custom type check'),
 {tt_semicolon}                  (defaultId:';';            reservedWordClass:rwc_not_reserved;     helpText:'Semicolon#Ends a statement'),
 {tt_optionalParameters}         (defaultId:'...';          reservedWordClass:rwc_not_reserved;     helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
-{tt_modifier_private}           (defaultId:'private';      reservedWordClass:rwc_modifier;         helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
+{tt_modifier_private}           (defaultId:PRIVATE_TEXT;   reservedWordClass:rwc_modifier;         helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
 {tt_modifier_memoized}          (defaultId:'memoized';     reservedWordClass:rwc_modifier;         helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
 {tt_modifier_mutable}           (defaultId:'mutable';      reservedWordClass:rwc_modifier;         helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
 {tt_modifier_persistent}        (defaultId:'persistent';   reservedWordClass:rwc_modifier;         helpText:'Modifier persistent#Makes the rule persistent.#Persistent rules also are mutable'),
@@ -378,6 +384,8 @@ CONST
 {tt_modifier_local}             (defaultId:'local';        reservedWordClass:rwc_modifier;         helpText:'Modifier local#Used for declaring block-local variables'),
 {tt_modifier_customType}        (defaultId:'type';         reservedWordClass:rwc_modifier;         helpText:'Modifier type#Used for declaring custom type checks'),
 {tt_EOL}                        (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'),
+{tt_docComment}                 (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'),
+{tt_attributeComment}           (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'),
 {tt_blank}                      (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
   C_specialWordInfo:array[0..6] of record

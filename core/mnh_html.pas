@@ -81,7 +81,7 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
         tt_modifier_private..tt_modifier_local: result:=result+span('modifier',txt);
         tt_comparatorEq..tt_cso_assignAppend: result:=result+span('operator',txt);
         tt_blank: begin
-                    if (copy(trim(txt),1,2)='//') then result:=result+span('comment',txt) else result:=result+txt;
+                    if startsWith(trim(txt),COMMENT_PREFIX) then result:=result+span('comment',txt) else result:=result+txt;
                   end;
         else result:=result+txt;
       end;
