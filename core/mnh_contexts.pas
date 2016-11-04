@@ -43,8 +43,7 @@ TYPE
                    cp_clearAdaptersOnStart,
                    cp_logEndOfEvaluation,
                    cp_beepOnError,
-                   cp_notifyParentOfAsyncTaskEnd,
-                   cp_disposeAdaptersOnDestruction);
+                   cp_notifyParentOfAsyncTaskEnd);
   T_contextOptions=set of T_contextOption;
   T_contextType=(ct_normal{$ifdef fullVersion},ct_profiling,ct_debugging{$endif},ct_silentlyRunAlone);
 
@@ -372,11 +371,7 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
       fill:=0;
     end;
     valueStore.create;
-    if outAdapters<>nil then initialAdapters:=outAdapters
-    else begin
-      new(initialAdapters,create);
-      options:=options+[cp_disposeAdaptersOnDestruction];
-    end;
+    initialAdapters:=outAdapters;
     currentAdapters:=initialAdapters;
     setLength(callStack,0);
     wallClock.create(@initTimer,@disposeTimer);
@@ -412,7 +407,6 @@ DESTRUCTOR T_evaluationContext.destroy;
     valueStore.destroy;
     clearCallStack;
     wallClock.destroy;
-    if cp_disposeAdaptersOnDestruction in options then dispose(adapters,destroy);
     {$ifdef fullVersion}
     profilingMap.destroy;
     system.doneCriticalSection(profilingAndDebuggingCriticalSection);
