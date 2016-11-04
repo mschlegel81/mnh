@@ -102,6 +102,7 @@ private BUILD_LOG:='build.log';
 private buildExe(B:BuildConfig)->
   B.needBuilt
   ? begin
+      ensureCodeHash;
       tprint('Building ',B[2]);
       local compilerOutput:=B[3].exec(B[4]).head;
       local sepLine:=repeat('-',compilerOutput.each(line,line.length,max));
