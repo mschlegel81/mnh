@@ -13,7 +13,7 @@ CONST
   '|___| \/ |___|___| \___|___| |___| |_____/');
 
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;
-  APP_NAME             ='MNH' {$ifdef imig}+'_IMIG'{$endif};
+  APP_NAME             ='MNH';
   APP_TITLE            ='MNH5'{$ifdef imig}+'+IMIG'{$endif};
   SCRIPT_EXTENSION     ='.mnh';
 
