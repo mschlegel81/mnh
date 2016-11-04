@@ -58,11 +58,13 @@
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
       FUNCTION getId:T_idString; virtual;
+      FUNCTION getParentId:T_idString;
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_listLiteral;
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+      FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
   end;
 
@@ -621,6 +623,11 @@ FUNCTION T_subrule.getId:T_idString;
     end;
   end;
 
+FUNCTION T_subrule.getParentId:T_idString;
+  begin
+    if parent=nil then exit('') else result:=parent^.id;
+  end;
+
 FUNCTION T_subrule.getLocation:T_tokenLocation;
   begin
     result:=declaredAt;
@@ -667,20 +674,28 @@ FUNCTION T_subrule.inspect:P_listLiteral;
   end;
 
 FUNCTION T_subrule.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+  begin
+    result:=getAttribute(attributeKey,caseSensitive).key<>'';
+  end;
+
+FUNCTION T_subrule.getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
+  CONST blankAttribute:T_subruleAttribute=(key:'';value:'');
+        publicAttribute:T_subruleAttribute=(key:PUBLIC_TEXT;value:'');
+        privateAttribute:T_subruleAttribute=(key:PRIVATE_TEXT;value:'');
   VAR attrib:T_subruleAttribute;
       useKey:string;
   begin
-    result:=false;
     if caseSensitive then begin
-      if (attributeKey=C_tokenInfo[tt_modifier_private].defaultId) and (typ=srt_normal_private) then exit(true);
-      if (attributeKey=PUBLIC_TEXT                               ) and (typ=srt_normal_public ) then exit(true);
-      for attrib in attributes do if attrib.key=attributeKey then exit(true);
+      if (attributeKey=privateAttribute.key) and (typ=srt_normal_private) then exit(privateAttribute);
+      if (attributeKey=publicAttribute .key) and (typ=srt_normal_public ) then exit(publicAttribute);
+      for attrib in attributes do if attrib.key=attributeKey then exit(attrib);
     end else begin
       useKey:=uppercase(attributeKey);
-      if (useKey=uppercase(C_tokenInfo[tt_modifier_private].defaultId)) and (typ=srt_normal_private) then exit(true);
-      if (useKey=uppercase(PUBLIC_TEXT                               )) and (typ=srt_normal_public ) then exit(true);
-      for attrib in attributes do if attrib.key=useKey then exit(true);
+      if (useKey=uppercase(privateAttribute.key)) and (typ=srt_normal_private) then exit(privateAttribute);
+      if (useKey=uppercase(publicAttribute .key)) and (typ=srt_normal_public ) then exit(publicAttribute);
+      for attrib in attributes do if attrib.key=useKey then exit(attrib);
     end;
+    result:=blankAttribute;
   end;
 
 PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);

@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+P_editorMeta=^T_editorMeta;
 T_editorMeta=object
   index:longint;
   paintedWithState:longint;

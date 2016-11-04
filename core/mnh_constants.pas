@@ -30,6 +30,7 @@ CONST
   MAIN_RULE_ID                  ='main';
   ALL_PARAMETERS_TOKEN_TEXT     ='$params';
   PUBLIC_TEXT                   ='public';
+  PRIVATE_TEXT                  ='private';
   ALL_PARAMETERS_PAR_IDX        =maxLongint;
   REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;
   COMMENT_PREFIX                ='//';
@@ -370,7 +371,7 @@ CONST
 {tt_customTypeCheck}            (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'Custom type check'),
 {tt_semicolon}                  (defaultId:';';            reservedWordClass:rwc_not_reserved;     helpText:'Semicolon#Ends a statement'),
 {tt_optionalParameters}         (defaultId:'...';          reservedWordClass:rwc_not_reserved;     helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
-{tt_modifier_private}           (defaultId:'private';      reservedWordClass:rwc_modifier;         helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
+{tt_modifier_private}           (defaultId:PRIVATE_TEXT;   reservedWordClass:rwc_modifier;         helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
 {tt_modifier_memoized}          (defaultId:'memoized';     reservedWordClass:rwc_modifier;         helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
 {tt_modifier_mutable}           (defaultId:'mutable';      reservedWordClass:rwc_modifier;         helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
 {tt_modifier_persistent}        (defaultId:'persistent';   reservedWordClass:rwc_modifier;         helpText:'Modifier persistent#Makes the rule persistent.#Persistent rules also are mutable'),

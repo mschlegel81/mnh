@@ -372,8 +372,12 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
       fill:=0;
     end;
     valueStore.create;
-    initialAdapters:=outAdapters;
-    currentAdapters:=outAdapters;
+    if outAdapters<>nil then initialAdapters:=outAdapters
+    else begin
+      new(initialAdapters,create);
+      options:=options+[cp_disposeAdaptersOnDestruction];
+    end;
+    currentAdapters:=initialAdapters;
     setLength(callStack,0);
     wallClock.create(@initTimer,@disposeTimer);
     {$ifdef fullVersion}
