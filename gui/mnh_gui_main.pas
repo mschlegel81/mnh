@@ -246,7 +246,7 @@ TYPE
     end;
     lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
-
+    lastReportedRunnerInfo:T_runnerStateInfo;
     PROCEDURE setEditorMode(CONST enable:boolean);
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
@@ -449,6 +449,10 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     lastStart.mainCall:=false;
     doNotMarkWordBefore:=now;
     doNotCheckFileBefore:=now+ONE_SECOND;
+
+    lastReportedRunnerInfo.message:='';
+    lastReportedRunnerInfo.state:=es_dead;
+    lastReportedRunnerInfo.request:=er_none;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
@@ -680,15 +684,39 @@ PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=1;
-        MAX_INTERVALL=250;
+        MAX_INTERVALL=1000;
   VAR aid:ansistring;
-      isEvaluationRunning:boolean;
       flushPerformed:boolean=false;
       canRun:boolean;
       i,modalRes:longint;
+      currentRunnerInfo:T_runnerStateInfo;
   begin
-    isEvaluationRunning:=runEvaluator.evaluationRunning;
-    if askForm.displayPending then askForm.Show;
+    currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
+    if currentRunnerInfo<>lastReportedRunnerInfo then begin
+      if breakPointHandlingPending then handleBreak;
+      lastReportedRunnerInfo:=currentRunnerInfo;
+      //progress time:------------------------------------------------------------
+      if inputPageControl.activePageIndex>=0
+      then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
+      else aid:='';
+      case currentRunnerInfo.state of
+        es_running     : StatusBar.SimpleText:='Evaluating...'+aid;
+        es_debugRunning: StatusBar.SimpleText:='Debugging...'+aid;
+        es_debugHalted : StatusBar.SimpleText:='Debugging [HALTED]'+aid;
+        es_editRunning : StatusBar.SimpleText:='Edit script...'+aid;
+        else StatusBar.SimpleText:=currentRunnerInfo.message+aid;
+      end;
+      //------------------------------------------------------------:progress time
+      //Halt/Run enabled states:--------------------------------------------------
+      miHaltEvalutaion.enabled:=(currentRunnerInfo.state in C_runningStates);
+      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
+      if canRun<>miEvaluateNow.enabled then begin
+        miEvaluateNow.enabled:=canRun;
+        miCallMain.enabled:=canRun;
+      end;
+      //--------------------------------------------------:Halt/Run enabled states
+    end;
+
     if showing then begin
       if not (reEvaluationWithGUIrequired) then begin
         //Form caption:-------------------------------------------------------------
@@ -700,27 +728,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         if aid<>caption then caption:=aid;
         //-------------------------------------------------------------:Form caption
       end;
-      //progress time:------------------------------------------------------------
-      if inputPageControl.activePageIndex>=0
-      then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
-      else aid:='';
-      if isEvaluationRunning then begin
-        if runEvaluator.context.hasOption(cp_debug) then begin
-          if runEvaluator.context.paused then begin
-            StatusBar.SimpleText:='Debugging [HALTED]'+aid;
-            if breakPointHandlingPending then handleBreak;
-          end else StatusBar.SimpleText:='Debugging...'+aid;
-        end else StatusBar.SimpleText:='Evaluating...'+aid;
-      end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
-      //------------------------------------------------------------:progress time
-      //Halt/Run enabled states:--------------------------------------------------
-      if isEvaluationRunning<>miHaltEvalutaion.enabled then miHaltEvalutaion.enabled:=isEvaluationRunning;
-      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(isEvaluationRunning);
-      if canRun<>miEvaluateNow.enabled then begin
-        miEvaluateNow.enabled:=canRun;
-        miCallMain.enabled:=canRun;
-      end;
-      //--------------------------------------------------:Halt/Run enabled states
+
       //File checks:------------------------------------------------------------
       if (now>doNotCheckFileBefore) then begin
         doNotCheckFileBefore:=now+1;
@@ -738,26 +746,29 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
           fileInfo.isChanged:=true;
         end;
         doNotCheckFileBefore:=now+ONE_SECOND;
+
+        if not(reEvaluationWithGUIrequired) and settings.value^.savingRequested then begin
+          for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
+          saveSettings;
+        end;
       end;
       //-----------------------------------------------------------.:File checks
     end;
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
-    if flushPerformed and (outputPageControl.activePage=assistanceTabSheet) then outputPageControl.activePage:=outputTabSheet;
-    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
-       not(runEvaluator.evaluationRunning) then plotForm.doPlot();
-
-    if not(flushPerformed) then begin
-      UpdateTimeTimer.interval:=UpdateTimeTimer.interval+10;
+    if flushPerformed and (outputPageControl.activePage<>outputTabSheet) then outputPageControl.activePage:=outputTabSheet;
+    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
+    if askForm.displayPending then begin
+      askForm.Show;
+      flushPerformed:=true;
+    end;
+    if flushPerformed then UpdateTimeTimer.interval:=MIN_INTERVALL else begin
+      UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
-    end else UpdateTimeTimer.interval:=MIN_INTERVALL;
-
-    if not(reEvaluationWithGUIrequired) and settings.value^.savingRequested then begin
-      for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
-      saveSettings;
     end;
 
-    if closeGuiFlag or reEvaluationWithGUIrequired and not(runEvaluator.evaluationRunning) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
+
+    if closeGuiFlag or reEvaluationWithGUIrequired and not(currentRunnerInfo.state in C_runningStates) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);

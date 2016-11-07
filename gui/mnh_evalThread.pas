@@ -4,7 +4,15 @@ USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_cons
      myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8, mnh_fileWrappers;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_die);
-  T_evaluationState=(es_dead,es_idle,es_running);
+  T_evaluationState=(es_dead,es_idle,es_running,es_debugRunning,es_debugHalted,es_editRunning);
+CONST
+  C_runningStates:set of T_evaluationState=[es_running,es_debugRunning,es_debugHalted,es_editRunning];
+TYPE
+  T_runnerStateInfo=record
+    request:T_evalRequest;
+    state  :T_evaluationState;
+    message:string;
+  end;
 
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
@@ -61,7 +69,7 @@ TYPE
       PROCEDURE reEvaluateWithGUI(CONST contextType:T_contextType);
       PROCEDURE evaluate(CONST path:ansistring; CONST L: TStrings; CONST contextType:T_contextType);
       PROCEDURE callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
-      FUNCTION getEndOfEvaluationText:ansistring;
+      FUNCTION getRunnerStateInfo:T_runnerStateInfo;
   end;
 
   P_assistanceEvaluator=^T_assistanceEvaluator;
@@ -92,11 +100,16 @@ VAR runEvaluator:T_runEvaluator;
     assistancEvaluator:T_assistanceEvaluator;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
-
+OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
     silentAdapters:T_adapters;
     intrinsicRulesForCompletion:T_listOfString;
+
+OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
+  begin
+    result:=(x.state=y.state) and (x.request=y.request) and (x.message=y.message);
+  end;
 
 {$WARN 5024 OFF}
 FUNCTION main(p:pointer):ptrint;
@@ -194,7 +207,7 @@ CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc:
 DESTRUCTOR T_evaluator.destroy;
   begin
     system.enterCriticalSection(cs);
-    if state=es_running then adapter^.haltEvaluation;
+    if state in C_runningStates then adapter^.haltEvaluation;
     repeat
       request:=er_die;
       system.leaveCriticalSection(cs);
@@ -238,7 +251,7 @@ PROCEDURE T_evaluator.haltEvaluation;
 PROCEDURE T_runEvaluator.reEvaluateWithGUI(CONST contextType:T_contextType);
   begin
     system.enterCriticalSection(cs);
-    if (state=es_running) or (request<>er_none) then begin
+    if (state in C_runningStates) or (request<>er_none) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
@@ -253,7 +266,7 @@ PROCEDURE T_runEvaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CON
   begin
     system.enterCriticalSection(cs);
     ensureThread;
-    if (state=es_running) then begin
+    if (state in C_runningStates) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
@@ -267,7 +280,7 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST path: ansistring; CONST L: TStrin
   begin
     system.enterCriticalSection(cs);
     ensureThread;
-    if (state=es_running) then begin
+    if (state in C_runningStates) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
@@ -281,7 +294,7 @@ PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; par
   VAR sp:longint;
   begin
     system.enterCriticalSection(cs);
-    if (state=es_running) or (request<>er_none) then begin
+    if (state in C_runningStates) or (request<>er_none) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
@@ -306,12 +319,12 @@ PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; par
 
 FUNCTION T_evaluator.evaluationRunning: boolean;
   begin
-    result:=state=es_running;
+    result:=state in C_runningStates;
   end;
 
 FUNCTION T_evaluator.evaluationRunningOrPending: boolean;
   begin
-    result:=(state=es_running) or (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]);
+    result:=(state in C_runningStates) or (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]);
   end;
 
 FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
@@ -341,7 +354,7 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     system.enterCriticalSection(cs);
-    while (state=es_running) do begin
+    while (state in C_runningStates) do begin
       system.leaveCriticalSection(cs);
       ThreadSwitch;
       sleep(1);
@@ -422,10 +435,13 @@ PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_runEvaluator.getEndOfEvaluationText: ansistring;
+FUNCTION T_runEvaluator.getRunnerStateInfo:T_runnerStateInfo;
   begin
     system.enterCriticalSection(cs);
-    result:=endOfEvaluationText;
+    result.state:=state;
+    if (context.hasOption(cp_debug)) and (context.paused) then result.state:=es_debugHalted;
+    result.request:=request;
+    result.message:=endOfEvaluationText;
     system.leaveCriticalSection(cs);
   end;
 
@@ -482,7 +498,8 @@ PROCEDURE T_evaluator.preEval;
   begin
     system.enterCriticalSection(cs);
     request:=er_none;
-    state:=es_running;
+    if context.hasOption(cp_debug) then state:=es_debugRunning
+                                   else state:=es_running;
     if pendingRequest=er_reEvaluateWithGUI then context.removeOption(cp_clearAdaptersOnStart);
     context.resetForEvaluation(@package);
     system.leaveCriticalSection(cs);
