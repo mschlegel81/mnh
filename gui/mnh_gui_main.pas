@@ -36,6 +36,7 @@ CONST LANG_MNH   = 0;
       LANG_VB    =14;
       LANG_BAT   =15;
       LANG_XML   =16;
+      LANG_TXT   =17;
 
 VAR fileTypeMeta:array of record
       extension:string;
@@ -146,6 +147,7 @@ TYPE
     subMenuHelp,
     subMenuSearch,
     submenuEditorAppearance:   TMenuItem;
+    miLangTxt: TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -366,6 +368,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       addFileType('vb',LANG_VB,SynVBSyn1,miLangVb);
       addFileType('bat',LANG_BAT,SynBatSyn1,miLangBat);
       addFileType('xml',LANG_XML,SynXMLSyn1,miLangXml);
+      addFileType('txt',LANG_TXT,nil,miLangTxt);
     end;
 
   PROCEDURE initHighlighters;

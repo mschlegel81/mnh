@@ -219,7 +219,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
   begin
     language:=languageIndex;
     for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].language=languageIndex then begin
-      if fileTypeMeta[metaIdx].highlighter=nil
+      if fileTypeMeta[metaIdx].language=LANG_MNH
       then editor.highlighter:=highlighter
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
       exit;
