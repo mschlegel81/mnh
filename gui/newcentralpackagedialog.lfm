@@ -95,11 +95,14 @@ object newCentralPackageForm: TnewCentralPackageForm
   object restoreButton: TButton
     Left = 0
     Height = 25
+    Hint = 'Restoring only recreates missing packages.'#13#10'You can delete a corrupted package to restore its original state.'
     Top = 0
     Width = 263
     Align = alTop
     Caption = 'restore default packages'
     OnClick = restoreButtonClick
+    ParentShowHint = False
+    ShowHint = True
     TabOrder = 3
   end
 end

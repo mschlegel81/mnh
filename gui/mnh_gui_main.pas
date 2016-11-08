@@ -18,7 +18,7 @@ USES
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
-  LazUTF8, mnh_tables,  openDemoDialog, mnh_workspaces;
+  LazUTF8, mnh_tables, openDemoDialog, mnh_workspaces;
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -60,6 +60,7 @@ TYPE
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
     MainMenu1:                 TMainMenu;
+    editScriptRoot,
     MenuItem1,
     MenuItem4,
     miCallMain,
@@ -70,6 +71,7 @@ TYPE
     miDebug,
     miDecFontSize,
     miDeclarationEcho,
+    miEditScriptFile,
     miEvaluateNow,
     miExpressionEcho,
     miExpressionResult,
@@ -247,14 +249,15 @@ TYPE
     end;
     lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
-
+    lastReportedRunnerInfo:T_runnerStateInfo;
+    editScriptMenuItems:array of TMenuItem;
     PROCEDURE setEditorMode(CONST enable:boolean);
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
-
   public
     editorMeta:array of T_editorMeta;
     PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
+    PROCEDURE updateEditScriptMenu;
   end;
 
 VAR MnhForm: TMnhForm;
@@ -470,6 +473,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
     mnh_out_adapters.gui_started:=true;
+    setLength(editScriptMenuItems,0);
+
+    runEvaluator.ensureEditScripts;
     updateDebugParts;
   end;
 
@@ -622,6 +628,26 @@ PROCEDURE TMnhForm.enableMenuForLanguage(CONST languageIndex:byte);
     for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=languageIndex then fileTypeMeta[i].menuItem.Checked:=true;
   end;
 
+PROCEDURE TMnhForm.updateEditScriptMenu;
+  VAR i:longint;
+      edits:T_arrayOfString;
+  begin
+    for i:=0 to length(editScriptMenuItems)-1 do begin
+      editScriptRoot.remove(editScriptMenuItems[i]);
+      FreeAndNil(editScriptMenuItems[i]);
+    end;
+    edits:=runEvaluator.getEditScriptNames;
+    {$ifdef debugMode} writeln('Creating edit script menu of ',length(edits),' items'); {$endif}
+    setLength(editScriptMenuItems,length(edits));
+    for i:=0 to length(edits)-1 do begin
+      editScriptMenuItems[i]:=TMenuItem.create(MainMenu1);
+      editScriptMenuItems[i].caption:=edits[i];
+      editScriptMenuItems[i].Tag:=i;
+      editScriptMenuItems[i].OnClick:=@miRunCustomEditScript;
+      editScriptRoot.add(editScriptMenuItems[i]);
+    end;
+  end;
+
 PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
   begin
     makeAndShowDoc(true);
@@ -681,15 +707,62 @@ PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=1;
-        MAX_INTERVALL=250;
+        MAX_INTERVALL=1000;
+
+  PROCEDURE processEditResult(CONST task:P_editScriptTask; CONST currentlyDebugging:boolean);
+    VAR outIdx:longint;
+        i:longint;
+    begin
+      if (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
+        if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
+                               else outIdx:=task^.inputIdx;
+        editorMeta[outIdx].setLanguage(task^.getOutputLanguage);
+        editorMeta[outIdx].updateContentAfterEditScript(P_listLiteral(task^.getOutput));
+      end;
+      for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
+    end;
+
   VAR aid:ansistring;
-      isEvaluationRunning:boolean;
       flushPerformed:boolean=false;
       canRun:boolean;
       i,modalRes:longint;
+      currentRunnerInfo:T_runnerStateInfo;
   begin
-    isEvaluationRunning:=runEvaluator.evaluationRunning;
-    if askForm.displayPending then askForm.Show;
+    currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
+    //progress time:------------------------------------------------------------
+    if inputPageControl.activePageIndex>=0
+    then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
+    else aid:='';
+    case currentRunnerInfo.state of
+      es_running     : StatusBar.SimpleText:='Evaluating...'+aid;
+      es_debugRunning: StatusBar.SimpleText:='Debugging...'+aid;
+      es_debugHalted : StatusBar.SimpleText:='Debugging [HALTED]'+aid;
+      es_editEnsuring,
+      es_editRunning : StatusBar.SimpleText:='Edit script...'+aid;
+      else StatusBar.SimpleText:=currentRunnerInfo.message+aid;
+    end;
+    //------------------------------------------------------------:progress time
+
+    if currentRunnerInfo<>lastReportedRunnerInfo then begin
+      {$ifdef debugMode} writeln('States: ',lastReportedRunnerInfo.state,' -> ',currentRunnerInfo.state); {$endif}
+      if breakPointHandlingPending then handleBreak;
+      //Halt/Run enabled states:--------------------------------------------------
+      miHaltEvalutaion.enabled:=(currentRunnerInfo.state in C_runningStates);
+      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
+      if canRun<>miEvaluateNow.enabled then begin
+        miEvaluateNow.enabled:=canRun;
+        miCallMain.enabled:=canRun;
+      end;
+      //--------------------------------------------------:Halt/Run enabled states
+      lastReportedRunnerInfo:=currentRunnerInfo;
+    end;
+
+    if currentRunnerInfo.hasPendingEditResult then begin
+      processEditResult(runEvaluator.getCurrentEdit,currentRunnerInfo.state in [es_debugHalted,es_debugRunning]);
+      runEvaluator.freeCurrentEdit;
+      currentRunnerInfo.hasPendingEditResult:=false;
+    end;
+
     if showing then begin
       if not (reEvaluationWithGUIrequired) then begin
         //Form caption:-------------------------------------------------------------
@@ -701,27 +774,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         if aid<>caption then caption:=aid;
         //-------------------------------------------------------------:Form caption
       end;
-      //progress time:------------------------------------------------------------
-      if inputPageControl.activePageIndex>=0
-      then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
-      else aid:='';
-      if isEvaluationRunning then begin
-        if runEvaluator.context.hasOption(cp_debug) then begin
-          if runEvaluator.context.paused then begin
-            StatusBar.SimpleText:='Debugging [HALTED]'+aid;
-            if breakPointHandlingPending then handleBreak;
-          end else StatusBar.SimpleText:='Debugging...'+aid;
-        end else StatusBar.SimpleText:='Evaluating...'+aid;
-      end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
-      //------------------------------------------------------------:progress time
-      //Halt/Run enabled states:--------------------------------------------------
-      if isEvaluationRunning<>miHaltEvalutaion.enabled then miHaltEvalutaion.enabled:=isEvaluationRunning;
-      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(isEvaluationRunning);
-      if canRun<>miEvaluateNow.enabled then begin
-        miEvaluateNow.enabled:=canRun;
-        miCallMain.enabled:=canRun;
-      end;
-      //--------------------------------------------------:Halt/Run enabled states
+
       //File checks:------------------------------------------------------------
       if (now>doNotCheckFileBefore) then begin
         doNotCheckFileBefore:=now+1;
@@ -739,26 +792,29 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
           fileInfo.isChanged:=true;
         end;
         doNotCheckFileBefore:=now+ONE_SECOND;
+
+        if not(reEvaluationWithGUIrequired) and settings.value^.savingRequested then begin
+          for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
+          saveSettings;
+        end;
       end;
       //-----------------------------------------------------------.:File checks
     end;
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
-    if flushPerformed and (outputPageControl.activePage=assistanceTabSheet) then outputPageControl.activePage:=outputTabSheet;
-    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
-       not(runEvaluator.evaluationRunning) then plotForm.doPlot();
-
-    if not(flushPerformed) then begin
-      UpdateTimeTimer.interval:=UpdateTimeTimer.interval+10;
+    if flushPerformed and (outputPageControl.activePage<>outputTabSheet) then outputPageControl.activePage:=outputTabSheet;
+    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
+    if askForm.displayPending then begin
+      askForm.Show;
+      flushPerformed:=true;
+    end;
+    if flushPerformed then UpdateTimeTimer.interval:=MIN_INTERVALL else begin
+      UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
-    end else UpdateTimeTimer.interval:=MIN_INTERVALL;
-
-    if not(reEvaluationWithGUIrequired) and settings.value^.savingRequested then begin
-      for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
-      saveSettings;
     end;
 
-    if closeGuiFlag or reEvaluationWithGUIrequired and not(runEvaluator.evaluationRunning) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
+
+    if closeGuiFlag or reEvaluationWithGUIrequired and not(currentRunnerInfo.state in C_runningStates) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);

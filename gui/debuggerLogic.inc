@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+PROCEDURE editScriptRootClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepInClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
@@ -27,6 +28,11 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
                                             else runEvaluator.context.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
+  end;
+
+PROCEDURE TMnhForm.editScriptRootClick(Sender: TObject);
+  begin
+    updateEditScriptMenu;
   end;
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);

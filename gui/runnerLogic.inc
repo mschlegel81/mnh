@@ -3,6 +3,7 @@ PROCEDURE miHaltEvalutaionClick(Sender: TObject);
 PROCEDURE MenuItem4Click(Sender: TObject);
 PROCEDURE doStartEvaluation(CONST reEvaluating:boolean);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
+PROCEDURE miRunCustomEditScript(Sender: TObject);
 FUNCTION preferredContextType:T_contextType;
 PROCEDURE doConditionalPlotReset;
 {$endif}
@@ -49,6 +50,15 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
       lastStart.mainCall:=false;
       with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
     end;
+  end;
+
+PROCEDURE TMnhForm.miRunCustomEditScript(Sender: TObject);
+  VAR i,k:longint;
+  begin
+    k:=inputPageControl.activePageIndex;
+    if (k<0) or (k>=length(editorMeta)) then exit;
+    for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=true;
+    runEvaluator.runEditScript(TMenuItem(Sender).Tag,k,editorMeta[k].editor.lines,editorMeta[k].languageName);
   end;
 
 FUNCTION TMnhForm.preferredContextType:T_contextType;

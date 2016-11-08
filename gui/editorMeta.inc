@@ -23,6 +23,7 @@ T_editorMeta=object
   PROCEDURE doneDebugging;
   PROCEDURE closeEditor;
   PROCEDURE setLanguage(CONST languageIndex:byte);
+  PROCEDURE setLanguage(CONST extensionWithoutDot:string);
   PROCEDURE guessLanguage;
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
@@ -44,6 +45,8 @@ T_editorMeta=object
   FUNCTION saveFile(CONST fileName:string=''):string;
   FUNCTION fileIsDeleted:boolean;
   FUNCTION fileIsModifiedOnFileSystem:boolean;
+  FUNCTION languageName:string;
+  PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -223,6 +226,21 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
     end;
   end;
 
+PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string);
+  VAR metaIdx:longint;
+      ext:string;
+  begin
+    ext:=uppercase(copy(extensionWithoutDot,2,10));
+    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
+      language:=fileTypeMeta[metaIdx].language;
+      if fileTypeMeta[metaIdx].highlighter=nil
+      then editor.highlighter:=highlighter
+      else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
+      exit;
+    end;
+    setLanguage(0);
+  end;
+
 PROCEDURE T_editorMeta.guessLanguage();
   VAR metaIdx:longint;
       ext:string;
@@ -328,27 +346,50 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
   end;
 
 PROCEDURE T_editorMeta.toggleComment;
-  VAR i0,i1,i:longint;
+  PROCEDURE commentLine(CONST CaretY:longint);
+    VAR c0,c1:TPoint;
+    begin
+      c0.y:=CaretY;
+      c1.y:=CaretY;
+      c0.x:=0;
+      c1.x:=0;
+      editor.TextBetweenPoints[c0,c1]:=COMMENT_PREFIX;
+    end;
+
+  PROCEDURE uncommentLine(CONST CaretY:longint);
+    VAR c0,c1:TPoint;
+    begin
+      c0.y:=CaretY;
+      c1.y:=CaretY;
+      c0.x:=pos(COMMENT_PREFIX,editor.lines[CaretY-1]);
+      c1.x:=c0.x+length(COMMENT_PREFIX);
+      editor.TextBetweenPoints[c0,c1]:='';
+    end;
+
+  FUNCTION lineIsCommented(CONST CaretY:longint):boolean;
+    begin
+      result:=startsWith(trim(editor.lines[CaretY-1]),COMMENT_PREFIX);
+    end;
+
+  VAR cy:longint;
       commented:boolean=true;
   begin
     editor.BeginUndoBlock;
-    if (editor.BlockBegin.y<1) then exit;
-    i0:=editor.BlockBegin.y-1;
-    i1:=editor.BlockEnd.y-1;
-    if editor.BlockEnd.x<=1 then dec(i1);
-    for i:=i0 to i1 do commented:=commented and (copy(trim(editor.lines[i]),1,2)=COMMENT_PREFIX);
-    if commented then for i:=i0 to i1 do editor.lines[i]:=replaceOne(editor.lines[i],COMMENT_PREFIX,'')
-                 else for i:=i0 to i1 do editor.lines[i]:=COMMENT_PREFIX+editor.lines[i];
+    if (editor.BlockBegin.y<1) then begin
+      if lineIsCommented(editor.CaretY)
+      then uncommentLine(editor.CaretY)
+      else   commentLine(editor.CaretY);
+    end else begin
+      for cy:=editor.BlockBegin.y to editor.BlockEnd.y do commented:=commented and lineIsCommented(cy);
+      if commented then for cy:=editor.BlockBegin.y to editor.BlockEnd.y do uncommentLine(cy)
+                   else for cy:=editor.BlockBegin.y to editor.BlockEnd.y do   commentLine(cy);
+    end;
     editor.EndUndoBlock;
   end;
 
 PROCEDURE T_editorMeta.insertText(CONST s: string);
-  VAR lineIdx,colIdx:longint;
   begin
-    lineIdx:=editor.CaretY-1;
-    colIdx:=editor.CaretX-1;
-    editor.lines[lineIdx]:=copy(editor.lines[lineIdx],1,colIdx)+s+
-                           copy(editor.lines[lineIdx],colIdx+1,length(editor.lines[lineIdx]));
+    editor.InsertTextAtCaret(s);
   end;
 
 PROCEDURE T_editorMeta.toggleBreakpoint;
@@ -429,6 +470,8 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
       fileAge(filePath,fileAccessAge);
       isChanged:=false;
       editor.modified:=false;
+      editor.MarkTextAsSaved;
+      if filePath=editScriptFileName then runEvaluator.ensureEditScripts();
     end;
     result:=updateSheetCaption;
   end;
@@ -444,6 +487,28 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
     if not(sheet.tabVisible and isFile) or changed then exit(false);
     fileAge(fileInfo.filePath,currentFileAge);
     result:=currentFileAge<>fileInfo.fileAccessAge;
+  end;
+
+FUNCTION T_editorMeta.languageName:string;
+  VAR i:longint;
+  begin
+    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language then exit(lowercase(copy(fileTypeMeta[i].extension,2,10)));
+    result:='';
+  end;
+
+PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
+  VAR concatenatedText:ansistring='';
+      i:longint;
+  begin
+    if stringListLiteral^.literalType<>lt_stringList then exit;
+    for i:=0 to stringListLiteral^.size-1 do begin
+      if i>0 then concatenatedText:=concatenatedText+LineEnding;
+      concatenatedText:=concatenatedText+P_stringLiteral(stringListLiteral^.value(i))^.value;
+    end;
+    editor.BeginUndoBlock;
+    editor.SelectAll;
+    editor.SelText:=concatenatedText;
+    editor.EndUndoBlock;
   end;
 
 {$endif}

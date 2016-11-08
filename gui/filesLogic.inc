@@ -53,6 +53,7 @@ PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShi
 
 PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE miEditScriptFileClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -466,5 +467,8 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shif
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
-
+PROCEDURE TMnhForm.miEditScriptFileClick(Sender: TObject);
+  begin
+    FormDropFiles(Sender,editScriptFileName);
+  end;
 {$endif}
