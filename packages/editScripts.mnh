@@ -6,4 +6,3 @@ removeDoubleBlanks(s:stringList)->s.join("\n").replace("\n\n\n","\n\n").split("\
 
 //@editScript=Sort lines and remove duplicates
 sortLines(s:stringList)->s.unique.sort;
-
