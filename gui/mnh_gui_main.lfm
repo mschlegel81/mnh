@@ -1,5 +1,5 @@
 object MnhForm: TMnhForm
-  Left = 633
+  Left = 1187
   Height = 733
   Top = 0
   Width = 717
@@ -2615,6 +2615,14 @@ object MnhForm: TMnhForm
       object miOpenImported: TMenuItem
         Caption = 'Open all imported files'
         OnClick = miOpenImportedClick
+      end
+      object editScriptRoot: TMenuItem
+        Caption = 'Edit scripts...'
+        OnClick = editScriptRootClick
+        object miEditScriptFile: TMenuItem
+          Caption = 'Edit script file'
+          OnClick = miEditScriptFileClick
+        end
       end
     end
   end

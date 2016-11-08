@@ -23,6 +23,7 @@ T_editorMeta=object
   PROCEDURE doneDebugging;
   PROCEDURE closeEditor;
   PROCEDURE setLanguage(CONST languageIndex:byte);
+  PROCEDURE setLanguage(CONST extensionWithoutDot:string);
   PROCEDURE guessLanguage;
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
@@ -44,6 +45,7 @@ T_editorMeta=object
   FUNCTION saveFile(CONST fileName:string=''):string;
   FUNCTION fileIsDeleted:boolean;
   FUNCTION fileIsModifiedOnFileSystem:boolean;
+  FUNCTION languageName:string;
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -221,6 +223,21 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
       exit;
     end;
+  end;
+
+PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string);
+  VAR metaIdx:longint;
+      ext:string;
+  begin
+    ext:=uppercase(copy(extensionWithoutDot,2,10));
+    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
+      language:=fileTypeMeta[metaIdx].language;
+      if fileTypeMeta[metaIdx].highlighter=nil
+      then editor.highlighter:=highlighter
+      else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
+      exit;
+    end;
+    setLanguage(0);
   end;
 
 PROCEDURE T_editorMeta.guessLanguage();
@@ -429,6 +446,8 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
       fileAge(filePath,fileAccessAge);
       isChanged:=false;
       editor.modified:=false;
+      editor.MarkTextAsSaved;
+      if filePath=editScriptFileName then runEvaluator.ensureEditScripts();
     end;
     result:=updateSheetCaption;
   end;
@@ -444,6 +463,13 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
     if not(sheet.tabVisible and isFile) or changed then exit(false);
     fileAge(fileInfo.filePath,currentFileAge);
     result:=currentFileAge<>fileInfo.fileAccessAge;
+  end;
+
+FUNCTION T_editorMeta.languageName:string;
+  VAR i:longint;
+  begin
+    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language then exit(lowercase(copy(fileTypeMeta[i].extension,2,10)));
+    result:='';
   end;
 
 {$endif}

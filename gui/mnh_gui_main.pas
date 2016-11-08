@@ -17,7 +17,7 @@ USES
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
-  LazUTF8, mnh_tables,  openDemoDialog, mnh_workspaces;
+  LazUTF8, mnh_tables, openDemoDialog, mnh_workspaces;
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -59,6 +59,7 @@ TYPE
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
     MainMenu1:                 TMainMenu;
+    editScriptRoot,
     MenuItem1,
     MenuItem4,
     miCallMain,
@@ -69,6 +70,7 @@ TYPE
     miDebug,
     miDecFontSize,
     miDeclarationEcho,
+    miEditScriptFile,
     miEvaluateNow,
     miExpressionEcho,
     miExpressionResult,
@@ -247,13 +249,14 @@ TYPE
     lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
     lastReportedRunnerInfo:T_runnerStateInfo;
+    editScriptMenuItems:array of TMenuItem;
     PROCEDURE setEditorMode(CONST enable:boolean);
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
-
   public
     editorMeta:array of T_editorMeta;
     PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
+    PROCEDURE updateEditScriptMenu;
   end;
 
 VAR MnhForm: TMnhForm;
@@ -450,10 +453,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     doNotMarkWordBefore:=now;
     doNotCheckFileBefore:=now+ONE_SECOND;
 
-    lastReportedRunnerInfo.message:='';
-    lastReportedRunnerInfo.state:=es_dead;
-    lastReportedRunnerInfo.request:=er_none;
-
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
     assistanceSynEdit.highlighter:=outputHighlighter;
@@ -473,6 +472,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
     mnh_out_adapters.gui_started:=true;
+    setLength(editScriptMenuItems,0);
+
+    runEvaluator.ensureEditScripts;
     updateDebugParts;
   end;
 
@@ -625,6 +627,26 @@ PROCEDURE TMnhForm.enableMenuForLanguage(CONST languageIndex:byte);
     for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=languageIndex then fileTypeMeta[i].menuItem.Checked:=true;
   end;
 
+PROCEDURE TMnhForm.updateEditScriptMenu;
+  VAR i:longint;
+      edits:T_arrayOfString;
+  begin
+    for i:=0 to length(editScriptMenuItems)-1 do begin
+      editScriptRoot.remove(editScriptMenuItems[i]);
+      FreeAndNil(editScriptMenuItems[i]);
+    end;
+    edits:=runEvaluator.getEditScriptNames;
+    {$ifdef debugMode} writeln('Creating edit script menu of ',length(edits),' items'); {$endif}
+    setLength(editScriptMenuItems,length(edits));
+    for i:=0 to length(edits)-1 do begin
+      editScriptMenuItems[i]:=TMenuItem.create(MainMenu1);
+      editScriptMenuItems[i].caption:=edits[i];
+      editScriptMenuItems[i].Tag:=i;
+      editScriptMenuItems[i].OnClick:=@miRunCustomEditScript;
+      editScriptRoot.add(editScriptMenuItems[i]);
+    end;
+  end;
+
 PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
   begin
     makeAndShowDoc(true);
@@ -685,6 +707,23 @@ PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=1;
         MAX_INTERVALL=1000;
+
+  PROCEDURE processEditResult(CONST task:P_editScriptTask; CONST currentlyDebugging:boolean);
+    VAR outIdx:longint;
+        i:longint;
+    begin
+      if (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
+        if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
+                               else outIdx:=task^.inputIdx;
+        editorMeta[outIdx].setLanguage(task^.getOutputLanguage);
+        editorMeta[outIdx].editor.BeginUpdate();
+        editorMeta[outIdx].editor.lines.clear;
+        with P_listLiteral(task^.getOutput)^ do for i:=0 to size-1 do editorMeta[outIdx].editor.lines.append(P_stringLiteral(value(i))^.value);
+        editorMeta[outIdx].editor.EndUpdate;
+      end;
+      for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
+    end;
+
   VAR aid:ansistring;
       flushPerformed:boolean=false;
       canRun:boolean;
@@ -692,21 +731,23 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       currentRunnerInfo:T_runnerStateInfo;
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
+    //progress time:------------------------------------------------------------
+    if inputPageControl.activePageIndex>=0
+    then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
+    else aid:='';
+    case currentRunnerInfo.state of
+      es_running     : StatusBar.SimpleText:='Evaluating...'+aid;
+      es_debugRunning: StatusBar.SimpleText:='Debugging...'+aid;
+      es_debugHalted : StatusBar.SimpleText:='Debugging [HALTED]'+aid;
+      es_editEnsuring,
+      es_editRunning : StatusBar.SimpleText:='Edit script...'+aid;
+      else StatusBar.SimpleText:=currentRunnerInfo.message+aid;
+    end;
+    //------------------------------------------------------------:progress time
+
     if currentRunnerInfo<>lastReportedRunnerInfo then begin
+      {$ifdef debugMode} writeln('States: ',lastReportedRunnerInfo.state,' -> ',currentRunnerInfo.state); {$endif}
       if breakPointHandlingPending then handleBreak;
-      lastReportedRunnerInfo:=currentRunnerInfo;
-      //progress time:------------------------------------------------------------
-      if inputPageControl.activePageIndex>=0
-      then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex].editor.CaretX)
-      else aid:='';
-      case currentRunnerInfo.state of
-        es_running     : StatusBar.SimpleText:='Evaluating...'+aid;
-        es_debugRunning: StatusBar.SimpleText:='Debugging...'+aid;
-        es_debugHalted : StatusBar.SimpleText:='Debugging [HALTED]'+aid;
-        es_editRunning : StatusBar.SimpleText:='Edit script...'+aid;
-        else StatusBar.SimpleText:=currentRunnerInfo.message+aid;
-      end;
-      //------------------------------------------------------------:progress time
       //Halt/Run enabled states:--------------------------------------------------
       miHaltEvalutaion.enabled:=(currentRunnerInfo.state in C_runningStates);
       canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
@@ -715,6 +756,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         miCallMain.enabled:=canRun;
       end;
       //--------------------------------------------------:Halt/Run enabled states
+      lastReportedRunnerInfo:=currentRunnerInfo;
+    end;
+
+    if currentRunnerInfo.hasPendingEditResult then begin
+      processEditResult(runEvaluator.getCurrentEdit,currentRunnerInfo.state in [es_debugHalted,es_debugRunning]);
+      runEvaluator.freeCurrentEdit;
+      currentRunnerInfo.hasPendingEditResult:=false;
     end;
 
     if showing then begin
