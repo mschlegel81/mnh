@@ -716,10 +716,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
                                else outIdx:=task^.inputIdx;
         editorMeta[outIdx].setLanguage(task^.getOutputLanguage);
-        editorMeta[outIdx].editor.BeginUpdate();
-        editorMeta[outIdx].editor.lines.clear;
-        with P_listLiteral(task^.getOutput)^ do for i:=0 to size-1 do editorMeta[outIdx].editor.lines.append(P_stringLiteral(value(i))^.value);
-        editorMeta[outIdx].editor.EndUpdate;
+        editorMeta[outIdx].updateContentAfterEditScript(P_listLiteral(task^.getOutput));
       end;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
     end;

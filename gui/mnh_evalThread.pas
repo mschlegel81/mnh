@@ -213,7 +213,7 @@ FUNCTION main(p:pointer):ptrint;
         new(editScriptPackage,create(nil));
         editScriptPackage^.setSourcePath(editScriptFileName);
       end else if not(editScriptPackage^.getCodeProvider^.fileHasChanged) then exit;
-      for script in editScriptList do dispose(Script,destroy);
+      for script in editScriptList do dispose(script,destroy);
       setLength(editScriptList,0);
       {$ifdef debugMode} writeln('Loading edit script package: ',editScriptPackage^.getPath); {$endif}
       editScriptPackage^.getCodeProvider^.load;
