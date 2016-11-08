@@ -230,7 +230,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string);
   VAR metaIdx:longint;
       ext:string;
   begin
-    ext:=uppercase(copy(extensionWithoutDot,2,10));
+    ext:='.'+uppercase(extensionWithoutDot);
     for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
       language:=fileTypeMeta[metaIdx].language;
       if fileTypeMeta[metaIdx].highlighter=nil
