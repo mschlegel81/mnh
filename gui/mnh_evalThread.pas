@@ -76,7 +76,7 @@ TYPE
       context:T_evaluationContext;
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE haltEvaluation;
+      PROCEDURE haltEvaluation; virtual;
 
       FUNCTION evaluationRunning: boolean;
       FUNCTION evaluationRunningOrPending: boolean;
@@ -97,6 +97,7 @@ TYPE
       editScriptPackage:P_package;
       editScriptList:array of P_editScriptMeta;
       currentEdit:P_editScriptTask;
+      editAdapters:P_adapters;
 
       FUNCTION parametersForMainCall:T_arrayOfString;
       PROCEDURE preEval; virtual;
@@ -113,7 +114,7 @@ TYPE
 
       FUNCTION getCurrentEdit:P_editScriptTask;
       PROCEDURE freeCurrentEdit;
-
+      PROCEDURE haltEvaluation; virtual;
       FUNCTION getEditScriptNames:T_arrayOfString;
   end;
 
@@ -170,44 +171,40 @@ FUNCTION main(p:pointer):ptrint;
   VAR sleepTime:longint=0;
       r:T_evalRequest;
 
-  PROCEDURE setupEdit(OUT collector:P_collectingOutAdapter; OUT context:T_evaluationContext);
-    VAR adapters:P_adapters;
+  PROCEDURE setupEdit(OUT context:T_evaluationContext);
     begin
-      new(collector,create(at_sandboxAdapter,C_defaultOutputBehavior_fileMode));
-      new(adapters,create);
-      adapters^.addOutAdapter(collector,true);
-      context.createContext(adapters,ct_normal);
+      P_runEvaluator(p)^.editAdapters^.clearAll;
+      context.createContext(P_runEvaluator(p)^.editAdapters,ct_normal);
       context.removeOption(cp_timing);
       context.removeOption(cp_spawnWorker);
       context.removeOption(cp_createDetachedTask);
       context.resetForEvaluation(nil);
     end;
 
-  PROCEDURE doneEdit(VAR collector:P_collectingOutAdapter; VAR context:T_evaluationContext);
+  PROCEDURE doneEdit(VAR context:T_evaluationContext);
     VAR i:longint;
-        adapters:P_adapters;
+        collector:P_collectingOutAdapter;
     begin
       context.afterEvaluation;
       if (context.adapters^.hasMessageOfType[mt_printline]) or
          (context.adapters^.hasMessageOfType[mt_el3_evalError]) or
          (context.adapters^.hasMessageOfType[mt_el3_userDefined]) or
          (context.adapters^.hasMessageOfType[mt_el4_parsingError]) or
-         (context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
+         (context.adapters^.hasMessageOfType[mt_el5_systemError]) or
+         (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]) then begin
+        collector:=P_collectingOutAdapter(context.adapters^.getAdapter(0));
         P_runEvaluator(p)^.context.adapters^.clearPrint;
         for i:=0 to length(collector^.storedMessages)-1 do P_runEvaluator(p)^.context.adapters^.raiseCustomMessage(collector^.storedMessages[i]);
       end;
-      adapters:=context.adapters;
       context.destroy;
-      dispose(adapters,destroy);
     end;
 
   PROCEDURE ensureEditScripts_impl();
     VAR subRule:P_subrule;
         script:P_editScriptMeta;
         editContext:T_evaluationContext;
-        collector:P_collectingOutAdapter;
     begin with P_runEvaluator(p)^ do begin
-      setupEdit(collector,editContext);
+      setupEdit(editContext);
       if editScriptPackage=nil then begin
         {$ifdef debugMode} writeln('Creating edit script package'); {$endif}
         new(editScriptPackage,create(nil));
@@ -226,16 +223,15 @@ FUNCTION main(p:pointer):ptrint;
           editScriptList[length(editScriptList)-1]:=script;
         end;
       end;
-      doneEdit(collector,editContext);
+      doneEdit(editContext);
     end; end;
 
   PROCEDURE executeEditScript_impl;
     VAR editContext:T_evaluationContext;
-        collector:P_collectingOutAdapter;
     begin
-      setupEdit(collector,editContext);
+      setupEdit(editContext);
       P_runEvaluator(p)^.currentEdit^.execute(editContext);
-      doneEdit(collector,editContext);
+      doneEdit(editContext);
     end;
 
   begin with P_runEvaluator(p)^ do begin
@@ -358,11 +354,15 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
   end;
 
 CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
+  VAR collector:P_collectingOutAdapter;
   begin
     inherited create(adapters,threadFunc);
     editScriptPackage:=nil;
     setLength(editScriptList,0);
     currentEdit:=nil;
+    new(editAdapters,create);
+    new(collector,create(at_sandboxAdapter,C_defaultOutputBehavior_fileMode));
+    adapters^.addOutAdapter(collector,true);
     endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   end;
 
@@ -401,6 +401,7 @@ DESTRUCTOR T_runEvaluator.destroy;
     if editScriptPackage<>nil then dispose(editScriptPackage,destroy);
     for i:=0 to length(editScriptList)-1 do dispose(editScriptList[i],destroy);
     setLength(editScriptList,0);
+    dispose(editAdapters,destroy);
     inherited destroy;
     setLength(mainParameters,0);
   end;
@@ -423,6 +424,14 @@ PROCEDURE T_evaluator.haltEvaluation;
       system.enterCriticalSection(cs);
     end;
     request:=er_none;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_runEvaluator.haltEvaluation;
+  begin
+    system.enterCriticalSection(cs);
+    editAdapters^.haltEvaluation;
+    inherited haltEvaluation;
     system.leaveCriticalSection(cs);
   end;
 
