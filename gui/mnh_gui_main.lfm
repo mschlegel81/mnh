@@ -2548,7 +2548,9 @@ object MnhForm: TMnhForm
           OnClick = miLangMnhClick
         end
         object miLangTxt: TMenuItem
+          AutoCheck = True
           Caption = 'Plain text'
+          RadioItem = True
           OnClick = miLangMnhClick
         end
         object miLangPython: TMenuItem
@@ -2627,6 +2629,14 @@ object MnhForm: TMnhForm
           Caption = 'Edit script file'
           OnClick = miEditScriptFileClick
         end
+      end
+    end
+    object miUtilityScriptRoot: TMenuItem
+      Caption = '&Utility scripts'
+      OnClick = miUtilityScriptRootClick
+      object miEditUtilityScriptFile: TMenuItem
+        Caption = 'Edit script File'
+        OnClick = miEditUtilityScriptFileClick
       end
     end
   end

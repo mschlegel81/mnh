@@ -148,6 +148,8 @@ TYPE
     subMenuHelp,
     subMenuSearch,
     submenuEditorAppearance:   TMenuItem;
+    miEditUtilityScriptFile: TMenuItem;
+    miUtilityScriptRoot: TMenuItem;
     miLangTxt: TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
@@ -252,7 +254,7 @@ TYPE
     lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
     lastReportedRunnerInfo:T_runnerStateInfo;
-    editScriptMenuItems:array of TMenuItem;
+    editScriptMenuItems,utilityScriptMenuItems:array of TMenuItem;
     PROCEDURE setEditorMode(CONST enable:boolean);
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
@@ -260,6 +262,7 @@ TYPE
     editorMeta:array of T_editorMeta;
     PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
     PROCEDURE updateEditScriptMenu;
+    PROCEDURE updateUtilityScriptMenu;
   end;
 
 VAR MnhForm: TMnhForm;
@@ -293,10 +296,15 @@ FUNCTION editors_impl intFuncSignature;
 
 FUNCTION editorContent_impl intFuncSignature;
   VAR meta:T_editorMeta;
+      i,k:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      for meta in MnhForm.editorMeta do if meta.sheet.tabVisible then exit(newStringLiteral(meta.editor.text));
+      for meta in MnhForm.editorMeta do if meta.sheet.tabVisible and (meta.pseudoName()=str0^.value) then begin
+        result:=newListLiteral(meta.editor.lines.count);
+        for i:=0 to meta.editor.lines.count-1 do lResult^.appendString(meta.editor.lines[i]);
+        exit(result);
+      end;
       result:=newVoidLiteral;
     end;
   end;
@@ -353,7 +361,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     PROCEDURE addFileType(CONST extension:string; CONST language:byte; CONST highlighter:TSynCustomHighlighter; CONST menuItem:TMenuItem);
       begin
         setLength(fileTypeMeta,length(fileTypeMeta)+1);
-        fileTypeMeta[length(fileTypeMeta)-1].extension  :='.'+uppercase(extension);
+        fileTypeMeta[length(fileTypeMeta)-1].extension  :=uppercase(extension);
         fileTypeMeta[length(fileTypeMeta)-1].language   :=language;
         fileTypeMeta[length(fileTypeMeta)-1].highlighter:=highlighter;
         fileTypeMeta[length(fileTypeMeta)-1].menuItem   :=menuItem;
@@ -489,6 +497,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     {$endif}
     mnh_out_adapters.gui_started:=true;
     setLength(editScriptMenuItems,0);
+    setLength(utilityScriptMenuItems,0);
 
     runEvaluator.ensureEditScripts;
     updateDebugParts;
@@ -663,6 +672,26 @@ PROCEDURE TMnhForm.updateEditScriptMenu;
     end;
   end;
 
+PROCEDURE TMnhForm.updateUtilityScriptMenu;
+  VAR i:longint;
+      edits:T_arrayOfString;
+  begin
+    for i:=0 to length(utilityScriptMenuItems)-1 do begin
+      miUtilityScriptRoot.remove(utilityScriptMenuItems[i]);
+      FreeAndNil(utilityScriptMenuItems[i]);
+    end;
+    edits:=runEvaluator.getUtilScriptNames;
+    {$ifdef debugMode} writeln('Creating edit script menu of ',length(edits),' items'); {$endif}
+    setLength(utilityScriptMenuItems,length(edits));
+    for i:=0 to length(edits)-1 do begin
+      utilityScriptMenuItems[i]:=TMenuItem.create(MainMenu1);
+      utilityScriptMenuItems[i].caption:=edits[i];
+      utilityScriptMenuItems[i].Tag:=i;
+      utilityScriptMenuItems[i].OnClick:=@miRunCustomUtilScript;
+      miUtilityScriptRoot.add(utilityScriptMenuItems[i]);
+    end;
+  end;
+
 PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
   begin
     makeAndShowDoc(true);
@@ -728,10 +757,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     VAR outIdx:longint;
         i:longint;
     begin
-      if (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
+      if (task^.wantOutput) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
         if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
                                else outIdx:=task^.inputIdx;
-        editorMeta[outIdx].setLanguage(task^.getOutputLanguage);
+        editorMeta[outIdx].setLanguage(task^.getOutputLanguage,LANG_TXT);
         editorMeta[outIdx].updateContentAfterEditScript(P_listLiteral(task^.getOutput));
       end;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
