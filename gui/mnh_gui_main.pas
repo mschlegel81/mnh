@@ -47,6 +47,7 @@ VAR fileTypeMeta:array of record
 
 TYPE
   {$define includeInterface}
+  {$include guiEditorInterface.inc}
   {$include editorMeta.inc}
   {$include guiOutAdapter.inc}
   {$WARN 5024 OFF}
@@ -272,6 +273,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
     closeGuiFlag:boolean=false;
 {$R *.lfm}
 {$define includeImplementation}
+{$include guiEditorInterface.inc}
 {$include editorMeta.inc}
 {$include guiOutAdapter.inc}
 {$include debuggerLogic.inc}
@@ -300,10 +302,12 @@ FUNCTION editorContent_impl intFuncSignature;
   end;
 
 FUNCTION openInEditor_impl intFuncSignature;
+  VAR task:P_openEditorTask;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-//      MnhForm.FormDropFiles(nil,str0^.value);
+      new(task,create(str0^.value));
+      guiTaskQueue.enqueueTask(task);
       result:=newVoidLiteral;
     end;
   end;
@@ -775,6 +779,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
 
     if showing then begin
+      while guiTaskQueue.executeTask do;
       if not (reEvaluationWithGUIrequired) then begin
         //Form caption:-------------------------------------------------------------
         if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
@@ -909,6 +914,7 @@ PROCEDURE lateInitialization;
   begin
     guiOutAdapter.create;
     guiAdapters.create;
+    guiTaskQueue.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
@@ -925,6 +931,7 @@ PROCEDURE lateInitialization;
 
 PROCEDURE doFinalization;
   begin
+    guiTaskQueue.destroy;
     guiAdapters.destroy;
     guiOutAdapter.destroy;
   end;
