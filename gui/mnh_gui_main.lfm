@@ -2547,6 +2547,10 @@ object MnhForm: TMnhForm
           RadioItem = True
           OnClick = miLangMnhClick
         end
+        object miLangTxt: TMenuItem
+          Caption = 'Plain text'
+          OnClick = miLangMnhClick
+        end
         object miLangPython: TMenuItem
           AutoCheck = True
           Caption = 'Python'

@@ -37,6 +37,7 @@ CONST LANG_MNH   = 0;
       LANG_VB    =14;
       LANG_BAT   =15;
       LANG_XML   =16;
+      LANG_TXT   =17;
 
 VAR fileTypeMeta:array of record
       extension:string;
@@ -47,6 +48,7 @@ VAR fileTypeMeta:array of record
 
 TYPE
   {$define includeInterface}
+  {$include guiEditorInterface.inc}
   {$include editorMeta.inc}
   {$include guiOutAdapter.inc}
   {$WARN 5024 OFF}
@@ -147,6 +149,7 @@ TYPE
     subMenuHelp,
     subMenuSearch,
     submenuEditorAppearance:   TMenuItem;
+    miLangTxt: TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -271,6 +274,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
     closeGuiFlag:boolean=false;
 {$R *.lfm}
 {$define includeImplementation}
+{$include guiEditorInterface.inc}
 {$include editorMeta.inc}
 {$include guiOutAdapter.inc}
 {$include debuggerLogic.inc}
@@ -294,6 +298,17 @@ FUNCTION editorContent_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       for meta in MnhForm.editorMeta do if meta.sheet.tabVisible then exit(newStringLiteral(meta.editor.text));
+      result:=newVoidLiteral;
+    end;
+  end;
+
+FUNCTION openInEditor_impl intFuncSignature;
+  VAR task:P_openEditorTask;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      new(task,create(str0^.value));
+      guiTaskQueue.enqueueTask(task);
       result:=newVoidLiteral;
     end;
   end;
@@ -367,6 +382,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       addFileType('vb',LANG_VB,SynVBSyn1,miLangVb);
       addFileType('bat',LANG_BAT,SynBatSyn1,miLangBat);
       addFileType('xml',LANG_XML,SynXMLSyn1,miLangXml);
+      addFileType('txt',LANG_TXT,nil,miLangTxt);
     end;
 
   PROCEDURE initHighlighters;
@@ -764,6 +780,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
 
     if showing then begin
+      while guiTaskQueue.executeTask do;
       if not (reEvaluationWithGUIrequired) then begin
         //Form caption:-------------------------------------------------------------
         if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
@@ -866,20 +883,49 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
     subMenuCode.visible:=enable;
 
     outputPageControl.ShowTabs:=enable;
+
+    miExpressionEcho  .enabled:=enable;
+    miExpressionResult.enabled:=enable;
+    miDeclarationEcho .enabled:=enable;
+    miWrapEcho        .enabled:=enable;
+    miTimingInfo      .enabled:=enable;
+    MenuItem4         .enabled:=enable;
+    MenuItem1         .enabled:=enable;
+
+    miExpressionEcho  .visible:=enable;
+    miExpressionResult.visible:=enable;
+    miDeclarationEcho .visible:=enable;
+    miWrapEcho        .visible:=enable;
+    miTimingInfo      .visible:=enable;
+    MenuItem4         .visible:=enable;
+    MenuItem1         .visible:=enable;
+
+    if enable then begin
+      registerRule(EDITORS_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
+      registerRule(EDITORS_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+      registerRule(EDITORS_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string)//opens an editor tab for the given file');
+    end else begin
+      unregisterRule(EDITORS_NAMESPACE,'editors');
+      unregisterRule(EDITORS_NAMESPACE,'editorContent');
+      unregisterRule(EDITORS_NAMESPACE,'openInEditor');
+    end;
   end;
 
 PROCEDURE lateInitialization;
   begin
     guiOutAdapter.create;
     guiAdapters.create;
+    guiTaskQueue.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
     {$ifdef imig}
     mnh_imig_form.guiAdapters:=@guiAdapters;
     {$endif}
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(EDITORS_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
+    registerRule(EDITORS_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(EDITORS_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string)//opens an editor tab for the given file');
+
     SynHighlighterMnh.initLists;
 
     mnh_evalThread.initUnit(@guiAdapters);
@@ -888,6 +934,7 @@ PROCEDURE lateInitialization;
 
 PROCEDURE doFinalization;
   begin
+    guiTaskQueue.destroy;
     guiAdapters.destroy;
     guiOutAdapter.destroy;
   end;

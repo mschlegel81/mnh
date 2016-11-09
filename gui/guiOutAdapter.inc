@@ -53,7 +53,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
-       {$ifdef debugMode}writeln(stdErr,'Already flushing!');{$endif}
+      {$ifdef debugMode}writeln(stdErr,'Already flushing!');{$endif}
       system.leaveCriticalSection(cs);
       exit(false);
     end;
@@ -92,9 +92,9 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           end;
         mt_endOfEvaluation: begin
           for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].doneDebugging;
-          MnhForm.updateDebugParts;
+          if not(reEvaluationWithGUIrequired) then MnhForm.updateDebugParts;
         end;
-        mt_reloadRequired:  for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
+        mt_reloadRequired: if not(reEvaluationWithGUIrequired) then for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,simpleMessage);

@@ -28,6 +28,7 @@ VAR
   print_cs        :system.TRTLCriticalSection;
 
 FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
@@ -42,6 +43,13 @@ FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
+  end;
+
+PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
+  begin
+    if not(fullNameOnly) then
+    intrinsicRuleMap.dropKey(                                                  name);
+    intrinsicRuleMap.dropKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name);
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST typ: T_literalType; CONST messageTail: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
