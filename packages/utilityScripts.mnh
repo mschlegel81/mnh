@@ -1,0 +1,25 @@
+//@utility=diff
+//@newEdit
+//@language=diff
+editDiff(editorFile:string)->begin
+  local B:=editorContent(editorFile);
+  local compareWith:=ask("Pick tab to compare with",minus(editors,[editorFile]).sort);
+  local A:=editorContent(compareWith);
+
+  local edit:=diff(A,B)['edit'].each(e,e[0]='.' ? [' ',e[1]+1,e[2]+1,A[e[1]]] :
+                                       e[0]='+' ? ['+',e[1]+1,e[2]+1,B[e[2]]] :
+                                       e[0]='M' ? ['-',e[1]+1,e[2]+1,A[e[1]]] :
+                                       e[0]='-' ? ['-',e[1]+1,e[2]+1,A[e[1]]] : void,
+                                       e[0]='M' ? ['+',e[1]+1,e[2]+1,B[e[2]]] : void);
+
+  local runs:=edit.each(e,e[0]<>' ' ? [index-2..index+2] : void,|).unique.each(i,i>=edit.size or i<0 ? void : i);
+  runs:=runs.each(i,index=0           OR runs[index-1]<i-1 ? i :
+                    index=runs.size-1 OR runs[index+1]>i+1 ? i : void);
+  runs:=runs.each(i,(index and 1)=0 ? [i,runs[index+1]]:void);
+  ['--- '&compareWith,'+++ '&editorFile]|
+  runs.each(run,
+      '',
+      join(['@@ -',edit[run[0]][1],',',edit[run[1]][1]-edit[run[0]][1],
+              ' +',edit[run[0]][2],',',edit[run[1]][2]-edit[run[0]][2]]),
+      edit[[run[0]..run[1]]].each(e,(e[0]='.' ? '  ' : e[0]&' ')&e[3]),|);
+end;

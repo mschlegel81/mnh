@@ -296,7 +296,7 @@ FUNCTION editors_impl intFuncSignature;
 
 FUNCTION editorContent_impl intFuncSignature;
   VAR meta:T_editorMeta;
-      i,k:longint;
+      i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
@@ -762,6 +762,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
                                else outIdx:=task^.inputIdx;
         editorMeta[outIdx].setLanguage(task^.getOutputLanguage,LANG_TXT);
         editorMeta[outIdx].updateContentAfterEditScript(P_listLiteral(task^.getOutput));
+        inputPageControl.ActivePageIndex:=outIdx;
       end;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
     end;

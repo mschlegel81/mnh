@@ -45,7 +45,7 @@ TYPE
       output:P_literal;
       outputLanguage:string;
       done  :boolean;
-      CONSTRUCTOR create(CONST script_:P_editScriptMeta; CONST inputIndex:longint; CONST input_:TStrings; CONST inputLang:string; CONST editScriptTask:boolean);
+      CONSTRUCTOR create(CONST script_:P_editScriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string; CONST editScriptTask:boolean);
       DESTRUCTOR destroy;
       PROCEDURE execute(VAR context:T_evaluationContext);
     public
@@ -115,7 +115,7 @@ TYPE
       PROCEDURE callMain         (CONST path:ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
       PROCEDURE ensureEditScripts();
       PROCEDURE runEditScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string);
-      PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string);
+      PROCEDURE runUtilScript    (CONST scriptIndex:longint;  CONST editorFileName:string; CONST inputLang:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
 
       FUNCTION getCurrentEdit:P_editScriptTask;
@@ -331,7 +331,7 @@ FUNCTION T_editScriptMeta.getName: string;
     result:=name;
   end;
 
-CONSTRUCTOR T_editScriptTask.create(CONST script_:P_editScriptMeta; CONST inputIndex:longint; CONST input_:TStrings; CONST inputLang:string; CONST editScriptTask:boolean);
+CONSTRUCTOR T_editScriptTask.create(CONST script_:P_editScriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string; CONST editScriptTask:boolean);
   VAR i:longint;
   begin
     script:=script_;
@@ -340,7 +340,7 @@ CONSTRUCTOR T_editScriptTask.create(CONST script_:P_editScriptMeta; CONST inputI
     if isEditScriptTask then begin
       input:=newListLiteral(input_.count);
       for i:=0 to input_.count-1 do P_listLiteral(input)^.appendString(input_[i]);
-    end else input:=newIntLiteral(inputIndex);
+    end else input:=newStringLiteral(inputEditFile);
     output:=nil;
     outputLanguage:=script^.outputLanguage;
     if outputLanguage='' then outputLanguage:=inputLang;
@@ -562,12 +562,12 @@ PROCEDURE T_runEvaluator.runEditScript(CONST scriptIndex,editorIndex:longint; CO
       exit;
     end;
     request:=er_runEditScript;
-    new(currentEdit,create(editScriptList[scriptIndex],editorIndex,L,inputLang,true));
+    new(currentEdit,create(editScriptList[scriptIndex],editorIndex,'',L,inputLang,true));
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string);
+PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex:longint; CONST editorFileName:string; CONST inputLang:string);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) or (currentEdit<>nil) then begin
@@ -575,7 +575,7 @@ PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex,editorIndex:longint; CO
       exit;
     end;
     request:=er_runEditScript;
-    new(currentEdit,create(utilityScriptList[scriptIndex],editorIndex,L,inputLang,false));
+    new(currentEdit,create(utilityScriptList[scriptIndex],-1,editorFileName,nil,inputLang,false));
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
