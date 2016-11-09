@@ -868,6 +868,23 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
     subMenuCode.visible:=enable;
 
     outputPageControl.ShowTabs:=enable;
+
+    miExpressionEcho  .enabled:=enable;
+    miExpressionResult.enabled:=enable;
+    miDeclarationEcho .enabled:=enable;
+    miWrapEcho        .enabled:=enable;
+    miTimingInfo      .enabled:=enable;
+    MenuItem4         .enabled:=enable;
+    MenuItem1         .enabled:=enable;
+
+    miExpressionEcho  .visible:=enable;
+    miExpressionResult.visible:=enable;
+    miDeclarationEcho .visible:=enable;
+    miWrapEcho        .visible:=enable;
+    miTimingInfo      .visible:=enable;
+    MenuItem4         .visible:=enable;
+    MenuItem1         .visible:=enable;
+
   end;
 
 PROCEDURE lateInitialization;
