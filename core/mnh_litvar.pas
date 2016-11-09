@@ -2735,6 +2735,7 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_listLiteral;
     for i:=0 to length(kvl)-1 do begin
       result^.dat[i]:=kvl[i].key;
       result^.dat[i]^.rereference;
+      result^.modifyType(result^.dat[i]);
     end;
     setLength(kvl,0);
   end;
