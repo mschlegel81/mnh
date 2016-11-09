@@ -324,6 +324,7 @@ DESTRUCTOR T_editScriptTask.destroy;
 PROCEDURE T_editScriptTask.execute(VAR context:T_evaluationContext);
   begin
     output:=script^.editRule^.directEvaluateUnary(input,script^.editRule^.getLocation,context,0);
+    disposeLiteral(input);
     done:=true;
   end;
 
