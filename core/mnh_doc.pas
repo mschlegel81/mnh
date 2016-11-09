@@ -380,7 +380,7 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
     end;
   VAR i:longint;
   begin
-    result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
+    result:='<h4><br><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
     if length(example)>0 then begin
       result:=result+'<br>Examples:<code>';
       for i:=0 to length(example)-1 do result:=result+LineEnding+example[i];
@@ -485,7 +485,7 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
       writeln(outFile, '</div><br>');
 
       for n:=low(T_namespace) to high(T_namespace) do begin
-        writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
+        writeln(outFile,'<div align="right"><hr></div><h3><br><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
         for i:=0 to length(builtInDoc[n])-1 do writeln(outFile, '<a href="#', builtInDoc[n][i]^.id, '">', builtInDoc[n][i]^.id, '</a> &nbsp; ');
         for i:=0 to length(builtInDoc[n])-1 do write(outFile,builtInDoc[n][i]^.getHtml);
       end;

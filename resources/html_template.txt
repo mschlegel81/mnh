@@ -1,7 +1,7 @@
 <!--file style.css-->
 *{margin: 0; padding: 0;}
 html, body, .Container {
-  font-family: Georgia, "Times New Roman",Times, serif;
+  font-family: Verdana, Geneva, sans-serif;
   color: black;
   background-color: #F2F2F2;
   height: 100%;}
@@ -30,6 +30,7 @@ table {display: inline-table}
 .Wrapper > div{height: 100%;}
 .navContent{background-color: #DDDDDD; float: left; margin-right: 10px;}
 .docContent{background-color: #F2F2F2; overflow: auto;}
+h3{margin-before: 5em; margin-after: 5em;}
 <!--file index.html-->
 <!--begin commonHead-->
 <html><head><title>MNH 5</title><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><link rel="stylesheet" href="style.css" type="text/css"></head>
@@ -46,6 +47,7 @@ table {display: inline-table}
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
   <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>  
   </ul>
 </div>
 <div class="docContent">
@@ -54,8 +56,7 @@ MNH5 comes in 2 flavours (for each compilation target):<ul>
   <li> <b>mnh_light</b>: a slimmed down console version without plotting support (for the cases where size matters)
 </ul>
 
-You can just start an executable of any flavour and start typing. Most of the inputs will result in understandable outputs (the exception being infinite loops,
-fork bombs and other "pathologic" examples).<br>
+Most of the inputs will result in understandable outputs (the exception being infinite loops, fork bombs and other "pathologic" examples).<br>
 <br>
 The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
 <!--mnh-->
@@ -85,7 +86,7 @@ f(x)->sin(x);
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
-  <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li> 
 <ul>
 <li><h4><a href="#usage">Usage</a></h4></li>
 <ul>
@@ -93,9 +94,11 @@ f(x)->sin(x);
   <li><h5><a href="#importing">Importing a package</a></h5></li>
   <li><h5><a href="#executables">Executable packages</a></h5></li>
   <li><h5><a href="#comments">Comments</a></h5></li>
+  <li><h5><a href="#attributes">Attributes</a></h5></li>
 </ul>
 <li><h4><a href="#defined">Currently defined packages</a></h4></li>
 </ul>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>  
   </ul>
 </div>
 <div class="docContent">
@@ -104,7 +107,7 @@ Packages form the major means to structure your implementation so that parts of 
 Each package is a collection of functions and expressions; each input to MNH is a package.<br>
 Expressions in a package will only be executed in interactive mode.<br>
 For details on how to define functions, see <a href="functions.html">MNH5 - Functions</a><br>
-<h4><a name="defining">Defining a package</a></h4>
+<h4><br><a name="defining">Defining a package</a></h4>
 To define a package, just create a file with the extension <code>.mnh</code> (or even simpler: start typing in interactive mode). The following restrictions apply:
 <ul>
   <li>The filenmae (without extension) should be a valid identifier, i.e. it should start with a letter.<br>This is because the filename wihtout extension will be interpreted as the package-identifier.
@@ -135,15 +138,25 @@ Executable packages can be executed from the command line. If called as<code>
 </code>the nullary main function will be executed. If additional parameters are given, the respective n-ary main rule will be executed, e.g.<code>
   mnh </code><i>packageName</i><code>.mnh </code><i>parameter_1<code> </code> parameter_2</i><br>
 All input parameters will be passed as strings; consequently they must be converted to other types (e.g. using <code>softCast</code>) as needed.<br>
-
+<br>
 <h4><a name="comments">Comments</a></h4>
 A comment is any string starting with <code>//</code> and ending with the following line break.<br>
 A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments are always associated with the (sub-)rule following the comment.
 They will be shown here (if the page is regenerated).<br>
 Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
 <code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
-
-<h3><a name="defined">Currently defined packages</a></h3>
+<br>
+<h4><a name="attributes">Attributes</a></h4>
+An attribute is a comment starting with <code>//@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via inspection.<br>
+Attributes are key-value pairs where the value can be omitted. They generally take the form:<code>
+<!--mnh-->
+  //@key=value
+  //@keyWithoutValue 
+<!--end-->
+</code>
+Attributes are also used to configure edit scripts, see <a href="gui.html">GUI features</a>.
+<br>
+<h3><br><a name="defined">Currently defined packages</a></h3>
 <div class="red">Open the documentation from the GUI via Help -> "Open Documentation with packages" to make sure these are up to date.</div>
 <!--USERPKG-->
 </div>
@@ -177,6 +190,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
   <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>    
 </ul>
 </div>
 <div class="docContent">
@@ -214,7 +228,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
 <tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td></tr>
 </table>
 
-<h3><a name="scalarOps"> Scalar operators<a></h3>
+<h3><br><a name="scalarOps"> Scalar operators<a></h3>
 Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
 All of those operators apart from <code>==</code>, <code>AND</code>, <code>OR</code> and <code>orElse</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
 [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span>  <span class="identifier">y</span>          <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="operator">...</span>]
@@ -239,7 +253,7 @@ For expression-literals, all operators will be used to expand the expression to 
 {<span class="identifier">expr</span>} <span class="operator">o</span> <span class="identifier">X</span> <span class="operator">-></span> {(<span class="identifier">expr</span> <span class="operator">o</span> <span class="identifier">X</span>)}
 </code>
 
-<h4><a name="#arithOps"> Arithmetic operators</a></h4>
+<h4><br><a name="#arithOps"> Arithmetic operators</a></h4>
 <table border="0">
 <tr><td><code>+</code></td><td><h5>Addition</h5></td></tr><tr><td></td><td>
 This is the common addition operator, which also doubles as an unary "neutral" operator.<br> As in many modern languages, the operator is overloaded for string concatenation.
@@ -319,7 +333,7 @@ out> -3
 </td></tr>
 </table>
 
-<h4><a name="compOps"> Comparators</a></h4>
+<h4><br><a name="compOps"> Comparators</a></h4>
 Comparators are implemented, so that they return a boolean or a list of booleans for most cases, the only exception being comparison of lists of incompatible sizes.<br>
 Consequently all comparators <code>o</code> must be read as<code>
 x o y -> [x and y are naively comparable] and (x o y)</code><br>
@@ -404,7 +418,7 @@ Returns a boolean or a list of booleans.<br>Returns true if the comparands are c
 Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand or both comparands are equal.</td></tr>
 </table>
 
-<h4><a name="logOps">Logical operators</a></h4>
+<h4><br><a name="logOps">Logical operators</a></h4>
 <table border="0">
 <tr><td><code>and</code></td><td><h5>Logical or bitwise and</h5></td></tr><tr><td></td><td>
 Examples: <code>
@@ -477,7 +491,7 @@ Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</cod
 </td></tr>
 </table>
 
-<h4><a name="stringOps">String concatenation</a></h4>
+<h4><br><a name="stringOps">String concatenation</a></h4>
 The <code>&</code>-operator for string concatenation (inspired from Excel) was introduced as the preferred method to concatenate strings.<br>
 In contrast to the <code>+</code> operator it allows for concatenation of any literals to a string.<br>
 Examples:<code>
@@ -489,7 +503,7 @@ Examples:<code>
 <!--end-->
 </code>
 
-<h4><a name="orElseOp">orElse</a></h4>
+<h4><br><a name="orElseOp">orElse</a></h4>
 The <code>orElse</code>-operator is intended for cases where the left-hand-side operand may be <code>void</code>, e.g. <code>
 <!--mnh-->
    in> sum(L:numericList)->L.agg(+) orElse 0;
@@ -513,7 +527,7 @@ The <code>orElse</code>-operator is intended for cases where the left-hand-side 
 This is a lazy operator, i.e. the right-hand-side is evaluated only if necessary.<br>
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first non-<code>void</code> element is encountered.
 
-<h3><a name="listOps">List operators</a></h3>
+<h3><br><a name="listOps">List operators</a></h3>
 <table border="0">
 <tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td>
 The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
@@ -565,14 +579,14 @@ This can also be applied to implement recursive variadic functions. The followin
 </td></tr>
 </table>
 
-<h3><a name="iifOps"> The ternary inline-if operator</a></h3>
+<h3><br><a name="iifOps"> The ternary inline-if operator</a></h3>
 The ternary inline-if operator is inspired by C and it's successors.<br>Syntax is <code>B ? X : Y</code>, where <code>B</code> is a boolean scalar, <code>X</code> is the result if <code>B</code> evaluates to true and <code>Y</code> is
 the result if <code>B</code> evaluates to false.<br>
 Note that <code>B</code> must be a boolean scalar; boolean lists are not allowed.<br>
 Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</code> is true and <code>Y</code> is evaluated only if <code>B</code> is false.
 
-<h3><a name="typecheckOps"> Type check operators</a></h3>
-Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match.
+<h3><br><a name="typecheckOps"> Type check operators</a></h3>
+Type check operators can be employed to test a value or an expression for it's type; they are only allowed in declaration patterns.
 <br>The following type checks are defined:<code>
 <!--mnh-->
   :scalar
@@ -619,7 +633,7 @@ Examples: <code>
 <!--end-->
 </code>
 
-<h3><a name="assignmentOps"> Assignment operators</a></h3>
+<h3><br><a name="assignmentOps"> Assignment operators</a></h3>
 For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs with side effects.
 <br>For details on user defined functions see <a href="functions.html">MNH5 - Function definitions</a>.<br>
 <table border="0">
@@ -636,7 +650,7 @@ It can also be used to assign a value to a mutable rule or a block-local variabl
 </code> </td></tr>
 </table>
 
-<h3><a name="cStyleOps"> C-Style operators</a></h3>
+<h3><br><a name="cStyleOps"> C-Style operators</a></h3>
 <i>C-Style</i> operators assign a new value to the right-hand-side.<br>
 The following C-Style operators are supported: <ul>
   <li> <code>+=</code> Adds the right-hand-side to the left-hand-side and returns the new value. </li>
@@ -681,6 +695,7 @@ the latter 4 additionally allow for specific optimizations, making e.g. the oper
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
   <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -755,7 +770,7 @@ a local function or variable (so <code>a.b</code> is interpreted as <code>b(a)</
 </li>
 </ul>
 
-<h3><a name="declarations">Declarations</a></h3>
+<h3><br><a name="declarations">Declarations</a></h3>
 A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
 The declaration may be preceded by <a href="#modifiers">modifiers</a>, the pattern may be empty (producing a nullary function).<br>
 <i>Patterns</i> form a means for case distinction. They may also serve to make the function "somewhat typesafe". The most primitive pattern element is just an identifier, without any restrictions:<code>
@@ -771,7 +786,7 @@ Patterns may consist of any number of elements:<code>
 </code>
 Please have a look at <a href="#restrictions">Parameter restrictions</a> for more sophisticated patterns.
 
-<h3><a name="assignments">Assignments</a></h3>
+<h3><br><a name="assignments">Assignments</a></h3>
 An assignment follows the prototype <i>ruleId(pattern)</i><code>:=</code><i>ruleBody</i>.<br>
 As you can see it is identical to the declaration prototype apart from the assignment operator. Behaviour is only almost identical: An assignment is evaluated "<i>on declaration</i>", while a declaration is evaluated only when it
 is called. This is important when you take side effects into account. A reasonable example would be:<code>
@@ -785,7 +800,7 @@ A less reasonable example would be the following declaration - a "random" number
   constantRandom:=random;
 <!--end-->
 </code>
-<h3><a name="restrictions">Parameter restrictions</a></h3>
+<h3><br><a name="restrictions">Parameter restrictions</a></h3>
 Parameter restrictions fall in three categories:<ul>
   <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>) or custom type checks (see <a href="#typeMod">type</a>)
   <li> Comparison with a literal (see <a href="operators.html#compOps"> Comparators</a>)
@@ -816,7 +831,7 @@ There is a shorthand for tests on equality: the first comparand can be omitted. 
 <!--end-->
 </code>
 
-<h3><a name="variadic">Variadic functions</a></h3>
+<h3><br><a name="variadic">Variadic functions</a></h3>
 Variadic functions can be defined using three dots (<code>...</code>) as last parameter in the function head.
 This allows the function to accept any number of additional parameters.<br>
 The trailing anonymous parameters can be referenced inside the function body by the pseudo-identifier <code>...</code>, which gives the remaining (anonymous) parameters as a list.
@@ -826,7 +841,7 @@ An example for a variadic recursive function, printing out all parameters in a s
   multiPrint(x,...)->print(x) | multiPrint@...;
 <!--end-->
 </code>
-<h3><a name="beginEnd">Begin-End-Blocks</a></h3>
+<h3><br><a name="beginEnd">Begin-End-Blocks</a></h3>
 
 <i>Begin-End-Blocks</i> are a means to program in a prodedural manner. It looks as follows <code>
   begin
@@ -848,23 +863,23 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
 Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End-Blocks if block local variables are reassigned.
 
-<h3><a name="modifiers">Modifiers</a></h3>
+<h3><br><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
 The <i>private modifier</i> can be used to hide a subrule from importing packages.
 Inside of the package containing the modified subrule it is usable as any other rule.
 
-<h4><a name="memoizedMod">memoized</a></h4>
+<h4><br><a name="memoizedMod">memoized</a></h4>
 The <i>memoized modifier</i> enables caching for the complete rule; if one subrule of a rule is marked as memoized, then the complete rule is memoized.
 <br>Caching means, that internally a hash map with key value pairs (<i>parameters</i>,<i>function result</i>) is created. For performance reasons this
 map has a size limit - if this limit is exceeded, key-value-pairs are "forgotten" based on a mixed strategy combining least-recently-used and least-frequently-used approaches.<br>
 Used appropriately, caching results in enormous speedup. <br>
 Note that memoized functions do not work well with parallelized evaluations.
 
-<h4><a name="synchronizedMod">synchronized</a></h4>
+<h4><br><a name="synchronizedMod">synchronized</a></h4>
 The <i>synchronized modifier</i> protects a rule against parallel execution.<br>
 This is desirable for functions with side effects, such as printing or modifying a <a href="#mutableMod">mutable</a> value.
 
-<h4><a name="mutableMod">mutable</a></h4>
+<h4><br><a name="mutableMod">mutable</a></h4>
 The <i>mutable modifier</i> allows for a rule to be mutable. The following restrictions apply:<ul>
   <li> A mutable rule also is not memoized per definition </li>
   <li> A mutable rule must have exactly one subrule </li>
@@ -872,7 +887,7 @@ The <i>mutable modifier</i> allows for a rule to be mutable. The following restr
 </ul>
 Functions modifying the value of a mutable value should be <a href="#synchronizedMod">synchronized</a>.
 
-<h4><a name="persistentMod">persistent</a></h4>
+<h4><br><a name="persistentMod">persistent</a></h4>
 The <i>persistent modifier</i> allows for a rule to be persistent, by writing the assigned value to the source file after successful evaluation. The following restrictions apply:<ul>
   <li> A persistent rule also is mutable per definition </li>
   <li> A persistent rule also is not memoized per definition </li>
@@ -881,7 +896,7 @@ The <i>persistent modifier</i> allows for a rule to be persistent, by writing th
 </ul>
 Functions modifying the value of a persistent value should be <a href="#synchronizedMod">synchronized</a>.
 
-<h4><a name="datastoreMod">datastore</a></h4>
+<h4><br><a name="datastoreMod">datastore</a></h4>
 The <i>datastore modifier</i> allows for a rule to be persistent, by writing the assigned value to the an additional file after successful evaluation. This file is automatically named based on the package source name.<br>
 Datastore rules are defined differently from other rules: they have no bodies.<code>
 <!--mnh-->
@@ -896,11 +911,11 @@ The following restrictions apply:<ul>
 </ul>
 Functions modifying the value of a datastore value should be <a href="#synchronizedMod">synchronized</a>.
 
-<h4><a name="localMod">local</a></h4>
+<h4><br><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.
 It is only allowed in this context. Local variables always are mutable.
 
-<h4><a name="typeMod">type</a></h4>
+<h4><br><a name="typeMod">type</a></h4>
 The <i>type modifier</i> allowes for the declaration of custom type checks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
 The rule must contain exactly one subrule accepting one parameter and returning a boolean.<br>
 The following restrictions apply:<ul>
@@ -935,30 +950,31 @@ The following restrictions apply:<ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
   <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>    
   </ul>
 </div>
 <div class="docContent">
 <h3><a name="intro">Introduction</a></h3>
 MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime. All types are either <i>scalars</i> (i.e. atomic values) or <i>lists</i>. <br>
 This page is about the representation and basic behaviour of the types. For details on the operators defined on these types see <a href="operators.html">MNH5 - Operators</a>.
-
-<h3><a name="scalars">Scalar types</a></h3>
+<br>
+<h3><br><a name="scalars">Scalar types</a></h3>
 <h4><a name="booleans">Booleans</a></h4>
 Booleans are the simplest type. There are only two possible values:<code><span class="literal">true</span></code> and <code><span class="literal">false</span></code>.<br>
 To directly input a boolean, use the reserved words <code><span class="literal">true</span></code> and <code><span class="literal">false</span></code>.
 
-<h4><a name="integers">Integers</a></h4>
+<h4><br><a name="integers">Integers</a></h4>
 Integers are internally represented as 64bit two-complement integer numbers. Consequently the smallest possible integer is -9223372036854775808 and the largest possible integer is 9223372036854775807.<br>
 Note that no overflow-checking is employed.<br>
 Together with reals, integers form the class of <i>numeric</i> values.<br>
 To directly input an integer, write a number only containing of digits, without a decimal point.
 
-<h4><a name="reals">Reals</a></h4>
+<h4><br><a name="reals">Reals</a></h4>
 Reals are internally represented as 80bit <i>extended precision</i> floating point numbers in 32bit flavours of mnh and as ordinary 64bit double precision floating point numbers in 64bit flavours.<br>
 Together with integers, reals form the class of <i>numeric</i> values.<br>
 To directly input a real, write a number containing of digits and a decimal point and/or an exponent, e.g. <code>1.2E-2</code>.
 
-<h4><a name="strings">Strings</a></h4>
+<h4><br><a name="strings">Strings</a></h4>
 Strings are internally represented as ANSI-Strings, without length limitation.<br>
 You can use one of the following representations:<br>
 <ul>
@@ -975,36 +991,9 @@ You can use one of the following representations:<br>
   <tr><td><code>\t</code></td><td><code>#09</code></td><td>Tabulator</td></tr>
   <tr><td><code>\\</code></td><td><code>#5C</code></td><td>Backslash</td></tr>
   <tr><td><code>\"</code></td><td><code>#22</code></td><td>The delimiter, a double quote</td></tr>
-  <tr><td><code>\0</code></td><td><code>#00</code></td></tr>
-  <tr><td><code>\1</code></td><td><code>#01</code></td></tr>
-  <tr><td><code>\2</code></td><td><code>#02</code></td></tr>
-  <tr><td><code>\3</code></td><td><code>#03</code></td></tr>
-  <tr><td><code>\4</code></td><td><code>#04</code></td></tr>
-  <tr><td><code>\5</code></td><td><code>#05</code></td></tr>
-  <tr><td><code>\6</code></td><td><code>#06</code></td></tr>
-  <tr><td><code>\a</code></td><td><code>#07</code></td></tr>
-  <tr><td><code>\b</code></td><td><code>#08</code></td></tr>
-  <tr><td><code>\v</code></td><td><code>#0B</code></td></tr>
+  <tr><td><code>\b</code></td><td><code>#08</code></td><td>Backspace</td></tr>
+  <tr><td><code>\v</code></td><td><code>#0B</code></td><td>Vertical tab (for pretty printing)</td></tr>
   <tr><td><code>\f</code></td><td><code>#0C</code></td><td>Form feed</td></tr>
-  <tr><td><code>\S</code></td><td><code>#0E</code></td></tr>
-  <tr><td><code>\s</code></td><td><code>#0F</code></td></tr>
-  <tr><td><code>\d</code></td><td><code>#10</code></td></tr>
-  <tr><td><code>\A</code></td><td><code>#11</code></td></tr>
-  <tr><td><code>\B</code></td><td><code>#12</code></td></tr>
-  <tr><td><code>\C</code></td><td><code>#13</code></td></tr>
-  <tr><td><code>\D</code></td><td><code>#14</code></td></tr>
-  <tr><td><code>\N</code></td><td><code>#15</code></td></tr>
-  <tr><td><code>\X</code></td><td><code>#16</code></td></tr>
-  <tr><td><code>\T</code></td><td><code>#17</code></td></tr>
-  <tr><td><code>\Z</code></td><td><code>#18</code></td></tr>
-  <tr><td><code>\M</code></td><td><code>#19</code></td></tr>
-  <tr><td><code>\Y</code></td><td><code>#1A</code></td></tr>
-  <tr><td><code>\x</code></td><td><code>#1B</code></td></tr>
-  <tr><td><code>\F</code></td><td><code>#1C</code></td></tr>
-  <tr><td><code>\G</code></td><td><code>#1D</code></td></tr>
-  <tr><td><code>\R</code></td><td><code>#1E</code></td></tr>
-  <tr><td><code>\U</code></td><td><code>#1F</code></td></tr>
-  <tr><td><code>\-</code></td><td><code>#7F</code></td></tr>
   </table><br>
   e.g.:<code>
   <span class="identifier">quote</span><span class="operator">:=</span><span class="literal">"'"</span>;
@@ -1023,7 +1012,7 @@ Alternatively strings can be written as "blobs", i.e. as a text block preserving
 </li>
 </ul>
 
-<h4><a name="expressions">Expressions</a></h4>
+<h4><br><a name="expressions">Expressions</a></h4>
 Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
 Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
 Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
@@ -1045,8 +1034,7 @@ Instead of using parameters like <code>$x</code> you can also refer to parameter
 <!--end-->
 </code>
 Adressing parameters by their index is recommended for expressions in <a href="formatStrings.html">format strings</a>.
-
-<h4><a name="void">void</a></h4>
+<h4><br><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
 <!--mnh-->
  in> [2..7*7].each(i,(i>2 and i mod 2=0) or
@@ -1058,13 +1046,12 @@ out> [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47]
 </code>
 For usual operators, <code>void</code> behaves as neutral element. <br>
 It cannot be passed as a function argument.
-
-<h4><a name="errors">Errors</a></h4>
+<h4><br><a name="errors">Errors</a></h4>
 Errors are no functional literals. They form a fallback for cases, where a literal result was expected but none could be provided (e.g. when invoking an operator with incompatible operands).<br>
 You should see them rarely and when you see them they should have a corresponding error message.<br>
 There is no way to directly write an error-literal.
 
-<h3><a name="lists">List types</a></h3>
+<h3><br><a name="lists">List types</a></h3>
 Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.<code>
 <!--mnh-->
   ["a",true,4.6]
@@ -1156,10 +1143,12 @@ out> [2,5,8]
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
 <li><h4><a href="#async">async</a></h4></li>
+<li><h4><a href="#toId">toId</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
   <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -1181,7 +1170,7 @@ Where <code>id</code> is an identifier,<br>
 If <code>agg</code> is used with a body which neither a primitive aggregator (as e.g. <code>+</code>) nor an aggregator (as e.g. <code>aggregator({$0/(1+$1)})</code>)
 but can be converted to an aggregator via the <a href="#aggregator">aggregator construct</a>, it will be converted to an aggregator.
 
-<h4><a name="construction">List construction</a></h4>
+<h4><br><a name="construction">List construction</a></h4>
 To construct a list, ommit the aggregator. The body part is mandatory.<br>
 Simple example: return the input list<code>
 <!--mnh-->
@@ -1210,8 +1199,7 @@ More complex: a function returning the intersection of sets A and B<code>
 <!--end-->
 </code>
 
-
-<h4><a name="aggregation">List aggregation</a></h4>
+<h4><br><a name="aggregation">List aggregation</a></h4>
 To aggregate a list, use an aggregator but no body.<br>
 If the list is empty, <code>void</code> is returned.<br>
 Simple example: a function returing the sum of the argument:<code>
@@ -1229,7 +1217,7 @@ Generally an aggregator is an expression expecting two parameters. Given an aggr
 <!--end-->
 </code>
 
-<h4><a name="consAgg">List construction and aggregation</a></h4>
+<h4><br><a name="consAgg">List construction and aggregation</a></h4>
 You can also use aggregator and body in the same each-/pEach clause.<br><br>
 Nested each: construct a cross product:<code>
 <!--mnh-->
@@ -1253,11 +1241,11 @@ Compute Euler's number based on inverse factorials<code>
 <!--end-->
 </code>
 
-<h4><a name="parallelization">Parallelization</a></h4>
+<h4><br><a name="parallelization">Parallelization</a></h4>
 This is simple.<br>In order to parallelize your existing <code>each</code>-expression just replace <code>each</code> by <code>pEach</code>.<br>
 However <code>pEach</code> uses only as many threads as configured. If you want make sure that processing takes place in a parallel fashion, use <code>async</code> instead. <br>
 
-<h3><a name="aggregator">aggregator</a></h3>
+<h3><br><a name="aggregator">aggregator</a></h3>
 The <code>aggregator</code> construct can be used to mark an expression for the use within an each-/pEach-clause.<code>
 <!--mnh-->
        //A simple expression, interpreted as each-body
@@ -1306,7 +1294,7 @@ In each construct you should prefer passing a single operator as aggregator inst
 <!--end-->
 </code>
 
-<h3><a name="while">while</a></h3>
+<h3><br><a name="while">while</a></h3>
 The <code>while</code> construct can be used to construct head-controlled loops. The general syntax is:<code>
 <!--mnh-->
   while(condition,body);
@@ -1329,7 +1317,7 @@ out> 6
 <!--end-->
 </code>
 
-<h3><a name="async">async</a></h3>
+<h3><br><a name="async">async</a></h3>
 The <code>async</code> construct can be used for parallelization.<br>
 It accepts a nullary expression as input. This expression is then executed in a separate thread.<br>
 Note that you cannot access local variables defined in the calling procedure. Use mutable variables for inter-thread communication instead.<br>
@@ -1361,6 +1349,14 @@ Example (2):<code>
   end;
 <!--end-->
 </code>
+
+<h3><br><a name="toId">toId</a></h3>
+<code>toId</code> converts a string to an identifier.<br>
+Example:<code>
+<!--mnh-->
+   in> toId('sqr')(2);
+  out> 4
+<!--end-->
 </div>
 </div>
 <!--commonFoot-->
@@ -1380,6 +1376,7 @@ Example (2):<code>
 <li><h4><a href="#timeFmt">Time formatting</a></h4></li>
 </ul>
   <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>    
   </ul>
 </div>
 <div class="docContent">
@@ -1432,7 +1429,7 @@ Using list parameters as arguments to be formatted results in multi-line-printin
 </code>
 (Output abridged... obviously.)
 <br>
-<h3><a name="timeFmt">Time formatting</a></h3>
+<h3><br><a name="timeFmt">Time formatting</a></h3>
 There are additional routines for formatting and parsing dates and times. Some of the available placeholders can be used in
 <code><span class="builtin">formatTime</span></code> only, others can be used both in <code><span class="builtin">formatTime</span></code> and in <code><span class="builtin">parseTime</span></code>.
 <br>
@@ -1470,6 +1467,67 @@ There are additional routines for formatting and parsing dates and times. Some o
 <tr><td><code>z</code>     </td><td>yes</td><td>milliseconds</td></tr>
 <tr><td><code>zzz</code>   </td><td>yes</td><td>milliseconds(leading zero)</td></tr>
 </table>
+</div>
+<!--commonFoot-->
+<!--file gui.html-->
+<!--commonHead-->
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+  <li><h3><a href="gui.html">GUI features</a></h4></li>
+  <ul>
+    <li><h4><a href="#shortcuts">Shortcuts</a></h4></li>
+    <li><h4><a href="#debugging">Debugging</a></h4></li>
+    <li><h4><a href="#profiling">Profiling</a></h4></li>
+    <li><h4><a href="#editScripts">Edit scripts</a></h4></li>
+    <li><h4><a href="#utilityScripts">Utility scripts</a></h4></li>
+  </ul>
+  </ul>
+</div>
+<div class="docContent">
+<h3><a name="shortcuts">Shortcuts</a></h4>
+Most shortcuts are accessible via the menu. The exceptions are...<br>
+<table><tr class="ruleHead">
+  <td>Shortcut</td><td>Meaning</td></tr>
+  <tr><td>Ctrl+B</td><td>Toggle breakpoint</td></tr>
+  <tr><td>Ctrl+Shift+C</td><td>Toggle comment</td></tr>
+  <tr><td>Ctrl+I</td><td>Indent selection</td></tr>
+  <tr><td>Ctrl+Shift+I</td><td>Unindent selection</td></tr>
+  <tr><td>Ctrl+Enter</td><td>Jump to declaration</td></tr>  
+  <tr><td>Ctrl+Z</td><td>Undo</td></tr>
+  <tr><td>Ctrl+Shift+Z</td><td>Redo</td></tr>  
+</table>
+<br>
+Apart from that there are of course the usual shortcuts for copy (Strg+C), paste (Strg+V), etc.
+<h3><br><a name="debugging">Debugging</a></h4>
+Debugging is enabled via the Evaluation/Debug menu item or by toggling a breakpoint.<br>
+When debugging, parallelization is disabled. Note that debugging implies profiling if Appearance/Show timing info is checked.
+<h3><br><a name="profiling">Profiling</a></h4>
+Profiling is enabled via the Evaluation/Profiling menu item.<br>
+The profiling result is displayed as a table.
+<h3><br><a name="editScripts">Edit scripts</a></h4>
+User defined edit scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
+<ul>
+<li>It accepts stringList as single parameter</li>
+<li>It returns a stringList or void</li>
+<li>It has the attribute <code>@editScript</code>
+</ul><br>
+If the <code>@editScript</code> has a value, this value will be displayed in the menu. Otherwise the rule ID will be used.<br>
+Note that if the "edit script" returns <code>void</code> it is not really an edit script because the editor content will remain untouched.<br>
+Additional attributes to modify the edit script behavior are:<br>
+<ul>
+<li><code>@newEdit</code> to create a new editor for the result</li>
+<li><code>@language=<u>ext</u></code> with a language specified by the characteristic file extension, e.g. <code>@language=java</code></li>
+</ul><br>
+<h3><br><a name="utilityScripts">Utility scripts</a></h4>
+<b>THIS IS A STUB - and this is not really implemented yet...</b>
 </div>
 <!--commonFoot-->
 <!--file builtin.html-->
