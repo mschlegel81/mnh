@@ -56,7 +56,7 @@ TYPE
                SYSTEM_BUILTIN_NAMESPACE ,
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE
-               {$ifdef fullVersion},PLOT_NAMESPACE{$endif}
+               {$ifdef fullVersion},PLOT_NAMESPACE,EDITORS_NAMESPACE{$endif}
                );
 CONST
   C_namespaceString:array[T_namespace] of string=(
@@ -68,7 +68,7 @@ CONST
     'system',
     'files',
     'typecast'
-    {$ifdef fullVersion},'plot'{$endif}
+    {$ifdef fullVersion},'plot','editors'{$endif}
     );
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,

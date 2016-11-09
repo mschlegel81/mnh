@@ -299,6 +299,15 @@ FUNCTION editorContent_impl intFuncSignature;
     end;
   end;
 
+FUNCTION openInEditor_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+//      MnhForm.FormDropFiles(nil,str0^.value);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 PROCEDURE TMnhForm.positionHelpNotifier;
   VAR maxLineLength:longint=0;
       i:longint;
@@ -885,6 +894,15 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
     MenuItem4         .visible:=enable;
     MenuItem1         .visible:=enable;
 
+    if enable then begin
+      registerRule(EDITORS_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
+      registerRule(EDITORS_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+      registerRule(EDITORS_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string)//opens an editor tab for the given file');
+    end else begin
+      unregisterRule(EDITORS_NAMESPACE,'editors');
+      unregisterRule(EDITORS_NAMESPACE,'editorContent');
+      unregisterRule(EDITORS_NAMESPACE,'openInEditor');
+    end;
   end;
 
 PROCEDURE lateInitialization;
@@ -895,8 +913,10 @@ PROCEDURE lateInitialization;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(EDITORS_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
+    registerRule(EDITORS_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(EDITORS_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string)//opens an editor tab for the given file');
+
     SynHighlighterMnh.initLists;
 
     mnh_evalThread.initUnit(@guiAdapters);
