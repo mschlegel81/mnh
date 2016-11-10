@@ -176,7 +176,6 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckKeyValueList}
 GENERIC_TYPE_CHECK;
 
-
 {$define FUNC_ID:=isExpression}
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;

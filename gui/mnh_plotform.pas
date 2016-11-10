@@ -347,7 +347,6 @@ FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     result:=newBoolLiteral(gui_started and plotForm.showing);
   end;
 
-
 INITIALIZATION
   broughtToFront:=0;
   registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,'plotShowing;#Returns true if the plot is currently showing, false otherwise');

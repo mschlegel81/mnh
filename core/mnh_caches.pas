@@ -157,7 +157,6 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
     else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
 
-
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR i: longint;
       binIdx: T_hashInt;

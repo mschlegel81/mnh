@@ -1,5 +1,6 @@
 {$ifdef includeInterface}
 PROCEDURE editScriptRootClick(Sender: TObject);
+PROCEDURE miUtilityScriptRootClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepInClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
@@ -33,6 +34,11 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
 PROCEDURE TMnhForm.editScriptRootClick(Sender: TObject);
   begin
     updateEditScriptMenu;
+  end;
+
+PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
+  begin
+    updateUtilityScriptMenu;
   end;
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
@@ -168,7 +174,6 @@ PROCEDURE TMnhForm.handleBreak;
 
     breakPointHandlingPending:=false;
     jumpToFile;
-
 
     variablesTreeView.items.clear;
     for i:=0 to callStackInfoStringGrid.RowCount-1 do callStackInfoStringGrid.Cells[1,i]:='';

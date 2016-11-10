@@ -93,7 +93,6 @@ DESTRUCTOR T_rule.destroy;
     if ruleType in [rt_datastore_private,rt_datastore_public] then
       dispose(dataStoreMeta,destroy);
 
-
     ruleType:=rt_normal;
     id:='';
   end;

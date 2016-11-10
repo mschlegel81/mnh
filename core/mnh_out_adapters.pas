@@ -528,12 +528,11 @@ PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring; CONST errorLocati
   end;
 
 PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
-  VAR i:longint;
-      m:T_storedMessage;
+  VAR m:T_storedMessage;
   begin
     m.messageType:=mt_printline;
     m.multiMessage:=s;
-    for i:=0 to length(adapter)-1 do adapter[i]^.append(m);
+    raiseCustomMessage(m);
   end;
 
 PROCEDURE T_adapters.clearPrint;

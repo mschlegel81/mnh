@@ -6,18 +6,18 @@ The solution is valid.
  ?> Another round?
  !> no
 ***** diff *****
-@ 1> //*Modified file contents follow:
-
-@25<     out|=out==[] ? void : '';
-@26>     out|=out==[] ? void : ''; //comment added
-
-@49< end;
-   <
-   < //*Shows the diff of two files
-   < main(file1:string,file2:string)->showDiff(file1.fileLines,file2.fileLines);
-   <
-   < //*For regression test
-   < main('test')->showDiff(myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=24 ? line&" //comment added" : line));
+--- original
++++ modified
+@@ -0,3 +1,3 @@
++ //*Modified file contents follow:
+  USE utilityScripts;
+  //*Shows the diff of two files
+@@ -5,4 +6,4 @@
+  main(file1:string,file2:string,extraLines)->printf("%s",unifiedDiff(file1,file2,file1.fileLines,file2.fileLines,toInt(extraLines)));
+  
+- //*For regression test
++ //*For regression test //comment added
+  main('test')->printf("%s",unifiedDiff('original','modified',myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=6 ? line&" //comment added" : line),2));
 ***** grep *****
 ./demos/htmlFunctionPlotter.mnh
     15:  try({begin
@@ -3498,7 +3498,7 @@ out> [2,3,5,7,11,13,17,19]
  in> subSets([1, 2, 1]);
 out> [[1,2],[],[1,1,2],[1,1],[2],[1]]
  in> diff('encode','decode');
-out> [['adds',1],['deletes',1],['matches',5],['modifies',0],['edit',[['+',-1,0],['.',0,1],['-',1,1],['.',2,2],['.',3,3],['.',4,4],['.',5,5]]]]
+out> [['adds',1],['deletes',1],['matches',5],['modifies',0],['edit',[['+',-1,0],[' ',0,1],['-',1,1],[' ',2,2],[' ',3,3],[' ',4,4],[' ',5,5]]]]
  in> diffStats('encode','decode');
 out> [['adds',1],['deletes',1],['matches',5],['modifies',0]]
  in> format('%s is a string, %3.3d is a number','X', 7);

@@ -837,7 +837,6 @@ FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: bool
                             else exit('(');
   end;
 
-
 //?.stringForm:=================================================================
 FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm: ansistring; begin result:=val;      end;
@@ -1339,7 +1338,6 @@ FUNCTION T_stringLiteral.trimRight: P_stringLiteral;
       rereference;
     end else result:=newStringLiteral(rs);
   end;
-
 
 FUNCTION T_stringLiteral.upper: P_stringLiteral;
   VAR rs: string;
@@ -2482,7 +2480,6 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
       end;
     end;
 
-
   VAR oldValue:P_literal;
       i:longint;
   begin
@@ -2735,6 +2732,7 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_listLiteral;
     for i:=0 to length(kvl)-1 do begin
       result^.dat[i]:=kvl[i].key;
       result^.dat[i]^.rereference;
+      result^.modifyType(result^.dat[i]);
     end;
     setLength(kvl,0);
   end;

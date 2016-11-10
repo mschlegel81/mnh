@@ -23,8 +23,8 @@ T_editorMeta=object
   PROCEDURE doneDebugging;
   PROCEDURE closeEditor;
   PROCEDURE setLanguage(CONST languageIndex:byte);
-  PROCEDURE setLanguage(CONST extensionWithoutDot:string);
-  PROCEDURE guessLanguage;
+  PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:byte);
+  PROCEDURE guessLanguage(CONST fallback:byte);
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
   PROCEDURE reloadFile(CONST fileName:string);
@@ -222,15 +222,16 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
       if fileTypeMeta[metaIdx].language=LANG_MNH
       then editor.highlighter:=highlighter
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
+      {$ifdef debugMode}writeln('Set language ',fileTypeMeta[metaIdx].language,' - ',fileTypeMeta[metaIdx].extension);{$endif}
       exit;
     end;
   end;
 
-PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string);
+PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string; CONST fallback:byte);
   VAR metaIdx:longint;
       ext:string;
   begin
-    ext:='.'+uppercase(extensionWithoutDot);
+    ext:=uppercase(extensionWithoutDot);
     for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
       language:=fileTypeMeta[metaIdx].language;
       if fileTypeMeta[metaIdx].highlighter=nil
@@ -238,22 +239,12 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string);
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
       exit;
     end;
-    setLanguage(0);
+    setLanguage(fallback);
   end;
 
-PROCEDURE T_editorMeta.guessLanguage();
-  VAR metaIdx:longint;
-      ext:string;
+PROCEDURE T_editorMeta.guessLanguage(CONST fallback:byte);
   begin
-    ext:=uppercase(extractFileExt(fileInfo.filePath));
-    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
-      language:=fileTypeMeta[metaIdx].language;
-      if fileTypeMeta[metaIdx].highlighter=nil
-      then editor.highlighter:=highlighter
-      else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
-      exit;
-    end;
-    setLanguage(0);
+    setLanguage(copy(extractFileExt(fileInfo.filePath),2,10),fallback);
   end;
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
@@ -271,7 +262,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
       fileInfo.isChanged:=true;
       fileInfo.fileAccessAge:=0;
     end;
-    guessLanguage;
+    guessLanguage(LANG_TXT);
     updateSheetCaption;
   end;
 
@@ -471,7 +462,7 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
       isChanged:=false;
       editor.modified:=false;
       editor.MarkTextAsSaved;
-      if filePath=editScriptFileName then runEvaluator.ensureEditScripts();
+      if (filePath=editScriptFileName) or (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
     end;
     result:=updateSheetCaption;
   end;

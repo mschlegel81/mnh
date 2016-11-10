@@ -1515,11 +1515,11 @@ The profiling result is displayed as a table.
 <h3><br><a name="editScripts">Edit scripts</a></h4>
 User defined edit scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
 <ul>
-<li>It accepts stringList as single parameter</li>
+<li>It accepts stringList (the editor content) as single parameter</li>
 <li>It returns a stringList or void</li>
 <li>It has the attribute <code>@editScript</code>
 </ul><br>
-If the <code>@editScript</code> has a value, this value will be displayed in the menu. Otherwise the rule ID will be used.<br>
+If the <code>@editScript</code> attribute has a value, this value will be displayed in the menu. Otherwise the rule ID will be used.<br>
 Note that if the "edit script" returns <code>void</code> it is not really an edit script because the editor content will remain untouched.<br>
 Additional attributes to modify the edit script behavior are:<br>
 <ul>
@@ -1527,7 +1527,13 @@ Additional attributes to modify the edit script behavior are:<br>
 <li><code>@language=<u>ext</u></code> with a language specified by the characteristic file extension, e.g. <code>@language=java</code></li>
 </ul><br>
 <h3><br><a name="utilityScripts">Utility scripts</a></h4>
-<b>THIS IS A STUB - and this is not really implemented yet...</b>
+User defined utility scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
+<ul>
+<li>It accepts string (the editor filename or pseudo-name) as single parameter</li>
+<li>It has the attribute <code>@utility</code>
+</ul><br>
+If the <code>@utility</code> attribute has a value, this value will be displayed in the menu. Otherwise the rule ID will be used.<br>
+Utility scripts create new editor pages, if they return a stringList and have the attribute <code>@newEdit</code>. In this case, the <code>@language</code> attribute can be used to specify highlighting for the new editor.
 </div>
 <!--commonFoot-->
 <!--file builtin.html-->

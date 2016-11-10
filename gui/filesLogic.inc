@@ -54,6 +54,7 @@ PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShi
 PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE miEditScriptFileClick(Sender: TObject);
+PROCEDURE miEditUtilityScriptFileClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -327,7 +328,6 @@ PROCEDURE TMnhForm.miOpenImportedClick(Sender: TObject);
     FormDropFiles(Sender,assistancEvaluator.getAllUsedFiles);
   end;
 
-
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     _doSaveAs_(inputPageControl.activePageIndex);
@@ -470,5 +470,10 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shif
 PROCEDURE TMnhForm.miEditScriptFileClick(Sender: TObject);
   begin
     FormDropFiles(Sender,editScriptFileName);
+  end;
+
+PROCEDURE TMnhForm.miEditUtilityScriptFileClick(Sender: TObject);
+  begin
+    FormDropFiles(Sender,utilityScriptFileName);
   end;
 {$endif}

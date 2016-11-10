@@ -385,7 +385,7 @@ PROCEDURE TtableForm.fillTable;
   end;
 
 INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);#Shows L in a table with given caption.');
+  registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);//Shows L in a table.#showTable(L:list,caption:string);//Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.');
   setLength(tableForms,0);
   initialize(tableFormCs);
   initCriticalSection(tableFormCs);
