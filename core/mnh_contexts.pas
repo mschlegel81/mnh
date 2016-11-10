@@ -59,6 +59,18 @@ CONST
 TYPE
   T_profileCategory=(pc_importing,pc_tokenizing,pc_declaration,pc_interpretation,pc_unknown,pc_total);
 
+  P_packageProfilingCall=^T_packageProfilingCall;
+  T_packageProfilingCalls=array[T_profileCategory] of P_packageProfilingCall;
+  T_packageProfilingCall=object(T_objectWithIdAndLocation)
+    package: P_objectWithPath;
+    category:T_profileCategory;
+    CONSTRUCTOR create(CONST package_: P_objectWithPath;
+                       CONST category_:T_profileCategory);
+    DESTRUCTOR destroy;
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION getLocation:T_tokenLocation; virtual;
+  end;
+
   T_profilingEntry=record
     id:T_idString;
     location:string;
@@ -171,6 +183,7 @@ TYPE
       FUNCTION mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       //call stack routines
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
+      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop();
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -201,7 +214,34 @@ TYPE
   end;
 
 VAR showProfilingTableCallback:PROCEDURE(CONST L:P_listLiteral)=nil;
+FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 IMPLEMENTATION
+FUNCTION blankProfilingCalls:T_packageProfilingCalls;
+  VAR p:T_profileCategory;
+  begin
+    for p in T_profileCategory do result[p]:=nil;
+  end;
+
+CONSTRUCTOR T_packageProfilingCall.create(CONST package_: P_objectWithPath; CONST category_: T_profileCategory);
+  begin
+    package:=package_;
+    category:=category_;
+  end;
+
+DESTRUCTOR T_packageProfilingCall.destroy;
+  begin end;
+
+FUNCTION T_packageProfilingCall.getId: T_idString;
+  CONST categoryText:array[T_profileCategory] of string=('importing','tokenizing','declarations','evaluation','unknown','total');
+  begin
+    result:=extractFileName(package^.getPath)+':'+categoryText[category];
+  end;
+
+FUNCTION T_packageProfilingCall.getLocation: T_tokenLocation;
+  begin
+    result:=packageTokenLocation(package);
+  end;
+
 CONSTRUCTOR T_valueStore.create;
   begin
     system.initCriticalSection(cs);
@@ -768,6 +808,12 @@ PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation: T_tokenLocatio
       callStack[topIdx].timeForProfiling_inclusive:=wallclockTime;
     end;
     {$endif}
+  end;
+
+PROCEDURE T_evaluationContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
+  begin
+    if calls[category]=nil then new(calls[category],create(package,category));
+    callStackPush(calls[category]^.getLocation,calls[category],nil,nil);
   end;
 
 PROCEDURE T_evaluationContext.callStackPop;

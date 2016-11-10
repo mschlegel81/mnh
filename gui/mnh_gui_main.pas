@@ -708,6 +708,7 @@ PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
     miProfile.Checked:=not(miProfile.Checked) or miDebug.Checked;
+    if miProfile.Checked and not(miTimingInfo.Checked) then miTimingInfoClick(Sender);
   end;
 
 PROCEDURE TMnhForm.miWorkspacesClick(Sender: TObject);
