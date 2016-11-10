@@ -39,7 +39,7 @@ TYPE
       packageUses:array of T_packageReference;
       ready:T_packageLoadUsecase;
       codeProvider:T_codeProvider;
-
+      pseudoCallees:T_packageProfilingCalls;
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
@@ -240,9 +240,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         rulesSet:T_ruleMap.KEY_VALUE_LIST;
         dummyRule:P_rule;
     begin
+      context.callStackPush(@self,pc_importing,pseudoCallees);
       if profile then context.timeBaseComponent(pc_importing);
       for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context);
       if profile then context.timeBaseComponent(pc_importing);
+      context.callStackPop();
       i:=0;
       while i<length(packageUses) do begin
         if packageUses[i].pack=nil then begin
@@ -566,6 +568,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
+        context.callStackPush(@self,pc_declaration,pseudoCallees);
         if profile then context.timeBaseComponent(pc_declaration);
         if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
           context.cascadeDisposeToken(first);
@@ -575,13 +578,17 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
         if profile then context.timeBaseComponent(pc_declaration);
+        context.callStackPop();
       end else if first^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
+        context.callStackPush(@self,pc_declaration,pseudoCallees);
         if profile then context.timeBaseComponent(pc_declaration);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseDataStore;
         if profile then context.timeBaseComponent(pc_declaration);
+        context.callStackPop();
       end else if context.adapters^.noErrors then begin
         if (usecase=lu_forDirectExecution) then begin
+          context.callStackPush(@self,pc_interpretation,pseudoCallees);
           if profile then context.timeBaseComponent(pc_interpretation);
           if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
@@ -591,6 +598,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
           reduceExpression(first,0,context);
           if profile then context.timeBaseComponent(pc_interpretation);
+          context.callStackPop();
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
@@ -615,9 +623,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
         t^.next:=context.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
+        context.callStackPush(@self,pc_interpretation,pseudoCallees);
         if profile then context.timeBaseComponent(pc_interpretation);
         reduceExpression(t,0,context);
         if profile then context.timeBaseComponent(pc_interpretation);
+        context.callStackPop();
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
@@ -762,6 +772,7 @@ CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
     codeProvider.create;
     packageRules.create(@disposeRule);
     importedRules.create;
+    pseudoCallees:=blankProfilingCalls;
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
@@ -798,11 +809,13 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
+  VAR c:T_profileCategory;
   begin
     clear(true);
     codeProvider.destroy;
     packageRules.destroy;
     importedRules.destroy;
+    for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adapters);
