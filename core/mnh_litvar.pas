@@ -2838,62 +2838,6 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       if (t>=low(T_literalType)) and (t<=high(T_literalType)) then result:=C_typeString[t] else result:='';
     end;
 
-  FUNCTION literalFromStream0:P_literal;
-    VAR literalType:T_literalType;
-        reusableIndex:longint;
-        literalByte:byte;
-        listSize:longint;
-        i:longint;
-    begin
-      literalByte:=stream.readByte;
-      if literalByte=255 then begin
-        reusableIndex:=stream.readNaturalNumber;
-        if (reusableIndex<length(reusableLiterals)) then begin
-          result:=reusableLiterals[reusableIndex];
-          result^.rereference;
-        end else begin
-          result:=newErrorLiteral;
-          stream.logWrongTypeError;
-          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
-        end;
-        exit(result);
-      end;
-      literalType:=T_literalType(literalByte);
-      case literalType of
-        lt_error:result:=newErrorLiteral;
-        lt_boolean:result:=newBoolLiteral(stream.readBoolean);
-        lt_int:result:=newIntLiteral(stream.readInt64);
-        lt_real:result:=newRealLiteral(stream.readDouble);
-        lt_string:result:=newStringLiteral(stream.readAnsiString);
-        lt_list,
-        lt_booleanList,
-        lt_intList,
-        lt_realList,
-        lt_numList,
-        lt_stringList,
-        lt_emptyList,
-        lt_keyValueList,
-        lt_flatList,
-        lt_listWithError:begin
-          listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
-          setLength(P_listLiteral(result)^.dat,listSize);
-          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream0(),false);
-          if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
-        end;
-        lt_void:result:=newVoidLiteral;
-        else begin
-          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(literalByte)+') ! Abort.');
-          stream.logWrongTypeError;
-          exit(newErrorLiteral);
-        end;
-      end;
-      if not(literalType in [lt_boolean,lt_void,lt_error]) and (length(reusableLiterals)<2097151) then begin
-        setLength(reusableLiterals,length(reusableLiterals)+1);
-        reusableLiterals[length(reusableLiterals)-1]:=result;
-      end;
-    end;
-
   FUNCTION literalFromStream255:P_literal;
     VAR literalType:T_literalType;
         reusableIndex:longint;
@@ -2978,12 +2922,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
     setLength(reusableLiterals,0);
     p:=stream.streamPosition;
     encodingMethod:=stream.readByte;
-    if (encodingMethod>=byte(low(T_literalType))) and (encodingMethod<=byte(high(T_literalType))) then begin
-      stream.jumpToStreamPosition(p);
-      encodingMethod:=0;
-    end;
     case encodingMethod of
-      0  : result:=literalFromStream0;
       255: result:=literalFromStream255;
       else begin
         errorOrException('Invalid literal encoding type '+intToStr(encodingMethod));
