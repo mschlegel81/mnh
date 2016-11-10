@@ -1,4 +1,4 @@
-main->['mnh.exe','mnh_light.exe','mnh_imig.exe'].each(file,
+main->['mnh.exe','mnh_light.exe','mnhi.exe'].each(file,
   fileExists(file)
   ? begin
       deleteFile('C:\bin\'&file);
