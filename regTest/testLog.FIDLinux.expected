@@ -3586,7 +3586,7 @@ out> 3.0
  in> getOptions;
 out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['autoscaleFactor',1.0],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
  in> executor;
-out> '/mnhi'
+out> '/mnhi_debug'
  in> print("1\n2.0\n03.45");
 1
 2.0
