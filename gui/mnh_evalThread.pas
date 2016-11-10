@@ -115,7 +115,7 @@ TYPE
       PROCEDURE callMain         (CONST path:ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
       PROCEDURE ensureEditScripts();
       PROCEDURE runEditScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string);
-      PROCEDURE runUtilScript    (CONST scriptIndex:longint;  CONST editorFileName:string; CONST inputLang:string);
+      PROCEDURE runUtilScript    (CONST scriptIndex:longint;  CONST editorFileName:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
 
       FUNCTION getCurrentEdit:P_editScriptTask;
@@ -343,7 +343,10 @@ CONSTRUCTOR T_editScriptTask.create(CONST script_:P_editScriptMeta; CONST inputI
     end else input:=newStringLiteral(inputEditFile);
     output:=nil;
     outputLanguage:=script^.outputLanguage;
-    if outputLanguage='' then outputLanguage:=inputLang;
+    if outputLanguage='' then begin
+      if isEditScriptTask then outputLanguage:=inputLang
+                          else outputLanguage:='txt';
+    end;
     done:=false;
   end;
 
@@ -567,7 +570,7 @@ PROCEDURE T_runEvaluator.runEditScript(CONST scriptIndex,editorIndex:longint; CO
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex:longint; CONST editorFileName:string; CONST inputLang:string);
+PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex:longint; CONST editorFileName:string);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) or (currentEdit<>nil) then begin
@@ -575,7 +578,7 @@ PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex:longint; CONST editorFi
       exit;
     end;
     request:=er_runEditScript;
-    new(currentEdit,create(utilityScriptList[scriptIndex],-1,editorFileName,nil,inputLang,false));
+    new(currentEdit,create(utilityScriptList[scriptIndex],-1,editorFileName,nil,'txt',false));
     ensureThread;
     system.leaveCriticalSection(cs);
   end;

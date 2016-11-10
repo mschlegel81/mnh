@@ -762,7 +762,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
                                else outIdx:=task^.inputIdx;
         editorMeta[outIdx].setLanguage(task^.getOutputLanguage,LANG_TXT);
         editorMeta[outIdx].updateContentAfterEditScript(P_listLiteral(task^.getOutput));
-        inputPageControl.ActivePageIndex:=outIdx;
+        inputPageControl.activePageIndex:=outIdx;
       end;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
     end;

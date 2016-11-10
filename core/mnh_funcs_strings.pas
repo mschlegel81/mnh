@@ -136,27 +136,27 @@ FUNCTION copy_imp intFuncSignature;
     end;
   end;
 
-FUNCTION chars_imp intFuncSignature;
-  FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
-    VAR charIndex,
-        byteIndex:longint;
-        i:longint;
-        txt:ansistring;
-        sub:ansistring;
-    begin
-      result:=newListLiteral;
-      txt:=P_stringLiteral(input)^.value;
-      byteIndex:=1;
-      for charIndex:=1 to UTF8Length(txt) do begin
-        sub:='';
-        for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
-          sub:=sub+txt[byteIndex];
-          inc(byteIndex)
-        end;
-        result^.appendString(sub);
+FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
+  VAR charIndex,
+      byteIndex:longint;
+      i:longint;
+      txt:ansistring;
+      sub:ansistring;
+  begin
+    result:=newListLiteral;
+    txt:=P_stringLiteral(input)^.value;
+    byteIndex:=1;
+    for charIndex:=1 to UTF8Length(txt) do begin
+      sub:='';
+      for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+        sub:=sub+txt[byteIndex];
+        inc(byteIndex)
       end;
+      result^.appendString(sub);
     end;
+  end;
 
+FUNCTION chars_imp intFuncSignature;
   VAR i:longint;
   begin
     result:=nil;
@@ -172,7 +172,7 @@ FUNCTION chars_imp intFuncSignature;
   end;
 
 FUNCTION charSet_imp intFuncSignature;
-  FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
+  FUNCTION charset_internal(CONST input:P_literal):P_listLiteral;
     VAR charIndex,
         byteIndex:longint;
         i:longint;
@@ -201,16 +201,15 @@ FUNCTION charSet_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=chars_internal(arg0);
+      result:=charset_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do lResult^.append(chars_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do lResult^.append(charset_internal(list0^.value(i)),false);
     end;
   end;
 
-
 FUNCTION bytes_imp intFuncSignature;
-  FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
+  FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
     VAR i:longint;
         txt:ansistring;
     begin
@@ -223,10 +222,10 @@ FUNCTION bytes_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=chars_internal(arg0);
+      result:=bytes_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do lResult^.append(chars_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do lResult^.append(bytes_internal(list0^.value(i)),false);
     end;
   end;
 
@@ -601,78 +600,140 @@ FUNCTION reverseString_impl intFuncSignature;
       end;
     end;
   end;
-{$R-}
-{$define diffStatOrDiff_impl:=
+
+FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_listLiteral;
   VAR aHashes,bHashes:PInteger;
       aLen,bLen:integer;
-      diff:TDiff;
       i:longint;
       {$ifdef withEditScript}
       comp:P_listLiteral;
       {$endif}
+      tempChars:P_listLiteral;
+  begin
+    diff.create();
+    if A^.literalType=lt_string then tempChars:=chars_internal(A)
+                                else begin tempChars:=P_listLiteral(A); A^.rereference; end;
+    with tempChars^ do begin
+      aLen:=size;
+      getMem(aHashes,aLen*sizeOf(integer));
+      {$R-}
+      for i:=0 to aLen-1 do aHashes[i]:=value(i)^.hash;
+      {$R+}
+    end;
+    disposeLiteral(tempChars);
+
+    if B^.literalType=lt_string then tempChars:=chars_internal(B)
+                                else begin tempChars:=P_listLiteral(B); B^.rereference; end;
+    with tempChars^ do begin
+      bLen:=size;
+      getMem(bHashes,bLen*sizeOf(integer));
+      {$R-}
+      for i:=0 to bLen-1 do bHashes[i]:=value(i)^.hash;
+      {$R+}
+    end;
+    disposeLiteral(tempChars);
+
+    diff.execute(aHashes,bHashes,aLen,bLen);
+    freeMem(aHashes,aLen*sizeOf(integer));
+    freeMem(bHashes,bLen*sizeOf(integer));
+    result:=newListLiteral(5)^
+            .append(newListLiteral(2)^.appendString('adds'    )^.appendInt(diff.DiffStats.adds    ),false)^
+            .append(newListLiteral(2)^.appendString('deletes' )^.appendInt(diff.DiffStats.deletes ),false)^
+            .append(newListLiteral(2)^.appendString('matches' )^.appendInt(diff.DiffStats.matches ),false)^
+            .append(newListLiteral(2)^.appendString('modifies')^.appendInt(diff.DiffStats.modifies),false);
+  end;
+
+FUNCTION diff_impl intFuncSignature;
+  CONST changeKindChar:array[TChangeKind] of char=(' ','+','-','M');
+  VAR diff:TDiff;
+
+  FUNCTION simpleEdit:P_listLiteral;
+    VAR i:longint;
+    begin
+      result:=newListLiteral(diff.count);
+      for i:=0 to diff.count-1 do
+        result^.append(newListLiteral(3)^
+          .appendString(changeKindChar[diff.Compares[i].kind    ])^
+          .appendInt   (               diff.Compares[i].oldIndex1)^
+          .appendInt   (               diff.Compares[i].oldIndex2),false);
+    end;
+
+  FUNCTION blockEdit:P_listLiteral;
+    TYPE T_diffRec=record
+                     kind:char;
+                     i0,i1:longint;
+                   end;
+         T_diffArr=array of T_diffRec;
+
+    FUNCTION diffRec(CONST kind:char; CONST i0,i1:longint):T_diffRec;
+      begin
+        result.kind:=kind;
+        result.i0  :=i0;
+        result.i1  :=i1;
+      end;
+
+    PROCEDURE add(VAR arr:T_diffArr; CONST rec:T_diffRec);
+      begin
+        setLength(arr,length(arr)+1);
+        arr[length(arr)-1]:=rec;
+      end;
+
+    VAR digest,modifyRun:T_diffArr;
+        rec:T_diffRec;
+        i,k:longint;
+    begin
+      //Convert modify runs to adds and deletes:--------------------------------
+      setLength(modifyRun,0);
+      setLength(digest,0);
+      i:=0;
+      while i<diff.count do
+      if diff.Compares[i].kind=ckModify then begin
+        while (i<diff.count) and (diff.Compares[i].kind=ckModify) do begin
+          add(modifyRun,diffRec('M',diff.Compares[i].oldIndex1,diff.Compares[i].oldIndex2));
+          inc(i);
+        end;
+        for k:=0 to length(modifyRun)-1 do add(digest,diffRec('-',modifyRun[k].i0,modifyRun[k].i1));
+        for k:=0 to length(modifyRun)-1 do add(digest,diffRec('+',modifyRun[k].i0,modifyRun[k].i1));
+        setLength(modifyRun,0)
+      end else begin
+        add(digest,diffRec(changeKindChar[diff.Compares[i].kind],diff.Compares[i].oldIndex1,diff.Compares[i].oldIndex2));
+        inc(i);
+      end;
+      //---------------------------------Convert modify runs to adds and deletes
+      result:=newListLiteral(length(digest));
+      for rec in digest do result^.append(newListLiteral(3)^.appendString(rec.kind)^.appendInt(rec.i0)^.appendInt(rec.i1),false);
+    end;
+
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and
+    if (params<>nil) and ((params^.size=2) or (params^.size=3)) and
        ((arg0^.literalType in [lt_stringList,lt_emptyList]) and
         (arg1^.literalType in [lt_stringList,lt_emptyList]) or
         (arg0^.literalType=lt_string) and
-        (arg1^.literalType=lt_string)) then begin
-      diff.create();
-      if (arg0^.literalType in [lt_stringList,lt_emptyList]) and
-         (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
-        with list0^ do begin
-          aLen:=size;
-          getMem(aHashes,aLen*sizeOf(integer));
-          for i:=0 to aLen-1 do aHashes[i]:=value(i)^.hash;
-        end;
-        with list1^ do begin
-          bLen:=size;
-          getMem(bHashes,bLen*sizeOf(integer));
-          for i:=0 to bLen-1 do bHashes[i]:=value(i)^.hash;
-        end;
-        diff.execute(aHashes,bHashes,aLen,bLen);
-        freeMem(aHashes,aLen*sizeOf(integer));
-        freeMem(bHashes,bLen*sizeOf(integer));
-      end else if (arg0^.literalType=lt_string) and
-                  (arg1^.literalType=lt_string) then begin
-        diff.execute(str0^.value,
-                     str1^.value);
-      end;
-
-      result:=newListLiteral^
-             .append(newListLiteral^
-                    .appendString('adds')^
-                    .appendInt(diff.DiffStats.adds),false)^
-             .append(newListLiteral^
-                    .appendString('deletes')^
-                    .appendInt(diff.DiffStats.deletes),false)^
-             .append(newListLiteral^
-                    .appendString('matches')^
-                    .appendInt(diff.DiffStats.matches),false)^
-             .append(newListLiteral^
-                    .appendString('modifies')^
-                    .appendInt(diff.DiffStats.modifies),false);
-      {$ifdef withEditScript}
-      comp:=newListLiteral;
-      for i:=0 to diff.count-1 do begin
-        case diff.Compares[i].kind of
-          ckNone:   comp^.append(newListLiteral^.appendString('.')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
-          ckAdd:    comp^.append(newListLiteral^.appendString('+')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
-          ckDelete: comp^.append(newListLiteral^.appendString('-')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
-          ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
-        end;
-      end;
-      lResult^.append(newListLiteral^.appendString('edit')^.append(comp,false),false);
-      {$endif}
+        (arg1^.literalType=lt_string)) and
+       ((params^.size=2) or (arg2^.literalType=lt_boolean)) then begin
+      result:=prepareDiff(arg0,arg1,diff);
+      if (params^.size=3) and (bool2^.value)
+      then lResult^.append(newListLiteral(2)^.appendString('edit')^.append(blockEdit ,false),false)
+      else lResult^.append(newListLiteral(2)^.appendString('edit')^.append(simpleEdit,false),false);
       diff.destroy;
     end;
-  end}
-{$define withEditScript}
-FUNCTION diff_impl intFuncSignature;
-diffStatOrDiff_impl;
-{$undef withEditScript}
+  end;
+
 FUNCTION diffStats_impl intFuncSignature;
-diffStatOrDiff_impl;
+  VAR diff:TDiff;
+  begin
+    result:=nil;
+    if (params<>nil) and ((params^.size=2) or (params^.size=3)) and
+       ((arg0^.literalType in [lt_stringList,lt_emptyList]) and
+        (arg1^.literalType in [lt_stringList,lt_emptyList]) or
+        (arg0^.literalType=lt_string) and
+        (arg1^.literalType=lt_string)) and
+       ((params^.size=2) or (arg2^.literalType=lt_int) and (int2^.value>=0)) then begin
+      result:=prepareDiff(arg0,arg1,diff);
+      diff.destroy;
+    end;
+  end;
 
 FUNCTION isUtf8_impl intFuncSignature;
   begin
@@ -780,7 +841,8 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);//Returns a string containing s repeated k times');
   registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
   registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);//reverseString(S:stringList);//Returns returns S reversed (character wise not bytewise)');
-  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);//Shows diff statistics and edit script for strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);//Shows diff statistics and edit script for strings A and B or string lists A and B#'+
+                                                   'diff(A,B,convertModifies:boolean);//As above but optionally convert modifies to adds and deletes');
   registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);//Shows diff statistics for strings A and B or string lists A and B');
   registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);//Returns true if S is UTF8 encoded and false otherwise');
   registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);//Returns true if S is ASCII encoded and false otherwise');

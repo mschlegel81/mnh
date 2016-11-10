@@ -68,7 +68,7 @@ PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
     k:=inputPageControl.activePageIndex;
     if (k<0) or (k>=length(editorMeta)) then exit;
     for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=true;
-    runEvaluator.runUtilScript(TMenuItem(Sender).Tag,editorMeta[k].pseudoName(),editorMeta[k].languageName);
+    runEvaluator.runUtilScript(TMenuItem(Sender).Tag,editorMeta[k].pseudoName());
   end;
 
 FUNCTION TMnhForm.preferredContextType:T_contextType;
