@@ -1024,13 +1024,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
-            if parameterListLiteral=nil
-            then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
-            else begin
-              if (P_rule(first^.data)^.id=MAIN_RULE_ID)
-              then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true)+LineEnding+P_rule(first^.data)^.getCmdLineHelpText,first^.location)
-              else context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+toParameterListString(parameterListLiteral,true),first^.location);
-            end;
+            if (P_rule(first^.data)^.id=MAIN_RULE_ID)
+            then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true,100)+LineEnding+P_rule(first^.data)^.getCmdLineHelpText,first^.location)
+            else context.adapters^.raiseError(                              'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true,100),first^.location);
             exit;
           end;
         {$ifndef DEBUGMODE}
@@ -1067,7 +1063,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
         end else if not(context.adapters^.noErrors) then exit else begin
-          context.adapters^.raiseError('Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true),first^.location);
+          context.adapters^.raiseError('Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListTypeString(parameterListLiteral)+':  '+toParameterListString(parameterListLiteral,true,100),first^.location);
           exit;
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
