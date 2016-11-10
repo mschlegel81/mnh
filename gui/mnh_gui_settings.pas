@@ -124,31 +124,15 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
   end;
 
 PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
-  {$ifdef imig}
-  {$i res_ensureAssoc_imig.inc}
-  {$else}
   {$i res_ensureAssoc.inc}
-  {$endif}
   begin
-    {$ifdef imig}
-    runAlone(ensureAssoc_imig_mnh);
-    {$else}
     runAlone(ensureAssoc_mnh);
-    {$endif}
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
-  {$ifdef imig}
-  {$i res_removeAssoc_imig.inc}
-  {$else}
   {$i res_removeAssoc.inc}
-  {$endif}
   begin
-    {$ifdef imig}
-    runAlone(removeAssoc_imig_mnh);
-    {$else}
     runAlone(removeAssoc_mnh);
-    {$endif}
   end;
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);

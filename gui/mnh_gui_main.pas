@@ -811,7 +811,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       miCallMain.enabled:=canRun;
     end;
 
-
     if currentRunnerInfo.hasPendingEditResult then begin
       processEditResult(runEvaluator.getCurrentEdit,currentRunnerInfo.state in [es_debugHalted,es_debugRunning]);
       runEvaluator.freeCurrentEdit;

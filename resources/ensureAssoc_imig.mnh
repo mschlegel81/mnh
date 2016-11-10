@@ -1,6 +1,0 @@
-writeFileLines('install.vbs',
-['Set UAC = CreateObject("Shell.Application")',
- 'UAC.ShellExecute "cmd", "/c assoc .mnh=mnh.script && assoc .mnhwf=mnhwf.script && ftype mnh.script=# %1 %* && ftype mnhwf.script=# %1 %*", "", "runas", 1'
-].replace('#',executor));
-exec('cmd',['/C','install.vbs']);
-deleteFile('install.vbs');

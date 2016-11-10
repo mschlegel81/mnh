@@ -1,6 +1,0 @@
-writeFileLines('uninstall.vbs',
-['Set UAC = CreateObject("Shell.Application")',
- 'UAC.ShellExecute "cmd", "/c ftype mnh.script= && ftype mnhwf.script= && assoc .mnh= && assoc .mnhwf= && rmdir /S /Q %ALLUSERSPROFILE%\MNH_IMIG && del #",  "", "runas", 1'
-].replace('#',executor));
-exec('cmd',['/C','uninstall.vbs']);
-deleteFile('uninstall.vbs');

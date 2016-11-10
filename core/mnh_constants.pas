@@ -60,7 +60,6 @@ TYPE
                {$ifdef imig},IMIG_NAMESPACE{$endif}
                );
 
-
 CONST
   C_namespaceString:array[T_namespace] of string=(
     'mnh',
