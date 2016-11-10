@@ -355,7 +355,6 @@ begin
   then result:=recurse(arg0);
 end}
 
-
 FUNCTION trim_imp intFuncSignature;
 {$define CALL_MACRO:=trim}
 {$define ID_MACRO:='trim'}
@@ -403,7 +402,6 @@ FUNCTION escapeJava_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(escapeString(str0^.value,es_javaStyle));
   end;
-
 
 FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
   VAR lookFor,replaceBy:T_arrayOfString;

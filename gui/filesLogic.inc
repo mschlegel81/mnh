@@ -328,7 +328,6 @@ PROCEDURE TMnhForm.miOpenImportedClick(Sender: TObject);
     FormDropFiles(Sender,assistancEvaluator.getAllUsedFiles);
   end;
 
-
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     _doSaveAs_(inputPageControl.activePageIndex);

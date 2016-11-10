@@ -517,7 +517,6 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST path: ansistring; CONST L: TStrin
     system.leaveCriticalSection(cs);
   end;
 
-
 PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
   VAR sp:longint;
   begin
@@ -582,7 +581,6 @@ PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex:longint; CONST editorFi
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
-
 
 FUNCTION T_runEvaluator.getCurrentEdit:P_editScriptTask;
   begin
@@ -773,7 +771,6 @@ FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
     addErrors(externalErrors);
     system.leaveCriticalSection(cs);
   end;
-
 
 FUNCTION T_evaluator.pendingRequest: T_evalRequest;
   begin

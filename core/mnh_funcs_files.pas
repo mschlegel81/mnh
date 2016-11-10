@@ -110,7 +110,6 @@ FUNCTION folderExists_impl intFuncSignature;
     then result:=newBoolLiteral(DirectoryExists(str0^.value));
   end;
 
-
 FUNCTION fileContents_impl intFuncSignature;
   VAR accessed:boolean;
   begin

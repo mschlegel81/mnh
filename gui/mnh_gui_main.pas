@@ -859,7 +859,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end;
 
-
     if closeGuiFlag or reEvaluationWithGUIrequired and not(currentRunnerInfo.state in C_runningStates) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
   end;
 
@@ -930,13 +929,13 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
     MenuItem1         .visible:=enable;
 
     if enable then begin
-      registerRule(EDITORS_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
-      registerRule(EDITORS_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
-      registerRule(EDITORS_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string)//opens an editor tab for the given file');
+      registerRule(GUI_NAMESPACE,'editors',@editors_impl,'editors(...);//Lists all editors');
+      registerRule(GUI_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+      registerRule(GUI_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string);//opens an editor tab for the given file');
     end else begin
-      unregisterRule(EDITORS_NAMESPACE,'editors');
-      unregisterRule(EDITORS_NAMESPACE,'editorContent');
-      unregisterRule(EDITORS_NAMESPACE,'openInEditor');
+      unregisterRule(GUI_NAMESPACE,'editors');
+      unregisterRule(GUI_NAMESPACE,'editorContent');
+      unregisterRule(GUI_NAMESPACE,'openInEditor');
     end;
   end;
 
@@ -949,9 +948,9 @@ PROCEDURE lateInitialization;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    registerRule(EDITORS_NAMESPACE,'editors',@editors_impl,'editors(...)//Lists all editors');
-    registerRule(EDITORS_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string)//Returns the content of the given editor as a string or void if no such editor was found.');
-    registerRule(EDITORS_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string)//opens an editor tab for the given file');
+    registerRule(GUI_NAMESPACE,'editors',@editors_impl,'editors(...);//Lists all editors');
+    registerRule(GUI_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(GUI_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string);//opens an editor tab for the given file');
 
     SynHighlighterMnh.initLists;
 

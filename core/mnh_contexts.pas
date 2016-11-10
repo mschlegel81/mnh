@@ -200,7 +200,6 @@ TYPE
       {$endif}
   end;
 
-
 VAR showProfilingTableCallback:PROCEDURE(CONST L:P_listLiteral)=nil;
 IMPLEMENTATION
 CONSTRUCTOR T_valueStore.create;
@@ -648,7 +647,6 @@ PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evalua
     parentContext:=nil;
     options:=options-[cp_queryParentValueStore];
   end;
-
 
 FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
   begin with recycler do begin

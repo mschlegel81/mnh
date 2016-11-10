@@ -455,7 +455,6 @@ FUNCTION niceText(CONST value, scale: longint): string;
     else exit(intToStr(value)+'E'+intToStr(scale));
   end;
 
-
 PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:boolean=false);
   PROCEDURE getRanges;
     VAR axis: char;

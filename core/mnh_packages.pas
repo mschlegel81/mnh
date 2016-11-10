@@ -709,7 +709,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     clear(false);
 
-
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;

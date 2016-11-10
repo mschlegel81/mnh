@@ -149,7 +149,6 @@ FUNCTION getMnhInfo:string;
     disposeLiteral(L);
   end;
 
-
 {$MACRO ON}
 {$define funcForOp:=intFuncSignature; begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^) else result:=nil; end}
 {$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      funcForOp;

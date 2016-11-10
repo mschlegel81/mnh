@@ -157,7 +157,6 @@ FUNCTION bits_impl intFuncSignature;
     end else result:=nil;
   end;
 
-
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
   begin end;
 

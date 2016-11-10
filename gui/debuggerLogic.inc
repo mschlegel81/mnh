@@ -175,7 +175,6 @@ PROCEDURE TMnhForm.handleBreak;
     breakPointHandlingPending:=false;
     jumpToFile;
 
-
     variablesTreeView.items.clear;
     for i:=0 to callStackInfoStringGrid.RowCount-1 do callStackInfoStringGrid.Cells[1,i]:='';
 
