@@ -800,14 +800,15 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if breakPointHandlingPending then handleBreak;
       //Halt/Run enabled states:--------------------------------------------------
       miHaltEvalutaion.enabled:=(currentRunnerInfo.state in C_runningStates);
-      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
-      if canRun<>miEvaluateNow.enabled then begin
-        miEvaluateNow.enabled:=canRun;
-        miCallMain.enabled:=canRun;
-      end;
       //--------------------------------------------------:Halt/Run enabled states
       lastReportedRunnerInfo:=currentRunnerInfo;
     end;
+    canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
+    if canRun<>miEvaluateNow.enabled then begin
+      miEvaluateNow.enabled:=canRun;
+      miCallMain.enabled:=canRun;
+    end;
+
 
     if currentRunnerInfo.hasPendingEditResult then begin
       processEditResult(runEvaluator.getCurrentEdit,currentRunnerInfo.state in [es_debugHalted,es_debugRunning]);

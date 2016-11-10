@@ -1120,7 +1120,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
 {$ifdef fullVersion}
 PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
   VAR sourceNames:T_arrayOfString;
-      i:longint;
+      sourceName:string;
       p:T_package;
       context:T_evaluationContext;
       nullAdapter:T_adapters;
@@ -1130,9 +1130,9 @@ PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
       ensureDemos;
       context.createContext(P_adapters(@nullAdapter),ct_silentlyRunAlone);
       sourceNames:=locateSources;
-      for i:=0 to length(sourceNames)-1 do begin
+      for sourceName in sourceNames do begin
         p.create(nil);
-        p.setSourcePath(sourceNames[i]);
+        p.setSourcePath(sourceName);
         nullAdapter.clearErrors;
         p.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
         addPackageDoc(p.getDoc);
@@ -1141,6 +1141,7 @@ PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
       context.destroy;
       nullAdapter.clearErrors;
       nullAdapter.destroy;
+      setLength(sourceNames,0);
     end;
     makeHtmlFromTemplate(includePackageDoc);
   end;

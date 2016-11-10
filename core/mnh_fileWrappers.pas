@@ -83,14 +83,14 @@ FUNCTION locateSources: T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
-      if (FindFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) then repeat
+      if (sysutils.FindFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) then repeat
         appendIfNew(result,path+info.name);
-      until (findNext(info)<>0);
+      until (sysutils.findNext(info)<>0);
       sysutils.FindClose(info);
 
-      if FindFirst(path+'*', faAnyFile, info) = 0 then repeat
+      if sysutils.FindFirst(path+'*', faAnyFile, info) = 0 then repeat
         if (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
-      until (findNext(info)<>0);
+      until (sysutils.findNext(info)<>0);
       sysutils.FindClose(info);
     end;
 
