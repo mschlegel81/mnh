@@ -631,6 +631,13 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
                            end;
   end;
 
+PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
+  begin
+    prepareDocumentation(includePackageDoc);
+    if includePackageDoc then OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/packages.html'),'\','/')+'#defined')
+                         else OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
+  end;
+
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
     makeAndShowDoc(false);
@@ -794,14 +801,15 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if breakPointHandlingPending then handleBreak;
       //Halt/Run enabled states:--------------------------------------------------
       miHaltEvalutaion.enabled:=(currentRunnerInfo.state in C_runningStates);
-      canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
-      if canRun<>miEvaluateNow.enabled then begin
-        miEvaluateNow.enabled:=canRun;
-        miCallMain.enabled:=canRun;
-      end;
       //--------------------------------------------------:Halt/Run enabled states
       lastReportedRunnerInfo:=currentRunnerInfo;
     end;
+    canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (editorMeta[inputPageControl.activePageIndex].language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
+    if canRun<>miEvaluateNow.enabled then begin
+      miEvaluateNow.enabled:=canRun;
+      miCallMain.enabled:=canRun;
+    end;
+
 
     if currentRunnerInfo.hasPendingEditResult then begin
       processEditResult(runEvaluator.getCurrentEdit,currentRunnerInfo.state in [es_debugHalted,es_debugRunning]);
