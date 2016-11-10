@@ -630,6 +630,13 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
                            end;
   end;
 
+PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
+  begin
+    prepareDocumentation(includePackageDoc);
+    if includePackageDoc then OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/packages.html'),'\','/')+'#defined')
+                         else OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
+  end;
+
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
     makeAndShowDoc(false);

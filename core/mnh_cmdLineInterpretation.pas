@@ -4,9 +4,6 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
      myStringUtil,sysutils,myGenerics,mnh_contexts,
      lclintf,mnh_html,mnh_funcs_mnh;
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
-{$ifdef fullVersion}
-PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
-{$endif}
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
 PROCEDURE displayHelp;
@@ -37,15 +34,6 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CO
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(adapters,nameAndOption,appending);
     if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
   end;
-
-{$ifdef fullVersion}
-PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
-  begin
-    prepareDocumentation(includePackageDoc);
-    if includePackageDoc then OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/packages.html'),'\','/')+'#defined')
-                         else OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
-  end;
-{$endif}
 
 PROCEDURE displayHelp;
   begin
@@ -80,7 +68,6 @@ PROCEDURE displayHelp;
     writeln('  -info             show info; same as -cmd mnhInfo.print');
     {$ifdef fullVersion}
     writeln('  -profile          do a profiling run - implies +time');
-    writeln('  -doc              regenerate and show documentation');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
     {$endif}
     writeln('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
@@ -208,9 +195,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                        {$ifdef debugMode}  'D'{$else}'O'{$endif},
                                                                        {$I %FPCTargetOS%},':',CODE_HASH); quitImmediate:=true; end
-        {$ifdef fullVersion}
-        else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc(false); quitImmediate:=true; end
-        {$endif}
         else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
