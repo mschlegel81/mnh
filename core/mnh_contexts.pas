@@ -234,12 +234,14 @@ DESTRUCTOR T_packageProfilingCall.destroy;
 FUNCTION T_packageProfilingCall.getId: T_idString;
   CONST categoryText:array[T_profileCategory] of string=('importing','tokenizing','declarations','evaluation','unknown','total');
   begin
-    result:=extractFileName(package^.getPath)+':'+categoryText[category];
+    result:=':'+categoryText[category];
   end;
 
 FUNCTION T_packageProfilingCall.getLocation: T_tokenLocation;
   begin
     result:=packageTokenLocation(package);
+    result.column:=0;
+    result.line:=-1-ord(category);
   end;
 
 CONSTRUCTOR T_valueStore.create;
