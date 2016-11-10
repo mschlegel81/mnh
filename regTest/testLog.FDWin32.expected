@@ -736,7 +736,7 @@ out> {$y^3+[3,-2]}
  in> f(3, 4);
 out> 67
  in> f;
-Error  Cannot apply user defined rule f to empty parameter list
+Error  Cannot apply user defined rule f to parameter list ():  ()
 Stack trace  :evaluation ()
 ***** countTheCoins *****
 There are 293 ways to make a dollar from coins
