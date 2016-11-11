@@ -509,7 +509,7 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
       end;
       context.cascadeDisposeToken(firstRep);
     end else begin
-      context.adapters^.raiseError('Cannot apply function to parameters: '+toParameterListString(params,true),declaredAt);
+      context.raiseCannotApplyError('function',params,callLocation);
       result:=nil;
     end;
   end;
