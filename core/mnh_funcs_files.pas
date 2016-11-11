@@ -439,7 +439,7 @@ FUNCTION splitFileName_imp intFuncSignature;
       result:=newListLiteral;
       name:=str0^.value;
       appendPair(result,'input',name);
-      appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
+      appendPair(result,'expanded',replaceAll(replaceAll(expandFileName(name),'\','/'),'//','/'));
       appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),expandFileName(name)),'\','/'));
       if ExtractFileDir(name)=''
       then appendPair(result,'directory','.')

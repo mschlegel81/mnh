@@ -2860,7 +2860,6 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       end;
       literalType:=T_literalType(literalByte);
       case literalType of
-        lt_error:result:=newErrorLiteral;
         lt_boolean:result:=newBoolLiteral(stream.readBoolean);
         lt_int:result:=newIntLiteral(stream.readInt64);
         lt_real:result:=newRealLiteral(stream.readDouble);
@@ -2894,8 +2893,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         lt_emptyList: result:=newListLiteral(0);
         lt_list,
         lt_numList,
-        lt_flatList,
-        lt_listWithError:begin
+        lt_flatList:begin
           listSize:=stream.readNaturalNumber;
           result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream255(),false);
@@ -2914,12 +2912,10 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       end;
     end;
 
-  VAR p:int64;
   begin
     {$ifdef debugMode}start:=now;{$endif}
 
     setLength(reusableLiterals,0);
-    p:=stream.streamPosition;
     encodingMethod:=stream.readByte;
     case encodingMethod of
       255: result:=literalFromStream255;
@@ -2942,10 +2938,6 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
     VAR i:longint;
         reusableIndex:longint;
     begin
-      if (L^.literalType=lt_expression) then begin
-        if adapters<>nil then adapters^.raiseError('Cannot represent expression literal in binary form!',location);
-        exit;
-      end;
       reusableIndex:=reusableMap.get(L,2097151);
       if reusableIndex<2097151 then begin
         stream.writeByte(255);
@@ -2954,10 +2946,10 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
       end;
       stream.writeByte(byte(L^.literalType));
       case L^.literalType of
-        lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
-        lt_int:stream.writeInt64(P_intLiteral(L)^.val);
-        lt_real:stream.writeDouble(P_realLiteral(L)^.val);
-        lt_string:stream.writeAnsiString(P_stringLiteral(L)^.val);
+        lt_boolean:stream.writeBoolean   (P_boolLiteral  (L)^.val);
+        lt_int:    stream.writeInt64     (P_intLiteral   (L)^.val);
+        lt_real:   stream.writeDouble    (P_realLiteral  (L)^.val);
+        lt_string: stream.writeAnsiString(P_stringLiteral(L)^.val);
         lt_booleanList:begin
           stream.writeNaturalNumber(P_listLiteral(L)^.size);
           for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream.writeBoolean(P_boolLiteral(P_listLiteral(L)^.value(i))^.val);
@@ -2981,13 +2973,16 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
             writeLiteral(                          P_listLiteral(P_listLiteral(L)^.value(i))^.dat[1]);
           end;
         end;
+        lt_emptyList: begin end; //completely defined by type
         lt_list,
         lt_numList,
-        lt_emptyList,
-        lt_flatList,
-        lt_listWithError:begin
+        lt_flatList:begin
           stream.writeNaturalNumber(P_listLiteral(L)^.size);
           for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_listLiteral(L)^.value(i));
+        end;
+        else begin
+          if adapters<>nil then adapters^.raiseError  ('Cannot represent '+L^.typeString+' literal in binary form!',location)
+                           else raise Exception.create('Cannot represent '+L^.typeString+' literal in binary form!');
         end;
       end;
       if (reusableMap.fill<2097151) and ((L^.literalType=lt_string) or (L^.literalType in C_validListTypes)) then

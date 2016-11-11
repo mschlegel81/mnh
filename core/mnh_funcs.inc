@@ -747,6 +747,7 @@ FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
       tempPackage:T_package;
+      Source:TStringList;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
@@ -771,6 +772,15 @@ FUNCTION inspect_imp intFuncSignature;
 
       result:=newListLiteral;
       context.adapters^.raiseNote('Cannot locate package with id or path "'+id+'"',tokenLocation);
+    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
+      tempPackage.create(nil);
+      Source:=TStringList.create;
+      for i:=0 to list1^.size-1 do Source.append(P_stringLiteral(list1^.value(i))^.value);
+      tempPackage.setSourceUTF8AndPath(Source,str0^.value);
+      FreeAndNil(Source);
+      tempPackage.loadForDocumentation;
+      result:=tempPackage.inspect;
+      tempPackage.destroy;
     end;
   end;
 
@@ -862,7 +872,7 @@ FUNCTION clearAllCaches_imp intFuncSignature;
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache',@clearRuleCache_imp,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches',@clearAllCaches_imp,'clearAllCaches;//Clears all memoized rule caches and returns void.');

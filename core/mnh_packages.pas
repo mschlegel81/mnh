@@ -63,8 +63,8 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getPath:ansistring; virtual;
       PROCEDURE setSourcePath(CONST path:ansistring);
-      {$ifdef fullVersion}
       PROCEDURE setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
+      {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       FUNCTION getPackageFileNameList:T_arrayOfString;
       {$else}
@@ -1031,13 +1031,12 @@ PROCEDURE T_package.setSourcePath(CONST path:ansistring);
     codeProvider.load;
   end;
 
-{$ifdef fullVersion}
 PROCEDURE T_package.setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
   begin
     codeProvider.setLinesUTF8(sourceUtf8);
     codeProvider.setPath(pathOrPseudoPath);
   end;
-{$else}
+{$ifndef fullVersion}
 PROCEDURE T_package.clearSource;
   begin
     codeProvider.clear;

@@ -61,3 +61,10 @@ maxFileTime(folder,...)->allFiles(folder,...==[] ? void : ...).fileInfo.getInner
 
 //*Returns the file time of the given file
 fileTime(file)->file.fileInfo['time'] orElse -1;
+
+//*Returns true if the file names indicate equal files
+isSameFile(name1:string,name2:string)->begin
+  local exp1:=splitFileName(name1)['expanded'];
+  local exp2:=splitFileName(name2)['expanded'];
+  exp1=exp2 OR mnhInfo['targetOs']<>'Linux' AND exp1.upper=exp2.upper;
+end;
