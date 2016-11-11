@@ -2867,27 +2867,27 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         lt_string:result:=newStringLiteral(stream.readAnsiString);
         lt_booleanList: begin
           listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
+          result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendBool(stream.readBoolean);
         end;
         lt_intList: begin
           listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
+          result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendInt(stream.readInt64);
         end;
         lt_realList: begin
           listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
+          result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendReal(stream.readDouble);
         end;
         lt_stringList: begin
           listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
+          result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.appendString(stream.readAnsiString);
         end;
         lt_keyValueList: begin
           listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
+          result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then
             P_listLiteral(result)^.append(newListLiteral(2)^.appendString(stream.readAnsiString)^.append(literalFromStream255(),false),false);
         end;
@@ -2897,10 +2897,8 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         lt_flatList,
         lt_listWithError:begin
           listSize:=stream.readNaturalNumber;
-          result:=newListLiteral;
-          setLength(P_listLiteral(result)^.dat,listSize);
+          result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream255(),false);
-          if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
         end;
         lt_void:result:=newVoidLiteral;
         else begin
@@ -2909,6 +2907,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
           exit(newErrorLiteral);
         end;
       end;
+      if (result^.literalType<>literalType) and (adapters<>nil) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
       if ((literalType=lt_string) or (literalType in C_validListTypes)) and (length(reusableLiterals)<2097151) then begin
         setLength(reusableLiterals,length(reusableLiterals)+1);
         reusableLiterals[length(reusableLiterals)-1]:=result;
