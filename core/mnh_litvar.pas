@@ -2889,6 +2889,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
           result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream.allOkay then
             P_listLiteral(result)^.append(newListLiteral(2)^.appendString(stream.readAnsiString)^.append(literalFromStream255(),false),false);
+          P_listLiteral(result)^.toKeyValueList(true);
         end;
         lt_emptyList: result:=newListLiteral(0);
         lt_list,

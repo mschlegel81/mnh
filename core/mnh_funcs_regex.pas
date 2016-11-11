@@ -45,10 +45,9 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   end;
 
 FUNCTION regexMatch_imp intFuncSignature;
+  VAR regex:TRegExpr;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
-    VAR regex:TRegExpr;
     begin
-      regex:=TRegExpr.create;
       regex.expression:=trip.x;
       regex.inputString:=trip.y;
       try
@@ -58,12 +57,12 @@ FUNCTION regexMatch_imp intFuncSignature;
            context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.free;
     end;
   VAR i,i1:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
+      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
@@ -71,15 +70,15 @@ FUNCTION regexMatch_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do lResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
       end;
+      regex.free;
     end;
   end;
 
 FUNCTION regexMatchComposite_imp intFuncSignature;
+  VAR regex:TRegExpr;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
-    VAR regex:TRegExpr;
-        i:longint;
+    VAR i:longint;
     begin
-      regex:=TRegExpr.create;
       regex.expression:=trip.x;
       regex.inputString:=trip.y;
       result:=newListLiteral;
@@ -98,13 +97,13 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
           context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.free;
     end;
 
   VAR i,i1:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
+      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
@@ -112,16 +111,16 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do lResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
       end;
+      regex.free;
     end;
   end;
 
 FUNCTION regexSplit_imp intFuncSignature;
+  VAR regex:TRegExpr;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
-    VAR regex:TRegExpr;
-        i:longint;
+    VAR i:longint;
         pieces : TStrings;
     begin
-      regex:=TRegExpr.create;
       regex.expression:=trip.x;
       pieces:=TStringList.create;
       try
@@ -131,7 +130,6 @@ FUNCTION regexSplit_imp intFuncSignature;
           context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.free;
       result:=newListLiteral;
       for i:=0 to pieces.count-1 do result^.appendString(pieces[i]);
       pieces.free;
@@ -141,6 +139,7 @@ FUNCTION regexSplit_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
+      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=regexSplit(triplet(arg1,arg0,nil,0))
@@ -148,14 +147,14 @@ FUNCTION regexSplit_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do lResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
       end;
+      regex.free;
     end;
   end;
 
 FUNCTION regexReplace_imp intFuncSignature;
+  VAR regex:TRegExpr;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
-    VAR regex:TRegExpr;
     begin
-      regex:=TRegExpr.create;
       regex.expression:=trip.x;
       try
         result:=regex.Replace(trip.y,trip.z,false);
@@ -164,13 +163,13 @@ FUNCTION regexReplace_imp intFuncSignature;
           context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.free;
     end;
 
   VAR i,i1:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) then begin
+      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,arg2);
       if i1<0 then exit(nil)
       else if i1=0 then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
@@ -179,6 +178,7 @@ FUNCTION regexReplace_imp intFuncSignature;
         for i:=0 to i1-1 do lResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
       end;
     end;
+    regex.free;
   end;
 
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';
