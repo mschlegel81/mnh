@@ -1,6 +1,6 @@
 USE inputs;
 
-private words:=dict.fileLines.trim;
+private memoized words->dict.fileLines.trim;
 
 private relativeFrequency(L:list)->begin
   local Freq:=L.elementFrequency.sort(1);
@@ -8,9 +8,9 @@ private relativeFrequency(L:list)->begin
   Freq.each(t,[t[0]*f,t[1]]);
 end;
 
-private lengthTable:=length(words).relativeFrequency;
-private firstTable:=words.copy(0,1).relativeFrequency;
-private followerTable:=words.each(word,word.length<2 ? void : word.copy([0..length(word)-2],2)).flatten.each(s,s.chars).group(0).each(g,[g[0,0],g.getInner(1).relativeFrequency]);
+private memoized lengthTable->length(words).relativeFrequency;
+private memoized firstTable->words.copy(0,1).relativeFrequency;
+private memoized followerTable->words.each(word,word.length<2 ? void : word.copy([0..length(word)-2],2)).flatten.each(s,s.chars).group(0).each(g,[g[0,0],g.getInner(1).relativeFrequency]);
 
 private randomFromTable(T:list)->begin
   local index:=intRandom(T.size);
