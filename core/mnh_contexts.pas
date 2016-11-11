@@ -190,6 +190,8 @@ TYPE
       {$endif}
       PROCEDURE printCallStack(CONST messageType:T_messageType);
       PROCEDURE clearCallStack;
+
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST messageType:T_messageType=mt_el3_evalError);
       //clock routines
       FUNCTION wallclockTime:double;
       FUNCTION wantBasicTiming:boolean;
@@ -864,6 +866,11 @@ PROCEDURE T_evaluationContext.clearCallStack;
     //If the evaluation was not finished cleanly, the call stack may not be empty
     //Make sure that the elements are profiled correctly and references to expressions are dropped
     while length(callStack)>0 do callStackPop();
+  end;
+
+PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST messageType:T_messageType=mt_el3_evalError);
+  begin
+    adapters^.raiseCustomMessage(messageType,'Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100)+suffix,location);
   end;
 
 FUNCTION T_evaluationContext.wallclockTime: double;

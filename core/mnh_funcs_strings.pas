@@ -345,7 +345,6 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
           result:=newErrorLiteral;
         end;
       end;
-      else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation,context.adapters^);
     end;
   end;
 
