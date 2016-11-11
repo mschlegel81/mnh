@@ -36,6 +36,7 @@
       FUNCTION inspect:P_listLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION idForErrorFeedback:ansistring;
+      FUNCTION getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -406,6 +407,58 @@ PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);
 FUNCTION T_rule.idForErrorFeedback:ansistring;
   begin
     result:=P_package(declarationStart.package)^.codeProvider.id+'.'+id+' ('+ansistring(declarationStart)+')';
+  end;
+
+FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+  VAR minPatternLength:longint=maxLongint;
+      maxPatternLength:longint=0;
+      sub:P_subrule;
+      i:longint;
+      last:P_token;
+  begin
+    if ruleType in C_mutableRuleTypes then begin
+      result:=context.newToken(location,'',tt_braceOpen);
+      result^.next:=context.newToken(location,'',tt_braceClose);
+    end else begin
+      for sub in subrules do begin
+        minPatternLength:=min(minPatternLength,length(sub^.pattern.sig));
+        maxPatternLength:=max(maxPatternLength,length(sub^.pattern.sig));
+        if sub^.pattern.hasOptionals then maxPatternLength:=maxLongint;
+      end;
+      result:=context.newToken(location,'',tt_braceOpen);
+      last:=result;
+      for i:=0 to minPatternLength-1 do begin
+        if i>0 then begin
+          last^.next:=context.newToken(location,'',tt_separatorComma);
+          last:=last^.next;
+        end;
+        last^.next:=context.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
+        last:=last^.next;
+      end;
+      last^.next:=context.newToken(location,'',tt_braceClose);
+      last:=last^.next;
+      if maxPatternLength>minPatternLength then begin
+        last^.next:=context.newToken(location,'',tt_listToParameterList);
+        last:=last^.next;
+        if minPatternLength>0 then begin
+          last^.next:=context.newToken(location,'tail',tt_intrinsicRule,BUILTIN_TAIL);
+          last:=last^.next;
+          last^.next:=context.newToken(location,'',tt_braceOpen);
+          last:=last^.next;
+          last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
+          last:=last^.next;
+          last^.next:=context.newToken(location,'',tt_separatorComma);
+          last:=last^.next;
+          last^.next:=context.newToken(location,'',tt_literal,newIntLiteral(minPatternLength));
+          last:=last^.next;
+          last^.next:=context.newToken(location,'',tt_braceClose);
+        end else begin
+          last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
+          last:=last^.next;
+        end;
+      end;
+
+    end;
   end;
 
 {$endif}

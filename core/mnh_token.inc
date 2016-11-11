@@ -655,7 +655,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         aggregatorPresent:=no;
         lastPart:=length(bodyParts)-1;
         t:=bodyParts[lastPart].first;
-        if t^.tokType=tt_aggregatorConstructor then begin
+        if (t^.tokType=tt_aggregatorConstructor) or (t^.tokType=tt_pseudoFuncPointer) and isPureAggregator then begin
           reduceExpression(bodyParts[lastPart].first,callDepth+1,context);
           bodyParts[lastPart].last:=bodyParts[lastPart].first^.last;
           t:=bodyParts[lastPart].first;
@@ -1360,8 +1360,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       location:=first^.location;;
       ruleToken:=context.disposeToken(first); //dispose ::, store f
       temp:=ruleToken^.next; //store ...
-      ruleToken^.next      :=context.newToken(location,'',tt_listToParameterList); //f -> f@
-      ruleToken^.next^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier); //f@ -> f@$params
+      if (ruleToken^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
+        ruleToken^.next:=P_rule(ruleToken^.data)^.getParametersForPseudoFuncPointer(context,location);
+      end else begin
+        ruleToken^.next      :=context.newToken(location,'',tt_listToParameterList); //f -> f@
+        ruleToken^.next^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier); //f@ -> f@$params
+      end;
       new(exRule,createFromInline(ruleToken,context));
       first:=context.newToken(location,'',tt_literal,newExpressionLiteral(exRule)); // {f@$params}
       first^.next:=temp; //-> {f@$params} ...
