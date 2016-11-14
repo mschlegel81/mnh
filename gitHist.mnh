@@ -48,8 +48,10 @@ end;
 
 plotHistory(lines:boolean)->begin
   plot([]);
+  plot.display;
   [0..5].each(cat,addPlot(history.getInner(1,cat,lines ? 0 : 1),
                           history.getInner(0)));
+  plot.display;
 end;
 
 main('plot')->plotHistory(true);
