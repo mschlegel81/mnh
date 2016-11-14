@@ -20,7 +20,7 @@ end;
 
 analyzeFolder->
 allFiles('D:\dev\temp',['*.pas','*.inc','*.mnh','*.lfm','*.txt'])
-  .each(file,[fileCategory(file),fileStats(file)[[0,2]]])
+  .pEach(file,[fileCategory(file),fileStats(file)[[0,2]]])
   .group(0,{[$x[0],$x[1]+$y[1]]})
   .{[$L['demo'] orElse [0,0],
      $L['mnh'] orElse [0,0],
@@ -30,15 +30,21 @@ allFiles('D:\dev\temp',['*.pas','*.inc','*.mnh','*.lfm','*.txt'])
      $L['resource'] orElse [0,0]]};
 
 datastore history;
+datastore names;
 
 fetchData->history:=commitHistory.each(entry,begin
   allFiles('D:\dev\temp').each(file,deleteFile(file));
   'git'.exec(['--work-tree=D:\dev\temp','checkout',entry[0],'--','.']);
+  names:=names.union(allFiles('D:\dev\temp'));
   local stats:=analyzeFolder;
   print('Commit ',index,' ',entry[0],' ',stats);
   [entry[1],stats];
 end);
 
+main('init')->begin
+  names:=[];
+  fetchData;
+end;
 
 plotHistory(lines:boolean)->begin
   plot([]);
@@ -46,6 +52,8 @@ plotHistory(lines:boolean)->begin
                           history.getInner(0)));
 end;
 
-plotHistory(true);
+main('plot')->plotHistory(true);
+
+main('names')->printf("%s\t%s",names,names.pEach(name,fileCategory(name)));
 
 //plot(history.getInner(1,0,0),history.getInner(0));
