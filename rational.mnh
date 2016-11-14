@@ -1,0 +1,41 @@
+private gcd(a,0)->a;
+private gcd(a,b)->gcd(b, a mod b);
+type rational(l:intList(2))->true;
+
+shorten(r:rational)->begin
+  local val:=abs(r);
+  local sig:=sign(r).agg(*);
+  val div gcd@val * [sig,1];
+end;
+
+ratInt(x:int)->[x,1];
+ratPlus (a:rational,b:rational)->shorten([a[0]*b[1]+b[0]*a[1],a[1]*b[1]]);
+ratPlus (a:int     ,b         )->ratPlus(ratInt(a),b);
+ratPlus (a:rational,b:int     )->ratPlus(a,ratInt(b));
+ratMinus(a:rational,b:rational)->shorten([a[0]*b[1]-b[0]*a[1],a[1]*b[1]]);
+ratMinus(a:int     ,b         )->ratMinus(ratInt(a),b);
+ratMinus(a:rational,b:int     )->ratMinus(a,ratInt(b));
+ratPot(base:rational,power>0)->[1..power].each(i,base,*);
+
+private arctanSummands(n:int)->[0..n].each(i,[(-1)^i,2*i+1]);
+private arctanSummands(n:int,x:rational)->[0..n].each(i,ratInt((-1)^i)*ratPot(x,2*i+1)*[1,2*i+1]);
+
+//Binominalkoeffizient über Pascalsches Dreieck:
+private pascal(n)->pascal([1],n);
+private pascal(L,n>0)->pascal(L|0+0|L,n-1);
+private pascal(L,n)->L;
+
+private series1(n:int)->arctanSummands(n).agg(::ratPlus)*ratInt(4);
+private series4(i:int)->arctanSummands(i,[1,5  ]).agg(::ratPlus)*ratInt(16).ratMinus(
+                        arctanSummands(i,[1,239]).agg(::ratPlus)*ratInt(4));
+
+series4(1)[0].factorize;
+series4(1)[1].factorize;
+series4(1).agg(/);
+//series4(2);
+//series4(3);
+//series4(4);
+
+aggregator(::ratPlus);
+
+[1..10].each(i,[1,i]).agg( ::ratPlus);
