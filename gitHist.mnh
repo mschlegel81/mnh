@@ -8,25 +8,34 @@ commitHistory->'git'.exec(['log','--all','--date=iso'])[0]
                .sort(1)
                .{print('Commit history has ',$L.size,' entries') orElse $L};
 
-fileCategory(filename:string)->begin
-  local ext:=splitFileName(filename)['extension'].upper;
-  ext='.LFM' ? 'gui' :
-  ext='.MNH' ? (filename.matches('demo') ? 'demo' : 'mnh') :
-  ext='.TXT' ? 'resource' :
-  filename.matches('func') ? 'fSource' :
-  filename.matches('gui' ) ? 'gui'
-                           : 'source';
-end;
+private acceptedExt:=[['.bat','batch'],
+                      ['.sh' ,'batch'],
+                      ['.pas','source'],
+                      ['.inc','source'],
+                      ['.lpi','sourceMeta'],
+                      ['.lpr','sourceMeta'],
+                      ['.lps','sourceMeta'],
+                      ['.lfm','sourceMeta'],
+                      ['.mnh','mnh'],
+                      ['.ico' ,'resource'],
+                      ['.txt' ,'resource'],
+                      ['.foot','resource'],
+                      ['.head','resource'],
+                      ['.html','resource'],
+                      ['.css' ,'resource'],
+                      ['.xml' ,'resource'],
+                      ['.svg' ,'resource']];
+
+fileCategory(filename:string)->acceptedExt[splitFileName(filename)['extension'].lower] orElse '-';
 
 analyzeFolder->
-allFiles('D:\dev\temp',['*.pas','*.inc','*.mnh','*.lfm','*.txt'])
+allFiles('D:\dev\temp','*'&acceptedExt.getInner(0))
   .pEach(file,[fileCategory(file),fileStats(file)[[0,2]]])
   .group(0,{[$x[0],$x[1]+$y[1]]})
-  .{[$L['demo'] orElse [0,0],
+  .{[$L['source'] orElse [0,0],
+     $L['sourceMeta'] orElse [0,0],
      $L['mnh'] orElse [0,0],
-     $L['gui'] orElse [0,0],
-     $L['source'] orElse [0,0],
-     $L['fSource'] orElse [0,0],
+     $L['batch'] orElse [0,0],
      $L['resource'] orElse [0,0]]};
 
 datastore history;
@@ -41,11 +50,6 @@ fetchData->history:=commitHistory.each(entry,begin
   [entry[1],stats];
 end);
 
-main('init')->begin
-  names:=[];
-  fetchData;
-end;
-
 plotHistory(lines:boolean)->begin
   plot([]);
   plot.display;
@@ -54,8 +58,14 @@ plotHistory(lines:boolean)->begin
   plot.display;
 end;
 
+//*Initializes datastores (this will take a while)
+main('init')->begin
+  names:=[];
+  fetchData;
+end;
+
+//*Plots the history
 main('plot')->plotHistory(true);
 
+//*Lists all file names
 main('names')->printf("%s\t%s",names,names.pEach(name,fileCategory(name)));
-
-//plot(history.getInner(1,0,0),history.getInner(0));
