@@ -158,9 +158,8 @@ exit}
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,lit);
-          end;
-          lastRep:=firstRep^.last;
-          if not(context.adapters^.noErrors) then begin
+            lastRep:=firstRep;
+          end else begin
             if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
             context.cascadeDisposeToken(firstRep);
             firstRep:=context.newToken(declarationStart,'',tt_literal,newErrorLiteral);
