@@ -52,8 +52,6 @@
       FUNCTION accept                  (CONST x:P_literal;                                                                            VAR context:T_evaluationContext):boolean;
       FUNCTION getInlineValue:P_literal;
 
-      FUNCTION fixParameter(CONST wrap:P_expressionLiteral; CONST parameterIndex:int64; CONST location:T_tokenLocation; CONST parameterValue:P_literal):P_expressionLiteral;
-
       //Inspection/documentation calls
       FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
@@ -583,24 +581,6 @@ FUNCTION T_subrule.getInlineValue:P_literal;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
-  end;
-
-FUNCTION T_subrule.fixParameter(CONST wrap:P_expressionLiteral; CONST parameterIndex:int64; CONST location:T_tokenLocation; CONST parameterValue:P_literal):P_expressionLiteral;
-  VAR resRule:P_subrule;
-      pt:T_preparedToken;
-  begin
-    if (parameterIndex<0) or (parameterIndex>=REMAINING_PARAMETERS_IDX) and (wrap<>nil) then begin
-      result:=wrap;
-      result^.rereference;
-      exit(result);
-    end;
-    new(resRule,clone(@self));
-    for pt in resRule^.preparedBody do if pt.parIdx=parameterIndex then begin
-      pt.token.undefine;
-      pt.token.define(location,'',tt_literal,parameterValue);
-      parameterValue^.rereference;
-    end;
-    result:=newExpressionLiteral(resRule);
   end;
 
 FUNCTION T_subrule.getCmdLineHelpText:ansistring;
