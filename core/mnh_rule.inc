@@ -158,9 +158,8 @@ exit}
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,lit);
-          end;
-          lastRep:=firstRep^.last;
-          if not(context.adapters^.noErrors) then begin
+            lastRep:=firstRep;
+          end else begin
             if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
             context.cascadeDisposeToken(firstRep);
             firstRep:=context.newToken(declarationStart,'',tt_literal,newErrorLiteral);
@@ -441,20 +440,9 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContex
         last^.next:=context.newToken(location,'',tt_listToParameterList);
         last:=last^.next;
         if minPatternLength>0 then begin
-          last^.next:=context.newToken(location,'tail',tt_intrinsicRule,BUILTIN_TAIL);
-          last:=last^.next;
-          last^.next:=context.newToken(location,'',tt_braceOpen);
-          last:=last^.next;
-          last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
-          last:=last^.next;
-          last^.next:=context.newToken(location,'',tt_separatorComma);
-          last:=last^.next;
-          last^.next:=context.newToken(location,'',tt_literal,newIntLiteral(minPatternLength));
-          last:=last^.next;
-          last^.next:=context.newToken(location,'',tt_braceClose);
+          last^.next:=context.newToken(location,'',tt_optionalParameters);
         end else begin
           last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
-          last:=last^.next;
         end;
       end;
 
