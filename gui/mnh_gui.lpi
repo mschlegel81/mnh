@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="56">
+    <Units Count="57">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -342,6 +342,13 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit55>
+      <Unit56>
+        <Filename Value="mnh_gui_outputonly.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="outputOnlyForm"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="mnh_gui_outputOnly"/>
+      </Unit56>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

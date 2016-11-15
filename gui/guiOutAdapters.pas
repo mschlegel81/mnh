@@ -1,16 +1,42 @@
-{$ifdef includeInterface}
-T_guiOutAdapter=object(T_collectingOutAdapter)
-  flushing:boolean;
-  CONSTRUCTOR create;
-  DESTRUCTOR destroy; virtual;
-  FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
-  PROCEDURE flushClear;
-end;
-{$endif}
-{$ifdef includeImplementation}
-CONSTRUCTOR T_guiOutAdapter.create;
+UNIT guiOutAdapters;
+INTERFACE
+USES SynEdit,SynEditKeyCmds,Forms,
+     myStringUtil,myGenerics,
+     mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
+     mnh_plotForm, mnh_tables;
+TYPE
+  T_abstractMnhForm=class(TForm)
+    PROCEDURE onEndOfEvaluation; virtual; abstract;
+    PROCEDURE onReloadRequired(CONST fileName:string); virtual; abstract;
+  end;
+
+  T_guiOutAdapter=object(T_collectingOutAdapter)
+    flushing:boolean;
+    parentForm:T_abstractMnhForm;
+    CONSTRUCTOR create(CONST owner:T_abstractMnhForm);
+    DESTRUCTOR destroy; virtual;
+    FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
+    PROCEDURE flushClear;
+  end;
+
+VAR guiOutAdapter: T_guiOutAdapter;
+    guiAdapters: T_adapters;
+
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
+IMPLEMENTATION
+VAR unitIsInitialized:boolean=false;
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
+  begin
+    if unitIsInitialized then exit;
+    guiOutAdapter.create(parent);
+    guiAdapters.create;
+    unitIsInitialized:=true;
+  end;
+
+CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm);
   begin
     inherited create(at_gui,C_collectAllOutputBehavior);
+    parentForm:=owner;
     flushing:=false;
   end;
 
@@ -87,11 +113,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
             end;
           end;
-        mt_endOfEvaluation: begin
-          for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].doneDebugging;
-          if not(reEvaluationWithGUIrequired) then MnhForm.updateDebugParts;
-        end;
-        mt_reloadRequired: if not(reEvaluationWithGUIrequired) then for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
+        mt_endOfEvaluation: parentForm.onEndOfEvaluation;
+        mt_reloadRequired: parentForm.onReloadRequired(simpleMessage);
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,simpleMessage);
@@ -108,27 +131,14 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     end;
     if result then clear;
     if wroteToSyn then begin
-      if not(MnhForm.showing) then begin
-        MnhForm.Show;
+      if not(parentForm.showing) then begin
+        parentForm.Show;
         {$ifdef debugMode}
         writeln(stdErr,'mnh form show triggered');
         {$endif}
       end;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
-    end;
-    if reEvaluationWithGUIrequired
-       and not(runEvaluator.evaluationRunning)
-       and guiAdapters.hasMessageOfType[mt_el3_evalError]
-    then begin
-      j:=closeDialogForm.showOnReEvaluationError;
-      if j=mrOk then begin
-        MnhForm.setEditorMode(true);
-        MnhForm.FormDropFiles(nil,getFileOrCommandToInterpretFromCommandLine);
-      end else begin
-        guiAdapters.clearErrors;
-        if j=mrClose then closeGuiFlag:=true;
-      end;
     end;
     flushing:=false;
     system.leaveCriticalSection(cs);
@@ -141,4 +151,10 @@ PROCEDURE T_guiOutAdapter.flushClear;
     append(message(mt_clearConsole,'',C_nilTokenLocation));
     system.leaveCriticalSection(cs);
   end;
-{$endif}
+
+FINALIZATION
+  if unitIsInitialized then begin
+    guiAdapters.destroy;
+    guiOutAdapter.destroy;
+  end;
+end.

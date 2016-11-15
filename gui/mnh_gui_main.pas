@@ -17,7 +17,7 @@ USES
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
-  LazUTF8, mnh_tables, openDemoDialog, mnh_workspaces;
+  LazUTF8, mnh_tables, openDemoDialog, mnh_workspaces, guiOutAdapters;
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -49,11 +49,10 @@ TYPE
   {$define includeInterface}
   {$include guiEditorInterface.inc}
   {$include editorMeta.inc}
-  {$include guiOutAdapter.inc}
   {$WARN 5024 OFF}
   { TMnhForm }
 
-  TMnhForm = class(TForm)
+  TMnhForm = class(T_abstractMnhForm)
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox: TGroupBox;
@@ -231,6 +230,8 @@ TYPE
     PROCEDURE miNewCentralPackageClick(Sender: TObject);
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
 
+    PROCEDURE onEndOfEvaluation; override;
+    PROCEDURE onReloadRequired(CONST fileName:string); override;
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
@@ -255,7 +256,6 @@ TYPE
     wordsInEditor:T_listOfString;
     lastReportedRunnerInfo:T_runnerStateInfo;
     editScriptMenuItems,utilityScriptMenuItems:array of TMenuItem;
-    PROCEDURE setEditorMode(CONST enable:boolean);
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
   public
@@ -267,18 +267,13 @@ TYPE
 
 VAR MnhForm: TMnhForm;
 
-PROCEDURE lateInitialization;
-PROCEDURE doFinalization;
 {$undef includeInterface}
 IMPLEMENTATION
-VAR guiOutAdapter: T_guiOutAdapter;
-    guiAdapters: T_adapters;
-    closeGuiFlag:boolean=false;
+VAR closeGuiFlag:boolean=false;
 {$R *.lfm}
 {$define includeImplementation}
 {$include guiEditorInterface.inc}
 {$include editorMeta.inc}
-{$include guiOutAdapter.inc}
 {$include debuggerLogic.inc}
 {$include runnerLogic.inc}
 {$include settingsLogic.inc}
@@ -466,6 +461,21 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
   VAR i:longint;
   begin
+    initGuiOutAdapters(MnhForm);
+    guiTaskQueue.create;
+    mnh_plotForm.guiAdapters:=@guiAdapters;
+
+    guiAdapters.addOutAdapter(@guiOutAdapter,false);
+    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
+    registerRule(GUI_NAMESPACE,'editors',@editors_impl,'editors(...);//Lists all editors');
+    registerRule(GUI_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(GUI_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string);//opens an editor tab for the given file');
+
+    SynHighlighterMnh.initLists;
+
+    mnh_evalThread.initUnit(@guiAdapters);
+    setupCallbacks;
+
     setLength(editorMeta,0);
     initFileTypes;
     registerForm(self,true,true);
@@ -529,12 +539,13 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
     UpdateTimeTimer.enabled:=false;
-    if not(reEvaluationWithGUIrequired) then saveSettings;
+    saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;
     debugHighlighter.destroy;
     helpHighlighter.destroy;
     wordsInEditor.destroy;
+    guiTaskQueue.destroy;
   end;
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -560,19 +571,12 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       processSettings;
       KeyPreview:=true;
       UpdateTimeTimer.enabled:=true;
-      if reEvaluationWithGUIrequired then begin
-        doStartEvaluation(true);
-        if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
-                        else runEvaluator.reEvaluateWithGUI(ct_normal);
-        setEditorMode(false);
-      end;
     end;
   end;
 
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if not(settingsReady) or
-       reEvaluationWithGUIrequired or
        (inputPageControl.activePageIndex<0) or
        (inputPageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
@@ -739,7 +743,7 @@ PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
   begin
-    if (inputPageControl.activePageIndex>=0) and not(reEvaluationWithGUIrequired) then begin
+    if (inputPageControl.activePageIndex>=0) then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       settings.value^.workspace.activePage:=inputPageControl.activePageIndex;
       with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(pseudoName,editor.lines);
@@ -819,16 +823,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     if showing then begin
       while guiTaskQueue.executeTask do;
-      if not (reEvaluationWithGUIrequired) then begin
-        //Form caption:-------------------------------------------------------------
-        if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
-        then begin
-          aid:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
-          editorMeta[inputPageControl.activePageIndex].repaintWithStateCounter(assistancEvaluator.getStateCounter,assistancEvaluator.getErrorHints);
-        end else aid:=APP_TITLE;
-        if aid<>caption then caption:=aid;
-        //-------------------------------------------------------------:Form caption
-      end;
+      //Form caption:-------------------------------------------------------------
+      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
+      then begin
+        aid:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
+        editorMeta[inputPageControl.activePageIndex].repaintWithStateCounter(assistancEvaluator.getStateCounter,assistancEvaluator.getErrorHints);
+      end else aid:=APP_TITLE;
+      if aid<>caption then caption:=aid;
+      //-------------------------------------------------------------:Form caption
 
       //File checks:------------------------------------------------------------
       if (now>doNotCheckFileBefore) then begin
@@ -848,7 +850,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         end;
         doNotCheckFileBefore:=now+ONE_SECOND;
 
-        if not(reEvaluationWithGUIrequired) and settings.value^.savingRequested then begin
+        if settings.value^.savingRequested then begin
           for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
           saveSettings;
         end;
@@ -867,8 +869,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end;
-
-    if closeGuiFlag or reEvaluationWithGUIrequired and not(currentRunnerInfo.state in C_runningStates) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
+    if closeGuiFlag then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
@@ -888,90 +889,18 @@ PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VA
     Special:=runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
-PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
+PROCEDURE TMnhForm.onEndOfEvaluation;
+  VAR j:longint;
   begin
-    if enable then begin
-      outputPageControl.Align:=alBottom;
-      Splitter1.visible:=true;
-      Splitter1.enabled:=true;
-      inputPageControl.visible:=true;
-      inputPageControl.enabled:=true;
-      reEvaluationWithGUIrequired:=false;
-      Show;
-    end else begin
-      inputPageControl.visible:=false;
-      inputPageControl.enabled:=false;
-      outputPageControl.Align:=alClient;
-      Splitter1.visible:=false;
-      Splitter1.enabled:=false;
-      caption:=APP_TITLE+' '+getFileOrCommandToInterpretFromCommandLine;
-      Hide;
-    end;
-    subMenuFile.enabled:=enable;
-    subMenuFile.visible:=enable;
-
-    subMenuEvaluation.enabled:=enable;
-    subMenuEvaluation.visible:=enable;
-
-    subMenuHelp.enabled:=enable;
-    subMenuHelp.visible:=enable;
-
-    subMenuCode.enabled:=enable;
-    subMenuCode.visible:=enable;
-
-    outputPageControl.ShowTabs:=enable;
-
-    miExpressionEcho  .enabled:=enable;
-    miExpressionResult.enabled:=enable;
-    miDeclarationEcho .enabled:=enable;
-    miWrapEcho        .enabled:=enable;
-    miTimingInfo      .enabled:=enable;
-    MenuItem4         .enabled:=enable;
-    MenuItem1         .enabled:=enable;
-
-    miExpressionEcho  .visible:=enable;
-    miExpressionResult.visible:=enable;
-    miDeclarationEcho .visible:=enable;
-    miWrapEcho        .visible:=enable;
-    miTimingInfo      .visible:=enable;
-    MenuItem4         .visible:=enable;
-    MenuItem1         .visible:=enable;
-
-    if enable then begin
-      registerRule(GUI_NAMESPACE,'editors',@editors_impl,'editors(...);//Lists all editors');
-      registerRule(GUI_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
-      registerRule(GUI_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string);//opens an editor tab for the given file');
-    end else begin
-      unregisterRule(GUI_NAMESPACE,'editors');
-      unregisterRule(GUI_NAMESPACE,'editorContent');
-      unregisterRule(GUI_NAMESPACE,'openInEditor');
-    end;
+    for j:=0 to length(editorMeta)-1 do editorMeta[j].doneDebugging;
+    updateDebugParts;
   end;
 
-PROCEDURE lateInitialization;
+PROCEDURE TMnhForm.onReloadRequired(CONST fileName:string);
+  VAR j:longint;
   begin
-    guiOutAdapter.create;
-    guiAdapters.create;
-    guiTaskQueue.create;
-    mnh_plotForm.guiAdapters:=@guiAdapters;
-
-    guiAdapters.addOutAdapter(@guiOutAdapter,false);
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    registerRule(GUI_NAMESPACE,'editors',@editors_impl,'editors(...);//Lists all editors');
-    registerRule(GUI_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
-    registerRule(GUI_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string);//opens an editor tab for the given file');
-
-    SynHighlighterMnh.initLists;
-
-    mnh_evalThread.initUnit(@guiAdapters);
-    setupCallbacks;
+    for j:=0 to length(editorMeta)-1 do editorMeta[j].reloadFile(fileName);
   end;
 
-PROCEDURE doFinalization;
-  begin
-    guiTaskQueue.destroy;
-    guiAdapters.destroy;
-    guiOutAdapter.destroy;
-  end;
 
 end.
