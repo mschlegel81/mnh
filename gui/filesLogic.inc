@@ -194,11 +194,6 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
     setUnderCursor(OutputEdit.GetWordAtRowCol(caret),true,doJump);
     loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
     if not(doJump) then exit;
-    if reEvaluationWithGUIrequired then begin
-      if runEvaluator.evaluationRunning
-      then exit
-      else setEditorMode(true);
-    end;
     if (loc.fileName='') or (loc.fileName='?') then exit;
     pageIdx:=addOrGetEditorMetaForFile(loc.fileName);
     if pageIdx<0 then exit;

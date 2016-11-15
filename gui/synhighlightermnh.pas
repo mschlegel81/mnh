@@ -353,13 +353,13 @@ PROCEDURE TSynMnhSyn.next;
               localId := localId+fLine [i];
               inc(i);
             end;
+            fTokenId := tkDefault;
             for tt in C_typeChecks do if (fTokenId<>tkOperator) and (localId=C_tokenInfo[tt].defaultId) then begin
               fTokenId := tkOperator;
               run:=i;
             end;
             if fTokenId<>tkOperator then begin
               fTokenId := tkOperator;
-              inc(run);
             end;
           end;
           else fTokenId := tkOperator;

@@ -152,12 +152,13 @@ TYPE
 VAR runEvaluator:T_runEvaluator;
     assistancEvaluator:T_assistanceEvaluator;
 
-PROCEDURE initUnit(CONST guiAdapters:P_adapters);
+PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION editScriptFileName:string;
 FUNCTION utilityScriptFileName:string;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
+    assistanceIsInitialized:boolean=false;
     silentAdapters:T_adapters;
     intrinsicRulesForCompletion:T_listOfString;
 
@@ -901,7 +902,7 @@ PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list: T_listOfString);
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE initUnit(CONST guiAdapters:P_adapters);
+PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
   PROCEDURE initIntrinsicRuleList;
     VAR ids:T_arrayOfString;
         i:longint;
@@ -931,10 +932,13 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
   VAR collector:P_collectingOutAdapter;
   begin
     runEvaluator.create(guiAdapters,@main);
-    silentAdapters.create;
-    new(collector,create(at_unknown,C_collectAllOutputBehavior));
-    silentAdapters.addOutAdapter(collector,true);
-    assistancEvaluator.create(@silentAdapters,@docMain);
+    if useAssistance then begin
+      silentAdapters.create;
+      new(collector,create(at_unknown,C_collectAllOutputBehavior));
+      silentAdapters.addOutAdapter(collector,true);
+      assistancEvaluator.create(@silentAdapters,@docMain);
+      assistanceIsInitialized:=true;
+    end;
     initIntrinsicRuleList;
     unitIsInitialized:=true;
   end;
@@ -942,7 +946,9 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 FINALIZATION
   if unitIsInitialized then begin
     runEvaluator.destroy;
-    assistancEvaluator.destroy;
-    silentAdapters.destroy;
+    if assistanceIsInitialized then begin
+      assistancEvaluator.destroy;
+      silentAdapters.destroy;
+    end;
   end;
 end.

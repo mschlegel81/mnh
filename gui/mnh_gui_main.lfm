@@ -24,11 +24,11 @@ object MnhForm: TMnhForm
     Top = 353
     Width = 717
     TabStop = False
-    ActivePage = debugTabSheet
+    ActivePage = outputTabSheet
     Align = alBottom
     Font.Color = clBlack
     ParentFont = False
-    TabIndex = 2
+    TabIndex = 1
     TabOrder = 5
     Options = [nboKeyboardTabSwitch]
     object assistanceTabSheet: TTabSheet
@@ -544,11 +544,11 @@ object MnhForm: TMnhForm
     end
     object outputTabSheet: TTabSheet
       Caption = 'Output'
-      ClientHeight = 397
+      ClientHeight = 309
       ClientWidth = 709
       inline OutputEdit: TSynEdit
         Left = 0
-        Height = 397
+        Height = 309
         Top = 0
         Width = 709
         Align = alClient
@@ -1100,7 +1100,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              521
+              504
             )
             Cells = (
               3

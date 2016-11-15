@@ -65,9 +65,7 @@ PROCEDURE TMnhForm.processSettings;
       miMinErrorlevel5.Checked:=maxLevel>=5;
       guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour;
 
-      if reEvaluationWithGUIrequired
-      then setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter)
-      else setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
+      setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
 
       processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
@@ -88,7 +86,7 @@ PROCEDURE TMnhForm.processSettings;
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if not(reEvaluationWithGUIrequired) and (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
+      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
