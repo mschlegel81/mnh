@@ -473,7 +473,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     SynHighlighterMnh.initLists;
 
-    mnh_evalThread.initUnit(@guiAdapters);
+    mnh_evalThread.initUnit(@guiAdapters,true);
     setupCallbacks;
 
     setLength(editorMeta,0);

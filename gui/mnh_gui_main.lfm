@@ -1100,7 +1100,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              521
+              504
             )
             Cells = (
               3

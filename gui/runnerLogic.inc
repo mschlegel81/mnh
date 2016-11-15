@@ -1,7 +1,7 @@
 {$ifdef includeInterface}
 PROCEDURE miHaltEvalutaionClick(Sender: TObject);
 PROCEDURE MenuItem4Click(Sender: TObject);
-PROCEDURE doStartEvaluation(CONST reEvaluating:boolean);
+PROCEDURE doStartEvaluation;
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miRunCustomEditScript(Sender: TObject);
 PROCEDURE miRunCustomUtilScript(Sender: TObject);
@@ -14,17 +14,16 @@ PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
     runEvaluator.haltEvaluation;
   end;
 
-PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating: boolean);
+PROCEDURE TMnhForm.doStartEvaluation;
   VAR i:longint;
   begin
     guiOutAdapter.flushClear;
     UpdateTimeTimerTimer(self);
     doConditionalPlotReset;
     resetTableForms;
-    if not(reEvaluating) then editorMeta[inputPageControl.activePageIndex].setWorkingDir;
+    editorMeta[inputPageControl.activePageIndex].setWorkingDir;
     underCursor.tokenText:='';
-    if miDebug.Checked or reEvaluating and profilingRun then begin
-      if reEvaluating and profilingRun then runEvaluator.context.clearBreakpoints;
+    if miDebug.Checked then begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].startDebugging;
       updateDebugParts;
     end;
@@ -37,7 +36,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     if inputPageControl.activePageIndex<0 then exit;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk then begin
-      doStartEvaluation(false);
+      doStartEvaluation;
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
       with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
@@ -47,7 +46,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if not(runEvaluator.evaluationRunningOrPending) then begin
-      doStartEvaluation(false);
+      doStartEvaluation;
       lastStart.mainCall:=false;
       with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
     end;
@@ -74,7 +73,7 @@ PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
 FUNCTION TMnhForm.preferredContextType:T_contextType;
   begin
     if miDebug.Checked then result:=ct_debugging
-    else if reEvaluationWithGUIrequired and profilingRun or miProfile.Checked
+    else if miProfile.Checked
     then result:=ct_profiling
     else result:=ct_normal;
   end;

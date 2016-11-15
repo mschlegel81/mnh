@@ -78,11 +78,17 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     SynHighlighterMnh.initLists;
-    mnh_evalThread.initUnit(@guiAdapters);
+    mnh_evalThread.initUnit(@guiAdapters,false);
     setupCallbacks;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
+    OutputEdit.Font.name:=settings.value^.editorFontname;
+    OutputEdit.Font.size:=settings.value^.fontSize;
+    if settings.value^.antialiasedFonts
+    then OutputEdit.Font.quality:=fqCleartypeNatural
+    else OutputEdit.Font.quality:=fqNonAntialiased;
+
     guiOutAdapter.flushClear;
     mnh_out_adapters.gui_started:=true;
     if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)

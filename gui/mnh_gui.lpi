@@ -346,6 +346,7 @@
         <Filename Value="mnh_gui_outputonly.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="outputOnlyForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_gui_outputOnly"/>
       </Unit56>

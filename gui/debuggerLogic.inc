@@ -19,7 +19,7 @@ PROCEDURE miDebugClick(Sender: TObject);
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
     if not(runEvaluator.evaluationRunning) then begin
-      doStartEvaluation(false);
+      doStartEvaluation;
       if lastStart.mainCall then begin
         with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,ct_debugging);
       end else begin
