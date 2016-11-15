@@ -131,8 +131,9 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     end;
     if result then clear;
     if wroteToSyn then begin
-      if not(parentForm.showing) then begin
+      if not(parentForm.showing) or not(parentForm.visible) then begin
         parentForm.Show;
+        parentForm.visible:=true;
         {$ifdef debugMode}
         writeln(stdErr,'mnh form show triggered');
         {$endif}

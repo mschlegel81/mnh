@@ -9,6 +9,8 @@ object outputOnlyForm: ToutputOnlyForm
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
+  Position = poScreenCenter
   LCLVersion = '1.6.0.4'
   inline OutputEdit: TSynEdit
     Left = 0
@@ -23,6 +25,7 @@ object outputOnlyForm: ToutputOnlyForm
     ParentColor = False
     ParentFont = False
     TabOrder = 0
+    OnKeyUp = OutputEditKeyUp
     Gutter.Width = 19
     Gutter.MouseActions = <>
     RightGutter.Width = 0

@@ -21,7 +21,10 @@ begin
     RequireDerivedFormResource := true;
     Application.initialize;
     if reEvaluationWithGUIrequired
-    then Application.CreateForm(ToutputOnlyForm, outputOnlyForm)
+    then begin
+      Application.CreateForm(ToutputOnlyForm, outputOnlyForm);
+      outputOnlyForm.Hide;
+    end
     else Application.CreateForm(TMnhForm, MnhForm);
     Application.run;
     showConsole;

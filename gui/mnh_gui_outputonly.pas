@@ -10,31 +10,26 @@ USES
   mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh;
 
 TYPE
-
-  { ToutputOnlyForm }
-
   ToutputOnlyForm = class(T_abstractMnhForm)
     OutputEdit: TSynEdit;
     Timer1: TTimer;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE Timer1Timer(Sender: TObject);
 
     PROCEDURE onEndOfEvaluation; override;
     PROCEDURE onReloadRequired(CONST fileName:string); override;
   private
     outputHighlighter:TSynMnhSyn;
-    { private declarations }
-  public
-    { public declarations }
   end;
 
 VAR
   outputOnlyForm: ToutputOnlyForm;
 
 IMPLEMENTATION
-
 {$R *.lfm}
 
 { ToutputOnlyForm }
@@ -63,6 +58,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
 
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin
+    caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
   end;
 
 PROCEDURE ToutputOnlyForm.onReloadRequired(CONST fileName: string);
@@ -89,28 +85,42 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     then OutputEdit.Font.quality:=fqCleartypeNatural
     else OutputEdit.Font.quality:=fqNonAntialiased;
 
-    guiOutAdapter.flushClear;
     mnh_out_adapters.gui_started:=true;
-    if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
-                    else runEvaluator.reEvaluateWithGUI(ct_normal);
-    caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine;
+    caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - evaluating';
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
-    Hide;
   end;
 
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
-begin
-  if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
-  if assistancEvaluator.evaluationRunning then assistancEvaluator.haltEvaluation;
-end;
+  begin
+    if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
+    if assistancEvaluator.evaluationRunning then assistancEvaluator.haltEvaluation;
+  end;
 
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);
   begin
     Timer1.enabled:=false;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;
+  end;
+
+VAR firstShow:boolean=true;
+PROCEDURE ToutputOnlyForm.FormShow(Sender: TObject);
+  begin
+    if firstShow then begin
+      if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
+                      else runEvaluator.reEvaluateWithGUI(ct_normal);
+      firstShow:=false;
+      Hide;
+    end;
+  end;
+
+PROCEDURE ToutputOnlyForm.OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
+    if ((key=187) or (key=107)) and (ssCtrl in Shift) then OutputEdit.Font.size:=OutputEdit.Font.size+1;
+    if ((key=189) or (key=109)) and (ssCtrl in Shift) then OutputEdit.Font.size:=OutputEdit.Font.size-1;
   end;
 
 end.
