@@ -601,6 +601,51 @@ changeFileExt('file.2.extension','.newExtension');
 
 httpError;
 
+isBoolList([true,false]);
+
+isBoolList(true);
+
+isIntList([1..3]);
+
+isIntList([1, 2.0]);
+
+isRealList([1,2,3]);
+
+isRealList([1.0,2.0,3.0,Nan]);
+
+isStringList(['a'..'z']);
+
+isNumList([1,2,3]);
+
+isNumList([1.0,2,3,Inf]);
+
+isFlatList([1.0,false,3,Inf]);
+
+isFlatList([1.0,false,3,Inf,[]]);
+
+isVoid();
+
+isVoid(void);
+
+isVoid(3);
+
+escapePascal('Test');
+
+escapeJava('Test');
+
+//#unflatten
+unflatten('(1+2/(4-5))*3^(6+7)'.chars,'(',')');
+
+extractFileNameOnly('/home/user/file.ext');
+
+expandedFileName('/home/user/file.ext');
+
+extractFileDirectory('/home/user/file.ext');
+
+extractFileName('/home/user/file.ext');
+
+extractFileExt('/home/user/file.ext');
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');
@@ -628,8 +673,6 @@ fileStats(executor);
 
 //#exec
 executor.exec(['-h']).head(5).join("\n").print;
-
-splitFileName("../test.txt");
 
 //#inspect
 inspect('sudoku').{

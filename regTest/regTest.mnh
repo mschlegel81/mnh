@@ -89,7 +89,7 @@ USE testLog,mnhInfo,
 private plotDemoCount:=8;
 
 private testPlotting(import:string,doLog:boolean,file:string)->begin
-  local filePath:=(myPath.splitFileName['directory'])&'/'&file;
+  local filePath:=(myPath.extractFileDirectory)&'/'&file;
   deleteFile(filePath);
   resetOptions;
   executeMainCall(import,doLog);
@@ -148,8 +148,8 @@ main->main_impl('',false,true);
 main('retest')->main_impl('',true,true);
 //*Display info on mssing test cases
 main('info')->begin
-  local untested:=files('../demos/*.mnh').splitFileName.getInner('expanded').minus(
-              inspect['uses'].getInner(1).splitFileName.getInner('expanded'));
+  local untested:=files('../demos/*.mnh').expandedFileName.minus(
+              inspect['uses'].getInner(1).expandedFileName);
   untested==[]
   ? print('All demos are covered by tests')
   : begin

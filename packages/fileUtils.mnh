@@ -1,4 +1,13 @@
-private timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]).sort(0);
+//*Returns a list suitbable for input of rule folderChanged
+timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]).sort(0);
+//*Returns the updated folder content or false if the content is unchanged
+changedFolderContent(folderPath:string,previousContent:list)->begin
+  local currentContent:=timedFolderContent(folderPath);
+  currentContent==previousContent
+  ? false
+  : currentContent;
+end;
+
 private changeToContent(L:list)->L.each(el,el[1]='deleted' ? void : el[[0,2]]).sort(0);
 private
 waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSeconds:numeric,initialContent)->begin
@@ -62,9 +71,12 @@ maxFileTime(folder,...)->allFiles(folder,...==[] ? void : ...).fileInfo.getInner
 //*Returns the file time of the given file
 fileTime(file)->file.fileInfo['time'] orElse -1;
 
+isLinux:=mnhInfo['targetOs']='Linux' orElse false;
+
 //*Returns true if the file names indicate equal files
-isSameFile(name1:string,name2:string)->begin
-  local exp1:=splitFileName(name1)['expanded'];
-  local exp2:=splitFileName(name2)['expanded'];
-  exp1=exp2 OR mnhInfo['targetOs']<>'Linux' AND exp1.upper=exp2.upper;
+isSameFileName(filename1:string,filename2:string)->begin
+  local case:=isLinux ? {$x} : {$x.upper};
+  (filename1.expandedFileName.case)==
+  (filename2.expandedFileName.case);
 end;
+

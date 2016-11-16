@@ -42,7 +42,7 @@ private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileLines;
-  local pasId:=clean(inFile.splitFileName['filename'],['a'..'z','A'..'Z'],'_');
+  local pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
   local outText:=
   'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
   inLines.each(line,line='' ? "''" : join('#'&(line.bytes.ord))).join(",\n")&');';
@@ -73,7 +73,7 @@ currentCodeHash:=begin
   templateToInc('resources/removeAssoc.mnh'                ,'core/res_removeAssoc.inc');
   templateToInc('resources/removeAssoc_imig.mnh'           ,'core/res_removeAssoc_imig.inc');
   templateToInc('resources/ensurePackages.mnh'             ,'core/res_ensurePackages.inc');
-  local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
+  local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,extractFileName(f)='code_hash.inc' ? void : f);
   //update code hash
   tprint('Updating code hash based on ',relevantFiles.size,' files');
   local result:=format('%8.8x',fileStats(relevantFiles).getInner(3).agg(+)).copy(0,8);
@@ -124,7 +124,7 @@ private testExe(B:BuildConfig,...)->
   : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuilt(B)
     ? void
     : tprint('Testing ',B[2]) orElse
-      B[2].execPipeless(['-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...)=0
+      B[2].execPipeless(['-quiet','regTest/regTest.mnh','resources/examples.txt'.expandedFileName]|...)=0
       ? tprint('Test passed')
       : fail('Test failed');
 
@@ -141,7 +141,7 @@ private showStatus->
 
 private cleanup->begin
   allFolders('.')
-  .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
+  .each(f,extractFileName(f) in ["nppBackup","backup"] ? f : void)
   .each(f,begin
            tprint('Deleting ',f);
            deleteDir(f);
@@ -189,8 +189,8 @@ end;
 
 private isSameFileName(filename1:string,filename2:string)->begin
   local case:=isLinux ? {$x} : {$x.upper};
-  (filename1.splitFileName['expanded'].case)==
-  (filename2.splitFileName['expanded'].case);
+  (filename1.expandedFileName.case)==
+  (filename2.expandedFileName.case);
 end;
 
 private isSimilarFile(filename1:string,filename2:string)->pos(filename2.upper,filename1.upper)>=0;

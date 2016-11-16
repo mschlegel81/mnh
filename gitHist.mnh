@@ -26,7 +26,7 @@ private acceptedExt:=[['.bat','batch'],
                       ['.xml' ,'resource'],
                       ['.svg' ,'resource']];
 
-fileCategory(filename:string)->acceptedExt[splitFileName(filename)['extension'].lower] orElse '-';
+fileCategory(filename:string)->acceptedExt[filename.extractFileExt.lower] orElse '-';
 
 analyzeFolder->
 allFiles('D:\dev\temp','*'&acceptedExt.getInner(0))

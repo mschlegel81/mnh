@@ -25,7 +25,7 @@ demoParamter(demo)->
 
 main->begin
   local tasks:=files('demos/*.mnh')
-    .each(demo,executor&mnhParameter(demo)&demo.splitFileName['expanded']&demoParamter(demo));
+    .each(demo,executor&mnhParameter(demo)&demo.expandedFileName&demoParamter(demo));
   tasks.each(task,begin
     index=0
     ? log.writeFileLines([task])

@@ -7,9 +7,17 @@ private quartiles([])->[Nan,Nan,Nan];
 private quartiles(L:numericList)->L.sort[(L.size*[1..3] div 4)];
 private quartiles(x:numeric)->[x,x,x];
 
+private average(X)->X.agg(+)/X.size;
+private averageAndRelativeSigma(X)->begin
+  local avg:=average(X);
+  local variance:=average((X-avg)^2);
+  [avg,sqrt(variance)/avg];
+end;
+
+
 private doAnalysis(rt:list)->begin
   ([['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios']]|
-  rt.getInner(0).unique.each(testCase,
+  rt.getInner(0).unique.pEach(testCase,
     begin
       local debugSamples:=rt[rt.getInner(0)=testCase];
       local optSamples  :=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? void : sample[2]).sort;
@@ -24,19 +32,13 @@ private doAnalysis(rt:list)->begin
   ).showTable('Test times',true);
 
   [true,false].each(debugVersions,begin
-    local filteredTests:=rt.each(t,t[1].matches('^[F|L]D')=debugVersions ? t : void);
+    local filteredTests:=rt.each(t,t[1].matches('^[F|L]I?D')=debugVersions ? t : void);
     print("=====================================================================\n",
           " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
           "=====================================================================\n");
     local tests  :=filteredTests.getInner(0).unique;
     local flavors:=filteredTests.getInner(1).unique;
-    local average:={$X.agg(+)/$X.size};
-    local relativeSigma:={begin
-      local avg:=average($X);
-      local variance:=average(($X-avg)^2);
-      sqrt(variance)/avg;
-    end};
-    local testsWithTime:=tests.each(t,[t,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).average,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).relativeSigma]).sort(1);
+    local testsWithTime:=tests.each(t,t|averageAndRelativeSigma(filteredTests.get(filteredTests.getInner(0)=t).getInner(2))).sort(1);
     local totalTime:=testsWithTime.getInner(1).agg(+);
     print("Fast tests: ");
     print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
