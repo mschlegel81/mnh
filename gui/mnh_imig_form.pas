@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   mnhFormHandler,
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls, mnh_out_adapters, mypics;
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls, mnh_out_adapters, mypics, mnh_imig;
 
 TYPE
 
