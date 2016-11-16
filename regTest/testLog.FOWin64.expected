@@ -26,7 +26,7 @@ The solution is valid.
      3:      {try({parseTime('hh:nn',input)},
 ./resources/ensurePackages.mnh
     44:,['demos/htmlFunctionPlotter.mnh',"private FIELD_FMT:='<tr><td>%s:</td><td><INPUT TYPE=\"text\" NAME=\"%s\" VALUE=\"%s\" SIZE=50 onkeydown=\"if (event.keyCode == 13) { this.form.submit(); return false; }\"></td></tr>';\r\n\r\nprivate isValidReal(x)->x.isNumeric AND not(x.isNan) and not(x.isInfinite);\r\nmemoized\r\npageSet(rawParameters,parameters)->begin\r\n  //extract parameters in string form\r\n  local f_ :=(parameters['f'] orElse \"sin(x)\").replace('$','');\r\n  local x0_:=parameters['x0'] orElse \"-3\";\r\n  local x1_:=parameters['x1'] orElse \"3\";\r\n  local sp_:=parameters['samples'] orElse \"1000\";\r\n\r\n  local validationMessages:=[];\r\n  //transform function in string form to expression\r\n  local f:=void;\r\n  try({begin\r\n        //replace \"x\" by valid expression variable \"$x\"\r\n        f:=f_.replace('x','$x').toExpression;\r\n        f.arity==1\r\n        ? void\r\n        : validationMessages|='Function must unary.';\r\n        f(random).isNumeric\r\n        ? void\r\n        : validationMessages|='Function must return a numeric value.';\r\n      end},\r\n      {validationMessages|=(escape(f_)&' is not a valid function.')});\r\n\r\n  isValidReal(local x0:=softCast(x0_))\r\n  ? void\r\n  : validationMessages|=(escape(x0_)&' is not a valid value for x0.');\r\n\r\n  isValidReal(local x1:=softCast(x1_))\r\n  ? void\r\n  : validationMessages|=(escape(x1_)&' is not a valid value for x1.');\r\n\r\n  local sp:=softCast(sp_);\r\n  sp.isInt AND 2<=sp<=10000\r\n  ? void\r\n  : validationMessages|=(escape(sp_)&' is not a valid value for samples.');\r\n\r\n  local htmlCode:='<HTML><HEAD><TITLE>Simple HTML function plotter</TITLE></HEAD><BODY><FORM name=\"myForm\"><table>'&\r\n    format(FIELD_FMT,'Function','f',f_)&\r\n    format(FIELD_FMT,'x0','x0',x0_)&\r\n    format(FIELD_FMT,'x1','x1',x1_)&\r\n    format(FIELD_FMT,'samples','samples',sp_)&\r\n    '</table></FORM>';\r\n\r\n  local imageCode:='';\r\n  validationMessages==[]\r\n  ? begin\r\n      //if there are no validation messages, add link to image and generate image\r\n      htmlCode&='<img src=\"plotImg.png?'&rawParameters&'\">';\r\n      local X:=([0,1]|random(sp-2)).sort*(x1-x0)+x0;\r\n      plot(f,x0,x1,sp,'1.5 red');\r\n      imageCode:=wrapTextInHttp(plot.renderToString(400,400,4),'image/png');\r\n    end\r\n  : begin\r\n      //if there are no validation messages, append them and return httpError(404) instead of image\r\n      htmlCode&=validationMessages.join('<br>');\r\n      imageCode:=httpError;\r\n    end;\r\n\r\n  [['/page.html',wrapTextInHttp(htmlCode&'</BODY></HTML>')],\r\n   ['/plotImg.png',imageCode]];\r\nend;\r\n\r\nmain->begin\r\n  startHttpServer('localhost:43210',{pageSet($2,$3)[$1] orElse httpError},0);\r\n  openUrl('http://localhost:43210/page.html');\r\n  ask('Press o.k. to shutdown server.',['o.k.']);\r\nend;\r\n"]
-    82:,['demos/timer.mnh',"tolerantParseTime(input:string)->\r\n  try({parseTime('hh:nn:ss',input)},\r\n      {try({parseTime('hh:nn',input)},\r\n           false)});\r\n\r\nreadTimeOrInterval(questionPrefix:string)->begin\r\n  local result:=false;\r\n  while(not(result.isNumeric),\r\n    result:=ask(questionPrefix&' as HH:MM.SS or HH:MM').tolerantParseTime);\r\n  result;\r\nend;\r\n\r\nreadInterval->readTimeOrInterval('Enter interval') - parseTime('hh:nn:ss','00:00:00') + systime;\r\nreadTime    ->readTimeOrInterval('Enter time');\r\nmutable endTime:=void;\r\nmutable keypressed:=false;\r\nmutable beepOnce:=false;\r\n\r\nprivate timerLoop->begin\r\n  async({begin\r\n    ask('Press enter to cancel');\r\n    keypressed:=true;\r\n  end});\r\n\r\n  while(systime<endTime AND not(keypressed),begin\r\n    clearPrint;\r\n    print('Timer set for: ',formatTime('hh:nn:ss',endTime        ));\r\n    print('    remaining: ',formatTime('hh:nn:ss',endTime-systime));\r\n    sleep(1);\r\n  end);\r\n  beepOnce ? beep :\r\n  while(not(keypressed),begin\r\n    beep;\r\n    sleep(1);\r\n  end);\r\nend;\r\n\r\nmain->begin\r\n  endTime:=[['t',{readTime}],['i',{readInterval}],['a',{false}]][ask('Timer: [t]ime, [i]nterval or [a]bort?',['t','i','a'])]();\r\n  endTime.isNumeric\r\n  ? timerLoop\r\n  : void;\r\nend;\r\n"]
+    83:,['demos/timer.mnh',"tolerantParseTime(input:string)->\r\n  try({parseTime('hh:nn:ss',input)},\r\n      {try({parseTime('hh:nn',input)},\r\n           false)});\r\n\r\nreadTimeOrInterval(questionPrefix:string)->begin\r\n  local result:=false;\r\n  while(not(result.isNumeric),\r\n    result:=ask(questionPrefix&' as HH:MM.SS or HH:MM').tolerantParseTime);\r\n  result;\r\nend;\r\n\r\nreadInterval->readTimeOrInterval('Enter interval') - parseTime('hh:nn:ss','00:00:00') + systime;\r\nreadTime    ->readTimeOrInterval('Enter time');\r\nmutable endTime:=void;\r\nmutable keypressed:=false;\r\nmutable beepOnce:=false;\r\n\r\nprivate timerLoop->begin\r\n  async({begin\r\n    ask('Press enter to cancel');\r\n    keypressed:=true;\r\n  end});\r\n\r\n  while(systime<endTime AND not(keypressed),begin\r\n    clearPrint;\r\n    print('Timer set for: ',formatTime('hh:nn:ss',endTime        ));\r\n    print('    remaining: ',formatTime('hh:nn:ss',endTime-systime));\r\n    sleep(1);\r\n  end);\r\n  beepOnce ? beep :\r\n  while(not(keypressed),begin\r\n    beep;\r\n    sleep(1);\r\n  end);\r\nend;\r\n\r\nmain->begin\r\n  endTime:=[['t',{readTime}],['i',{readInterval}],['a',{false}]][ask('Timer: [t]ime, [i]nterval or [a]bort?',['t','i','a'])]();\r\n  endTime.isNumeric\r\n  ? timerLoop\r\n  : void;\r\nend;\r\n"]
 ***** emptyFolders *****
 
 ***** 100doors *****
@@ -1600,6 +1600,29 @@ smin
 susies
 tritrubl
 havan
+***** rationalPi *****
+4/1                                   = 4.0
+8/3                                   = 2.6666
+52/15                                 = 3.4666
+304/105                               = 2.8952
+1052/315                              = 3.3396
+10312/3465                            = 2.9760
+147916/45045                          = 3.2837
+135904/45045                          = 3.0170
+2490548/765765                        = 3.2523
+44257352/14549535                     = 3.0418
+47028692/14549535                     = 3.2323
+1023461776/334639305                  = 3.0584
+5385020324/1673196525                 = 3.2184
+15411418072/5019589575                = 3.0702
+467009482388/145568097675             = 3.2081
+13895021563328/4512611027925          = 3.0791
+14442004718228/4512611027925          = 3.2003
+13926277743608/4512611027925          = 3.0860
+533322720625196/166966608033225       = 3.1941
+516197940314096/166966608033225       = 3.0916
+21831981985010836/6845630929362225    = 3.1891
+911392701638017048/294362129962575675 = 3.0961
 ***** roman *****
 MMXV       (roman)  =       2015 (arabic)
 MCMXC      (roman)  =       1990 (arabic)
