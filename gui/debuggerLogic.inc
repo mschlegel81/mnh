@@ -29,6 +29,7 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
                                             else runEvaluator.context.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
+    lastReportedRunnerInfo.state:=es_dead;
   end;
 
 PROCEDURE TMnhForm.editScriptRootClick(Sender: TObject);
@@ -46,6 +47,7 @@ PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
     runEvaluator.context.doStepInto;
     updateDebugParts;
     breakPointHandlingPending:=true;
+    lastReportedRunnerInfo.state:=es_dead;
   end;
 
 PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
@@ -53,6 +55,7 @@ PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
     runEvaluator.context.doStep;
     updateDebugParts;
     breakPointHandlingPending:=true;
+    lastReportedRunnerInfo.state:=es_dead;
   end;
 
 PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
@@ -60,11 +63,14 @@ PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
     runEvaluator.context.doStepOut;
     updateDebugParts;
     breakPointHandlingPending:=true;
+    lastReportedRunnerInfo.state:=es_dead;
   end;
 
 PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
   begin
     runEvaluator.haltEvaluation;
+    breakPointHandlingPending:=true;
+    lastReportedRunnerInfo.state:=es_dead;
   end;
 
 PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
@@ -72,15 +78,17 @@ PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
     runEvaluator.context.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
+    lastReportedRunnerInfo.state:=es_dead;
   end;
 
 FUNCTION treeLit_canExpand(L:P_literal):boolean;
   begin
-    result:=(L^.literalType in C_allListTypes) and (length(L^.toString(100))>=100);
+    result:=(L<>nil) and (L^.literalType in C_allListTypes) and (length(L^.toString(100))>=100);
   end;
 
 FUNCTION treeLit_toString(L:P_literal):string;
   begin
+    if L=nil then result:=' ' else
     if treeLit_canExpand(L) then result:=L^.typeString
                             else result:=L^.toString();
   end;

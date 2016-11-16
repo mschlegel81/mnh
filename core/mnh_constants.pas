@@ -478,9 +478,7 @@ TYPE
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_displayTable,
-    mt_guiPseudoPackageFound
-    {$endif}
-    {$ifdef imig},
+    mt_guiPseudoPackageFound,
     mt_displayImage
     {$endif});
 
@@ -523,8 +521,7 @@ CONST
 {mt_plotCreatedWithInstantDisplay      } (level:-1; prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_plotSettingsChanged                } (level:-1; prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_displayTable                       } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
-{$endif}{$ifdef imig},
+{mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_displayImage}                        (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
   C_errorMessageTypes:array[1..5] of T_messageTypeSet=(

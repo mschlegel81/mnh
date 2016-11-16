@@ -56,7 +56,7 @@ CONST tokenKindForMt:array[T_messageType] of T_tokenKind=(
 {mt_plotSettingsChanged,               } tkNote,
 {mt_displayTable                       } tkNote,
 {mt_guiPseudoPackageFound              } tkNote
-{$ifdef imig},tkNote{$endif});
+,tkNote);
 
 TYPE
   TSynMnhSyn = class(TSynCustomHighlighter)

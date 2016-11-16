@@ -923,7 +923,7 @@ PROCEDURE T_evaluationContext.stepping(CONST first: P_token; CONST stack: pointe
   VAR lineChanged:boolean;
   begin
     if not(cp_debug in options) or (debuggingStepper.state=dontBreakAtAll) then exit;
-    if parentContext<>nil then parentContext^.stepping(first,stack);
+    if parentContext<>nil then begin parentContext^.stepping(first,stack); exit; end;
     system.enterCriticalSection(profilingAndDebuggingCriticalSection);
     wallClock.value.stop;
     with debuggingStepper do begin
@@ -960,6 +960,7 @@ PROCEDURE T_evaluationContext.haltEvaluation;
       system.enterCriticalSection(profilingAndDebuggingCriticalSection);
       debuggingStepper.state:=dontBreakAtAll;
       system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
+      if parentContext<>nil then parentContext^.haltEvaluation;
     end;
   end;
 
@@ -968,6 +969,7 @@ PROCEDURE T_evaluationContext.clearBreakpoints;
     system.enterCriticalSection(profilingAndDebuggingCriticalSection);
     setLength(debuggingStepper.breakpoints,0);
     system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
+    if parentContext<>nil then parentContext^.clearBreakpoints;
   end;
 
 PROCEDURE T_evaluationContext.addBreakpoint(CONST fileName: string; CONST line: longint);

@@ -2934,6 +2934,9 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR reusableMap:specialize G_literalKeyMap<longint>;
+      {$ifdef debugMode}
+      start:double;
+      {$endif}
 
  PROCEDURE writeLiteral(CONST L:P_literal);
     VAR i:longint;
@@ -2991,10 +2994,14 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
     end;
 
   begin
+    {$ifdef debugMode}start:=now;{$endif}
     reusableMap.create();
     stream.writeByte(255);
     writeLiteral(L);
     reusableMap.destroy;
+    {$ifdef debugMode}
+    writeln(stdErr,'Wrote literal in ',(now-start)*24*60*60:0:3,'s');
+    {$endif}
   end;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;

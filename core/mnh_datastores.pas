@@ -84,6 +84,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
   VAR wrapper:T_streamWrapper;
   begin
     tryObtainName(true);
+    {$ifdef debugMode} writeln(stdErr,'Writing datastore ',fileName,' for rule ',ruleId); {$endif}
     wrapper.createToWriteToFile(fileName);
     wrapper.writeAnsiString(ruleId);
     writeLiteralToStream(L,wrapper,location,adapters);

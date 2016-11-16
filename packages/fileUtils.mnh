@@ -79,4 +79,3 @@ isSameFileName(filename1:string,filename2:string)->begin
   (filename1.expandedFileName.case)==
   (filename2.expandedFileName.case);
 end;
-
