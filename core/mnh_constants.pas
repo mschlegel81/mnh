@@ -475,7 +475,8 @@ TYPE
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_displayTable,
-    mt_guiPseudoPackageFound
+    mt_guiPseudoPackageFound,
+    mt_displayImage
     {$endif});
 
   T_messageTypeSet=set of T_messageType;
@@ -517,7 +518,8 @@ CONST
 {mt_plotCreatedWithInstantDisplay      } (level:-1; prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_plotSettingsChanged                } (level:-1; prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_displayTable                       } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
+{mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_displayImage}                        (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
   C_errorMessageTypes:array[1..5] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],
@@ -530,7 +532,7 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
-//FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
+
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
 OPERATOR :=(x:qword):T_messageTypeSet;
 IMPLEMENTATION

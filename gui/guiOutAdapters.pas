@@ -30,6 +30,8 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
     if unitIsInitialized then exit;
     guiOutAdapter.create(parent);
     guiAdapters.create;
+    mnh_plotForm.guiAdapters:=@guiAdapters;
+    guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
   end;
 

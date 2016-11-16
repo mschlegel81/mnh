@@ -69,8 +69,6 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
     registerForm(self,true,true);
     initGuiOutAdapters(outputOnlyForm);
-    mnh_plotForm.guiAdapters:=@guiAdapters;
-    guiAdapters.addOutAdapter(@guiOutAdapter,false);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     SynHighlighterMnh.initLists;
