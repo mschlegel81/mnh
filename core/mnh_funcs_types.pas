@@ -112,7 +112,7 @@ FUNCTION toReal_imp intFuncSignature;
 {$define FUNC_ID:=isScalar}
 {$define TYPE_CHECK:=tt_typeCheckScalar}
 {$define GENERIC_TYPE_CHECK:=
-FUNCTION FUNC_ID  intFuncSignature;
+FUNCTION FUNC_ID intFuncSignature;
   begin
     result:=nil;              ;
     if (params<>nil) and (params^.size=1) then
@@ -180,6 +180,11 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;
 
+FUNCTION isVoid intFuncSignature;
+  begin
+    result:=newBoolLiteral((params=nil) or (params^.size=0));
+  end;
+
 FUNCTION typeOf_imp intFuncSignature;
   begin
     result:=nil;
@@ -209,6 +214,7 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'isFlatList',@isFlatList          ,'isFlatList(x);//Returns true if x is a flat list. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isKeyValueList',@isKeyValueList  ,'isKeyValueList(x);//Returns true if x is a keyValueList. Specify an additional int parameter to additionally check the length.');
   registerRule(TYPECAST_NAMESPACE,'isExpression',@isExpression      ,'isExpression(x);//Returns true if x is an expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
+  registerRule(TYPECAST_NAMESPACE,'isVoid',@isVoid                  ,'isVoid(x);//Returns true if no parameters are passed.');
   registerRule(TYPECAST_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');
 
 end.

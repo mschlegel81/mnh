@@ -422,40 +422,46 @@ FUNCTION fileStats_imp intFuncSignature;
     end;
   end;
 
-FUNCTION splitFileName_imp intFuncSignature;
-  PROCEDURE appendPair(VAR result:P_literal; CONST el0,el1:string);
-    begin
-      lResult^.append(
-        newListLiteral^.
-        appendString(el0)^.
-        appendString(el1),false);
-    end;
-  VAR name:string;
-      i:longint;
-      tmpParam:P_listLiteral;
+{$define fileNameBody:=VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=newListLiteral;
-      name:=str0^.value;
-      appendPair(result,'input',name);
-      appendPair(result,'expanded',replaceAll(replaceAll(expandFileName(name),'\','/'),'//','/'));
-      appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),expandFileName(name)),'\','/'));
-      if ExtractFileDir(name)=''
-      then appendPair(result,'directory','.')
-      else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
-      appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
-      appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
-      appendPair(result,'drive',ExtractFileDrive(expandFileName(name)));
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true);
-        lResult^.append(splitFileName_imp(tmpParam,tokenLocation,context),false);
-        disposeLiteral(tmpParam);
+    if (params<>nil) and (params^.size=1) then begin
+      if (arg0^.literalType=lt_string) then result:=newStringLiteral(internal(str0^.value))
+      else if arg0^.literalType in [lt_stringList,lt_emptyList] then begin
+        result:=newListLiteral(list0^.size);
+        for i:=0 to list0^.size-1 do lResult^.appendString(internal(P_stringLiteral(list0^.value(i))^.value));
       end;
     end;
-  end;
+  end}
+
+FUNCTION expandedFileName_imp intFuncSignature;
+  FUNCTION internal(CONST s:string):string;
+    begin result:=replaceAll(replaceAll(expandFileName(s),'\','/'),'//','/'); end;
+  fileNameBody;
+
+FUNCTION extractFileDirectory_imp intFuncSignature;
+  FUNCTION internal(CONST s:string):string;
+    begin
+      if ExtractFileDir(s)=''
+      then result:='.'
+      else result:=replaceAll(ExtractFileDir(s),'\','/');
+    end;
+  fileNameBody;
+
+FUNCTION extractFileName_imp intFuncSignature;
+  FUNCTION internal(CONST s:string):string;
+    begin result:=replaceAll(extractFileName(s),'\','/'); end;
+  fileNameBody;
+
+FUNCTION extractFileNameOnly_imp intFuncSignature;
+  FUNCTION internal(CONST s:string):string;
+    begin result:=replaceAll(ExtractFileNameOnly(s),'\','/'); end;
+  fileNameBody;
+
+FUNCTION extractFileExt_imp intFuncSignature;
+  FUNCTION internal(CONST s:string):string;
+    begin result:=replaceAll(extractFileExt(s),'\','/'); end;
+  fileNameBody;
 
 FUNCTION changeFileExtension_imp intFuncSignature;
   begin
@@ -536,7 +542,11 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);//Moves a file from source to dest, returning true on success and false otherwise');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);//Retuns file info as a key-value-list');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileStats',@fileStats_imp,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].');
-  registerRule(FILES_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);//Returns various representations and parts of the given name');
+  registerRule(FILES_BUILTIN_NAMESPACE,'expandedFileName',@expandedFileName_imp ,'expandedFileName(F);//Returns the expanded file name of file(s) given by string or stringList F');
+  registerRule(FILES_BUILTIN_NAMESPACE,'extractFileDirectory',@extractFileDirectory_imp,'extractFileDirectory(F);//Returns the expanded file directories of file(s) given by string or stringList F');
+  registerRule(FILES_BUILTIN_NAMESPACE,'extractFileName',@extractFileName_imp ,'extractFileName(F);//Returns the expanded file names (without path) of file(s) given by string or stringList F');
+  registerRule(FILES_BUILTIN_NAMESPACE,'extractFileNameOnly',@extractFileNameOnly_imp ,'extractFileNameOnly(F);//Returns the expanded file names (without path and extension) of file(s) given by string or stringList F');
+  registerRule(FILES_BUILTIN_NAMESPACE,'extractFileExt',@extractFileExt_imp ,'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt',@changeFileExtension_imp,'changeFileExt(filename,newExtension);//Returns the path of file with the new extension');
   registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);//Returns the path of file relative to reference');
 
