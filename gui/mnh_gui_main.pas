@@ -39,7 +39,7 @@ CONST LANG_MNH   = 0;
       LANG_TXT   =17;
 
 VAR fileTypeMeta:array of record
-      extension:string;
+      extensionWithoutDot:string;
       language:byte;
       highlighter:TSynCustomHighlighter;
       menuItem:TMenuItem;
@@ -356,7 +356,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     PROCEDURE addFileType(CONST extension:string; CONST language:byte; CONST highlighter:TSynCustomHighlighter; CONST menuItem:TMenuItem);
       begin
         setLength(fileTypeMeta,length(fileTypeMeta)+1);
-        fileTypeMeta[length(fileTypeMeta)-1].extension  :=uppercase(extension);
+        fileTypeMeta[length(fileTypeMeta)-1].extensionWithoutDot:=uppercase(extension);
         fileTypeMeta[length(fileTypeMeta)-1].language   :=language;
         fileTypeMeta[length(fileTypeMeta)-1].highlighter:=highlighter;
         fileTypeMeta[length(fileTypeMeta)-1].menuItem   :=menuItem;

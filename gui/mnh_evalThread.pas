@@ -801,7 +801,9 @@ PROCEDURE T_evaluator.preEval;
       er_reEvaluateWithGUI: context.removeOption(cp_clearAdaptersOnStart);
     end;
     request:=er_none;
-    if not(state in [es_editEnsuring,es_editRunning]) then context.resetForEvaluation(@package);
+    if state in [es_editEnsuring,es_editRunning]
+    then adapter^.clearErrors
+    else context.resetForEvaluation(@package);
     system.leaveCriticalSection(cs);
   end;
 

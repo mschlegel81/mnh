@@ -184,8 +184,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateM
     end;
   end;
 
-PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
-  CONST doJump: boolean);
+PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boolean);
   VAR loc:T_searchTokenLocation;
       newCaret:TPoint;
       pageIdx:longint;
