@@ -24,3 +24,11 @@ end;
 
 //@utility=diff
 editDiffPrint(editorFile:string)->printf("%s",editDiff(editorFile));
+
+//@utility=find in all open files
+findInAll(editorFile:string)->begin
+  local searchRegex:=ask('Please enter regex for search.');
+  searchRegex<>''
+  ? editors.each(editor,editor.editorContent.each(line,line.matches(searchRegex) ? print('@',editor,':',index+1,',',1) : void))
+  : print('No regex given - search cancelled');
+end;

@@ -104,7 +104,7 @@ FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithout
       exit(result);
     end;
     i2:=i1+1;
-    while (i1<=length(s)) and (s[i2] in ['0'..'9']) do inc(i2);
+    while (i1<=length(s)) and (i2<=length(s)) and (s[i2] in ['0'..'9']) do inc(i2);
     result.line  :=strToIntDef(copy(s,i0+1,i1-i0-1),0);
     result.column:=strToIntDef(copy(s,i1+1,i2-i1-1),0);
   end;

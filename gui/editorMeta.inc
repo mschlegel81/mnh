@@ -222,7 +222,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
       if fileTypeMeta[metaIdx].language=LANG_MNH
       then editor.highlighter:=highlighter
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
-      {$ifdef debugMode}writeln('Set language ',fileTypeMeta[metaIdx].language,' - ',fileTypeMeta[metaIdx].extension);{$endif}
+      {$ifdef debugMode}writeln('Set language ',fileTypeMeta[metaIdx].language,' - ',fileTypeMeta[metaIdx].extensionWithoutDot);{$endif}
       exit;
     end;
   end;
@@ -232,7 +232,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string; CONST fallb
       ext:string;
   begin
     ext:=uppercase(extensionWithoutDot);
-    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extension=ext then begin
+    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extensionWithoutDot=ext then begin
       language:=fileTypeMeta[metaIdx].language;
       if fileTypeMeta[metaIdx].highlighter=nil
       then editor.highlighter:=highlighter
@@ -483,7 +483,7 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
 FUNCTION T_editorMeta.languageName:string;
   VAR i:longint;
   begin
-    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language then exit(lowercase(copy(fileTypeMeta[i].extension,2,10)));
+    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language then exit(lowercase(fileTypeMeta[i].extensionWithoutDot));
     result:='';
   end;
 
