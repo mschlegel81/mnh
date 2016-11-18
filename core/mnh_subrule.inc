@@ -66,6 +66,7 @@
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
+      FUNCTION acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
   end;
 
 {$endif}
@@ -718,6 +719,11 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
         attributes[length(attributes)-1].value:=trim(join(parts,'='));
       end;
     end;
+  end;
+
+FUNCTION T_subrule.acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
+  begin
+    result:=(length(pattern.sig)=1) and (literalType in pattern.sig[0].typeWhitelist);
   end;
 
 PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);

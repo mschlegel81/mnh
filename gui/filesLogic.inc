@@ -26,7 +26,6 @@ PROCEDURE miFileHistory17Click(Sender: TObject);
 PROCEDURE miFileHistory18Click(Sender: TObject);
 PROCEDURE miFileHistory19Click(Sender: TObject);
 PROCEDURE miOpenClick(Sender: TObject);
-PROCEDURE miOpenImportedClick(Sender: TObject);
 PROCEDURE miSaveAsClick(Sender: TObject);
 PROCEDURE miSaveClick(Sender: TObject);
 
@@ -53,7 +52,6 @@ PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShi
 
 PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE miEditScriptFileClick(Sender: TObject);
 PROCEDURE miEditUtilityScriptFileClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
@@ -314,14 +312,6 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(OpenDialog.fileName);
   end;
 
-PROCEDURE TMnhForm.miOpenImportedClick(Sender: TObject);
-  begin
-    if (inputPageControl.PageIndex>=0) and
-       (inputPageControl.PageIndex<length(editorMeta)) and
-       (editorMeta[inputPageControl.PageIndex].language=LANG_MNH) then
-    FormDropFiles(Sender,assistancEvaluator.getAllUsedFiles);
-  end;
-
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     _doSaveAs_(inputPageControl.activePageIndex);
@@ -459,11 +449,6 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shif
   begin
     if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[inputPageControl.activePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
-  end;
-
-PROCEDURE TMnhForm.miEditScriptFileClick(Sender: TObject);
-  begin
-    FormDropFiles(Sender,editScriptFileName);
   end;
 
 PROCEDURE TMnhForm.miEditUtilityScriptFileClick(Sender: TObject);

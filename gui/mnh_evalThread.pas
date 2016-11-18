@@ -5,8 +5,13 @@ USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_cons
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript,er_die);
   T_evaluationState=(es_dead,es_idle,es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning);
+  T_scriptType=(st_edit,st_insert,st_util);
 CONST
   C_runningStates:set of T_evaluationState=[es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning];
+  C_scriptTypeMeta:array[T_scriptType] of record nameAttribute:string; validResultType:T_literalTypeSet; end=
+    {st_edit} ((nameAttribute:'editScript'  ; validResultType:[lt_emptyList,lt_stringList]),
+    {st_insert}(nameAttribute:'insertScript'; validResultType:[lt_string]),
+    {st_util}  (nameAttribute:'utility';      validResultType:[lt_emptyList,lt_stringList,lt_void]));
 TYPE
   T_runnerStateInfo=record
     request:T_evalRequest;
@@ -21,31 +26,32 @@ TYPE
     startLoc,endLoc:T_searchTokenLocation;
   end;
 
-  P_editScriptMeta=^T_editScriptMeta;
-  T_editScriptMetaArray=array of P_editScriptMeta;
-  T_editScriptMeta=object
+  P_scriptMeta=^T_scriptMeta;
+  T_scriptMetaArray=array of P_scriptMeta;
+  T_scriptMeta=object
     private
       name:string;
       editRule:P_subrule;
       outputLanguage:string;
       createNewEditor:boolean;
-      CONSTRUCTOR create(CONST rule:P_subrule; CONST nameAttribute:string);
+      scriptType:T_scriptType;
+      CONSTRUCTOR create(CONST rule:P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);
       DESTRUCTOR destroy;
     public
-      FUNCTION getName:string;
+      PROPERTY getName:string read name;
+      PROPERTY getScriptType:T_scriptType read scriptType;
   end;
 
   P_editScriptTask=^T_editScriptTask;
   T_editScriptTask=object
     private
-      script:P_editScriptMeta;
+      script:P_scriptMeta;
       inputEditIndex:longint;
-      isEditScriptTask:boolean;
       input,
       output:P_literal;
       outputLanguage:string;
       done  :boolean;
-      CONSTRUCTOR create(CONST script_:P_editScriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string; CONST editScriptTask:boolean);
+      CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
       DESTRUCTOR destroy;
       PROCEDURE execute(VAR context:T_evaluationContext);
     public
@@ -54,6 +60,7 @@ TYPE
       FUNCTION wantNewEditor:boolean;
       FUNCTION inputIdx:longint;
       FUNCTION wantOutput:boolean;
+      FUNCTION wantInsert:boolean;
   end;
 
   P_evaluator=^T_evaluator;
@@ -96,11 +103,8 @@ TYPE
       //internal state variables
       startOfEvaluation:double;
       endOfEvaluationText:ansistring;
-
-      editScriptPackage,
       utilityScriptPackage:P_package;
-      editScriptList,
-      utilityScriptList:T_editScriptMetaArray;
+      utilityScriptList:T_scriptMetaArray;
       currentEdit:P_editScriptTask;
       editAdapters:P_adapters;
 
@@ -114,15 +118,13 @@ TYPE
       PROCEDURE evaluate         (CONST path:ansistring; CONST L: TStrings; CONST contextType:T_contextType);
       PROCEDURE callMain         (CONST path:ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
       PROCEDURE ensureEditScripts();
-      PROCEDURE runEditScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string);
-      PROCEDURE runUtilScript    (CONST scriptIndex:longint;  CONST editorFileName:string);
+      PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
 
       FUNCTION getCurrentEdit:P_editScriptTask;
       PROCEDURE freeCurrentEdit;
       PROCEDURE haltEvaluation; virtual;
-      FUNCTION getEditScriptNames:T_arrayOfString;
-      FUNCTION getUtilScriptNames:T_arrayOfString;
+      FUNCTION getScripts:T_scriptMetaArray;
   end;
 
   P_assistanceEvaluator=^T_assistanceEvaluator;
@@ -154,7 +156,6 @@ VAR runEvaluator:T_runEvaluator;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
-FUNCTION editScriptFileName:string;
 FUNCTION utilityScriptFileName:string;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
@@ -167,15 +168,9 @@ OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
     result:=(x.state=y.state) and (x.request=y.request) and (x.message=y.message);
   end;
 
-FUNCTION editScriptFileName:string;
-  begin
-    result:=configDir+'packages'+DirectorySeparator+'editScripts.mnh';
-    if not(fileExists(result)) then ensureDemos;
-  end;
-
 FUNCTION utilityScriptFileName:string;
   begin
-    result:=configDir+'packages'+DirectorySeparator+'utilityScripts.mnh';
+    result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
     if not(fileExists(result)) then ensureDemos;
   end;
 {$WARN 5024 OFF}
@@ -221,37 +216,34 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   PROCEDURE ensureEditScripts_impl();
-    CONST editScriptNameAttribute='editScript';
-          utilityScriptNameAttribute='utility';
     VAR subRule:P_subrule;
-        script:P_editScriptMeta;
+        script:P_scriptMeta;
         editContext:T_evaluationContext;
-    PROCEDURE prepare(VAR scriptPackage:P_package; CONST scriptPath:string; VAR scriptList:T_editScriptMetaArray; CONST scriptAttribute:string);
-      begin
-        if scriptPackage=nil then begin
-          {$ifdef debugMode} writeln('Creating script package'); {$endif}
-          new(scriptPackage,create(nil));
-          scriptPackage^.setSourcePath(scriptPath);
-        end else if not(scriptPackage^.getCodeProvider^.fileHasChanged) then exit;
-        for script in scriptList do dispose(script,destroy);
-        setLength(scriptList,0);
-        {$ifdef debugMode} writeln('Loading script package: ',scriptPackage^.getPath); {$endif}
-        scriptPackage^.getCodeProvider^.load;
-        scriptPackage^.load(lu_forImport,editContext,C_EMPTY_STRING_ARRAY);
-        if editContext.adapters^.noErrors then begin
-          for subRule in scriptPackage^.getSubrulesByAttribute(scriptAttribute) do begin
-            {$ifdef debugMode} writeln('Found script: ',subRule^.getId); {$endif}
-            new(script,create(subRule,scriptAttribute));
-            setLength(scriptList,length(scriptList)+1);
-            scriptList[length(scriptList)-1]:=script;
-          end;
-        end;
-      end;
-
+        scriptType:T_scriptType;
+        isValid:boolean;
     begin with P_runEvaluator(p)^ do begin
       setupEdit(editContext);
-      prepare(editScriptPackage   ,editScriptFileName   ,editScriptList   ,editScriptNameAttribute);
-      prepare(utilityScriptPackage,utilityScriptFileName,utilityScriptList,utilityScriptNameAttribute);
+      if utilityScriptPackage=nil then begin
+        {$ifdef debugMode} writeln('Creating script package'); {$endif}
+        new(utilityScriptPackage,create(nil));
+        utilityScriptPackage^.setSourcePath(utilityScriptFileName);
+      end else if not(utilityScriptPackage^.getCodeProvider^.fileHasChanged) then exit;
+      for script in utilityScriptList do dispose(script,destroy);
+      setLength(utilityScriptList,0);
+      {$ifdef debugMode} writeln('Loading script package: ',utilityScriptPackage^.getPath); {$endif}
+      utilityScriptPackage^.getCodeProvider^.load;
+      utilityScriptPackage^.load(lu_forImport,editContext,C_EMPTY_STRING_ARRAY);
+      if editContext.adapters^.noErrors then begin
+        for scriptType in T_scriptType do
+        for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
+          {$ifdef debugMode} writeln('Found script: ',subRule^.getId); {$endif}
+          new(script,create(subRule,isValid,editAdapters^));
+          if isValid then begin
+            setLength(utilityScriptList,length(utilityScriptList)+1);
+            utilityScriptList[length(utilityScriptList)-1]:=script;
+          end else dispose(script,destroy);
+        end;
+      end;
       doneEdit(editContext);
     end; end;
 
@@ -314,39 +306,59 @@ FUNCTION docMain(p:pointer):ptrint;
     {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' stopped assistance evaluation loop');{$endif}
   end; end;
 
-CONSTRUCTOR T_editScriptMeta.create(CONST rule: P_subrule; CONST nameAttribute:string);
+CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);
+  VAR t:T_scriptType;
   begin
     editRule:=rule;
     outputLanguage:=editRule^.getAttribute('language').value;
     createNewEditor:=editRule^.hasAttribute('newEdit');
-    name:=editRule^.getAttribute(nameAttribute).value;
+    isValid:=false;
+    for t in T_scriptType do if rule^.hasAttribute(C_scriptTypeMeta[t].nameAttribute) then begin
+      scriptType:=t;
+      name:=editRule^.getAttribute(C_scriptTypeMeta[t].nameAttribute).value;
+      isValid:=true;
+    end;
     if name='' then name:=editRule^.getId;
+    if (scriptType=st_insert) and createNewEditor then begin
+      isValid:=false;
+      adapters.raiseError('Invalid attribute @newEdit for insert script',rule^.getLocation);
+    end;
+    if (scriptType=st_insert) and (outputLanguage<>'') then begin
+      isValid:=false;
+      adapters.raiseError('Invalid attribute @language for insert script',rule^.getLocation);
+    end;
+    if scriptType in [st_util,st_insert] then begin
+      if not(rule^.acceptsSingleLiteral(lt_string)) then begin
+        isValid:=false;
+        adapters.raiseError('Scripts @'+C_scriptTypeMeta[scriptType].nameAttribute+' must accept a single string, the editor name',rule^.getLocation);
+      end;
+    end else begin
+      if not(rule^.acceptsSingleLiteral(lt_stringList)) then begin
+        isValid:=false;
+        adapters.raiseError('Scripts @'+C_scriptTypeMeta[scriptType].nameAttribute+' must accept a single stringList, the editor contents',rule^.getLocation);
+      end;
+    end;
   end;
 
-DESTRUCTOR T_editScriptMeta.destroy;
+DESTRUCTOR T_scriptMeta.destroy;
   begin
   end;
 
-FUNCTION T_editScriptMeta.getName: string;
-  begin
-    result:=name;
-  end;
-
-CONSTRUCTOR T_editScriptTask.create(CONST script_:P_editScriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string; CONST editScriptTask:boolean);
+CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
   VAR i:longint;
   begin
     script:=script_;
     inputEditIndex:=inputIndex;
-    isEditScriptTask:=editScriptTask;
-    if isEditScriptTask then begin
+    if script^.scriptType=st_edit then begin
       input:=newListLiteral(input_.count);
       for i:=0 to input_.count-1 do P_listLiteral(input)^.appendString(input_[i]);
     end else input:=newStringLiteral(inputEditFile);
     output:=nil;
     outputLanguage:=script^.outputLanguage;
     if outputLanguage='' then begin
-      if isEditScriptTask then outputLanguage:=inputLang
-                          else outputLanguage:='txt';
+      if script^.scriptType=st_edit
+      then outputLanguage:=inputLang
+      else outputLanguage:='txt';
     end;
     done:=false;
   end;
@@ -360,6 +372,10 @@ PROCEDURE T_editScriptTask.execute(VAR context:T_evaluationContext);
   begin
     output:=script^.editRule^.directEvaluateUnary(input,script^.editRule^.getLocation,context,0);
     disposeLiteral(input);
+    if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
+      context.adapters^.raiseError('Script failed due to invalid result type '+C_typeString[output^.literalType],script^.editRule^.getLocation);
+      disposeLiteral(output);
+    end;
     done:=true;
   end;
 
@@ -367,7 +383,8 @@ FUNCTION T_editScriptTask.getOutput:P_literal; begin result:=output; end;
 FUNCTION T_editScriptTask.getOutputLanguage:string; begin result:=outputLanguage; end;
 FUNCTION T_editScriptTask.wantNewEditor:boolean; begin result:=(script^.createNewEditor) and (output<>nil) and (output^.literalType=lt_stringList); end;
 FUNCTION T_editScriptTask.inputIdx:longint; begin result:=inputEditIndex; end;
-FUNCTION T_editScriptTask.wantOutput:boolean; begin result:=((output<>nil) and (output^.literalType=lt_stringList)) and (isEditScriptTask or script^.createNewEditor); end;
+FUNCTION T_editScriptTask.wantOutput:boolean; begin result:=((output<>nil) and (output^.literalType=lt_stringList)) and ((script^.scriptType=st_edit) or script^.createNewEditor); end;
+FUNCTION T_editScriptTask.wantInsert:boolean; begin result:=((output<>nil) and (output^.literalType=lt_string)) and (script^.scriptType=st_insert); end;
 
 PROCEDURE T_evaluator.ensureThread;
   begin
@@ -394,9 +411,7 @@ CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadF
   VAR collector:P_collectingOutAdapter;
   begin
     inherited create(adapters,threadFunc);
-    editScriptPackage:=nil;
     utilityScriptPackage:=nil;
-    setLength(editScriptList,0);
     setLength(utilityScriptList,0);
     currentEdit:=nil;
     new(editAdapters,create);
@@ -438,11 +453,8 @@ DESTRUCTOR T_runEvaluator.destroy;
   VAR i:longint;
   begin
     if currentEdit<>nil then dispose(currentEdit,destroy);
-    if editScriptPackage<>nil then dispose(editScriptPackage,destroy);
     if utilityScriptPackage<>nil then dispose(utilityScriptPackage,destroy);
-    for i:=0 to length(editScriptList)-1 do dispose(editScriptList[i],destroy);
     for i:=0 to length(utilityScriptList)-1 do dispose(utilityScriptList[i],destroy);
-    setLength(editScriptList,0);
     dispose(editAdapters,destroy);
     inherited destroy;
     setLength(mainParameters,0);
@@ -557,7 +569,7 @@ PROCEDURE T_runEvaluator.ensureEditScripts();
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.runEditScript(CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string);
+PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) or (currentEdit<>nil) then begin
@@ -565,20 +577,7 @@ PROCEDURE T_runEvaluator.runEditScript(CONST scriptIndex,editorIndex:longint; CO
       exit;
     end;
     request:=er_runEditScript;
-    new(currentEdit,create(editScriptList[scriptIndex],editorIndex,'',L,inputLang,true));
-    ensureThread;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex:longint; CONST editorFileName:string);
-  begin
-    system.enterCriticalSection(cs);
-    if (state in C_runningStates) or (currentEdit<>nil) then begin
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    request:=er_runEditScript;
-    new(currentEdit,create(utilityScriptList[scriptIndex],-1,editorFileName,nil,'txt',false));
+    new(currentEdit,create(utilityScriptList[scriptIndex],editorIndex,editorFileName,L,inputLang));
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
@@ -598,18 +597,9 @@ PROCEDURE T_runEvaluator.freeCurrentEdit;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_runEvaluator.getEditScriptNames:T_arrayOfString;
-  VAR i:longint;
+FUNCTION T_runEvaluator.getScripts:T_scriptMetaArray;
   begin
-    setLength(result,length(editScriptList));
-    for i:=0 to length(result)-1 do result[i]:=editScriptList[i]^.name;
-  end;
-
-FUNCTION T_runEvaluator.getUtilScriptNames:T_arrayOfString;
-  VAR i:longint;
-  begin
-    setLength(result,length(utilityScriptList));
-    for i:=0 to length(result)-1 do result[i]:=utilityScriptList[i]^.name;
+    result:=utilityScriptList;
   end;
 
 FUNCTION T_evaluator.evaluationRunning: boolean;

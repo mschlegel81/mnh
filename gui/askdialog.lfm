@@ -4,13 +4,14 @@ object askForm: TaskForm
   Top = 121
   Width = 342
   AutoSize = True
-  BorderStyle = bsDialog
+  BorderStyle = bsSingle
   Caption = 'askForm'
-  ClientHeight = 442
+  ClientHeight = 422
   ClientWidth = 342
   Constraints.MinHeight = 25
   Constraints.MinWidth = 200
   FormStyle = fsStayOnTop
+  Menu = MainMenu1
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poOwnerFormCenter
@@ -18,7 +19,7 @@ object askForm: TaskForm
   object ComboBox1: TComboBox
     Left = 0
     Height = 23
-    Top = 19
+    Top = -1
     Width = 342
     Align = alBottom
     ItemHeight = 15
@@ -28,7 +29,7 @@ object askForm: TaskForm
   end
   object Label1: TLabel
     Left = 0
-    Height = 19
+    Height = 0
     Top = 0
     Width = 342
     Align = alClient
@@ -39,7 +40,7 @@ object askForm: TaskForm
   object Button1: TButton
     Left = 0
     Height = 25
-    Top = 42
+    Top = 22
     Width = 342
     Align = alBottom
     Caption = 'Button1'
@@ -49,7 +50,7 @@ object askForm: TaskForm
   object Button2: TButton
     Left = 0
     Height = 25
-    Top = 67
+    Top = 47
     Width = 342
     Align = alBottom
     Caption = 'Button2'
@@ -59,7 +60,7 @@ object askForm: TaskForm
   object Button3: TButton
     Left = 0
     Height = 25
-    Top = 92
+    Top = 72
     Width = 342
     Align = alBottom
     Caption = 'Button3'
@@ -69,7 +70,7 @@ object askForm: TaskForm
   object Button4: TButton
     Left = 0
     Height = 25
-    Top = 117
+    Top = 97
     Width = 342
     Align = alBottom
     Caption = 'Button4'
@@ -79,7 +80,7 @@ object askForm: TaskForm
   object Button5: TButton
     Left = 0
     Height = 25
-    Top = 142
+    Top = 122
     Width = 342
     Align = alBottom
     Caption = 'Button5'
@@ -89,7 +90,7 @@ object askForm: TaskForm
   object Button6: TButton
     Left = 0
     Height = 25
-    Top = 167
+    Top = 147
     Width = 342
     Align = alBottom
     Caption = 'Button6'
@@ -99,7 +100,7 @@ object askForm: TaskForm
   object Button7: TButton
     Left = 0
     Height = 25
-    Top = 192
+    Top = 172
     Width = 342
     Align = alBottom
     Caption = 'Button7'
@@ -109,7 +110,7 @@ object askForm: TaskForm
   object Button8: TButton
     Left = 0
     Height = 25
-    Top = 217
+    Top = 197
     Width = 342
     Align = alBottom
     Caption = 'Button8'
@@ -119,7 +120,7 @@ object askForm: TaskForm
   object Button9: TButton
     Left = 0
     Height = 25
-    Top = 242
+    Top = 222
     Width = 342
     Align = alBottom
     Caption = 'Button9'
@@ -129,7 +130,7 @@ object askForm: TaskForm
   object Button10: TButton
     Left = 0
     Height = 25
-    Top = 267
+    Top = 247
     Width = 342
     Align = alBottom
     Caption = 'Button10'
@@ -139,7 +140,7 @@ object askForm: TaskForm
   object Button11: TButton
     Left = 0
     Height = 25
-    Top = 292
+    Top = 272
     Width = 342
     Align = alBottom
     Caption = 'Button11'
@@ -149,7 +150,7 @@ object askForm: TaskForm
   object Button12: TButton
     Left = 0
     Height = 25
-    Top = 317
+    Top = 297
     Width = 342
     Align = alBottom
     Caption = 'Button12'
@@ -159,7 +160,7 @@ object askForm: TaskForm
   object Button13: TButton
     Left = 0
     Height = 25
-    Top = 342
+    Top = 322
     Width = 342
     Align = alBottom
     Caption = 'Button13'
@@ -169,7 +170,7 @@ object askForm: TaskForm
   object Button14: TButton
     Left = 0
     Height = 25
-    Top = 367
+    Top = 347
     Width = 342
     Align = alBottom
     Caption = 'Button14'
@@ -179,7 +180,7 @@ object askForm: TaskForm
   object Button15: TButton
     Left = 0
     Height = 25
-    Top = 392
+    Top = 372
     Width = 342
     Align = alBottom
     Caption = 'Button15'
@@ -189,11 +190,33 @@ object askForm: TaskForm
   object Button16: TButton
     Left = 0
     Height = 25
-    Top = 417
+    Top = 397
     Width = 342
     Align = alBottom
     Caption = 'Button16'
     OnClick = ButtonClick
     TabOrder = 16
+  end
+  object MainMenu1: TMainMenu
+    left = 112
+    top = 60
+    object miPickFile: TMenuItem
+      Caption = 'Pick &file'
+      OnClick = miPickFileClick
+    end
+    object miPickDirectory: TMenuItem
+      Caption = 'Pick &directory'
+      OnClick = miPickDirectoryClick
+    end
+  end
+  object OpenDialog1: TOpenDialog
+    Title = 'Pick file'
+    left = 125
+    top = 60
+  end
+  object SelectDirectoryDialog1: TSelectDirectoryDialog
+    Title = 'Pick Directory'
+    left = 168
+    top = 68
   end
 end

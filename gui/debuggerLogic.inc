@@ -1,5 +1,4 @@
 {$ifdef includeInterface}
-PROCEDURE editScriptRootClick(Sender: TObject);
 PROCEDURE miUtilityScriptRootClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepInClick(Sender: TObject);
@@ -32,14 +31,9 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     lastReportedRunnerInfo.state:=es_dead;
   end;
 
-PROCEDURE TMnhForm.editScriptRootClick(Sender: TObject);
-  begin
-    updateEditScriptMenu;
-  end;
-
 PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
   begin
-    updateUtilityScriptMenu;
+    updateScriptMenus;
   end;
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);

@@ -5,9 +5,9 @@ UNIT askDialog;
 INTERFACE
 
 USES
-  mnhFormHandler,
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, mnh_funcs, mnh_litVar, mnh_basicTypes, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
+  mnhFormHandler, Classes, sysutils, FileUtil, Forms, Controls, Graphics,
+  Dialogs, StdCtrls, Menus, mnh_funcs, mnh_litVar, mnh_basicTypes,
+  mnh_constants, mnh_out_adapters, myGenerics, mnh_contexts;
 TYPE
   {$WARN 5024 OFF}
 
@@ -32,10 +32,17 @@ TYPE
     Button1: TButton;
     Button2: TButton;
     Button3: TButton;
+    MainMenu1: TMainMenu;
+    miPickFile: TMenuItem;
+    miPickDirectory: TMenuItem;
+    OpenDialog1: TOpenDialog;
+    SelectDirectoryDialog1: TSelectDirectoryDialog;
     PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ButtonClick(Sender: TObject);
+    PROCEDURE miPickDirectoryClick(Sender: TObject);
+    PROCEDURE miPickFileClick(Sender: TObject);
   private
     rejectNonmatchingInput: boolean;
     previousAnswers:array[0..31] of ansistring;
@@ -99,6 +106,16 @@ PROCEDURE TaskForm.ButtonClick(Sender: TObject);
     lastAnswer := TButton(Sender).caption;
     ModalResult := mrOk;
     Hide;
+  end;
+
+PROCEDURE TaskForm.miPickDirectoryClick(Sender: TObject);
+  begin
+    if SelectDirectoryDialog1.execute then ComboBox1.text:=SelectDirectoryDialog1.fileName;
+  end;
+
+PROCEDURE TaskForm.miPickFileClick(Sender: TObject);
+  begin
+    if OpenDialog1.execute then ComboBox1.text:=OpenDialog1.fileName;
   end;
 
 PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);

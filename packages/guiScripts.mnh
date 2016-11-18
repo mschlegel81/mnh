@@ -1,3 +1,12 @@
+//@editScript=Trim trailing spaces
+trimTrailingSpaces(s:stringList)->s.trimRight;
+
+//@editScript=Remove double blank lines
+removeDoubleBlanks(s:stringList)->s.join("\n").replace("\n\n\n","\n\n").split("\n");
+
+//@editScript=Sort lines and remove duplicates
+sortLines(s:stringList)->s.unique.sort;
+
 unifiedDiff(aName:string,bName:string,aLines:stringList,bLines:stringList,additionalLines>=0)->begin
   local edit:=diff(aLines,bLines,true)['edit'].each(e,e[0]='+' ? [e[0],e[1]+1,e[2]+1,bLines[e[2]]]
                                                                : [e[0],e[1]+1,e[2]+1,aLines[e[1]]]);
