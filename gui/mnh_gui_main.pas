@@ -670,7 +670,7 @@ PROCEDURE TMnhForm.updateScriptMenus;
       case scriptType of
         st_edit: root:=editScriptRoot;
         st_util: root:=miUtilityScriptRoot;
-        st_insert: root:=miInserScriptRoot;
+        else     root:=miInserScriptRoot;
       end;
       for i:=0 to length(scriptMenuItems[scriptType])-1 do begin
         root.remove(scriptMenuItems[scriptType][i]);
@@ -685,9 +685,9 @@ PROCEDURE TMnhForm.updateScriptMenus;
       script:=scriptList[i];
       scriptType:=script^.getScriptType;
       case scriptType of
-        st_edit  : root:=editScriptRoot;
-        st_util  : root:=miUtilityScriptRoot;
-        st_insert: root:=miInserScriptRoot;
+        st_edit: root:=editScriptRoot;
+        st_util: root:=miUtilityScriptRoot;
+        else     root:=miInserScriptRoot;
       end;
       k:=length(scriptMenuItems[scriptType]);
       setLength(scriptMenuItems[scriptType],k+1);
