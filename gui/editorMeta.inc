@@ -462,7 +462,7 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
       isChanged:=false;
       editor.modified:=false;
       editor.MarkTextAsSaved;
-      if (filePath=editScriptFileName) or (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
+      if (filePath=utilityScriptFileName) then runEvaluator.ensureEditScripts();
     end;
     result:=updateSheetCaption;
   end;

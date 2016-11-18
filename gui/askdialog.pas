@@ -41,8 +41,8 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ButtonClick(Sender: TObject);
-    procedure miPickDirectoryClick(Sender: TObject);
-    procedure miPickFileClick(Sender: TObject);
+    PROCEDURE miPickDirectoryClick(Sender: TObject);
+    PROCEDURE miPickFileClick(Sender: TObject);
   private
     rejectNonmatchingInput: boolean;
     previousAnswers:array[0..31] of ansistring;
@@ -108,14 +108,14 @@ PROCEDURE TaskForm.ButtonClick(Sender: TObject);
     Hide;
   end;
 
-procedure TaskForm.miPickDirectoryClick(Sender: TObject);
+PROCEDURE TaskForm.miPickDirectoryClick(Sender: TObject);
   begin
-    if SelectDirectoryDialog1.Execute then ComboBox1.Text:=SelectDirectoryDialog1.FileName;
+    if SelectDirectoryDialog1.execute then ComboBox1.text:=SelectDirectoryDialog1.fileName;
   end;
 
-procedure TaskForm.miPickFileClick(Sender: TObject);
+PROCEDURE TaskForm.miPickFileClick(Sender: TObject);
   begin
-    if OpenDialog1.Execute then ComboBox1.Text:=OpenDialog1.FileName;
+    if OpenDialog1.execute then ComboBox1.text:=OpenDialog1.fileName;
   end;
 
 PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);

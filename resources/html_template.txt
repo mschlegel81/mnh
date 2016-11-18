@@ -1487,7 +1487,8 @@ There are additional routines for formatting and parsing dates and times. Some o
     <li><h4><a href="#debugging">Debugging</a></h4></li>
     <li><h4><a href="#profiling">Profiling</a></h4></li>
     <li><h4><a href="#editScripts">Edit scripts</a></h4></li>
-    <li><h4><a href="#utilityScripts">Utility scripts</a></h4></li>
+    <li><h4><a href="#insertScripts">Insert scripts</a></h4></li>
+    <li><h4><a href="#utilityScripts">Utility scripts</a></h4></li>   
   </ul>
   </ul>
 </div>
@@ -1513,10 +1514,10 @@ When debugging, parallelization is disabled. Note that debugging implies profili
 Profiling is enabled via the Evaluation/Profiling menu item.<br>
 The profiling result is displayed as a table.
 <h3><br><a name="editScripts">Edit scripts</a></h4>
-User defined edit scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
+User defined scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>
 <ul>
 <li>It accepts stringList (the editor content) as single parameter</li>
-<li>It returns a stringList or void</li>
+<li>It returns a stringList</li>
 <li>It has the attribute <code>@editScript</code>
 </ul><br>
 If the <code>@editScript</code> attribute has a value, this value will be displayed in the menu. Otherwise the rule ID will be used.<br>
@@ -1525,6 +1526,14 @@ Additional attributes to modify the edit script behavior are:<br>
 <ul>
 <li><code>@newEdit</code> to create a new editor for the result</li>
 <li><code>@language=<u>ext</u></code> with a language specified by the characteristic file extension, e.g. <code>@language=java</code></li>
+</ul><br>
+<h3><br><a name="insertScripts">Insert scripts</a></h4>
+Insert scripts are similar to edit scripts but they must return a string which is then inserted at the current caret position.
+User defined scripts are defined in a central utility package. A rule defined in this package can be an insert script if: <br>
+<ul>
+<li>It accepts string (the editor filename or pseudo-name) as single parameter</li>
+<li>It returns a string</li>
+<li>It has the attribute <code>@insertScript</code>
 </ul><br>
 <h3><br><a name="utilityScripts">Utility scripts</a></h4>
 User defined utility scripts are defined in a central utility package. A rule defined in this package can be an edit script if: <br>

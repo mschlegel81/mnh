@@ -71,7 +71,6 @@ TYPE
     miDebug,
     miDecFontSize,
     miDeclarationEcho,
-    miEditScriptFile,
     miEvaluateNow,
     miExpressionEcho,
     miExpressionResult,
@@ -130,7 +129,6 @@ TYPE
     miOpenDemo,
     miOpenDocumentation,
     miOpenDocumentationPack,
-    miOpenImported,
     miProfile,
     miReplace,
     miSave,
@@ -138,7 +136,6 @@ TYPE
     miTimingInfo,
     miWorkspaces,
     miWrapEcho,
-    mi_insertFilename,
     mi_settings,
     pmiOpenFile1,
     pmiOpenFile2,
@@ -147,10 +144,11 @@ TYPE
     subMenuFile,
     subMenuHelp,
     subMenuSearch,
+    miInserScriptRoot,
+    miEditGuiScripts,
+    miUtilityScriptRoot,
+    miLangTxt,
     submenuEditorAppearance:   TMenuItem;
-    miEditUtilityScriptFile: TMenuItem;
-    miUtilityScriptRoot: TMenuItem;
-    miLangTxt: TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -222,7 +220,6 @@ TYPE
     PROCEDURE miOpenDocumentationPackClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miWorkspacesClick(Sender: TObject);
-    PROCEDURE mi_insertFilenameClick(Sender: TObject);
     PROCEDURE inputPageControlChange(Sender: TObject);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE Splitter3Moved(Sender: TObject);
@@ -256,14 +253,13 @@ TYPE
     lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
     lastReportedRunnerInfo:T_runnerStateInfo;
-    editScriptMenuItems,utilityScriptMenuItems:array of TMenuItem;
+    scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
   public
     editorMeta:array of T_editorMeta;
     PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
-    PROCEDURE updateEditScriptMenu;
-    PROCEDURE updateUtilityScriptMenu;
+    PROCEDURE updateScriptMenus;
   end;
 
 VAR MnhForm: TMnhForm;
@@ -504,9 +500,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
     mnh_out_adapters.gui_started:=true;
-    setLength(editScriptMenuItems,0);
-    setLength(utilityScriptMenuItems,0);
-
+    setLength(scriptMenuItems[st_edit],0);
+    setLength(scriptMenuItems[st_insert],0);
+    setLength(scriptMenuItems[st_util],0);
     runEvaluator.ensureEditScripts;
     updateDebugParts;
   end;
@@ -661,44 +657,47 @@ PROCEDURE TMnhForm.enableMenuForLanguage(CONST languageIndex:byte);
     for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=languageIndex then fileTypeMeta[i].menuItem.Checked:=true;
   end;
 
-PROCEDURE TMnhForm.updateEditScriptMenu;
-  VAR i:longint;
-      edits:T_arrayOfString;
+PROCEDURE TMnhForm.updateScriptMenus;
+  VAR i,k:longint;
+      scriptList:T_scriptMetaArray;
+      script:P_scriptMeta;
+      scriptType:T_scriptType;
+      root:TMenuItem;
   begin
-    for i:=0 to length(editScriptMenuItems)-1 do begin
-      editScriptRoot.remove(editScriptMenuItems[i]);
-      FreeAndNil(editScriptMenuItems[i]);
+    {$ifdef debugMode}writeln(stdErr,'updateScriptMenus start');{$endif}
+    for scriptType in T_scriptType do begin
+      case scriptType of
+        st_edit: root:=editScriptRoot;
+        st_util: root:=miUtilityScriptRoot;
+        st_insert: root:=miInserScriptRoot;
+      end;
+      for i:=0 to length(scriptMenuItems[scriptType])-1 do begin
+        root.remove(scriptMenuItems[scriptType][i]);
+        FreeAndNil(scriptMenuItems[scriptType][i]);
+      end;
+      setLength(scriptMenuItems[scriptType],0);
     end;
-    edits:=runEvaluator.getEditScriptNames;
-    {$ifdef debugMode} writeln('Creating edit script menu of ',length(edits),' items'); {$endif}
-    setLength(editScriptMenuItems,length(edits));
-    for i:=0 to length(edits)-1 do begin
-      editScriptMenuItems[i]:=TMenuItem.create(MainMenu1);
-      editScriptMenuItems[i].caption:=edits[i];
-      editScriptMenuItems[i].Tag:=i;
-      editScriptMenuItems[i].OnClick:=@miRunCustomEditScript;
-      editScriptRoot.add(editScriptMenuItems[i]);
+    {$ifdef debugMode}writeln(stdErr,'fetching scripts');{$endif}
+    scriptList:=runEvaluator.getScripts;
+    {$ifdef debugMode}writeln(stdErr,'updating menu from ',length(scriptList),' scripts');{$endif}
+    for i:=0 to length(scriptList)-1 do begin
+      script:=scriptList[i];
+      scriptType:=script^.getScriptType;
+      case scriptType of
+        st_edit  : root:=editScriptRoot;
+        st_util  : root:=miUtilityScriptRoot;
+        st_insert: root:=miInserScriptRoot;
+      end;
+      k:=length(scriptMenuItems[scriptType]);
+      setLength(scriptMenuItems[scriptType],k+1);
+      {$ifdef debugMode}writeln(stdErr,'creating entry ',scriptType,',',k,' ',script^.getName);{$endif}
+      scriptMenuItems[scriptType][k]:=TMenuItem.create(MainMenu1);
+      scriptMenuItems[scriptType][k].caption:=script^.getName;
+      scriptMenuItems[scriptType][k].Tag:=i;
+      scriptMenuItems[scriptType][k].OnClick:=@miRunCustomUtilScript;
+      root.add(scriptMenuItems[scriptType][k]);
     end;
-  end;
-
-PROCEDURE TMnhForm.updateUtilityScriptMenu;
-  VAR i:longint;
-      edits:T_arrayOfString;
-  begin
-    for i:=0 to length(utilityScriptMenuItems)-1 do begin
-      miUtilityScriptRoot.remove(utilityScriptMenuItems[i]);
-      FreeAndNil(utilityScriptMenuItems[i]);
-    end;
-    edits:=runEvaluator.getUtilScriptNames;
-    {$ifdef debugMode} writeln('Creating edit script menu of ',length(edits),' items'); {$endif}
-    setLength(utilityScriptMenuItems,length(edits));
-    for i:=0 to length(edits)-1 do begin
-      utilityScriptMenuItems[i]:=TMenuItem.create(MainMenu1);
-      utilityScriptMenuItems[i].caption:=edits[i];
-      utilityScriptMenuItems[i].Tag:=i;
-      utilityScriptMenuItems[i].OnClick:=@miRunCustomUtilScript;
-      miUtilityScriptRoot.add(utilityScriptMenuItems[i]);
-    end;
+    {$ifdef debugMode}writeln(stdErr,'updateScriptMenus end');{$endif}
   end;
 
 PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
@@ -730,13 +729,6 @@ PROCEDURE TMnhForm.miWorkspacesClick(Sender: TObject);
       inputPageControl.activePageIndex:=i;
       if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
     end;
-  end;
-
-PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
-  begin
-    OpenDialog.FilterIndex:=2;
-    OpenDialog.options:=OpenDialog.options-[ofPathMustExist,ofFileMustExist];
-    if OpenDialog.execute then editorMeta[inputPageControl.activePageIndex].insertText(escapeString(OpenDialog.fileName,es_pickShortest));
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
@@ -773,7 +765,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         editorMeta[outIdx].setLanguage(task^.getOutputLanguage,LANG_TXT);
         editorMeta[outIdx].updateContentAfterEditScript(P_listLiteral(task^.getOutput));
         inputPageControl.activePageIndex:=outIdx;
-      end;
+      end else if (task^.wantInsert) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_string) then
+        editorMeta[task^.inputIdx].insertText(P_stringLiteral(task^.getOutput)^.value);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=currentlyDebugging;
     end;
 

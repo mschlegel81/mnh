@@ -2618,30 +2618,19 @@ object MnhForm: TMnhForm
       end
     end
     object subMenuCode: TMenuItem
-      Caption = '&Code'
-      object mi_insertFilename: TMenuItem
-        Caption = 'Insert &Filename'
-        OnClick = mi_insertFilenameClick
-      end
-      object miOpenImported: TMenuItem
-        Caption = 'Open all imported files'
-        OnClick = miOpenImportedClick
-      end
-    end
-    object editScriptRoot: TMenuItem
-      Caption = 'Edit scripts'
-      OnClick = editScriptRootClick
-      object miEditScriptFile: TMenuItem
-        Caption = 'Edit script file'
-        OnClick = miEditScriptFileClick
-      end
-    end
-    object miUtilityScriptRoot: TMenuItem
-      Caption = '&Utility scripts'
+      Caption = 'S&cripts'
       OnClick = miUtilityScriptRootClick
-      object miEditUtilityScriptFile: TMenuItem
-        Caption = 'Edit script File'
-        OnClick = miEditUtilityScriptFileClick
+      object editScriptRoot: TMenuItem
+        Caption = '&Edit scripts'
+      end
+      object miUtilityScriptRoot: TMenuItem
+        Caption = '&Utility scripts'
+      end
+      object miInserScriptRoot: TMenuItem
+        Caption = '&Insert scripts'
+      end
+      object miEditGuiScripts: TMenuItem
+        Caption = 'Edit &Script file'
       end
     end
   end
