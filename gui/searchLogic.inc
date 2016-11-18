@@ -6,6 +6,7 @@ PROCEDURE ReplaceDialogReplace(Sender: TObject);
 PROCEDURE ReplaceDialogFind(Sender: TObject);
 PROCEDURE miFindNextClick(Sender: TObject);
 PROCEDURE miFindPreviousClick(Sender: TObject);
+PROCEDURE miGotoClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.miFindClick(Sender: TObject);
@@ -86,5 +87,21 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
   begin
     outputFocusedOnFind:=OutputEdit.Focused;
     editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options)+[ssoBackwards]);
+  end;
+
+PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
+  VAR i:longint;
+  begin
+    i:=inputPageControl.activePageIndex;
+    if (i<0) or (i>=length(editorMeta)) then exit;
+    with editorMeta[i] do begin
+      askForm.initWithQuestion('Go to line');
+      askForm.ShowModal;
+      i:=strToIntDef(askForm.getLastAnswerReleasing(nil),-1);
+      if i>=1 then begin
+        editor.CaretX:=1;
+        editor.CaretY:=i;
+      end;
+    end;
   end;
 {$endif}

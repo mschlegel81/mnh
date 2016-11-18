@@ -100,6 +100,7 @@ TYPE
     miFindNext,
     miFindPrevious,
     miFullscreen,
+    miGoto,
     miHaltEvalutaion,
     miHelp,
     miIncFontSize,
