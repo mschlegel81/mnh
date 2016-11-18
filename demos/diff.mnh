@@ -1,4 +1,4 @@
-USE utilityScripts;
+USE guiScripts;
 //*Shows the diff of two files
 main(file1:string,file2:string)->printf("%s",unifiedDiff(file1,file2,file1.fileLines,file2.fileLines,2));
 //*Shows the diff of two files with customizable extra lines
