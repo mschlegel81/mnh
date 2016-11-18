@@ -2381,6 +2381,11 @@ object MnhForm: TMnhForm
         ShortCut = 8306
         OnClick = miFindPreviousClick
       end
+      object miGoto: TMenuItem
+        Caption = '&Go to line'
+        ShortCut = 16455
+        OnClick = miGotoClick
+      end
     end
     object subMenuEvaluation: TMenuItem
       Caption = '&Evaluation'
@@ -2622,13 +2627,13 @@ object MnhForm: TMnhForm
         Caption = 'Open all imported files'
         OnClick = miOpenImportedClick
       end
-      object editScriptRoot: TMenuItem
-        Caption = 'Edit scripts...'
-        OnClick = editScriptRootClick
-        object miEditScriptFile: TMenuItem
-          Caption = 'Edit script file'
-          OnClick = miEditScriptFileClick
-        end
+    end
+    object editScriptRoot: TMenuItem
+      Caption = 'Edit scripts'
+      OnClick = editScriptRootClick
+      object miEditScriptFile: TMenuItem
+        Caption = 'Edit script file'
+        OnClick = miEditScriptFileClick
       end
     end
     object miUtilityScriptRoot: TMenuItem
