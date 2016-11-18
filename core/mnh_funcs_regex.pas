@@ -177,8 +177,8 @@ FUNCTION regexReplace_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do lResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
       end;
+      regex.free;
     end;
-    regex.free;
   end;
 
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';
