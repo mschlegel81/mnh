@@ -23,14 +23,16 @@ step(w)->step(w,TRANSITION.getInner(neighbors(w)));
 step(w,t)->[0..size(w)-1].each(i,t.getInner(i).get(w[i]));
 
 playUntilStatic(w,sleepTime)->begin
-  local world:=w;
   async(
- {while(true,begin
+ {begin
+  local world:=w;
+  while(true,begin
     printWorld(world);
     sleep(sleepTime);
     world:=step(world);
     void;
-  end)});
+  end);
+  end});
   ask('Press Enter to quit.');
 end;
 
