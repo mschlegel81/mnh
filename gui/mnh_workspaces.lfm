@@ -1,9 +1,9 @@
 object workspacesForm: TworkspacesForm
-  Left = 405
+  Left = 464
   Height = 280
-  Top = 264
+  Top = 255
   Width = 320
-  Caption = 'MNH - Manage workspaces'
+  Caption = 'MNH - Working sets'
   ClientHeight = 280
   ClientWidth = 320
   OnShow = FormShow

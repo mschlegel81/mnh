@@ -2242,7 +2242,7 @@ object MnhForm: TMnhForm
         OnClick = miNewCentralPackageClick
       end
       object miWorkspaces: TMenuItem
-        Caption = 'Manage &workspaces'
+        Caption = '&Working sets'
         OnClick = miWorkspacesClick
       end
       object miClear: TMenuItem

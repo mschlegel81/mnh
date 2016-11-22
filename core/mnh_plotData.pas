@@ -1282,15 +1282,15 @@ PROCEDURE T_plot.renderInternally(CONST width,height:longint);
     renderPlot(renderImage);
   end;
 
-PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST factor: double);
+PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
   VAR ARect: TRect;
       X, Y: integer;
   begin
-    X:=round(Source.width*factor);
-    Y:=round(Source.height*factor);
+    X:=round(source.width*factor);
+    Y:=round(source.height*factor);
     ARect:=Rect(0, 0, X, Y);
     dest.Canvas.AntialiasingMode:=amOn;
-    dest.Canvas.StretchDraw(ARect, Source.picture.Bitmap);
+    dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);

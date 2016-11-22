@@ -747,7 +747,7 @@ FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
       tempPackage:T_package;
-      Source:TStringList;
+      source:TStringList;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
@@ -774,10 +774,10 @@ FUNCTION inspect_imp intFuncSignature;
       context.adapters^.raiseNote('Cannot locate package with id or path "'+id+'"',tokenLocation);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       tempPackage.create(nil);
-      Source:=TStringList.create;
-      for i:=0 to list1^.size-1 do Source.append(P_stringLiteral(list1^.value(i))^.value);
-      tempPackage.setSourceUTF8AndPath(Source,str0^.value);
-      FreeAndNil(Source);
+      source:=TStringList.create;
+      for i:=0 to list1^.size-1 do source.append(P_stringLiteral(list1^.value(i))^.value);
+      tempPackage.setSourceUTF8AndPath(source,str0^.value);
+      FreeAndNil(source);
       tempPackage.loadForDocumentation;
       result:=tempPackage.inspect;
       tempPackage.destroy;
