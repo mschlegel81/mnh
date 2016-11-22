@@ -54,7 +54,7 @@ FUNCTION validateWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_
 
 FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR isValid:boolean=true;
-      Source:string='';
+      source:string='';
       dest:string='';
       xRes:longint=0;
       yRes:longint=0;
@@ -80,7 +80,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
             else exit(nil);
           end;
           lt_string: begin
-            if Source='' then Source:=P_stringLiteral(params^.value(i))^.value
+            if source='' then source:=P_stringLiteral(params^.value(i))^.value
             else if dest='' then dest:=P_stringLiteral(params^.value(i))^.value
             else exit(nil);
           end;
@@ -88,9 +88,9 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         end;
       end;
       if (xRes>0) and (yRes=0) then begin sizeLimit:=xRes; xRes:=0; end;
-      if (dest='') and (Source<>'') then begin dest:=Source; Source:=''; end;
+      if (dest='') and (source<>'') then begin dest:=source; source:=''; end;
 
-      if (Source='') and ((xRes=0) or (yRes=0)) then begin
+      if (source='') and ((xRes=0) or (yRes=0)) then begin
         context.adapters^.raiseError('Either target resolution or input image must be provided',tokenLocation);
         isValid:=false;
       end;
@@ -100,7 +100,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
       end;
       enterCriticalSection(imigCS);
       workflow:=createWorkflow(P_listLiteral(params^.value(0)),false,isValid,tokenLocation,context);
-      if isValid and (Source=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
+      if isValid and (source=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then begin
           context.adapters^.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
@@ -112,7 +112,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         unlock;
       end;
       if isValid then begin
-        if Source<>'' then workflow.executeForTarget(Source,sizeLimit,dest)
+        if source<>'' then workflow.executeForTarget(source,sizeLimit,dest)
                       else workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
         while progressQueue.calculating and (context.adapters^.noErrors) do begin
           currentProgress:=progressQueue.getProgressString;
