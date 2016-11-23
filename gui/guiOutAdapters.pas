@@ -32,6 +32,9 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
     guiOutAdapter.create(parent);
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
+    {$ifdef imig}
+    mnh_imig_form.guiAdapters:=@guiAdapters;
+    {$endif}
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
   end;
