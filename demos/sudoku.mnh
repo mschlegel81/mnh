@@ -1,12 +1,14 @@
 private drop(list:intList,toDrop:int)->list[list!=toDrop];
 private drop(list:intList,toDrop:intList)->list.minus(toDrop).sort;
 
+//*The cells that are connected
 private
-COMPONENTS:=[0..8].each(i,i+[0..8]*9)|
-            [0..8].each(i,i*9+[0..8])|
-            [0..8].each(i,[0..80].get(i=([0..80] div 27)*3+[0..80] mod 9 div 3));
-
+COMPONENTS:=[0..8].each(i,i+[0..8]*9)| //same row
+            [0..8].each(i,i*9+[0..8])| //same column
+            [0..8].each(i,[0..80].get(i=([0..80] div 27)*3+[0..80] mod 9 div 3)); //same block
+//*Returns the unique indexes of all cells connected to i (excluding i)
 private memoized connectedIdx(i:int)->COMPONENTS.each(c,i in c ? drop(c,i) : void).flatten.sort;
+//*Returns the components
 private memoized components(i)->COMPONENTS.each(c,i in c ? drop(c,i) : void);
 
 //*A board is solved when all components contain numbers [1..9]
@@ -39,25 +41,29 @@ solve(B)->begin
   while(needRun,
   begin
     needRun:=false;
-    local intsOnly:=Board.each(c,c.isInt ? c : []);
-    Board:=[0..80].each(i,
-      Board[i].isInt
-      ? Board[i]
+    //intsOnly are the fixed/solved cells
+    local intsOnly:=Board.pEach(c,c.isInt ? c : []);
+    Board:=Board.each(cell,
+      cell.isInt //is cell already fixed/solved ?
+      ? cell
       : begin
-          local newList:=drop(Board[i],intsOnly[connectedIdx(i)].flatten);
+          //first try to solve the cell by restricting values based on already fixed/solved cells
+          local newList:=drop(cell,intsOnly[connectedIdx(index)].flatten);
           size(newList)=1
           ? begin
               needRun:=true;
-              newList[0];
+              newList.head;
             end
-          : begin
-              local tmp:=drop(Board[i],flatten(Board.get(components(i)[0])));
-              size(tmp)=1 ? begin needRun:=true; tmp[0]; end : begin
-              tmp:=drop(Board[i],Board.get(components(i)[1]).flatten);
-              size(tmp)=1 ? begin needRun:=true; tmp[0]; end : begin
-              tmp:=drop(Board.get(i),Board.get(components(i)[2]).flatten);
-              size(tmp)=1 ? begin needRun:=true; tmp[0]; end : newList; end; end;
-            end;
+          : components(index).each(COMP,begin
+              //try to solve based on all cells (including unsolved)
+              local tmp:=cell.drop(Board[COMP].flatten);
+              size(tmp)=1
+              ? begin
+                  needRun:=true;
+                  tmp.head;
+                end
+              : void;
+            end,head) orElse newList;
         end);
   end);
   Board;
@@ -96,3 +102,10 @@ end;
 
 //*For regression test: create a random riddle and print it out
 main->randomRiddle.printBoard;
+
+//*Create count riddles
+main(count)->begin
+  local iCount:=count.toInt;
+  iCount<=0 ? fail('count must be >0') : void;
+  [1..iCount].each(i,print,main);
+end;
