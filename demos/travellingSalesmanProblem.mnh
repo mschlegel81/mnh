@@ -1,4 +1,20 @@
-private points:=[0..1199].each(i,sqrt(i)*[cos(2.39996323*i),sin(2.39996323*i)]).each(p,-25<p.get(0)<25 and -25<p.get(1)<25 ? p : void);
+private memoized points->
+begin
+  local P:=[random(2)];
+  local acceptAt:=1;
+  local tries:=0;
+  while(P.size<1000,begin
+    tries:=0;
+    local q:=random(2)*0.5+0.5;
+    while(P.each(p,sqr(p-q).agg(+)<acceptAt,OR),begin
+      q:=random(2);
+      acceptAt:=acceptAt*0.999;
+      tries+=1;
+    end);
+    P|=[q];
+  end);
+  P;
+end;
 
 private norm(x)->sqrt(x.sqr.agg(+));
 
