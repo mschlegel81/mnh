@@ -27,9 +27,9 @@ private analyze(lines:stringList)->begin
 
 end;
 
-private filesWords(pattern)->each(f,files(pattern),|,fileLines(f));
+private filesWords(pattern)->files(pattern).each(file,fileLines(file),|);
 
 //*Displays a short info on words in kjv.txt
-main->analyze(fileLines(inputs.kjv));
+main->inputs.kjv.fileLines.analyze;
 //*Displays a short info on words in the given file or files matching a search pattern
-main(fileOrPattern:string)->analyze(filesWords(fileOrPattern));
+main(fileOrPattern:string)->filesWords(fileOrPattern).analyze;
