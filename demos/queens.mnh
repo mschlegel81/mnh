@@ -2,15 +2,15 @@
 //Queens are represented as lists of integers where the position in
 //the list indicates the row and the value represents the column
 
-//*Always true (one Queen only)
-isValid(L:list,n=0)->true;
+//*Always true (first queen)
+isValid([],newQueen:int)->true;
 //*For n+1 Queens, test Queens [n-1..0] if they threaten Queen [n]
-isValid(L:list,n>0)->[n-1..0].each(k,abs(L[n]-L[k])-1!=index,AND);
+isValid(oldQueens:intList,newQueen:int)->(abs(oldQueens-newQueen)!=[oldQueens.size..1]).agg(AND);
 
 //*No candiates left: return H
 queens(H:intList,[])->[H];
 //*Try to elongate H by each element in C, testing if it is valid. Recurse.
-queens(H:intList,C:intList)->C.pEach(c,isValid(H|c,size(H))
+queens(H:intList,C:intList)->C.pEach(c,isValid(H,c)
                                        ? queens(H|c,C.minus([c]))
                                        : void,|);
 queens(numberOfQueens>1)->queens([],[1..numberOfQueens]) orElse [];
