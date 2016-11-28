@@ -1,0 +1,13 @@
+//*Returns true iff fullString starts with prefix
+//*Works for: string     x string
+//*.          stringList x string
+//*.          string     x stringList
+//*.          stringList x stringList
+startsWith(fullString,prefix)->pos(prefix,fullString)=0;
+
+//*Returns true iff fullString ends with suffix
+//*Works for: string     x string
+//*.          stringList x string
+//*.          string     x stringList
+//*.          stringList x stringList
+endsWith(fullString,suffix)->copy(fullString,length(fullString)-length(suffix),length(suffix))=suffix;

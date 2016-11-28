@@ -1,3 +1,6 @@
+//@insertScript=Pick file or directory
+pickFile(s:string)->ask('Pick file or directory').escape;
+
 //@editScript=Trim trailing spaces
 trimTrailingSpaces(s:stringList)->s.trimRight;
 
@@ -40,4 +43,24 @@ findInAll(editorFile:string)->begin
   searchRegex<>''
   ? editors.each(editor,editor.editorContent.each(line,line.matches(searchRegex) ? print('@',editor,':',index+1,',',1) : void))
   : print('No regex given - search cancelled');
+  void;
+end;
+
+//@utility=open all imported files
+openImported(editorFile:string)->inspect(editorFile,editorFile.editorContent)['uses'].getInner(1).each(file,openInEditor(file));
+
+
+//@utility=Compare folders (new editor)
+//@newEdit
+//@language=diff
+compareFolders(editorFile:string)->begin
+  local folder1:=ask('Please enter folder 1').expandedFileName;
+  local filesIn1:=folder1.allFiles.replaceOne(folder1,'');
+  local folder2:=ask('Please enter folder 2').expandedFileName;
+  local filesIn2:=folder2.allFiles.replaceOne(folder2,'');
+  local toCompare:=filesIn1.intersect(filesIn2)
+                  .each(file,fileContents(folder1&file)==fileContents(folder2&file) ? void : file)
+                  .union(filesIn1.minus(filesIn2),
+                         filesIn2.minus(filesIn1));
+  toCompare.each(file,unifiedDiff(folder1&file,folder2&file,fileLines(folder1&file),fileLines(folder2&file),2),' ',|);
 end;

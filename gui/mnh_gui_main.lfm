@@ -2631,6 +2631,7 @@ object MnhForm: TMnhForm
       end
       object miEditGuiScripts: TMenuItem
         Caption = 'Edit &Script file'
+        OnClick = miEditGuiScriptsClick
       end
     end
   end
