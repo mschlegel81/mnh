@@ -43,6 +43,10 @@ private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.
         'consoles/lib/i386-win32',
         'consoles/lib/x86_64-linux',
         'consoles/lib/x86_64-win64',
+        '../art.source/display/lib/i386-win32',
+        '../art.source/display/lib/x86_64-win64',
+        '../art.source/im/lib/i386-win32',
+        '../art.source/im/lib/x86_64-win64',
         '../art.source/igSrc']);
 
 private templateToInc(inFile,outFile<>inFile)->begin
