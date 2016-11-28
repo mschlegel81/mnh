@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+PROCEDURE miEditGuiScriptsClick(Sender: TObject);
 PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
 PROCEDURE miClearClick(Sender: TObject);
 PROCEDURE miCloseClick(Sender: TObject);
@@ -55,6 +56,11 @@ PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShift
 PROCEDURE miEditUtilityScriptFileClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
+PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
+  begin
+    FormDropFiles(Sender,utilityScriptFileName);
+  end;
+
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   VAR i:longint;
   begin
