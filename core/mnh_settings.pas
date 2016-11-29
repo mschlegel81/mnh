@@ -17,8 +17,8 @@ T_formPosition=object(T_serializable)
   isFullscreen: boolean;
   CONSTRUCTOR create;
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
+  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
 end;
 
 T_editorState=object(T_serializable)
@@ -35,8 +35,8 @@ T_editorState=object(T_serializable)
   DESTRUCTOR destroy;
   PROCEDURE getLines(CONST dat: TStrings);
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_streamWrapper; CONST saveAll:boolean);
+  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper; CONST saveAll:boolean);
 end;
 
 T_fileHistory=object(T_serializable)
@@ -45,8 +45,8 @@ T_fileHistory=object(T_serializable)
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
+  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   FUNCTION polishHistory: boolean;
   PROCEDURE fileClosed(CONST fileName:ansistring);
   FUNCTION historyItem(CONST index:longint):ansistring;
@@ -69,9 +69,9 @@ T_workspace=object(T_serializable)
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
   FUNCTION loadNameOnly(CONST fileName:string):boolean;
-  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
+  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   PROCEDURE initDefaults(CONST withEditor:boolean);
 end;
 
@@ -106,8 +106,8 @@ T_settings=object(T_serializable)
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
+  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   PROCEDURE initDefaults;
 
   FUNCTION savingRequested:boolean;
@@ -188,7 +188,7 @@ FUNCTION T_workspace.getSerialVersion: dword;
     result:=2661226500;
   end;
 
-FUNCTION T_workspace.loadFromStream(VAR stream: T_streamWrapper): boolean;
+FUNCTION T_workspace.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   VAR i:longint;
   begin
     if not(inherited loadFromStream(stream)) then exit(false);
@@ -207,7 +207,7 @@ FUNCTION T_workspace.loadFromStream(VAR stream: T_streamWrapper): boolean;
   end;
 
 FUNCTION T_workspace.loadNameOnly(CONST fileName:string): boolean;
-  VAR stream:T_streamWrapper;
+  VAR stream:T_bufferedInputStreamWrapper;
   begin
     stream.createToReadFromFile(fileName);
     result:=stream.allOkay and inherited loadFromStream(stream);
@@ -216,7 +216,7 @@ FUNCTION T_workspace.loadNameOnly(CONST fileName:string): boolean;
     stream.destroy;
   end;
 
-PROCEDURE T_workspace.saveToStream(VAR stream: T_streamWrapper);
+PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   VAR i:longint;
       visibleEditorCount:longint=0;
   begin
@@ -276,7 +276,7 @@ FUNCTION workerThreadCount:longint;
   end;
 
 FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235075; end;
-FUNCTION T_settings.loadFromStream(VAR stream: T_streamWrapper): boolean;
+FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
   begin
@@ -308,7 +308,7 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_streamWrapper): boolean;
     wasLoaded:=result;
   end;
 
-PROCEDURE T_settings.saveToStream(VAR stream: T_streamWrapper);
+PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   begin
     inherited saveToStream(stream);
     stream.writeLongint(cpuCount);
@@ -421,7 +421,7 @@ DESTRUCTOR T_fileHistory.destroy;
 
 FUNCTION T_fileHistory.getSerialVersion:dword; begin result:=176454893; end;
 
-FUNCTION T_fileHistory.loadFromStream(VAR stream:T_streamWrapper):boolean;
+FUNCTION T_fileHistory.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   VAR i,count:longint;
   begin
     if not(inherited loadFromStream(stream)) then exit(false);
@@ -432,7 +432,7 @@ FUNCTION T_fileHistory.loadFromStream(VAR stream:T_streamWrapper):boolean;
     result:=stream.allOkay;
   end;
 
-PROCEDURE T_fileHistory.saveToStream(VAR stream:T_streamWrapper);
+PROCEDURE T_fileHistory.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   VAR i,count:longint;
   begin
     inherited saveToStream(stream);
@@ -484,7 +484,7 @@ CONSTRUCTOR T_formPosition.create;
   end;
 
 FUNCTION T_formPosition.getSerialVersion:dword; begin result:=1529642236; end;
-FUNCTION T_formPosition.loadFromStream(VAR stream:T_streamWrapper):boolean;
+FUNCTION T_formPosition.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   begin
     if not inherited loadFromStream(stream) then exit(false);
     top   :=stream.readLongint;
@@ -495,7 +495,7 @@ FUNCTION T_formPosition.loadFromStream(VAR stream:T_streamWrapper):boolean;
     result:=true;
   end;
 
-PROCEDURE T_formPosition.saveToStream(VAR stream:T_streamWrapper);
+PROCEDURE T_formPosition.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   begin
     inherited saveToStream(stream);
     stream.writeLongint(top);
@@ -533,7 +533,7 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
 
 FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366166; end;
 
-FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
+FUNCTION T_editorState.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   VAR i:longint;
   begin
     if not inherited loadFromStream(stream) then exit(false);
@@ -557,7 +557,7 @@ FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
     result:=stream.allOkay;
   end;
 
-PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper; CONST saveAll:boolean);
+PROCEDURE T_editorState.saveToStream(VAR stream:T_bufferedOutputStreamWrapper; CONST saveAll:boolean);
   VAR i:longint;
   begin
     inherited saveToStream(stream);

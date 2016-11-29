@@ -314,8 +314,8 @@ FUNCTION setMinus    (CONST params:P_listLiteral):P_listLiteral;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
-FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+FUNCTION newLiteralFromStream(VAR stream:T_bufferedInputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_bufferedOutputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
@@ -2821,7 +2821,7 @@ DESTRUCTOR T_format.destroy;
     strFmt:='';
   end;
 
-FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+FUNCTION newLiteralFromStream(VAR stream:T_bufferedInputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
   VAR reusableLiterals:array of P_literal;
       encodingMethod:byte=0;
       {$ifdef debugMode}
@@ -2932,7 +2932,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
     {$endif}
   end;
 
-PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_bufferedOutputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR reusableMap:specialize G_literalKeyMap<longint>;
       {$ifdef debugMode}
       start:double;
@@ -3052,7 +3052,7 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
   end;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
-  VAR wrapper:T_streamWrapper;
+  VAR wrapper:T_bufferedOutputStreamWrapper;
       stream:TStringStream;
   begin
     if asExpression then exit(serialize(L,location,adapters));
@@ -3065,7 +3065,7 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
   end;
 
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-  VAR wrapper:T_streamWrapper;
+  VAR wrapper:T_bufferedInputStreamWrapper;
       stream:TStringStream;
   begin
     stream:=TStringStream.create(source);
