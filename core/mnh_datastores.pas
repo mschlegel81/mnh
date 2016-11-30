@@ -23,7 +23,7 @@ IMPLEMENTATION
 PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
   VAR allStores:T_arrayOfString;
       i:longint;
-      wrapper:T_streamWrapper;
+      wrapper:T_bufferedInputStreamWrapper;
   begin
     if fileName<>'' then exit;
     allStores:=find(ChangeFileExt(packagePath,'.datastore*'),true,false);
@@ -64,14 +64,14 @@ FUNCTION T_datastoreMeta.fileChangedSinceRead: boolean;
   end;
 
 FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapters:P_adapters): P_literal;
-  VAR wrapper:T_streamWrapper;
+  VAR wrapper:T_bufferedInputStreamWrapper;
   begin
     tryObtainName(false);
     {$ifdef debugMode} writeln(stdErr,'Reading datastore ',fileName,' for rule ',ruleId); {$endif}
     if fileName='' then exit(newVoidLiteral);
     wrapper.createToReadFromFile(fileName);
     wrapper.readAnsiString;
-    result:=newLiteralFromStream(wrapper,location,adapters);
+    result:=newLiteralFromStream(@wrapper,location,adapters);
     if not(wrapper.allOkay) then begin
       if result<>nil then disposeLiteral(result);
       result:=nil;
@@ -81,13 +81,13 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapter
   end;
 
 PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters);
-  VAR wrapper:T_streamWrapper;
+  VAR wrapper:T_bufferedOutputStreamWrapper;
   begin
     tryObtainName(true);
     {$ifdef debugMode} writeln(stdErr,'Writing datastore ',fileName,' for rule ',ruleId); {$endif}
     wrapper.createToWriteToFile(fileName);
     wrapper.writeAnsiString(ruleId);
-    writeLiteralToStream(L,wrapper,location,adapters);
+    writeLiteralToStream(L,@wrapper,location,adapters);
     wrapper.destroy;
   end;
 
