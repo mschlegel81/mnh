@@ -71,7 +71,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapter
     if fileName='' then exit(newVoidLiteral);
     wrapper.createToReadFromFile(fileName);
     wrapper.readAnsiString;
-    result:=newLiteralFromStream(wrapper,location,adapters);
+    result:=newLiteralFromStream(@wrapper,location,adapters);
     if not(wrapper.allOkay) then begin
       if result<>nil then disposeLiteral(result);
       result:=nil;
@@ -87,7 +87,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     {$ifdef debugMode} writeln(stdErr,'Writing datastore ',fileName,' for rule ',ruleId); {$endif}
     wrapper.createToWriteToFile(fileName);
     wrapper.writeAnsiString(ruleId);
-    writeLiteralToStream(L,wrapper,location,adapters);
+    writeLiteralToStream(L,@wrapper,location,adapters);
     wrapper.destroy;
   end;
 
