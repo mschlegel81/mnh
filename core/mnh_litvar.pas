@@ -3052,21 +3052,20 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
   end;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
-  VAR wrapper:T_bufferedOutputStreamWrapper;
+  VAR wrapper:T_outputStreamWrapper;
       stream:TStringStream;
   begin
     if asExpression then exit(serialize(L,location,adapters));
     stream:= TStringStream.create('');
     wrapper.create(stream);
     writeLiteralToStream(L,@wrapper,location,adapters);
-    wrapper.flush;
     stream.position:=0;
     result:=stream.DataString;
     wrapper.destroy; //implicitly destroys stream
   end;
 
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-  VAR wrapper:T_bufferedinputStreamWrapper;
+  VAR wrapper:T_inputStreamWrapper;
       stream:TStringStream;
   begin
     stream:=TStringStream.create(source);
