@@ -1,11 +1,14 @@
-private memoized points->
+datastore points;
+//*Returns the contents of datastore points.
+//*If necessary, the datastore is initialized first.
+private getPoints->points orElse (points :=
 begin
   local P:=[random(2)];
   local acceptAt:=1;
   local tries:=0;
   while(P.size<1000,begin
     tries:=0;
-    local q:=random(2)*0.5+0.5;
+    local q:=random(2);
     while(P.each(p,sqr(p-q).agg(+)<acceptAt,OR),begin
       q:=random(2);
       acceptAt:=acceptAt*0.999;
@@ -14,10 +17,12 @@ begin
     P|=[q];
   end);
   P;
-end;
+end);
 
+//*Returns the Euklidean norm of x
 private norm(x)->sqrt(x.sqr.agg(+));
 
+//*Returns the length of path points in Euklidean norm
 private pathLength(points)->begin
   local result:=0;
   local lastPoint:=points.trailing;
@@ -25,8 +30,10 @@ private pathLength(points)->begin
   result;
 end;
 
+//*Returns the length of a 4-node-path in Euklidean norm
 private len4(a,b,c,d)->norm(b-a)+norm(c-b)+norm(d-c);
 
+//*Sierpinski-Curve sorting
 scSort(L)->begin
   local x:=L.getInner(0); local xr:=[min(x),max(x)];
   local y:=L.getInner(1); local yr:=[min(y),max(y)];
@@ -45,6 +52,24 @@ scSort(L)->begin
   result;
 end;
 
+private scSort_(ax:numeric,ay:numeric,bx:numeric,by:numeric,cx:numeric,cy:numeric,x:numericList,y:numericList)->
+  size(x)>1
+  ? (sqr(ax-cx)+sqr(ay-cy)>1E-12
+    ? begin
+        local mask:=sqr(x-ax)+sqr(y-ay) <
+                    sqr(x-cx)+sqr(y-cy);
+        scSort_(ax,ay,(ax+cx)/2,(ay+cy)/2,bx,by,x.get(    mask ),y.get(    mask )) |
+        scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x.get(not(mask)),y.get(not(mask)));
+      end
+    : begin
+        print('Aboring at ',ax,'  ',ay,' | ',
+                            bx,'  ',by,' | ',
+                            cx,'  ',cy,' with ',size(x),' points');
+        [0..size(x)-1].each(i,[x.get(i),y.get(i)]);
+      end)
+  : size(x)=1 ? [x|y] : [];
+
+//*Tries to reduce path length by swapping adjacent nodes
 polish(L)->begin
   local result:=L;
   local changing:=true;
@@ -67,27 +92,12 @@ polish(L)->begin
   result;
 end;
 
-private scSort_(ax:numeric,ay:numeric,bx:numeric,by:numeric,cx:numeric,cy:numeric,x:numericList,y:numericList)->
-  size(x)>1
-  ? (sqr(ax-cx)+sqr(ay-cy)>1E-12
-    ? begin
-        local mask:=sqr(x-ax)+sqr(y-ay) <
-                    sqr(x-cx)+sqr(y-cy);
-        scSort_(ax,ay,(ax+cx)/2,(ay+cy)/2,bx,by,x.get(    mask ),y.get(    mask )) |
-        scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x.get(not(mask)),y.get(not(mask)));
-      end
-    : begin
-        print('Aboring at ',ax,'  ',ay,' | ',
-                            bx,'  ',by,' | ',
-                            cx,'  ',cy,' with ',size(x),' points');
-        [0..size(x)-1].each(i,[x.get(i),y.get(i)]);
-      end)
-  : size(x)=1 ? [x|y] : [];
 
 //*Approximately solves the Travelling Salesman Problem using sorting by Sierpinski-Curve
 main->begin
+  resetRandom;
   plot.setOptions([['axisStyleX',0],['axisStyleY',0]]);
-  local L:=polish(scSort(points));
+  local L:=polish(scSort(getPoints));
   plot(L|L.get([0]),'. l');
   plot.renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
 end;
