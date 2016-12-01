@@ -19,6 +19,7 @@ object newCentralPackageForm: TnewCentralPackageForm
     ItemHeight = 0
     OnClick = ListBoxClick
     OnDblClick = ListBoxDblClick
+    OnKeyPress = ListBoxKeyPress
     TabOrder = 0
   end
   object remButton: TButton

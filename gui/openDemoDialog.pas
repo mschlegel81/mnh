@@ -13,6 +13,7 @@ TYPE
     ListBox: TListBox;
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ListBoxDblClick(Sender: TObject);
+    procedure ListBoxKeyPress(Sender: TObject; var Key: char);
   private
     { private declarations }
   public
@@ -40,6 +41,11 @@ PROCEDURE TopenDemoDialogForm.ListBoxDblClick(Sender: TObject);
   begin
     selectedFile:=demosFolder+ListBox.items[ListBox.ItemIndex]+'.mnh';
     ModalResult:=mrOk;
+  end;
+
+procedure TopenDemoDialogForm.ListBoxKeyPress(Sender: TObject; var Key: char);
+  begin
+    if key=#13 then ListBoxDblClick(Sender);
   end;
 
 PROCEDURE TopenDemoDialogForm.FormShow(Sender: TObject);
