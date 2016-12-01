@@ -27,3 +27,12 @@ main->obtainData
   .print;
 
 main('GUI')->obtainData.showTable;
+
+main(pattern)->
+  print('Search pattern: ',escape(pattern)) orElse
+  obtainData
+  .each(line,line.join("\t"))
+  .each(line,line.matches(pattern) ? line : void)
+  .join("\n")
+  .print;
+
