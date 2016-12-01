@@ -13,7 +13,7 @@ TYPE
     ListBox: TListBox;
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ListBoxDblClick(Sender: TObject);
-    procedure ListBoxKeyPress(Sender: TObject; var Key: char);
+    PROCEDURE ListBoxKeyPress(Sender: TObject; VAR key: char);
   private
     { private declarations }
   public
@@ -43,7 +43,7 @@ PROCEDURE TopenDemoDialogForm.ListBoxDblClick(Sender: TObject);
     ModalResult:=mrOk;
   end;
 
-procedure TopenDemoDialogForm.ListBoxKeyPress(Sender: TObject; var Key: char);
+PROCEDURE TopenDemoDialogForm.ListBoxKeyPress(Sender: TObject; VAR key: char);
   begin
     if key=#13 then ListBoxDblClick(Sender);
   end;

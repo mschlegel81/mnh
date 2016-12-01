@@ -35,4 +35,3 @@ main(pattern)->
   .each(line,line.matches(pattern) ? line : void)
   .join("\n")
   .print;
-

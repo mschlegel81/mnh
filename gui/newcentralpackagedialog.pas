@@ -26,7 +26,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ListBoxClick(Sender: TObject);
     PROCEDURE ListBoxDblClick(Sender: TObject);
-    procedure ListBoxKeyPress(Sender: TObject; var Key: char);
+    PROCEDURE ListBoxKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE packageNameEditChange(Sender: TObject);
     PROCEDURE restoreButtonClick(Sender: TObject);
   private
@@ -70,9 +70,9 @@ PROCEDURE TnewCentralPackageForm.ListBoxDblClick(Sender: TObject);
     ModalResult:=mrOk;
   end;
 
-procedure TnewCentralPackageForm.ListBoxKeyPress(Sender: TObject; var Key: char);
+PROCEDURE TnewCentralPackageForm.ListBoxKeyPress(Sender: TObject; VAR key: char);
   begin
-    if key=#13 then ListBoxDblClick(sender);
+    if key=#13 then ListBoxDblClick(Sender);
   end;
 
 PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);
