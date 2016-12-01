@@ -12,6 +12,7 @@ TYPE
     hasKillRequest:boolean;
     up:boolean;
     context:P_evaluationContext;
+    socket:T_socketPair;
 
     CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_evaluationContext);
     DESTRUCTOR destroy;
@@ -44,6 +45,13 @@ FUNCTION httpError_impl intFuncSignature;
     else result:=nil;
   end;
 
+FUNCTION microserverThread(p:pointer):ptrint;
+  begin
+    P_microserver(p)^.serve;
+    dispose(P_microserver(p),destroy);
+    result:=0;
+  end;
+
 FUNCTION startServer_impl intFuncSignature;
   VAR microserver:P_microserver;
       timeout:double;
@@ -69,16 +77,15 @@ FUNCTION startServer_impl intFuncSignature;
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,childContext));
+        if microserver^.socket.getLastListenerSocketError=0
+        then beginThread(@microserverThread,microserver)
+        else begin
+          context.adapters^.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
+          dispose(microserver,destroy);
+        end;
         result:=newVoidLiteral;
       end else context.adapters^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
-  end;
-
-FUNCTION microserverThread(p:pointer):ptrint;
-  begin
-    P_microserver(p)^.serve;
-    dispose(P_microserver(p),destroy);
-    result:=0;
   end;
 
 CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_evaluationContext);
@@ -96,7 +103,7 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]^.ip=ip then currentUpServers[i]^.killQuickly;
     setLength(currentUpServers,length(currentUpServers)+1);
     currentUpServers[length(currentUpServers)-1]:=@self;
-    beginThread(@microserverThread,@self);
+    socket.create(ip);
     system.leaveCriticalSection(serverCS);
   end;
 
@@ -104,6 +111,7 @@ DESTRUCTOR T_microserver.destroy;
   VAR i,j:longint;
   begin
     system.enterCriticalSection(serverCS);
+    socket.destroy;
     j:=0;
     for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]<>@self then begin
       currentUpServers[j]:=currentUpServers[i];
@@ -128,7 +136,6 @@ PROCEDURE T_microserver.serve;
       response:P_literal;
       requestLiteral:T_listLiteral;
       sleepTime:longint=minSleepTime;
-      socket:T_socketPair;
 
   PROCEDURE initRequestLiteral(CONST request:string);
     VAR parts:T_arrayOfString;
@@ -179,7 +186,6 @@ PROCEDURE T_microserver.serve;
     end;
 
   begin
-    socket.create(ip);
     context^.resetForEvaluation(nil);
     context^.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
@@ -208,7 +214,6 @@ PROCEDURE T_microserver.serve;
       end;
     until timedOut or not(context^.adapters^.noErrors);
     disposeLiteral(servingExpression);
-    socket.destroy;
     context^.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
     context^.afterEvaluation;
     dispose(context,destroy);
