@@ -12,6 +12,7 @@ USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mn
      ig_funcTrees,
      ig_expoClouds;
 
+{$i mnh_func_defines.inc}
 IMPLEMENTATION
 VAR imigCS:TRTLCriticalSection;
 FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):T_imageManipulationWorkflow;
@@ -41,18 +42,20 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
     if steps<>tmpSteps then disposeLiteral(tmpSteps);
   end;
 
-FUNCTION validateWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION validateWorkflow_imp intFuncSignature;
   VAR wf:T_imageManipulationWorkflow;
       isValid:boolean;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_list,lt_keyValueList]) then begin
-      wf:=createWorkflow(P_listLiteral(params^.value(0)),true,isValid,tokenLocation,context);
+    enterCriticalSection(imigCS);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_list,lt_keyValueList]) then begin
+      wf:=createWorkflow(list0,true,isValid,tokenLocation,context);
       wf.destroy;
       result:=newBoolLiteral(isValid);
     end else result:=nil;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION executeWorkflow_imp intFuncSignature;
   VAR isValid:boolean=true;
       source:string='';
       dest:string='';
@@ -69,7 +72,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
     end;
 
   begin
-    if (params<>nil) and (params^.size>=2) and (params^.value(0)^.literalType in [lt_stringList,lt_list,lt_keyValueList]) then begin
+    if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_stringList,lt_list,lt_keyValueList]) then begin
       for i:=1 to params^.size-1 do begin
         case params^.value(i)^.literalType of
           lt_int: begin
@@ -99,7 +102,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         isValid:=false;
       end;
       enterCriticalSection(imigCS);
-      workflow:=createWorkflow(P_listLiteral(params^.value(0)),false,isValid,tokenLocation,context);
+      workflow:=createWorkflow(list0,false,isValid,tokenLocation,context);
       if isValid and (source=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then begin
@@ -140,26 +143,29 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
 
 PROCEDURE doCloseImage(VAR context:T_evaluationContext);
   begin
+    enterCriticalSection(imigCS);
     with context.adapters^.picture do begin
       lock;
       if (value<>nil) then dispose(value,destroy);
       value:=nil;
       unlock;
     end;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION loadImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION loadImage_imp intFuncSignature;
   VAR loadedImage:P_rawImage;
       ok:boolean=true;
   begin
+    enterCriticalSection(imigCS);
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       new(loadedImage,create(1,1));
       try
-        loadedImage^.loadFromFile(P_stringLiteral(params^.value(0))^.value);
+        loadedImage^.loadFromFile(P_stringLiteral(arg0)^.value);
       except
         ok:=false;
-        context.adapters^.raiseError('Error loading image '+params^.value(0)^.toString(),tokenLocation);
+        context.adapters^.raiseError('Error loading image '+arg0^.toString(),tokenLocation);
       end;
       if ok then with context.adapters^.picture do begin
         lock;
@@ -169,11 +175,13 @@ FUNCTION loadImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         result:=newVoidLiteral;
       end else dispose(loadedImage,destroy);
     end;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION saveImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION saveImage_imp intFuncSignature;
   VAR ok:boolean=true;
   begin
+    enterCriticalSection(imigCS);
     result:=nil;
     with context.adapters^.picture do begin
       lock;
@@ -183,10 +191,10 @@ FUNCTION saveImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         exit(newBoolLiteral(false));
       end;
       try
-        if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
-        then value^.saveToFile(P_stringLiteral(params^.value(0))^.value)
-        else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_int)
-        then value^.saveJpgWithSizeLimit(P_stringLiteral(params^.value(0))^.value,P_intLiteral(params^.value(1))^.value)
+        if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+        then value^.saveToFile(P_stringLiteral(arg0)^.value)
+        else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int)
+        then value^.saveJpgWithSizeLimit(str0^.value,int1^.value)
         else ok:=false;
       except
         on e:Exception do begin
@@ -197,19 +205,23 @@ FUNCTION saveImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       unlock;
       if ok then result:=newVoidLiteral;
     end;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION closeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION closeImage_imp intFuncSignature;
   begin
+    enterCriticalSection(imigCS);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       doCloseImage(context);
       result:=newVoidLiteral;
     end;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION imageSize_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION imageSize_imp intFuncSignature;
   begin
+    enterCriticalSection(imigCS);
     result:=nil;
     if (params=nil) or (params^.size=0) then with context.adapters^.picture do begin
       lock;
@@ -217,9 +229,10 @@ FUNCTION imageSize_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
                     else result:=newListLiteral();
       unlock;
     end;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION resizeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION resizeImage_imp intFuncSignature;
   CONST styleString:array[res_exact..res_fit] of string=('exact','fill','fit');
   VAR xRes:longint=0;
       yRes:longint=0;
@@ -227,12 +240,13 @@ FUNCTION resizeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
       s,r:T_resizeStyle;
 
   begin
+    enterCriticalSection(imigCS);
     result:=nil;
-    if (params<>nil) and (params^.size>=2) and (params^.value(0)^.literalType=lt_int) and (params^.value(1)^.literalType=lt_int)
-      and ((params^.size=2) or (params^.size=3) and (params^.value(2)^.literalType=lt_string)) then begin
-      xRes:=P_intLiteral(params^.value(0))^.value;
-      yRes:=P_intLiteral(params^.value(1))^.value;
-      if params^.size=3 then style:=P_stringLiteral(params^.value(2))^.value;
+    if (params<>nil) and (params^.size>=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int)
+      and ((params^.size=2) or (params^.size=3) and (arg2^.literalType=lt_string)) then begin
+      xRes:=int0^.value;
+      yRes:=int1^.value;
+      if params^.size=3 then style:=str2^.value;
       r:=res_dataResize;
       for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
 
@@ -246,16 +260,34 @@ FUNCTION resizeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
         unlock;
       end;
     end;
+    leaveCriticalSection(imigCS);
   end;
 
-FUNCTION displayImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION displayImage_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      if context.adapters^.picture.value<>nil then context.adapters^.raiseCustomMessage(mt_displayImage,'',tokenLocation)
-                                              else context.adapters^.raiseNote('Cannot display image because no image is loaded',tokenLocation);
+      if context.adapters^.picture.value<>nil
+      then context.adapters^.raiseCustomMessage(mt_displayImage,'',tokenLocation)
+      else context.adapters^.raiseNote('Cannot display image because no image is loaded',tokenLocation);
       result:=newVoidLiteral;
     end;
+  end;
+
+FUNCTION imageJpgRawData_imp intFuncSignature;
+  begin
+    enterCriticalSection(imigCS);
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      if context.adapters^.picture.value<>nil
+      then result:=newStringLiteral(context.adapters^.picture.value^.getJpgFileData)
+      else context.adapters^.raiseError('Cannot display image because no image is loaded',tokenLocation);
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+      if context.adapters^.picture.value<>nil
+      then result:=newStringLiteral(context.adapters^.picture.value^.getJpgFileData(int0^.value))
+      else context.adapters^.raiseError('Cannot display image because no image is loaded',tokenLocation);
+    end;
+    leaveCriticalSection(imigCS);
   end;
 
 INITIALIZATION
@@ -270,8 +302,8 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'closeImage',@closeImage_imp,'closeImage;//Closes the current image, freeing associated memory');
   registerRule(IMIG_NAMESPACE,'imageSize',@imageSize_imp,'imageSize;//Returns the size as [width,height] of the current image.');
   registerRule(IMIG_NAMESPACE,'resizeImage',@resizeImage_imp,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
-
   registerRule(IMIG_NAMESPACE,'displayImage',@displayImage_imp,'displayImage;//Displays the current image.');
+  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,'imageJpgRawData;//Returns the image raw data in JPG representation.');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.
