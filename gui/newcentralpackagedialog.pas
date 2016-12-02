@@ -26,6 +26,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE ListBoxClick(Sender: TObject);
     PROCEDURE ListBoxDblClick(Sender: TObject);
+    PROCEDURE ListBoxKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE packageNameEditChange(Sender: TObject);
     PROCEDURE restoreButtonClick(Sender: TObject);
   private
@@ -67,6 +68,11 @@ PROCEDURE TnewCentralPackageForm.ListBoxDblClick(Sender: TObject);
   begin
     fileNameEdit.text:=packagesFolder+ListBox.items[ListBox.ItemIndex]+'.mnh';
     ModalResult:=mrOk;
+  end;
+
+PROCEDURE TnewCentralPackageForm.ListBoxKeyPress(Sender: TObject; VAR key: char);
+  begin
+    if key=#13 then ListBoxDblClick(Sender);
   end;
 
 PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);

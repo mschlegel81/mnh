@@ -18,6 +18,7 @@ object openDemoDialogForm: TopenDemoDialogForm
     Align = alClient
     ItemHeight = 0
     OnDblClick = ListBoxDblClick
+    OnKeyPress = ListBoxKeyPress
     TabOrder = 0
   end
 end

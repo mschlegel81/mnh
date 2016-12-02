@@ -78,37 +78,37 @@ FUNCTION clearPrint_imp intFuncSignature;
     result:=newVoidLiteral;
   end;
 
-FUNCTION getStringToPrint(CONST params:P_listLiteral):ansistring; inline;
+FUNCTION getStringToPrint(CONST params:P_listLiteral):T_arrayOfString; inline;
   VAR i:longint;
+      resultText:string;
   begin
-    result:='';
+    resultText:='';
     if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
-      lt_boolean,
-      lt_int,
-      lt_real,
-      lt_string,
-      lt_expression: result:=result + P_scalarLiteral(params^.value(i))^.stringForm;
-      lt_list..lt_listWithError: result:=result + params^.value(i)^.toString;
+      lt_boolean,lt_int,lt_real,lt_string,lt_expression:
+        resultText:=resultText + P_scalarLiteral(params^.value(i))^.stringForm;
+      lt_list..lt_listWithError:
+        resultText:=resultText + params^.value(i)^.toString;
     end;
+    result:=formatTabs(split(resultText));
   end;
 
 FUNCTION print_imp intFuncSignature;
   begin
     system.enterCriticalSection(print_cs);
-    context.adapters^.printOut(formatTabs(split(getStringToPrint(params))));
+    context.adapters^.printOut(getStringToPrint(params));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
 
 FUNCTION note_imp intFuncSignature;
   begin
-    context.adapters^.raiseCustomMessage(mt_el1_userNote,getStringToPrint(params),tokenLocation);
+    context.adapters^.raiseCustomMessage(mt_el1_userNote,join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
-    context.adapters^.raiseCustomMessage(mt_el2_userWarning,getStringToPrint(params),tokenLocation);
+    context.adapters^.raiseCustomMessage(mt_el2_userWarning,join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
     result:=newVoidLiteral;
   end;
 
@@ -116,7 +116,7 @@ FUNCTION fail_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
     else begin
-      context.adapters^.raiseCustomMessage(mt_el3_userDefined,getStringToPrint(params),tokenLocation);
+      context.adapters^.raiseCustomMessage(mt_el3_userDefined,join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
       result:=newVoidLiteral;
     end;
     result:=nil;

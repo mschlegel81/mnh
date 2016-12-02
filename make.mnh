@@ -49,8 +49,7 @@ private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.
         '../art.source/im/lib/x86_64-win64',
         '../art.source/igSrc']);
 
-private templateToInc(inFile,outFile<>inFile)->begin
-  local inLines:=inFile.fileLines;
+private templateToInc(inFile,inLines,outFile<>inFile)->begin
   local pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
   local outText:=
   'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
@@ -60,11 +59,12 @@ private templateToInc(inFile,outFile<>inFile)->begin
   : writeFile(outFile,outText);
 end;
 
-private ensurePackages->fileExists('resources/ensurePackages.mnh') ? void :
-  writeFileLines('resources/ensurePackages.mnh','{'|
+private templateToInc(inFile,outFile<>inFile)->templateToInc(inFile,fileLines(inFile),outFile);
+
+private ensurePackagesLines->'{'|
     (files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
     .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file))&']'))|
-    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}","\n");
+    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}";
 
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
@@ -72,14 +72,13 @@ currentCodeHash:=begin
   tprint('Checkstyle');
   executor.execPipeless(['../checkstyle.mnh','fix']);
   tprint('Updating generated files');
-  ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('resources/examples.txt'                   ,'core/res_examples.inc');
   templateToInc('resources/html_template.txt'              ,'core/res_html_template.inc');
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
   templateToInc('resources/ensureAssoc.mnh'                ,'core/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'core/res_removeAssoc.inc');
-  templateToInc('resources/ensurePackages.mnh'             ,'core/res_ensurePackages.inc');
+  templateToInc('',ensurePackagesLines                     ,'core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,extractFileName(f)='code_hash.inc' ? void : f);
   //update code hash
   tprint('Updating code hash based on ',relevantFiles.size,' files');
@@ -155,8 +154,6 @@ private cleanup->begin
           end);
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
-   files('resources/ensureDemos.mnh')|
-   files('resources/ensurePackages.mnh')|
    files('core/res_*.inc')|
    allFiles('versions','*.exe')|
    files(BUILTS.getInner(5))|
