@@ -184,6 +184,7 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
 <li><h4><a href="#typecheckOps"> Type check operators</a></h4></li>
 <li><h4><a href="#assignmentOps"> Assignment operators</a></h4></li>
 <li><h4><a href="#cStyleOps"> C-Style operators</a></h4></li>
+<li><h4><a href="#funcToExp"> Function-to-Expression</a></h4></li>
 </ul>
   <li><h3><a href="functions.html">Functions</a></h4></li>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
@@ -199,7 +200,7 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
   <tr><td>Op.</td><td>Precedence</td><td>Name</td></tr>
 <tr><td><code>|</code></td><td>1</td><td> list concatenation</td></tr>
 <tr><td><code>^</code></td><td>2</td><td> potentiation</td></tr>
-<tr><td><code>**</code></td><td>2</td><td> potentiation</td></tr>
+<tr><td><code>**</code></td><td>2</td><td> potentiation (alias)</td></tr>
 <tr><td><code>*</code></td><td>3</td><td> multiplication</td></tr>
 <tr><td><code>/</code></td><td>3</td><td> division</td></tr>
 <tr><td><code>div</code></td><td>3</td><td> integer division</td></tr>
@@ -226,6 +227,15 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
 <tr><td><code>OR</code></td><td>9</td><td> lazy or</td></tr>
 <tr><td><code>? :</code></td><td>n/a</td><td> ternary inline if operator</td></tr>
 <tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td></tr>
+<tr><td><code>+=</code></td><td>n/a</td><td> increment</td></tr>
+<tr><td><code>-=</code></td><td>n/a</td><td> decrement</td></tr>
+<tr><td><code>*=</code></td><td>n/a</td><td> assign-multiply</td></tr>
+<tr><td><code>/=</code></td><td>n/a</td><td> assign-divide</td></tr>
+<tr><td><code>&=</code></td><td>n/a</td><td> assign-string-concat</td></tr>
+<tr><td><code>|=</code></td><td>n/a</td><td> append</td></tr>
+<tr><td><code><<</code></td><td>n/a</td><td> map put</td></tr>
+<tr><td><code>>></code></td><td>n/a</td><td> map drop</td></tr>
+<tr><td><code>::</code></td><td>n/a</td><td> function-to-expression</td></tr>
 </table>
 
 <h3><br><a name="scalarOps"> Scalar operators<a></h3>
@@ -664,6 +674,48 @@ The following C-Style operators are supported: <ul>
 </ul>
 While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
 the latter 4 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
+
+<h3><br><a name="funcToExp"> Function-to-Expression</a></h3>
+The <i>Function-to-Expression</i> operator "<code>::</code>" can be used to conveniently wrap a rule in an expression.<br>
+If the rule has only non-variadic subrules with the same number of parameters, the resulting expression will have the same number of parameters:<code>
+<!--mnh-->
+   in> f0->0;
+   in> ::f0;
+  out> {f0()}
+   in> f1(x)->2*x;
+   in> ::f1;
+  out> {f1($0)}
+   in> f2(x, y<0)->-x^2;
+   in> f2(x, y)->x^2;
+   in> ::f2;
+  out> {f2($0,$1)}
+<!--end-->
+</code>
+If the subrules accept different numbers of parameters, the expression will be variadic:<code>
+<!--mnh-->
+   in> g(x)->x;
+   in> g(x, y)->x+y;
+   in> ::g;
+  out> {g($0)@...}
+<!--end-->
+</code>
+The same holds if the rule contains a variadic subrule:<code>
+<!--mnh-->
+  in> h(x,...)->x*(...).agg(+);
+   in> ::h;
+  out> {h($0)@...}
+  in> i(...)->size(...);
+   in> ::i;
+  out> {i()@$params}
+<!--end-->
+</code>
+Currently there is no meta-information on built-in rules, so those will always lead to a variadic expression:<code>
+<!--mnh-->
+   in> ::sin;
+  out> {sin@$params}
+<!--end-->
+</code>
+
 </div>
 <!--commonFoot-->
 <!--file functions.html-->
