@@ -78,7 +78,7 @@ currentCodeHash:=begin
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
   templateToInc('resources/ensureAssoc.mnh'                ,'core/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'core/res_removeAssoc.inc');
-  templateToInc('',ensurePackagesLines                     ,'core/res_ensurePackages.inc');
+  templateToInc('resources/ensurePackages.mnh',ensurePackagesLines,'core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,extractFileName(f)='code_hash.inc' ? void : f);
   //update code hash
   tprint('Updating code hash based on ',relevantFiles.size,' files');
