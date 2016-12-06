@@ -1,0 +1,41 @@
+private ipAndPort:='localhost:43210';
+private address:='http://'+ipAndPort;
+private upSince:=systime;
+
+serve(request,'/index.html'  ,rawParameters,parameters):=//!~
+<body>
+<h3>serverTest @%{$0}s</h3>
+<ul>
+  <li><a href=%{$0}s/ping>  ping  </a></li>
+  <li><a href=%{$0}s/time>  time  </a></li>
+  <li><a href=%{$0}s/uptime>upTime</a></li>
+</ul>
+</body>
+~.format(address).wrapTextInHttp;
+
+serve(request,'/time'  ,rawParameters,parameters)->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',systime),'text');
+serve(request,'/uptime',rawParameters,parameters)->wrapTextInHttp(formatTime('hh:nn.ss yyyy-mm-dd',upSince-systime),'text');
+serve(request,'/ping'  ,rawParameters,parameters):=wrapTextInHttp('Pong!','text');
+
+memoized complainOnce(request,path,rawParameters,parameters)->begin
+  warn("Unhandled request:",
+       "\n  request      = ",request,
+       "\n  path         = ",path,
+       "\n  rawParameters= ",rawParameters,
+       "\n  parameters   = ",parameters);
+  httpError;
+end;
+
+//*Fallback
+serve(request,path,rawParameters,parameters)->complainOnce@$params;
+
+main->begin
+  startHttpServer(ipAndPort,::serve,0);
+  openUrl(address+'/index.html');
+  ask('Press Enter to shutdown server');
+end;
+
+main('test')->begin
+  startHttpServer(ipAndPort,::serve,0);
+  print(httpGet(address&'/ping'));
+end;
