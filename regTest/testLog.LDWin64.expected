@@ -3156,7 +3156,7 @@ Root found at   1.29578534367463E-234
 Root found at   1.0
 Root found at   2.0
 ***** examples from file *****
-Examples file has 699 lines
+Examples file has 702 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3791,3 +3791,5 @@ out> '/home/user'
 out> 'file.ext'
  in> extractFileExt('/home/user/file.ext');
 out> '.ext'
+ in> readXml('<?xml version="1.0"?><body empty="False"><first id="1" value="Text"><child dummy="True"/></first><second/></body>');
+out> [['body',[['empty','False']],[['first',[['id','1'],['value','Text']],[['child',[['dummy','True']],[]]]],['second',[],[]]]]]
