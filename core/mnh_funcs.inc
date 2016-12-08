@@ -826,6 +826,21 @@ FUNCTION clearAllCaches_imp intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION writeAllDataStores_imp intFuncSignature;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      P_package(tokenLocation.package)^.writeDataStores(context.adapters^,true);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
+FUNCTION writeDataStores_imp intFuncSignature;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      P_package(tokenLocation.package)^.writeDataStores(context.adapters^,false);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
@@ -876,6 +891,9 @@ FUNCTION clearAllCaches_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache',@clearRuleCache_imp,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches',@clearAllCaches_imp,'clearAllCaches;//Clears all memoized rule caches and returns void.');
+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores',@writeDataStores_imp,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
 
 {$endif}
 {$ifdef include_finalization}

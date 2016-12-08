@@ -5,7 +5,7 @@ USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typ
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
      Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,{$else}mySys,{$endif}
      mnh_funcs_mnh, mnh_funcs_types, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_files,
-     mnh_funcs_regex,mnh_datastores;
+     mnh_funcs_regex, mnh_funcs_xml, mnh_datastores;
 
 {$define include_interface}
 TYPE
@@ -46,6 +46,7 @@ TYPE
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
       PROCEDURE loadForDocumentation;
       PROCEDURE clear(CONST includeSecondaries:boolean);
+      PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
@@ -787,6 +788,16 @@ PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
     packageRules.clear;
     importedRules.clear;
     ready:=lu_NONE;
+  end;
+
+PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
+  VAR rule:P_rule;
+      i:longint;
+  begin
+    for rule in packageRules.valueSet do
+      if rule^.ruleType in [rt_datastore_private,rt_datastore_public]
+      then rule^.writeBack(codeProvider,adapters);
+    if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(adapters,recurse);
   end;
 
 PROCEDURE T_package.finalize(VAR adapters:T_adapters);

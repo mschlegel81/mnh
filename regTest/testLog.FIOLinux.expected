@@ -3174,7 +3174,7 @@ Hash of regTest/../demos/turtleGfx.png is FB769509
 ***** heart *****
 Hash of regTest/../demos/heart.png is 88B30F70
 ***** examples from file *****
-Examples file has 699 lines
+Examples file has 702 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3811,3 +3811,5 @@ out> '/home/user'
 out> 'file.ext'
  in> extractFileExt('/home/user/file.ext');
 out> '.ext'
+ in> readXml('<?xml version="1.0"?><body empty="False"><first id="1" value="Text"><child dummy="True"/></first><second/></body>');
+out> [['body',[['empty','False']],[['first',[['id','1'],['value','Text']],[['child',[['dummy','True']],[]]]],['second',[],[]]]]]
