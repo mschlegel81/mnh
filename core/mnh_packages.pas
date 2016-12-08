@@ -5,7 +5,7 @@ USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typ
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
      Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,{$else}mySys,{$endif}
      mnh_funcs_mnh, mnh_funcs_types, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_files,
-     mnh_funcs_regex,mnh_datastores;
+     mnh_funcs_regex, mnh_funcs_xml, mnh_datastores;
 
 {$define include_interface}
 TYPE
