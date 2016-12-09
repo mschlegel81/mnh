@@ -95,10 +95,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       case messageType of
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
-        mt_plotCreatedWithInstantDisplay: begin
-          plotForm.doPlot();
-          guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-        end;
+        mt_plotCreatedWithInstantDisplay: plotForm.doPlot();
         mt_displayTable: conditionalShowTables;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:

@@ -188,7 +188,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
             pack:=secondaryPackages[i];
             exit;
           end else begin
-            context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
+            context.adapters^.raiseError('Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
             exit;
           end;
         end;
@@ -206,7 +206,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
     path:=locateSource(extractFilePath(root),id);
     if adapters<>nil then begin
       if (path='')
-      then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation)
+      then adapters^.raiseError('Cannot locate package for id "'+id+'"',tokenLocation)
       else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
     end;
     pack:=nil;
@@ -218,7 +218,7 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     id:=filenameToPackageId(path_);
     if not(fileExists(path)) and fileExists(path_) then path:=path_;
     if not(fileExists(path))
-    then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package "'+path+'"',tokenLocation)
+    then adapters^.raiseError('Cannot locate package "'+path+'"',tokenLocation)
     else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
     pack:=nil;
   end;
@@ -278,7 +278,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             newId:=first^.txt;
             {$ifdef fullVersion}
             if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
-              if not(gui_started) then context.adapters^.raiseCustomMessage(mt_guiPseudoPackageFound,'',locationForErrorFeedback);
+              if not(gui_started) then context.adapters^.logGuiNeeded;
             end else
             {$endif}
             begin
@@ -292,7 +292,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             setLength(packageUses,j+1);
             packageUses[j].createWithSpecifiedPath(newId,first^.location,context.adapters);
           end else if first^.tokType<>tt_separatorComma then
-            context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
+            context.adapters^.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
           if (j>0) then for i:=0 to j-1 do
             if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
                            or (packageUses[i].id   =               packageUses[j].id)
@@ -316,8 +316,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       PROCEDURE fail(VAR firstOfPart:P_token);
         begin
           if firstOfPart=nil
-          then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element.',partLocation)
-          else context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
+          then context.adapters^.raiseError('Invalid declaration pattern element.',partLocation)
+          else context.adapters^.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
           context.cascadeDisposeToken(firstOfPart);
         end;
 
@@ -349,7 +349,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         assignmentToken^.next:=nil;
         //plausis:
         if (ruleBody=nil) then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
+          context.adapters^.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
           context.cascadeDisposeToken(first);
           exit;
         end;
@@ -362,14 +362,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                    or (tt_modifier_persistent in ruleModifiers);
 
         if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Declaration does not start with an identifier.',first^.location);
+          context.adapters^.raiseError('Declaration does not start with an identifier.',first^.location);
           context.cascadeDisposeToken(first);
           exit;
         end;
         p:=first;
         while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
           if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(first^.txt) then begin
-            context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Declaration head contains qualified ID.',p^.location);
+            context.adapters^.raiseError('Declaration head contains qualified ID.',p^.location);
             context.cascadeDisposeToken(first);
             exit;
           end;
@@ -379,7 +379,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         ruleId:=trim(first^.txt);
         first:=context.disposeToken(first);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration head.',first^.location);
+          context.adapters^.raiseError('Invalid declaration head.',first^.location);
           context.cascadeDisposeToken(first);
           exit;
         end;
@@ -394,7 +394,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             for i:=0 to length(parts)-1 do begin
               partLocation:=parts[i].first^.location;
               if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
-                if i<>length(parts)-1 then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,parts[i].first^.location);
+                if i<>length(parts)-1 then context.adapters^.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
                 //Optionals: f(...)->
                 rulePattern.appendOptional;
                 parts[i].first:=context.disposeToken(parts[i].first);
@@ -474,7 +474,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if first<>nil then begin
           first:=context.disposeToken(first);
         end else begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
+          context.adapters^.raiseError('Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
         if (usecase=lu_forDocGeneration) then begin
@@ -537,7 +537,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if (first=nil) or not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
            (first^.next<>nil) then begin
           if first<>nil then loc:=first^.location;
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid datastore definition: '+tokensToString(first),loc);
+          context.adapters^.raiseError('Invalid datastore definition: '+tokensToString(first),loc);
           context.cascadeDisposeToken(first);
           exit;
         end;
@@ -576,14 +576,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           exit;
         end;
         predigest(assignmentToken,@self,context);
-        if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
+        if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(first)+';');
         parseRule;
         if profile then context.timeBaseComponent(pc_declaration);
         context.callStackPop();
       end else if first^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
         context.callStackPush(@self,pc_declaration,pseudoCallees);
         if profile then context.timeBaseComponent(pc_declaration);
-        if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
+        if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(first)+';');
         parseDataStore;
         if profile then context.timeBaseComponent(pc_declaration);
         context.callStackPop();
@@ -597,15 +597,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               exit;
             end;
             predigest(first,@self,context);
-            if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
+            if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
             reduceExpression(first,0,context);
             if profile then context.timeBaseComponent(pc_interpretation);
             context.callStackPop();
-            if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
+            if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
           end;
           lu_forCodeAssistance: if (first<>nil) and first^.areBracketsPlausible(context.adapters^) then begin
             predigest(first,@self,context,true);
-            if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
+            if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
           end
           else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,50),first^.location);
         end;
@@ -821,7 +821,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider.save;
-      adapters.raiseCustomMessage(mt_reloadRequired,codeProvider.getPath,packageTokenLocation(@self));
+      adapters.logReloadRequired(codeProvider.getPath);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;
@@ -921,9 +921,9 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
       if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
-      then adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
+      then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
       else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
-      then adapters.raiseCustomMessage(mt_el4_parsingError,C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
+      then adapters.raiseError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
       else adapters.raiseNote('Extending rule: '+ruleId,ruleDeclarationStart);
     end;
     result^.declarationEnd:=ruleDeclarationEnd;

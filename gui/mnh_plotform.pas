@@ -112,7 +112,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
     if (key in ['+','-']) then begin
       if key='+' then guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
                  else guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
-      guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
+      guiAdapters^.logDeferredPlot;
       pullPlotSettingsToGui();
     end;
   end;
@@ -144,7 +144,7 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
     if runEvaluator.evaluationRunning
-    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    then guiAdapters^.logDeferredPlot
     else doPlot();
   end;
 
@@ -173,7 +173,7 @@ PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
     o.relativeFontSize:=o.relativeFontSize/1.1;
     guiAdapters^.plot.options:=o;
     if runEvaluator.evaluationRunning
-    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    then guiAdapters^.logDeferredPlot
     else doPlot();
   end;
 
@@ -184,7 +184,7 @@ PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
     o.relativeFontSize:=o.relativeFontSize*1.1;
     guiAdapters^.plot.options:=o;
     if runEvaluator.evaluationRunning
-    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    then guiAdapters^.logDeferredPlot
     else doPlot();
   end;
 
@@ -320,7 +320,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     guiAdapters^.plot.options:=o;
     pullPlotSettingsToGui();
     if runEvaluator.evaluationRunning
-    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    then guiAdapters^.logDeferredPlot
     else doPlot();
   end;
 
@@ -338,7 +338,7 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing3.Checked then factor:=3
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
-    guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    guiAdapters^.resetFlagsAfterPlotDone;
     guiAdapters^.plot.renderPlot(plotImage,factor);
   end;
 

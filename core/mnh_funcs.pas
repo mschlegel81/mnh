@@ -102,21 +102,21 @@ FUNCTION print_imp intFuncSignature;
 
 FUNCTION note_imp intFuncSignature;
   begin
-    context.adapters^.raiseCustomMessage(mt_el1_userNote,join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
+    context.adapters^.raiseUserNote(join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
-    context.adapters^.raiseCustomMessage(mt_el2_userWarning,join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
+    context.adapters^.raiseUserWarning(join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
     result:=newVoidLiteral;
   end;
 
 FUNCTION fail_impl intFuncSignature;
   begin
-    if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
+    if (params=nil) or (params^.size=0) then context.adapters^.raiseUserError('Fail.',tokenLocation)
     else begin
-      context.adapters^.raiseCustomMessage(mt_el3_userDefined,join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
+      context.adapters^.raiseUserError(join(getStringToPrint(params),C_lineBreakChar),tokenLocation);
       result:=newVoidLiteral;
     end;
     result:=nil;

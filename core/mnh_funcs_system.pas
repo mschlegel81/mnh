@@ -61,7 +61,7 @@ FUNCTION httpGet_imp intFuncSignature;
       except
         on E : Exception do begin
           resultText:='';
-          context.adapters^.raiseCustomMessage(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
+          context.adapters^.raiseSystemError('httpGet failed with:'+E.message,tokenLocation);
         end;
       end;
       result:=newStringLiteral(resultText);

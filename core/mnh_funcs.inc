@@ -450,14 +450,14 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     end;
 
     digestInlineExpression(first,context);
-    if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.adapters^.noErrors) then begin
       context.cascadeDisposeToken(first);
       exit(newErrorLiteral);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
       context.disposeToken(first);
-      context.adapters^.raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+      context.adapters^.raiseSystemError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
       exit(newErrorLiteral);
     end;
     result:=P_expressionLiteral(first^.data);

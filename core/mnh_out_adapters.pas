@@ -104,8 +104,10 @@ TYPE
       hasHtmlAdapter           :boolean;
       plotChangedAfterDeferring:boolean;
       {$endif}
-    public
       hasMessageOfType:array[T_messageType] of boolean;
+      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
+    public
       {$ifdef fullVersion}
       hasNeedGUIerror:boolean;
       plot:T_plot;
@@ -113,17 +115,43 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clearErrors;
-      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
       PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseSystemError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+
+      PROCEDURE echoDeclaration(CONST m:string);
+      PROCEDURE echoInput      (CONST m:string);
+      PROCEDURE echoOutput     (CONST m:string);
+
+      PROCEDURE raiseStoredMessages(VAR stored:T_storedMessages);
+      {$ifdef fullVersion}
+      PROCEDURE logGuiNeeded;
+      PROCEDURE logDeferredPlot;
+      FUNCTION isDeferredPlotLogged:boolean;
+      PROCEDURE logInstantPlot;
+      PROCEDURE resetFlagsAfterPlotDone;
+      PROCEDURE logPlotSettingsChanged;
+      PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
+      PROCEDURE logDisplayTable;
+      FUNCTION isDisplayTableLogged:boolean;
+      {$endif}
+      PROCEDURE logTimingInfo(CONST infoText:ansistring);
+      PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
+      PROCEDURE logMissingMain;
+      PROCEDURE logReloadRequired(CONST fileName:string);
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
       PROCEDURE clearAll;
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
-      FUNCTION hasHaltMessage: boolean;
+      FUNCTION hasHaltMessage(CONST includeQuiet:boolean=true): boolean;
+      FUNCTION hasFatalError: boolean;
+      FUNCTION hasStackTrace:boolean;
+      FUNCTION hasPrintOut:boolean;
       PROCEDURE resetErrorFlags;
       PROCEDURE updateErrorlevel;
       PROCEDURE haltEvaluation;
@@ -514,6 +542,103 @@ PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring; CONST errorLocati
     raiseCustomMessage(message(mt_el1_note,errorMessage,errorLocation));
   end;
 
+PROCEDURE T_adapters.raiseUserError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el3_userDefined,errorMessage,errorLocation));
+  end;
+PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el2_userWarning,errorMessage,errorLocation));
+  end;
+PROCEDURE T_adapters.raiseUserNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el1_userNote,errorMessage,errorLocation));
+  end;
+
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el5_systemError,errorMessage,errorLocation));
+  end;
+
+PROCEDURE T_adapters.echoDeclaration(CONST m:string); begin raiseCustomMessage(message(mt_echo_declaration,m,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoInput      (CONST m:string); begin raiseCustomMessage(message(mt_echo_input      ,m,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoOutput     (CONST m:string); begin raiseCustomMessage(message(mt_echo_output     ,m,C_nilTokenLocation)); end;
+
+PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
+  VAR m:T_storedMessage;
+  begin for m in stored do raiseCustomMessage(m); end;
+
+{$ifdef fullVersion}
+PROCEDURE T_adapters.logGuiNeeded;
+  begin
+    hasNeedGUIerror:=true;
+  end;
+
+PROCEDURE T_adapters.logDeferredPlot;
+  begin
+    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
+  end;
+
+FUNCTION T_adapters.isDeferredPlotLogged:boolean;
+  begin
+    result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay];
+  end;
+
+PROCEDURE T_adapters.logInstantPlot;
+  begin
+    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    hasMessageOfType[mt_plotCreatedWithInstantDisplay]:=true;
+  end;
+
+PROCEDURE T_adapters.resetFlagsAfterPlotDone;
+  begin
+    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    hasMessageOfType[mt_plotCreatedWithInstantDisplay]:=false;
+  end;
+
+PROCEDURE T_adapters.logPlotSettingsChanged;
+  begin
+    hasMessageOfType[mt_plotSettingsChanged]:=true;
+    plotChangedAfterDeferring:=true;
+  end;
+
+PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_plotFileCreated,fileName,location));
+  end;
+
+PROCEDURE T_adapters.logDisplayTable;
+  begin
+    hasMessageOfType[mt_displayTable]:=true;
+  end;
+
+FUNCTION T_adapters.isDisplayTableLogged:boolean;
+  begin
+    result:=hasMessageOfType[mt_displayTable];
+  end;
+
+{$endif}
+
+PROCEDURE T_adapters.logTimingInfo(CONST infoText:ansistring);
+  begin
+    raiseCustomMessage(message(mt_timing_info,infoText,C_nilTokenLocation));
+  end;
+
+PROCEDURE T_adapters.logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el3_stackTrace,infoText,location));
+  end;
+
+PROCEDURE T_adapters.logMissingMain;
+  begin
+    hasMessageOfType[mt_el3_noMatchingMain]:=true;
+  end;
+
+PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);
+  begin
+    raiseCustomMessage(mt_reloadRequired,fileName,C_nilTokenLocation);
+  end;
+
 PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
   VAR m:T_storedMessage;
   begin
@@ -566,10 +691,27 @@ FUNCTION T_adapters.noErrors: boolean;
     {$endif};
   end;
 
-FUNCTION T_adapters.hasHaltMessage:boolean;
+FUNCTION T_adapters.hasHaltMessage(CONST includeQuiet:boolean=true):boolean;
+  begin
+    result:=hasMessageOfType[mt_el5_haltMessageReceived] or
+            hasMessageOfType[mt_el5_haltMessageQuiet] and includeQuiet;
+  end;
+
+FUNCTION T_adapters.hasFatalError: boolean;
   begin
     result:=hasMessageOfType[mt_el5_haltMessageQuiet] or
-            hasMessageOfType[mt_el5_haltMessageReceived];
+            hasMessageOfType[mt_el5_haltMessageReceived] or
+            hasMessageOfType[mt_el5_systemError];
+  end;
+
+FUNCTION T_adapters.hasStackTrace:boolean;
+  begin
+    result:=hasMessageOfType[mt_el3_stackTrace];
+  end;
+
+FUNCTION T_adapters.hasPrintOut:boolean;
+  begin
+    result:=hasMessageOfType[mt_printline];
   end;
 
 PROCEDURE T_adapters.resetErrorFlags;

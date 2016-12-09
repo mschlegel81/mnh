@@ -101,7 +101,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       header:boolean=false;
       i:longint;
   begin
-    context.adapters^.raiseCustomMessage(mt_displayTable,'',tokenLocation);
+    context.adapters^.logDisplayTable;
     if not(gui_started) then exit(nil);
     if (params<>nil) and
        (params^.size>0) and
