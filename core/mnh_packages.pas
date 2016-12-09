@@ -588,20 +588,27 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if profile then context.timeBaseComponent(pc_declaration);
         context.callStackPop();
       end else if context.adapters^.noErrors then begin
-        if (usecase=lu_forDirectExecution) then begin
-          context.callStackPush(@self,pc_interpretation,pseudoCallees);
-          if profile then context.timeBaseComponent(pc_interpretation);
-          if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
-            context.cascadeDisposeToken(first);
-            exit;
+        case usecase of
+          lu_forDirectExecution:begin
+            context.callStackPush(@self,pc_interpretation,pseudoCallees);
+            if profile then context.timeBaseComponent(pc_interpretation);
+            if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
+              context.cascadeDisposeToken(first);
+              exit;
+            end;
+            predigest(first,@self,context);
+            if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
+            reduceExpression(first,0,context);
+            if profile then context.timeBaseComponent(pc_interpretation);
+            context.callStackPop();
+            if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
           end;
-          predigest(first,@self,context);
-          if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
-          reduceExpression(first,0,context);
-          if profile then context.timeBaseComponent(pc_interpretation);
-          context.callStackPop();
-          if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
-        end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
+          lu_forCodeAssistance: if (first<>nil) and first^.areBracketsPlausible(context.adapters^) then begin
+            predigest(first,@self,context,true);
+            if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
+          end
+          else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,50),first^.location);
+        end;
       end;
       if first<>nil then context.cascadeDisposeToken(first);
       first:=nil;
@@ -879,7 +886,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
         exit;
       end;
     end;
-    if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
+    if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
 FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
