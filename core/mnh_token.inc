@@ -99,7 +99,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR comments,attributes:T_
           t[i+3].txt:=t[i+2].txt;
           t[i+3].data:=nil;
           inc(i,3); //skip tt_braceOpen, identifier and comma
-        end else adapters.raiseCustomMessage(mt_el4_parsingError,'Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',t[i].location);
+        end else adapters.raiseError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',t[i].location);
         tt_agg: if (i<length(t)-1) and
           (t[i+1].tokType=tt_braceOpen) then begin
           t[i+1].tokType:=tt_each;
@@ -173,7 +173,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
 
   PROCEDURE fail(message:ansistring);
     begin
-      adapters.raiseCustomMessage(mt_el4_parsingError,message,lineLocation);
+      adapters.raiseError(message,lineLocation);
     end;
 
   FUNCTION leadingId:ansistring;
@@ -498,7 +498,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_evaluationContext);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_evaluationContext; CONST strict:boolean=false);
   VAR t:P_token;
       rule:P_rule;
   begin
@@ -507,8 +507,11 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
       case t^.tokType of
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
+          if t^.tokType=tt_identifier then begin
+            if strict then inPackage^.resolveRuleId(t^,context.adapters)
+                      else inPackage^.resolveRuleId(t^,nil);
+          end;
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
-            inPackage^.resolveRuleId(t^,nil);
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
                 rule:=t^.data;
@@ -902,7 +905,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$ifdef debugMode}
         raise Exception.create('Stack overflow in (p)each construct.');
         {$else}
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
+        context.adapters^.raiseSystemError('Stack overflow in (p)each construct.',eachLocation);
         {$endif}
         exit;
       end;
@@ -995,7 +998,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       whileLocation:=first^.location;
       if callDepth>STACK_DEPTH_LIMIT then begin
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in while construct.',whileLocation);
+        context.adapters^.raiseSystemError('Stack overflow in while construct.',whileLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
@@ -1025,15 +1028,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if (P_rule(first^.data)^.id=MAIN_RULE_ID)
-            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,LineEnding+P_rule(first^.data)^.getCmdLineHelpText,mt_el3_noMatchingMain)
+            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,LineEnding+P_rule(first^.data)^.getCmdLineHelpText,true)
             else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location);
             exit;
           end;
         {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
-            context.adapters^.raiseCustomMessage(mt_el5_systemError,'Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
-            context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,first^.location);
+            context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
+            context.adapters^.raiseSystemError(e.message,first^.location);
             exit;
           end;
         end;
@@ -1735,20 +1738,17 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         context.adapters^.raiseError('Irreducible expression: '+tokenStackToString(@stack,first,100),first^.location);
-        if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+        if not(context.adapters^.hasStackTrace) then context.printCallStack;
         cleanupStackAndExpression;
       end;
-    end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
-                 context.adapters^.hasMessageOfType[mt_el5_systemError] or
-                 context.adapters^.hasMessageOfType[mt_el5_haltMessageQuiet]) then begin
-      if not(context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]) and
-         not(context.adapters^.hasMessageOfType[mt_el5_haltMessageQuiet]) and
-         not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+    end else if (context.adapters^.hasFatalError) then begin
+      if not(context.adapters^.hasHaltMessage) and
+         not(context.adapters^.hasStackTrace) then context.printCallStack;
       context.clearCallStack;
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
-      if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+      if not(context.adapters^.hasStackTrace) then context.printCallStack;
       cleanupStackAndExpression;
     end;
     stack.destroy;

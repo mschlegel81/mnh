@@ -173,7 +173,7 @@ exit}
       rt_synchronized: begin
         for useUncurryingFallback:=false to true do
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
-          if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',declarationStart)
+          if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseSystemError('Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
             reduceExpression(firstRep,callDepth+1,context);

@@ -12,7 +12,6 @@ TYPE
   T_adapterType=(at_unknown,
                  at_console,
                  at_textFile,
-                 at_htmlFile,
                  at_gui,
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
@@ -21,7 +20,6 @@ CONST
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
     {at_console}  [mt_clearConsole..mt_el5_haltMessageReceived,mt_timing_info],
     {at_textFile} [mt_printline..mt_el5_haltMessageReceived,mt_timing_info],
-    {at_htmlFile} [mt_echo_input..mt_el5_haltMessageQuiet,mt_timing_info{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithInstantDisplay{$endif}],
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -100,12 +98,10 @@ TYPE
       someEchoDeclaration  :boolean;
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
-      {$ifdef fullVersion}
-      hasHtmlAdapter           :boolean;
-      plotChangedAfterDeferring:boolean;
-      {$endif}
-    public
       hasMessageOfType:array[T_messageType] of boolean;
+      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
+    public
       {$ifdef fullVersion}
       hasNeedGUIerror:boolean;
       plot:T_plot;
@@ -116,23 +112,53 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clearErrors;
-      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
       PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseSystemError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+
+      PROCEDURE echoDeclaration(CONST m:string);
+      PROCEDURE echoInput      (CONST m:string);
+      PROCEDURE echoOutput     (CONST m:string);
+
+      PROCEDURE raiseStoredMessages(VAR stored:T_storedMessages);
+      {$ifdef fullVersion}
+      PROCEDURE logGuiNeeded;
+      PROCEDURE logDeferredPlot;
+      FUNCTION isDeferredPlotLogged:boolean;
+      PROCEDURE logInstantPlot;
+      PROCEDURE resetFlagsAfterPlotDone;
+      PROCEDURE logPlotSettingsChanged;
+      PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
+      PROCEDURE logDisplayTable;
+      FUNCTION isDisplayTableLogged:boolean;
+      {$ifdef IMIG}
+      PROCEDURE logDisplayImage;
+      {$endif}
+      {$endif}
+      PROCEDURE logTimingInfo(CONST infoText:ansistring);
+      PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
+      PROCEDURE logMissingMain;
+      PROCEDURE logReloadRequired(CONST fileName:string);
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
       PROCEDURE clearAll;
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
-      FUNCTION hasHaltMessage: boolean;
+      FUNCTION hasHaltMessage(CONST includeQuiet:boolean=true): boolean;
+      FUNCTION hasFatalError: boolean;
+      FUNCTION hasStackTrace:boolean;
+      FUNCTION hasPrintOut:boolean;
       PROCEDURE resetErrorFlags;
       PROCEDURE updateErrorlevel;
       PROCEDURE haltEvaluation;
       PROCEDURE logEndOfEvaluation;
       PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
 
+      FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
@@ -212,7 +238,7 @@ FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansis
     with C_messageTypeMeta[messageType] do begin
       result:=prefix;
       if includeLocation then result:=result+ansistring(location)+' ';
-      result:=replaceAll(result+message,UTF8_ZERO_WIDTH_SPACE,'');
+      result:=result+message;
     end;
   end;
 
@@ -465,23 +491,6 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
   end;
 
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
-  {$ifdef fullVersion}
-  PROCEDURE raiseModifiedMessage;
-    VAR modifiedMessage:T_storedMessage;
-        i:longint;
-    begin
-      modifiedMessage.messageType  :=message.messageType;
-      modifiedMessage.location     :=message.location;
-      modifiedMessage.simpleMessage:=message.simpleMessage;
-      setLength(modifiedMessage.multiMessage,1);
-      modifiedMessage.multiMessage[0]:=plot.renderToString(HTML_IMAGE_WIDTH,HTML_IMAGE_HEIGHT,HTML_IMAGE_SUPERSAMPLING);
-      for i:=0 to length(adapter)-1 do
-        if adapter[i]^.adapterType=at_htmlFile
-        then adapter[i]^.append(modifiedMessage)
-        else adapter[i]^.append(message);
-    end;
-  {$endif}
-
   VAR i:longint;
   begin
     {$ifdef fullVersion}
@@ -499,16 +508,6 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
       inc(errorCount);
       if errorCount>30 then exit;
     end;
-    {$ifdef fullVersion}
-    if message.messageType in C_plotMessages then plotChangedAfterDeferring:=true;
-    if hasHtmlAdapter and ((message.messageType in [mt_plotCreatedWithInstantDisplay,mt_plotFileCreated])
-                        or (message.messageType=mt_endOfEvaluation) and plotChangedAfterDeferring)
-    then begin
-      raiseModifiedMessage;
-      plotChangedAfterDeferring:=false;
-      exit;
-    end;
-    {$endif}
     for i:=0 to length(adapter)-1 do adapter[i]^.append(message);
   end;
 
@@ -525,6 +524,109 @@ PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring; CONST errorLoc
 PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   begin
     raiseCustomMessage(message(mt_el1_note,errorMessage,errorLocation));
+  end;
+
+PROCEDURE T_adapters.raiseUserError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el3_userDefined,errorMessage,errorLocation));
+  end;
+PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el2_userWarning,errorMessage,errorLocation));
+  end;
+PROCEDURE T_adapters.raiseUserNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el1_userNote,errorMessage,errorLocation));
+  end;
+
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el5_systemError,errorMessage,errorLocation));
+  end;
+
+PROCEDURE T_adapters.echoDeclaration(CONST m:string); begin raiseCustomMessage(message(mt_echo_declaration,m,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoInput      (CONST m:string); begin raiseCustomMessage(message(mt_echo_input      ,m,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoOutput     (CONST m:string); begin raiseCustomMessage(message(mt_echo_output     ,m,C_nilTokenLocation)); end;
+
+PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
+  VAR m:T_storedMessage;
+  begin for m in stored do raiseCustomMessage(m); end;
+
+{$ifdef fullVersion}
+PROCEDURE T_adapters.logGuiNeeded;
+  begin
+    hasNeedGUIerror:=true;
+  end;
+
+PROCEDURE T_adapters.logDeferredPlot;
+  begin
+    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
+  end;
+
+FUNCTION T_adapters.isDeferredPlotLogged:boolean;
+  begin
+    result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay];
+  end;
+
+PROCEDURE T_adapters.logInstantPlot;
+  begin
+    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    hasMessageOfType[mt_plotCreatedWithInstantDisplay]:=true;
+  end;
+
+PROCEDURE T_adapters.resetFlagsAfterPlotDone;
+  begin
+    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    hasMessageOfType[mt_plotCreatedWithInstantDisplay]:=false;
+  end;
+
+PROCEDURE T_adapters.logPlotSettingsChanged;
+  begin
+    hasMessageOfType[mt_plotSettingsChanged]:=true;
+  end;
+
+PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_plotFileCreated,fileName,location));
+  end;
+
+PROCEDURE T_adapters.logDisplayTable;
+  begin
+    hasMessageOfType[mt_displayTable]:=true;
+  end;
+
+FUNCTION T_adapters.isDisplayTableLogged:boolean;
+  begin
+    result:=hasMessageOfType[mt_displayTable];
+  end;
+
+{$ifdef IMIG}
+PROCEDURE T_adapters.logDisplayImage;
+  begin
+    raiseCustomMessage(mt_displayImage,'',C_nilTokenLocation);
+  end;
+
+{$endif}
+{$endif}
+
+PROCEDURE T_adapters.logTimingInfo(CONST infoText:ansistring);
+  begin
+    raiseCustomMessage(message(mt_timing_info,infoText,C_nilTokenLocation));
+  end;
+
+PROCEDURE T_adapters.logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
+  begin
+    raiseCustomMessage(message(mt_el3_stackTrace,infoText,location));
+  end;
+
+PROCEDURE T_adapters.logMissingMain;
+  begin
+    hasMessageOfType[mt_el3_noMatchingMain]:=true;
+  end;
+
+PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);
+  begin
+    raiseCustomMessage(mt_reloadRequired,fileName,C_nilTokenLocation);
   end;
 
 PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
@@ -553,19 +655,12 @@ PROCEDURE T_adapters.clearAll;
     someEchoDeclaration  :=false;
     someShowExpressionOut:=false;
     someShowTimingInfo   :=false;
-    {$ifdef fullVersion}
-    hasHtmlAdapter           :=false;
-    plotChangedAfterDeferring:=false;
-    {$endif}
     for i:=0 to length(adapter)-1 do begin
       adapter[i]^.clear;
       someEchoInput        :=someEchoInput         or (mt_echo_input       in adapter[i]^.messageTypesToInclude);
       someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in adapter[i]^.messageTypesToInclude);
       someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in adapter[i]^.messageTypesToInclude);
       someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in adapter[i]^.messageTypesToInclude);
-      {$ifdef fullVersion}
-      hasHtmlAdapter       :=hasHtmlAdapter        or (adapter[i]^.adapterType=at_htmlFile);
-      {$endif}
     end;
   end;
 
@@ -583,10 +678,27 @@ FUNCTION T_adapters.noErrors: boolean;
     {$endif};
   end;
 
-FUNCTION T_adapters.hasHaltMessage:boolean;
+FUNCTION T_adapters.hasHaltMessage(CONST includeQuiet:boolean=true):boolean;
+  begin
+    result:=hasMessageOfType[mt_el5_haltMessageReceived] or
+            hasMessageOfType[mt_el5_haltMessageQuiet] and includeQuiet;
+  end;
+
+FUNCTION T_adapters.hasFatalError: boolean;
   begin
     result:=hasMessageOfType[mt_el5_haltMessageQuiet] or
-            hasMessageOfType[mt_el5_haltMessageReceived];
+            hasMessageOfType[mt_el5_haltMessageReceived] or
+            hasMessageOfType[mt_el5_systemError];
+  end;
+
+FUNCTION T_adapters.hasStackTrace:boolean;
+  begin
+    result:=hasMessageOfType[mt_el3_stackTrace];
+  end;
+
+FUNCTION T_adapters.hasPrintOut:boolean;
+  begin
+    result:=hasMessageOfType[mt_printline];
   end;
 
 PROCEDURE T_adapters.resetErrorFlags;
@@ -621,14 +733,24 @@ PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
     raiseCustomMessage(mt_el5_systemError,errorMessage,C_nilTokenLocation);
   end;
 
+FUNCTION T_adapters.addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
+  VAR fileName:string;
+      options:string='';
+  begin
+    if pos('(',fileNameAndOptions)>0 then begin
+      options :=copy(fileNameAndOptions,  pos('(',fileNameAndOptions),length(fileNameAndOptions));
+      fileName:=copy(fileNameAndOptions,1,pos('(',fileNameAndOptions)-1);
+    end else fileName:=fileNameAndOptions;
+
+    new(result,create(fileName,options,not(appendMode)));
+    addOutAdapter(result,true);
+  end;
+
 PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   begin
     setLength(adapter,length(adapter)+1);
     adapter[length(adapter)-1]:=p;
     p^.autodestruct:=destroyIt;
-    {$ifdef fullVersion}
-    hasHtmlAdapter:=hasHtmlAdapter or (p^.adapterType=at_htmlFile);
-    {$endif}
     someEchoInput        :=someEchoInput         or (mt_echo_input       in p^.messageTypesToInclude);
     someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in p^.messageTypesToInclude);
     someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in p^.messageTypesToInclude);
@@ -659,10 +781,6 @@ PROCEDURE T_adapters.removeOutAdapter(CONST index:longint);
     if adapter[index]^.autodestruct then dispose(adapter[index],destroy);
     for j:=index to length(adapter)-2 do adapter[j]:=adapter[j+1];
     setLength(adapter,length(adapter)-1);
-    {$ifdef fullVersion}
-    hasHtmlAdapter:=false;
-    for j:=0 to length(adapter)-1 do hasHtmlAdapter:=hasHtmlAdapter or (adapter[j]^.adapterType=at_htmlFile);
-    {$endif}
   end;
 
 PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);

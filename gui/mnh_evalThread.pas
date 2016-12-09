@@ -190,27 +190,17 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   PROCEDURE doneEdit(VAR context:T_evaluationContext);
-    VAR i:longint;
-        collector:P_collectingOutAdapter;
-        {$ifdef debugMode}mt:T_messageType;{$endif}
+    VAR collector:P_collectingOutAdapter;
     begin
       context.afterEvaluation;
-      {$ifdef debugMode}
-      writeln('The following message types are logged:');
-      for mt in T_messageType do if context.adapters^.hasMessageOfType[mt] then writeln('  ',mt);
-      {$endif}
-      if (context.adapters^.hasMessageOfType[mt_printline]) or
-         (context.adapters^.hasMessageOfType[mt_el3_evalError]) or
-         (context.adapters^.hasMessageOfType[mt_el3_userDefined]) or
-         (context.adapters^.hasMessageOfType[mt_el4_parsingError]) or
-         (context.adapters^.hasMessageOfType[mt_el5_systemError]) or
-         (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]) then begin
+      if (context.adapters^.hasPrintOut) or
+         not(context.adapters^.noErrors) then begin
         collector:=P_collectingOutAdapter(context.adapters^.getAdapter(0));
         {$ifdef debugMode}
         writeln('Raising ',length(collector^.storedMessages),' stored messages');
         {$endif}
         P_runEvaluator(p)^.adapter^.clearPrint;
-        for i:=0 to length(collector^.storedMessages)-1 do P_runEvaluator(p)^.adapter^.raiseCustomMessage(collector^.storedMessages[i]);
+        P_runEvaluator(p)^.adapter^.raiseStoredMessages(collector^.storedMessages);
       end;
       context.destroy;
     end;
@@ -471,7 +461,7 @@ PROCEDURE T_evaluator.haltEvaluation;
   begin
     system.enterCriticalSection(cs);
     context.haltEvaluation;
-    while not(adapter^.hasMessageOfType[mt_el5_haltMessageReceived]) do begin
+    while not(adapter^.hasHaltMessage) do begin
       system.leaveCriticalSection(cs);
       ThreadSwitch;
       sleep(1);
@@ -749,7 +739,7 @@ FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
     VAR i:longint;
     begin
       for i:=0 to length(list)-1 do with list[i] do begin
-        result[k]:=UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage);
+        result[k]:=C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage);
         inc(k);
       end;
     end;
@@ -818,7 +808,7 @@ PROCEDURE T_runEvaluator.postEval;
   begin
     system.enterCriticalSection(cs);
     inherited postEval;
-    if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
+    if adapter^.hasHaltMessage(false)
     then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
     else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
     system.leaveCriticalSection(cs);

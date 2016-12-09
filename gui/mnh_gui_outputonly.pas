@@ -44,7 +44,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
-    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
+    if guiAdapters.isDeferredPlotLogged and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
     if askForm.displayPending then begin
       askForm.Show;
       flushPerformed:=true;
@@ -53,7 +53,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
       Timer1.interval:=Timer1.interval+1;
       if Timer1.interval>MAX_INTERVALL then Timer1.interval:=MAX_INTERVALL;
     end;
-    if not(currentRunnerInfo.state in C_runningStates) and not(guiAdapters.hasMessageOfType[mt_el3_evalError]) and not(anyFormShowing) then close;
+    if not(currentRunnerInfo.state in C_runningStates) and guiAdapters.noErrors and not(anyFormShowing) then close;
   end;
 
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;

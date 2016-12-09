@@ -268,7 +268,7 @@ FUNCTION displayImage_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       if context.adapters^.picture.value<>nil
-      then context.adapters^.raiseCustomMessage(mt_displayImage,'',tokenLocation)
+      then context.adapters^.logDisplayImage
       else context.adapters^.raiseNote('Cannot display image because no image is loaded',tokenLocation);
       result:=newVoidLiteral;
     end;

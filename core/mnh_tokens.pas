@@ -176,12 +176,12 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
   FUNCTION popPlausible(CONST token:P_token):boolean;
     begin
       if length(bracketStack)<=0 then begin
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Missing opening bracket for closing '+safeTokenToString(token),token^.location);
+        adaptersForComplaints.raiseError('Missing opening bracket for closing '+safeTokenToString(token),token^.location);
         exit(false);
       end;
       if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
+        adaptersForComplaints.raiseError('Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
+        adaptersForComplaints.raiseError('Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
         exit(false);
       end;
       setLength(bracketStack,length(bracketStack)-1);
@@ -191,7 +191,7 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
   FUNCTION stackIsEmpty:boolean;
     begin
       if length(bracketStack)<=0 then exit(true);
-      adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Missing closing bracket.',bracketStack[length(bracketStack)-1]^.location);
+      adaptersForComplaints.raiseError('Missing closing bracket.',bracketStack[length(bracketStack)-1]^.location);
       result:=false;
     end;
 
@@ -202,7 +202,7 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
     result:=true;
     while result and (t<>nil) do begin
       if t^.tokType in C_forbiddenTokenTypes then begin
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Invalid symbol '+safeTokenToString(t),t^.location);
+        adaptersForComplaints.raiseError('Invalid symbol '+safeTokenToString(t),t^.location);
         result:=false;
       end;
       if      t^.tokType in C_openingBrackets then push(t)

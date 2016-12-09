@@ -9,7 +9,7 @@ USES
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants, types, LCLType,
   mnh_plotData, mnh_funcs, mnh_litVar, mnh_doc, lclintf, StdCtrls, mnh_packages,
   closeDialog, askDialog, SynEditKeyCmds, SynMemo, myGenerics, mnh_fileWrappers,
-  mySys, mnh_html, mnh_cmdLineInterpretation, mnh_plotForm,
+  mySys, mnh_cmdLineInterpretation, mnh_plotForm,
   newCentralPackageDialog, SynGutterMarks, SynEditMarks, mnh_contexts,
   {$ifdef imig}mnh_imig_form,{$endif}
   SynPluginMultiCaret, SynEditMiscClasses,
@@ -851,7 +851,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
     if flushPerformed and (outputPageControl.activePage<>outputTabSheet) then outputPageControl.activePage:=outputTabSheet;
-    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
+    if guiAdapters.isDeferredPlotLogged and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
     if askForm.displayPending then begin
       askForm.Show;
       flushPerformed:=true;

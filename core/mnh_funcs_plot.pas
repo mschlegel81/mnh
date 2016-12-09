@@ -65,7 +65,7 @@ FUNCTION addPlot intFuncSignature;
       end;
       if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
         context.adapters^.plot.addRow(options,newDataRow(list0));
-        context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
+        context.adapters^.logDeferredPlot;
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 2) and
@@ -73,7 +73,7 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (list0^.size=list1^.size) then begin
         context.adapters^.plot.addRow(options,newDataRow(list1,list0));
-        context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
+        context.adapters^.logDeferredPlot;
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
@@ -87,7 +87,7 @@ FUNCTION addPlot intFuncSignature;
                                                           int3^.value,
                                                           tokenLocation,
                                                           context));
-        if context.adapters^.noErrors then context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
+        if context.adapters^.noErrors then context.adapters^.logDeferredPlot;
         exit(newVoidLiteral);
       end;
     end;
@@ -195,7 +195,7 @@ FUNCTION setOptions intFuncSignature;
     end else allOkay:=false;
     if allOkay then begin
       context.adapters^.plot.options:=opt;
-      context.adapters^.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
+      context.adapters^.logPlotSettingsChanged;
     end;
   end;
 
@@ -230,8 +230,9 @@ FUNCTION renderToFile_impl intFuncSignature;
         exit(nil);
       end;
       try
+        fileName:=ChangeFileExt(fileName,'.png');
         context.adapters^.plot.renderToFile(fileName,width,height,supersampling);
-        context.adapters^.raiseCustomMessage(mt_plotFileCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
+        context.adapters^.logPlotFileCreated(expandFileName(ChangeFileExt(fileName,'.png')),tokenLocation);
       except
         on e:Exception do begin
           context.adapters^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
@@ -268,8 +269,7 @@ FUNCTION renderToString_impl intFuncSignature;
 FUNCTION display_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      context.adapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-      context.adapters^.raiseCustomMessage(mt_plotCreatedWithInstantDisplay,'',tokenLocation);
+      context.adapters^.logInstantPlot;
       result:=newVoidLiteral;
     end else result:=nil;
   end;

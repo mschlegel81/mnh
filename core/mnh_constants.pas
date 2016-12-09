@@ -12,7 +12,14 @@ CONST
   '|   |\  /|   |   |\    |   | |   |  ___)  |',
   '|___| \/ |___|___| \___|___| |___| |_____/');
 
-  UTF8_ZERO_WIDTH_SPACE=#226#128#139;
+  //UTF-8 zero width and invisible characters
+  ECHO_MARKER   =#226#128#139;
+  NOTE_MARKER   =#226#128#140;
+//UNUSED_MARKER =#226#128#141;
+  ERROR_MARKER  =#226#129#162;
+  WARNING_MARKER=#226#129#163;
+  TIMING_MARKER =#226#129#164;
+
   APP_NAME             ='MNH';
   APP_TITLE            ='MNH5'{$ifdef imig}+'+IMIG'{$endif};
   SCRIPT_EXTENSION     ='.mnh';
@@ -450,6 +457,15 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_muta
            (modifiers:[tt_modifier_customType];                       ruleType:rt_customTypeCheck));
 
 TYPE
+  T_messageClass=(mc_echo,
+                  mc_print,
+                  mc_timing,
+                  mc_note,
+                  mc_warning,
+                  mc_error);
+CONST
+  C_messageClassMarker:array[T_messageClass] of string=(ECHO_MARKER,'',TIMING_MARKER,NOTE_MARKER,WARNING_MARKER,ERROR_MARKER);
+TYPE
   T_messageType = (
     mt_clearConsole,
     mt_printline,
@@ -490,39 +506,40 @@ CONST
   {$endif}
   C_messageTypeMeta:array[T_messageType] of record
     level:shortint;
+    mClass:T_messageClass;
     prefix:string;
     includeLocation,ignoredBySandbox,triggersGuiStartup:boolean;
     systemErrorLevel:byte;
   end = (
-{mt_clearConsole           }             (level:-2; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_printline              }             (level:-2; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_input             }             (level:-1; prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_declaration       }             (level:-1; prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_output            }             (level:-1; prefix: 'out>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_continued         }             (level:-1; prefix: '...>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el1_note               }             (level: 1; prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el1_userNote           }             (level: 1; prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el2_warning            }             (level: 2; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el2_userWarning        }             (level: 2; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el3_evalError          }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:3),
-{mt_el3_noMatchingMain     }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:1),
-{mt_el3_stackTrace         }             (level: 3; prefix: 'Stack trace '         ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el3_userDefined        }             (level: 3; prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:2),
-{mt_el4_parsingError       }             (level: 4; prefix: 'Parsing Error '       ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:4),
-{mt_el5_systemError        }             (level: 5; prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:5),
-{mt_el5_haltMessageReceived}             (level: 5; prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el5_haltMessageQuiet   }             (level: 5; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_endOfEvaluation        }             (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_reloadRequired         }             (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_timing_info            }             (level:-1; prefix: UTF8_ZERO_WIDTH_SPACE  ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0)
+{mt_clearConsole           }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_printline              }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_echo_input             }             (level:-1; mClass:mc_echo;    prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_echo_declaration       }             (level:-1; mClass:mc_echo;    prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_echo_output            }             (level:-1; mClass:mc_echo;    prefix: 'out>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_echo_continued         }             (level:-1; mClass:mc_echo;    prefix: '...>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el1_note               }             (level: 1; mClass:mc_note;    prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el1_userNote           }             (level: 1; mClass:mc_note;    prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el2_warning            }             (level: 2; mClass:mc_warning; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el2_userWarning        }             (level: 2; mClass:mc_warning; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el3_evalError          }             (level: 3; mClass:mc_error;   prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:3),
+{mt_el3_noMatchingMain     }             (level: 3; mClass:mc_error;   prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:1),
+{mt_el3_stackTrace         }             (level: 3; mClass:mc_error;   prefix: 'Stack trace '         ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el3_userDefined        }             (level: 3; mClass:mc_error;   prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:2),
+{mt_el4_parsingError       }             (level: 4; mClass:mc_error;   prefix: 'Parsing Error '       ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:4),
+{mt_el5_systemError        }             (level: 5; mClass:mc_error;   prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:5),
+{mt_el5_haltMessageReceived}             (level: 5; mClass:mc_error;   prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el5_haltMessageQuiet   }             (level: 5; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_endOfEvaluation        }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_reloadRequired         }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_timing_info            }             (level:-1; mClass:mc_timing;  prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0)
 {$ifdef fullVersion},
-{mt_plotFileCreated                    } (level:-1; prefix: 'Image:'               ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_plotCreatedWithDeferredDisplay     } (level:-1; prefix: 'Deferred plot request'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_plotCreatedWithInstantDisplay      } (level:-1; prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_plotSettingsChanged                } (level:-1; prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_displayTable                       } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_displayImage}                        (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0)
+{mt_plotFileCreated                    } (level:-1; mClass:mc_note;    prefix: 'Image:'               ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_plotCreatedWithDeferredDisplay     } (level:-1; mClass:mc_note;    prefix: 'Deferred plot request'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_plotCreatedWithInstantDisplay      } (level:-1; mClass:mc_note;    prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_plotSettingsChanged                } (level:-1; mClass:mc_note;    prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_displayTable                       } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_guiPseudoPackageFound              } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_displayImage}                        (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
   C_errorMessageTypes:array[1..5] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],

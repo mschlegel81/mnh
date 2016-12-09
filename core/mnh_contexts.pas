@@ -188,10 +188,10 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
-      PROCEDURE printCallStack(CONST messageType:T_messageType);
+      PROCEDURE printCallStack;
       PROCEDURE clearCallStack;
 
-      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST messageType:T_messageType=mt_el3_evalError);
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
       //clock routines
       FUNCTION wallclockTime:double;
       FUNCTION wantBasicTiming:boolean;
@@ -532,8 +532,8 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=CATEGORY_DESCRIPTION[cat]+fmt(timeString[cat]);
       for cat:=low(T_profileCategory) to high(T_profileCategory) do begin
         if cat=high(T_profileCategory) then
-        adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',length(timeString[cat])),C_nilTokenLocation);
-        adapters^.raiseCustomMessage(mt_timing_info,                        timeString[cat]  ,C_nilTokenLocation);
+        adapters^.logTimingInfo(StringOfChar('-',length(timeString[cat])));
+        adapters^.logTimingInfo(                        timeString[cat]  );
       end;
     end;
   {$ifdef fullVersion}
@@ -597,7 +597,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then adapters^.getAdapter(j)^.append(showTableMessage);
       end;
 
-      for i:=0 to length(lines)-1 do adapters^.raiseCustomMessage(mt_timing_info,lines[i],C_nilTokenLocation);
+      for i:=0 to length(lines)-1 do adapters^.logTimingInfo(lines[i]);
     end;
   {$endif}
 
@@ -850,15 +850,15 @@ PROCEDURE T_evaluationContext.reportVariables(
   end;
 {$endif}
 
-PROCEDURE T_evaluationContext.printCallStack(CONST messageType: T_messageType);
+PROCEDURE T_evaluationContext.printCallStack;
   VAR i:longint;
       p:P_evaluationContext;
   begin
     p:=parentContext;
     if adapters=nil then exit;
     for i:=length(callStack)-1 downto 0 do with callStack[i] do
-    adapters^.raiseCustomMessage(messageType,callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
-    if p<>nil then p^.printCallStack(messageType);
+    adapters^.logCallStackInfo(callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
+    if p<>nil then p^.printCallStack();
   end;
 
 PROCEDURE T_evaluationContext.clearCallStack;
@@ -868,9 +868,10 @@ PROCEDURE T_evaluationContext.clearCallStack;
     while length(callStack)>0 do callStackPop();
   end;
 
-PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST messageType:T_messageType=mt_el3_evalError);
+PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
   begin
-    adapters^.raiseCustomMessage(messageType,'Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100)+suffix,location);
+    adapters^.raiseError('Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100)+suffix,location);
+    if missingMain then adapters^.logMissingMain;
   end;
 
 FUNCTION T_evaluationContext.wallclockTime: double;
