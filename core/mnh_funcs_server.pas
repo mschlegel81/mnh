@@ -56,30 +56,26 @@ FUNCTION startServer_impl intFuncSignature;
   VAR microserver:P_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;
-      servingSubrule:P_subrule;
       childContext:P_evaluationContext;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.arity<=4) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) and
        (arg2^.literalType in [lt_int,lt_real]) then begin
 
       if arg2^.literalType=lt_int then timeout:=int2^.value/(24*60*60)
                                   else timeout:=real2^.value/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
-      if servingExpression^.arity<4 then begin
-        new(servingSubrule,clone(servingExpression^.value));
-        servingExpression:=newExpressionLiteral(servingSubrule);
-        servingSubrule^.increaseArity(4);
-      end else servingExpression^.rereference;
+      servingExpression^.rereference;
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,childContext));
-        if microserver^.socket.getLastListenerSocketError=0
-        then beginThread(@microserverThread,microserver)
-        else begin
+        if microserver^.socket.getLastListenerSocketError=0 then begin
+          beginThread(@microserverThread,microserver);
+          repeat ThreadSwitch; sleep(1); until microserver^.up;
+        end else begin
           context.adapters^.raiseError('Error in socket creation ('+microserver^.ip+')',tokenLocation);
           dispose(microserver,destroy);
         end;
@@ -137,54 +133,6 @@ PROCEDURE T_microserver.serve;
       requestLiteral:T_listLiteral;
       sleepTime:longint=minSleepTime;
 
-  PROCEDURE initRequestLiteral(CONST request:string);
-    VAR parts:T_arrayOfString;
-        parameters:P_listLiteral;
-        i:longint;
-
-    PROCEDURE addParameterPair(CONST pair:string);
-      FUNCTION code(CONST c:byte):string;
-        CONST hexDigit:array[0..15] of char=('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
-        begin
-          result:='%'+hexDigit[c shr 4]+hexDigit[c and 15];
-        end;
-
-      VAR keyAndValue:T_arrayOfString;
-          c:byte;
-          i:longint;
-          value:P_stringLiteral;
-          castValue:P_scalarLiteral;
-      begin
-        keyAndValue:=split(pair,'=');
-        while length(keyAndValue)<2 do append(keyAndValue,'');
-        for i:=0 to length(keyAndValue)-1 do
-        for c:=0 to 255 do keyAndValue[i]:=replaceAll(keyAndValue[i],code(c),chr(c));
-         value:=newStringLiteral(keyAndValue[1]);
-        castValue:=value^.softCast;
-        disposeLiteral(value);
-        parameters^.append(
-          newListLiteral^
-            .appendString(keyAndValue[0])^
-            .append(castValue,false),
-          false);
-      end;
-
-    begin
-      requestLiteral.create;
-      requestLiteral.appendString(request);
-      parts:=split(request,'?');
-      while (length(parts)<2) do append(parts,'');
-      requestLiteral.appendString(parts[0]);
-      requestLiteral.appendString(parts[1]);
-      parameters:=newListLiteral;
-      if length(parts[1])>0 then begin
-        parts:=split(parts[1],'&');
-        for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
-        parameters^.toKeyValueList(false);
-      end;
-      requestLiteral.append(parameters,false);
-    end;
-
   begin
     context^.resetForEvaluation(nil);
     context^.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
@@ -195,7 +143,8 @@ PROCEDURE T_microserver.serve;
       if request<>'' then begin
         sleepTime:=minSleepTime;
         lastActivity:=now;
-        initRequestLiteral(request);
+        requestLiteral.create;
+        requestLiteral.appendString(request);
         response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,context);
         requestLiteral.destroy;
         if (response<>nil) then begin
@@ -227,12 +176,123 @@ PROCEDURE T_microserver.killQuickly;
     while up do sleep(1);
   end;
 
+
+FUNCTION percentCode(CONST c:byte):string;
+  CONST hexDigit:array[0..15] of char=('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
+  begin
+    result:='%'+hexDigit[c shr 4]+hexDigit[c and 15];
+  end;
+
+FUNCTION extractParameters_impl intFuncSignature;
+  VAR parameters:P_listLiteral;
+  PROCEDURE addParameterPair(CONST pair:string);
+
+    VAR keyAndValue:T_arrayOfString;
+        c:byte;
+        i:longint;
+        value:P_stringLiteral;
+        castValue:P_scalarLiteral;
+    begin
+      keyAndValue:=split(pair,'=');
+      while length(keyAndValue)<2 do append(keyAndValue,'');
+      for i:=0 to length(keyAndValue)-1 do
+      for c:=0 to 255 do keyAndValue[i]:=replaceAll(keyAndValue[i],percentCode(c),chr(c));
+       value:=newStringLiteral(keyAndValue[1]);
+      castValue:=value^.softCast;
+      disposeLiteral(value);
+      parameters^.append(
+        newListLiteral^
+          .appendString(keyAndValue[0])^
+          .append(castValue,false),
+        false);
+    end;
+
+  VAR parts:T_arrayOfString;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      parts:=split(str0^.value,'?');
+      while (length(parts)<2) do append(parts,'');
+      parameters:=newListLiteral;
+      if length(parts[1])>0 then begin
+        parts:=split(parts[1],'&');
+        for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
+        parameters^.toKeyValueList(false);
+      end;
+      exit(parameters);
+    end;
+  end;
+
+FUNCTION extractRawParameters_impl intFuncSignature;
+  VAR parts:T_arrayOfString;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      parts:=split(str0^.value,'?');
+      if length(parts)>1 then exit(newStringLiteral(parts[1])) else exit(newStringLiteral(''));
+    end;
+  end;
+
+FUNCTION extractPath_impl intFuncSignature;
+  VAR parts:T_arrayOfString;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      parts:=split(str0^.value,'?');
+      if length(parts)>0 then exit(newStringLiteral(parts[0])) else exit(newStringLiteral(''));
+    end;
+  end;
+
+FUNCTION encodeRequest_impl intFuncSignature;
+  VAR address:string='';
+      path:string='';
+      parameters:string='';
+      i:longint;
+  FUNCTION getString(CONST L:P_literal):string;
+    begin
+      if L^.literalType=lt_string then result:=P_stringLiteral(L)^.value
+                                  else result:=L^.toString();
+    end;
+
+  FUNCTION percentEncode(CONST s:string):string;
+    VAR c:char;
+    begin
+      result:='';
+      for c in s do if c in ['A'..'Z','a'..'z','0'..'9','-','_'] then result:=result+c else result:=result+percentCode(ord(c));
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_keyValueList,lt_string]) then begin
+      address:=str0^.value;
+      path:=str1^.value;
+      if not(startsWith(path,'/')) then path:='/'+path;
+      case arg2^.literalType of
+        lt_string: parameters:=percentEncode(str2^.value);
+        lt_keyValueList: for i:=0 to list2^.size-1 do begin
+          if i>0 then parameters:=parameters+'&';
+          parameters:=parameters+percentEncode(P_stringLiteral(P_listLiteral(list2^.value(i))^.value(0))^.value)
+                            +'='+percentEncode(getString      (P_listLiteral(list2^.value(i))^.value(1))       );
+        end;
+
+      end;
+      if parameters<>'' then parameters:='?'+parameters;
+      result:=newStringLiteral(address+path+parameters);
+    end;
+  end;
+
+
 INITIALIZATION
   {$WARN 5058 OFF}
   system.initCriticalSection(serverCS);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'extractParameters',@extractParameters_impl,'extractParameters(request:string);#Returns the parameters of an http request as a keyValueList');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,'extractRawParameters(request:string);#Returns the parameter part of an http request as a string');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'extractPath',@extractPath_impl,'extractPath(request:string);#Returns http-representation of error 404.#Returns the path part of an http request as a string');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'encodeRequest',@encodeRequest_impl,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);#Returns an http request from the given components');
 
 FINALIZATION
   doneCriticalSection(serverCS);
