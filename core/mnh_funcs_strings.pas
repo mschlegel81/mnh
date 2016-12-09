@@ -819,7 +819,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'pos',@pos_imp,'pos(subString,searchInString);//Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule(STRINGS_NAMESPACE,'copy',@copy_imp,'copy(S,start,length)://Returns the substring of S starting at index start and having specified length');
   registerRule(STRINGS_NAMESPACE,'chars',@chars_imp,'chars(S);//Returns the characters in S as a list#chars;//Returns all possible single-byte characters in natural ordering');
-  registerRule(STRINGS_NAMESPACE,'charSet',@chars_imp,'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)');
+  registerRule(STRINGS_NAMESPACE,'charSet',@charSet_imp,'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)');
   registerRule(STRINGS_NAMESPACE,'bytes',@bytes_imp,'bytes(S);//Returns the bytes in S as a list of strings');
   registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string,splitter:string);//Returns a list of strings obtained by splitting S at the specified splitters#//The splitters themselves are not contained in the result');
   registerRule(STRINGS_NAMESPACE,'join',@join_impl,'join(L:list);//Returns a string-concatenation of all elements in L#join(L:list,joiner:string);//Returns a string-concatenation of all elements, with joiner between.');
