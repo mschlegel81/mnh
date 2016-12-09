@@ -3156,7 +3156,7 @@ Root found at   1.29578534367572E-234
 Root found at   1.0
 Root found at   2.0
 ***** examples from file *****
-Examples file has 702 lines
+Examples file has 710 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3733,7 +3733,7 @@ out> [1,1,1,2,0]
  in> arctan2(1, 1);
 out> 0.785398163397448
  in> charSet('abcba');
-out> ['a','b','c','b','a']
+out> ['a','b','c']
  in> bytes('ö').ord;
 out> [246]
  in> base64encode('Test');
@@ -3793,3 +3793,15 @@ out> 'file.ext'
 out> '.ext'
  in> readXml('<?xml version="1.0"?><body empty="False"><first id="1" value="Text"><child dummy="True"/></first><second/></body>');
 out> [['body',[['empty','False']],[['first',[['id','1'],['value','Text']],[['child',[['dummy','True']],[]]]],['second',[],[]]]]]
+ in> extractPath('/index.html?x=0&y=3%2Ax');
+Error  Unresolved identifier "extractPath"
+Stack trace  :evaluation ()
+ in> extractParameters('/index.html?x=0&y=3%2Ax');
+Error  Unresolved identifier "extractParameters"
+Stack trace  :evaluation ()
+ in> extractRawParameters('/index.html?x=0&y=3%2Ax');
+Error  Unresolved identifier "extractRawParameters"
+Stack trace  :evaluation ()
+ in> encodeRequest('127.0.0.1:3126','rest',[['user','anonymous'],['request','3*&7']]);
+Error  Unresolved identifier "encodeRequest"
+Stack trace  :evaluation ()
