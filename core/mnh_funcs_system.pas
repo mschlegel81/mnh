@@ -3,7 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,
      sysutils, Classes,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
-     LazFileUtils,LazUTF8,mnh_html;
+     LazFileUtils,LazUTF8;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -202,7 +202,7 @@ FUNCTION logTo_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_boolean)  then begin
-      addOutfile(context.adapters^,str0^.value,bool1^.value);
+      context.adapters^.addOutfile(str0^.value,bool1^.value);
       result:=newVoidLiteral;
     end;
   end;

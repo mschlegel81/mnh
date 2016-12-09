@@ -36,7 +36,7 @@ T_editorState=object(T_serializable)
   PROCEDURE getLines(CONST dat: TStrings);
   FUNCTION getSerialVersion:dword; virtual;
   FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper; CONST saveAll:boolean);
+  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper; CONST saveAll:boolean); reintroduce;
 end;
 
 T_fileHistory=object(T_serializable)

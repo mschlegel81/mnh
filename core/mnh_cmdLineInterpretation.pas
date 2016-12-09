@@ -2,7 +2,7 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_funcs_server{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mnh_html,mnh_funcs_mnh;
+     lclintf,mnh_funcs_mnh;
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
@@ -31,7 +31,7 @@ FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
   VAR i:longint;
   begin
-    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(adapters,nameAndOption,appending);
+    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters.addOutfile(nameAndOption,appending);
     if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
   end;
 
@@ -70,8 +70,7 @@ PROCEDURE displayHelp;
     writeln('  -profile          do a profiling run - implies +time');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
     {$endif}
-    writeln('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
-    writeln('     an html document will be generated, otherwise simple text. Options are verbosity options');
+    writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
     writeln('     if no options are given, the global output settings will be used');
     writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
     writeln('  -quiet            disable console output');

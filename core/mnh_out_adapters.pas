@@ -12,7 +12,6 @@ TYPE
   T_adapterType=(at_unknown,
                  at_console,
                  at_textFile,
-                 at_htmlFile,
                  at_gui,
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
@@ -21,7 +20,6 @@ CONST
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
     {at_console}  [mt_clearConsole..mt_el5_haltMessageReceived,mt_timing_info],
     {at_textFile} [mt_printline..mt_el5_haltMessageReceived,mt_timing_info],
-    {at_htmlFile} [mt_echo_input..mt_el5_haltMessageQuiet,mt_timing_info{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithInstantDisplay{$endif}],
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -100,10 +98,6 @@ TYPE
       someEchoDeclaration  :boolean;
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
-      {$ifdef fullVersion}
-      hasHtmlAdapter           :boolean;
-      plotChangedAfterDeferring:boolean;
-      {$endif}
       hasMessageOfType:array[T_messageType] of boolean;
       PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
@@ -158,6 +152,7 @@ TYPE
       PROCEDURE logEndOfEvaluation;
       PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
 
+      FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
@@ -480,23 +475,6 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
   end;
 
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
-  {$ifdef fullVersion}
-  PROCEDURE raiseModifiedMessage;
-    VAR modifiedMessage:T_storedMessage;
-        i:longint;
-    begin
-      modifiedMessage.messageType  :=message.messageType;
-      modifiedMessage.location     :=message.location;
-      modifiedMessage.simpleMessage:=message.simpleMessage;
-      setLength(modifiedMessage.multiMessage,1);
-      modifiedMessage.multiMessage[0]:=plot.renderToString(HTML_IMAGE_WIDTH,HTML_IMAGE_HEIGHT,HTML_IMAGE_SUPERSAMPLING);
-      for i:=0 to length(adapter)-1 do
-        if adapter[i]^.adapterType=at_htmlFile
-        then adapter[i]^.append(modifiedMessage)
-        else adapter[i]^.append(message);
-    end;
-  {$endif}
-
   VAR i:longint;
   begin
     {$ifdef fullVersion}
@@ -514,16 +492,6 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
       inc(errorCount);
       if errorCount>30 then exit;
     end;
-    {$ifdef fullVersion}
-    if message.messageType in C_plotMessages then plotChangedAfterDeferring:=true;
-    if hasHtmlAdapter and ((message.messageType in [mt_plotCreatedWithInstantDisplay,mt_plotFileCreated])
-                        or (message.messageType=mt_endOfEvaluation) and plotChangedAfterDeferring)
-    then begin
-      raiseModifiedMessage;
-      plotChangedAfterDeferring:=false;
-      exit;
-    end;
-    {$endif}
     for i:=0 to length(adapter)-1 do adapter[i]^.append(message);
   end;
 
@@ -599,7 +567,6 @@ PROCEDURE T_adapters.resetFlagsAfterPlotDone;
 PROCEDURE T_adapters.logPlotSettingsChanged;
   begin
     hasMessageOfType[mt_plotSettingsChanged]:=true;
-    plotChangedAfterDeferring:=true;
   end;
 
 PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
@@ -661,19 +628,12 @@ PROCEDURE T_adapters.clearAll;
     someEchoDeclaration  :=false;
     someShowExpressionOut:=false;
     someShowTimingInfo   :=false;
-    {$ifdef fullVersion}
-    hasHtmlAdapter           :=false;
-    plotChangedAfterDeferring:=false;
-    {$endif}
     for i:=0 to length(adapter)-1 do begin
       adapter[i]^.clear;
       someEchoInput        :=someEchoInput         or (mt_echo_input       in adapter[i]^.messageTypesToInclude);
       someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in adapter[i]^.messageTypesToInclude);
       someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in adapter[i]^.messageTypesToInclude);
       someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in adapter[i]^.messageTypesToInclude);
-      {$ifdef fullVersion}
-      hasHtmlAdapter       :=hasHtmlAdapter        or (adapter[i]^.adapterType=at_htmlFile);
-      {$endif}
     end;
   end;
 
@@ -746,14 +706,24 @@ PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
     raiseCustomMessage(mt_el5_systemError,errorMessage,C_nilTokenLocation);
   end;
 
+FUNCTION T_adapters.addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
+  VAR fileName:string;
+      options:string='';
+  begin
+    if pos('(',fileNameAndOptions)>0 then begin
+      options :=copy(fileNameAndOptions,  pos('(',fileNameAndOptions),length(fileNameAndOptions));
+      fileName:=copy(fileNameAndOptions,1,pos('(',fileNameAndOptions)-1);
+    end else fileName:=fileNameAndOptions;
+
+    new(result,create(fileName,options,not(appendMode)));
+    addOutAdapter(result,true);
+  end;
+
 PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   begin
     setLength(adapter,length(adapter)+1);
     adapter[length(adapter)-1]:=p;
     p^.autodestruct:=destroyIt;
-    {$ifdef fullVersion}
-    hasHtmlAdapter:=hasHtmlAdapter or (p^.adapterType=at_htmlFile);
-    {$endif}
     someEchoInput        :=someEchoInput         or (mt_echo_input       in p^.messageTypesToInclude);
     someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in p^.messageTypesToInclude);
     someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in p^.messageTypesToInclude);
@@ -784,10 +754,6 @@ PROCEDURE T_adapters.removeOutAdapter(CONST index:longint);
     if adapter[index]^.autodestruct then dispose(adapter[index],destroy);
     for j:=index to length(adapter)-2 do adapter[j]:=adapter[j+1];
     setLength(adapter,length(adapter)-1);
-    {$ifdef fullVersion}
-    hasHtmlAdapter:=false;
-    for j:=0 to length(adapter)-1 do hasHtmlAdapter:=hasHtmlAdapter or (adapter[j]^.adapterType=at_htmlFile);
-    {$endif}
   end;
 
 PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
