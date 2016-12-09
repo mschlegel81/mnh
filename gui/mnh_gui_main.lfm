@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 1187
+  Left = 491
   Height = 733
-  Top = 0
+  Top = 5
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
