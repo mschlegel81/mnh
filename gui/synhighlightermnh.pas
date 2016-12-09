@@ -28,35 +28,13 @@ TYPE
   T_tokenSubKind =(skNormal,skWarn,skError);
   T_mnhSynFlavour=(msf_input,msf_output,msf_guessing);
 
-CONST tokenKindForMt:array[T_messageType] of T_tokenKind=(
-{mt_clearConsole,                      } tkDefault,
-{mt_printline,                         } tkDefault,
-{mt_echo_input,                        } tkDefault,
-{mt_echo_declaration,                  } tkDefault,
-{mt_echo_output,                       } tkDefault,
-{mt_echo_continued,                    } tkDefault,
-{mt_el1_note,                          } tkNote,
-{mt_el1_userNote,                      } tkNote,
-{mt_el2_warning,                       } tkWarning,
-{mt_el2_userWarning,                   } tkWarning,
-{mt_el3_evalError,                     } tkError,
-{mt_el3_noMatchingMain,                } tkError,
-{mt_el3_stackTrace,                    } tkError,
-{mt_el3_userDefined,                   } tkError,
-{mt_el4_parsingError,                  } tkError,
-{mt_el5_systemError,                   } tkError,
-{mt_el5_haltMessageReceived,           } tkError,
-{mt_el5_haltMessageQuiet,              } tkNote,
-{mt_endOfEvaluation,                   } tkDefault,
-{mt_reloadRequired,                    } tkNote,
-{mt_timing_info                        } tkTimingNote,
-{mt_plotFileCreated,                   } tkNote,
-{mt_plotCreatedWithDeferredDisplay,    } tkNote,
-{mt_plotCreatedWithInstantDisplay,     } tkNote,
-{mt_plotSettingsChanged,               } tkNote,
-{mt_displayTable                       } tkNote,
-{mt_guiPseudoPackageFound              } tkNote
-,tkNote);
+CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
+{mc_echo   }tkDefault,
+{mc_print  }tkDefault,
+{mc_timing }tkTimingNote,
+{mc_note   }tkNote,
+{mc_warning}tkWarning,
+{mc_error  }tkError);
 
 TYPE
   TSynMnhSyn = class(TSynCustomHighlighter)
@@ -86,7 +64,7 @@ TYPE
   public
     class FUNCTION GetLanguageName: ansistring; override;
   public
-    CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
+    CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour); reintroduce;
     DESTRUCTOR destroy; override;
     {$WARN 5024 OFF}
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;
@@ -222,8 +200,8 @@ PROCEDURE TSynMnhSyn.next;
   CONST RUN_LIMIT=10000;
   VAR localId: shortString;
       i: longint;
-      lc:T_messageType;
-      specialLineCase:T_messageType;
+      lc: T_messageClass;
+      specialLineCase:T_messageClass;
       tt: T_tokenType;
 
   FUNCTION continuesWith(CONST part:shortString; CONST offset:longint):boolean;
@@ -248,24 +226,23 @@ PROCEDURE TSynMnhSyn.next;
       exit;
     end;
     if (run = 0) and (flavour in [msf_output,msf_guessing]) then begin
-      specialLineCase:=mt_clearConsole;
+      specialLineCase:=mc_print;
       i:=-1;
-      for lc:=low(T_messageType) to high(T_messageType) do if (C_messageTypeMeta[lc].prefix<>'') and startsWith(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[lc].prefix) then begin
+      for lc in T_messageClass do if (C_messageClassMarker[lc]<>'') and startsWith(C_messageClassMarker[lc]) then begin
         specialLineCase:=lc;
-        i:=length(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[lc].prefix);
       end;
-      if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
-        i:=0;
-        if startsWith(' in>') or startsWith('out>') then specialLineCase:=mt_echo_input;
-        while (fLine[i]<>#0) and (specialLineCase=mt_clearConsole) do begin
-          if (fLine[i]=';') or ((fLine[i]='/') and (fLine[i+1]='/')) then specialLineCase:=mt_echo_input;
-          inc(i);
-        end;
-        i:=-1;
-      end;
+      //if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
+      //  i:=0;
+      //  if startsWith(' in>') or startsWith('out>') then specialLineCase:=mt_echo_input;
+      //  while (fLine[i]<>#0) and (specialLineCase=mt_clearConsole) do begin
+      //    if (fLine[i]=';') or ((fLine[i]='/') and (fLine[i+1]='/')) then specialLineCase:=mt_echo_input;
+      //    inc(i);
+      //  end;
+      //  i:=-1;
+      //end;
       if i>=0 then run:=i+1;
-      fTokenId:=tokenKindForMt[specialLineCase];
-      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_echo_continued]) then while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
+      fTokenId:=tokenKindForClass[specialLineCase];
+      if specialLineCase<>mc_echo then while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
     if blobEnder<>#0 then begin

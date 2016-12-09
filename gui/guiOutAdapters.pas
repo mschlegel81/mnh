@@ -70,11 +70,11 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             firstInLine:=false;
           end;
           if first
-          then syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType]      .prefix+' '+txt)
-          else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
+          then syn.lines.append(C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+C_messageTypeMeta[messageType]      .prefix+' '+txt)
+          else syn.lines.append(C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
           first:=false;
         end;
-      end else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+message);
+      end else syn.lines.append(C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+C_messageTypeMeta[messageType].prefix+' '+message);
       wroteToSyn:=true;
     end;
 
@@ -122,11 +122,11 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_output: writeWrapped(messageType,simpleMessage);
         mt_timing_info: begin
           wroteToSyn:=true;
-          syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+simpleMessage);
+          syn.lines.append(C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+C_messageTypeMeta[messageType].prefix+simpleMessage);
         end
         else begin
           wroteToSyn:=true;
-          syn.lines.append(UTF8_ZERO_WIDTH_SPACE+defaultFormatting(storedMessages[i]));
+          syn.lines.append(C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+defaultFormatting(storedMessages[i]));
         end;
       end;
       while syn.lines.count>outputLinesLimit do syn.lines.delete(0);
