@@ -96,7 +96,6 @@ f(x)->sin(x);
   <li><h5><a href="#comments">Comments</a></h5></li>
   <li><h5><a href="#attributes">Attributes</a></h5></li>
 </ul>
-<li><h4><a href="#defined">Currently defined packages</a></h4></li>
 </ul>
   <li><h3><a href="gui.html">GUI features</a></h4></li>  
   </ul>
@@ -156,9 +155,6 @@ Attributes are key-value pairs where the value can be omitted. They generally ta
 </code>
 Attributes are also used to configure edit scripts, see <a href="gui.html">GUI features</a>.
 <br>
-<h3><br><a name="defined">Currently defined packages</a></h3>
-<div class="red">Open the documentation from the GUI via Help -> "Open Documentation with packages" to make sure these are up to date.</div>
-<!--USERPKG-->
 </div>
 <!--commonFoot-->
 <!--file operators.html-->

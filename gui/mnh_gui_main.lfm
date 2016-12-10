@@ -2608,10 +2608,6 @@ object MnhForm: TMnhForm
         ShortCut = 8304
         OnClick = miHelpExternallyClick
       end
-      object miOpenDocumentationPack: TMenuItem
-        Caption = 'Open Documentation with packages'
-        OnClick = miOpenDocumentationPackClick
-      end
       object miOpenDemo: TMenuItem
         Caption = 'Open demo'
         OnClick = miOpenDemoClick
