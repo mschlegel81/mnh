@@ -129,7 +129,6 @@ TYPE
     miOpen,
     miOpenDemo,
     miOpenDocumentation,
-    miOpenDocumentationPack,
     miProfile,
     miReplace,
     miSave,
@@ -218,7 +217,6 @@ TYPE
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miLangMnhClick(Sender: TObject);
-    PROCEDURE miOpenDocumentationPackClick(Sender: TObject);
     PROCEDURE miProfileClick(Sender: TObject);
     PROCEDURE miWorkspacesClick(Sender: TObject);
     PROCEDURE inputPageControlChange(Sender: TObject);
@@ -629,16 +627,15 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
                            end;
   end;
 
-PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
+PROCEDURE makeAndShowDoc();
   begin
-    prepareDocumentation(includePackageDoc);
-    if includePackageDoc then OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/packages.html'),'\','/')+'#defined')
-                         else OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
+    makeHtmlFromTemplate();
+    OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
   end;
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
-    makeAndShowDoc(false);
+    makeAndShowDoc();
   end;
 
 PROCEDURE TMnhForm.miLangMnhClick(Sender: TObject);
@@ -699,11 +696,6 @@ PROCEDURE TMnhForm.updateScriptMenus;
       root.add(scriptMenuItems[scriptType][k]);
     end;
     {$ifdef debugMode}writeln(stdErr,'updateScriptMenus end');{$endif}
-  end;
-
-PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
-  begin
-    makeAndShowDoc(true);
   end;
 
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);

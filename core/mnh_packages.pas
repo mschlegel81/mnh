@@ -56,7 +56,6 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
-      FUNCTION getDoc:P_userPackageDocumentation;
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
@@ -78,9 +77,6 @@ TYPE
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-{$ifdef fullVersion}
-PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
-{$endif}
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
@@ -993,19 +989,6 @@ PROCEDURE T_package.complainAboutUnused(CONST inMainPackage:boolean; VAR adapter
     setLength(ruleList,0);
   end;
 
-FUNCTION T_package.getDoc:P_userPackageDocumentation;
-  VAR ruleList:array of P_rule;
-      i:longint;
-  begin
-    new(result,create(codeProvider.getPath,codeProvider.id,codeProvider.getLines));
-    ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do begin
-      result^.addRuleDoc(ruleList[i]^.getDocHtml);
-      if ruleList[i]^.id=MAIN_RULE_ID then result^.isExecutable:=true;
-    end;
-    setLength(ruleList,0);
-    for i:=0 to length(packageUses)-1 do result^.addUses(expandFileName(packageUses[i].path));
-  end;
 {$endif}
 
 FUNCTION T_package.getHelpOnMain:ansistring;
@@ -1146,36 +1129,6 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
       end;
     end;
   end;
-
-{$ifdef fullVersion}
-PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
-  VAR sourceNames:T_arrayOfString;
-      sourceName:string;
-      p:T_package;
-      context:T_evaluationContext;
-      nullAdapter:T_adapters;
-  begin
-    if includePackageDoc then begin
-      nullAdapter.create;
-      ensureDemos;
-      context.createContext(P_adapters(@nullAdapter),ct_silentlyRunAlone);
-      sourceNames:=locateSources;
-      for sourceName in sourceNames do begin
-        p.create(nil);
-        p.setSourcePath(sourceName);
-        nullAdapter.clearErrors;
-        p.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
-        addPackageDoc(p.getDoc);
-        p.destroy;
-      end;
-      context.destroy;
-      nullAdapter.clearErrors;
-      nullAdapter.destroy;
-      setLength(sourceNames,0);
-    end;
-    makeHtmlFromTemplate(includePackageDoc);
-  end;
-{$endif}
 
 {$undef include_implementation}
 INITIALIZATION
