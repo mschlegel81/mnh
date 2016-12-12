@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html,mnh_fileWrappers;
+USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html;
 TYPE
   T_demoCodeToHtmlCallback=FUNCTION(CONST input:T_arrayOfString):T_arrayOfString;
   T_registerDocProcedure=PROCEDURE(CONST qualifiedId,explanation:ansistring);
@@ -27,7 +27,6 @@ VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
     htmlRoot:ansistring;
-CONST PACKAGE_DOC_SUBFOLDER='package_doc';
 
 PROCEDURE ensureDemos;
   {$i res_ensurePackages.inc}
@@ -238,9 +237,9 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
 FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
   VAR i:longint;
   begin
-    result:=id+lineSplitter+replaceAll(description,'#',lineSplitter);
+    result:=ECHO_MARKER+id+lineSplitter+ECHO_MARKER+replaceAll(description,'#',lineSplitter+ECHO_MARKER);
     if length(example)>0 then result:=result+lineSplitter+'Examples:';
-    for i:=0 to length(example)-1 do result:=result+lineSplitter+StripHTML(example[i]);
+    for i:=0 to length(example)-1 do result:=result+lineSplitter+ECHO_MARKER+StripHTML(example[i]);
   end;
 
 PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST exampleHtml:T_arrayOfString; CONST skipFirstLine:boolean=false);

@@ -1,6 +1,6 @@
 UNIT mnh_funcs_regex;
 INTERFACE
-USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_basicTypes,sysutils,mnh_out_adapters,mnh_contexts;
+USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_basicTypes,sysutils,mnh_out_adapters,mnh_contexts,myGenerics;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}

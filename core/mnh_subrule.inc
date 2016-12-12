@@ -587,15 +587,15 @@ FUNCTION T_subrule.getInlineValue:P_literal;
 FUNCTION T_subrule.getCmdLineHelpText:ansistring;
   begin
     result:='  '+pattern.toCmdLineHelpStringString;
-    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+COMMENT_PREFIX);
+    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+COMMENT_PREFIX);
   end;
 
 FUNCTION T_subrule.getDocTxt():ansistring;
   begin
-    result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
+    result:=ECHO_MARKER+'@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+getId+';';
-    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+COMMENT_PREFIX);
+    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
   end;
 
 FUNCTION T_subrule.getDocHtml():ansistring;

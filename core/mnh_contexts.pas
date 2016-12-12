@@ -549,14 +549,6 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         lines:T_arrayOfString;
         i,j:longint;
 
-    FUNCTION showTableMessage:T_storedMessage;
-      begin
-        result.messageType:=mt_displayTable;
-        result.location:=C_nilTokenLocation;
-        result.simpleMessage:='';
-        result.multiMessage:=C_EMPTY_STRING_ARRAY;
-      end;
-
     begin
       profilingData:=profilingMap.valueSet;
       for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do if profilingData[i].timeSpent_inclusive<profilingData[j].timeSpent_inclusive then begin
@@ -594,7 +586,10 @@ PROCEDURE T_evaluationContext.afterEvaluation;
                       .appendReal(timeSpent_exclusive*1E3),false);
         showProfilingTableCallback(data);
         disposeLiteral(data);
-        for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then adapters^.getAdapter(j)^.append(showTableMessage);
+        for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then begin
+          adapters^.logDisplayTable;
+          break;
+        end;
       end;
 
       for i:=0 to length(lines)-1 do adapters^.logTimingInfo(lines[i]);

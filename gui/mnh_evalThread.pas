@@ -739,7 +739,7 @@ FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
     VAR i:longint;
     begin
       for i:=0 to length(list)-1 do with list[i] do begin
-        result[k]:=C_messageClassMarker[C_messageTypeMeta[messageType].mClass]+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage);
+        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage);
         inc(k);
       end;
     end;
