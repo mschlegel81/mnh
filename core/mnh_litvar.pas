@@ -338,19 +338,14 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLite
       else result:=newListLiteral(3)^.appendString(C_messageTypeMeta[messageType].prefix);
     end;
 
-  VAR i,j:longint;
+  VAR i:longint;
   begin
     result:=newListLiteral;
-    for i:=0 to length(messages)-1 do with messages[i] do if not(C_messageTypeMeta[messageType].ignoredBySandbox) then begin
-      if length(multiMessage)>0 then begin
-        simpleMessage:=multiMessage[0];
-        for j:=1 to length(multiMessage)-1 do simpleMessage:=simpleMessage+C_lineBreakChar+multiMessage[j];
-      end;
+    for i:=0 to length(messages)-1 do with messages[i] do if not(C_messageTypeMeta[messageType].ignoredBySandbox) then
       result^.append(
          headByMessageType(messageType)^
         .appendString(ansistring(location))^
-        .appendString(simpleMessage),false);
-    end;
+        .appendString(join(messageText,C_lineBreakChar)),false);
   end;
 
 FUNCTION exp(CONST x:double):double; inline;

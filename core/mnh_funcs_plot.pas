@@ -1,7 +1,7 @@
 UNIT mnh_funcs_plot;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils, mnh_funcs,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts;
+USES sysutils, mnh_funcs,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts,myGenerics;
 TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;

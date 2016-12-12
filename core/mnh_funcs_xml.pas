@@ -1,6 +1,6 @@
 UNIT mnh_funcs_xml;
 INTERFACE
-USES sysutils, mnh_basicTypes,mnh_litVar,mnh_constants,mnh_funcs,mnh_contexts,XMLRead,dom,Classes,LazUTF8;
+USES sysutils, mnh_basicTypes,mnh_litVar,mnh_constants,mnh_funcs,mnh_contexts,XMLRead,dom,Classes,LazUTF8,myGenerics;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}

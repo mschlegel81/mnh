@@ -1,7 +1,7 @@
 UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
+USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts,myGenerics;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL:P_intFuncCallback;
 
 IMPLEMENTATION

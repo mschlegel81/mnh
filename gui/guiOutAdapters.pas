@@ -51,6 +51,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j:longint;
       outputLinesLimit:longint=0;
       wroteToSyn:boolean=false;
+      s:string;
 
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
@@ -101,29 +102,25 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_printline:
           begin
             wroteToSyn:=true;
-            if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
+            if (length(messageText)>0) and (messageText[0]=C_formFeedChar) then begin
               syn.lines.clear;
-              for j:=1 to length(multiMessage)-1 do begin
-                syn.lines.append(multiMessage[j]);
+              for j:=1 to length(messageText)-1 do begin
+                syn.lines.append(messageText[j]);
                 if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
               end;
-            end else for j:=0 to length(multiMessage)-1 do begin
-              syn.lines.append(multiMessage[j]);
+            end else for j:=0 to length(messageText)-1 do begin
+              syn.lines.append(messageText[j]);
               if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
             end;
           end;
         mt_endOfEvaluation: parentForm.onEndOfEvaluation;
-        mt_reloadRequired: parentForm.onReloadRequired(simpleMessage);
+        mt_reloadRequired: parentForm.onReloadRequired(data);
         mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output: writeWrapped(messageType,simpleMessage);
-        mt_timing_info: begin
-          wroteToSyn:=true;
-          syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+simpleMessage);
-        end
+        mt_echo_output: writeWrapped(messageType,join(messageText,' '));
         else begin
           wroteToSyn:=true;
-          syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+defaultFormatting(storedMessages[i]));
+          for s in defaultFormatting(storedMessages[i],true) do syn.lines.append(s);
         end;
       end;
       while syn.lines.count>outputLinesLimit do syn.lines.delete(0);
@@ -148,7 +145,7 @@ PROCEDURE T_guiOutAdapter.flushClear;
   begin
     system.enterCriticalSection(cs);
     clear;
-    append(message(mt_clearConsole,'',C_nilTokenLocation));
+    append(clearConsoleMessage);
     system.leaveCriticalSection(cs);
   end;
 
