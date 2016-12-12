@@ -8,13 +8,16 @@ VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
+FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
   begin
-    result:='<span class="'+sc+'">'+txt+'</span>';
+    if (sc='') or (txt='')
+    then result:=txt
+    else result:='<span class="'+sc+'">'+txt+'</span>';
   end;
 
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
@@ -22,12 +25,9 @@ FUNCTION imageTag(CONST fileName:ansistring):ansistring;
     result:='<img src="'+fileName+'" alt="'+fileName+'">';
   end;
 
-FUNCTION toHtmlCode(line:ansistring):ansistring;
-  VAR raw:T_rawTokenArray;
-      i:longint;
+FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
+  VAR i:longint;
   begin
-    result:='';
-    raw:=rawTokenizeCallback(line);
     for i:=0 to length(raw)-1 do with raw[i] do begin
       case tokType of
         tt_literal, tt_aggregatorExpressionLiteral: result:=result+span('literal',txt);
@@ -49,6 +49,11 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
             replaceOne(result,
                        '<span class="identifier">out</span><span class="operator">></span>','out>'),
                        '<span class="operator">in</span><span class="operator">></span>','in>');
+  end;
+
+FUNCTION toHtmlCode(line:ansistring):ansistring;
+  begin
+    result:=toHtmlCode(rawTokenizeCallback(line));
   end;
 
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;

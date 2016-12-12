@@ -81,7 +81,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
-FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
+PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
@@ -127,38 +127,46 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     collector.destroy;
   end;
 
-FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
+PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   VAR messages:T_storedMessages;
       i:longint;
       tmp:ansistring;
+      raw:T_rawTokenArray;
+      tok:T_rawToken;
   begin
     messages:=runAlone(input);
-    setLength(result,0);
+    setLength(textOut,0);
+    setLength(htmlOut,0);
+    setLength(usedBuiltinIDs,0);
     for i:=0 to length(input)-1 do begin
       tmp:=trim(input[i]);
-      if startsWith(tmp,COMMENT_PREFIX)
-      then append(result,StringOfChar(' ',length(C_messageTypeMeta[mt_echo_input].prefix)+1)+toHtmlCode(tmp))
-      else append(result,                        C_messageTypeMeta[mt_echo_input].prefix+' '+toHtmlCode(tmp));
+      raw:=rawTokenizeCallback(tmp);
+      for tok in raw do if tok.tokType=tt_intrinsicRule then appendIfNew(usedBuiltinIDs,tok.txt);
+      if startsWith(tmp,COMMENT_PREFIX) then begin
+        append(htmlOut,            StringOfChar(' ',length(C_messageTypeMeta[mt_echo_input].prefix)+1)+toHtmlCode(raw));
+        append(textOut,ECHO_MARKER+StringOfChar(' ',length(C_messageTypeMeta[mt_echo_input].prefix)+1)+tmp);
+      end else begin
+        append(htmlOut,            C_messageTypeMeta[mt_echo_input].prefix+' '+toHtmlCode(raw));
+        append(textOut,ECHO_MARKER+C_messageTypeMeta[mt_echo_input].prefix+' '+tmp);
+      end;
     end;
-    for i:=0 to length(messages)-1 do begin
-      with messages[i] do case messageType of
-        mt_printline: append(result,multiMessage);
-        mt_echo_output: append(result,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(simpleMessage));
-        mt_el1_note,
-        mt_el2_warning: append(result,C_messageTypeMeta[messageType].prefix+' '+simpleMessage);
-        mt_el3_evalError,
-        mt_el3_noMatchingMain,
-        mt_el3_stackTrace,
-        mt_el4_parsingError,
-        mt_el5_systemError,
-        mt_el5_haltMessageReceived: append(result,span('error',C_messageTypeMeta[messageType].prefix+' '+simpleMessage));
+    for i:=0 to length(messages)-1 do with messages[i] do begin
+      case messageType of
+        mt_printline:   append(htmlOut,multiMessage);
+        mt_echo_input: begin end;
+        mt_echo_output: append(htmlOut,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(escapeHtml(simpleMessage)));
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
           tmp:=extractFileName(simpleMessage);
           CopyFile(simpleMessage,getHtmlRoot+DirectorySeparator+tmp);
-          append(result,'Image created: '+imageTag(tmp));
+          append(htmlOut,'Image created: '+imageTag(tmp));
         end;
         {$endif}
+        else append(htmlOut,span(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].htmlSpan,C_messageTypeMeta[messageType].prefix+' '+escapeHtml(simpleMessage)));
+      end;
+      if messageType<>mt_echo_input then begin
+        for tmp in multiMessage do append(textOut,C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+tmp);
+        tmp:=simpleMessage;        append(textOut,C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+tmp);
       end;
     end;
   end;
