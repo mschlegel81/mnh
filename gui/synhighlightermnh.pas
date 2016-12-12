@@ -26,7 +26,7 @@ TYPE
     tkTimingNote,
     tkHighlightedItem);
   T_tokenSubKind =(skNormal,skWarn,skError);
-  T_mnhSynFlavour=(msf_input,msf_output,msf_guessing);
+  T_mnhSynFlavour=(msf_input,msf_output);
 
 CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
 {mc_echo   }tkDefault,
@@ -225,10 +225,10 @@ PROCEDURE TSynMnhSyn.next;
       fTokenId:=tkNull;
       exit;
     end;
-    if (run = 0) and (flavour in [msf_output,msf_guessing]) then begin
+    if (run = 0) and (flavour in [msf_output]) then begin
       specialLineCase:=mc_print;
       i:=-1;
-      for lc in T_messageClass do if (C_messageClassMarker[lc]<>'') and startsWith(C_messageClassMarker[lc]) then begin
+      for lc in T_messageClass do if (C_messageClassMeta[lc].guiMarker<>'') and startsWith(C_messageClassMeta[lc].guiMarker) then begin
         specialLineCase:=lc;
       end;
       //if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin

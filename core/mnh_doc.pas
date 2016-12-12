@@ -1,8 +1,8 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html,mnh_fileWrappers;
+USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html;
 TYPE
-  T_demoCodeToHtmlCallback=FUNCTION(CONST input:T_arrayOfString):T_arrayOfString;
+  T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   T_registerDocProcedure=PROCEDURE(CONST qualifiedId,explanation:ansistring);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
 TYPE
@@ -10,12 +10,12 @@ TYPE
   T_intrinsicFunctionDocumentation = object
     id, unqualifiedId, description: ansistring;
     unqualifiedAccess:boolean;
-    example: T_arrayOfString;
+    txtExample,htmlExample: T_arrayOfString;
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
     FUNCTION getPlainText(CONST lineSplitter:string):ansistring;
-    PROCEDURE addExample(CONST exampleHtml:T_arrayOfString; CONST skipFirstLine:boolean=false);
+    PROCEDURE addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
   end;
 
 PROCEDURE makeHtmlFromTemplate();
@@ -27,17 +27,17 @@ VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
     htmlRoot:ansistring;
-CONST PACKAGE_DOC_SUBFOLDER='package_doc';
 
 PROCEDURE ensureDemos;
   {$i res_ensurePackages.inc}
   VAR code:T_arrayOfString;
+      html,txt,ids:T_arrayOfString;
       i:longint;
   begin
     setLength(code,length(ensurePackages_mnh));
     for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
     append(code,'('+escapeString(configDir,es_dontCare)+')');
-    demoCodeToHtmlCallback(code);
+    demoCodeToHtmlCallback(code,txt,html,ids);
   end;
 
 FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;
@@ -66,8 +66,7 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 
 PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
-  CONST EXAMPLES_CACHE_FILE= '/examples.dat';
-        httpServerExample:array[0..7] of string=
+  CONST httpServerExample:array[0..7] of string=
 ('//#startHttpServer',
  ' in> startHttpServer("127.0.0.1:60000",{print("Parameters: "&$p) orElse wrapTextInHttp($p)},1);',
  ' in> httpGet("http://127.0.0.1:60000/index.html?x=0&y=3%2Ax");',
@@ -81,11 +80,9 @@ PROCEDURE ensureBuiltinDocExamples;
       i:longint;
       keys:T_arrayOfString;
       allDocs:array of P_intrinsicFunctionDocumentation;
-      examplesCache:text;
 
-  PROCEDURE addExample(CONST exampleSource,html:T_arrayOfString);
+  PROCEDURE addExample(CONST exampleSource,html,txt,idList:T_arrayOfString);
     VAR ids:T_listOfString;
-        words:T_arrayOfString;
         i:longint;
         leadingIdLine:boolean=false;
         doc:P_intrinsicFunctionDocumentation;
@@ -95,11 +92,7 @@ PROCEDURE ensureBuiltinDocExamples;
       if copy(exampleSource[0],1,3)='//#' then begin
         ids.add(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
         leadingIdLine:=true;
-      end else for i:=0 to length(exampleSource)-1 do if (copy(trim(exampleSource[i]),1,2)<>COMMENT_PREFIX) then begin
-        words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
-        ids.addAll(words);
-        ids.addAll(split(join(words,'.'),'.'));
-      end;
+      end else ids.addAll(idList);
       ids.unique;
       for i:=0 to ids.size-1 do if functionDocMap.containsKey(ids[i],doc) then begin
         {$ifdef debugMode}
@@ -110,35 +103,17 @@ PROCEDURE ensureBuiltinDocExamples;
           for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
         end;
         {$endif}
-        doc^.addExample(html,leadingIdLine);
+        doc^.addExample(html,txt,leadingIdLine);
       end;
       ids.destroy
     end;
 
   PROCEDURE processExample;
-    VAR html:T_arrayOfString;
-        i:longint;
+    VAR html,txt,ids:T_arrayOfString;
     begin
       if (length(code)<=0) then exit;
-      html:=demoCodeToHtmlCallback(code);
-      addExample(code,html);
-      for i:=0 to length(html)-1 do writeln(examplesCache,html[i]);
-      writeln(examplesCache,'');
-      setLength(code,0);
-      setLength(html,0);
-    end;
-
-  PROCEDURE restoreExample;
-    VAR html:T_arrayOfString;
-        htmlLine:ansistring;
-    begin
-      if (length(code)<=0) then exit;
-      setLength(html,0);
-      repeat
-        readln(examplesCache,htmlLine);
-        if htmlLine<>'' then append(html,htmlLine);
-      until (htmlLine='') or eof(examplesCache);
-      addExample(code,html);
+      demoCodeToHtmlCallback(code,txt,html,ids);
+      addExample(code,html,txt,ids);
       setLength(code,0);
       setLength(html,0);
     end;
@@ -155,30 +130,14 @@ PROCEDURE ensureBuiltinDocExamples;
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
-    addExample(httpServerExample,code);
-    if fileExists(htmlRoot+EXAMPLES_CACHE_FILE) then begin
-      assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);
-      reset(examplesCache);
-      //Read examples:---------------------------------------------------------------------
-      setLength(code,0);
-      for i:=0 to length(examples_txt)-1 do
-      if trim(examples_txt[i])='' then restoreExample
-                                      else append(code,examples_txt[i]);
-      restoreExample;
-      //---------------------------------------------------------------------:Read examples
-      close(examplesCache);
-    end else begin
-      assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);
-      rewrite(examplesCache);
-      //Read examples:---------------------------------------------------------------------
-      setLength(code,0);
-      for i:=0 to length(examples_txt)-1 do
-      if trim(examples_txt[i])='' then processExample
-                                      else append(code,examples_txt[i]);
-      processExample;
-      //---------------------------------------------------------------------:Read examples
-      close(examplesCache);
-    end;
+    addExample(httpServerExample,code,code,C_EMPTY_STRING_ARRAY);
+    //Read examples:---------------------------------------------------------------------
+    setLength(code,0);
+    for i:=0 to length(examples_txt)-1 do
+    if trim(examples_txt[i])='' then processExample
+                                    else append(code,examples_txt[i]);
+    processExample;
+    //---------------------------------------------------------------------:Read examples
     functionDocExamplesReady:=true;
   end;
 
@@ -191,17 +150,19 @@ CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
   begin
     id:=funcName;
     unqualifiedId:=shortName(funcName);
-    setLength(example,0);
+    setLength(txtExample,0);
+    setLength(htmlExample,0);
   end;
 
 DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
     {$ifdef debugMode}
-    if (length(example)=0) and functionDocExamplesReady then writeln(stdErr,'               undocumented builtin function: ',id);
+    if (length(txtExample)=0) and functionDocExamplesReady then writeln(stdErr,'               undocumented builtin function: ',id);
     {$endif}
     id:='';
     description:='';
-    setLength(example,0);
+    setLength(txtExample,0);
+    setLength(htmlExample,0);
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
@@ -228,9 +189,9 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   VAR i:longint;
   begin
     result:='<h4><br><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
-    if length(example)>0 then begin
+    if length(htmlExample)>0 then begin
       result:=result+'<br>Examples:<code>';
-      for i:=0 to length(example)-1 do result:=result+LineEnding+example[i];
+      for i:=0 to length(htmlExample)-1 do result:=result+LineEnding+htmlExample[i];
       result:=result+'</code>';
     end;
   end;
@@ -238,16 +199,21 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
 FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
   VAR i:longint;
   begin
-    result:=id+lineSplitter+replaceAll(description,'#',lineSplitter);
-    if length(example)>0 then result:=result+lineSplitter+'Examples:';
-    for i:=0 to length(example)-1 do result:=result+lineSplitter+StripHTML(example[i]);
+    result:=ECHO_MARKER+id+lineSplitter+join(formatTabs(split(ECHO_MARKER+replaceAll(replaceAll(description,'//',C_tabChar+'//'),'#',C_lineBreakChar+ECHO_MARKER),C_lineBreakChar)),lineSplitter);
+    if length(txtExample)>0 then result:=result+lineSplitter+'Examples:';
+    for i:=0 to length(txtExample)-1 do result:=result+lineSplitter+txtExample[i];
   end;
 
-PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST exampleHtml:T_arrayOfString; CONST skipFirstLine:boolean=false);
+PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
   VAR i:longint;
   begin
-    if skipFirstLine then for i:=1 to length(exampleHtml)-1 do append(example,exampleHtml[i])
-                     else append(example,exampleHtml);
+    if skipFirstLine then begin
+      for i:=1 to length(txt )-1 do append(txtExample ,txt [i]);
+      for i:=1 to length(html)-1 do append(htmlExample,html[i]);
+      exit;
+    end;
+    append(txtExample ,txt);
+    append(htmlExample,html);
   end;
 
 PROCEDURE makeHtmlFromTemplate();

@@ -484,7 +484,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.highlighter:=outputHighlighter;
     assistanceSynEdit.highlighter:=outputHighlighter;
 
-    helpHighlighter:=TSynMnhSyn.create(nil,msf_guessing);
+    helpHighlighter:=TSynMnhSyn.create(nil,msf_output);
     helpPopupMemo.highlighter:=helpHighlighter;
 
     debugHighlighter:=TSynMnhSyn.create(nil,msf_input);

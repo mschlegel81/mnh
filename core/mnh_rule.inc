@@ -286,7 +286,7 @@ FUNCTION T_rule.getCmdLineHelpText:ansistring;
   begin
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getCmdLineHelpText();
-
+    result:=join(formatTabs(split(result)),LineEnding);
   end;
 
 FUNCTION T_rule.getDocTxt:ansistring;
@@ -295,6 +295,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt();
     if ruleType in C_mutableRuleTypes then result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
+    result:=join(formatTabs(split(result)),LineEnding)
   end;
 
 FUNCTION T_rule.getDocHtml:ansistring;

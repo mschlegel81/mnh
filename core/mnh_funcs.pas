@@ -194,13 +194,13 @@ INITIALIZATION
   new(mnhSystemPseudoPackage,create);
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);//Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);//Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note',@note_imp,'note(...);//Raises a note of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn',@warn_imp,'warn(...);//Raises a warning of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize',@deserialize_impl,'deserialize(s:string);#Returns the literal represented by s which was created using serialize(x)');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;//Returns the command line parameters/switches passed on program startup');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);//Returns a string representing x.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize',@deserialize_impl,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits',@bits_impl,'bits(i:int);#Returns the bits of i');
   system.initCriticalSection(print_cs);
 FINALIZATION
