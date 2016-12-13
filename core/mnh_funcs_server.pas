@@ -1,7 +1,8 @@
 UNIT mnh_funcs_server;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics;
+USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics,
+    fphttpclient,lclintf;
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object
@@ -282,17 +283,42 @@ FUNCTION encodeRequest_impl intFuncSignature;
     end;
   end;
 
+FUNCTION httpGet_imp intFuncSignature;
+  VAR resultText:ansistring;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      try
+        resultText:=TFPCustomHTTPClient.SimpleGet(str0^.value);
+      except
+        on E : Exception do begin
+          resultText:='';
+          context.adapters^.raiseSystemError('httpGet failed with:'+E.message,tokenLocation);
+        end;
+      end;
+      result:=newStringLiteral(resultText);
+    end;
+  end;
+
+FUNCTION openUrl_imp intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newBoolLiteral(OpenURL(str0^.value))
+    else result:=nil;
+  end;
 
 INITIALIZATION
   {$WARN 5058 OFF}
   system.initCriticalSection(serverCS);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'extractParameters',@extractParameters_impl,'extractParameters(request:string);#Returns the parameters of an http request as a keyValueList');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,'extractRawParameters(request:string);#Returns the parameter part of an http request as a string');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'extractPath',@extractPath_impl,'extractPath(request:string);#Returns http-representation of error 404.#Returns the path part of an http request as a string');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'encodeRequest',@encodeRequest_impl,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);#Returns an http request from the given components');
+  registerRule(HTTP_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance');
+  registerRule(HTTP_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.');
+  registerRule(HTTP_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.');
+  registerRule(HTTP_NAMESPACE,'extractParameters',@extractParameters_impl,'extractParameters(request:string);#Returns the parameters of an http request as a keyValueList');
+  registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,'extractRawParameters(request:string);#Returns the parameter part of an http request as a string');
+  registerRule(HTTP_NAMESPACE,'extractPath',@extractPath_impl,'extractPath(request:string);#Returns http-representation of error 404.#Returns the path part of an http request as a string');
+  registerRule(HTTP_NAMESPACE,'encodeRequest',@encodeRequest_impl,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);#Returns an http request from the given components');
+  registerRule(HTTP_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
+  registerRule(HTTP_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);#Opens the URL in the default browser');
 
 FINALIZATION
   doneCriticalSection(serverCS);

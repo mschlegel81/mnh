@@ -62,7 +62,8 @@ TYPE
                REGEX_NAMESPACE          ,
                SYSTEM_BUILTIN_NAMESPACE ,
                FILES_BUILTIN_NAMESPACE  ,
-               TYPECAST_NAMESPACE
+               TYPECAST_NAMESPACE       ,
+               HTTP_NAMESPACE
                {$ifdef fullVersion},PLOT_NAMESPACE,GUI_NAMESPACE{$endif}
                );
 CONST
@@ -74,7 +75,8 @@ CONST
     'regex',
     'system',
     'files',
-    'typecast'
+    'typecast',
+    'http'
     {$ifdef fullVersion},'plot','gui'{$endif}
     );
 TYPE

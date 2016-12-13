@@ -56,7 +56,6 @@
       FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
-      FUNCTION getDocHtml:ansistring;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getParentId:T_idString;
       FUNCTION getLocation:T_tokenLocation; virtual;
@@ -596,18 +595,6 @@ FUNCTION T_subrule.getDocTxt():ansistring;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+getId+';';
     if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
-  end;
-
-FUNCTION T_subrule.getDocHtml():ansistring;
-  CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-  begin
-    result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
-    if comment<>'' then begin
-      if pos(C_lineBreakChar,comment)>0
-      then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
-      else result:=result+'<i>'+comment+'</i><br>';
-    end;
-    result:=result+'<code>'+toHtmlCode(getId)+'</code></td></tr>';
   end;
 
 FUNCTION T_subrule.getId:T_idString;
