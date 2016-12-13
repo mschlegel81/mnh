@@ -284,19 +284,26 @@ FUNCTION encodeRequest_impl intFuncSignature;
   end;
 
 FUNCTION httpGet_imp intFuncSignature;
-  VAR resultText:ansistring;
+  VAR resultText:ansistring='';
+      retriesRemaining:longint=16;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      try
-        resultText:=TFPCustomHTTPClient.SimpleGet(str0^.value);
-      except
-        on E : Exception do begin
-          resultText:='';
-          context.adapters^.raiseSystemError('httpGet failed with:'+E.message,tokenLocation);
+      while retriesRemaining>0 do begin
+        try
+          resultText:=TFPCustomHTTPClient.SimpleGet(str0^.value);
+          exit(newStringLiteral(resultText));
+        except
+          on E : Exception do begin
+            resultText:='';
+            if retriesRemaining=1 then begin
+              context.adapters^.raiseSystemError('httpGet failed with:'+E.message,tokenLocation);
+              exit(newStringLiteral(resultText));
+            end;
+          end;
         end;
+        dec(retriesRemaining);
       end;
-      result:=newStringLiteral(resultText);
     end;
   end;
 
