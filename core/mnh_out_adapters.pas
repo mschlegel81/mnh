@@ -507,17 +507,27 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
     for i:=0 to length(adapter)-1 do adapter[i]^.append(message);
   end;
 
-PROCEDURE T_adapters.raiseError      (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_evalError  ,errorMessage,errorLocation)); end;
-PROCEDURE T_adapters.raiseWarning    (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_warning    ,errorMessage,errorLocation)); end;
-PROCEDURE T_adapters.raiseNote       (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_note       ,errorMessage,errorLocation)); end;
-PROCEDURE T_adapters.raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_userDefined,errorMessage,errorLocation)); end;
-PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_userWarning,errorMessage,errorLocation)); end;
-PROCEDURE T_adapters.raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_userNote   ,errorMessage,errorLocation)); end;
-PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el5_systemError,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseError      (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_evalError   ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseWarning    (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_warning     ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseNote       (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_note        ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_userDefined ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_userWarning ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_userNote    ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el5_systemError ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.logTimingInfo    (CONST infoText:T_arrayOfString);                                                 begin raiseCustomMessage(message(mt_timing_info     ,infoText            ,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logCallStackInfo (CONST infoText:ansistring; CONST location:T_searchTokenLocation);                begin raiseCustomMessage(message(mt_el3_stackTrace  ,infoText            ,location)); end;
+PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);                                                          begin raiseCustomMessage(message(mt_reloadRequired  ,fileName            ,C_nilTokenLocation,fileName)); end;
+PROCEDURE T_adapters.printOut         (CONST s: T_arrayOfString);                                                       begin raiseCustomMessage(message(mt_printline       ,s                   ,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.clearPrint;                                                                                        begin raiseCustomMessage(message(mt_clearConsole    ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoDeclaration(CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_declaration,m                   ,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoInput      (CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_input      ,m                   ,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoOutput     (CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_output     ,m                   ,C_nilTokenLocation)); end;
 
-PROCEDURE T_adapters.echoDeclaration(CONST m:string); begin raiseCustomMessage(message(mt_echo_declaration,m,C_nilTokenLocation)); end;
-PROCEDURE T_adapters.echoInput      (CONST m:string); begin raiseCustomMessage(message(mt_echo_input      ,m,C_nilTokenLocation)); end;
-PROCEDURE T_adapters.echoOutput     (CONST m:string); begin raiseCustomMessage(message(mt_echo_output     ,m,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logMissingMain;
+  begin
+    hasMessageOfType[mt_el3_noMatchingMain]:=true;
+  end;
+
 
 PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
   VAR m:T_storedMessage;
@@ -525,29 +535,17 @@ PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
 
 {$ifdef fullVersion}
 PROCEDURE T_adapters.logGuiNeeded;                begin hasNeedGUIerror:=true; end;
-PROCEDURE T_adapters.logDeferredPlot;             begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true; end;
 FUNCTION T_adapters.isDeferredPlotLogged:boolean; begin result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay]; end;
-PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-                                                                hasMessageOfType[mt_plotCreatedWithInstantDisplay ]:=true; end;
+FUNCTION T_adapters.isDisplayTableLogged:boolean; begin result:=hasMessageOfType[mt_displayTable];                   end;
 PROCEDURE T_adapters.resetFlagsAfterPlotDone;     begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
                                                                 hasMessageOfType[mt_plotCreatedWithInstantDisplay ]:=false; end;
-PROCEDURE T_adapters.logPlotSettingsChanged;      begin         hasMessageOfType[mt_plotSettingsChanged           ]:=true;  end;
+PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+                                                                                                            raiseCustomMessage(message(mt_plotCreatedWithInstantDisplay ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
+PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location,fileName)); end;
+PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayImage                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 
-PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_plotFileCreated,fileName,location,fileName));
-  end;
-
-PROCEDURE T_adapters.logDisplayTable;
-  begin
-
-    hasMessageOfType[mt_displayTable]:=true;
-  end;
-
-FUNCTION T_adapters.isDisplayTableLogged:boolean;
-  begin
-    result:=hasMessageOfType[mt_displayTable];
-  end;
 
 {$ifdef IMIG}
 PROCEDURE T_adapters.logDisplayImage;
@@ -557,36 +555,6 @@ PROCEDURE T_adapters.logDisplayImage;
 
 {$endif}
 {$endif}
-
-PROCEDURE T_adapters.logTimingInfo(CONST infoText:T_arrayOfString);
-  begin
-    raiseCustomMessage(message(mt_timing_info,infoText,C_nilTokenLocation));
-  end;
-
-PROCEDURE T_adapters.logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el3_stackTrace,infoText,location));
-  end;
-
-PROCEDURE T_adapters.logMissingMain;
-  begin
-    hasMessageOfType[mt_el3_noMatchingMain]:=true;
-  end;
-
-PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);
-  begin
-    raiseCustomMessage(message(mt_reloadRequired,fileName,C_nilTokenLocation,fileName));
-  end;
-
-PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
-  begin
-    raiseCustomMessage(message(mt_printline,s,C_nilTokenLocation));
-  end;
-
-PROCEDURE T_adapters.clearPrint;
-  begin
-    raiseCustomMessage(message(mt_clearConsole,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
-  end;
 
 PROCEDURE T_adapters.clearAll;
   VAR i:longint;

@@ -28,6 +28,7 @@ FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
   VAR i:longint;
   begin
+    result:='';
     for i:=0 to length(raw)-1 do with raw[i] do begin
       case tokType of
         tt_literal, tt_aggregatorExpressionLiteral: result:=result+span('literal',txt);

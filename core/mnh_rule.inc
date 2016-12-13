@@ -30,7 +30,6 @@
       {$endif}
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
-      FUNCTION getDocHtml:ansistring;
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_listLiteral;
@@ -296,22 +295,6 @@ FUNCTION T_rule.getDocTxt:ansistring;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt();
     if ruleType in C_mutableRuleTypes then result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
     result:=join(formatTabs(split(result)),LineEnding)
-  end;
-
-FUNCTION T_rule.getDocHtml:ansistring;
-  VAR anyPublic:boolean=false;
-      i:longint;
-  begin
-    result:='<table><tr class="ruleHead"><td>';
-    result:=result+toHtmlCode(C_ruleTypeText[ruleType]+' ');
-    if id = MAIN_RULE_ID then result:=result+'<b>'+id+'</b>' else result:=result+id;
-    result:=result+'</td></tr>';
-    for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then begin
-      anyPublic:=true;
-      result:=result+subrules[i]^.getDocHtml();
-    end;
-    result:=result+'</table>';
-    if not(anyPublic) then result:='';
   end;
 
 FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;

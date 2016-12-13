@@ -56,7 +56,6 @@
       FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
-      FUNCTION getDocHtml:ansistring;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getParentId:T_idString;
       FUNCTION getLocation:T_tokenLocation; virtual;
@@ -598,18 +597,6 @@ FUNCTION T_subrule.getDocTxt():ansistring;
     if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
   end;
 
-FUNCTION T_subrule.getDocHtml():ansistring;
-  CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-  begin
-    result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
-    if comment<>'' then begin
-      if pos(C_lineBreakChar,comment)>0
-      then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
-      else result:=result+'<i>'+comment+'</i><br>';
-    end;
-    result:=result+'<code>'+toHtmlCode(getId)+'</code></td></tr>';
-  end;
-
 FUNCTION T_subrule.getId:T_idString;
   begin
     case typ of
@@ -724,6 +711,36 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
 FUNCTION T_subrule.acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
   begin
     result:=(length(pattern.sig)=1) and (literalType in pattern.sig[0].typeWhitelist);
+  end;
+
+PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
+  VAR bracketStack:T_TokenStack;
+  FUNCTION isEachIdentifier(CONST id:string):boolean;
+    VAR k:longint;
+    begin
+      result:=false;
+      for k:=0 to bracketStack.topIndex do
+      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach]) and
+         (bracketStack.dat[k]^.txt=id) or (id=EACH_INDEX_IDENTIFIER) then exit(true);
+    end;
+
+  VAR t:P_token;
+  begin
+    t:=first;
+    bracketStack.create;
+    while t<>nil do begin
+      with t^ do begin
+        case tokType of
+          tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(t);
+          tt_braceClose:bracketStack.quietPop;
+        end;
+        if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
+          P_package(location.package)^.resolveRuleId(t^,adapters);
+      end;
+      t:=t^.next;
+    end;
+    bracketStack.destroy;
+
   end;
 
 PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);

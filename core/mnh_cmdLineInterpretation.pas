@@ -1,8 +1,18 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_funcs_server{$endif},mnh_packages,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mnh_funcs_mnh;
+     mnh_funcs_mnh,
+     mnh_funcs_server,
+     mnh_funcs_types,
+     mnh_funcs_math,
+     mnh_funcs_strings,
+     mnh_funcs_list,
+     mnh_funcs_system,
+     mnh_funcs_files,
+     mnh_funcs_regex,
+     mnh_funcs_xml;
+
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);

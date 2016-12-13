@@ -20,7 +20,7 @@ The solution is valid.
   main('test')->printf("%s",unifiedDiff('original','modified',myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=6 ? line&" //comment added" : line),2));
 ***** grep *****
 ./demos/htmlFunctionPlotter.mnh
-    15:  try({begin
+    16:  try({begin
 ./demos/sudoku.mnh
     50:          //first try to solve the cell by restricting values based on already fixed/solved cells
     58:              //try to solve based on all cells (including unsolved)
@@ -3471,11 +3471,11 @@ out> ['X','Y','Z']
  in> minus([1..10]^2, 2*[0..50]);
 out> [1,49,81,9,25]
  in> sort(intRandom(10, 5));
-out> [0,1,3,9,9]
+out> [0,5,7,7,9]
  in> sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
 out> ['01','1','10','010','100']
  in> sortPerm(random(10));
-out> [6,0,1,3,8,7,9,4,5,2]
+out> [5,7,3,8,1,2,9,0,4,6]
  in> sortPerm(['a'..'c'..'a']);
 out> [0,4,1,3,2]
  in> intersect([0..1000]^2,[0..1000]^3);
@@ -3642,7 +3642,7 @@ Note  Creating new rule: input
  in> serialized :=input.serialize;
 Note  Creating new rule: serialized
  in> print(input.toString.byteLength,' > ', serialized.byteLength);
-213 > 174
+211 > 174
 out> void
  in> input==serialized.deserialize;
 out> true
@@ -3745,8 +3745,7 @@ out> 'file.newExtension'
  in> changeFileExt('file.2.extension','.newExtension');
 out> 'file.2.newExtension'
  in> httpError;
-Error  Unresolved identifier "httpError"
-Stack trace  :evaluation ()
+out> "HTTP/1.0 404\r\n"
  in> isBoolList([true, false]);
 out> true
  in> isBoolList(true);
@@ -3794,14 +3793,10 @@ out> '.ext'
  in> readXml('<?xml version="1.0"?><body empty="False"><first id="1" value="Text"><child dummy="True"/></first><second/></body>');
 out> [['body',[['empty','False']],[['first',[['id','1'],['value','Text']],[['child',[['dummy','True']],[]]]],['second',[],[]]]]]
  in> extractPath('/index.html?x=0&y=3%2Ax');
-Error  Unresolved identifier "extractPath"
-Stack trace  :evaluation ()
+out> '/index.html'
  in> extractParameters('/index.html?x=0&y=3%2Ax');
-Error  Unresolved identifier "extractParameters"
-Stack trace  :evaluation ()
+out> [['x',0],['y','3*x']]
  in> extractRawParameters('/index.html?x=0&y=3%2Ax');
-Error  Unresolved identifier "extractRawParameters"
-Stack trace  :evaluation ()
+out> 'x=0&y=3%2Ax'
  in> encodeRequest('127.0.0.1:3126','rest',[['user','anonymous'],['request','3*&7']]);
-Error  Unresolved identifier "encodeRequest"
-Stack trace  :evaluation ()
+out> '127.0.0.1:3126/rest?user=anonymous&request=3%2A%267'

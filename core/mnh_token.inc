@@ -498,7 +498,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_evaluationContext; CONST strict:boolean=false);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_evaluationContext);
   VAR t:P_token;
       rule:P_rule;
   begin
@@ -507,10 +507,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
       case t^.tokType of
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
-          if t^.tokType=tt_identifier then begin
-            if strict then inPackage^.resolveRuleId(t^,context.adapters)
-                      else inPackage^.resolveRuleId(t^,nil);
-          end;
+          if t^.tokType=tt_identifier then inPackage^.resolveRuleId(t^,nil);
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin

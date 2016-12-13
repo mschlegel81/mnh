@@ -2,10 +2,10 @@ UNIT mnh_packages;
 INTERFACE
 USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
-     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
-     Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,{$else}mySys,{$endif}
-     mnh_funcs_mnh, mnh_funcs_types, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_files,
-     mnh_funcs_regex, mnh_funcs_xml, mnh_datastores;
+     mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
+     Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,
+     mnh_datastores;
 
 {$define include_interface}
 TYPE
@@ -81,8 +81,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
-PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
-
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
@@ -127,6 +125,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     collector.destroy;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   VAR messages:T_storedMessages;
       i:longint;
@@ -168,6 +167,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
         for tmp in messageText do append(textOut,C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+tmp);
     end;
   end;
+{$endif}
 
 {$define include_implementation}
 {$include mnh_token.inc}
@@ -606,7 +606,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
           end;
           lu_forCodeAssistance: if (first<>nil) and first^.areBracketsPlausible(context.adapters^) then begin
-            predigest(first,@self,context,true);
+            predigest(first,@self,context);
+            resolveBuiltinIDs(first,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
           end
           else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,50),first^.location);
@@ -1150,9 +1151,8 @@ INITIALIZATION
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
   mnh_funcs_plot.generateRow:=@generateRow;
-  {$endif}
-  //callbacks in html
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
+  {$endif}
   {$include mnh_funcs.inc}
 {$undef include_initialization}
 

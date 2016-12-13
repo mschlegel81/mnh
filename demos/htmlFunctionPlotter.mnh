@@ -12,6 +12,7 @@ pageSet(rawParameters,parameters)->begin
   local validationMessages:=[];
   //transform function in string form to expression
   local f:=void;
+  print('Function input: ',escape(f_));
   try({begin
         //replace "x" by valid expression variable "$x"
         f:=f_.replace('x','$x').toExpression;
@@ -49,7 +50,6 @@ pageSet(rawParameters,parameters)->begin
   ? begin
       //if there are no validation messages, add link to image and generate image
       htmlCode&='<img src="plotImg.png?'&rawParameters&'">';
-      local X:=([0,1]|random(sp-2)).sort*(x1-x0)+x0;
       plot(f,x0,x1,sp,'1.5 red');
       imageCode:=wrapTextInHttp(plot.renderToString(400,400,4),'image/png');
     end
@@ -63,8 +63,24 @@ pageSet(rawParameters,parameters)->begin
    ['/plotImg.png',imageCode]];
 end;
 
+memoized unhandled(method,request,protocol)->begin
+  print("Unhandled request.",
+        "\n  Method  : ",method .escape,
+        "\n  Request : ",request.escape,
+        "\n  Protocol: ",request.escape);
+  httpError;
+end;
+
+serve(method,request,protocol)->begin
+  pageSet(request.extractRawParameters,request.extractParameters)[request.extractPath]
+  orElse unhandled@$params;
+end;
+
 main->begin
-  startHttpServer('localhost:43210',{pageSet($2,$3)[$1] orElse httpError},0);
+  startHttpServer('localhost:43210',::serve,0);
   openUrl('http://localhost:43210/page.html');
   ask('Press o.k. to shutdown server.',['o.k.']);
 end;
+
+req:='/page.html?f=sin%28x%5E2%29*s%5E2&x0=0&x1=10&samples=1000';
+pageSet(req.extractRawParameters,req.extractParameters);

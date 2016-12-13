@@ -20,7 +20,7 @@ The solution is valid.
   main('test')->printf("%s",unifiedDiff('original','modified',myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=6 ? line&" //comment added" : line),2));
 ***** grep *****
 ./demos/htmlFunctionPlotter.mnh
-    15:  try({begin
+    16:  try({begin
 ./demos/sudoku.mnh
     50:          //first try to solve the cell by restricting values based on already fixed/solved cells
     58:              //try to solve based on all cells (including unsolved)

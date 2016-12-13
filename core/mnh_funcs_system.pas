@@ -2,7 +2,7 @@ UNIT mnh_funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,
-     sysutils, Classes,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
+     sysutils, Classes,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,
      LazFileUtils,LazUTF8;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
@@ -49,30 +49,6 @@ FUNCTION systime_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0)
     then exit(newRealLiteral(now));
-  end;
-
-FUNCTION httpGet_imp intFuncSignature;
-  VAR resultText:ansistring;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      try
-        resultText:=TFPCustomHTTPClient.SimpleGet(str0^.value);
-      except
-        on E : Exception do begin
-          resultText:='';
-          context.adapters^.raiseSystemError('httpGet failed with:'+E.message,tokenLocation);
-        end;
-      end;
-      result:=newStringLiteral(resultText);
-    end;
-  end;
-
-FUNCTION openUrl_imp intFuncSignature;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(OpenURL(str0^.value))
-    else result:=nil;
   end;
 
 FUNCTION beep_imp intFuncSignature;
@@ -231,8 +207,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime',@systime_imp,'systime;#Returns the current time as a real number');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep',@beep_imp,'beep;#Makes a beep'{$ifdef Windows}+'#beep(freq:int,duration:int);#Makes a beep of given frequency and duration'{$endif});
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);#Opens the URL in the default browser');
   {$ifdef Windows}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
   {$endif}

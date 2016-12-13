@@ -111,8 +111,7 @@ TYPE
       //links to other objects
       parentContext:P_evaluationContext;
       asyncChildCount:longint;
-      initialAdapters:P_adapters;
-      currentAdapters:P_adapters;
+      myAdapters:P_adapters;
       //token recycling
       recycler:record
         dat:array[0..2047] of P_token;
@@ -157,7 +156,7 @@ TYPE
       PROCEDURE afterEvaluation;
 
       //Basic property queries:
-      PROPERTY adapters:P_adapters read currentAdapters;
+      PROPERTY adapters:P_adapters read myAdapters;
       FUNCTION hasOption(CONST option:T_contextOption):boolean; inline;
       PROCEDURE removeOption(CONST option:T_contextOption);
       PROCEDURE addOption(CONST option:T_contextOption);
@@ -188,7 +187,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
-      PROCEDURE printCallStack;
+      PROCEDURE printCallStack(CONST targetAdapters:P_adapters=nil);
       PROCEDURE clearCallStack;
 
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
@@ -414,8 +413,7 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
       fill:=0;
     end;
     valueStore.create;
-    initialAdapters:=outAdapters;
-    currentAdapters:=initialAdapters;
+    myAdapters:=outAdapters;
     setLength(callStack,0);
     wallClock.create(@initTimer,@disposeTimer);
     {$ifdef fullVersion}
@@ -470,7 +468,7 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath
     profilingMap.clear;
     {$endif}
     if cp_clearTimerOnStart in options then begin
-      if {$ifdef fullVersion} (cp_profile in options) or {$endif} initialAdapters^.doShowTimingInfo then begin
+      if {$ifdef fullVersion} (cp_profile in options) or {$endif} myAdapters^.doShowTimingInfo then begin
         wallClock.value.clear;
         wallClock.value.start;
         with timingInfo do begin
@@ -487,10 +485,7 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath
       end;
       {$endif}
     end;
-    currentAdapters:=initialAdapters;
-    if cp_clearAdaptersOnStart in options then begin
-      initialAdapters^.clearAll;
-    end;
+    if cp_clearAdaptersOnStart in options then myAdapters^.clearAll;
   end;
 
 PROCEDURE T_evaluationContext.afterEvaluation;
@@ -607,12 +602,12 @@ PROCEDURE T_evaluationContext.afterEvaluation;
     valueStore.clear;
     clearCallStack;
     if cp_logEndOfEvaluation in options then begin
-      initialAdapters^.stopEvaluation;
+      myAdapters^.stopEvaluation;
       while asyncChildCount>0 do begin
         ThreadSwitch;
         sleep(1);
       end;
-      initialAdapters^.logEndOfEvaluation;
+      myAdapters^.logEndOfEvaluation;
       if wantBasicTiming then logTimingInfo;
       {$ifdef fullVersion}
       if (cp_profile in options) and adapters^.doShowTimingInfo then logProfilingInfo;
@@ -651,7 +646,7 @@ FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
     if not(cp_createDetachedTask in options) then exit(nil);
     if parentContext=nil then begin
       InterLockedIncrement(asyncChildCount);
-      new(result,createContext(initialAdapters,ct_normal));
+      new(result,createContext(myAdapters,ct_normal));
       result^.parentContext:=@self;
       result^.options:=options-[cp_timing,cp_queryParentValueStore];
       result^.options:=[cp_notifyParentOfAsyncTaskEnd];
@@ -662,20 +657,19 @@ FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
 
 FUNCTION T_evaluationContext.enterTryStatementReturningPreviousAdapters: P_adapters;
   begin
-    result:=currentAdapters;
-    currentAdapters:=result^.collectingClone;
+    result:=myAdapters;
+    myAdapters:=result^.collectingClone;
   end;
 
 PROCEDURE T_evaluationContext.leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
   begin
-    previousAdapters^.copyDataFromCollectingCloneDisposing(currentAdapters,tryBodyFailed);
-    currentAdapters:=previousAdapters;
+    previousAdapters^.copyDataFromCollectingCloneDisposing(myAdapters,tryBodyFailed);
+    myAdapters:=previousAdapters;
   end;
 
 PROCEDURE T_evaluationContext.attachWorkerContext(CONST newParent: P_evaluationContext);
   begin
-    initialAdapters:=newParent^.initialAdapters;
-    currentAdapters:=newParent^.currentAdapters;
+    myAdapters:=newParent^.myAdapters;
     parentContext:=newParent;
     options:=parentContext^.options-[cp_timing]+[cp_queryParentValueStore];
   end;
@@ -847,15 +841,19 @@ PROCEDURE T_evaluationContext.reportVariables(
   end;
 {$endif}
 
-PROCEDURE T_evaluationContext.printCallStack;
+PROCEDURE T_evaluationContext.printCallStack(CONST targetAdapters:P_adapters=nil);
   VAR i:longint;
       p:P_evaluationContext;
+      a:P_adapters;
   begin
+    a:=targetAdapters;
+    if a=nil then a:=myAdapters;
+    if a=nil then exit;
+
     p:=parentContext;
-    if adapters=nil then exit;
     for i:=length(callStack)-1 downto 0 do with callStack[i] do
-    adapters^.logCallStackInfo(callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
-    if p<>nil then p^.printCallStack();
+    a^.logCallStackInfo(callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
+    if p<>nil then p^.printCallStack(a);
   end;
 
 PROCEDURE T_evaluationContext.clearCallStack;

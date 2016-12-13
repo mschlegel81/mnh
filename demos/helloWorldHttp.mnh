@@ -1,9 +1,13 @@
 mutable counter:=0;
+
+serve(method,request='/page.html',protocol)->begin counter+=1; wrapTextInHttp("Hello world"); end;
+serve(method,request,protocol)->httpError;
+
 main->begin
   //start server without timeout (=0) -> server will stop on end of evaluation
-  startHttpServer('127.0.0.1:65432',{wrapTextInHttp("Hello world "&chars[counter+=1])},0);
+  startHttpServer('127.0.0.1:65432',::serve,0);
   //open provided URL
-  openUrl('http://127.0.0.1:65432');
+  openUrl('http://127.0.0.1:65432/page.html');
   //wait until server has received at least one request
-  while(counter=0,sleep(0.1));
+  while(counter<=0,sleep(0.1));
 end;

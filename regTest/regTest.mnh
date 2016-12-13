@@ -107,6 +107,7 @@ private printExecute(code:stringList)->begin
 end;
 
 private executeExamples(examplesFile:string)->begin
+  resetRandom;
   print('***** examples from file *****');
   local codeToExecute:=[];
   local inputLines:=fileLines(examplesFile);
@@ -148,7 +149,7 @@ end;
 main->main_impl('',false,true);
 //*Retest without examples file
 main('retest')->main_impl('',true,true);
-//*Display info on mssing test cases
+//*Display info on missing test cases
 main('info')->begin
   local untested:=files('../demos/*.mnh').expandedFileName.minus(
               inspect['uses'].getInner(1).expandedFileName);
