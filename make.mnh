@@ -165,7 +165,7 @@ end;
 private testIsPassedAccordingToLog(B:BuildConfig)->
   testLog.log[testLog.log.getInner(0)=B[1] and testLog.log.getInner(1)=ensureCodeHash].size>0;
 
-private makeDistro->begin
+private makeDistro->isLinux ? fail : begin
   BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
   execPipeless('..\upx.exe',['-9','mnh_light.exe']);
   call7z(['mnh.exe','mnh_light.exe'],'64bit_windows');
@@ -175,8 +175,9 @@ private makeDistro->begin
   ? begin
       execPipeless('..\upx.exe',['-9','mnh_light']);
       call7z(['mnh','mnh_light'],'linux');
+      call7z(['mnh','mnh.exe','mnh_light','mnh_light.exe','bin32/mnh.exe','bin32/mnh_light.exe'],'all');
     end
-  : void;
+  : call7z(['mnh.exe','mnh_light.exe','bin32/mnh.exe','bin32/mnh_light.exe'],'all');
   fileExists('distro_hook.mnh')
   ? executor.execPipeless(['distro_hook.mnh'])
   : void;
