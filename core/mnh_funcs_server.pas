@@ -21,6 +21,8 @@ TYPE
     PROCEDURE killQuickly;
   end;
 
+  T_httpMethod=(hm_get,hm_put,hm_post);
+
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -101,12 +103,16 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     setLength(currentUpServers,length(currentUpServers)+1);
     currentUpServers[length(currentUpServers)-1]:=@self;
     socket.create(ip);
+    context^.resetForEvaluation(nil);
     system.leaveCriticalSection(serverCS);
   end;
 
 DESTRUCTOR T_microserver.destroy;
   VAR i,j:longint;
   begin
+    disposeLiteral(servingExpression);
+    context^.afterEvaluation;
+    dispose(context,destroy);
     system.enterCriticalSection(serverCS);
     socket.destroy;
     j:=0;
@@ -135,7 +141,6 @@ PROCEDURE T_microserver.serve;
       sleepTime:longint=minSleepTime;
 
   begin
-    context^.resetForEvaluation(nil);
     context^.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
     lastActivity:=now;
@@ -163,10 +168,7 @@ PROCEDURE T_microserver.serve;
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
     until timedOut or not(context^.adapters^.noErrors);
-    disposeLiteral(servingExpression);
     context^.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
-    context^.afterEvaluation;
-    dispose(context,destroy);
     up:=false;
   end;
 
@@ -283,29 +285,31 @@ FUNCTION encodeRequest_impl intFuncSignature;
     end;
   end;
 
-FUNCTION httpGet_imp intFuncSignature;
+FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost');
   VAR resultText:ansistring='';
-      retriesRemaining:longint=16;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      while retriesRemaining>0 do begin
-        try
-          resultText:=TFPCustomHTTPClient.SimpleGet(str0^.value);
-          exit(newStringLiteral(resultText));
-        except
-          on E : Exception do begin
-            resultText:='';
-            if retriesRemaining=1 then begin
-              context.adapters^.raiseSystemError('httpGet failed with:'+E.message,tokenLocation);
-              exit(newStringLiteral(resultText));
-            end;
-          end;
+      try
+        case method of
+          hm_put:  resultText:=TFPCustomHTTPClient.SimplePut (str0^.value);
+          hm_post: resultText:=TFPCustomHTTPClient.SimplePost(str0^.value);
+          else     resultText:=TFPCustomHTTPClient.SimpleGet (str0^.value);
         end;
-        dec(retriesRemaining);
+      except
+        on E : Exception do begin
+          resultText:='';
+          context.adapters^.raiseWarning(methodName[method]+' failed with:'+E.message,tokenLocation);
+        end;
       end;
+      exit(newStringLiteral(resultText));
     end;
   end;
+
+FUNCTION httpGet_imp  intFuncSignature; begin result:=httpGetPutPost(hm_get ,params,tokenLocation,context); end;
+FUNCTION httpPut_imp  intFuncSignature; begin result:=httpGetPutPost(hm_put ,params,tokenLocation,context); end;
+FUNCTION httpPost_imp intFuncSignature; begin result:=httpGetPutPost(hm_post,params,tokenLocation,context); end;
 
 FUNCTION openUrl_imp intFuncSignature;
   begin
@@ -324,7 +328,9 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,'extractRawParameters(request:string);//Returns the parameter part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'extractPath',@extractPath_impl,'extractPath(request:string);//Returns the path part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'encodeRequest',@encodeRequest_impl,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);//Returns an http request from the given components');
-  registerRule(HTTP_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string');
+  registerRule(HTTP_NAMESPACE,'httpGet' ,@httpGet_imp ,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string');
+  registerRule(HTTP_NAMESPACE,'httpPut' ,@httpPut_imp ,'httpPut(URL:string);');
+  registerRule(HTTP_NAMESPACE,'httpPost',@httpPost_imp,'httpPost(URL:string);');
   registerRule(HTTP_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);//Opens the URL in the default browser');
 
 FINALIZATION
