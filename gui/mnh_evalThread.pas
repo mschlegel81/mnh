@@ -737,9 +737,11 @@ FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
   VAR k:longint;
   PROCEDURE addErrors(CONST list:T_storedMessages);
     VAR i:longint;
+        s:string;
     begin
-      for i:=0 to length(list)-1 do with list[i] do begin
-        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage);
+      for i:=0 to length(list)-1 do with list[i] do for s in messageText do begin
+        if k>=length(result) then setLength(result,k+1);
+        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(s);
         inc(k);
       end;
     end;

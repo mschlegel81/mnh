@@ -501,7 +501,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       'Declaration time    ',
       'Interpretation time ',
       'Unaccounted for     ',
-      '                    ');
+      'Total               ');
 
     VAR timeValue :array[T_profileCategory] of double;
         timeString:array[T_profileCategory] of string;
@@ -510,6 +510,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         timeUnit:string;
         longest:longint=0;
         formatString:ansistring;
+        timingMessage:T_arrayOfString;
 
     FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
     FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
@@ -530,11 +531,12 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       end;
       for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=fmt(timeValue[cat]);
       for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=CATEGORY_DESCRIPTION[cat]+fmt(timeString[cat]);
+      timingMessage:=C_EMPTY_STRING_ARRAY;
       for cat:=low(T_profileCategory) to high(T_profileCategory) do begin
-        if cat=high(T_profileCategory) then
-        adapters^.logTimingInfo(StringOfChar('-',length(timeString[cat])));
-        adapters^.logTimingInfo(                        timeString[cat]  );
+        if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
+        append(timingMessage,timeString[cat]);
       end;
+      adapters^.logTimingInfo(timingMessage);
     end;
   {$ifdef fullVersion}
   PROCEDURE logProfilingInfo;

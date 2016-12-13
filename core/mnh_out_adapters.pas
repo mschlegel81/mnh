@@ -3,10 +3,10 @@ INTERFACE
 USES mnh_constants, mnh_basicTypes, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif}{$ifdef imig},mypics{$endif};
 TYPE
   T_storedMessage = record
-    messageType : T_messageType;
-    simpleMessage: ansistring;
-    multiMessage: T_arrayOfString;
-    location: T_searchTokenLocation;
+    messageType: T_messageType;
+    location:    T_searchTokenLocation;
+    messageText: T_arrayOfString;
+    data: ansistring;
   end;
   T_storedMessages = array of T_storedMessage;
   T_adapterType=(at_unknown,
@@ -99,7 +99,7 @@ TYPE
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
       hasMessageOfType:array[T_messageType] of boolean;
-      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      //PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
     public
       {$ifdef fullVersion}
@@ -112,13 +112,13 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clearErrors;
-      PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseUserError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseUserWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseUserNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseSystemError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseError      (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseWarning    (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseNote       (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
 
       PROCEDURE echoDeclaration(CONST m:string);
       PROCEDURE echoInput      (CONST m:string);
@@ -139,7 +139,7 @@ TYPE
       PROCEDURE logDisplayImage;
       {$endif}
       {$endif}
-      PROCEDURE logTimingInfo(CONST infoText:ansistring);
+      PROCEDURE logTimingInfo(CONST infoText:T_arrayOfString);
       PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
       PROCEDURE logMissingMain;
       PROCEDURE logReloadRequired(CONST fileName:string);
@@ -208,37 +208,41 @@ VAR
 {$ifdef fullVersion}
   gui_started:boolean=false;
 {$endif}
-FUNCTION message(CONST messageType  : T_messageType;
-                 CONST simpleMessage: ansistring;
-                 CONST location     : T_searchTokenLocation):T_storedMessage;
-FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
-FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
+FUNCTION defaultFormatting(CONST message:T_storedMessage; CONST includeGuiMarker:boolean): T_arrayOfString;
 OPERATOR :=(s:string):T_messageTypeSet;
+FUNCTION clearConsoleMessage:T_storedMessage;
 IMPLEMENTATION
-FUNCTION message(CONST messageType  : T_messageType;
-                 CONST simpleMessage: ansistring;
-                 CONST location     : T_searchTokenLocation):T_storedMessage;
+FUNCTION message(CONST messageType: T_messageType;
+                 CONST messageText: T_arrayOfString;
+                 CONST location   : T_searchTokenLocation;
+                 CONST data       : ansistring=''):T_storedMessage;
   begin
-    result.messageType  :=messageType  ;
-    result.simpleMessage:=simpleMessage;
-    result.location     :=location     ;
-    result.multiMessage:=C_EMPTY_STRING_ARRAY;
+    result.messageType:=messageType;
+    result.messageText:=messageText;
+    result.location   :=location;
+    result.data       :=data;
   end;
 
-FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
+FUNCTION clearConsoleMessage:T_storedMessage;
   begin
-    with message do if (length(simpleMessage)=0) and (length(multiMessage)>0)
-    then result:=defaultFormatting(messageType,join(multiMessage,C_lineBreakChar),location)
-    else result:=defaultFormatting(messageType,simpleMessage,location);
+    result:=message(mt_clearConsole,C_EMPTY_STRING_ARRAY,C_nilTokenLocation);
   end;
 
-FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
+FUNCTION defaultFormatting(CONST message: T_storedMessage; CONST includeGuiMarker:boolean): T_arrayOfString;
+  VAR i:longint;
+      loc:string='';
   begin
-    if messageType=mt_printline then exit(message);
-    with C_messageTypeMeta[messageType] do begin
-      result:=prefix;
-      if includeLocation then result:=result+ansistring(location)+' ';
-      result:=result+message;
+    if message.messageType=mt_printline then exit(message.messageText);
+    with message do begin
+      setLength(result,length(messageText));
+      with C_messageTypeMeta[messageType] do begin
+        if includeLocation then loc:=ansistring(location)+' ';
+        for i:=0 to length(result)-1 do begin
+          result[i]:=prefix+loc+messageText[i];
+          if i=0 then loc:=StringOfChar(' ',length(loc));
+          if includeGuiMarker then result[i]:=C_messageClassMeta[mClass].guiMarker+result[i];
+        end;
+      end;
     end;
   end;
 
@@ -315,19 +319,20 @@ DESTRUCTOR T_consoleOutAdapter.destroy;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
   VAR i:longint;
+      s:string;
   begin
     result:=message.messageType in messageTypesToInclude;
     if result then with message do case messageType of
       mt_clearConsole: mySys.clearConsole;
       mt_printline: begin
         if not(mySys.isConsoleShowing) then mySys.showConsole;
-        for i:=0 to length(multiMessage)-1 do begin
-          if multiMessage[i]=C_formFeedChar
+        for i:=0 to length(messageText)-1 do begin
+          if messageText[i]=C_formFeedChar
           then mySys.clearConsole
-          else writeln(multiMessage[i]);
+          else writeln(messageText[i]);
         end;
       end
-      else writeln(stdErr,defaultFormatting(message));
+      else for s in defaultFormatting(message,false) do writeln(stdErr,s);
     end;
   end;
 //==========================================================:T_consoleOutAdapter
@@ -407,7 +412,7 @@ FUNCTION T_textFileOutAdapter.switchFile(CONST newFileName: string):boolean;
 PROCEDURE T_textFileOutAdapter.flush;
   VAR i,j:longint;
       handle:text;
-
+      s:string;
   begin
     enterCriticalSection(cs);
     if length(storedMessages)>0 then begin
@@ -418,8 +423,8 @@ PROCEDURE T_textFileOutAdapter.flush;
         else rewrite(handle);
         forceRewrite:=false;
         for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
-          mt_printline: for j:=0 to length(multiMessage)-1 do writeln(handle,multiMessage[j]);
-          else writeln(handle,defaultFormatting(storedMessages[i]));
+          mt_printline: for j:=0 to length(messageText)-1 do writeln(handle,messageText[j]);
+          else for s in defaultFormatting(storedMessages[i],false) do writeln(handle,s);
         end;
         clear;
         close(handle);
@@ -481,15 +486,6 @@ PROCEDURE T_adapters.clearErrors;
     errorCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  VAR m:T_storedMessage;
-  begin
-    m.messageType:=thisErrorLevel;
-    m.simpleMessage:=errorMessage;
-    m.location:=errorLocation;
-    raiseCustomMessage(m);
-  end;
-
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
@@ -511,38 +507,13 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
     for i:=0 to length(adapter)-1 do adapter[i]^.append(message);
   end;
 
-PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el3_evalError,errorMessage,errorLocation));
-  end;
-
-PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el2_warning,errorMessage,errorLocation));
-  end;
-
-PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el1_note,errorMessage,errorLocation));
-  end;
-
-PROCEDURE T_adapters.raiseUserError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el3_userDefined,errorMessage,errorLocation));
-  end;
-PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el2_userWarning,errorMessage,errorLocation));
-  end;
-PROCEDURE T_adapters.raiseUserNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el1_userNote,errorMessage,errorLocation));
-  end;
-
-PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
-  begin
-    raiseCustomMessage(message(mt_el5_systemError,errorMessage,errorLocation));
-  end;
+PROCEDURE T_adapters.raiseError      (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_evalError  ,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseWarning    (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_warning    ,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseNote       (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_note       ,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_userDefined,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_userWarning,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_userNote   ,errorMessage,errorLocation)); end;
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el5_systemError,errorMessage,errorLocation)); end;
 
 PROCEDURE T_adapters.echoDeclaration(CONST m:string); begin raiseCustomMessage(message(mt_echo_declaration,m,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.echoInput      (CONST m:string); begin raiseCustomMessage(message(mt_echo_input      ,m,C_nilTokenLocation)); end;
@@ -553,45 +524,23 @@ PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
   begin for m in stored do raiseCustomMessage(m); end;
 
 {$ifdef fullVersion}
-PROCEDURE T_adapters.logGuiNeeded;
-  begin
-    hasNeedGUIerror:=true;
-  end;
-
-PROCEDURE T_adapters.logDeferredPlot;
-  begin
-    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
-  end;
-
-FUNCTION T_adapters.isDeferredPlotLogged:boolean;
-  begin
-    result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay];
-  end;
-
-PROCEDURE T_adapters.logInstantPlot;
-  begin
-    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-    hasMessageOfType[mt_plotCreatedWithInstantDisplay]:=true;
-  end;
-
-PROCEDURE T_adapters.resetFlagsAfterPlotDone;
-  begin
-    hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-    hasMessageOfType[mt_plotCreatedWithInstantDisplay]:=false;
-  end;
-
-PROCEDURE T_adapters.logPlotSettingsChanged;
-  begin
-    hasMessageOfType[mt_plotSettingsChanged]:=true;
-  end;
+PROCEDURE T_adapters.logGuiNeeded;                begin hasNeedGUIerror:=true; end;
+PROCEDURE T_adapters.logDeferredPlot;             begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true; end;
+FUNCTION T_adapters.isDeferredPlotLogged:boolean; begin result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay]; end;
+PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+                                                                hasMessageOfType[mt_plotCreatedWithInstantDisplay ]:=true; end;
+PROCEDURE T_adapters.resetFlagsAfterPlotDone;     begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+                                                                hasMessageOfType[mt_plotCreatedWithInstantDisplay ]:=false; end;
+PROCEDURE T_adapters.logPlotSettingsChanged;      begin         hasMessageOfType[mt_plotSettingsChanged           ]:=true;  end;
 
 PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
   begin
-    raiseCustomMessage(message(mt_plotFileCreated,fileName,location));
+    raiseCustomMessage(message(mt_plotFileCreated,fileName,location,fileName));
   end;
 
 PROCEDURE T_adapters.logDisplayTable;
   begin
+
     hasMessageOfType[mt_displayTable]:=true;
   end;
 
@@ -603,13 +552,13 @@ FUNCTION T_adapters.isDisplayTableLogged:boolean;
 {$ifdef IMIG}
 PROCEDURE T_adapters.logDisplayImage;
   begin
-    raiseCustomMessage(mt_displayImage,'',C_nilTokenLocation);
+    raiseCustomMessage(message(mt_displayImage,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
   end;
 
 {$endif}
 {$endif}
 
-PROCEDURE T_adapters.logTimingInfo(CONST infoText:ansistring);
+PROCEDURE T_adapters.logTimingInfo(CONST infoText:T_arrayOfString);
   begin
     raiseCustomMessage(message(mt_timing_info,infoText,C_nilTokenLocation));
   end;
@@ -626,20 +575,17 @@ PROCEDURE T_adapters.logMissingMain;
 
 PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);
   begin
-    raiseCustomMessage(mt_reloadRequired,fileName,C_nilTokenLocation);
+    raiseCustomMessage(message(mt_reloadRequired,fileName,C_nilTokenLocation,fileName));
   end;
 
 PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
-  VAR m:T_storedMessage;
   begin
-    m.messageType:=mt_printline;
-    m.multiMessage:=s;
-    raiseCustomMessage(m);
+    raiseCustomMessage(message(mt_printline,s,C_nilTokenLocation));
   end;
 
 PROCEDURE T_adapters.clearPrint;
   begin
-    raiseCustomMessage(mt_clearConsole,'',C_nilTokenLocation);
+    raiseCustomMessage(message(mt_clearConsole,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
   end;
 
 PROCEDURE T_adapters.clearAll;
@@ -720,17 +666,17 @@ PROCEDURE T_adapters.updateErrorlevel;
 
 PROCEDURE T_adapters.haltEvaluation;
   begin
-    raiseCustomMessage(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
+    raiseCustomMessage(message(mt_el5_haltMessageReceived, C_EMPTY_STRING_ARRAY, C_nilTokenLocation));
   end;
 
 PROCEDURE T_adapters.logEndOfEvaluation;
   begin
-    raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+    raiseCustomMessage(message(mt_endOfEvaluation,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
   end;
 
 PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
   begin
-    raiseCustomMessage(mt_el5_systemError,errorMessage,C_nilTokenLocation);
+    raiseCustomMessage(message(mt_el5_systemError,errorMessage,C_nilTokenLocation));
   end;
 
 FUNCTION T_adapters.addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;

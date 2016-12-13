@@ -1,6 +1,6 @@
 UNIT mnh_imig;
 INTERFACE
-USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mnh_basicTypes,sysutils,
+USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mnh_basicTypes,sysutils,myGenerics,
      mypics,
      ig_gradient,
      ig_perlin,

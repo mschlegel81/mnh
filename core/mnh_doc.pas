@@ -1,9 +1,8 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html;
+USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html, serializationUtil;
 TYPE
   T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
-  T_registerDocProcedure=PROCEDURE(CONST qualifiedId,explanation:ansistring);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
 TYPE
   P_intrinsicFunctionDocumentation = ^T_intrinsicFunctionDocumentation;
@@ -88,6 +87,7 @@ PROCEDURE ensureBuiltinDocExamples;
         doc:P_intrinsicFunctionDocumentation;
         {$ifdef debugMode} first:boolean=true; j:longint; {$endif}
     begin
+      if length(exampleSource)<=0 then exit;
       ids.create;
       if copy(exampleSource[0],1,3)='//#' then begin
         ids.add(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
@@ -105,8 +105,19 @@ PROCEDURE ensureBuiltinDocExamples;
         {$endif}
         doc^.addExample(html,txt,leadingIdLine);
       end;
+      {$ifdef debugMode}
+      if first then begin
+        write('The following example is not assignable. IDs: ');
+        for j:=0 to ids.size-1 do write(ids[j],' ');
+        writeln;
+        for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
+      end;
+      {$endif}
       ids.destroy
     end;
+
+  CONST EXAMPLES_CACHE_FILE= '/examples.dat';
+  VAR examplesToStore:array of array[0..3] of T_arrayOfString;
 
   PROCEDURE processExample;
     VAR html,txt,ids:T_arrayOfString;
@@ -114,8 +125,62 @@ PROCEDURE ensureBuiltinDocExamples;
       if (length(code)<=0) then exit;
       demoCodeToHtmlCallback(code,txt,html,ids);
       addExample(code,html,txt,ids);
-      setLength(code,0);
-      setLength(html,0);
+      setLength(examplesToStore,length(examplesToStore)+1);
+      examplesToStore[length(examplesToStore)-1,0]:=code;
+      examplesToStore[length(examplesToStore)-1,1]:=txt;
+      examplesToStore[length(examplesToStore)-1,2]:=html;
+      examplesToStore[length(examplesToStore)-1,3]:=ids;
+      code:=C_EMPTY_STRING_ARRAY;
+    end;
+
+  PROCEDURE storeExamples;
+    VAR wrapper:T_bufferedOutputStreamWrapper;
+        i,j:longint;
+    PROCEDURE writeArrayOfString(CONST a:T_arrayOfString);
+      VAR s:string;
+      begin
+        wrapper.writeNaturalNumber(length(a));
+        for s in a do wrapper.writeAnsiString(s);
+      end;
+
+    begin
+      wrapper.createToWriteToFile(htmlRoot+EXAMPLES_CACHE_FILE);
+      wrapper.writeAnsiString(CODE_HASH);
+      wrapper.writeNaturalNumber(length(examplesToStore));
+      for i:=0 to length(examplesToStore)-1 do for j:=0 to 3 do writeArrayOfString(examplesToStore[i,j]);
+      wrapper.destroy;
+    end;
+
+  FUNCTION canRestoreExamples:boolean;
+    VAR wrapper:T_bufferedInputStreamWrapper;
+        exampleCount,ei:longint;
+
+    FUNCTION readArrayOfString:T_arrayOfString;
+      VAR i:longint;
+      begin
+        setLength(result,wrapper.readNaturalNumber);
+        for i:=0 to length(result)-1 do result[i]:=wrapper.readAnsiString;
+      end;
+
+    VAR code,txt,html,ids:T_arrayOfString;
+    begin
+      if not(fileExists(htmlRoot+EXAMPLES_CACHE_FILE)) then exit(false);
+      wrapper.createToReadFromFile(htmlRoot+EXAMPLES_CACHE_FILE);
+      if not(wrapper.allOkay) then begin
+        wrapper.destroy;
+        exit(false);
+      end;
+      result:=(wrapper.readAnsiString=CODE_HASH);
+      exampleCount:=wrapper.readNaturalNumber;
+      result:=result and wrapper.allOkay;
+      if result then for ei:=0 to exampleCount-1 do begin
+        code:=readArrayOfString;
+        txt :=readArrayOfString;
+        html:=readArrayOfString;
+        ids :=readArrayOfString;
+        addExample(code,html,txt ,ids);
+      end;
+      wrapper.destroy;
     end;
 
   begin
@@ -131,13 +196,18 @@ PROCEDURE ensureBuiltinDocExamples;
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
     addExample(httpServerExample,code,code,C_EMPTY_STRING_ARRAY);
-    //Read examples:---------------------------------------------------------------------
-    setLength(code,0);
-    for i:=0 to length(examples_txt)-1 do
-    if trim(examples_txt[i])='' then processExample
-                                    else append(code,examples_txt[i]);
-    processExample;
-    //---------------------------------------------------------------------:Read examples
+    if not(canRestoreExamples) then begin
+      setLength(examplesToStore,0);
+      //Read examples:---------------------------------------------------------------------
+      setLength(code,0);
+      for i:=0 to length(examples_txt)-1 do
+      if trim(examples_txt[i])='' then processExample
+                                  else append(code,examples_txt[i]);
+      processExample;
+      //---------------------------------------------------------------------:Read examples
+      storeExamples;
+      setLength(examplesToStore,0);
+    end;
     functionDocExamplesReady:=true;
   end;
 

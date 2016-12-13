@@ -152,22 +152,20 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
     end;
     for i:=0 to length(messages)-1 do with messages[i] do begin
       case messageType of
-        mt_printline:   append(htmlOut,multiMessage);
+        mt_printline:  for tmp in messageText do append(htmlOut,escapeHtml(tmp));
         mt_echo_input: begin end;
-        mt_echo_output: append(htmlOut,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(escapeHtml(simpleMessage)));
+        mt_echo_output: for tmp in messageText do append(htmlOut,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(escapeHtml(tmp)));
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
-          tmp:=extractFileName(simpleMessage);
-          CopyFile(simpleMessage,getHtmlRoot+DirectorySeparator+tmp);
+          tmp:=extractFileName(data);
+          CopyFile(data,getHtmlRoot+DirectorySeparator+tmp);
           append(htmlOut,'Image created: '+imageTag(tmp));
         end;
         {$endif}
-        else append(htmlOut,span(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].htmlSpan,C_messageTypeMeta[messageType].prefix+' '+escapeHtml(simpleMessage)));
+        else for tmp in messageText do append(htmlOut,span(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].htmlSpan,C_messageTypeMeta[messageType].prefix+' '+escapeHtml(tmp)));
       end;
-      if messageType<>mt_echo_input then begin
-        for tmp in multiMessage do append(textOut,C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+tmp);
-        tmp:=simpleMessage;        append(textOut,C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+tmp);
-      end;
+      if messageType<>mt_echo_input then
+        for tmp in messageText do append(textOut,C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+tmp);
     end;
   end;
 
