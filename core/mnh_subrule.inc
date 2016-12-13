@@ -726,6 +726,36 @@ FUNCTION T_subrule.acceptsSingleLiteral(CONST literalType:T_literalType):boolean
     result:=(length(pattern.sig)=1) and (literalType in pattern.sig[0].typeWhitelist);
   end;
 
+PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
+  VAR bracketStack:T_TokenStack;
+  FUNCTION isEachIdentifier(CONST id:string):boolean;
+    VAR k:longint;
+    begin
+      result:=false;
+      for k:=0 to bracketStack.topIndex do
+      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach]) and
+         (bracketStack.dat[k]^.txt=id) or (id=EACH_INDEX_IDENTIFIER) then exit(true);
+    end;
+
+  VAR t:P_token;
+  begin
+    t:=first;
+    bracketStack.create;
+    while t<>nil do begin
+      with t^ do begin
+        case tokType of
+          tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(t);
+          tt_braceClose:bracketStack.quietPop;
+        end;
+        if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
+          P_package(location.package)^.resolveRuleId(t^,adapters);
+      end;
+      t:=t^.next;
+    end;
+    bracketStack.destroy;
+
+  end;
+
 PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
   VAR i:longint;
       bracketStack:T_TokenStack;

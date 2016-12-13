@@ -606,7 +606,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
           end;
           lu_forCodeAssistance: if (first<>nil) and first^.areBracketsPlausible(context.adapters^) then begin
-            predigest(first,@self,context,true);
+            predigest(first,@self,context);
+            resolveBuiltinIDs(first,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
           end
           else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,50),first^.location);
