@@ -63,7 +63,7 @@ FUNCTION startServer_impl intFuncSignature;
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(3)) and
        (arg2^.literalType in [lt_int,lt_real]) then begin
 
       if arg2^.literalType=lt_int then timeout:=int2^.value/(24*60*60)
@@ -129,7 +129,7 @@ PROCEDURE T_microserver.serve;
   CONST minSleepTime=0;
         maxSleepTime=100;
 
-  VAR request:ansistring;
+  VAR request:T_requestTriplet;
       response:P_literal;
       requestLiteral:T_listLiteral;
       sleepTime:longint=minSleepTime;
@@ -141,17 +141,17 @@ PROCEDURE T_microserver.serve;
     lastActivity:=now;
     repeat
       request:=socket.getRequest(sleepTime);
-      if request<>'' then begin
+      if not(request.isBlank) then begin
         sleepTime:=minSleepTime;
         lastActivity:=now;
         requestLiteral.create;
-        requestLiteral.appendString(request);
+        requestLiteral.appendString(request.method)^.appendString(request.request)^.appendString(request.protocol);
         response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,context);
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes
           then socket.SendString(P_scalarLiteral(response)^.stringForm)
-          else socket.SendString(P_scalarLiteral(response)^.toString);
+          else socket.SendString(response^.toString);
           disposeLiteral(response);
         end else begin
           context^.adapters^.raiseWarning('Microserver response is nil!', feedbackLocation);
@@ -310,15 +310,15 @@ FUNCTION openUrl_imp intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   system.initCriticalSection(serverCS);
-  registerRule(HTTP_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance');
-  registerRule(HTTP_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.');
-  registerRule(HTTP_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.');
-  registerRule(HTTP_NAMESPACE,'extractParameters',@extractParameters_impl,'extractParameters(request:string);#Returns the parameters of an http request as a keyValueList');
-  registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,'extractRawParameters(request:string);#Returns the parameter part of an http request as a string');
-  registerRule(HTTP_NAMESPACE,'extractPath',@extractPath_impl,'extractPath(request:string);#Returns http-representation of error 404.#Returns the path part of an http request as a string');
-  registerRule(HTTP_NAMESPACE,'encodeRequest',@encodeRequest_impl,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);#Returns an http request from the given components');
-  registerRule(HTTP_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
-  registerRule(HTTP_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);#Opens the URL in the default browser');
+  registerRule(HTTP_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
+  registerRule(HTTP_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
+  registerRule(HTTP_NAMESPACE,'httpError',@httpError_impl,'httpError;//Returns http-representation of error 404.#httpError(code:int);//Returns http-representation of given error code.');
+  registerRule(HTTP_NAMESPACE,'extractParameters',@extractParameters_impl,'extractParameters(request:string);//Returns the parameters of an http request as a keyValueList');
+  registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,'extractRawParameters(request:string);//Returns the parameter part of an http request as a string');
+  registerRule(HTTP_NAMESPACE,'extractPath',@extractPath_impl,'extractPath(request:string);//Returns the path part of an http request as a string');
+  registerRule(HTTP_NAMESPACE,'encodeRequest',@encodeRequest_impl,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);//Returns an http request from the given components');
+  registerRule(HTTP_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string');
+  registerRule(HTTP_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);//Opens the URL in the default browser');
 
 FINALIZATION
   doneCriticalSection(serverCS);

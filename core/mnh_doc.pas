@@ -65,16 +65,6 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 
 PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
-  CONST httpServerExample:array[0..7] of string=
-('//#startHttpServer',
- ' in> startHttpServer("127.0.0.1:60000",{print("Parameters: "&$p) orElse wrapTextInHttp($p)},1);',
- ' in> httpGet("http://127.0.0.1:60000/index.html?x=0&y=3%2Ax");',
- 'Note @<new 6>:2,1 Microserver started. 127.0.0.1:60000',
- 'out> void',
- 'Parameters: /index.html?x=0&y=3%2Ax',
- 'out> "/index.html?x=0&y=3%2Ax"',
- 'Note @<new 6>:2,1 Microserver stopped. 127.0.0.1:60000');
-
   VAR code:T_arrayOfString;
       i:longint;
       keys:T_arrayOfString;
@@ -187,15 +177,10 @@ PROCEDURE ensureBuiltinDocExamples;
     if functionDocExamplesReady then exit;
     keys:=functionDocMap.keySet;
     setLength(allDocs,0);
-
-    setLength(code,length(httpServerExample));
-    for i:=0 to length(code)-1 do if byte(i) in [3,5,7] then code[i]:=httpServerExample[i] else code[i]:=toHtmlCode(httpServerExample[i]);
-
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
-    addExample(httpServerExample,code,code,C_EMPTY_STRING_ARRAY);
     if not(canRestoreExamples) then begin
       setLength(examplesToStore,0);
       //Read examples:---------------------------------------------------------------------
