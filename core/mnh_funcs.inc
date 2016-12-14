@@ -844,56 +844,56 @@ FUNCTION writeDataStores_imp intFuncSignature;
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
-  registerRule(MATH_NAMESPACE,'sqrt',@sqrt_imp,'sqrt(n);//Returns the square root of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sin',@sin_imp,'sin(n);//Returns the sine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,'arcsin(n);//Returns the arcsine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'cos',@cos_imp,'cos(n);//Returns the cosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,'arccos(n);//Returns the arccosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'tan',@tan_imp,'tan(n);//Returns the tangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,'arctan(n);//Returns the arctangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'exp',@exp_imp,'exp(n);//Returns the exponential of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ln',@ln_imp,'ln(n);//Returns the natural logarithm of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,true,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sin'   ,@sin_imp   ,true,ak_unary,'sin(n);//Returns the sine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,true,ak_unary,'arcsin(n);//Returns the arcsine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'cos'   ,@cos_imp   ,true,ak_unary,'cos(n);//Returns the cosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,true,ak_unary,'arccos(n);//Returns the arccosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'tan'   ,@tan_imp   ,true,ak_unary,'tan(n);//Returns the tangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,true,ak_unary,'arctan(n);//Returns the arctangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'exp'   ,@exp_imp   ,true,ak_unary,'exp(n);//Returns the exponential of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ln'    ,@ln_imp    ,true,ak_unary,'ln(n);//Returns the natural logarithm of numeric or expression parameter n');
   //Unary Boolean -> boolean
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,'not(b:boolean);#not(b:booleanList);//Returns the negated value of b#not(i:int);#not(i:intList);//Returns the bitwise negated value of i');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,true,ak_unary,'not(b:boolean);#not(b:booleanList);//Returns the negated value of b#not(i:int);#not(i:intList);//Returns the bitwise negated value of i');
   //Unary Numeric -> same (i.e. I -> I, R -> R)
-  registerRule(MATH_NAMESPACE,'abs',@abs_imp,'abs(n);//Returns the absolute value of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,'sqr(n);//Returns the square of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'abs',@abs_imp,true,ak_unary,'abs(n);//Returns the absolute value of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,true,ak_unary,'sqr(n);//Returns the square of numeric or expression parameter n');
   //Unary Numeric -> Integer
-  registerRule(MATH_NAMESPACE,'sign',@sign_imp,'sign(n);//Returns the sign of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ceil',@ceil_imp,'ceil(x);//Returns the smallest integer >=x#ceil(x,k);//Does the same but with k digits precision');
-  registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);//Returns the largest integer <=x#floor(x,k);//Does the same but with k digits precision');
-  //round might be binary...
-  registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);//Returns the value of x, rounded to the nearest integer#round(x,k);//Returns the value of x rounded to k-digits precision');
+  registerRule(MATH_NAMESPACE,'sign' ,@sign_imp ,true,ak_unary     ,'sign(n);//Returns the sign of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ceil' ,@ceil_imp ,true,ak_variadic_1,'ceil(x);//Returns the smallest integer >=x#ceil(x,k);//Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'floor',@floor_imp,true,ak_variadic_1,'floor(x);//Returns the largest integer <=x#floor(x,k);//Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'round',@round_imp,true,ak_variadic_1,'round(x);//Returns the value of x, rounded to the nearest integer#round(x,k);//Returns the value of x rounded to k-digits precision');
   builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;//Returns an internal time for time difference measurement.#'+
-                                                         'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
-                                                         'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,false,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
+               'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
+               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
   builtinLocation_try.create(SYSTEM_BUILTIN_NAMESPACE,'try');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,'try(E:expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
-                                                       'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
-                                                       'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
-                                                       'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
-                                                           'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);//Returns an expression parsed from S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);//Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,false,ak_variadic,
+               'try(E:expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
+               'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
+               'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
+               'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,true,ak_unary,'toExpression(S);//Returns an expression parsed from S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,true,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,false,ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
   builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,true,ak_variadic_1,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
   builtinLocation_format.create(STRINGS_NAMESPACE,'format');
-  registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache',@clearRuleCache_imp,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches',@clearAllCaches_imp,'clearAllCaches;//Clears all memoized rule caches and returns void.');
+  registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,true ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,true ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,false,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,false,ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache'   ,@clearRuleCache_imp   ,false,ak_unary     ,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,false,ak_unary     ,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches'   ,@clearAllCaches_imp   ,false,ak_nullary   ,'clearAllCaches;//Clears all memoized rule caches and returns void.');
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores',@writeDataStores_imp,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,false,ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,false,ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
 
 {$endif}
 {$ifdef include_finalization}

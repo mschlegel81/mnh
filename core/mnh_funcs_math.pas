@@ -346,19 +346,19 @@ FUNCTION arctan2_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(MATH_NAMESPACE,'pi',@pi_imp,'pi;//Returns pi');
+  registerRule(MATH_NAMESPACE,'pi'          ,@pi_imp           ,true,ak_nullary   ,'pi;//Returns pi');
   BUILTIN_MAX:=
-  registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters');
-  registerRule(MATH_NAMESPACE,'argMax',@argMax_imp,'argMax(L);//Returns the index of the greatest element out of list L (or the first index if ambiguous)');
+  registerRule(MATH_NAMESPACE,'max'         ,@max_imp          ,true,ak_variadic_1,'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters');
+  registerRule(MATH_NAMESPACE,'argMax'      ,@argMax_imp       ,true,ak_unary     ,'argMax(L);//Returns the index of the greatest element out of list L (or the first index if ambiguous)');
   BUILTIN_MIN:=
-  registerRule(MATH_NAMESPACE,'min',@min_imp,'min(L);//Returns the smallest element out of list L#min(x,y,...);//Returns the smallest element out of the given parameters');
-  registerRule(MATH_NAMESPACE,'argMin',@argMin_imp,'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)');
-  registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
-  registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);//Returns true if n is a number representing an infinite value');
-  registerRule(MATH_NAMESPACE,'subSets',@subSets_impl,'subSets(S);//Returns all distinct subsets of S');
-  registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,'permutations(L:list);//Returns a list of all permutations of S');
-  registerRule(MATH_NAMESPACE,'factorize',@factorize_impl,'factorize(i:int);//Returns a list of all prime factors of i');
-  registerRule(MATH_NAMESPACE,'primes',@primes_impl,'primes(pMax:int);//Returns prime numbers up to pMax');
-  registerRule(MATH_NAMESPACE,'digits',@digits_impl,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
-  registerRule(MATH_NAMESPACE,'arctan2',@arctan2_impl,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
+  registerRule(MATH_NAMESPACE,'min'         ,@min_imp          ,true,ak_variadic_1,'min(L);//Returns the smallest element out of list L#min(x,y,...);//Returns the smallest element out of the given parameters');
+  registerRule(MATH_NAMESPACE,'argMin'      ,@argMin_imp       ,true,ak_unary     ,'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)');
+  registerRule(MATH_NAMESPACE,'isNan'       ,@isNan_impl       ,true,ak_unary     ,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
+  registerRule(MATH_NAMESPACE,'isInfinite'  ,@isInfinite_impl  ,true,ak_unary     ,'isInfinite(n);//Returns true if n is a number representing an infinite value');
+  registerRule(MATH_NAMESPACE,'subSets'     ,@subSets_impl     ,true,ak_unary     ,'subSets(S);//Returns all distinct subsets of S');
+  registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,true,ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
+  registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,true,ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
+  registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,true,ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
+  registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,true,ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
+  registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,true,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
 end.

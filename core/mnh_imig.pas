@@ -292,18 +292,18 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
 
 INITIALIZATION
   initCriticalSection(imigCS);
-  registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
-  registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
+  registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,true,ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
+  registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,false,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#Executes the workflow with the given options. Use "-" as source or target to read/write the current image.');
-  registerRule(IMIG_NAMESPACE,'loadImage',@loadImage_imp,'loadImage(filename:string);//Loads image from the given file');
-  registerRule(IMIG_NAMESPACE,'saveImage',@saveImage_imp,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
-  registerRule(IMIG_NAMESPACE,'closeImage',@closeImage_imp,'closeImage;//Closes the current image, freeing associated memory');
-  registerRule(IMIG_NAMESPACE,'imageSize',@imageSize_imp,'imageSize;//Returns the size as [width,height] of the current image.');
-  registerRule(IMIG_NAMESPACE,'resizeImage',@resizeImage_imp,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
-  registerRule(IMIG_NAMESPACE,'displayImage',@displayImage_imp,'displayImage;//Displays the current image.');
-  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,'imageJpgRawData;//Returns the image raw data in JPG representation.');
+  registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,false,ak_unary,'loadImage(filename:string);//Loads image from the given file');
+  registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,false,ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
+  registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,false,ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
+  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,false,ak_nullary,'imageSize;//Returns the size as [width,height] of the current image.');
+  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,false,ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
+  registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,false,ak_nullary,'displayImage;//Displays the current image.');
+  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,false,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.

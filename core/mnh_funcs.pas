@@ -4,6 +4,15 @@ INTERFACE
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_basicTypes,mnh_contexts,
      myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
+  T_arityKind=(ak_nullary,
+               ak_unary,
+               ak_binary,
+               ak_ternary,
+               ak_variadic,
+               ak_variadic_1,
+               ak_variadic_2,
+               ak_variadic_3);
+
   P_intFuncCallback=FUNCTION intFuncSignature;
 
   P_identifiedInternalFunction=^T_identifiedInternalFunction;
@@ -27,7 +36,8 @@ VAR
   intrinsicRuleMap:specialize G_stringKeyMap<P_intFuncCallback>;
   print_cs        :system.TRTLCriticalSection;
 
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
@@ -36,13 +46,20 @@ IMPLEMENTATION
 VAR mnhParameters:P_listLiteral=nil;
     mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
-FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
   begin
     result:=ptr;
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
+  end;
+
+FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+  begin
+    if not(fullNameOnly) then
+    intrinsicRuleMap.put(                                                  name,result);
+    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
   end;
 
 PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
@@ -193,15 +210,15 @@ INITIALIZATION
   intrinsicRuleMap.create;
   new(mnhSystemPseudoPackage,create);
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);//Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note',@note_imp,'note(...);//Raises a note of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn',@warn_imp,'warn(...);//Raises a warning of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;//Returns the command line parameters/switches passed on program startup');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);//Returns a string representing x.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize',@deserialize_impl,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits',@bits_impl,'bits(i:int);#Returns the bits of i');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,false,ak_nullary ,'clearPrint;//Clears the output and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,false,ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,false,ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,false,ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,false,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,false,ak_nullary ,'mnhParameters;//Returns the command line parameters/switches passed on program startup');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,true ,ak_unary   ,'serialize(x);//Returns a string representing x.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,true ,ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,true ,ak_unary   ,'bits(i:int);#Returns the bits of i');
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);

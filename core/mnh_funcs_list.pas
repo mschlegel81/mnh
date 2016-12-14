@@ -344,36 +344,37 @@ FUNCTION indexOf_impl intFuncSignature;
 
 INITIALIZATION
   //Functions on lists:
-  registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);//Returns L with the new element e appended');
+  registerRule(LIST_NAMESPACE,'add'     ,@add_imp     ,true,ak_binary    ,'add(L,e);//Returns L with the new element e appended');
   BUILTIN_HEAD:=
-  registerRule(LIST_NAMESPACE,'head',@head_imp,'head(L);//Returns the first element of list L or [] if L is empty#head(L,k);//Returns the first min(k,size(L)) elements of L or [] if L is empty');
+  registerRule(LIST_NAMESPACE,'head'    ,@head_imp    ,true,ak_variadic_1,'head(L);//Returns the first element of list L or [] if L is empty#head(L,k);//Returns the first min(k,size(L)) elements of L or [] if L is empty');
   BUILTIN_TAIL:=
-  registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);//Returns list L without the first element#tail(L,k);//Returns L without the first k elements');
-  registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);//Returns L without the last element or [] if L is empty#leading(L,k);//Returns L without the last k elements or [] if L is empty');
-  registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,'trailing(L);//Returns the last element of L#trailing(L,k);//Returns the last k elements of L');
+  registerRule(LIST_NAMESPACE,'tail'    ,@tail_imp    ,true,ak_variadic_1,'tail(L);//Returns list L without the first element#tail(L,k);//Returns L without the first k elements');
+  registerRule(LIST_NAMESPACE,'leading' ,@leading_imp ,true,ak_variadic_1,'leading(L);//Returns L without the last element or [] if L is empty#leading(L,k);//Returns L without the last k elements or [] if L is empty');
+  registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,true,ak_variadic_1,'trailing(L);//Returns the last element of L#trailing(L,k);//Returns the last k elements of L');
   builtinLocation_sort.create(LIST_NAMESPACE,'sort');
-  registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
+  registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,true,ak_variadic_1,
+                                               'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
                                                'sort(L,leqExpression:expression);//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
                                                'sort(L,innerIndex:int);//Returns L sorted by given inner index');
-  registerRule(LIST_NAMESPACE,'sortPerm',@sortPerm_imp,'sortPerm(L);//Returns indexes I so that L%I==sort(L)');
-  registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L:list);//Returns list L without duplicates and enhanced for faster lookup');
-  registerRule(LIST_NAMESPACE,'toMap',@mapOf_imp,'toMap(L:keyValueList);//Returns key L without duplicate keys and enhanced for faster lookup');
-  registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
-  registerRule(LIST_NAMESPACE,'transpose',@transpose_imp,'transpose(L);//Returns list L transposed.');
-  registerRule(LIST_NAMESPACE,'union',@setUnion_imp,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'intersect',@setIntersect_imp,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'minus',@setMinus_imp,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);//Returns all parameters as a flat list.');
-  registerRule(LIST_NAMESPACE,'unflatten',@unflatten_imp,'unflatten(L,openers,closers);//Returns L expanded to a nexted list using openers and closers.');
-  registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);//Returns the number of elements in list L');
-  registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);//Returns the number of true values in B');
-  registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);//Returns L reversed');
+  registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,true,ak_unary     ,'sortPerm(L);//Returns indexes I so that L%I==sort(L)');
+  registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,true,ak_unary     ,'unique(L:list);//Returns list L without duplicates and enhanced for faster lookup');
+  registerRule(LIST_NAMESPACE,'toMap'           ,@mapOf_imp         ,true,ak_unary     ,'toMap(L:keyValueList);//Returns key L without duplicate keys and enhanced for faster lookup');
+  registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,true,ak_unary     ,'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
+  registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,true,ak_unary     ,'transpose(L);//Returns list L transposed.');
+  registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,true,ak_variadic_1,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,true,ak_variadic_1,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,true,ak_binary    ,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,true,ak_variadic  ,'flatten(L,...);//Returns all parameters as a flat list.');
+  registerRule(LIST_NAMESPACE,'unflatten'       ,@unflatten_imp     ,true,ak_ternary   ,'unflatten(L,openers,closers);//Returns L expanded to a nexted list using openers and closers.');
+  registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,true,ak_unary     ,'size(L);//Returns the number of elements in list L');
+  registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,true,ak_unary     ,'trueCount(B:booleanList);//Returns the number of true values in B');
+  registerRule(LIST_NAMESPACE,'reverseList'     ,@reverseList_impl  ,true,ak_unary     ,'reverseList(L:list);//Returns L reversed');
   BUILTIN_GET:=
-  registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
-  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');
-  registerRule(LIST_NAMESPACE,'mapGet',@mapGet_imp,'mapGet(L:keyValueList,key:string);//Returns the element with matching key or the empty list if no such element was found.#'+
-                                            'mapGet(L:keyValueList,key:string,fallback);//Returns the element with matching key or fallback if no such element was found.');
-  registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
+  registerRule(LIST_NAMESPACE,'get'     ,@get_imp     ,true,ak_variadic_2,'get(L:list,index);');
+  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,true,ak_variadic_2,'getInner(L:list,index);');
+  registerRule(LIST_NAMESPACE,'mapGet'  ,@mapGet_imp  ,true,ak_variadic_2,'mapGet(L:keyValueList,key:string);//Returns the element with matching key or the empty list if no such element was found.#'+
+                                                                          'mapGet(L:keyValueList,key:string,fallback);//Returns the element with matching key or fallback if no such element was found.');
+  registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,true,ak_unary     ,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
 
 FINALIZATION
   builtinLocation_sort.destroy;

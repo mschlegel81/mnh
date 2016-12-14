@@ -70,7 +70,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     registerForm(self,true,true);
     initGuiOutAdapters(outputOnlyForm);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
+    reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
     mnh_evalThread.initUnit(@guiAdapters,false);
     setupCallbacks;

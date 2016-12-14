@@ -194,28 +194,28 @@ FUNCTION typeOf_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(TYPECAST_NAMESPACE,'softCast',@softCast_imp,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
-  registerRule(TYPECAST_NAMESPACE,'toString',@toString_imp,'toString(X);#Casts X to string');
-  registerRule(TYPECAST_NAMESPACE,'toBoolean',@toBoolean_imp,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toInt',@toInt_imp,'toInt(X);#Casts X to int or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'toReal',@toReal_imp,'toReal(X);#Casts X to real or throws an error if not possible');
-  registerRule(TYPECAST_NAMESPACE,'isScalar',@isScalar              ,'isScalar(x);//Returns true if x is a scalar.');
-  registerRule(TYPECAST_NAMESPACE,'isBoolean',@isBoolean            ,'isBoolean(x);//Returns true if x is a boolean.');
-  registerRule(TYPECAST_NAMESPACE,'isInt',@isInt                    ,'isInt(x);//Returns true if x is an int.');
-  registerRule(TYPECAST_NAMESPACE,'isReal',@isReal                  ,'isReal(x);//Returns true if x is numeric.');
-  registerRule(TYPECAST_NAMESPACE,'isNumeric',@isNumeric            ,'isNumeric(x);//Returns true if x is a real.');
-  registerRule(TYPECAST_NAMESPACE,'isString',@isString              ,'isString(x);//Returns true if x is a string.');
-  registerRule(TYPECAST_NAMESPACE,'isList',@isList                  ,'isList(x);//Returns true if x is a list. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isBoolList',@isBoolList          ,'isBoolList(x);//Returns true if x is a boolList. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isIntList',@isIntList            ,'isIntListx);//Returns true if x is an intList. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isRealList',@isRealList          ,'isRealList(x);//Returns true if x is a realList. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isStringList',@isStringList      ,'isStringList(x);//Returns true if x is a stringList. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isNumList',@isNumList            ,'isNumList(x);//Returns true if x is a numList. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isFlatList',@isFlatList          ,'isFlatList(x);//Returns true if x is a flat list. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isKeyValueList',@isKeyValueList  ,'isKeyValueList(x);//Returns true if x is a keyValueList. Specify an additional int parameter to additionally check the length.');
-  registerRule(TYPECAST_NAMESPACE,'isExpression',@isExpression      ,'isExpression(x);//Returns true if x is an expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
-  registerRule(TYPECAST_NAMESPACE,'isVoid',@isVoid                  ,'isVoid(x);//Returns true if no parameters are passed.');
-  registerRule(TYPECAST_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');
+  registerRule(TYPECAST_NAMESPACE,'softCast'      ,@softCast_imp  ,true,ak_unary,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
+  registerRule(TYPECAST_NAMESPACE,'toString'      ,@toString_imp  ,true,ak_unary,'toString(X);#Casts X to string');
+  registerRule(TYPECAST_NAMESPACE,'toBoolean'     ,@toBoolean_imp ,true,ak_unary,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'toInt'         ,@toInt_imp     ,true,ak_unary,'toInt(X);#Casts X to int or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'toReal'        ,@toReal_imp    ,true,ak_unary,'toReal(X);#Casts X to real or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'isScalar'      ,@isScalar      ,true,ak_unary,'isScalar(x);//Returns true if x is a scalar.');
+  registerRule(TYPECAST_NAMESPACE,'isBoolean'     ,@isBoolean     ,true,ak_unary,'isBoolean(x);//Returns true if x is a boolean.');
+  registerRule(TYPECAST_NAMESPACE,'isInt'         ,@isInt         ,true,ak_unary,'isInt(x);//Returns true if x is an int.');
+  registerRule(TYPECAST_NAMESPACE,'isReal'        ,@isReal        ,true,ak_unary,'isReal(x);//Returns true if x is numeric.');
+  registerRule(TYPECAST_NAMESPACE,'isNumeric'     ,@isNumeric     ,true,ak_unary,'isNumeric(x);//Returns true if x is a real.');
+  registerRule(TYPECAST_NAMESPACE,'isString'      ,@isString      ,true,ak_unary,'isString(x);//Returns true if x is a string.');
+  registerRule(TYPECAST_NAMESPACE,'isList'        ,@isList        ,true,ak_unary,'isList(x);//Returns true if x is a list. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isBoolList'    ,@isBoolList    ,true,ak_unary,'isBoolList(x);//Returns true if x is a boolList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isIntList'     ,@isIntList     ,true,ak_unary,'isIntListx);//Returns true if x is an intList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isRealList'    ,@isRealList    ,true,ak_unary,'isRealList(x);//Returns true if x is a realList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isStringList'  ,@isStringList  ,true,ak_unary,'isStringList(x);//Returns true if x is a stringList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isNumList'     ,@isNumList     ,true,ak_unary,'isNumList(x);//Returns true if x is a numList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isFlatList'    ,@isFlatList    ,true,ak_unary,'isFlatList(x);//Returns true if x is a flat list. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isKeyValueList',@isKeyValueList,true,ak_unary,'isKeyValueList(x);//Returns true if x is a keyValueList. Specify an additional int parameter to additionally check the length.');
+  registerRule(TYPECAST_NAMESPACE,'isExpression'  ,@isExpression  ,true,ak_unary,'isExpression(x);//Returns true if x is an expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
+  registerRule(TYPECAST_NAMESPACE,'isVoid'        ,@isVoid        ,true,ak_unary,'isVoid(x);//Returns true if no parameters are passed.');
+  registerRule(TYPECAST_NAMESPACE,'typeOf'        ,@typeOf_imp    ,true,ak_unary,'typeOf(x);#Returns a string representation of the type of x');
 
 end.
 
