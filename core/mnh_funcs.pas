@@ -12,6 +12,10 @@ TYPE
                ak_variadic_1,
                ak_variadic_2,
                ak_variadic_3);
+  T_intFuncMeta=record
+    arityKind:T_arityKind;
+    pure:boolean;
+  end;
 
   P_intFuncCallback=FUNCTION intFuncSignature;
 
@@ -32,13 +36,21 @@ TYPE
     FUNCTION getPath:ansistring; virtual;
   end;
 
+  P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
+  T_builtinFunctionMetaData=record
+    pure     :boolean;
+    arityKind:T_arityKind;
+  end;
+
 VAR
   intrinsicRuleMap:specialize G_stringKeyMap<P_intFuncCallback>;
+  builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;
 
 FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
+FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
@@ -47,16 +59,28 @@ VAR mnhParameters:P_listLiteral=nil;
     mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
 FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
+  VAR meta:T_builtinFunctionMetaData;
   begin
     result:=ptr;
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
+    meta.pure:=isPure;
+    meta.arityKind:=aritiyKind;
+    builtinMetaMap.put(ptr,meta);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+  VAR meta:T_builtinFunctionMetaData;
+      previous:P_intFuncCallback;
   begin
+    if intrinsicRuleMap.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,previous) then begin
+      if builtinMetaMap.containsKey(previous)
+      then meta:=builtinMetaMap.get(previous)
+      else raise Exception.create('Error during cloning meta.');
+      builtinMetaMap.put(ptr,meta);
+    end;
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
@@ -67,6 +91,11 @@ PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CON
     if not(fullNameOnly) then
     intrinsicRuleMap.dropKey(                                                  name);
     intrinsicRuleMap.dropKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name);
+  end;
+
+FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
+  begin
+    result:=builtinMetaMap.get(p);
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST typ: T_literalType; CONST messageTail: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
@@ -208,6 +237,7 @@ FUNCTION T_identifiedInternalFunction.getLocation: T_tokenLocation;
 
 INITIALIZATION
   intrinsicRuleMap.create;
+  builtinMetaMap.create;
   new(mnhSystemPseudoPackage,create);
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,false,ak_nullary ,'clearPrint;//Clears the output and returns void.');
@@ -222,6 +252,7 @@ INITIALIZATION
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);
+  builtinMetaMap.destroy;
   intrinsicRuleMap.destroy;
   dispose(mnhSystemPseudoPackage,destroy);
   system.doneCriticalSection(print_cs);
