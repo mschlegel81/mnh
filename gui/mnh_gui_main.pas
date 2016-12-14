@@ -458,10 +458,10 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
     initGuiOutAdapters(MnhForm);
     guiTaskQueue.create;
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    registerRule(GUI_NAMESPACE,'editors',@editors_impl,'editors(...);//Lists all editors');
-    registerRule(GUI_NAMESPACE,'editorContent',@editorContent_impl,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
-    registerRule(GUI_NAMESPACE,'openInEditor',@openInEditor_impl,'openInEditor(filename:string);//opens an editor tab for the given file');
+    reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
+    registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,false,ak_nullary,'editors(...);//Lists all editors');
+    registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,false,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+    registerRule(GUI_NAMESPACE,'openInEditor'  ,@openInEditor_impl ,false,ak_unary,'openInEditor(filename:string);//opens an editor tab for the given file');
 
     SynHighlighterMnh.initLists;
 
