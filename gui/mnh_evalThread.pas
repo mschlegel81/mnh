@@ -133,7 +133,7 @@ TYPE
       localErrors,externalErrors:T_storedMessages;
       stateCounter:longint;
       userRules,
-      completionList:T_listOfString;
+      completionList:T_setOfString;
       PROCEDURE postEval; virtual;
     public
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
@@ -146,7 +146,7 @@ TYPE
       FUNCTION getStateCounter:longint;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
-      PROCEDURE extendCompletionList(VAR list:T_listOfString);
+      PROCEDURE extendCompletionList(VAR list:T_setOfString);
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
       FUNCTION getAllUsedFiles:T_arrayOfString;
   end;
@@ -161,7 +161,7 @@ IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
     assistanceIsInitialized:boolean=false;
     silentAdapters:T_adapters;
-    intrinsicRulesForCompletion:T_listOfString;
+    intrinsicRulesForCompletion:T_setOfString;
 
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
   begin
@@ -818,14 +818,13 @@ PROCEDURE T_runEvaluator.postEval;
 
 PROCEDURE T_assistanceEvaluator.postEval;
   PROCEDURE updateCompletionList;
-    VAR i:longint;
+    VAR s:string;
     begin
       completionList.clear;
-      completionList.addAll(intrinsicRulesForCompletion.elementArray);
+      completionList.put(intrinsicRulesForCompletion);
       package.updateLists(userRules);
-      completionList.addAll(userRules.elementArray);
-      for i:=0 to userRules.size-1 do if pos(ID_QUALIFY_CHARACTER,userRules[i])<=0 then completionList.add(ID_QUALIFY_CHARACTER+userRules[i]);
-      completionList.unique;
+      completionList.put(userRules);
+      for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then completionList.put(ID_QUALIFY_CHARACTER+s);
     end;
 
   VAR i:longint;
@@ -879,10 +878,10 @@ FUNCTION T_assistanceEvaluator.resolveImport(CONST id: string): string;
     result:=package.getSecondaryPackageById(id);
   end;
 
-PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list: T_listOfString);
+PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list: T_setOfString);
   begin
     system.enterCriticalSection(cs);
-    list.addAll(completionList.elementArray);
+    list.put(completionList.values);
     leaveCriticalSection(cs);
   end;
 
@@ -896,21 +895,20 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
       intrinsicRulesForCompletion.create;
       for i:=0 to length(ids)-1 do begin
         if pos(ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
-          intrinsicRulesForCompletion.add(ids[i]);
-          intrinsicRulesForCompletion.add(ID_QUALIFY_CHARACTER+ids[i]);
+          intrinsicRulesForCompletion.put(ids[i]);
+          intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+ids[i]);
         end else begin
-          intrinsicRulesForCompletion.add(ids[i]);
-          intrinsicRulesForCompletion.add(split(ids[i],ID_QUALIFY_CHARACTER)[0]);
-          intrinsicRulesForCompletion.add(split(ids[i],ID_QUALIFY_CHARACTER)[1]);
-          intrinsicRulesForCompletion.add(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[0]);
-          intrinsicRulesForCompletion.add(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[1]);
+          intrinsicRulesForCompletion.put(ids[i]);
+          intrinsicRulesForCompletion.put(split(ids[i],ID_QUALIFY_CHARACTER)[0]);
+          intrinsicRulesForCompletion.put(split(ids[i],ID_QUALIFY_CHARACTER)[1]);
+          intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[0]);
+          intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[1]);
         end;
       end;
       for tt:=low(T_tokenType) to high(T_tokenType) do if isIdentifier(C_tokenInfo[tt].defaultId,true) then
-        intrinsicRulesForCompletion.add(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
+        intrinsicRulesForCompletion.put(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
       for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
-        intrinsicRulesForCompletion.add(C_specialWordInfo[i].txt);
-      intrinsicRulesForCompletion.unique;
+        intrinsicRulesForCompletion.put(C_specialWordInfo[i].txt);
     end;
 
   VAR collector:P_collectingOutAdapter;

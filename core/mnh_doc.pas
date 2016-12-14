@@ -71,24 +71,23 @@ PROCEDURE ensureBuiltinDocExamples;
       allDocs:array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE addExample(CONST exampleSource,html,txt,idList:T_arrayOfString);
-    VAR ids:T_listOfString;
+    VAR ids:T_arrayOfString;
         i:longint;
         leadingIdLine:boolean=false;
         doc:P_intrinsicFunctionDocumentation;
         {$ifdef debugMode} first:boolean=true; j:longint; {$endif}
     begin
       if length(exampleSource)<=0 then exit;
-      ids.create;
       if copy(exampleSource[0],1,3)='//#' then begin
-        ids.add(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
+        ids:=(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
         leadingIdLine:=true;
-      end else ids.addAll(idList);
-      ids.unique;
-      for i:=0 to ids.size-1 do if functionDocMap.containsKey(ids[i],doc) then begin
+      end else ids:=idList;
+      sortUnique(ids);
+      for i:=0 to length(ids)-1 do if functionDocMap.containsKey(ids[i],doc) then begin
         {$ifdef debugMode}
         if first then first:=false else begin
           write('The following example is not uniquely assignable. IDs: ');
-          for j:=0 to ids.size-1 do write(ids[j],' ');
+          for j:=0 to length(ids)-1 do write(ids[j],' ');
           writeln;
           for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
         end;
@@ -98,12 +97,12 @@ PROCEDURE ensureBuiltinDocExamples;
       {$ifdef debugMode}
       if first then begin
         write('The following example is not assignable. IDs: ');
-        for j:=0 to ids.size-1 do write(ids[j],' ');
+        for j:=0 to length(ids)-1 do write(ids[j],' ');
         writeln;
         for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
       end;
       {$endif}
-      ids.destroy
+      setLength(ids,0);
     end;
 
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
@@ -435,14 +434,13 @@ PROCEDURE makeHtmlFromTemplate();
 
 PROCEDURE finalizeFunctionDocMap;
   VAR entries:functionDocMap.KEY_VALUE_LIST;
-      values:specialize G_list<P_intrinsicFunctionDocumentation>;
+      values:T_arrayOfPointer;
       i:longint;
   begin
     entries:=functionDocMap.entrySet;
-    values.create;
-    for i:=0 to length(entries)-1 do values.add(entries[i].value);
-    values.unique;
-    for i:=0 to values.size-1 do dispose(values[i],destroy);
+    setLength(values,0);
+    for i:=0 to length(entries)-1 do appendIfNew(values,entries[i].value);
+    for i:=0 to length(values)-1 do dispose(P_intrinsicFunctionDocumentation(values[i]),destroy);
     functionDocMap.destroy;
   end;
 

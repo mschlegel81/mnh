@@ -178,7 +178,7 @@ FUNCTION charSet_imp intFuncSignature;
         i:longint;
         txt:ansistring;
         sub:ansistring;
-        charSet:T_listOfString;
+        charSet:T_setOfString;
     begin
       charSet.create;
       txt:=P_stringLiteral(input)^.value;
@@ -189,11 +189,10 @@ FUNCTION charSet_imp intFuncSignature;
           sub:=sub+txt[byteIndex];
           inc(byteIndex)
         end;
-        charSet.add(sub);
+        charSet.put(sub);
       end;
-      charSet.unique;
       result:=newListLiteral(charSet.size);
-      for i:=0 to charSet.size-1 do result^.appendString(charSet[i]);
+      for sub in charSet.values do result^.appendString(sub);
       charSet.destroy;
     end;
 

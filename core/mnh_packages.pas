@@ -54,7 +54,7 @@ TYPE
       PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
-      PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
+      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
@@ -958,7 +958,7 @@ PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
+PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
   FUNCTION typeToIsType(CONST id:T_idString):T_idString;
     begin
       result:=id;
@@ -970,14 +970,13 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
   begin
     userDefinedRules.clear;
     for rule in packageRules.valueSet do begin
-      userDefinedRules.add(rule^.id);
-      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.add(typeToIsType(rule^.id));
+      userDefinedRules.put(rule^.id);
+      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.id));
     end;
     for rule in importedRules.valueSet do  begin
-      userDefinedRules.add(rule^.id);
-      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.add(typeToIsType(rule^.id));
+      userDefinedRules.put(rule^.id);
+      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.id));
     end;
-    userDefinedRules.unique;
   end;
 
 PROCEDURE T_package.complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);

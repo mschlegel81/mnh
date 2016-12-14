@@ -42,12 +42,12 @@ VAR globalMemoryLimit:int64={$ifdef Windows}
                             {$else}
                             1000000000;
                             {$endif}
-    allCaches:specialize G_list<P_cache>;
+    allCaches:T_arrayOfPointer;
 
 PROCEDURE polishAllCaches;
   VAR i:longint;
   begin
-    for i:=0 to allCaches.size-1 do with allCaches[i]^ do if system.TryEnterCriticalsection(criticalSection)<>0 then begin
+    for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.TryEnterCriticalsection(criticalSection)<>0 then begin
       polish;
       system.leaveCriticalSection(criticalSection);
     end;
@@ -59,12 +59,12 @@ CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
     {$ifdef fullVersion}globalMemoryLimit:=settings.value^.memoryLimit;{$endif}
     fill := 0;
     setLength(cached,MIN_BIN_COUNT);
-    allCaches.add(@self);
+    append(allCaches,@self);
   end;
 
 DESTRUCTOR T_cache.destroy;
   begin
-    allCaches.remValue(@self);
+    dropValues(allCaches,@self);
     clear;
   end;
 
@@ -189,8 +189,6 @@ PROCEDURE T_cache.clear;
   end;
 
 INITIALIZATION
-  allCaches.create;
-FINALIZATION
-  allCaches.destroy;
+  allCaches:=C_EMPTY_POINTER_ARRAY;
 
 end.

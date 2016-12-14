@@ -19,7 +19,6 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
       if language=LANG_MNH then assistancEvaluator.extendCompletionList(wordsInEditor);
     end;
-    wordsInEditor.unique;
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
@@ -29,19 +28,19 @@ PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: s
   end;
 
 PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
-  VAR i:longint;
-      s:string;
+  VAR s:string;
+      w:string;
   begin
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
-    for i:=0 to wordsInEditor.size-1 do
-      if (s='') or (pos(s,wordsInEditor[i])=1) then SynCompletion.ItemList.add(wordsInEditor[i]);
+    for w in wordsInEditor.values do if (s='') or (pos(s,w)=1) then SynCompletion.ItemList.add(w);
   end;
 
 PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   VAR i:longint;
       s:string;
+      w:string;
   begin
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
@@ -51,8 +50,7 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
       s:=copy(s,i,length(s));
       SynCompletion.CurrentString:=s;
     end;
-    for i:=0 to wordsInEditor.size-1 do
-      if pos(s,wordsInEditor[i])=1 then SynCompletion.ItemList.add(wordsInEditor[i]);
+    for w in wordsInEditor.values do if pos(s,w)=1 then SynCompletion.ItemList.add(w);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 {$endif}

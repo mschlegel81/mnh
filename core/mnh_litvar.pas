@@ -141,7 +141,7 @@ TYPE
     FUNCTION typeString:string; virtual;
   end;
 
-  GENERIC G_literalKeyMap<VALUE_TYPE>= object
+  generic G_literalKeyMap<VALUE_TYPE>= object
     TYPE CACHE_ENTRY=record
            key:P_literal;
            value:VALUE_TYPE;
