@@ -249,7 +249,7 @@ TYPE
       line:longint;
     end;
     lastWordsCaret:longint;
-    wordsInEditor:T_listOfString;
+    wordsInEditor:T_setOfString;
     lastReportedRunnerInfo:T_runnerStateInfo;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     PROCEDURE positionHelpNotifier;

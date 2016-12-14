@@ -40,7 +40,7 @@ T_editorState=object(T_serializable)
 end;
 
 T_fileHistory=object(T_serializable)
-  items: T_listOfString;
+  items: T_arrayOfString;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -233,7 +233,7 @@ PROCEDURE T_workspace.initDefaults(CONST withEditor:boolean);
   VAR i:longint;
   begin
     name:='';
-    fileHistory.items.clear;
+    fileHistory.items:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(editorState)-1 do editorState[i].destroy;
     if withEditor then begin
       setLength(editorState,1);
@@ -411,12 +411,12 @@ FUNCTION T_settings.deleteWorkspace: boolean;
 
 CONSTRUCTOR T_fileHistory.create;
   begin
-    items.create;
+    items:=C_EMPTY_STRING_ARRAY;
   end;
 
 DESTRUCTOR T_fileHistory.destroy;
   begin
-    items.destroy;
+    setLength(items,0);
   end;
 
 FUNCTION T_fileHistory.getSerialVersion:dword; begin result:=176454893; end;
@@ -425,10 +425,11 @@ FUNCTION T_fileHistory.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):b
   VAR i,count:longint;
   begin
     if not(inherited loadFromStream(stream)) then exit(false);
-    items.clear;
+    setLength(items,0);
     count:=stream.readNaturalNumber;
     if count>FILE_HISTORY_MAX_SIZE then exit(false);
-    for i:=0 to count-1 do items.add(stream.readAnsiString);
+    setLength(items,count);
+    for i:=0 to count-1 do items[i]:=stream.readAnsiString;
     result:=stream.allOkay;
   end;
 
@@ -436,7 +437,7 @@ PROCEDURE T_fileHistory.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   VAR i,count:longint;
   begin
     inherited saveToStream(stream);
-    count:=items.size;
+    count:=length(items);
     if count>FILE_HISTORY_MAX_SIZE then count:=FILE_HISTORY_MAX_SIZE;
     stream.writeNaturalNumber(count);
     for i:=0 to count-1 do stream.writeAnsiString(items[i]);
@@ -446,30 +447,30 @@ FUNCTION T_fileHistory.polishHistory: boolean;
   VAR i, j: longint;
   begin
     result := false;
-    for i:=0 to items.size-1 do
+    for i:=0 to length(items)-1 do
       if not(fileExists(items[i])) then begin
         items[i]:='';
         result:=true;
       end;
     i:=0;
-    for i:=1 to items.size-1 do
+    for i:=1 to length(items)-1 do
       if (items[i]<>'') then for j:=0 to i-1 do
         if (expandFileName(items[i])=expandFileName(items[j])) then begin
           items[j]:='';
           result:=true;
         end;
-    items.remValue('');
+    dropValues(items,'');
   end;
 
 PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
   begin
-    items.add(fileName,0);
+    prepend(items,fileName);
     polishHistory;
   end;
 
 FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
   begin
-    if (index>=0) and (index<items.size)
+    if (index>=0) and (index<length(items))
     then result:=items[index]
     else result:='';
   end;

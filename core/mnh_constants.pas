@@ -232,6 +232,7 @@ CONST
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
   C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
+  C_unpureTokens:T_tokenTypeSet=[tt_declare..tt_cso_mapDrop,tt_pseudoFuncPointer,tt_toId];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
