@@ -276,17 +276,15 @@ private testIsPassedAccordingToLog(B:BuildConfig)->
 
 private makeDistro->isLinux ? fail : begin
   BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
-  execPipeless('..\upx.exe',['-9','mnh_light.exe']);
-  call7z(['mnh.exe','mnh_light.exe'],'64bit_windows');
-  execPipeless('..\upx.exe',['-9','bin32/mnh_light.exe']);
-  call7z(['bin32/mnh.exe','bin32/mnh_light.exe'],'32bit_windows');
-  LINUX_BUILTS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND)
-  ? begin
-      execPipeless('..\upx.exe',['-9','mnh_light']);
-      call7z(['mnh','mnh_light'],'linux');
-      call7z(['mnh','mnh.exe','mnh_light','mnh_light.exe','bin32/mnh.exe','bin32/mnh_light.exe'],'all');
-    end
-  : call7z(['mnh.exe','mnh_light.exe','bin32/mnh.exe','bin32/mnh_light.exe'],'all');
+  local linuxBuiltReady:=LINUX_BUILTS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
+  ['mnh_light.exe','bin32/mnh_light.exe',linuxBuiltReady ? 'mnh_light' : void].pEach(lightBinary,execPipeless('..\upx.exe',['-9',lightBinary]));
+  [                 [[      'mnh.exe',      'mnh_light.exe'],'64bit_windows'],
+                    [['bin32/mnh.exe','bin32/mnh_light.exe'],'32bit_windows'],
+  linuxBuiltReady ? [[      'mnh'    ,      'mnh_light'    ],'linux'] : void,
+                    [[linuxBuiltReady ? 'mnh' : void,linuxBuiltReady ? 'mnh_light' : void ,
+                                        'mnh.exe',                     'mnh_light.exe',
+                                  'bin32/mnh.exe',               'bin32/mnh_light.exe'],'all']]
+  .pEach(zipTask,call7z@zipTask);
   fileExists('distro_hook.mnh')
   ? executor.execPipeless(['distro_hook.mnh'])
   : void;
