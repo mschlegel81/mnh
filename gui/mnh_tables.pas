@@ -269,7 +269,6 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
-    writeln('TtableForm.initWithLiteral - ',parameterListTypeString(L),' ',toParameterListString(L,true,50));
     with sorted do begin
       ascending:=false;
       byColumn:=-1;
