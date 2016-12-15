@@ -875,7 +875,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,true,ak_unary,'toExpression(S);//Returns an expression parsed from S');
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,false,ak_unary,'toExpression(S);//Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
