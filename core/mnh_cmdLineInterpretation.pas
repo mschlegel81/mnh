@@ -208,7 +208,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
           if fileExists(paramStr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
-            if startsWith(paramstr(i),'-') or startsWith(paramstr(i),'+')
+            if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
             then writeln('Invalid parameter/switch given!')
             else begin
               writeln('Invalid filename given!');

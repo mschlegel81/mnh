@@ -583,7 +583,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
     end;
   end;
 
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:Boolean; VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
   VAR last:P_token;
       i:longint;
   begin
