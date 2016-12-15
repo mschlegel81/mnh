@@ -3725,7 +3725,7 @@ out> true
  in> isExpression(:: sin, 1);
 out> true
  in> isExpression(:: sin, 2);
-out> true
+out> false
  in> digits(123);
 out> [1,2,3]
  in> digits(123, 3);
