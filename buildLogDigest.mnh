@@ -12,3 +12,19 @@ main->'build.log'.fileLines
 .each(line,line[1].replace(line[0],"\t"&line[0]))
 .join("\n")
 .print;
+
+main('files')->'build.log'.fileLines
+.pEach(line,line.matches('\(3104\)').agg(OR) ? line : void)
+.pEach(line,line.replace(['/media/','D:\'],'').replace('\','/').replace('(3104) Compiling','').trim)
+.unique
+.pEach(file,relativeFilename(myPath,'../'&file),
+            'gui/'&file                                        ,
+            relativeFilename(myPath,replace(file,'dev/','../')),
+            'consoles/'&file)
+.pEach(file,file.replace('../mnh5/',''))
+.pEach(file,fileExists(file) ? file.escape : void)
+.union(allFiles('','*.inc').escape)
+.minus(['core/code_hash.inc'])
+.sort
+.join(",\n                    ")
+.{print('private hashFiles:=[',$s,'];')};
