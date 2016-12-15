@@ -2456,14 +2456,9 @@ object MnhForm: TMnhForm
           OnClick = miMinErrorlevel3Click
         end
         object miMinErrorlevel4: TMenuItem
-          Caption = '4: Show parsing and system errors'
+          Caption = '4: Show system errors only'
           RadioItem = True
           OnClick = miMinErrorlevel4Click
-        end
-        object miMinErrorlevel5: TMenuItem
-          Caption = '5: Show system errors only'
-          RadioItem = True
-          OnClick = miMinErrorlevel5Click
         end
       end
       object miIncFontSize: TMenuItem

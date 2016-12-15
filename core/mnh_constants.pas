@@ -488,10 +488,9 @@ TYPE
     mt_el3_noMatchingMain,
     mt_el3_stackTrace,
     mt_el3_userDefined,
-    mt_el4_parsingError,
-    mt_el5_systemError,
-    mt_el5_haltMessageReceived,
-    mt_el5_haltMessageQuiet,
+    mt_el4_systemError,
+    mt_el4_haltMessageReceived,
+    mt_el4_haltMessageQuiet,
     mt_endOfEvaluation,
     mt_reloadRequired,
     mt_timing_info
@@ -501,8 +500,7 @@ TYPE
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_displayTable,
-    mt_guiPseudoPackageFound,
-    mt_displayImage
+    mt_guiPseudoPackageFound
     {$endif});
 
   T_messageTypeSet=set of T_messageType;
@@ -532,10 +530,9 @@ CONST
 {mt_el3_noMatchingMain     }             (level: 3; mClass:mc_error;   prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:1),
 {mt_el3_stackTrace         }             (level: 3; mClass:mc_error;   prefix: 'Stack trace '         ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_el3_userDefined        }             (level: 3; mClass:mc_error;   prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:2),
-{mt_el4_parsingError       }             (level: 4; mClass:mc_error;   prefix: 'Parsing Error '       ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:4),
-{mt_el5_systemError        }             (level: 5; mClass:mc_error;   prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:5),
-{mt_el5_haltMessageReceived}             (level: 5; mClass:mc_error;   prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el5_haltMessageQuiet   }             (level: 5; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el4_systemError        }             (level: 4; mClass:mc_error;   prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:5),
+{mt_el4_haltMessageReceived}             (level: 4; mClass:mc_error;   prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el4_haltMessageQuiet   }             (level: 4; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_endOfEvaluation        }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_reloadRequired         }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_timing_info            }             (level:-1; mClass:mc_timing;  prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0)
@@ -545,15 +542,13 @@ CONST
 {mt_plotCreatedWithInstantDisplay      } (level:-1; mClass:mc_note;    prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_plotSettingsChanged                } (level:-1; mClass:mc_note;    prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_displayTable                       } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_guiPseudoPackageFound              } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_displayImage}                        (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0)
+{mt_guiPseudoPackageFound              } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
-  C_errorMessageTypes:array[1..5] of T_messageTypeSet=(
+  C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],
     [mt_el2_warning,mt_el2_userWarning],
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_stackTrace,mt_el3_userDefined],
-    [mt_el4_parsingError],
-    [mt_el5_systemError,mt_el5_haltMessageReceived,mt_el5_haltMessageQuiet]);
+    [mt_el4_systemError,mt_el4_haltMessageReceived,mt_el4_haltMessageQuiet]);
 
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
