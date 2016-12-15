@@ -291,6 +291,7 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
   end;
 
 INITIALIZATION
+  initialize(imigCS);
   initCriticalSection(imigCS);
   registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,true,ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,false,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+

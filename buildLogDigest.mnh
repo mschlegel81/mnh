@@ -1,5 +1,15 @@
 ignoredCodes:=[1002,1008,1021,1022,1023,3104,9015,9022,5024,11030,11031,3018,3019,3100,'lazarus'];
-ignoredPaths:=['dev/common/synapse','dev/common/epiktimer','lazbuild','--------------------------------','Free Pascal Compiler','Statefile not found'];
+ignoredPaths:=['dev/common/synapse',
+               'dev/common/epiktimer',
+               'lazbuild',
+               '--------------------------------',
+               'Free Pascal Compiler',
+               'Statefile not found',
+               'Local variable "perlinTable" does not seem to be initialized'            ,
+               'Variable "newImage" does not seem to be initialized'                     ,
+               'Variable "initialStep" of a managed type does not seem to be initialized',
+               'Variable "step" of a managed type does not seem to be initialized'       ,
+               'Variable "params" of a managed type does not seem to be initialized'];
 
 main->'build.log'.fileLines
 .pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
