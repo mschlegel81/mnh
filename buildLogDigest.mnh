@@ -23,8 +23,7 @@ main('files')->'build.log'.fileLines
             'consoles/'&file)
 .pEach(file,file.replace('../mnh5/',''))
 .pEach(file,fileExists(file) ? file.escape : void)
-.union(allFiles('','*.inc').escape)
-.minus(['core/code_hash.inc'])
+.union(allFiles('','*.inc').minus(['core/code_hash.inc']).escape)
 .sort
 .join(",\n                    ")
 .{print('private hashFiles:=[',$s,'];')};
