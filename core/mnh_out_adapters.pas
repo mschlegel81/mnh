@@ -528,9 +528,7 @@ PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType
 PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
 PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location,fileName)); end;
-PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayImage                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
-
-
+PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$endif}
 
 PROCEDURE T_adapters.clearAll;

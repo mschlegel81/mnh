@@ -71,19 +71,23 @@ VAR tableForms: array of TtableForm;
 PROCEDURE resetTableForms;
   VAR i:longint;
   begin
+    enterCriticalSection(tableFormCs);
     for i:=0 to length(tableForms)-1 do begin
       unregisterForm(tableForms[i]);
       FreeAndNil(tableForms[i]);
     end;
     setLength(tableForms,0);
+    leaveCriticalSection(tableFormCs);
   end;
 
 FUNCTION newTableForm:TtableForm;
   begin
+    enterCriticalSection(tableFormCs);
     result:=TtableForm.create(nil);
     setLength(tableForms,length(tableForms)+1);
     tableForms[length(tableForms)-1]:=result;
     registerForm(result,false,true);
+    leaveCriticalSection(tableFormCs);
   end;
 
 {$R *.lfm}
@@ -101,8 +105,6 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       header:boolean=false;
       i:longint;
   begin
-    context.adapters^.logDisplayTable;
-    if not(gui_started) then exit(nil);
     if (params<>nil) and
        (params^.size>0) and
        (params^.value(0)^.literalType in C_validListTypes) then begin
@@ -115,8 +117,9 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       end;
       enterCriticalSection(tableFormCs);
       newTableForm.initWithLiteral(P_listLiteral(params^.value(0)),caption,header);
+      context.adapters^.logDisplayTable;
       leaveCriticalSection(tableFormCs);
-      result:=newVoidLiteral;
+      if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
   end;
 
@@ -266,6 +269,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
+    writeln('TtableForm.initWithLiteral - ',parameterListTypeString(L),' ',toParameterListString(L,true,50));
     with sorted do begin
       ascending:=false;
       byColumn:=-1;
@@ -279,7 +283,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
       setLength(requested.headerData,headerLiteral^.size);
       for i:=0 to headerLiteral^.size-1 do case headerLiteral^.value(i)^.literalType of
         lt_string: requested.headerData[i]:=P_stringLiteral(headerLiteral^.value(i))^.value
-        else requested.headerData[i]:=headerLiteral^.value(i)^.toString;
+        else       requested.headerData[i]:=                headerLiteral^.value(i)^.toString;
       end;
       requested.literal:=L^.tail;
     end else begin
