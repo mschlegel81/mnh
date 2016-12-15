@@ -87,6 +87,7 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
   VAR meta:T_builtinFunctionMetaData;
       previous:P_intFuncCallback;
   begin
+    result:=ptr;
     if intrinsicRuleMap.containsKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,previous) then begin
       if builtinMetaMap.containsKey(previous)
       then meta:=builtinMetaMap.get(previous)
