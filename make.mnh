@@ -57,6 +57,89 @@ private ensurePackagesLines->'{'|
     .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file))&']'))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}";
 
+private hashFiles:=['../common/diff.pas',
+                    '../common/epiktimer.pas',
+                    '../common/httpUtil.pas',
+                    '../common/huffman.pas',
+                    '../common/myGenerics.pas',
+                    '../common/myStringUtil.pas',
+                    '../common/mySys.pas',
+                    '../common/serializationUtil.pas',
+                    '../common/synapse/blcksock.pas',
+                    '../common/synapse/synacode.pas',
+                    '../common/synapse/synafpc.pas',
+                    '../common/synapse/synaip.pas',
+                    '../common/synapse/synautil.pas',
+                    '../common/synapse/synsock.pas',
+                    'consoles/mnh_light.lpr',
+                    'core/code_hash.inc',
+                    'core/consoleAsk.pas',
+                    'core/mnh_basicTypes.pas',
+                    'core/mnh_caches.pas',
+                    'core/mnh_cmdLineInterpretation.pas',
+                    'core/mnh_constants.pas',
+                    'core/mnh_contexts.pas',
+                    'core/mnh_datastores.pas',
+                    'core/mnh_doc.pas',
+                    'core/mnh_fileWrappers.pas',
+                    'core/mnh_fmtStmt.inc',
+                    'core/mnh_func_defines.inc',
+                    'core/mnh_funcs.inc',
+                    'core/mnh_funcs.pas',
+                    'core/mnh_funcs_files.pas',
+                    'core/mnh_funcs_list.pas',
+                    'core/mnh_funcs_math.pas',
+                    'core/mnh_funcs_mnh.pas',
+                    'core/mnh_funcs_plot.pas',
+                    'core/mnh_funcs_regex.pas',
+                    'core/mnh_funcs_server.pas',
+                    'core/mnh_funcs_strings.pas',
+                    'core/mnh_funcs_system.pas',
+                    'core/mnh_funcs_types.pas',
+                    'core/mnh_funcs_xml.pas',
+                    'core/mnh_futureTask.inc',
+                    'core/mnh_html.pas',
+                    'core/mnh_litvar.pas',
+                    'core/mnh_out_adapters.pas',
+                    'core/mnh_packages.pas',
+                    'core/mnh_pattern.inc',
+                    'core/mnh_plotData.pas',
+                    'core/mnh_procBlock.inc',
+                    'core/mnh_rule.inc',
+                    'core/mnh_settings.pas',
+                    'core/mnh_subrule.inc',
+                    'core/mnh_token.inc',
+                    'core/mnh_tokens.pas',
+                    'core/res_ensureAssoc.inc',
+                    'core/res_ensureNppHighlighting.inc',
+                    'core/res_ensurePackages.inc',
+                    'core/res_examples.inc',
+                    'core/res_html_template.inc',
+                    'core/res_removeAssoc.inc',
+                    'gui/askdialog.pas',
+                    'gui/closedialog.pas',
+                    'gui/completionLogic.inc',
+                    'gui/debuggerLogic.inc',
+                    'gui/editorMeta.inc',
+                    'gui/filesLogic.inc',
+                    'gui/guiEditorInterface.inc',
+                    'gui/guiOutAdapters.pas',
+                    'gui/mnhFormHandler.pas',
+                    'gui/mnh_evalThread.pas',
+                    'gui/mnh_gui.lpr',
+                    'gui/mnh_gui_main.pas',
+                    'gui/mnh_gui_outputonly.pas',
+                    'gui/mnh_gui_settings.pas',
+                    'gui/mnh_plotform.pas',
+                    'gui/mnh_tables.pas',
+                    'gui/mnh_workspaces.pas',
+                    'gui/newcentralpackagedialog.pas',
+                    'gui/openDemoDialog.pas',
+                    'gui/runnerLogic.inc',
+                    'gui/searchLogic.inc',
+                    'gui/settingsLogic.inc',
+                    'gui/synhighlightermnh.pas'];
+
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
@@ -70,10 +153,9 @@ currentCodeHash:=begin
   templateToInc('resources/ensureAssoc.mnh'                ,'core/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'core/res_removeAssoc.inc');
   templateToInc('resources/ensurePackages.mnh',ensurePackagesLines,'core/res_ensurePackages.inc');
-  local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,extractFileName(f)='code_hash.inc' ? void : f);
   //update code hash
-  tprint('Updating code hash based on ',relevantFiles.size,' files');
-  local result:=format('%8.8x',fileStats(relevantFiles).getInner(3).agg(+)).copy(0,8);
+  tprint('Updating code hash based on ',hashFiles.size,' files');
+  local result:=format('%8.8x',fileStats(hashFiles).getInner(3).agg(+)).copy(0,8);
   fileContents('core/code_hash.inc')=="CODE_HASH='"&result&"';"
   ? void
   : begin
