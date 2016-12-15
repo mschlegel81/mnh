@@ -583,6 +583,40 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
     end;
   end;
 
+FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:Boolean; VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+  VAR last:P_token;
+      i:longint;
+  begin
+    result:=context.newToken(location,'',tt_braceOpen);
+    last:=result;
+    for i:=0 to minPatternLength-1 do begin
+      if i>0 then begin
+        last^.next:=context.newToken(location,'',tt_separatorComma);
+        last:=last^.next;
+      end;
+      last^.next:=context.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
+      last:=last^.next;
+    end;
+    last^.next:=context.newToken(location,'',tt_braceClose);
+    last:=last^.next;
+    if variadic then begin
+      last^.next:=context.newToken(location,'',tt_listToParameterList);
+      last:=last^.next;
+      if minPatternLength>0 then begin
+        last^.next:=context.newToken(location,'',tt_optionalParameters);
+      end else begin
+        last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
+      end;
+    end;
+  end;
+
+FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+  VAR a:T_arityKind;
+  begin
+    a:=getMeta(builtinRulePointer).arityKind;
+    result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
+  end;
+
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
   VAR stack:T_TokenStack;
       newLit:P_literal;
@@ -1360,12 +1394,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       location:=first^.location;;
       ruleToken:=context.disposeToken(first); //dispose ::, store f
       temp:=ruleToken^.next; //store ...
-      if (ruleToken^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
-        ruleToken^.next:=P_rule(ruleToken^.data)^.getParametersForPseudoFuncPointer(context,location);
-      end else begin
-        ruleToken^.next      :=context.newToken(location,'',tt_listToParameterList); //f -> f@
-        ruleToken^.next^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier); //f@ -> f@$params
-      end;
+      if (ruleToken^.tokType in [tt_localUserRule,tt_importedUserRule])
+      then ruleToken^.next:=P_rule(ruleToken^.data)^.getParametersForPseudoFuncPointer(context,location)
+      else ruleToken^.next:=getParametersForPseudoFuncPtr(ruleToken^.data,context,location);
       new(exRule,createFromInline(ruleToken,context));
       first:=context.newToken(location,'',tt_literal,newExpressionLiteral(exRule)); // {f@$params}
       first^.next:=temp; //-> {f@$params} ...

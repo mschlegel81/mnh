@@ -396,8 +396,6 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContex
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
       sub:P_subrule;
-      i:longint;
-      last:P_token;
   begin
     if ruleType in C_mutableRuleTypes then begin
       result:=context.newToken(location,'',tt_braceOpen);
@@ -408,28 +406,7 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContex
         maxPatternLength:=max(maxPatternLength,length(sub^.pattern.sig));
         if sub^.pattern.hasOptionals then maxPatternLength:=maxLongint;
       end;
-      result:=context.newToken(location,'',tt_braceOpen);
-      last:=result;
-      for i:=0 to minPatternLength-1 do begin
-        if i>0 then begin
-          last^.next:=context.newToken(location,'',tt_separatorComma);
-          last:=last^.next;
-        end;
-        last^.next:=context.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
-        last:=last^.next;
-      end;
-      last^.next:=context.newToken(location,'',tt_braceClose);
-      last:=last^.next;
-      if maxPatternLength>minPatternLength then begin
-        last^.next:=context.newToken(location,'',tt_listToParameterList);
-        last:=last^.next;
-        if minPatternLength>0 then begin
-          last^.next:=context.newToken(location,'',tt_optionalParameters);
-        end else begin
-          last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
-        end;
-      end;
-
+      result:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
     end;
   end;
 

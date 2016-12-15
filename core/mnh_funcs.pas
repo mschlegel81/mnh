@@ -12,6 +12,18 @@ TYPE
                ak_variadic_1,
                ak_variadic_2,
                ak_variadic_3);
+CONST
+  C_arityKind:array[T_arityKind] of record fixedParameters:longint; variadic:boolean end=
+                          {ak_nullary   }((fixedParameters:0;       variadic:false),
+                          {ak_unary     } (fixedParameters:1;       variadic:false),
+                          {ak_binary    } (fixedParameters:2;       variadic:false),
+                          {ak_ternary   } (fixedParameters:3;       variadic:false),
+                          {ak_variadic  } (fixedParameters:0;       variadic:true ),
+                          {ak_variadic_1} (fixedParameters:1;       variadic:true ),
+                          {ak_variadic_2} (fixedParameters:2;       variadic:true ),
+                          {ak_variadic_3} (fixedParameters:3;       variadic:true ));
+
+TYPE
   T_intFuncMeta=record
     arityKind:T_arityKind;
     pure:boolean;
