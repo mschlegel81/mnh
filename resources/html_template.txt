@@ -705,10 +705,10 @@ The same holds if the rule contains a variadic subrule:<code>
   out> {i()@$params}
 <!--end-->
 </code>
-Currently there is no meta-information on built-in rules, so those will always lead to a variadic expression:<code>
+For built-in rules:<code>
 <!--mnh-->
    in> ::sin;
-  out> {sin@$params}
+  out> {sin($0)}
 <!--end-->
 </code>
 

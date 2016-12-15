@@ -69,7 +69,7 @@ PROCEDURE displayHelp;
     writeln('                       n/N  : notes (error level 1 only)');
     writeln('                       w/W  : warnings (error level 2 only)');
     writeln('                       u/U  : user defined notes, warnings and errors');
-    writeln('                       1..5 : override minimum error level');
+    writeln('                       1..4 : override minimum error level');
     writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
     writeln('  -h                display this help or help on the input file if present and quit');
     writeln('  -version          show version info and exit');
@@ -210,9 +210,13 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
           if fileExists(paramStr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
-            writeln('Invalid filename given!');
+            if startsWith(paramStr(i),'-') or startsWith(paramStr(i),'+')
+            then writeln('Invalid parameter/switch given!')
+            else begin
+              writeln('Invalid filename given!');
+              writeln('File does not exist.');
+            end;
             writeln('Parameter: ',paramStr(i));
-            writeln('File does not exist.');
             exit(false);
           end;
         end;

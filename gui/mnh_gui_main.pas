@@ -124,7 +124,6 @@ TYPE
     miMinErrorlevel2,
     miMinErrorlevel3,
     miMinErrorlevel4,
-    miMinErrorlevel5,
     miNewCentralPackage,
     miOpen,
     miOpenDemo,

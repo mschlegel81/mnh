@@ -18,8 +18,8 @@ TYPE
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
-    {at_console}  [mt_clearConsole..mt_el5_haltMessageReceived,mt_timing_info],
-    {at_textFile} [mt_printline..mt_el5_haltMessageReceived,mt_timing_info],
+    {at_console}  [mt_clearConsole..mt_el4_haltMessageReceived,mt_timing_info],
+    {at_textFile} [mt_printline..mt_el4_haltMessageReceived,mt_timing_info],
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
@@ -272,7 +272,7 @@ OPERATOR :=(s:string):T_messageTypeSet;
       'N': result:=result-[mt_el1_note,mt_el1_userNote];
       'w': result:=result+[mt_el2_warning,mt_el2_userWarning];
       'W': result:=result-[mt_el2_warning,mt_el2_userWarning];
-      '1'..'5': begin
+      '1'..'4': begin
         level:=strToInt(s[i]);
         for mt:=low(T_messageType) to high(T_messageType) do if C_messageTypeMeta[mt].level>0 then begin
           if C_messageTypeMeta[mt].level>=level then result:=result+[mt]
@@ -500,7 +500,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
       inc(stackTraceCount);
       if stackTraceCount>30 then exit;
     end;
-    if (message.messageType in [mt_el3_evalError,mt_el3_noMatchingMain,mt_el4_parsingError,mt_el5_haltMessageReceived,mt_el5_systemError]) then begin
+    if (message.messageType in [mt_el3_evalError,mt_el3_noMatchingMain,mt_el4_haltMessageReceived,mt_el4_systemError]) then begin
       inc(errorCount);
       if errorCount>30 then exit;
     end;
@@ -513,7 +513,7 @@ PROCEDURE T_adapters.raiseNote       (CONST errorMessage: T_arrayOfString; CONST
 PROCEDURE T_adapters.raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el3_userDefined ,errorMessage        ,errorLocation)); end;
 PROCEDURE T_adapters.raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el2_userWarning ,errorMessage        ,errorLocation)); end;
 PROCEDURE T_adapters.raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el1_userNote    ,errorMessage        ,errorLocation)); end;
-PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el5_systemError ,errorMessage        ,errorLocation)); end;
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el4_systemError ,errorMessage        ,errorLocation)); end;
 PROCEDURE T_adapters.logTimingInfo    (CONST infoText:T_arrayOfString);                                                 begin raiseCustomMessage(message(mt_timing_info     ,infoText            ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logCallStackInfo (CONST infoText:ansistring; CONST location:T_searchTokenLocation);                begin raiseCustomMessage(message(mt_el3_stackTrace  ,infoText            ,location)); end;
 PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);                                                          begin raiseCustomMessage(message(mt_reloadRequired  ,fileName            ,C_nilTokenLocation,fileName)); end;
@@ -544,9 +544,7 @@ PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType
 PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
 PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location,fileName)); end;
-PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayImage                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
-
-
+PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$ifdef IMIG}
 PROCEDURE T_adapters.logDisplayImage;
   begin
@@ -580,7 +578,7 @@ PROCEDURE T_adapters.clearAll;
 
 PROCEDURE T_adapters.stopEvaluation;
   begin
-    hasMessageOfType[mt_el5_haltMessageQuiet]:=true;
+    hasMessageOfType[mt_el4_haltMessageQuiet]:=true;
     maxErrorLevel:=5;
   end;
 
@@ -594,15 +592,15 @@ FUNCTION T_adapters.noErrors: boolean;
 
 FUNCTION T_adapters.hasHaltMessage(CONST includeQuiet:boolean=true):boolean;
   begin
-    result:=hasMessageOfType[mt_el5_haltMessageReceived] or
-            hasMessageOfType[mt_el5_haltMessageQuiet] and includeQuiet;
+    result:=hasMessageOfType[mt_el4_haltMessageReceived] or
+            hasMessageOfType[mt_el4_haltMessageQuiet] and includeQuiet;
   end;
 
 FUNCTION T_adapters.hasFatalError: boolean;
   begin
-    result:=hasMessageOfType[mt_el5_haltMessageQuiet] or
-            hasMessageOfType[mt_el5_haltMessageReceived] or
-            hasMessageOfType[mt_el5_systemError];
+    result:=hasMessageOfType[mt_el4_haltMessageQuiet] or
+            hasMessageOfType[mt_el4_haltMessageReceived] or
+            hasMessageOfType[mt_el4_systemError];
   end;
 
 FUNCTION T_adapters.hasStackTrace:boolean;
@@ -627,25 +625,14 @@ PROCEDURE T_adapters.updateErrorlevel;
   begin
     maxErrorLevel:=0;
     for mt:=low(T_messageType) to high(T_messageType) do
-    if (mt<>mt_el5_haltMessageQuiet) and
+    if (mt<>mt_el4_haltMessageQuiet) and
        (hasMessageOfType[mt]) and
        (C_messageTypeMeta[mt].level>maxErrorLevel) then maxErrorLevel:=C_messageTypeMeta[mt].level;
   end;
 
-PROCEDURE T_adapters.haltEvaluation;
-  begin
-    raiseCustomMessage(message(mt_el5_haltMessageReceived, C_EMPTY_STRING_ARRAY, C_nilTokenLocation));
-  end;
-
-PROCEDURE T_adapters.logEndOfEvaluation;
-  begin
-    raiseCustomMessage(message(mt_endOfEvaluation,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
-  end;
-
-PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
-  begin
-    raiseCustomMessage(message(mt_el5_systemError,errorMessage,C_nilTokenLocation));
-  end;
+PROCEDURE T_adapters.haltEvaluation;                                   begin raiseCustomMessage(message(mt_el4_haltMessageReceived,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logEndOfEvaluation;                               begin raiseCustomMessage(message(mt_endOfEvaluation        ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring); begin raiseCustomMessage(message(mt_el4_systemError        ,errorMessage        ,C_nilTokenLocation)); end;
 
 FUNCTION T_adapters.addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
   VAR fileName:string;
@@ -755,7 +742,7 @@ PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters;
     {$endif}
     if (collector<>nil) then
     for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
-      mt_el5_haltMessageReceived,
+      mt_el4_haltMessageReceived,
       mt_endOfEvaluation,
       mt_reloadRequired: raiseCustomMessage(collector^.storedMessages[i]);
       else begin
