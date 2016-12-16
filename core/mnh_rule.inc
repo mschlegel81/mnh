@@ -36,6 +36,7 @@
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION idForErrorFeedback:ansistring;
       FUNCTION getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+      FUNCTION getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_listLiteral;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -362,6 +363,9 @@ FUNCTION T_rule.inspect:P_listLiteral;
     VAR i:longint;
         value:P_literal;
     begin
+      {$ifdef debugMode}
+      writeln(stdErr,'inspecting ',id,' ',ansistring(declarationStart));
+      {$endif}
       if ruleType in C_mutableRuleTypes then begin
         value:=namedValue.getValue;
         result:=newListLiteral^.append(newListLiteral(5)^
@@ -412,6 +416,36 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContex
       end;
       result:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
     end;
+  end;
+
+FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_listLiteral;
+  VAR attributes:P_listLiteral;
+      subAttributes:P_listLiteral;
+      sub:P_subrule;
+      expressionToken:P_token;
+  begin
+    attributes:=newListLiteral();
+    for sub in subrules do begin
+      subAttributes:=sub^.getAttributesLiteral;
+      attributes^.appendAll(subAttributes);
+      disposeLiteral(subAttributes);
+    end;
+    attributes^.toSet;
+
+    expressionToken:=context.newToken(declarationStart,id,tt_importedUserRule,@self);
+    expressionToken^.next:=getParametersForPseudoFuncPointer(context,declarationStart);
+    new(sub,createFromInline(expressionToken,context));
+
+    result:=newListLiteral(3)^
+              .append(newListLiteral(2)^
+                .appendString('id')^
+                .appendString(id),false)^
+              .append(newListLiteral(2)^
+                .appendString('rule')^
+                .append(newExpressionLiteral(sub),false),false)^
+              .append(newListLiteral(2)^
+                .appendString('attributes')^
+                .append(attributes,false),false);
   end;
 
 {$endif}

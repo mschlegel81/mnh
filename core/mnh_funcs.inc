@@ -743,45 +743,78 @@ FUNCTION parseTime_imp intFuncSignature;
     end;
   end;
 
+FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_evaluationContext; CONST registerAsSecondaryPackage:boolean; OUT freshlyCreated:boolean):P_package;
+  VAR fileName:string='';
+      id      :string='';
+      p       :P_package;
+  begin
+    freshlyCreated:=false;
+    if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
+    then fileName:=expandFileName(filenameOrId)
+    else id      :=filenameOrId;
+    for p in callerPackage^.mainPackage^.secondaryPackages do
+      if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.getCodeProvider^.id    ))
+      or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
+      then exit(p);
+    if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
+    if (fileName='') or not(fileExists(fileName)) then begin
+      context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
+      exit(nil);
+    end;
+    new(result,create(callerPackage^.mainPackage));
+    result^.setSourcePath(fileName);
+    result^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+    freshlyCreated:=true;
+    if registerAsSecondaryPackage then begin
+      setLength(callerPackage^.mainPackage^.secondaryPackages,
+         length(callerPackage^.mainPackage^.secondaryPackages)+1);
+                callerPackage^.mainPackage^.secondaryPackages[
+         length(callerPackage^.mainPackage^.secondaryPackages)-1]:=result;
+    end;
+  end;
+
 FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
-      tempPackage:T_package;
+      tempPackage:P_package;
       source:TStringList;
+      needDispose:boolean=false;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
-      with P_package(tokenLocation.package)^ do
-        for i:=0 to length(packageUses)-1 do
-        if (packageUses[i].id=id) or (packageUses[i].path=id)
-        then exit(packageUses[i].pack^.inspect);
-
-      if not(fileExists(id)) then id:=locateSource(extractFilePath(tokenLocation.package^.getPath),id);
-
-      if (id<>'') and fileExists(id) then begin
-        tempPackage.create(nil);
-        tempPackage.setSourcePath(id);
-        tempPackage.loadForDocumentation;
-        result:=tempPackage.inspect;
-        tempPackage.destroy;
+      tempPackage:=obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context,false,needDispose);
+      if tempPackage<>nil then begin
+        if needDispose then tempPackage^.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
+        result:=tempPackage^.inspect;
+        if needDispose then dispose(tempPackage,destroy);
         exit(result);
       end;
-
       result:=newListLiteral;
-      context.adapters^.raiseNote('Cannot locate package with id or path "'+id+'"',tokenLocation);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
-      tempPackage.create(nil);
+      new(tempPackage,create(nil));
       source:=TStringList.create;
       for i:=0 to list1^.size-1 do source.append(P_stringLiteral(list1^.value(i))^.value);
-      tempPackage.setSourceUTF8AndPath(source,str0^.value);
+      tempPackage^.setSourceUTF8AndPath(source,str0^.value);
       FreeAndNil(source);
-      tempPackage.loadForDocumentation;
-      result:=tempPackage.inspect;
-      tempPackage.destroy;
+      tempPackage^.loadForDocumentation;
+      result:=tempPackage^.inspect;
+      dispose(tempPackage,destroy);
     end;
+  end;
+
+FUNCTION import_imp intFuncSignature;
+  VAR p:P_package;
+      freshlyCreated:boolean;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      p:=obtainPackage(P_package(tokenLocation.package),tokenLocation,str0^.value,context,true,freshlyCreated);
+      if freshlyCreated then p^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+      if p=nil then result:=newListLiteral
+               else result:=p^.getDynamicUseMeta(context);
+    end else result:=nil;
   end;
 
 FUNCTION clearRuleCache_imp intFuncSignature;
@@ -888,6 +921,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,true ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,false,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,false,ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'import'           ,@import_imp           ,false,ak_unary     ,'import(idOrPath:string);//Returns information on rules of an imported package or a specified MNH source file');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache'   ,@clearRuleCache_imp   ,false,ak_unary     ,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,false,ak_unary     ,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches'   ,@clearAllCaches_imp   ,false,ak_nullary   ,'clearAllCaches;//Clears all memoized rule caches and returns void.');

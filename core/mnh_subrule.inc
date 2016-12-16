@@ -20,7 +20,6 @@
       attributes:array of T_subruleAttribute;
       firstCallCs:TRTLCriticalSection;
       functionIdsReady:boolean;
-
       comment:ansistring;
       parent:P_rule;
       typ:T_subruleType;
@@ -66,6 +65,7 @@
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
       FUNCTION acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
+      FUNCTION getAttributesLiteral:P_listLiteral;
   end;
 
 {$endif}
@@ -258,7 +258,11 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evalu
 
 PROCEDURE disposeSubruleImpl (VAR p:pointer);
   begin
-    dispose(P_subrule(p),destroy);
+    case P_subrule(p)^.typ of
+      srt_normal_private,srt_normal_public: begin end;
+      srt_inline_for_literal: dispose(P_subrule(p),destroy)
+      else raise Exception.create('Unexpected subrule type; rule is declared '+ansistring(P_subrule(p)^.declaredAt));
+    end;
     p:=nil;
   end;
 
@@ -711,6 +715,13 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
 FUNCTION T_subrule.acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
   begin
     result:=(length(pattern.sig)=1) and (literalType in pattern.sig[0].typeWhitelist);
+  end;
+
+FUNCTION T_subrule.getAttributesLiteral:P_listLiteral;
+  VAR i:longint;
+  begin
+    result:=newListLiteral(length(attributes));
+    for i:=0 to length(attributes)-1 do result^.append(newListLiteral(2)^.appendString(attributes[i].key)^.appendString(attributes[i].value),false);
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
