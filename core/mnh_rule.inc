@@ -207,14 +207,18 @@ exit}
   end;
 
 PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evaluationContext);
-  VAR i:longint;
+  VAR i,j:longint;
   begin
     if (id=MAIN_RULE_ID) and not(rule^.pattern.isValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.declaredAt);
-
     i:=0;
     while (i<length(subrules)) and not(rule^.pattern.isEquivalent(subrules[i]^.pattern)) do inc(i);
-    if i>=length(subrules) then setLength(subrules,i+1)
-                           else dispose(subrules[i],destroy);
+    if i>=length(subrules) then begin
+      setLength(subrules,i+1);
+      for j:=0 to i-1 do if subrules[j]^.pattern.hides(rule^.pattern) then context.adapters^.raiseWarning('Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.declaredAt),rule^.declaredAt);
+    end else begin
+      dispose(subrules[i],destroy);
+      context.adapters^.raiseWarning('Overriding rule '+rule^.getId,rule^.declaredAt);
+    end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (ruleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[ruleType]+'rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
