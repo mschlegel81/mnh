@@ -3382,7 +3382,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.executor','mnh.clearPackageCache','mnh.clearRuleCache','mnh.parameterNames','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.arity','mnh.listBuiltin','mnh.bits','mnh.hash','mnh.mnhInfo','mnh.sandBoxExecute','mnh.group','mnh.clearAllCaches','mnh.myPath','mnh.not','mnh.ord']
+out> ['mnh.executor','mnh.clearPackageCache','mnh.clearRuleCache','mnh.import','mnh.parameterNames','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.arity','mnh.listBuiltin','mnh.bits','mnh.hash','mnh.mnhInfo','mnh.sandBoxExecute','mnh.group','mnh.clearAllCaches','mnh.myPath','mnh.not','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);

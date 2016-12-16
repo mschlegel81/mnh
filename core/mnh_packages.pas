@@ -36,7 +36,7 @@ TYPE
       mainPackage:P_package;
       secondaryPackages:array of P_package;
       packageRules,importedRules:T_ruleMap;
-      packageUses:array of T_packageReference;
+      packageUses,dynamicUses:array of T_packageReference;
       ready:T_packageLoadUsecase;
       codeProvider:T_codeProvider;
       pseudoCallees:T_packageProfilingCalls;
@@ -74,6 +74,7 @@ TYPE
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_listLiteral;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
+      FUNCTION getDynamicUseMeta(VAR context:T_evaluationContext):P_listLiteral;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -780,6 +781,7 @@ CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
     setLength(packageUses,0);
+    setLength(dynamicUses,0);
     codeProvider.create;
     packageRules.create(@disposeRule);
     importedRules.create;
@@ -793,8 +795,8 @@ PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
       for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
       setLength(secondaryPackages,0);
     end;
-    for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
-    setLength(packageUses,0);
+    for i:=0 to length(packageUses)-1 do packageUses[i].destroy; setLength(packageUses,0);
+    for i:=0 to length(dynamicUses)-1 do dynamicUses[i].destroy; setLength(dynamicUses,0);
     packageRules.clear;
     importedRules.clear;
     ready:=lu_NONE;
@@ -1029,7 +1031,6 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_ad
     result.create(codeProvider.getPath,'',packageTokenLocation(@self),adapters);
   end;
 
-//FUNCTION T_package.isReady:boolean; begin result:=ready; end;
 FUNCTION T_package.getPath:ansistring; begin result:=codeProvider.getPath; end;
 FUNCTION T_package.isMain:boolean; begin result:=(@self=mainPackage); end;
 PROCEDURE T_package.setSourcePath(CONST path:ansistring);
@@ -1134,6 +1135,45 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
         result[length(result)-1]:=subRule;
       end;
     end;
+  end;
+
+FUNCTION T_package.getDynamicUseMeta(VAR context:T_evaluationContext):P_listLiteral;
+  FUNCTION rulesMeta:P_listLiteral;
+    VAR rule:P_rule;
+    begin
+      result:=newListLiteral();
+      for rule in packageRules.valueSet do if rule^.hasPublicSubrule then
+        result^.append(rule^.getDynamicUseMetaLiteral(context),false);
+    end;
+
+  FUNCTION subRulesMeta:P_listLiteral;
+    VAR rule:P_rule;
+        subRule:P_subrule;
+    begin
+      result:=newListLiteral();
+      for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.typ=srt_normal_public then begin
+        result^
+          .append(newListLiteral(3)^
+            .append(newListLiteral(2)^
+              .appendString('id')^
+              .appendString(subRule^.getId),false)^
+            .append(newListLiteral(2)^
+              .appendString('subrule')^
+              .append(newExpressionLiteral(subRule),false),false)^
+            .append(newListLiteral(2)^
+              .appendString('attributes')^
+              .append(subRule^.getAttributesLiteral,false),false),false);
+      end;
+    end;
+
+  begin
+    result:=newListLiteral(2)^
+              .append(newListLiteral(2)^
+                .appendString('rules')^
+                .append(rulesMeta,false),false)^
+              .append(newListLiteral(2)^
+                .appendString('subrules')^
+                .append(subRulesMeta,false),false);
   end;
 
 {$undef include_implementation}

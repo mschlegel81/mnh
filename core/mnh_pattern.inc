@@ -17,6 +17,7 @@
       FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
       PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
       PROCEDURE thinOutWhitelist;
+      FUNCTION hides(CONST e:T_patternElement):boolean;
       DESTRUCTOR destroy;
   end;
 
@@ -44,6 +45,7 @@
     FUNCTION toCmdLineHelpStringString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
     FUNCTION isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
+    FUNCTION hides(CONST p:T_pattern):boolean;
     FUNCTION isValidMainPattern:boolean;
     PROCEDURE toParameterIds(CONST tok:P_token);
   end;
@@ -161,14 +163,44 @@ PROCEDURE T_patternElement.thinOutWhitelist;
        and (restrictionValue<>nil)
     then begin
       case restrictionValue^.literalType of
-        lt_int : typeWhitelist:=[lt_int];
-        lt_real: typeWhitelist:=[lt_int,lt_real];
-        lt_string: typeWhitelist:=[lt_string];
-        lt_boolean: typeWhitelist:=[lt_boolean];
+        lt_int      : typeWhitelist:=[lt_int];
+        lt_real     : typeWhitelist:=[lt_int,lt_real];
+        lt_string   : typeWhitelist:=[lt_string];
+        lt_boolean  : typeWhitelist:=[lt_boolean];
         lt_emptyList: if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
-          then typeWhitelist:=[lt_emptyList]
-          else typeWhitelist:=[lt_list..lt_stringList, lt_keyValueList, lt_flatList];
+                 then typeWhitelist:=[lt_emptyList]
+                 else typeWhitelist:=[lt_list..lt_stringList, lt_keyValueList, lt_flatList];
       end;
+    end;
+  end;
+
+FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
+  begin
+    if e.typeWhitelist-typeWhitelist<>[] then exit(false); //e accepts types not accepted by self
+    case restrictionType of
+      tt_customTypeCheck:
+        exit((e.restrictionType=tt_customTypeCheck) and (customTypeCheck=e.customTypeCheck));
+      tt_typeCheckExpression,
+      tt_typeCheckList,
+      tt_typeCheckBoolList,
+      tt_typeCheckIntList,
+      tt_typeCheckRealList,
+      tt_typeCheckStringList,
+      tt_typeCheckNumList,
+      tt_typeCheckKeyValueList:
+        if e.restrictionType<>tt_typeCheckExpression then exit(false)
+        else exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
+      tt_comparatorListEq,
+      tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (e.restrictionIdx=restrictionIdx) and
+                             ((e.restrictionIdx>=0) or (e.restrictionValue^.isInRelationTo(tt_comparatorListEq,restrictionValue))));
+      tt_comparatorNeq   : exit((e.restrictionType = tt_comparatorNeq)                       and (e.restrictionIdx=restrictionIdx) and
+                             ((e.restrictionIdx>=0) or (e.restrictionValue^.isInRelationTo(tt_comparatorListEq,restrictionValue))));
+      tt_comparatorLeq,
+      tt_comparatorGeq,
+      tt_comparatorLss,
+      tt_comparatorGrt,
+      tt_operatorIn: exit(false); //TODO: this is too naive
+      else exit(true);
     end;
   end;
 
@@ -353,6 +385,19 @@ FUNCTION T_pattern.isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
     result:=(length(sig)=length(p.sig)) and
             (hasOptionals=p.hasOptionals);
     for i:=0 to length(sig)-1 do result:=result and (sig[i].typeWhitelist=p.sig[i].typeWhitelist);
+  end;
+
+FUNCTION T_pattern.hides(CONST p:T_pattern):boolean;
+  VAR i:longint;
+  begin
+    if not(hasOptionals) then begin
+      if p.hasOptionals               then exit(false); //p accepts more parameters
+      if (length(sig)<>length(p.sig)) then exit(false); //p accepts a different number of parameters
+    end else begin
+      if length(sig)>length(p.sig) then exit(false); //p accepts fewer parameters
+    end;
+    for i:=0 to length(sig)-1 do if not(sig[i].hides(p.sig[i])) then exit(false);
+    result:=true;
   end;
 
 FUNCTION T_pattern.isValidMainPattern:boolean;

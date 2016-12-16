@@ -7,9 +7,8 @@ USES {$ifdef UNIX} cthreads, {$else}
   {$ifdef debugMode}heaptrc,{$endif}{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms,
-  mnh_gui_main,mnh_gui_settings,closeDialog,askDialog,mnh_plotForm, newCentralPackageDialog, mnh_tables, //actual Forms
-  mnh_cmdLineInterpretation, mnh_basicTypes, mnh_funcs_files,
-  mnh_funcs_server, mnh_packages, mnh_settings, openDemoDialog, mySys, mnh_gui_outputOnly;
+  mnh_gui_main,
+  mnh_cmdLineInterpretation, mySys, mnh_gui_outputOnly;
 
 {$R *.res}
 
