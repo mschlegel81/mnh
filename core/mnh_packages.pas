@@ -364,7 +364,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                    or (tt_modifier_mutable    in ruleModifiers)
                    or (tt_modifier_persistent in ruleModifiers);
 
-        if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) then begin
+        if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
           context.adapters^.raiseError('Declaration does not start with an identifier.',first^.location);
           context.cascadeDisposeToken(first);
           exit;
@@ -846,13 +846,14 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     begin
       if (length(id)>=3) and (id[1]='i') and (id[2]='s') and (id[3] in ['A'..'Z']) then begin
         result:=copy(id,3,length(id)-2);
-        result[1]:=lowercase(result[1]);
+        result[1]:=upcase(result[1]);
       end else result:='';
     end;
 
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
+      lcRuleId:T_idString;
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
@@ -878,13 +879,15 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     end;
     ruleId:=isTypeToType(ruleId);
     if ruleId<>'' then begin
-      if packageRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+      lcRuleId:=ruleId;
+      lcRuleId[1]:=lowercase(lcRuleId[1]);
+      if (packageRules.containsKey(ruleId,userRule) or packageRules.containsKey(lcRuleId,userRule)) and (userRule^.ruleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
         userRule^.idResolved:=true;
         exit;
       end;
-      if importedRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+      if (importedRules.containsKey(ruleId,userRule) or importedRules.containsKey(lcRuleId,userRule)) and (userRule^.ruleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
         userRule^.idResolved:=true;
