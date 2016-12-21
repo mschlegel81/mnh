@@ -175,6 +175,19 @@ PROCEDURE T_patternElement.thinOutWhitelist;
   end;
 
 FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
+  TYPE T_valueRelation=(vr_unknown,vr_equal,vr_lesser,vr_greater);
+
+  FUNCTION getValueRelation:T_valueRelation;
+    begin
+      if (restrictionIdx>=0) and (e.restrictionIdx=restrictionIdx) then exit(vr_equal);
+      if (restrictionIdx<0) and (e.restrictionIdx<0) then begin
+        if      restrictionValue^.isInRelationTo(tt_comparatorListEq,e.restrictionValue) then exit(vr_equal)
+        else if restrictionValue^.isInRelationTo(tt_comparatorLss   ,e.restrictionValue) then exit(vr_lesser)
+        else if restrictionValue^.isInRelationTo(tt_comparatorGrt   ,e.restrictionValue) then exit(vr_greater);
+      end;
+      result:=vr_unknown;
+    end;
+
   begin
     if e.typeWhitelist-typeWhitelist<>[] then exit(false); //e accepts types not accepted by self
     case restrictionType of
@@ -191,14 +204,30 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
         if e.restrictionType<>tt_typeCheckExpression then exit(false)
         else exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
       tt_comparatorListEq,
-      tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (e.restrictionIdx=restrictionIdx) and
-                             ((e.restrictionIdx>=0) or (e.restrictionValue^.isInRelationTo(tt_comparatorListEq,restrictionValue))));
-      tt_comparatorNeq   : exit((e.restrictionType = tt_comparatorNeq)                       and (e.restrictionIdx=restrictionIdx) and
-                             ((e.restrictionIdx>=0) or (e.restrictionValue^.isInRelationTo(tt_comparatorListEq,restrictionValue))));
-      tt_comparatorLeq,
-      tt_comparatorGeq,
-      tt_comparatorLss,
-      tt_comparatorGrt,
+      tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (getValueRelation=vr_equal));
+      tt_comparatorNeq   : exit((e.restrictionType = tt_comparatorNeq) and (getValueRelation=vr_equal));
+      tt_comparatorLeq   :
+        case getValueRelation of
+          vr_unknown,vr_lesser: exit(false);
+          vr_equal, vr_greater: exit(e.restrictionType in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorLss,tt_comparatorLeq]);
+        end;
+      tt_comparatorGeq   :
+        case getValueRelation of
+          vr_unknown,vr_greater: exit(false);
+          vr_equal,vr_lesser: exit(e.restrictionType in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorGrt,tt_comparatorGeq]);
+        end;
+      tt_comparatorLss:
+        case getValueRelation of
+          vr_unknown,vr_lesser: exit(false);
+          vr_equal  : exit(e.restrictionType in [tt_comparatorNeq,tt_comparatorLss]);
+          vr_greater: exit(e.restrictionType in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorLss,tt_comparatorLeq]);
+        end;
+      tt_comparatorGrt:
+        case getValueRelation of
+          vr_unknown,vr_greater: exit(false);
+          vr_equal : exit(e.restrictionType in [tt_comparatorNeq,tt_comparatorGrt]);
+          vr_lesser: exit(e.restrictionType in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorGrt,tt_comparatorGeq]);
+        end;
       tt_operatorIn: exit(false); //TODO: this is too naive
       else exit(true);
     end;
