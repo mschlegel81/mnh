@@ -406,10 +406,12 @@ CONST
        (txt:'true';     reservedWordClass:rwc_specialLiteral; helpText:'true literal'),
        (txt:'main';     reservedWordClass:rwc_not_reserved  ; helpText:'main rule#Called when the script is executed from the command line (or via "call main" in the GUI)'));
 
-  C_ruleTypeString: array[tt_localUserRule..tt_intrinsicRule] of string = (
+  C_ruleTypeString: array[tt_localUserRule..tt_customTypeRule] of string = (
     'user function (local)',
     'user function (imported)',
-    'built in function');
+    'built in function',
+    'put-cache rule',
+    'custom type');
 
 TYPE
   T_ruleType=(rt_normal,
