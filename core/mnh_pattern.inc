@@ -189,6 +189,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
     end;
 
   begin
+    result:=false;
     if e.typeWhitelist-typeWhitelist<>[] then exit(false); //e accepts types not accepted by self
     case restrictionType of
       tt_customTypeCheck:

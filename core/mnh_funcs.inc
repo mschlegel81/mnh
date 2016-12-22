@@ -779,6 +779,21 @@ FUNCTION inspect_imp intFuncSignature;
       tempPackage:P_package;
       source:TStringList;
       needDispose:boolean=false;
+      loadMessages:P_listLiteral=nil;
+
+  PROCEDURE loadTemporaryPackage;
+    VAR prevAdapters:P_adapters;
+        collector   :P_collectingOutAdapter;
+        mt:T_messageType;
+    begin
+      prevAdapters:=context.enterTryStatementReturningPreviousAdapters;
+      collector:=P_collectingOutAdapter(context.adapters^.getAdapter(at_sandboxAdapter));
+      for mt in T_messageType do collector^.enableMessageType(C_messageTypeMeta[mt].mClass in [mc_echo,mc_warning],[mt]);
+      tempPackage^.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
+      loadMessages:=newListLiteral(2)^.appendString('messages')^.append(messagesToLiteralForSandbox(collector^.storedMessages),false);
+      context.leaveTryStatementReassumingPreviousAdapters(prevAdapters,true);
+    end;
+
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
@@ -787,8 +802,9 @@ FUNCTION inspect_imp intFuncSignature;
 
       tempPackage:=obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context,false,needDispose);
       if tempPackage<>nil then begin
-        if needDispose then tempPackage^.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
+        if needDispose then loadTemporaryPackage;
         result:=tempPackage^.inspect;
+        if loadMessages<>nil then lResult^.append(loadMessages,false);
         if needDispose then dispose(tempPackage,destroy);
         exit(result);
       end;
@@ -799,8 +815,8 @@ FUNCTION inspect_imp intFuncSignature;
       for i:=0 to list1^.size-1 do source.append(P_stringLiteral(list1^.value(i))^.value);
       tempPackage^.setSourceUTF8AndPath(source,str0^.value);
       FreeAndNil(source);
-      tempPackage^.loadForDocumentation;
-      result:=tempPackage^.inspect;
+      loadTemporaryPackage;
+      result:=tempPackage^.inspect^.append(loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;

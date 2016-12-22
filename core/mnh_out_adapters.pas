@@ -161,6 +161,7 @@ TYPE
 
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
+      FUNCTION getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
 
       FUNCTION collectingClone:P_adapters;
       PROCEDURE copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean);
@@ -688,6 +689,13 @@ FUNCTION T_adapters.getAdapter(CONST index: longint): P_abstractOutAdapter;
     result:=adapter[index];
   end;
 
+FUNCTION T_adapters.getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
+  VAR a:P_abstractOutAdapter;
+  begin
+    for a in adapter do if a^.adapterType=adapterType then exit(a);
+    result:=nil;
+  end;
+
 FUNCTION T_adapters.collectingClone: P_adapters;
   VAR collector:P_collectingOutAdapter;
   begin
@@ -704,9 +712,7 @@ PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters;
   VAR collector:P_collectingOutAdapter=nil;
       i:longint;
   begin
-    for i:=0 to length(clone^.adapter)-1 do
-    if (collector=nil) and
-       (clone^.adapter[i]^.adapterType=at_sandboxAdapter) then collector:=P_collectingOutAdapter(clone^.adapter[i]);
+    collector:=P_collectingOutAdapter(clone^.getAdapter(at_sandboxAdapter));
     {$ifdef fullVersion}
     if not(errorCase) and (clone^.hasMessageOfType[mt_plotFileCreated] or
                            clone^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] or
