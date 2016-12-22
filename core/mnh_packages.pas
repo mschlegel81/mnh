@@ -20,7 +20,7 @@ TYPE
   {$include mnh_futureTask.inc}
   {$include mnh_procBlock.inc}
   {$include mnh_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance);
+  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
   T_packageReference=object
     id,path:ansistring;
@@ -44,7 +44,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
-      PROCEDURE loadForDocumentation;
       PROCEDURE clear(CONST includeSecondaries:boolean);
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
@@ -91,6 +90,12 @@ FUNCTION tokenStackToString(CONST stack:pointer; CONST first: P_token; CONST len
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT={$ifdef Windows}60000{$else}3000{$endif};
 VAR pendingTasks     :T_taskQueue;
+FUNCTION isTypeToType(CONST id:T_idString):T_idString;
+  begin
+    if (length(id)>=3) and (id[1]='i') and (id[2]='s')
+    then result:=copy(id,3,length(id)-2)
+    else result:='';
+  end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
   begin
@@ -307,7 +312,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
           setLength(packageUses,0);
         end;
-        if usecase<>lu_forDocGeneration then reloadAllPackages(locationForErrorFeedback);
+        reloadAllPackages(locationForErrorFeedback);
       end;
 
     VAR assignmentToken:P_token;
@@ -364,9 +369,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                    or (tt_modifier_mutable    in ruleModifiers)
                    or (tt_modifier_persistent in ruleModifiers);
 
-        if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) then begin
+        if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
           context.adapters^.raiseError('Declaration does not start with an identifier.',first^.location);
           context.cascadeDisposeToken(first);
+          context.cascadeDisposeToken(ruleBody);
           exit;
         end;
         p:=first;
@@ -374,6 +380,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(first^.txt) then begin
             context.adapters^.raiseError('Declaration head contains qualified ID.',p^.location);
             context.cascadeDisposeToken(first);
+            context.cascadeDisposeToken(ruleBody);
             exit;
           end;
           p:=p^.next;
@@ -384,6 +391,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
           context.adapters^.raiseError('Invalid declaration head.',first^.location);
           context.cascadeDisposeToken(first);
+          context.cascadeDisposeToken(ruleBody);
           exit;
         end;
         rulePattern.create;
@@ -478,17 +486,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           first:=context.disposeToken(first);
         end else begin
           context.adapters^.raiseError('Invalid declaration.',ruleDeclarationStart);
+          context.cascadeDisposeToken(ruleBody);
           exit;
         end;
-        if (usecase=lu_forDocGeneration) then begin
-          context.cascadeDisposeToken(ruleBody);
-          ruleBody:=context.newToken(ruleDeclarationStart,'',tt_literal,newVoidLiteral);
-        end else begin
-          rulePattern.toParameterIds(ruleBody);
-          //[marker 1]
-          if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then begin
-            reduceExpression(ruleBody,0,context);
-          end;
+        rulePattern.toParameterIds(ruleBody);
+        //[marker 1]
+        if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then begin
+          reduceExpression(ruleBody,0,context);
         end;
 
         if context.adapters^.noErrors then begin
@@ -744,7 +748,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     ready:=usecase;
     case usecase of
       lu_forCodeAssistance,
-      lu_forDocGeneration: resolveRuleIds(context.adapters);
       lu_forCallingMain:   executeMain;
     end;
     {$ifdef fullVersion}
@@ -756,18 +759,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       finalize(context.adapters^);
       clearCachedFormats;
     end;
-  end;
-
-PROCEDURE T_package.loadForDocumentation;
-  VAR silentContext:T_evaluationContext;
-      nullAdapter:T_adapters;
-  begin
-    nullAdapter.create;
-    silentContext.createContext(P_adapters(@nullAdapter),ct_silentlyRunAlone);
-    nullAdapter.clearErrors;
-    load(lu_forDocGeneration,silentContext,C_EMPTY_STRING_ARRAY);
-    silentContext.destroy;
-    nullAdapter.destroy;
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -842,14 +833,6 @@ DESTRUCTOR T_package.destroy;
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adapters);
-  FUNCTION isTypeToType(CONST id:T_idString):T_idString;
-    begin
-      if (length(id)>=3) and (id[1]='i') and (id[2]='s') and (id[3] in ['A'..'Z']) then begin
-        result:=copy(id,3,length(id)-2);
-        result[1]:=lowercase(result[1]);
-      end else result:='';
-    end;
-
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -920,9 +903,15 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
           exit;
         end;
       end;
+      if (ruleType=rt_customTypeCheck) and not(ruleId[1] in ['A'..'Z']) then
+        adapters.raiseWarning('Type rules should begin with an uppercase letter',ruleDeclarationStart);
+      if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
+        adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
-      adapters.raiseNote('Creating new rule: '+ruleId,ruleDeclarationStart);
+      if ruleType=rt_customTypeCheck
+      then adapters.raiseNote('Creating new rules: '+ruleId+' and is'+ruleId,ruleDeclarationStart)
+      else adapters.raiseNote('Creating new rule: '+ruleId,ruleDeclarationStart);
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
       if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
@@ -1101,7 +1090,7 @@ FUNCTION T_package.inspect:P_listLiteral;
     end;
 
   begin
-    result:=newListLiteral(5)^
+    result:=newListLiteral(6)^
       .append(newListLiteral(2)^
               .appendString('id')^
               .appendString(codeProvider.id),false)^

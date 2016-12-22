@@ -128,18 +128,19 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     begin
       package.create(nil);
       package.setSourcePath(fileOrCommandToInterpret);
-
-      if wantHelpDisplay then begin
-        package.loadForDocumentation;
-        writeln(package.getHelpOnMain);
-        package.destroy;
-        wantHelpDisplay:=false;
-        exit;
-      end;
       {$ifdef fullVersion}
       if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling) else
       {$endif}
       context.createContext(P_adapters(@consoleAdapters),ct_normal);
+
+      if wantHelpDisplay then begin
+        package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
+        writeln(package.getHelpOnMain);
+        package.destroy;
+        wantHelpDisplay:=false;
+        context.destroy;
+        exit;
+      end;
       context.removeOption(cp_clearAdaptersOnStart);
       context.addOption(cp_beepOnError);
       context.resetForEvaluation(@package);
