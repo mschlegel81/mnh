@@ -196,7 +196,16 @@ exit}
           called:=true;
         end;
       end;
-      rt_normal,rt_customTypeCheck: begin
+      rt_customTypeCheck: begin
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,false) then begin
+          called:=true;
+          exit(true);
+        end;
+        firstRep:=context.newToken(declarationStart,'',tt_literal,newBoolLiteral(false));
+        lastRep:=firstRep;
+        exit(true);
+      end;
+      rt_normal: begin
         for useUncurryingFallback:=false to true do
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
           called:=true;
