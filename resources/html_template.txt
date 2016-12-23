@@ -964,12 +964,31 @@ The <i>local modifier</i> ensures, that a variable is declared in the scope of t
 It is only allowed in this context. Local variables always are mutable.
 
 <h4><br><a name="typeMod">type</a></h4>
-The <i>type modifier</i> allowes for the declaration of custom type checks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
+The <i>type modifier</i> allowes for the declaration of custom typechecks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
 The rule must contain exactly one subrule accepting one parameter and returning a boolean.<br>
 The following restrictions apply:<ul>
   <li> A type rule cannot be private </li>
   <li> A type rule must have exactly one subrule</li>
 </ul>
+For each type <code><b>T</b></code>, an additional rule <code>is<b>T</b></code> is automatically created.<br>
+It is recommended that type rules begin with an uppercase letter.<br><code>
+<!--mnh-->
+   in> type SquareMatrix(M:list)->M.each(row,row.isNumList(M.size),AND);
+   in> determinant(M:SquareMatrix)->
+         M.size=1 ? M[0,0] :
+         M.size=2 ? M[0,0]*M[1,1]-M[1,0]*M[0,1] :
+                    [0..M.size-1].each(i,-1^(i)*M[i,0]*M.subMatrix(i,0).determinant,+);
+
+   in> private subMatrix(M:SquareMatrix,skipRow,skipCol)->
+         M.each(row,index=skipRow
+                    ? void
+                    : row.each(cell,index=skipCol ? void : cell));   
+
+   in> [[1, 0],[2, 3]].isSquareMatrix;
+  out> true
+   in> [[1, 0],[2, 3]].determinant;
+  out> 3
+<!--end-->
 
 </div>
 <!--commonFoot-->
