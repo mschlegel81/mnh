@@ -1,5 +1,5 @@
 //*Returns a list suitbable for input of rule folderChanged
-timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]).sort(0);
+timedFolderContent(folderPath:string)->fileInfo(folderPath&'/*').each(info,[info['path'],info]).sort(0);
 //*Returns the updated folder content or false if the content is unchanged
 changedFolderContent(folderPath:string,previousContent:list)->begin
   local currentContent:=timedFolderContent(folderPath);

@@ -59,16 +59,16 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
-      if (FindFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
+      if (findFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
          ((info.Attr and faDirectory)<>faDirectory)
       then result:=expandFileName(path+info.name);
-      sysutils.FindClose(info);
+      sysutils.findClose(info);
       if result<>'' then exit;
 
-      if FindFirst(path+'*', faAnyFile, info) = 0 then repeat
+      if findFirst(path+'*', faAnyFile, info) = 0 then repeat
         if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
       until (findNext(info)<>0) or (result<>'');
-      sysutils.FindClose(info);
+      sysutils.findClose(info);
     end;
 
   begin
@@ -83,15 +83,15 @@ FUNCTION locateSources: T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
-      if (sysutils.FindFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) then repeat
+      if (sysutils.findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) then repeat
         appendIfNew(result,path+info.name);
       until (sysutils.findNext(info)<>0);
-      sysutils.FindClose(info);
+      sysutils.findClose(info);
 
-      if sysutils.FindFirst(path+'*', faAnyFile, info) = 0 then repeat
+      if sysutils.findFirst(path+'*', faAnyFile, info) = 0 then repeat
         if (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
       until (sysutils.findNext(info)<>0);
-      sysutils.FindClose(info);
+      sysutils.findClose(info);
     end;
 
   begin
@@ -265,7 +265,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
   begin
     path := extractFilePath(pattern);
     setLength(result, 0);
-    if FindFirst(pattern, faAnyFile, info) = 0 then repeat
+    if findFirst(pattern, faAnyFile, info) = 0 then repeat
       if (info.name<>'.') and
          (info.name<>'..') and
         (((info.Attr and faDirectory) =faDirectory) and not(filesAndNotFolders) or
@@ -275,7 +275,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
         if recurseSubDirs and not(filesAndNotFolders) then append(result,find(path+info.name+DirectorySeparator+'*',false,true));
       end;
     until (findNext(info)<>0);
-    sysutils.FindClose(info);
+    sysutils.findClose(info);
   end;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
