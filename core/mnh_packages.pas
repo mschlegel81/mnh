@@ -747,8 +747,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     ready:=usecase;
     case usecase of
-      lu_forCodeAssistance,
-      lu_forCallingMain:   executeMain;
+      lu_forCodeAssistance: resolveRuleIds(context.adapters);
+      lu_forCallingMain:    executeMain;
     end;
     {$ifdef fullVersion}
     if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forCodeAssistance]) and gui_started and context.adapters^.noErrors
