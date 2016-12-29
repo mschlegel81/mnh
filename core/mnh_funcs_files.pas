@@ -347,62 +347,48 @@ FUNCTION moveFile_imp intFuncSignature;
   end;
 
 FUNCTION fileInfo_imp intFuncSignature;
-  VAR time:double;
-      size:int64;
-      isExistent,
-      isArchive,
-      isDirectory,
-      isReadOnly,
-      isSystem,
-      isHidden:boolean;
-      //-------------------------
-      resultAsList:P_listLiteral;
-      attributeList:P_listLiteral;
+  FUNCTION infoForSearch(CONST s:string):P_listLiteral;
+    FUNCTION infoToLiteral(CONST info:T_fileInfo):P_listLiteral;
+      VAR a:P_listLiteral;
+          att:T_fileAttrib;
+      begin
+        a:=newListLiteral(3);
+        result:=newListLiteral()^.append(
+                  newListLiteral(2)^.
+                    appendString('path')^.
+                    appendString(info.filePath),false)^.append(
+                  newListLiteral(2)^.
+                    appendString('time')^.
+                    appendReal(info.time),false)^.append(
+                  newListLiteral(2)^.
+                    appendString('size')^.
+                    appendInt(info.size),false)^.append(
+                  newListLiteral(2)^.
+                    appendString('attributes')^.
+                    append(a,false),false);
+        for att in info.attributes do a^.appendString(C_fileAttribName[att]);
+      end; //infoToLiteral
 
-  PROCEDURE appendKeyValuePair(CONST key:string; CONST value:P_literal);
+    VAR info:T_fileInfo;
     begin
-      resultAsList^.append(
-        newListLiteral^.
-        appendString(key)^.
-        append(value,false),false);
-    end;
+      if containsPlaceholder(s) then begin
+        result:=newListLiteral();
+        for info in findFileInfo(s) do result^.append(infoToLiteral(info),false);
+      end else for info in findFileInfo(s) do exit(infoToLiteral(info));
+    end; //infoForSearch
 
   VAR i:longint;
-      tmpParam:P_listLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      getFileInfo(str0^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
-      if not(isExistent) then begin
-        size:=-1;
-        time:= 0;
-        isArchive:=false;
-        isDirectory:=false;
-        isReadOnly:=false;
-        isSystem:=false;
-        isHidden:=false;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_string: exit(infoForSearch(str0^.value));
+      lt_stringList: begin
+        result:=newListLiteral(list0^.size);
+        for i:=0 to list0^.size-1 do lResult^.append(infoForSearch(P_stringLiteral(list0^.value(i))^.value),false);
       end;
-      resultAsList:=newListLiteral;
-      appendKeyValuePair('exists',newBoolLiteral(isExistent));
-      appendKeyValuePair('size',newIntLiteral(size));
-      appendKeyValuePair('time',newRealLiteral(time));
-      attributeList:=newListLiteral;
-      if isArchive   then attributeList^.appendString('archive'  );
-      if isDirectory then attributeList^.appendString('directory');
-      if isReadOnly  then attributeList^.appendString('readonly' );
-      if isSystem    then attributeList^.appendString('system'   );
-      if isHidden    then attributeList^.appendString('hidden'   );
-      appendKeyValuePair('attributes',attributeList);
-      result:=resultAsList;
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true);
-        lResult^.append(fileInfo_imp(tmpParam,tokenLocation,context),false);
-        disposeLiteral(tmpParam);
-      end;
+      lt_emptyList: result:=newListLiteral(0);
     end;
-  end;
+  end; //fileInfo_imp
 
 FUNCTION fileStats_imp intFuncSignature;
   VAR lineCount,wordCount,byteCount:longint;
@@ -541,8 +527,8 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir'           ,@deleteDir_imp    ,false,ak_unary     ,'deleteDir(directoryname:string);//Deletes the given directory, returning true on success and false otherwise');
   registerRule(FILES_BUILTIN_NAMESPACE,'copyFile'            ,@copyFile_imp     ,false,ak_binary    ,'copyFile(source:string,dest:string);//Copies a file from source to dest, returning true on success and false otherwise');
   registerRule(FILES_BUILTIN_NAMESPACE,'moveFile'            ,@moveFile_imp     ,false,ak_binary    ,'moveFile(source:string,dest:string);//Moves a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo'            ,@fileInfo_imp     ,false,ak_unary     ,'fileInfo(filename:string);//Retuns file info as a key-value-list');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats'           ,@fileStats_imp    ,false,ak_unary     ,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo'            ,@fileInfo_imp     ,false,ak_unary     ,'fileInfo(filenameOrPattern:string);//Retuns file info as a key-value-list#fileInfo(filenameOrPattern:stringList);');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats'           ,@fileStats_imp    ,false,ak_unary     ,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:stringList);');
   registerRule(FILES_BUILTIN_NAMESPACE,'expandedFileName'    ,@expandedFileName_imp    ,true,ak_unary ,'expandedFileName(F);//Returns the expanded file name of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileDirectory',@extractFileDirectory_imp,true,ak_unary ,'extractFileDirectory(F);//Returns the expanded file directories of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileName'     ,@extractFileName_imp     ,true,ak_unary ,'extractFileName(F);//Returns the expanded file names (without path) of file(s) given by string or stringList F');
