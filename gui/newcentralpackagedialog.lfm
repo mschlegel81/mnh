@@ -29,6 +29,7 @@ object newCentralPackageForm: TnewCentralPackageForm
     Width = 263
     Align = alBottom
     Caption = 'remove package'
+    OnClick = remButtonClick
     TabOrder = 1
   end
   object GroupBox1: TGroupBox
