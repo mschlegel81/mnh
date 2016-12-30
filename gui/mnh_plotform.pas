@@ -74,6 +74,7 @@ TYPE
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
     PROCEDURE doPlot();
+    PROCEDURE doOrPostPlot();
     { public declarations }
   end;
 
@@ -112,8 +113,8 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
     if (key in ['+','-']) then begin
       if key='+' then guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
                  else guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
-      guiAdapters^.logDeferredPlot;
       pullPlotSettingsToGui();
+      doOrPostPlot();
     end;
   end;
 
@@ -143,9 +144,7 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
-    if runEvaluator.evaluationRunning
-    then guiAdapters^.logDeferredPlot
-    else doPlot();
+    doOrPostPlot();
   end;
 
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
@@ -172,9 +171,7 @@ PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
     o:=guiAdapters^.plot.options;
     o.relativeFontSize:=o.relativeFontSize/1.1;
     guiAdapters^.plot.options:=o;
-    if runEvaluator.evaluationRunning
-    then guiAdapters^.logDeferredPlot
-    else doPlot();
+    doOrPostPlot();
   end;
 
 PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
@@ -183,9 +180,7 @@ PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
     o:=guiAdapters^.plot.options;
     o.relativeFontSize:=o.relativeFontSize*1.1;
     guiAdapters^.plot.options:=o;
-    if runEvaluator.evaluationRunning
-    then guiAdapters^.logDeferredPlot
-    else doPlot();
+    doOrPostPlot();
   end;
 
 PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
@@ -275,7 +270,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
       pullPlotSettingsToGui();
       lastMouseX:=x;
       lastMouseY:=y;
-      doPlot();
+      doOrPostPlot();
     end;
   end;
 
@@ -319,9 +314,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     o.autoscale['y']:=miAutoscaleY.Checked;
     guiAdapters^.plot.options:=o;
     pullPlotSettingsToGui();
-    if runEvaluator.evaluationRunning
-    then guiAdapters^.logDeferredPlot
-    else doPlot();
+    doOrPostPlot();
   end;
 
 VAR broughtToFront:double;
@@ -340,6 +333,13 @@ PROCEDURE TplotForm.doPlot;
     else                                 factor:=1;
     guiAdapters^.resetFlagsAfterPlotDone;
     guiAdapters^.plot.renderPlot(plotImage,factor);
+  end;
+
+PROCEDURE TplotForm.doOrPostPlot;
+  begin
+    if runEvaluator.evaluationRunning
+    then guiAdapters^.logDeferredPlot
+    else doPlot();
   end;
 
 FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
