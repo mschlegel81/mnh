@@ -28,6 +28,7 @@ TYPE
     PROCEDURE ListBoxDblClick(Sender: TObject);
     PROCEDURE ListBoxKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE packageNameEditChange(Sender: TObject);
+    PROCEDURE remButtonClick(Sender: TObject);
     PROCEDURE restoreButtonClick(Sender: TObject);
   private
     { private declarations }
@@ -94,6 +95,12 @@ PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);
     end;
     complaintLabel.visible:=false;
     OKButton.enabled:=true;
+  end;
+
+PROCEDURE TnewCentralPackageForm.remButtonClick(Sender: TObject);
+  begin
+    DeleteFile(packagesFolder+ListBox.items[ListBox.ItemIndex]+'.mnh');
+    updatePackageList;
   end;
 
 PROCEDURE TnewCentralPackageForm.restoreButtonClick(Sender: TObject);
