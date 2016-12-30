@@ -305,10 +305,11 @@ FUNCTION T_rule.getCmdLineHelpText:ansistring;
 FUNCTION T_rule.getDocTxt:ansistring;
   VAR i:longint;
   begin
-    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
+    result:='';
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt();
     if ruleType in C_mutableRuleTypes then result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
-    result:=join(formatTabs(split(result)),LineEnding)
+    result:=join(formatTabs(split(result)),LineEnding);
+    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath+result;
   end;
 
 FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
