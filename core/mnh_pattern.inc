@@ -180,7 +180,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
   FUNCTION getValueRelation:T_valueRelation;
     begin
       if (restrictionIdx>=0) and (e.restrictionIdx=restrictionIdx) then exit(vr_equal);
-      if (restrictionIdx<0) and (e.restrictionIdx<0) then begin
+      if (restrictionIdx<0) and (e.restrictionIdx<0) and not(e.restrictionType in C_typeChecks) then begin
         if      restrictionValue^.isInRelationTo(tt_comparatorListEq,e.restrictionValue) then exit(vr_equal)
         else if restrictionValue^.isInRelationTo(tt_comparatorLss   ,e.restrictionValue) then exit(vr_lesser)
         else if restrictionValue^.isInRelationTo(tt_comparatorGrt   ,e.restrictionValue) then exit(vr_greater);
