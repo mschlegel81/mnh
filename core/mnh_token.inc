@@ -870,6 +870,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR future:array of P_futureTask;
           nextFuture:longint=0;
           initializedFutures:longint=0;
+          localContext:T_evaluationContext;
 
       PROCEDURE aggregateFutures(CONST finalizing:boolean);
         begin
@@ -878,7 +879,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,localContext);
             addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
@@ -891,6 +892,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
       VAR i,j:longint;
       begin
+        localContext.createContext(nil,ct_silentlyRunAlone);
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
@@ -904,6 +906,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
         aggregateFutures(true);
+        localContext.destroy;
       end;
 
     PROCEDURE initNonFutures;

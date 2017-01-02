@@ -669,17 +669,23 @@ PROCEDURE T_evaluationContext.leaveTryStatementReassumingPreviousAdapters(CONST 
 
 PROCEDURE T_evaluationContext.attachWorkerContext(CONST newParent: P_evaluationContext);
   begin
+    {$ifdef debugMode}
+    if parentContext<>nil then raise Exception.create('Attaching overrides already attached parent context');
+    {$endif}
     myAdapters:=newParent^.myAdapters;
     parentContext:=newParent;
     options:=parentContext^.options-[cp_timing]+[cp_queryParentValueStore];
+    valueStore.clear;
   end;
 
 PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evaluationContext);
   begin
     {$ifdef debugMode}
     if parentContext<>expectedParent then raise Exception.create('Detaching excepts another context');
+    if (length(valueStore.data)<>0) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
     {$endif}
     parentContext:=nil;
+    valueStore.clear;
     options:=options-[cp_queryParentValueStore];
   end;
 
@@ -753,7 +759,7 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
     system.enterCriticalSection(valueStore.cs);
     named:=valueStore.getVariable(id,blocked);
     if named<>nil then result:=named^.getValue
-    else if not(blocked) and (parentContext<>nil) and (cp_queryParentValueStore in options) then result:=parentContext^.getVariableValue(id)
+    else if not(blocked) and (cp_queryParentValueStore in options) then result:=parentContext^.getVariableValue(id)
     else result:=nil;
     system.leaveCriticalSection(valueStore.cs);
   end;
@@ -765,7 +771,6 @@ PROCEDURE T_evaluationContext.setVariableValue(CONST id:T_idString; CONST value:
     system.enterCriticalSection(valueStore.cs);
     named:=valueStore.getVariable(id,blocked);
     if named<>nil then named^.setValue(value)
-    else if not(blocked) and (parentContext<>nil) and (cp_queryParentValueStore in options) then parentContext^.setVariableValue(id,value,location)
     else adapters^.raiseError('Cannot assign value to unknown local variable '+id,location);
     system.leaveCriticalSection(valueStore.cs);
   end;
@@ -777,7 +782,6 @@ FUNCTION T_evaluationContext.mutateVariableValue(CONST id:T_idString; CONST muta
     system.enterCriticalSection(valueStore.cs);
     named:=valueStore.getVariable(id,blocked);
     if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^)
-    else if not(blocked) and (parentContext<>nil) and (cp_queryParentValueStore in options) then result:=parentContext^.mutateVariableValue(id,mutation,RHS,location)
     else begin
       adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
       result:=nil;
