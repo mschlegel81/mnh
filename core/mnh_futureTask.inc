@@ -55,6 +55,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
       currentTask:=pendingTasks.dequeue;
       if currentTask=nil then begin
         inc(sleepTime);
+        ThreadSwitch;
         sleep(sleepTime div 5);
       end else begin
         currentTask^.evaluate(0,tempcontext,true);
@@ -176,7 +177,7 @@ PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth: word; VAR context: T_evaluat
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(callDepth,context,false);
+    if task<>nil then task^.evaluate(callDepth,context,true);
   end;
 
 {$endif}
