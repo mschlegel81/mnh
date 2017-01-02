@@ -617,6 +617,10 @@ FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR con
     result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
   end;
 
+{$ifdef debugMode}
+VAR localContextCount:longint=0;
+    maxLocalContextCount:longint=0;
+{$endif}
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
   VAR stack:T_TokenStack;
       newLit:P_literal;
@@ -870,7 +874,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR future:array of P_futureTask;
           nextFuture:longint=0;
           initializedFutures:longint=0;
-          localContext:T_evaluationContext;
+          localContext:P_evaluationContext=nil;
 
       PROCEDURE aggregateFutures(CONST finalizing:boolean);
         begin
@@ -879,7 +883,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,localContext);
+            if localContext=nil then begin
+              new(localContext,createContext(nil,ct_silentlyRunAlone));
+              {$ifdef debugMode}
+              InterLockedIncrement(localContextCount);
+              if localContextCount>maxLocalContextCount then maxLocalContextCount:=localContextCount;
+              {$endif}
+            end;
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,localContext^);
             addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
@@ -892,7 +903,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
       VAR i,j:longint;
       begin
-        localContext.createContext(nil,ct_silentlyRunAlone);
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
@@ -906,7 +916,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
         aggregateFutures(true);
-        localContext.destroy;
+        if localContext<>nil then begin
+          dispose(localContext,destroy);
+          {$ifdef debugMode}
+          interlockedDecrement(localContextCount);
+          {$endif}
+        end;
       end;
 
     PROCEDURE initNonFutures;
