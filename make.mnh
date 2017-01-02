@@ -29,7 +29,7 @@ BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,'..\lazarus64\lazbuild.exe
 LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
 //Configuration:=====================================================
 private canBuild(B:BuildConfig)->B[0]=isLinux;
-private VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
+VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
 private binName(B:BuildConfig)->B[2];
 private needBuilt(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
 
