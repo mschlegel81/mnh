@@ -669,17 +669,23 @@ PROCEDURE T_evaluationContext.leaveTryStatementReassumingPreviousAdapters(CONST 
 
 PROCEDURE T_evaluationContext.attachWorkerContext(CONST newParent: P_evaluationContext);
   begin
+    {$ifdef debugMode}
+    if parentContext<>nil then raise Exception.create('Attaching overrides already attached parent context');
+    {$endif}
     myAdapters:=newParent^.myAdapters;
     parentContext:=newParent;
     options:=parentContext^.options-[cp_timing]+[cp_queryParentValueStore];
+    valueStore.clear;
   end;
 
 PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evaluationContext);
   begin
     {$ifdef debugMode}
     if parentContext<>expectedParent then raise Exception.create('Detaching excepts another context');
+    if (length(valueStore.data)<>0) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
     {$endif}
     parentContext:=nil;
+    valueStore.clear;
     options:=options-[cp_queryParentValueStore];
   end;
 
