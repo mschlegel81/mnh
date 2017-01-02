@@ -285,13 +285,13 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
     VAR i:longint;
-        b:boolean;
+        blocking:boolean;
         L:P_literal;
         remaining:P_listLiteral=nil;
     begin
       if not(functionIdsReady) then resolveIds(context.adapters);
-      b:=typ in [srt_normal_private,srt_normal_public];
-      firstRep:=context.newToken(declaredAt,'',beginToken[b]);
+      blocking:=typ in [srt_normal_private,srt_normal_public];
+      firstRep:=context.newToken(declaredAt,'',beginToken[blocking]);
       lastRep:=firstRep;
       for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
         if parIdx>=0 then begin
@@ -315,7 +315,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
       end;
       lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(declaredAt,'',endToken[b]);
+      lastRep^.next:=context.newToken(declaredAt,'',endToken[blocking]);
       lastRep:=lastRep^.next;
     end;
 
