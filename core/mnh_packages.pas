@@ -1190,7 +1190,4 @@ FINALIZATION
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
 {$include mnh_subrule.inc}
-{$ifdef debugMode}
-  writeln('Max local context count=',maxLocalContextCount);
-{$endif}
 end.

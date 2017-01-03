@@ -238,6 +238,7 @@ TYPE
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
+      FUNCTION readOnlyClone:P_namedVariable;
   end;
 
  {$ifdef fullVersion}
@@ -2562,6 +2563,11 @@ FUNCTION T_namedVariable.getValue:P_literal;
 FUNCTION T_namedVariable.toString(CONST lengthLimit:longint=maxLongint):ansistring;
   begin
     result:=id+'='+value^.toString(lengthLimit-1-length(id));
+  end;
+
+FUNCTION T_namedVariable.readOnlyClone:P_namedVariable;
+  begin
+    new(result,create(id,value,true));
   end;
 
 FUNCTION mapGet(CONST params:P_listLiteral):P_literal;

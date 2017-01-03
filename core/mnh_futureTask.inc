@@ -11,13 +11,14 @@
       eachParameter:P_literal;
       eachLocation:T_tokenLocation;
       scope:P_evaluationContext;
+      valueScope:P_valueStore;
       next:P_futureTask;
 
       evaluationResult:P_literal;
     public
       state:T_futureTaskState;
 
-    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext);
+    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext; CONST values:P_valueStore);
     PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext; CONST calledFromWorkerThread:boolean);
     FUNCTION    getResultAsLiteral:P_literal;
     DESTRUCTOR  destroy;
@@ -33,7 +34,7 @@
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext):P_futureTask;
+    FUNCTION  enqueue(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext; CONST values:P_valueStore):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_evaluationContext);
   end;
@@ -79,13 +80,14 @@ PROCEDURE ensurePoolThreads();
     end;
   end;
 
-CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext);
+CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext; CONST values:P_valueStore);
   begin
     eachIndex:=idx;
     eachRule:=expr;
     eachParameter:=x;
     eachLocation:=location;
     scope:=context;
+    valueScope:=values;
     next:=nil;
     state:=fts_pending;
     evaluationResult:=nil;
@@ -94,7 +96,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_token
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext; CONST calledFromWorkerThread:boolean);
   VAR idxLit:P_intLiteral;
   begin
-    if calledFromWorkerThread then context.attachWorkerContext(scope);
+    if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
     context.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
     context.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
@@ -141,9 +143,9 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext):P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext; CONST values:P_valueStore):P_futureTask;
   begin
-    new(result,createTask(expr,location,idx,x,context));
+    new(result,createTask(expr,location,idx,x,context,values));
     if result^.state=fts_pending then begin
       system.enterCriticalSection(cs);
       if first=nil then begin
@@ -177,7 +179,7 @@ PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth: word; VAR context: T_evaluat
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(callDepth,context,true);
+    if task<>nil then task^.evaluate(callDepth,context,false);
   end;
 
 {$endif}

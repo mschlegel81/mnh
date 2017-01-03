@@ -7,9 +7,11 @@ CONST
   C_voidOfBlocking:array[false..true] of T_valueStoreMarker=(vsm_nonBlockingVoid,vsm_blockingVoid);
   C_firstOfVoid   :array[vsm_nonBlockingVoid..vsm_blockingVoid] of T_valueStoreMarker=(vsm_nonBlockingFirst,vsm_blockingFirst);
 TYPE
+  P_valueStore=^T_valueStore;
   T_valueStore=object
     private
       cs:TRTLCriticalSection;
+      parentStore:P_valueStore;
       data:array of record
         marker:T_valueStoreMarker;
         v:P_namedVariable;
@@ -21,6 +23,7 @@ TYPE
 
     public
       CONSTRUCTOR create;
+      FUNCTION readOnlyClone:P_valueStore;
       DESTRUCTOR destroy;
       PROCEDURE clear;
       {$ifdef fullVersion}
@@ -38,7 +41,6 @@ TYPE
                    cp_debug,
                    {$endif}
                    cp_createDetachedTask,
-                   cp_queryParentValueStore,
                    cp_clearTimerOnStart,
                    cp_clearAdaptersOnStart,
                    cp_logEndOfEvaluation,
@@ -165,8 +167,9 @@ TYPE
       FUNCTION getNewAsyncContext:P_evaluationContext;
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters:P_adapters; CONST tryBodyFailed:boolean);
-      PROCEDURE attachWorkerContext(CONST newParent:P_evaluationContext);
+      PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
       PROCEDURE detachWorkerContext(CONST expectedParent:P_evaluationContext);
+      FUNCTION getReadOnlyValueStore:P_valueStore;
       //Recycler routines:
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -247,8 +250,22 @@ FUNCTION T_packageProfilingCall.getLocation: T_tokenLocation;
 
 CONSTRUCTOR T_valueStore.create;
   begin
+    parentStore:=nil;
     system.initCriticalSection(cs);
     setLength(data,0);
+  end;
+
+FUNCTION T_valueStore.readOnlyClone:P_valueStore;
+  VAR i:longint;
+  begin
+    new(result,create);
+    setLength(result^.data,length(data));
+    for i:=0 to length(data)-1 do with result^.data[i] do begin
+      marker:=data[i].marker;
+      if data[i].v=nil
+      then v:=nil
+      else v:=data[i].v^.readOnlyClone;
+    end;
   end;
 
 DESTRUCTOR T_valueStore.destroy;
@@ -308,6 +325,7 @@ FUNCTION T_valueStore.getVariable(CONST id:T_idString; OUT blockEncountered:bool
       blockEncountered:=true;
       exit(nil);
     end;
+    if parentStore<>nil then result:=parentStore^.getVariable(id,blockEncountered);
   end;
 
 PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
@@ -340,6 +358,7 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
       vsm_nonBlockingVoid,vsm_nonBlockingFirst: inc(up);
       vsm_blockingVoid,vsm_blockingFirst: begin up:=1; i0:=i; end;
     end;
+    if (i0>0) and (parentStore<>nil) then parentStore^.reportVariables(variableReport);
     for i:=i0 to length(data)-1 do begin
       if data[i].marker<>vsm_none then dec(up);
       with data[i] do if v<>nil then begin
@@ -360,6 +379,7 @@ PROCEDURE T_valueStore.writeStore;
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
+    if parentStore<>nil then parentStore^.writeStore;
     for i:=0 to length(data)-1 do writeln(data[i].marker,' ',vts(data[i].v));
     system.leaveCriticalSection(cs);
   end;
@@ -648,7 +668,7 @@ FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
       InterLockedIncrement(asyncChildCount);
       new(result,createContext(myAdapters,ct_normal));
       result^.parentContext:=@self;
-      result^.options:=options-[cp_timing,cp_queryParentValueStore];
+      result^.options:=options-[cp_timing];
       result^.options:=[cp_notifyParentOfAsyncTaskEnd];
     end else begin
       result:=parentContext^.getNewAsyncContext();
@@ -667,15 +687,16 @@ PROCEDURE T_evaluationContext.leaveTryStatementReassumingPreviousAdapters(CONST 
     myAdapters:=previousAdapters;
   end;
 
-PROCEDURE T_evaluationContext.attachWorkerContext(CONST newParent: P_evaluationContext);
+PROCEDURE T_evaluationContext.attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
   begin
     {$ifdef debugMode}
     if parentContext<>nil then raise Exception.create('Attaching overrides already attached parent context');
     {$endif}
     myAdapters:=newParent^.myAdapters;
     parentContext:=newParent;
-    options:=parentContext^.options-[cp_timing]+[cp_queryParentValueStore];
+    options:=parentContext^.options-[cp_timing];
     valueStore.clear;
+    valueStore.parentStore:=valueScope;
   end;
 
 PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evaluationContext);
@@ -686,7 +707,12 @@ PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evalua
     {$endif}
     parentContext:=nil;
     valueStore.clear;
-    options:=options-[cp_queryParentValueStore];
+    valueStore.parentStore:=nil;
+  end;
+
+FUNCTION T_evaluationContext.getReadOnlyValueStore:P_valueStore;
+  begin
+    result:=valueStore.readOnlyClone;
   end;
 
 FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
@@ -759,7 +785,6 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
     system.enterCriticalSection(valueStore.cs);
     named:=valueStore.getVariable(id,blocked);
     if named<>nil then result:=named^.getValue
-    else if not(blocked) and (cp_queryParentValueStore in options) then result:=parentContext^.getVariableValue(id)
     else result:=nil;
     system.leaveCriticalSection(valueStore.cs);
   end;

@@ -617,10 +617,6 @@ FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR con
     result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
   end;
 
-{$ifdef debugMode}
-VAR localContextCount:longint=0;
-    maxLocalContextCount:longint=0;
-{$endif}
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
   VAR stack:T_TokenStack;
       newLit:P_literal;
@@ -874,7 +870,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR future:array of P_futureTask;
           nextFuture:longint=0;
           initializedFutures:longint=0;
-          localContext:P_evaluationContext=nil;
+          store:P_valueStore;
 
       PROCEDURE aggregateFutures(CONST finalizing:boolean);
         begin
@@ -883,14 +879,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
-            if localContext=nil then begin
-              new(localContext,createContext(nil,ct_silentlyRunAlone));
-              {$ifdef debugMode}
-              InterLockedIncrement(localContextCount);
-              if localContextCount>maxLocalContextCount then maxLocalContextCount:=localContextCount;
-              {$endif}
-            end;
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,localContext^);
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
             addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
@@ -906,22 +895,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
+        store:=context.getReadOnlyValueStore;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList^.value(i),@context);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList^.value(i),@context,store);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
         aggregateFutures(true);
-        if localContext<>nil then begin
-          dispose(localContext,destroy);
-          {$ifdef debugMode}
-          interlockedDecrement(localContextCount);
-          {$endif}
-        end;
+        dispose(store,destroy);
       end;
 
     PROCEDURE initNonFutures;
@@ -929,7 +914,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           i,j:longint;
       begin
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
-          task.createTask(bodyRule[j],eachLocation,i,itList^.value(i),@context);
+          task.createTask(bodyRule[j],eachLocation,i,itList^.value(i),@context,nil);
           task.evaluate(callDepth+1,context,false);
           addToAggregation(task.getResultAsLiteral,true);
           task.destroy;
@@ -941,7 +926,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if (eachType=tt_parallelEach) and
          ((callDepth>=STACK_DEPTH_LIMIT-16) or
          not(context.hasOption(cp_spawnWorker)) or
-         (workerThreadCount<=0))
+         (workerThreadCount<=0) or (pendingTasks.queuedCount>4*workerThreadCount))
       then eachType:=tt_each;
       eachLocation:=first^.location;
       initialize(bodyRule);
