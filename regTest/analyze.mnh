@@ -76,8 +76,8 @@ private analyzeCase(data,testCase:string)->begin
                : optSamples  |=[sample[[2,1]]]);
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
-  debugSamples.union(optSamples).showTable;
-  sleep(0.1);
+  local allSamples:=debugSamples.union(optSamples);
+  allSamples.showTable;
   print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
 
   local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
@@ -90,10 +90,16 @@ private analyzeCase(data,testCase:string)->begin
   local star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
   table.each(line,line.each(x,x.isNumeric ? round(x,4) : x).join("\t")).join("\n").print;
+
+  setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
+  plot([]);
+  allSamples:=allSamples.group(1).each(g,g.getInner(0));
+  local minSize:=allSamples.each(s,s.size,min);
+  allSamples.each(g,g.trailing(minSize).addPlot);
+  plot.display;
 end;
 
 private analyzeFlavour(data,flavour:string)->begin
-  print('Analyzing flavour: ',flavour);
   local groupedData:=
   data[data.getInner(1)=flavour] //filter by flavour
   .pEach(e,e[[0,2]]) //drop flavour info

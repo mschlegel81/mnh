@@ -1,0 +1,12 @@
+USE make;
+
+timedExecute(exe:string,params)->begin
+  local t0:=time;
+  exe.execPipeless(params);
+  time-t0;
+end;
+
+main(...)->begin
+  local timedExes:=VALID_TARGETS.each(target,fileExists(target) ? [target,timedExecute(target,...)]  : void);
+  printf("%s\t%s",timedExes.getInner(0),timedExes.getInner(1));
+end;
