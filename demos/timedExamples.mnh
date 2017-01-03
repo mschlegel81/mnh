@@ -1,0 +1,49 @@
+//Naive with inline-if
+fib0(x:int)->x<1 ? 1 : fib0(x-1)+fib0(x-2);
+
+//Case distinction via pattern matching
+fib1(x<1)->1;
+fib1(x)->fib1(x-1)+fib1(x-2);
+
+//Case distinction via pattern matching - reversed cases
+fib2(x>=1)->fib2(x-1)+fib2(x-2);
+fib2(x)->1;
+
+//As fib2 but memoized
+memoized
+fib3(x>=1)->fib3(x-1)+fib3(x-2);
+fib3(x)->1;
+
+//Recursive
+sineSum0(s<>[])->sin(s.head)+sineSum0(s.tail);
+sineSum0(s==[])->0;
+
+//List processing
+sineSum1(s:numericList)->s.each(x,sin(x),+);
+
+//Parallel list processing
+sineSum2(s:numericList)->s.pEach(x,sin(x),+);
+
+//Vectorized operation + Aggregation
+sineSum3(s:numericList)->sin(s).agg(+);
+
+
+test(f:expression(1),input)->time(f,[input])['time'];
+
+main->begin
+  local times:=[test(::fib0,22),test(::fib1,22),test(::fib2,22),test(::fib3,22)];
+  print("Fibonacci\n  Source");
+  ("    "&inspect['source'].split("\n").get([0..14])).join("\n").print;
+  print;
+  printf("  %s\t%s\t%s",['method','fib0','fib1','fib2','fib3'],
+                         'time'|times,
+                         'speedup factor'|(times.head/times));
+  local r:=random(2000);
+  times:=[test(::sineSum0,r),test(::sineSum1,r),test(::sineSum2,r),test(::sineSum3,r)];
+  print("\nSum of Sines\n  Source");
+  ("    "&inspect['source'].split("\n").get([16..27])).join("\n").print;
+  print;
+  printf("  %s\t%s\t%s",['method','sineSum0','sineSum1','sineSum2','sineSum3'],
+                         'time'|times,
+                         'speedup factor'|(times.head/times));
+end;

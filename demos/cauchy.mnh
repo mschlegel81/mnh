@@ -1,0 +1,48 @@
+runningSum(L:numericList)->begin
+  local sum:=0;
+  L.each(x,sum+=x);
+end;
+
+eSeries(n>0)->(1+1/[1..n])^[1..n];
+
+harmonicSummands(n>0)->1/[1..n];
+
+arctanSummands(n:int)->begin
+  local N:=[0..n];
+  ((-1)^N/(2*N+1));
+end;
+
+private EPSILONS:=(10^[0..-10]);//.each(f,f,f*0.5,f*0.2);
+
+guessLimit(samples:numericList)->(samples.trailing(4)*[1..4]*0.1).agg(+);
+
+guessEpsilons(samples:numericList)->begin
+  local Max:=
+  local Min:=samples.trailing;
+  local spreads:=samples.reverseList.each(s,begin
+    Max:=max(Max,s);
+    Min:=min(Min,s);
+    Max-Min;
+  end).reverseList;
+  local epsilonList:=
+  EPSILONS.pEach(epsilon,begin
+    local N:=indexOf(spreads>epsilon).trailing;
+    isNumeric(N) ? void : N:=0;
+    N<spreads.size*0.9 ? format("N=\v%s\t"#206#181"=\v%s",N,epsilon) : void;
+  end);
+  epsilonList.size>3 ? print('...seems to converge against ',samples.guessLimit)
+                     : print('...seems to diverge');
+  print('Cauchy: '#226#136#128#32#206#181'>0 : '#198#142' N : '#226#136#128' n,m>N : |x[n]-x[m]|<'#206#181' ');
+  epsilonList.join("\n").print;
+end;
+
+main->begin
+  print('(1+1/n)^n');
+  guessEpsilons(         eSeries(100000));
+  print("\n1 + 1/2 + 1/3 + 1/4 + ...");
+  guessEpsilons(harmonicSummands(100000).runningSum);
+  print("\n1 + 1/2^2 + 1/3^2 + 1/4^2 + ...");
+  guessEpsilons(harmonicSummands(100000).sqr.runningSum);
+  print("\n1 - 1/3 + 1/5 - 1/7 + 1/9 - 1/11 ...");
+  guessEpsilons(arctanSummands  (100000).runningSum);
+end;
