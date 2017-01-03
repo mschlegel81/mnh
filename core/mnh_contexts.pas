@@ -20,7 +20,7 @@ TYPE
       FUNCTION getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
       PROCEDURE scopePush(CONST blocking:boolean);
       PROCEDURE scopePop;
-
+      PROCEDURE copyDataAsReadOnly(VAR original:T_valueStore);
     public
       CONSTRUCTOR create;
       FUNCTION readOnlyClone:P_valueStore;
@@ -255,17 +255,25 @@ CONSTRUCTOR T_valueStore.create;
     setLength(data,0);
   end;
 
+PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
+  VAR i,i0:longint;
+  begin
+    clear;
+    i0:=length(original.data)-1;
+    while (i0>0) and (original.data[i0].marker in [vsm_none,vsm_nonBlockingVoid,vsm_nonBlockingFirst]) do dec(i0);
+    setLength(data,length(original.data)-i0);
+    for i:=i0 to length(original.data)-1 do with data[i-i0] do begin
+      marker:=original.data[i].marker;
+      if original.data[i].v=nil
+      then v:=nil
+      else v:=original.data[i].v^.readOnlyClone;
+    end;
+  end;
+
 FUNCTION T_valueStore.readOnlyClone:P_valueStore;
-  VAR i:longint;
   begin
     new(result,create);
-    setLength(result^.data,length(data));
-    for i:=0 to length(data)-1 do with result^.data[i] do begin
-      marker:=data[i].marker;
-      if data[i].v=nil
-      then v:=nil
-      else v:=data[i].v^.readOnlyClone;
-    end;
+    result^.copyDataAsReadOnly(self);
   end;
 
 DESTRUCTOR T_valueStore.destroy;
