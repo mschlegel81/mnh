@@ -75,7 +75,7 @@ PROCEDURE ensurePoolThreads();
     {$else}
     if (poolThreadsRunning<getNumberOfCPUs-1) then begin
     {$endif}
-      InterLockedIncrement(poolThreadsRunning);
+      interLockedIncrement(poolThreadsRunning);
       beginThread(@threadPoolThread);
     end;
   end;
