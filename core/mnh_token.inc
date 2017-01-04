@@ -926,7 +926,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if (eachType=tt_parallelEach) and
          ((callDepth>=STACK_DEPTH_LIMIT-16) or
          not(context.hasOption(cp_spawnWorker)) or
-         (workerThreadCount<=0) or (pendingTasks.queuedCount>4*workerThreadCount))
+         (workerThreadCount<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
       initialize(bodyRule);
@@ -1487,7 +1487,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     repeat
       didSubstitution:=false;
       initTokTypes;
-      //writeln(tokensToString(first,50));      writeln(tokenContextString);
       {$ifdef fullVersion} if context.hasOption(cp_debug) then context.stepping(first,@stack); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
