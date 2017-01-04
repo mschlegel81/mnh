@@ -53,7 +53,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
       Timer1.interval:=Timer1.interval+1;
       if Timer1.interval>MAX_INTERVALL then Timer1.interval:=MAX_INTERVALL;
     end;
-    if not(currentRunnerInfo.state in C_runningStates) and guiAdapters.noErrors and not(anyFormShowing) then close;
+    if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
 
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;

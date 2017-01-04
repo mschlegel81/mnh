@@ -3,7 +3,20 @@ UNIT mnh_litVar;
 {$Q-}
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
-USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes,LazUTF8;
+USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes,LazUTF8
+     {$ifdef debugMode},EpikTimer{$endif};
+
+{$ifdef debugMode}
+VAR profilingTimer:TEpikTimer;
+    intLiteralCount:longint=0;
+    intLiteralTime :double=0;
+    realLiteralCount:longint=0;
+    realLiteralTime :double=0;
+    stringLiteralCount:longint=0;
+    stringLiteralTime :double=0;
+    listLiteralCount:longint=0;
+    listLiteralTime :double=0;
+{$endif}
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -368,30 +381,39 @@ PROCEDURE disposeLiteral(VAR l: P_literal);
 
 FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral;
   begin
-    result:=@boolLit [value];
+    result:=@boolLit[value];
     result^.rereference;
   end;
 
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
+  {$ifdef debugMode} VAR entryTime:double; {$endif}
   begin
+    {$ifdef debugMode} entryTime:=profilingTimer.elapsed; {$endif}
     if (value>=low(intLit)) and (value<=high(intLit)) then begin
       result:=@intLit[value];
       result^.rereference;
     end else new(result, create(value));
+    {$ifdef debugMode} interLockedIncrement(intLiteralCount); intLiteralTime:=intLiteralTime+profilingTimer.elapsed-entryTime; {$endif}
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
+  {$ifdef debugMode} VAR entryTime:double; {$endif}
   begin
+    {$ifdef debugMode} entryTime:=profilingTimer.elapsed; {$endif}
     new(result, create(value));
+    {$ifdef debugMode} interLockedIncrement(realLiteralCount); realLiteralTime:=realLiteralTime+profilingTimer.elapsed-entryTime; {$endif}
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
+  {$ifdef debugMode} VAR entryTime:double; {$endif}
   begin
+    {$ifdef debugMode} entryTime:=profilingTimer.elapsed; {$endif}
     if length(value)<=1 then begin
       if length(value)=1 then result:=@charLit[value[1]]
                          else result:=@emptyStringLit;
       result^.rereference;
     end else new(result, create(value));
+    {$ifdef debugMode} interLockedIncrement(stringLiteralCount); stringLiteralTime:=stringLiteralTime+profilingTimer.elapsed-entryTime; {$endif}
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
@@ -400,9 +422,12 @@ FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
   end;
 
 FUNCTION newListLiteral(CONST initialSize:longint=0): P_listLiteral;
+  {$ifdef debugMode} VAR entryTime:double; {$endif}
   begin
+    {$ifdef debugMode} entryTime:=profilingTimer.elapsed; {$endif}
     new(result, create);
     if initialSize>0 then setLength(result^.dat,initialSize);
+    {$ifdef debugMode} interLockedIncrement(listLiteralCount); listLiteralTime:=listLiteralTime+profilingTimer.elapsed-entryTime; {$endif}
   end;
 
 FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean): P_listLiteral;
@@ -644,7 +669,7 @@ CONSTRUCTOR T_literal.init(CONST lt:T_literalType); begin literalType:=lt; numbe
 
 PROCEDURE T_literal.rereference;
   begin
-    InterLockedIncrement(numberOfReferences);
+    interLockedIncrement(numberOfReferences);
   end;
 
 FUNCTION T_literal.unreference: longint;
@@ -3089,6 +3114,10 @@ INITIALIZATION
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
+  {$ifdef debugMode}
+  profilingTimer:=TEpikTimer.create(nil);
+  profilingTimer.start;
+  {$endif}
 
 FINALIZATION
   boolLit[false].destroy;
@@ -3098,5 +3127,12 @@ FINALIZATION
   emptyStringLit.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
-
+  {$ifdef debugMode}
+  writeln('Total timed: ',profilingTimer.elapsed);
+  FreeAndNil(profilingTimer);
+  writeln('T_intLiteral:    Created/Destroyed ',intLiteralCount,' instances in ',intLiteralTime:0:20,' seconds');
+  writeln('T_realLiteral:   Created/Destroyed ',realLiteralCount,' instances in ',realLiteralTime:0:20,' seconds');
+  writeln('T_stringLiteral: Created/Destroyed ',stringLiteralCount,' instances in ',stringLiteralTime:0:20,' seconds');
+  writeln('T_listLiteral:   Created/Destroyed ',listLiteralCount,' instances in ',listLiteralTime:0:20,' seconds');
+  {$endif}
 end.

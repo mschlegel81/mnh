@@ -112,8 +112,8 @@ private analyzeFlavour(data,flavour:string)->begin
                case[1].trailing(2).head,      //3 - sample before last
                case[1].trailing])             //4 - last sample
   .{$L|['TOTAL'| $L.agg(+).tail]}
-  .pEach(case,[case[0],case[1]  ,case[2]  ,case[3] ,case[4],round((case[4]/case[2]-1)*100,2),round((case[4]/case[3]-1)*100,2)])
-  .{showTable([['case','samples','average','before','last','+%avg','+%before']]|$L,true)};
+  .pEach(case,[case[0],case[1]  ,case[2]  ,case[3] ,case[4],case[4]-case[2],case[4]-case[3],round((case[4]/case[2]-1)*100,2),round((case[4]/case[3]-1)*100,2)])
+  .{showTable([['case','samples','average','before','last','+avg','+before','+%avg','+%before']]|$L,true)};
   setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
   plot;
   //times only
