@@ -77,7 +77,7 @@ PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
 
 FUNCTION treeLit_canExpand(L:P_literal):boolean;
   begin
-    result:=(L<>nil) and (L^.literalType in C_allListTypes) and (length(L^.toString(100))>=100);
+    result:=(L<>nil) and (L^.literalType in C_compoundTypes) and (length(L^.toString(100))>=100);
   end;
 
 FUNCTION treeLit_toString(L:P_literal):string;
@@ -92,8 +92,8 @@ PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; 
     VAR k:longint;
         L:P_literal;
     begin
-      for k:=0 to P_listLiteral(node2.data)^.size-1 do begin
-        L:=P_listLiteral(node2.data)^.value(k);
+      for k:=0 to P_compoundLiteral(node2.data)^.size-1 do begin
+        L:=P_compoundLiteral(node2.data)^[k];
         variablesTreeView.items.AddChild(node2,treeLit_toString(L)).data:=L;
       end;
     end;
@@ -118,7 +118,7 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
       newNode:=variablesTreeView.items.add(nil,id+'='+treeLit_toString(value));
       newNode.data:=value;
       if treeLit_canExpand(value) then for i:=0 to P_listLiteral(value)^.size-1 do
-        variablesTreeView.items.AddChild(newNode,treeLit_toString(P_listLiteral(value)^.value(i))).data:=P_listLiteral(value)^.value(i);
+        variablesTreeView.items.AddChild(newNode,treeLit_toString(P_listLiteral(value)^[i])).data:=P_listLiteral(value)^[i];
     end;
 
   begin

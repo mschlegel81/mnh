@@ -342,7 +342,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
                                                else apply(tt_operatorDivReal);
       ':': if startsWith(tt_assign)            then apply(tt_assign)
       else if startsWith(tt_pseudoFuncPointer) then apply(tt_pseudoFuncPointer)
-      else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k','f']) then begin
+      else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k','f','m']) then begin
         id:=leadingId;
         result.tokType:=tt_iifElse;
         for tt in C_typeChecks do if id=C_tokenInfo[tt].defaultId then result.tokType:=tt;
@@ -750,7 +750,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         //---------------------------------------------process other body parts (if any)
       end;
 
-    VAR itList:P_listLiteral;
+    VAR itList:T_arrayOfLiteral;
         i:longint;
         eachLocation:T_tokenLocation;
         resultLiteral:P_literal=nil;
@@ -765,11 +765,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           exit;
         end;
         if (L=nil) then begin
-          if resultLiteral=nil then resultLiteral:=newErrorLiteral;
+          if resultLiteral=nil then resultLiteral:=newVoidLiteral;
           context.adapters^.raiseError('Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           exit;
         end else if L^.literalType=lt_void then exit
-        else if L^.literalType in [lt_error,lt_listWithError] then begin
+        else if L^.literalType in [lt_error] then begin
           if doDispose then disposeLiteral(L);
           context.adapters^.raiseError('Error performing aggregation in each-construct - ERROR literal encountered',eachLocation);
           exit;
@@ -848,10 +848,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           then first^.data:=newVoidLiteral
           else first^.data:=newListLiteral;
         end else begin
-          if resultLiteral^.literalType=lt_listWithError then begin
-            disposeLiteral(resultLiteral);
-            resultLiteral:=newErrorLiteral;
-          end;
           first^.data:=resultLiteral;
         end;
         first^.txt:='';
@@ -897,10 +893,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         else maxFutureForwardInitialization:=1024;
         store:=context.getReadOnlyValueStore;
         initializedFutures:=0;
-        setLength(future,length(bodyRule)*itList^.size);
-        for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
+        setLength(future,length(bodyRule)*length(itList));
+        for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList^.value(i),@context,store);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
@@ -913,8 +909,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR task:T_futureTask;
           i,j:longint;
       begin
-        for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
-          task.createTask(bodyRule[j],eachLocation,i,itList^.value(i),@context,nil);
+        for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
+          task.createTask(bodyRule[j],eachLocation,i,itList[i],@context,nil);
           task.evaluate(callDepth+1,context,false);
           addToAggregation(task.getResultAsLiteral,true);
           task.destroy;
@@ -931,7 +927,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       eachLocation:=first^.location;
       initialize(bodyRule);
 
-      if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
+      if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
@@ -944,13 +940,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         exit;
       end;
       if not(parseBodyOk) then exit;
-      if (P_literal(first^.data)^.literalType in C_validListTypes)
-      then itList:=first^.data
-      else itList:=newOneElementListLiteral(first^.data,false);
-
+      if (P_literal(first^.data)^.literalType in C_compoundTypes)
+      then itList:=P_compoundLiteral(first^.data)^.iteratableList
+      else begin
+        setLength(itList,1);
+        itList[0]:=P_literal(first^.data)^.rereferenced;
+      end;
       first^.next:=context.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
-      if (aggregatorPresent<>no) and (itList^.size=0) then begin
+      if (aggregatorPresent<>no) and (length(itList)=0) then begin
         resultLiteral:=newVoidLiteral;
         finalizeAggregation;
       end else if length(bodyRule)>0 then begin
@@ -959,7 +957,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         else initNonFutures;
       end else begin
         if eachType in [tt_parallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
-        for i:=0 to itList^.size-1 do addToAggregation(itList^.value(i),false);
+        for i:=0 to length(itList)-1 do addToAggregation(itList[i],false);
         finalizeAggregation;
       end;
       //----------------------------------------------------------iterate over itList
@@ -1080,14 +1078,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
-        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^.value(0)^.literalType=lt_expression) then begin
+        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^[0]^.literalType=lt_expression) then begin
 
-          if parameterListLiteral^.value(0)^.getReferenceCount=1 then begin
-            newLiteral:=parameterListLiteral^.value(0);
-            newLiteral^.rereference;
+          if parameterListLiteral^[0]^.getReferenceCount=1 then begin
+            newLiteral:=parameterListLiteral^[0]^.rereferenced;
             inlineRule:=P_expressionLiteral(newLiteral)^.value;
           end else begin
-            new(inlineRule,clone(P_subrule(P_expressionLiteral(parameterListLiteral^.value(0))^.value)));
+            new(inlineRule,clone(P_subrule(P_expressionLiteral(parameterListLiteral^[0])^.value)));
             newLiteral:=newExpressionLiteral(inlineRule);
           end;
           inlineRule^.pattern.appendOptional;
@@ -1261,7 +1258,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       if ruleIdResolved then begin
         //resolved rule ID mutate x . y -> y(x)
-        newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false));
+        newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newListLiteral(1)^.append(first^.data,false));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
                                //Disposing from:   <Lit> . func ...
@@ -1499,7 +1496,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             initTokTypes;
             pon_flip;
           end;
-          tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
+          tt_listToParameterList: if P_literal(first^.data)^.literalType in C_listTypes then begin
             stack.popDestroy(context);
             first^.tokType:=tt_parList;
             stack.popLink(first);
@@ -1552,11 +1549,14 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             FORBIDDEN_SEPARATORS;
             else context.adapters^.raiseError('Unable to resolve paranthesis!',stack.dat[stack.topIndex]^.location);
           end;
-          tt_list_constructor: case cTokType[1] of
+          tt_list_constructor,tt_list_constructor_ranging: case cTokType[1] of
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
-                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
-                if first^.next^.tokType=tt_separatorCnt then P_listLiteral(stack.dat[stack.topIndex]^.data)^.setRangeAppend;
+                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
+                              stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
+                if first^.next^.tokType=tt_separatorCnt
+                then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
+                else stack.dat[stack.topIndex]^.tokType:=tt_list_constructor;
                 first:=context.disposeToken(first);
                 first:=context.disposeToken(first);
               until (first=nil) or (first^.tokType<>tt_literal) or
@@ -1564,7 +1564,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               didSubstitution:=true;
             end;
             tt_listBraceClose: begin // [ | <Lit> ] ...
-              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
+              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
+                            stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               stack.popLink(first);   // -> ? | [ ...
@@ -1701,7 +1702,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_list_constructor: begin stack.push(first); didSubstitution:=true; end;
+        tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
         tt_identifier: context.adapters^.raiseError('Unresolved identifier "'+first^.txt+'"',first^.location);
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
         tt_aggregatorConstructor: case cTokType[1] of
@@ -1729,9 +1730,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: if cTokType[0]=tt_toId then begin
-            if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^.value(0)^.literalType=lt_string) then begin
+            if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
-              first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^.value(0))^.value;
+              first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
               P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
               first^.next:=context.disposeToken(first^.next);
               didSubstitution:=true;

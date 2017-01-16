@@ -224,7 +224,7 @@ TYPE
       {$endif}
   end;
 
-VAR showProfilingTableCallback:PROCEDURE(CONST L:P_listLiteral)=nil;
+VAR showProfilingTableCallback:PROCEDURE(CONST L:P_compoundLiteral)=nil;
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 IMPLEMENTATION
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
@@ -595,7 +595,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       end;
 
     VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
-        data:P_listLiteral;
+        data:P_collectionLiteral;
         swapTemp:T_profilingEntry;
         lines:T_arrayOfString;
         i,j:longint;

@@ -60,7 +60,7 @@
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
-      FUNCTION inspect:P_listLiteral;
+      FUNCTION inspect:P_mapLiteral;
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
@@ -304,7 +304,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
               remaining^.unreference;
             end;
             L:=remaining;
-          end else L:=param^.value(parIdx);
+          end else L:=param^[parIdx];
           {$ifdef debugMode}
           if L=nil then raise Exception.create('Whoops! Unressolved parameter pointer.');
           {$endif}
@@ -332,7 +332,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
       result:=true;
       context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
       tempInnerParam:=newListLiteral;
-      for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^.value(i),true);
+      for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^[i],true);
       lastRep^.next:=context.newToken(declaredAt,'',tt_parList,tempInnerParam);
       lastRep:=lastRep^.next;
     end else begin
@@ -531,7 +531,7 @@ FUNCTION T_subrule.directEvaluateNullary(CONST callLocation:T_tokenLocation; VAR
 FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
   VAR param:P_listLiteral;
   begin
-    param:=newOneElementListLiteral(x,true);
+    param:=P_listLiteral(newListLiteral(1)^.append(x,true));
     result:=directEvaluate(param,callLocation,context,callDepth);
     disposeLiteral(param);
   end;
@@ -540,7 +540,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocat
   VAR param:P_listLiteral;
       lit:P_literal;
   begin
-    param:=newListLiteral(2)^.append(x,true)^.append(y,true);
+    param:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
     lit:=directEvaluate(param,callLocation,context,callDepth);
     disposeLiteral(param);
     if (context.adapters^.noErrors) and (lit<>nil) and (lit^.literalType=lt_boolean) then result:=P_boolLiteral(lit)^.value
@@ -562,7 +562,7 @@ FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSC
 FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
   VAR param:P_listLiteral;
   begin
-    param:=newListLiteral(2)^.append(x,true)^.append(y,true);
+    param:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
     result:=directEvaluate(param,callLocation,context,callDepth);
     disposeLiteral(param);
   end;
@@ -571,7 +571,7 @@ FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_evaluationContext):bo
   VAR param:P_listLiteral;
       L:P_literal;
   begin
-    param:=newOneElementListLiteral(x,true);
+    param:=P_listLiteral(newListLiteral(1)^.append(x,true));
     L:=directEvaluate(param,declaredAt,context,0);
     dispose(param,destroy);
     result:=(L<>nil) and (L^.literalType=lt_boolean) and P_boolLiteral(L)^.value;
@@ -635,7 +635,7 @@ PROCEDURE T_subrule.increaseArity(CONST newArity:longint);
     while length(pattern.sig)<newArity do pattern.appendFreeId('');
   end;
 
-FUNCTION T_subrule.inspect:P_listLiteral;
+FUNCTION T_subrule.inspect:P_mapLiteral;
   FUNCTION typeString:string;
     begin
       case typ of
@@ -648,21 +648,21 @@ FUNCTION T_subrule.inspect:P_listLiteral;
       end;
     end;
 
-  FUNCTION attributeList:P_listLiteral;
+  FUNCTION attributeList:P_mapLiteral;
     VAR attrib:T_subruleAttribute;
     begin
-      result:=newListLiteral(length(attributes));
-      for attrib in attributes do result^.append(newListLiteral(2)^.appendString(attrib.key)^.appendString(attrib.value),false);
+      result:=newMapLiteral;
+      for attrib in attributes do result^.put(attrib.key,attrib.value);
     end;
 
   begin
-    result:=newListLiteral(6)^
-      .append(newListLiteral(2)^.appendString('pattern')^.appendString(pattern.toString),false)^
-      .append(newListLiteral(2)^.appendString('location')^.appendString(declaredAt),false)^
-      .append(newListLiteral(2)^.appendString('type')^.appendString(typeString),false)^
-      .append(newListLiteral(2)^.appendString('comment')^.appendString(comment),false)^
-      .append(newListLiteral(2)^.appendString('attributes')^.append(attributeList,false),false)^
-      .append(newListLiteral(2)^.appendString('body')^.appendString(toString(false)),false);
+    result:=newMapLiteral;
+    P_mapLiteral(result)^.put('pattern'   ,pattern.toString)^
+                         .put('location'  ,declaredAt      )^
+                         .put('type'      ,typeString      )^
+                         .put('comment'   ,comment         )^
+                         .put('attributes',attributeList   ,false)^
+                         .put('body'      ,toString(false) );
   end;
 
 FUNCTION T_subrule.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
@@ -837,7 +837,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
   FUNCTION evaluateVectorExpressionOk:boolean;
     VAR params:T_listLiteral;
     begin
-      params.create;
+      params.create(1);
       params.append(TList,true);
       result:=(subRule^.replaces(@params,nil,location,firstRep,lastRep,tempcontext,false) or
                subRule^.replaces(@params,nil,location,firstRep,lastRep,tempcontext,true)) and evaluateOk;
