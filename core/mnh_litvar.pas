@@ -185,7 +185,7 @@ TYPE
     containsError:boolean;
     FUNCTION toSet :P_setLiteral;
     FUNCTION toList:P_listLiteral;
-    FUNCTION toMap :P_mapLiteral;
+    FUNCTION toMap(CONST location:T_tokenLocation; VAR adapters:T_adapters):P_mapLiteral;
     PROPERTY value[CONST index:longint]:P_literal read getValue; default;
     FUNCTION get     (CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual; abstract;
@@ -268,11 +268,12 @@ TYPE
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
       FUNCTION append(CONST L: P_literal; CONST incRefs: boolean):P_collectionLiteral; virtual;
+      FUNCTION appendAll(CONST L:P_compoundLiteral              ):P_collectionLiteral; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
-      FUNCTION iteratableList:T_arrayOfLiteral;
+      FUNCTION iteratableList:T_arrayOfLiteral; virtual;
     end;
 
-  T_mapLiteral=object(T_collectionLiteral)
+  T_mapLiteral=object(T_compoundLiteral)
     private
       dat:T_literalKeyLiteralValueMap;
       manifestation:P_listLiteral;
@@ -294,6 +295,9 @@ TYPE
       PROCEDURE drop(CONST L:P_scalarLiteral);
       FUNCTION put(CONST key,                  newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
       FUNCTION put(CONST key,                  newValue:ansistring                      ):P_mapLiteral;
+      FUNCTION put(CONST key:ansistring; CONST newValue:int64                           ):P_mapLiteral;
+      FUNCTION put(CONST key:ansistring; CONST newValue:T_myFloat                       ):P_mapLiteral;
+      FUNCTION put(CONST key:ansistring; CONST newValue:boolean                         ):P_mapLiteral;
       FUNCTION put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
       FUNCTION put(CONST key:P_literal;  CONST newValue:int64    ; CONST incRefs:boolean):P_mapLiteral;
       FUNCTION putAll(CONST map:P_mapLiteral):P_mapLiteral;
@@ -379,7 +383,7 @@ FUNCTION newListLiteral          (CONST initialSize:longint=0): P_listLiteral;  
 FUNCTION newSetLiteral                                        : P_setLiteral;        inline;
 FUNCTION newMapLiteral                                        : P_mapLiteral;        inline;
 FUNCTION newVoidLiteral: P_voidLiteral; inline;
-fUNCTION newErrorLiteral:P_literal; inline;
+FUNCTION newErrorLiteral:P_literal; inline;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
@@ -397,12 +401,12 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
+VAR emptyStringSingleton: T_stringLiteral;
 IMPLEMENTATION
 VAR
   errLit        : T_literal;
   boolLit       : array[false..true] of T_boolLiteral;
   intLit        : array[-100..4000] of T_intLiteral;
-  emptyStringLit: T_stringLiteral;
   charLit       : array[#0..#255] of T_stringLiteral;
   voidLit       : T_voidLiteral;
 
@@ -465,8 +469,8 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
     if length(value)<=1 then begin
-      if length(value)=1 then result:=P_stringLiteral(charLit[value[1]].rereferenced)
-                         else result:=P_stringLiteral(emptyStringLit   .rereferenced);
+      if length(value)=1 then result:=P_stringLiteral(charLit[value[1]]   .rereferenced)
+                         else result:=P_stringLiteral(emptyStringSingleton.rereferenced);
     end else new(result, create(value));
   end;
 
@@ -476,7 +480,7 @@ FUNCTION newListLiteral(CONST initialSize:longint=0): P_listLiteral;       begin
 FUNCTION newSetLiteral                              : P_setLiteral;        begin new(result,create);              end;
 FUNCTION newMapLiteral                              : P_mapLiteral;        begin new(result,create);              end;
 FUNCTION newVoidLiteral                             : P_voidLiteral;       begin result:=P_voidLiteral(voidLit       .rereferenced); end;
-fUNCTION newErrorLiteral                            : P_literal;           begin result:=              errLit        .rereferenced ; end;
+FUNCTION newErrorLiteral                            : P_literal;           begin result:=              errLit        .rereferenced ; end;
 FUNCTION newBoolLiteral(CONST value: boolean)       : P_boolLiteral;       begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
@@ -567,7 +571,7 @@ PROCEDURE T_variableReport.addSubReport(VAR sub:T_variableReport; CONST pseudoLo
 CONSTRUCTOR G_literalKeyMap.create();
   VAR i:longint;
   begin
-    setLength(dat,16);
+    setLength(dat,1);
     for i:=0 to length(dat)-1 do setLength(dat[i],0);
     fill:=0;
   end;
@@ -906,6 +910,18 @@ FUNCTION T_collectionLiteral.appendAll   (CONST L: P_compoundLiteral): P_collect
   begin
     for x in L^.iteratableList do append(x,false);
     result:=@self
+  end;
+
+FUNCTION T_setLiteral.appendAll(CONST L:P_compoundLiteral):P_collectionLiteral;
+  VAR x:P_literal;
+      E:T_literalKeyBooleanValueMap.CACHE_ENTRY;
+      prevBool:boolean; //dummy
+  begin
+    if L^.literalType in C_setTypes then begin
+      for E in P_setLiteral(L)^.dat.keyValueList do
+      if dat.putNew(E,prevBool) then E.key^.rereference;
+    end else for x in L^.iteratableList do append(x,false);
+    result:=@self;
   end;
 
 //?.size:=======================================================================
@@ -1643,10 +1659,21 @@ FUNCTION T_compoundLiteral.toList: P_listLiteral;
     result:=P_listLiteral(newListLiteral^.appendAll(@self));
   end;
 
-FUNCTION T_compoundLiteral.toMap: P_mapLiteral;
+FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; VAR adapters:T_adapters): P_mapLiteral;
+  VAR iter:T_arrayOfLiteral;
+      pair:P_literal;
   begin
     if literalType in C_mapTypes then exit(P_mapLiteral(rereferenced));
-    result:=P_mapLiteral(newMapLiteral^.appendAll(@self));
+    iter:=iteratableList;
+    result:=newMapLiteral;
+    for pair in iter do if (pair^.literalType in C_listTypes) and (P_listLiteral(pair)^.isKeyValuePair) then begin
+      result^.put(P_listLiteral(pair)^[0],
+                  P_listLiteral(pair)^[1],true);
+    end else begin
+      result^.containsError:=true;
+      adapters.raiseError('Literal of type '+pair^.typeString+' cannot be intrerpreted as key-value-pair',location);
+    end;
+    disposeLiteral(iter);
   end;
 
 FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST doRangeAppend:boolean):P_compoundLiteral;
@@ -1703,11 +1730,7 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
 FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_collectionLiteral;
   begin
     result:=@self;
-    if L = nil then begin
-      raise Exception.create('Trying to append NIL literal to list');
-      exit;
-    end;
-    if (L^.literalType=lt_void) then exit;
+    if (L=nil) or (L^.literalType=lt_void) then exit;
     if length(dat)<=fill then setLength(dat,round(fill*1.1)+1);
     dat[fill]:=L;
     inc(fill);
@@ -1719,31 +1742,13 @@ FUNCTION T_setLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_coll
   VAR prevBool:boolean;
   begin
     result:=@self;
-    if L = nil then begin
-      raise Exception.create('Trying to append NIL literal to set');
-      exit;
-    end;
-    if (L^.literalType=lt_void) then exit;
+    if (L=nil) or (L^.literalType=lt_void) then exit;
     if dat.putNew(L,true,prevBool) then begin
       if incRefs then L^.rereference;
       modifyType(L);
       dropManifestation;
     end else if not(incRefs) then disposeLiteralWithoutResettingPointer(L);
   end;
-
-//FUNCTION T_mapLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_compoundLiteral;
-//  begin
-//    result:=@self;
-//    if L = nil then begin
-//      raise Exception.create('Trying to append NIL literal to set');
-//      exit;
-//    end;
-//    if not((L^.literalType in C_listTypes) and (P_listLiteral(L)^.isKeyValuePair)) then begin
-//    end;
-//    put(P_listLiteral(L)^.dat[0],
-//        P_listLiteral(L)^.dat[1],incRefs);
-//    disposeLiteralWithoutResettingPointer(L);
-//  end;
 
 FUNCTION T_mapLiteral.put(CONST key,newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   VAR prevValue:P_literal;
@@ -1759,11 +1764,11 @@ FUNCTION T_mapLiteral.put(CONST key,newValue:P_literal; CONST incRefs:boolean):P
     result:=@self;
   end;
 
-FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring):P_mapLiteral;
-  begin
-    result:=put(newStringLiteral(key),
-                newStringLiteral(newValue),false);
-  end;
+FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring                 ):P_mapLiteral; begin result:=put(newStringLiteral(key), newStringLiteral(newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(newStringLiteral(key), newIntLiteral   (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(newStringLiteral(key), newRealLiteral  (newValue),false); end;
+FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newStringLiteral(key), newBoolLiteral  (newValue),false); end;
+
 
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   begin
@@ -1778,6 +1783,7 @@ FUNCTION T_mapLiteral.put(CONST key:P_literal; CONST newValue:int64; CONST incRe
     result:=put(key,
                 newIntLiteral(newValue),false);
   end;
+
 
 FUNCTION T_mapLiteral.putAll(CONST map:P_mapLiteral):P_mapLiteral;
   VAR prevValue:P_literal;
@@ -2245,7 +2251,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     {$define function_id:=perform_comparator}
     VAR i,j:longint;
     begin
-      if rhs^.literalType in C_comparableTypes[lhs^.literalType] then
+      if RHS^.literalType in C_comparableTypes[LHS^.literalType] then
       case LHS^.literalType of
         defaultLHScases;
         lt_boolean..lt_string: case RHS^.literalType of
@@ -2858,9 +2864,21 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
         end;
       end;
       tt_cso_mapPut, tt_cso_mapDrop: begin
-        if not(value^.literalType in C_mapTypes) then begin
-          adapters.raiseError('Operators << and >> expect a map variable (local or mutable) on the left-hand-side',location);
+        if value^.literalType=lt_void then begin
+          value:=newMapLiteral;
+          disposeLiteral(oldValue);
+        end;
+        if value^.literalType in C_scalarTypes then begin
+          adapters.raiseError('Operators << and >> expect a map variable (local or mutable) on the left-hand-side - cannot cast scalar to map',location);
           exit(newVoidLiteral);
+        end;
+        if (value^.literalType in C_compoundTypes-C_mapTypes) then begin
+          value:=P_compoundLiteral(oldValue)^.toMap(location,adapters);
+          disposeLiteral(oldValue);
+          if P_compoundLiteral(value)^.containsError then begin
+            adapters.raiseError('Operators << and >> expect a map variable (local or mutable) on the left-hand-side - colt not cast collection to map',location);
+            exit(newVoidLiteral);
+          end;
         end;
         if (mutation=tt_cso_mapPut) and not((RHS^.literalType in C_mapTypes) or (RHS^.literalType in C_listTypes) and (P_listLiteral(RHS)^.isKeyValuePair)) then begin
           adapters.raiseError('Operator << expect a map or key-value-pair on the right-hand-side',location);
@@ -2872,8 +2890,8 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
         end;
         if mutation=tt_cso_mapPut then begin
           if RHS^.literalType in C_mapTypes
-          then P_mapLiteral(value)^.appendAll(P_mapLiteral(RHS))
-          else P_mapLiteral(value)^.append(RHS,true);
+          then P_mapLiteral(value)^.putAll(P_mapLiteral(RHS))
+          else P_mapLiteral(value)^.put(P_listLiteral(RHS)^[0],P_listLiteral(RHS)^[1],true);
         end else if mutation=tt_cso_mapDrop then begin
           P_mapLiteral(value)^.drop(P_scalarLiteral(RHS));
         end;
@@ -3384,7 +3402,7 @@ INITIALIZATION
   boolLit[false].create(false);
   boolLit[true ].create(true);
   voidLit.create();
-  emptyStringLit.create('');
+  emptyStringSingleton.create('');
   for i:=low(intLit) to high(intLit) do intLit[i].create(i);
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
@@ -3396,7 +3414,7 @@ FINALIZATION
   boolLit[false].destroy;
   boolLit[true ].destroy;
   voidLit.destroy;
-  emptyStringLit.destroy;
+  emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
 end.
