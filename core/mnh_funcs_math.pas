@@ -14,68 +14,74 @@ FUNCTION pi_imp intFuncSignature;
 
 FUNCTION max_imp intFuncSignature;
   VAR x:P_literal;
-      i:longint;
+      it:T_arrayOfLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
+    if params=nil then exit(nil);
+    if (params^.size=1)
     then x:=arg0
     else x:=params;
-    if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      result:=P_listLiteral(x)^.value(0);
-      for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorGrt,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
-      result^.rereference;
-    end else if (x<>nil) and (x^.literalType in [lt_emptyList]) then exit(newVoidLiteral);
-  end;
-
-FUNCTION argMax_imp intFuncSignature;
-  VAR x,xMin:P_scalarLiteral;
-      L:P_listLiteral;
-      i,iMin:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      L:=list0;
-      iMin:=0;
-      xMin:=P_scalarLiteral(L^.value(0));
-      for i:=1 to L^.size-1 do begin
-        x:=P_scalarLiteral(L^.value(i));
-        if x^.isInRelationTo(tt_comparatorGrt,xMin) then begin
-          iMin:=i;
-          xMin:=x;
-        end;
-      end;
-      result:=newIntLiteral(iMin);
-    end;
+    if x^.literalType in [lt_emptyList,lt_emptySet,lt_emptyMap] then exit(nil);
+    if x^.literalType in C_scalarTypes then exit(x^.rereferenced);
+    it:=P_compoundLiteral(x)^.iteratableList;
+    result:=it[0];
+    for x in it do if not(x^.leqForSorting(result)) then result:=x;
+    result^.rereference;
+    disposeLiteral(it);
   end;
 
 FUNCTION min_imp intFuncSignature;
   VAR x:P_literal;
-      i:longint;
+      it:T_arrayOfLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
+    if params=nil then exit(nil);
+    if (params^.size=1)
     then x:=arg0
     else x:=params;
-    if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      result:=P_listLiteral(x)^.value(0);
-      for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorLss,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
-      result^.rereference;
-    end else if (x<>nil) and (x^.literalType in [lt_emptyList]) then exit(newVoidLiteral);
+    if x^.literalType in [lt_emptyList,lt_emptySet,lt_emptyMap] then exit(nil);
+    if x^.literalType in C_scalarTypes then exit(x^.rereferenced);
+    it:=P_compoundLiteral(x)^.iteratableList;
+    result:=it[0];
+    for x in it do if x^.leqForSorting(result) then result:=x;
+    result^.rereference;
+    disposeLiteral(it);
+  end;
+
+FUNCTION argMax_imp intFuncSignature;
+  VAR x,xMax:P_literal;
+      L:P_listLiteral;
+      i,imax:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes) then begin
+      L:=list0;
+      imax:=0;
+      xMax:=L^[0];
+      for i:=1 to L^.size-1 do begin
+        x:=L^[i];
+        if not(x^.leqForSorting(xMax)) then begin
+          imax:=i;
+          xMax:=x;
+        end;
+      end;
+      result:=newIntLiteral(imax);
+    end;
   end;
 
 FUNCTION argMin_imp intFuncSignature;
-  VAR x,xMin:P_scalarLiteral;
+  VAR x,xMin:P_literal;
       L:P_listLiteral;
       i,iMin:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes) then begin
       L:=list0;
       iMin:=0;
-      xMin:=P_scalarLiteral(L^.value(0));
+      xMin:=L^.value[0];
       for i:=1 to L^.size-1 do begin
-        x:=P_scalarLiteral(L^.value(i));
-        if x^.isInRelationTo(tt_comparatorLss,xMin) then begin
+        x:=L^.value[i];
+        if x^.leqForSorting(xMin) then begin
           iMin:=i;
           xMin:=x;
         end;
@@ -84,67 +90,47 @@ FUNCTION argMin_imp intFuncSignature;
     end;
   end;
 
-FUNCTION isNan_impl intFuncSignature;
+{$define nan_or_inf_impl:=
   VAR i:longint;
-      L:P_listLiteral;
       x:P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-       (arg0^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
+       (arg0^.literalType in [lt_real,lt_int,
+                              lt_realList,lt_intList,lt_numList,lt_emptyList,
+                              lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet]) then begin
       case arg0^.literalType of
-        lt_real: exit(newBoolLiteral(isNan(real0^.value)));
+        lt_real: exit(newBoolLiteral(PREDICATE(real0^.value)));
         lt_int:  exit(newBoolLiteral(false));
+        lt_emptyList,lt_emptySet: exit(arg0^.rereferenced);
         lt_intList: begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            lResult^.appendBool(false);
+          result:=newListLiteral(list0^.size);
+          for i:=0 to list0^.size-1 do listResult^.appendBool(false);
         end;
+        lt_intSet: exit(newSetLiteral^.appendBool(false));
         else begin
-          L:=list0;
-          result:=newListLiteral;
-          for i:=0 to L^.size-1 do begin
-            x:=L^.value(i);
-            lResult^.appendBool((x^.literalType=lt_real) and isNan(P_realLiteral(x)^.value));
+          result:=collection0^.newOfSameType;
+          for i:=0 to collection0^.size-1 do begin
+            x:=collection0^[i];
+            collResult^.appendBool((x^.literalType=lt_real) and PREDICATE(P_realLiteral(x)^.value));
           end;
         end;
       end;
     end;
-  end;
+  end}
 
-FUNCTION isInfinite_impl intFuncSignature;
-  VAR i:longint;
-      L:P_listLiteral;
-      x:P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and
-       (arg0^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
-      case arg0^.literalType of
-        lt_real: exit(newBoolLiteral(isInfinite(real0^.value)));
-        lt_int:  exit(newBoolLiteral(false));
-        lt_intList: begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            lResult^.appendBool(false);
-        end;
-        else begin
-          L:=list0;
-          result:=newListLiteral;
-          for i:=0 to L^.size-1 do begin
-            x:=L^.value(i);
-            lResult^.appendBool((x^.literalType=lt_real) and isInfinite(P_realLiteral(x)^.value));
-          end;
-        end;
-      end;
-    end;
-  end;
+{$define PREDICATE:=isNan}
+FUNCTION isNan_impl intFuncSignature; nan_or_inf_impl;
+{$define PREDICATE:=isNan}
+FUNCTION isInfinite_impl intFuncSignature; nan_or_inf_impl;
+{$undef nan_or_inf_impl}
+{$undef PREDICATE}
 
 FUNCTION subSets_impl intFuncSignature;
   VAR sets:specialize G_literalKeyMap<byte>;
   PROCEDURE recurseBuildSets(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
-        newSet:P_listLiteral;
+        newSet:P_collectionLiteral;
         i:longint;
     begin
       if length(mightContain)>0 then begin
@@ -159,9 +145,9 @@ FUNCTION subSets_impl intFuncSignature;
         setLength(newMust,0);
         setLength(newMight,0);
       end else begin
-        newSet:=newListLiteral;
+        newSet:=collection0^.newOfSameType;
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
-        newSet^.sort;
+        if newSet^.literalType in C_listTypes then P_listLiteral(newSet)^.sort;
         if sets.get(newSet,0)=0 then sets.put(newSet,1)
                                 else disposeLiteral(newSet);
       end;
@@ -171,19 +157,19 @@ FUNCTION subSets_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if arg0^.literalType in C_validListTypes then begin
+      if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         sets.create;
         setLength(mustContain,0);
-        setLength(mightContain,list0^.size);
-        for i:=0 to length(mightContain)-1 do mightContain[i]:=list0^.value(i);
+        mightContain:=P_compoundLiteral(arg0)^.iteratableList;
         recurseBuildSets(mustContain,mightContain);
+        disposeLiteral(mightContain);
         mustContain:=sets.keySet;
         result:=newListLiteral;
-        for i:=0 to length(mustContain)-1 do lResult^.append(mustContain[i],false);
+        for i:=0 to length(mustContain)-1 do listResult^.append(mustContain[i],false);
         sets.destroy;
       end else begin
-        result:=newListLiteral^.append(newListLiteral                     ,false)
-                              ^.append(newOneElementListLiteral(arg0,true),false);
+        result:=newListLiteral^.append(newListLiteral                   ,false)
+                              ^.append(newListLiteral^.append(arg0,true),false);
       end;
     end;
   end;
@@ -193,7 +179,7 @@ FUNCTION permutations_impl intFuncSignature;
       i:longint;
   PROCEDURE recurseBuildPermutations(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
-        newSet:P_listLiteral;
+        newList:P_listLiteral;
         i,j,k:longint;
     begin
       if length(mightContain)>0 then begin
@@ -211,25 +197,25 @@ FUNCTION permutations_impl intFuncSignature;
         setLength(newMust,0);
         setLength(newMight,0);
       end else begin
-        newSet:=newListLiteral;
-        for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
-        lResult^.append(newSet,false);
+        newList:=newListLiteral(length(mustContain));
+        for i:=0 to length(mustContain)-1 do newList^.append(mustContain[i],true);
+        setResult^.append(newListLiteral(),false);
       end;
     end;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
+    if (params<>nil) and (params^.size=1) and ((arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes)) then begin
       setLength(mustContain,0);
       setLength(mightContain,list0^.size);
-      for i:=0 to length(mightContain)-1 do mightContain[i]:=list0^.value(i);
-      result:=newListLiteral;
+      for i:=0 to length(mightContain)-1 do mightContain[i]:=compound0^.value[i];
+      result:=newSetLiteral;
       recurseBuildPermutations(mustContain,mightContain);
     end;
   end;
 
 FUNCTION factorize_impl intFuncSignature;
-  {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; lResult^.appendInt(p); end}
+  {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; listResult^.appendInt(p); end}
   VAR n,p:int64;
   begin
     result:=nil;
@@ -239,23 +225,23 @@ FUNCTION factorize_impl intFuncSignature;
       result:=newListLiteral;
       if n<0 then begin
         n:=-n;
-        lResult^.appendInt(-1);
+        listResult^.appendInt(-1);
       end;
       p:=2; DIVIDE_THROUGH;
       p:=3; DIVIDE_THROUGH;
       p:=5; DIVIDE_THROUGH;
       p:=7;
       while (p*p<n) and (context.adapters^.noErrors) do begin
-        DIVIDE_THROUGH; inc(p,4);
-        DIVIDE_THROUGH; inc(p,2);
-        DIVIDE_THROUGH; inc(p,4);
-        DIVIDE_THROUGH; inc(p,2);
-        DIVIDE_THROUGH; inc(p,4);
-        DIVIDE_THROUGH; inc(p,6);
-        DIVIDE_THROUGH; inc(p,2);
-        DIVIDE_THROUGH; inc(p,6);
+        DIVIDE_THROUGH; inc(p,4); // n*30 +  7
+        DIVIDE_THROUGH; inc(p,2); // n*30 + 11
+        DIVIDE_THROUGH; inc(p,4); // n*30 + 13
+        DIVIDE_THROUGH; inc(p,2); // n*30 + 17
+        DIVIDE_THROUGH; inc(p,4); // n*30 + 19
+        DIVIDE_THROUGH; inc(p,6); // n*30 + 23
+        DIVIDE_THROUGH; inc(p,2); // n*30 + 29
+        DIVIDE_THROUGH; inc(p,6); // n*30 + 31
       end;
-      if n>1 then lResult^.appendInt(n);
+      if n>1 then listResult^.appendInt(n);
     end;
   end;
 
@@ -318,7 +304,7 @@ FUNCTION digits_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
-      (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
+      (arg0^.literalType in [lt_int,lt_emptyList,lt_intList,lt_emptySet,lt_intSet]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
       if params^.size=2 then base:=int1^.value;
       if base<=1 then begin
@@ -326,8 +312,8 @@ FUNCTION digits_impl intFuncSignature;
         exit(nil);
       end;
       if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
-      result:=newListLiteral(list0^.size);
-      for j:=0 to list0^.size-1 do lResult^.append(digitsOf(P_intLiteral(list0^.value(j))^.value),false);
+      result:=collection0^.newOfSameType;
+      for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
     end;
   end;
 

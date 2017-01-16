@@ -5,36 +5,6 @@ USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGener
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
-FUNCTION length_imp intFuncSignature;
-  VAR i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then
-    case arg0^.literalType of
-      lt_string: result:=newIntLiteral(UTF8Length(str0^.value));
-      lt_stringList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to list0^.size-1 do
-          lResult^.appendInt(UTF8Length(P_stringLiteral(list0^.value(i))^.value));
-      end;
-    end;
-  end;
-
-FUNCTION byteLength_imp intFuncSignature;
-  VAR i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then
-    case arg0^.literalType of
-      lt_string: result:=newIntLiteral(length(str0^.value));
-      lt_stringList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to list0^.size-1 do
-          lResult^.appendInt(length(P_stringLiteral(list0^.value(i))^.value));
-      end;
-    end;
-  end;
-
 FUNCTION pos_imp intFuncSignature;
   FUNCTION posInt(x,y:P_literal):P_intLiteral;
     begin
@@ -55,20 +25,20 @@ FUNCTION pos_imp intFuncSignature;
         end else begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            lResult^.append(posInt(arg0,list1^.value(i)),false);
+            listResult^.append(posInt(arg0,list1^[i]),false);
         end;
       end else begin
         if arg1^.literalType=lt_string then begin
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
-            lResult^.append(posInt(list0^.value(i),
+            listResult^.append(posInt(list0^[i],
                                                                arg1           ),false);
         end else begin
           if list0^.size=list1^.size then begin
             result:=newListLiteral;
             for i:=0 to list0^.size-1 do
-              lResult^.append(posInt(list0^.value(i),
-                                                   list1^.value(i)),false);
+              listResult^.append(posInt(list0^[i],
+                                        list1^[i]),false);
           end else context.adapters^.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
@@ -81,7 +51,7 @@ FUNCTION copy_imp intFuncSignature;
       i1:longint=0;
       i:longint;
 
-  PROCEDURE checkLength(L:P_literal);
+  PROCEDURE checkLength(CONST L:P_literal);
     VAR s:longint;
     begin
       s:=P_listLiteral(L)^.size;
@@ -89,26 +59,26 @@ FUNCTION copy_imp intFuncSignature;
                       else if    i1<>s then allOkay:=false;
     end;
 
-  FUNCTION safeString(index:longint):ansistring;
+  FUNCTION safeString(CONST index:longint):ansistring;
     begin
       if arg0^.literalType=lt_string
         then result:=str0^.value
-        else result:=P_stringLiteral(list0^.value(index))^.value;
+        else result:=P_stringLiteral(list0^[index])^.value;
     end;
 
-  FUNCTION safeStart(index:longint):longint;
+  FUNCTION safeStart(CONST index:longint):longint;
     begin
       if arg1^.literalType=lt_int
         then result:=int1^.value
-        else result:=P_intLiteral(list1^.value(index))^.value;
+        else result:=P_intLiteral(list1^[index])^.value;
       inc(result);
     end;
 
-  FUNCTION safeLen(index:longint):longint;
+  FUNCTION safeLen(CONST index:longint):longint;
     begin
       if arg2^.literalType=lt_int
         then result:=int2^.value
-        else result:=P_intLiteral(list2^.value(index))^.value;
+        else result:=P_intLiteral(list2^[index])^.value;
     end;
 
   begin
@@ -128,7 +98,7 @@ FUNCTION copy_imp intFuncSignature;
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
-          lResult^.appendString(
+          listResult^.appendString(
               UTF8Copy(safeString(i),
                        safeStart(i),
                        safeLen(i)));
@@ -164,15 +134,15 @@ FUNCTION chars_imp intFuncSignature;
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do lResult^.append(chars_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do listResult^.append(chars_internal(list0^[i]),false);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
-      for i:=0 to 255 do lResult^.appendString(chr(i));
+      for i:=0 to 126 do listResult^.appendString(chr(i));
     end;
   end;
 
 FUNCTION charSet_imp intFuncSignature;
-  FUNCTION charset_internal(CONST input:P_literal):P_listLiteral;
+  FUNCTION charset_internal(CONST input:P_literal):P_setLiteral;
     VAR charIndex,
         byteIndex:longint;
         i:longint;
@@ -191,7 +161,7 @@ FUNCTION charSet_imp intFuncSignature;
         end;
         charSet.put(sub);
       end;
-      result:=newListLiteral(charSet.size);
+      result:=newSetLiteral;
       for sub in charSet.values do result^.appendString(sub);
       charSet.destroy;
     end;
@@ -203,7 +173,7 @@ FUNCTION charSet_imp intFuncSignature;
       result:=charset_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do lResult^.append(charset_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do listResult^.append(charset_internal(list0^[i]),false);
     end;
   end;
 
@@ -224,7 +194,7 @@ FUNCTION bytes_imp intFuncSignature;
       result:=bytes_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do lResult^.append(bytes_internal(list0^.value(i)),false);
+      for i:=0 to list0^.size-1 do listResult^.append(bytes_internal(list0^[i]),false);
     end;
   end;
 
@@ -239,11 +209,11 @@ FUNCTION split_imp intFuncSignature;
       end else begin
         setLength(splitters,list1^.size);
         for i:=0 to length(splitters)-1 do
-          splitters[i]:=P_stringLiteral(list1^.value(i))^.value;
+          splitters[i]:=P_stringLiteral(list1^[i])^.value;
       end;
     end;
 
-  FUNCTION splitOneString(CONST s:P_stringLiteral):P_listLiteral;
+  FUNCTION splitOneString(CONST s:P_stringLiteral):P_collectionLiteral;
     PROCEDURE firstSplitterPos(CONST s:ansistring; OUT splitterStart,splitterEnd:longint);
       VAR i,p:longint;
       begin
@@ -261,7 +231,7 @@ FUNCTION split_imp intFuncSignature;
         rest:ansistring;
     begin
       firstSplitterPos(s^.value,sp0,sp1);
-      if sp0<0 then exit(newOneElementListLiteral(s,true));
+      if sp0<0 then exit(newListLiteral(1)^.append(s,true));
       result:=newListLiteral;
       rest:=s^.value;
       while sp0>0 do begin
@@ -273,16 +243,19 @@ FUNCTION split_imp intFuncSignature;
     end;
 
   FUNCTION splitRecurse(CONST p:P_literal):P_literal;
-    VAR i:longint;
+    VAR iter:T_arrayOfLiteral;
+        sub:P_literal;
     begin
       case p^.literalType of
         lt_string: result:=splitOneString(P_stringLiteral(p));
-        lt_list,lt_stringList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(p)^.size-1 do if context.adapters^.noErrors then
-            lResult^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
-        end
-       else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation,context.adapters^);
+        lt_list,lt_stringList,lt_emptyList,
+        lt_set ,lt_stringSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(p)^.newOfSameType;
+          iter:=P_collectionLiteral(p)^.iteratableList;
+          for sub in iter do collResult^.append(splitRecurse(sub),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then disposeLiteral(result);
+        end;
       end;
     end;
 
@@ -305,7 +278,7 @@ FUNCTION join_impl intFuncSignature;
         lt_real,
         lt_string,
         lt_expression: result:= P_scalarLiteral(L)^.stringForm;
-        lt_list..lt_listWithError: result:=L^.toString;
+        lt_list..lt_emptyMap: result:=L^.toString;
         else result:='';
       end;
     end;
@@ -317,76 +290,49 @@ FUNCTION join_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
       if params^.size=2 then joiner:=str1^.value;
-      if (arg0^.literalType in C_validListTypes) then begin
+      if (arg0^.literalType in C_listTypes+C_setTypes) then begin
         if list0^.size=0 then exit(newStringLiteral(''));
-        resTxt:=stringOfLit(list0^.value(0));
+        resTxt:=stringOfLit(list0^[0]);
         for i:=1 to list0^.size-1 do
-          resTxt:=resTxt+joiner+stringOfLit(list0^.value(i));
+          resTxt:=resTxt+joiner+stringOfLit(list0^[i]);
         result:=newStringLiteral(resTxt);
-      end else if (arg0^.literalType in C_validScalarTypes) then
+      end else if (arg0^.literalType in C_scalarTypes) then
         result:=newStringLiteral(stringOfLit(arg0));
     end;
   end;
 
 {$define STRINGLITERAL_ROUTINE:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR i:longint;
+  VAR iter:T_arrayOfLiteral;
+      sub:P_literal;
   begin
     result:=nil;
     case x^.literalType of
       lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
-      lt_list,lt_stringList,lt_emptyList:  begin
-        result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-          lResult^.append(recurse(P_listLiteral(x)^.value(i)),false);
-        if result^.literalType = lt_listWithError then begin
-          disposeLiteral(result);
-          result:=newErrorLiteral;
-        end;
+      lt_list,lt_stringList,lt_emptyList,
+      lt_set ,lt_stringSet ,lt_emptySet :  begin
+        result:=P_collectionLiteral(x)^.newOfSameType;
+        iter  :=P_collectionLiteral(x)^.iteratableList;
+        for sub in iter do collResult^.append(recurse(sub),false);
+        disposeLiteral(iter);
+        if collResult^.containsError then disposeLiteral(result);
       end;
     end;
   end;
 
 begin
   result:=nil;
-  if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList])
+  if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList,lt_set,lt_stringSet,lt_emptySet])
   then result:=recurse(arg0);
 end}
 
-FUNCTION trim_imp intFuncSignature;
-{$define CALL_MACRO:=trim}
-{$define ID_MACRO:='trim'}
-STRINGLITERAL_ROUTINE;
-
-FUNCTION trimLeft_imp intFuncSignature;
-{$define CALL_MACRO:=trimLeft}
-{$define ID_MACRO:='trimLeft'}
-STRINGLITERAL_ROUTINE;
-
-FUNCTION trimRight_imp intFuncSignature;
-{$define CALL_MACRO:=trimRight}
-{$define ID_MACRO:='trimRight'}
-STRINGLITERAL_ROUTINE;
-
-FUNCTION upper_imp intFuncSignature;
-{$define CALL_MACRO:=upper}
-{$define ID_MACRO:='upper'}
-STRINGLITERAL_ROUTINE;
-
-FUNCTION lower_imp intFuncSignature;
-{$define CALL_MACRO:=lower}
-{$define ID_MACRO:='lower'}
-STRINGLITERAL_ROUTINE;
-
-FUNCTION unbrace_imp intFuncSignature;
-{$define CALL_MACRO:=unbrace}
-{$define ID_MACRO:='unbrace'}
-STRINGLITERAL_ROUTINE;
-
-FUNCTION escape_imp intFuncSignature;
-{$define CALL_MACRO:=escape}
-{$define ID_MACRO:='escape'}
-STRINGLITERAL_ROUTINE;
+FUNCTION trim_imp      intFuncSignature; {$define CALL_MACRO:=trim}     {$define ID_MACRO:='trim'}     STRINGLITERAL_ROUTINE;
+FUNCTION trimLeft_imp  intFuncSignature; {$define CALL_MACRO:=trimLeft} {$define ID_MACRO:='trimLeft'} STRINGLITERAL_ROUTINE;
+FUNCTION trimRight_imp intFuncSignature; {$define CALL_MACRO:=trimRight}{$define ID_MACRO:='trimRight'}STRINGLITERAL_ROUTINE;
+FUNCTION upper_imp     intFuncSignature; {$define CALL_MACRO:=upper}    {$define ID_MACRO:='upper'}    STRINGLITERAL_ROUTINE;
+FUNCTION lower_imp     intFuncSignature; {$define CALL_MACRO:=lower}    {$define ID_MACRO:='lower'}    STRINGLITERAL_ROUTINE;
+FUNCTION unbrace_imp   intFuncSignature; {$define CALL_MACRO:=unbrace}  {$define ID_MACRO:='unbrace'}  STRINGLITERAL_ROUTINE;
+FUNCTION escape_imp    intFuncSignature; {$define CALL_MACRO:=escape}   {$define ID_MACRO:='escape'}   STRINGLITERAL_ROUTINE;
 {$undef STRINGLITERAL_ROUTINE}
 
 FUNCTION escapePascal_imp intFuncSignature;
@@ -427,7 +373,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
       end else begin
         setLength(lookFor,P_listLiteral(L)^.size);
         for i:=0 to length(lookFor)-1 do
-          lookFor[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
+          lookFor[i]:=P_stringLiteral(P_listLiteral(L)^[i])^.value;
       end;
       L:=arg2;
       if L^.literalType=lt_string then begin
@@ -436,7 +382,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
       end else begin
         setLength(replaceBy,P_listLiteral(L)^.size);
         for i:=0 to length(replaceBy)-1 do
-          replaceBy[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
+          replaceBy[i]:=P_stringLiteral(P_listLiteral(L)^[i])^.value;
       end;
       while length(replaceBy)<length(lookFor) do elongate(replaceBy);
       while length(lookFor)<length(replaceBy) do elongate(lookFor);
@@ -457,7 +403,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     else begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do
-        lResult^.appendString(modify(P_stringLiteral(list0^.value(i))^.value));
+        listResult^.appendString(modify(P_stringLiteral(list0^[i])^.value));
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
@@ -500,43 +446,43 @@ FUNCTION repeat_impl intFuncSignature;
     end;
   end;
 
-FUNCTION clean_impl intFuncSignature;
-  //clean(input,whitelist,instead)
-  VAR whiteList:charSet;
-      instead:char;
-      tmp:ansistring;
-      i:longint;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=3) and
-       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg1^.literalType=lt_stringList) and
-       (arg2^.literalType=lt_string) and
-       (length(str2^.value)=1) then begin
-      whiteList:=[];
-      for i:=0 to list1^.size-1 do begin
-        tmp:=P_stringLiteral(list1^.value(i))^.value;
-        if (length(tmp)=1) and (tmp[1]<=#127) then include(whiteList,tmp[1])
-        else begin
-          context.adapters^.raiseError('Built in function clean expects a list of ASCII characters as whitelist (second argument)',tokenLocation);
-          exit(nil);
-        end;
-      end;
-      if length(str2^.value)<>1 then begin
-        context.adapters^.raiseError('Built in function clean expects an ASCII characters as instead (third argument)',tokenLocation);
-        exit(nil);
-      end;
-      instead:=str2^.value[1];
-      if arg0^.literalType=lt_string then begin
-        result:=newStringLiteral(cleanString(str0^.value,whiteList,instead));
-      end else begin
-        result:=newListLiteral;
-        for i:=0 to list0^.size-1 do
-        lResult^.appendString(cleanString(P_stringLiteral(list0^.value(i))^.value,whiteList,instead));
-      end;
-    end;
-  end;
+//FUNCTION clean_impl intFuncSignature;
+//  //clean(input,whitelist,instead)
+//  VAR whiteList:charSet;
+//      instead:char;
+//      tmp:ansistring;
+//      i:longint;
+//
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=3) and
+//       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+//       (arg1^.literalType=lt_stringList) and
+//       (arg2^.literalType=lt_string) and
+//       (length(str2^.value)=1) then begin
+//      whiteList:=[];
+//      for i:=0 to list1^.size-1 do begin
+//        tmp:=P_stringLiteral(list1^[i])^.value;
+//        if (length(tmp)=1) and (tmp[1]<=#127) then include(whiteList,tmp[1])
+//        else begin
+//          context.adapters^.raiseError('Built in function clean expects a list of ASCII characters as whitelist (second argument)',tokenLocation);
+//          exit(nil);
+//        end;
+//      end;
+//      if length(str2^.value)<>1 then begin
+//        context.adapters^.raiseError('Built in function clean expects an ASCII characters as instead (third argument)',tokenLocation);
+//        exit(nil);
+//      end;
+//      instead:=str2^.value[1];
+//      if arg0^.literalType=lt_string then begin
+//        result:=newStringLiteral(cleanString(str0^.value,whiteList,instead));
+//      end else begin
+//        result:=newListLiteral;
+//        for i:=0 to list0^.size-1 do
+//        listResult^.appendString(cleanString(P_stringLiteral(list0^[i])^.value,whiteList,instead));
+//      end;
+//    end;
+//  end;
 
 FUNCTION tokenSplit_impl intFuncSignature;
   VAR language:string='MNH';
@@ -556,7 +502,7 @@ FUNCTION tokenSplit_impl intFuncSignature;
         stringToSplit:=str0^.value;
         tokens:=tokenSplit(stringToSplit,language);
         result:=newListLiteral;
-        for i:=0 to length(tokens)-1 do result:=lResult^.appendString(tokens[i]);
+        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(tokens[i]);
       end;
       lt_expression: if uppercase(language)='MNH' then
         result:=expressionToTokensCallback(P_expressionLiteral(arg0));
@@ -592,12 +538,12 @@ FUNCTION reverseString_impl intFuncSignature;
       lt_stringList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to list0^.size-1 do
-          lResult^.appendString(rev(list0^.value(i)));
+          listResult^.appendString(rev(list0^[i]));
       end;
     end;
   end;
 
-FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_listLiteral;
+FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_mapLiteral;
   VAR aHashes,bHashes:PInteger;
       aLen,bLen:integer;
       i:longint;
@@ -608,23 +554,23 @@ FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_listLiteral;
   begin
     diff.create();
     if A^.literalType=lt_string then tempChars:=chars_internal(A)
-                                else begin tempChars:=P_listLiteral(A); A^.rereference; end;
+                                else tempChars:=P_listLiteral(A^.rereferenced);
     with tempChars^ do begin
       aLen:=size;
       getMem(aHashes,aLen*sizeOf(integer));
       {$R-}
-      for i:=0 to aLen-1 do aHashes[i]:=value(i)^.hash;
+      for i:=0 to aLen-1 do aHashes[i]:=value[i]^.hash;
       {$R+}
     end;
     disposeLiteral(tempChars);
 
     if B^.literalType=lt_string then tempChars:=chars_internal(B)
-                                else begin tempChars:=P_listLiteral(B); B^.rereference; end;
+                                else tempChars:=P_listLiteral(B^.rereferenced);
     with tempChars^ do begin
       bLen:=size;
       getMem(bHashes,bLen*sizeOf(integer));
       {$R-}
-      for i:=0 to bLen-1 do bHashes[i]:=value(i)^.hash;
+      for i:=0 to bLen-1 do bHashes[i]:=value[i]^.hash;
       {$R+}
     end;
     disposeLiteral(tempChars);
@@ -632,11 +578,11 @@ FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_listLiteral;
     diff.execute(aHashes,bHashes,aLen,bLen);
     freeMem(aHashes,aLen*sizeOf(integer));
     freeMem(bHashes,bLen*sizeOf(integer));
-    result:=newListLiteral(5)^
-            .append(newListLiteral(2)^.appendString('adds'    )^.appendInt(diff.DiffStats.adds    ),false)^
-            .append(newListLiteral(2)^.appendString('deletes' )^.appendInt(diff.DiffStats.deletes ),false)^
-            .append(newListLiteral(2)^.appendString('matches' )^.appendInt(diff.DiffStats.matches ),false)^
-            .append(newListLiteral(2)^.appendString('modifies')^.appendInt(diff.DiffStats.modifies),false);
+    result:=newMapLiteral^
+            .put('adds'    ,diff.DiffStats.adds    )^
+            .put('deletes' ,diff.DiffStats.deletes )^
+            .put('matches' ,diff.DiffStats.matches )^
+            .put('modifies',diff.DiffStats.modifies);
   end;
 
 FUNCTION diff_impl intFuncSignature;
@@ -710,8 +656,8 @@ FUNCTION diff_impl intFuncSignature;
        ((params^.size=2) or (arg2^.literalType=lt_boolean)) then begin
       result:=prepareDiff(arg0,arg1,diff);
       if (params^.size=3) and (bool2^.value)
-      then lResult^.append(newListLiteral(2)^.appendString('edit')^.append(blockEdit ,false),false)
-      else lResult^.append(newListLiteral(2)^.appendString('edit')^.append(simpleEdit,false),false);
+      then mapResult^.put('edit',blockEdit ,false)
+      else mapResult^.put('edit',simpleEdit,false);
       diff.destroy;
     end;
   end;
@@ -806,10 +752,41 @@ FUNCTION formatTabs_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       arr:=formatTabs(split(str0^.value));
       result:=newListLiteral;
-      for i:=0 to length(arr)-1 do lResult^.appendString(arr[i]);
+      for i:=0 to length(arr)-1 do listResult^.appendString(arr[i]);
       setLength(arr,0);
     end;
   end;
+
+{$define LENGTH_MACRO:=intFuncSignature;
+  FUNCTION innerRec(l:P_literal):P_literal;
+    VAR iter:T_arrayOfLiteral;
+        sub :P_literal;
+    begin
+      result:=nil;
+      case l^.literalType of
+        lt_string: result:=newIntLiteral(LENGTH_FUNC(P_stringLiteral(L)^.value));
+        lt_list,lt_stringList,lt_emptyList,
+        lt_set,lt_stringSet,lt_emptySet:
+        begin
+          result:=P_collectionLiteral(l)^.newOfSameType;
+          iter  :=P_collectionLiteral(l)^.iteratableList;
+          for sub in iter do P_collectionLiteral(result)^.append(innerRec(sub),false);
+          disposeLiteral(iter);
+          if P_collectionLiteral(result)^.containsError then disposeLiteral(result);
+        end;
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then result:=innerRec(arg0);
+  end}
+
+FUNCTION length_imp     {$define LENGTH_FUNC:=UTF8Length} LENGTH_MACRO;
+FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     LENGTH_MACRO;
+{$undef LENGTH_FUNC}
+{$undef LENGTH_MACRO}
+
 
 INITIALIZATION
   //Functions on Strings:
@@ -827,7 +804,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'trimRight'     ,@trimRight_imp     ,true,ak_unary     ,'trimRight(S:string);//Returns string S without trailing spaces');
   registerRule(STRINGS_NAMESPACE,'upper'         ,@upper_imp         ,true,ak_unary     ,'upper(S:string);//Returns an uppercase representation of S');
   registerRule(STRINGS_NAMESPACE,'lower'         ,@lower_imp         ,true,ak_unary     ,'lower(S:string);//Returns an lowercase representation of S');
-  registerRule(STRINGS_NAMESPACE,'clean'         ,@clean_impl        ,true,ak_ternary   ,'clean(s,whiteList:stringList,instead:string);//Replaces all characters in s which are not in whitelist by instead.#//Whitelist must be a list of ASCII characters, instead must be an ASCII character');
+//  registerRule(STRINGS_NAMESPACE,'clean'         ,@clean_impl        ,true,ak_ternary   ,'clean(s,whiteList:stringList,instead:string);//Replaces all characters in s which are not in whitelist by instead.#//Whitelist must be a list of ASCII characters, instead must be an ASCII character');
   registerRule(STRINGS_NAMESPACE,'unbrace'       ,@unbrace_imp       ,true,ak_unary     ,'unbrace(S:string);//Returns an unbraced representation of S');
   registerRule(STRINGS_NAMESPACE,'escape'        ,@escape_imp        ,true,ak_unary     ,'escape(S:string);//Returns an escaped representation of S');
   registerRule(STRINGS_NAMESPACE,'escapePascal'  ,@escapePascal_imp  ,true,ak_unary     ,'escapePascal(S:string);//Returns an escaped representation of S for use in Pascal source code');

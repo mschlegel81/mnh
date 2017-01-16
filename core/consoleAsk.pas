@@ -2,6 +2,7 @@ UNIT consoleAsk;
 INTERFACE
 USES mnh_funcs, sysutils, mnh_litVar, mnh_basicTypes, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil,mnh_contexts;
 IMPLEMENTATION
+{$i mnh_func_defines.inc}
 VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring): ansistring;
   begin
@@ -42,22 +43,26 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansist
     result:=options[i];
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext):  P_literal;
+FUNCTION ask_impl intFuncSignature;
   VAR opt: T_arrayOfString;
+      iter:T_arrayOfLiteral;
       i: longint;
   begin
     result:=nil;
     if (params<>nil) and
        (params^.size = 1) and
-       (params^.value(0)^.literalType = lt_string)
-    then result:=newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value))
+       (arg0^.literalType = lt_string)
+    then result:=newStringLiteral(ask(str0^.value))
     else if (params<>nil) and (params^.size = 2) and
-            (params^.value(0)^.literalType = lt_string) and
-            (params^.value(1)^.literalType = lt_stringList) then begin
+            (arg0^.literalType = lt_string) and
+            (arg1^.literalType = lt_stringList) then begin
       system.enterCriticalSection(cs);
-      setLength(opt, P_listLiteral(params^.value(1))^.size);
-      for i:=0 to length(opt)-1 do opt[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-      result:=newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value, opt));
+      setLength(opt, list1^.size);
+      iter:=list1^.iteratableList;
+      setLength(opt,length(iter));
+      for i:=0 to length(opt)-1 do opt[i]:=P_stringLiteral(iter[i])^.value;
+      disposeLiteral(iter);
+      result:=newStringLiteral(ask(str0^.value, opt));
       system.leaveCriticalSection(cs);
     end;
   end;

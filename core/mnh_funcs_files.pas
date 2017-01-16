@@ -14,7 +14,7 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     begin
       if pathOrPathList^.literalType=lt_string
       then result:=P_stringLiteral(pathOrPathList)^.value
-      else result:=P_stringLiteral(P_listLiteral(pathOrPathList)^.value(index))^.value;
+      else result:=P_stringLiteral(P_listLiteral(pathOrPathList)^[index])^.value;
       if not(filesAndNotFolders) and recurseSubDirs and (pos('*',result)<=0) then result:=result+DirectorySeparator+'*';
     end;
 
@@ -28,8 +28,8 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(searchString(j),filesAndNotFolders,recurseSubDirs);
-        if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value)
-                                          then result^.append(P_listLiteral(pathOrPathList)^.value(j),true);
+        if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^[j])^.value)
+                                          then result^.append(P_listLiteral(pathOrPathList)^[j],true);
         for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
       end;
     end;
@@ -52,7 +52,7 @@ FUNCTION allFiles_impl intFuncSignature;
         k:longint;
     begin
       list:=FindAllFiles(root,pattern,recurse);
-      for k:=0 to list.count-1 do lResult^.appendString(replaceAll(list[k],'\','/'));
+      for k:=0 to list.count-1 do listResult^.appendString(replaceAll(list[k],'\','/'));
       list.destroy;
     end;
 
@@ -65,8 +65,8 @@ FUNCTION allFiles_impl intFuncSignature;
           lt_emptyList: begin end;
           lt_string: pattern:=str1^.value;
           lt_stringList: begin
-            pattern:=P_stringLiteral(list1^.value(0))^.value;
-            for i:=1 to list1^.size-1 do pattern:=pattern+';'+P_stringLiteral(list1^.value(i))^.value;
+            pattern:=P_stringLiteral(list1^[0])^.value;
+            for i:=1 to list1^.size-1 do pattern:=pattern+';'+P_stringLiteral(list1^[i])^.value;
           end;
           else exit(nil);
         end;
@@ -78,7 +78,7 @@ FUNCTION allFiles_impl intFuncSignature;
       result:=newListLiteral;
       if arg0^.literalType=lt_string
       then searchInRoot(str0^.value)
-      else for i:=0 to list0^.size-1 do searchInRoot(P_stringLiteral(list0^.value(i))^.value);
+      else for i:=0 to list0^.size-1 do searchInRoot(P_stringLiteral(list0^[i])^.value);
     end;
   end;
 
@@ -133,7 +133,7 @@ FUNCTION fileLines_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       L:=fileLines(str0^.value,accessed);
       result:=newListLiteral;
-      for i:=0 to length(L)-1 do lResult^.appendString(L[i]);
+      for i:=0 to length(L)-1 do listResult^.appendString(L[i]);
       if not(accessed) then begin
         context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
@@ -169,7 +169,7 @@ FUNCTION writeOrAppendFileLines(CONST params:P_listLiteral; CONST tokenLocation:
       if params^.size=3 then sep:=str2^.value
                         else sep:='';
       setLength(L,list1^.size);
-      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value(i))^.value;
+      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^[i])^.value;
       ok:=writeFileLines(str0^.value,L,sep,doAppend);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
@@ -252,10 +252,10 @@ FUNCTION execSync_impl intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
       setLength(cmdLinePar,0);
       if (params^.size>=2) then begin
-        if arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList] then begin
+        if arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList] then begin
           setLength(cmdLinePar,list1^.size);
           for i:=0 to list1^.size-1 do begin
-            cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
+            cmdLinePar[i]:=P_scalarLiteral(list1^[i])^.stringForm;
           end;
         end else if (arg1^.literalType=lt_boolean) then includeStdErr:=bool1^.value
         else exit(nil);
@@ -268,7 +268,7 @@ FUNCTION execSync_impl intFuncSignature;
       processExitCode:=runCommand(executable,cmdLinePar,output,includeStdErr);
       outputLit:=newListLiteral(output.count);
       for i:=0 to output.count-1 do outputLit^.appendString(output[i]);
-      result:=newListLiteral(2)^.append(outputLit,false,false)^.appendInt(processExitCode);
+      result:=newListLiteral(2)^.append(outputLit,false)^.appendInt(processExitCode);
       output.free;
     end;
   end;
@@ -281,13 +281,13 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+      and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList])) then begin
       setLength(cmdLinePar,0);
       executable:=str0^.value;
       if params^.size=2 then begin
         setLength(cmdLinePar,list1^.size);
         for i:=0 to list1^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
+          cmdLinePar[i]:=P_scalarLiteral(list1^[i])^.stringForm;
       end;
       showConsole;
       processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch);
@@ -347,46 +347,42 @@ FUNCTION moveFile_imp intFuncSignature;
   end;
 
 FUNCTION fileInfo_imp intFuncSignature;
-  FUNCTION infoForSearch(CONST s:string):P_listLiteral;
-    FUNCTION infoToLiteral(CONST info:T_fileInfo):P_listLiteral;
-      VAR a:P_listLiteral;
+  FUNCTION infoForSearch(CONST s:string):P_compoundLiteral;
+    FUNCTION infoToLiteral(CONST info:T_fileInfo):P_mapLiteral;
+      VAR a:P_setLiteral;
           att:T_fileAttrib;
       begin
-        a:=newListLiteral(3);
-        result:=newListLiteral()^.append(
-                  newListLiteral(2)^.
-                    appendString('path')^.
-                    appendString(info.filePath),false)^.append(
-                  newListLiteral(2)^.
-                    appendString('time')^.
-                    appendReal(info.time),false)^.append(
-                  newListLiteral(2)^.
-                    appendString('size')^.
-                    appendInt(info.size),false)^.append(
-                  newListLiteral(2)^.
-                    appendString('attributes')^.
-                    append(a,false),false);
+        a:=newSetLiteral;
         for att in info.attributes do a^.appendString(C_fileAttribName[att]);
+        result:=newMapLiteral^
+                .put('path'      ,info.filePath)^
+                .put('time'      ,info.time)^
+                .put('size'      ,info.size)^
+                .put('attributes',a,false);
       end; //infoToLiteral
 
     VAR info:T_fileInfo;
     begin
       if containsPlaceholder(s) then begin
-        result:=newListLiteral();
-        for info in findFileInfo(s) do result^.append(infoToLiteral(info),false);
+        result:=newListLiteral(0);
+        for info in findFileInfo(s) do listResult^.append(infoToLiteral(info),false);
       end else for info in findFileInfo(s) do exit(infoToLiteral(info));
     end; //infoForSearch
 
-  VAR i:longint;
+  VAR iter:T_arrayOfLiteral;
+      sub :P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
       lt_string: exit(infoForSearch(str0^.value));
-      lt_stringList: begin
-        result:=newListLiteral(list0^.size);
-        for i:=0 to list0^.size-1 do lResult^.append(infoForSearch(P_stringLiteral(list0^.value(i))^.value),false);
+      lt_stringList,lt_stringSet: begin
+        result:=collection0^.newOfSameType;
+        iter  :=collection0^.iteratableList;
+        for sub in iter do collResult^.append(infoForSearch(P_stringLiteral(sub)^.value),false);
+        disposeLiteral(iter);
       end;
       lt_emptyList: result:=newListLiteral(0);
+      lt_emptySet : result:=newSetLiteral;
     end;
   end; //fileInfo_imp
 
@@ -402,8 +398,8 @@ FUNCTION fileStats_imp intFuncSignature;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_stringList) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        fileStats(P_stringLiteral(list0^.value(i))^.value,lineCount,wordCount,byteCount,hash);
-        lResult^.append(newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash),false);
+        fileStats(P_stringLiteral(list0^[i])^.value,lineCount,wordCount,byteCount,hash);
+        listResult^.append(newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash),false);
       end;
     end;
   end;
@@ -415,7 +411,7 @@ FUNCTION fileStats_imp intFuncSignature;
       if (arg0^.literalType=lt_string) then result:=newStringLiteral(internal(str0^.value))
       else if arg0^.literalType in [lt_stringList,lt_emptyList] then begin
         result:=newListLiteral(list0^.size);
-        for i:=0 to list0^.size-1 do lResult^.appendString(internal(P_stringLiteral(list0^.value(i))^.value));
+        for i:=0 to list0^.size-1 do listResult^.appendString(internal(P_stringLiteral(list0^[i])^.value));
       end;
     end;
   end}
@@ -470,10 +466,10 @@ FUNCTION relativeFilename_impl intFuncSignature;
         lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            lResult^.appendString(
+            listResult^.appendString(
             replaceAll(
             extractRelativePath(str0^.value+'/',
-                                P_stringLiteral(list1^.value(i))^.value),
+                                P_stringLiteral(list1^[i])^.value),
             '\','/'));
         end;
       end;
@@ -481,19 +477,19 @@ FUNCTION relativeFilename_impl intFuncSignature;
         lt_string: begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            lResult^.appendString(
+            listResult^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
+            extractRelativePath(P_stringLiteral(list0^[i])^.value+'/',
                                 str1^.value),
             '\','/'));
         end;
         lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            lResult^.appendString(
+            listResult^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
-                                P_stringLiteral(list1^.value(i))^.value),
+            extractRelativePath(P_stringLiteral(list0^[i])^.value+'/',
+                                P_stringLiteral(list1^[i])^.value),
             '\','/'));
         end;
       end;

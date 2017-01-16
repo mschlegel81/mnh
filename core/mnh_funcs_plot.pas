@@ -37,16 +37,16 @@ FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
     setLength(result,0);
     if x=nil then case y^.literalType of
       lt_list:
-        with y^ do for i:=0 to size-1 do if value(i)^.literalType in [lt_intList,lt_realList,lt_numList] then begin
-          xy:=P_listLiteral(value(i));
-          if xy^.size=2 then addSample(fReal(xy^.value(0)), fReal(xy^.value(1)))
+        with y^ do for i:=0 to size-1 do if value[i]^.literalType in [lt_intList,lt_realList,lt_numList] then begin
+          xy:=P_listLiteral(value[i]);
+          if xy^.size=2 then addSample(fReal(xy^.value[0]), fReal(xy^.value[1]))
                         else addSample(Nan,Nan);
         end else addSample(Nan,Nan);
       lt_intList, lt_realList, lt_numList:
-        with y^ do for i:=0 to size-1 do addSample(i,fReal(value(i)));
+        with y^ do for i:=0 to size-1 do addSample(i,fReal(value[i]));
     end else begin
       imax:=min(X^.size, Y^.size);
-      for i:=0 to imax-1 do addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
+      for i:=0 to imax-1 do addSample(fReal(X^.value[i]), fReal(Y^.value[i]));
     end;
   end;
 
@@ -56,8 +56,8 @@ FUNCTION addPlot intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
-      if (params^.value(params^.size-1)^.literalType = lt_string) then begin
-        options:=P_stringLiteral(params^.value(params^.size-1))^.value;
+      if (params^.value[params^.size-1]^.literalType = lt_string) then begin
+        options:=P_stringLiteral(params^.value[params^.size-1])^.value;
         sizeWithoutOptions:=params^.size-1;
       end else begin
         options:='';
@@ -107,20 +107,20 @@ FUNCTION getOptions intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       opt:=context.adapters^.plot.options;
-      result:=newListLiteral^
-        .append(newListLiteral^.appendString('x0'             )^.appendReal(opt.range['x',0]),false)^
-        .append(newListLiteral^.appendString('x1'             )^.appendReal(opt.range['x',1]),false)^
-        .append(newListLiteral^.appendString('y0'             )^.appendReal(opt.range['y',0]),false)^
-        .append(newListLiteral^.appendString('y1'             )^.appendReal(opt.range['y',1]),false)^
-        .append(newListLiteral^.appendString('fontsize'       )^.appendReal(opt.relativeFontSize),false)^
-        .append(newListLiteral^.appendString('preserveAspect' )^.appendBool(opt.preserveAspect),false)^
-        .append(newListLiteral^.appendString('autoscaleX'     )^.appendBool(opt.autoscale['x']),false)^
-        .append(newListLiteral^.appendString('autoscaleY'     )^.appendBool(opt.autoscale['y']),false)^
-        .append(newListLiteral^.appendString('autoscaleFactor')^.appendReal(opt.autoscaleFactor),false)^
-        .append(newListLiteral^.appendString('logscaleX'      )^.appendBool(opt.logscale['x']),false)^
-        .append(newListLiteral^.appendString('logscaleY'      )^.appendBool(opt.logscale['y']),false)^
-        .append(newListLiteral^.appendString('axisStyleX'     )^.appendInt(opt.axisStyle['x']),false)^
-        .append(newListLiteral^.appendString('axisStyleY'     )^.appendInt(opt.axisStyle['y']),false);
+      result:=newMapLiteral^
+        .put('x0'             ,opt.range['x',0]    )^
+        .put('x1'             ,opt.range['x',1]    )^
+        .put('y0'             ,opt.range['y',0]    )^
+        .put('y1'             ,opt.range['y',1]    )^
+        .put('fontsize'       ,opt.relativeFontSize)^
+        .put('preserveAspect' ,opt.preserveAspect  )^
+        .put('autoscaleX'     ,opt.autoscale['x']  )^
+        .put('autoscaleY'     ,opt.autoscale['y']  )^
+        .put('autoscaleFactor',opt.autoscaleFactor )^
+        .put('logscaleX'      ,opt.logscale['x']   )^
+        .put('logscaleY'      ,opt.logscale['y']   )^
+        .put('axisStyleX'     ,opt.axisStyle['x']  )^
+        .put('axisStyleY'     ,opt.axisStyle['y']  );
     end;
   end;
 
@@ -182,11 +182,11 @@ FUNCTION setOptions intFuncSignature;
   begin
     result:=nil;
     opt:=context.adapters^.plot.options;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_keyValueList) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_map) then begin
       for i:=0 to list0^.size-1 do begin
-        pair:=P_listLiteral(list0^.value(i));
-        matchKey(P_stringLiteral(pair^.value(0))^.value,
-                                 pair^.value(1));
+        pair:=P_listLiteral(list0^.value[i]);
+        matchKey(P_stringLiteral(pair^.value[0])^.value,
+                                 pair^.value[1]);
       end;
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_int,lt_boolean]) then begin

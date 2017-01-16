@@ -22,7 +22,7 @@ FUNCTION random_imp intFuncSignature;
       count:=int0^.value;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do lResult^.appendReal(random);
+        for i:=1 to count do listResult^.appendReal(random);
         exit(result);
       end;
     end;
@@ -37,7 +37,7 @@ FUNCTION intRandom_imp intFuncSignature;
       count:=int1^.value;
       if count>=0 then begin
         result:=newListLiteral;
-        for i:=1 to count do lResult^.appendInt(random(int0^.value));
+        for i:=1 to count do listResult^.appendInt(random(int0^.value));
         exit(result);
       end;
     end;
@@ -75,81 +75,68 @@ FUNCTION driveInfo_imp intFuncSignature;
         VolumeInfo:  array[0..MAX_PATH] of char;
         VolumeSerialNumber: dword;
         Buf: array [0..MAX_PATH] of char;
-        infoPair:P_listLiteral;
-        infoMap:P_listLiteral;
+        infoMap:P_mapLiteral;
     begin
       DriveLetter := drive + ':\';
       driveType:=GetDriveType(PChar(DriveLetter));
-      if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK] then begin
-        result:=newListLiteral;
-      end else exit(newVoidLiteral);
-      infoMap:=newListLiteral;
-      lResult^.appendString(drive)^.append(infoMap,false);
-
-      infoPair:=newListLiteral;
-      infoPair^.appendString('type');
+      if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK]
+      then result:=newListLiteral
+      else exit(nil);
+      infoMap:=newMapLiteral;
       case driveType of
-        DRIVE_REMOVABLE: infoPair^.appendString('removable');
-        DRIVE_FIXED:     infoPair^.appendString('fixed'    );
-        DRIVE_REMOTE:    infoPair^.appendString('network'  );
-        DRIVE_CDROM:     infoPair^.appendString('CD_ROM'   );
-        DRIVE_RAMDISK:   infoPair^.appendString('RAM_disk' );
+        DRIVE_REMOVABLE: infoMap^.put('type','removable');
+        DRIVE_FIXED:     infoMap^.put('type','fixed'    );
+        DRIVE_REMOTE:    infoMap^.put('type','network'  );
+        DRIVE_CDROM:     infoMap^.put('type','CD_ROM'   );
+        DRIVE_RAMDISK:   infoMap^.put('type','RAM_disk' );
       end;
-      infoMap^.append(infoPair,false);
       {$WARN 5036 OFF}
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
       SetString(DriveLetter, Buf, StrLen(Buf));
-
-      infoMap^.append(
-        newListLiteral^.
-        appendString('serial')^.
-        appendInt(VolumeSerialNumber),false);
-
-      infoMap^.append(
-        newListLiteral^.
-        appendString('label')^.
-        appendString(DriveLetter),false);
+      infoMap^.put('serial',VolumeSerialNumber);
+      infoMap^.put('label' ,DriveLetter);
     end;
 
   VAR c:char;
+      info:P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newListLiteral;
-      for c:='A' to 'Z' do lResult^.append(infoForLetter(c),false);
+      result:=newMapLiteral;
+      for c:='A' to 'Z' do begin
+        info:=infoForLetter(c);
+        if info<>nil then mapResult^.put(c,info,false);
+      end;
     end;
   end;
 {$endif}
 
 FUNCTION getEnv_impl intFuncSignature;
   VAR e:T_arrayOfString;
-      i:longint;
-  FUNCTION environmentPair(CONST envString:ansistring):P_listLiteral;
-    VAR env:T_arrayOfString;
-        inner:P_listLiteral;
-        k:longint;
-    begin
-      env:=split(envString,'=');
-      result:=newListLiteral^.appendString(env[0]);
-      if length(env)>=2 then begin
-        env:=split(env[1],';');
-        if length(env)=1 then exit(result^.appendString(env[0])) else begin
-          inner:=newListLiteral;
-          for k:=0 to length(env)-1 do inner^.appendString(env[k]);
-          result:=result^.append(inner,false);
-        end;
-      end;
-    end;
+      envString:ansistring;
+      envKey:ansistring;
+      envValue:ansistring;
+      envTuple:T_arrayOfString;
+      inner:P_listLiteral;
 
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      e:=getEnvironment;
-      result:=newListLiteral;
-      for i:=0 to length(e)-1 do lResult^.append(environmentPair(e[i]),false);
-      setLength(e,0);
+      result:=newMapLiteral;
+      for envString in getEnvironment do begin
+        envTuple:=split(envString,'=');
+        envKey:=envTuple[0];
+        if length(envTuple)>=2 then begin
+          envTuple:=split(envTuple[1],';');
+          if length(envTuple)=1 then mapResult^.put(envKey,envTuple[1]) else begin
+            inner:=newListLiteral(length(envTuple));
+            for envValue in envTuple do inner^.appendString(envValue);
+            mapResult^.put(envKey,inner,false);
+          end;
+        end else mapResult^.put(envKey,newVoidLiteral,false);
+      end;
     end;
   end;
 

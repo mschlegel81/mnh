@@ -176,7 +176,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
-            then formats[i].formatAppend(result,p.value(k))
+            then formats[i].formatAppend(result,p[k])
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
@@ -191,9 +191,9 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       //prepare parameters
       fpar:=newListLiteral;
       for k:=1 to params^.size-1 do
-      if params^.value(k)^.literalType in C_validListTypes
-      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true)
-      else fpar^.append(              params^.value(k)               ,true);
+      if params^[k]^.literalType in C_compoundTypes
+      then fpar^.append(P_listLiteral(params^[k])^[index],true)
+      else fpar^.append(              params^[k]         ,true);
 
       if formatSubrule<>nil then begin
         temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(
@@ -202,7 +202,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           context,
           0);
         disposeLiteral(fpar);
-        if (temp<>nil) and (temp^.literalType in C_validListTypes)
+        if (temp<>nil) and (temp^.literalType in C_listTypes)
         then fpar:=P_listLiteral(temp)
         else begin
           if temp<>nil then disposeLiteral(temp);
@@ -216,10 +216,10 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   VAR i:longint;
       listSize:longint=-1;
   begin
-    for i:=1 to params^.size-1 do if params^.value(i)^.literalType in C_validListTypes then begin
-      if listSize=-1 then listSize:=P_listLiteral(params^.value(i))^.size
-                  else if listSize<>P_listLiteral(params^.value(i))^.size then begin
-        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^.value(i))^.size)+' for formatting.',tokenLocation);
+    for i:=1 to params^.size-1 do if params^[i]^.literalType in C_listTypes then begin
+      if listSize=-1 then listSize:=P_listLiteral(params^[i])^.size
+                  else if listSize<>P_listLiteral(params^[i])^.size then begin
+        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^[i])^.size)+' for formatting.',tokenLocation);
         exit(C_EMPTY_STRING_ARRAY);
       end;
     end;

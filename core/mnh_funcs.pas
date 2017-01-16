@@ -63,7 +63,8 @@ FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST 
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
 
@@ -111,10 +112,17 @@ FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
     result:=builtinMetaMap.get(p);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST typ: T_literalType; CONST messageTail: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
+PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters; CONST messageTail: ansistring='');
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in function '+functionName+' cannot be applied to type '+C_typeString[typ]+messageTail;
+    complaintText:='Built in function '+functionName+' cannot be applied to type '+L^.typeString+messageTail;
+    adapters.raiseError(complaintText,tokenLocation);
+  end;
+
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
+  VAR complaintText:ansistring;
+  begin
+    complaintText:='Built in function '+functionName+' cannot be applied to parameters of type '+x^.typeString+' and '+y^.typeString+messageTail;
     adapters.raiseError(complaintText,tokenLocation);
   end;
 
@@ -142,11 +150,11 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral):T_arrayOfString; inline;
       resultText:string;
   begin
     resultText:='';
-    if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
+    if params<>nil then for i:=0 to params^.size-1 do case params^.value[i]^.literalType of
       lt_boolean,lt_int,lt_real,lt_string,lt_expression:
-        resultText:=resultText + P_scalarLiteral(params^.value(i))^.stringForm;
-      lt_list..lt_listWithError:
-        resultText:=resultText + params^.value(i)^.toString;
+        resultText:=resultText + P_scalarLiteral(params^.value[i])^.stringForm;
+      lt_list..lt_emptyMap:
+        resultText:=resultText + params^.value[i]^.toString;
     end;
     result:=formatTabs(split(resultText));
   end;
@@ -212,7 +220,7 @@ FUNCTION bits_impl intFuncSignature;
       initialize(bits);
       move(P_intLiteral(arg0)^.value,bits,8);
       result:=newListLiteral;
-      for k:=0 to 63 do lResult^.appendBool(bits[k]);
+      for k:=0 to 63 do listResult^.appendBool(bits[k]);
     end else result:=nil;
   end;
 
