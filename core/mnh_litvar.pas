@@ -2155,10 +2155,10 @@ FUNCTION T_mapLiteral.clone: P_compoundLiteral;
   end;
 
 FUNCTION T_listLiteral.iteratableList: T_arrayOfLiteral;
-  VAR L:P_literal;
+  VAR i:longint;
   begin
     setLength(result,fill);
-    for L in result do L^.rereference;
+    for i:=0 to fill-1 do result[i]:=dat[i]^.rereferenced;
   end;
 
 FUNCTION T_setLiteral.iteratableList: T_arrayOfLiteral;
@@ -2226,9 +2226,9 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
   {$define L_x_S_recursion:=
     begin
       result:=P_collectionLiteral(LHS)^.newOfSameType;
-      for i:=0 to P_compoundLiteral(LHS)^.size-1 do P_collectionLiteral(result)^.append(
-        function_id(P_compoundLiteral(LHS)^[i],
-                                      RHS           ),false);
+      for i:=0 to P_collectionLiteral(LHS)^.size-1 do P_collectionLiteral(result)^.append(
+        function_id(P_collectionLiteral(LHS)^[i],
+                                        RHS           ),false);
       exit(result);
     end}
   {$define L_x_L_recursion:=
@@ -2648,14 +2648,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           lt_int:    exit(pot_int_int(P_intLiteral(LHS)^.val,P_intLiteral (RHS)^.val));
           lt_real:   exit(newRealLiteral(exp(ln(P_intLiteral(LHS)^.val)*P_realLiteral(RHS)^.val)));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-          lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: L_x_S_recursion;
+          lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_real: case RHS^.literalType of
           defaultRhsCases;
           lt_int:    exit(newRealLiteral(pot_real_int(P_realLiteral(LHS)^.val,P_intLiteral(RHS)^.val)));
           lt_real:   exit(newRealLiteral(exp(ln(P_realLiteral(LHS)^.val)*P_realLiteral(RHS)^.val)));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-          lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: L_x_S_recursion;
+          lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_intList,lt_realList,lt_numList,
         lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
