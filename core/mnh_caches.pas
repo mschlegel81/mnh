@@ -8,6 +8,7 @@ CONST MAX_ACCEPTED_COLLISIONS=10;
 TYPE
   T_cacheEntry = record
     key: P_listLiteral;
+    keyHash: T_hashInt;
     value: P_literal;
     useCount: longint;
   end;
@@ -118,7 +119,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       setLength(cached,length(cached)*2);
       for i:=0 to length(cached)-1 do with cached[i] do setLength(data,0);
       for k:=0 to length(redistribute)-1 do begin
-        i:=redistribute[k].key^.hash and (length(cached)-1);
+        i:=redistribute[k].keyHash and (length(cached)-1);
         with cached[i] do begin
           j:=length(data);
           setLength(data,j+1);
@@ -137,34 +138,38 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
     end;
 
   VAR i:longint;
+      hash:T_hashInt;
       binIdx: T_hashInt;
   begin
-    binIdx:=key^.hash and (length(cached)-1);
+    hash:=key^.hash;
+    binIdx:=hash and (length(cached)-1);
     with cached[binIdx] do begin
       i := 0;
-      while (i<length(data)) and not (key^.equals(data[i].key)) do inc(i);
+      while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
       if (i<length(data))
       then exit
       else setLength(data, i+1);
       inc(fill);
-      data[i].key  :=key;   key  ^.rereference;
-      data[i].value:=value; value^.rereference;
+      data[i].key     :=key;   key  ^.rereference;
+      data[i].keyHash :=hash;
+      data[i].value   :=value; value^.rereference;
       data[i].useCount:= 0;
     end;
     inc(putCounter);
     if (MemoryUsed>globalMemoryLimit) then polishAllCaches
-    else if (putCounter>POLISH_FREQUENCY*length(cached)) then polish
     else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR i: longint;
+      hash:T_hashInt;
       binIdx: T_hashInt;
   begin
-    binIdx:=key^.hash and (length(cached)-1);
+    hash:=key^.hash;
+    binIdx:=hash and (length(cached)-1);
     with cached[binIdx] do begin
       i := 0;
-      while (i<length(data)) and not (key^.equals(data[i].key)) do inc(i);
+      while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
       if i>=length(data) then result:=nil
       else begin
         inc(data[i].useCount);
