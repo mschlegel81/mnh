@@ -114,8 +114,7 @@ FUNCTION driveInfo_imp intFuncSignature;
 {$endif}
 
 FUNCTION getEnv_impl intFuncSignature;
-  VAR e:T_arrayOfString;
-      envString:ansistring;
+  VAR envString:ansistring;
       envKey:ansistring;
       envValue:ansistring;
       envTuple:T_arrayOfString;
@@ -130,7 +129,7 @@ FUNCTION getEnv_impl intFuncSignature;
         envKey:=envTuple[0];
         if length(envTuple)>=2 then begin
           envTuple:=split(envTuple[1],';');
-          if length(envTuple)=1 then mapResult^.put(envKey,envTuple[1]) else begin
+          if length(envTuple)=1 then mapResult^.put(envKey,envTuple[0]) else begin
             inner:=newListLiteral(length(envTuple));
             for envValue in envTuple do inner^.appendString(envValue);
             mapResult^.put(envKey,inner,false);
