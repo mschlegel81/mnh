@@ -119,10 +119,8 @@ FUNCTION argMin_imp intFuncSignature;
     end;
   end}
 
-{$define PREDICATE:=isNan}
-FUNCTION isNan_impl intFuncSignature; nan_or_inf_impl;
-{$define PREDICATE:=isNan}
-FUNCTION isInfinite_impl intFuncSignature; nan_or_inf_impl;
+FUNCTION isNan_impl      {$define PREDICATE:=isNan}      intFuncSignature; nan_or_inf_impl;
+FUNCTION isInfinite_impl {$define PREDICATE:=isInfinite} intFuncSignature; nan_or_inf_impl;
 {$undef nan_or_inf_impl}
 {$undef PREDICATE}
 
@@ -199,7 +197,7 @@ FUNCTION permutations_impl intFuncSignature;
       end else begin
         newList:=newListLiteral(length(mustContain));
         for i:=0 to length(mustContain)-1 do newList^.append(mustContain[i],true);
-        setResult^.append(newListLiteral(),false);
+        setResult^.append(newList,false);
       end;
     end;
 
