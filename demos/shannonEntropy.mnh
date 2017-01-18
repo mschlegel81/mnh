@@ -1,7 +1,9 @@
 shannonEntropy(s:string)->s.chars //split s in characters
                            .elementFrequency //obtain element frequency
-                           .getInner(0) //retain only
-                           .{$L/($L.agg(+))}.{$L*ln($L)/ln(2)}.agg(+)*-1;
+                           .getInner(1) //retain only frequencies
+                           .{$L/($L.agg(+))} //average frequencies
+                           .{$L*ln($L)/ln(2)}
+                           .agg(+)*-1;
 
 //*See <a href="http://rosettacode.org/wiki/Entropy">Entropy task from RosettaCode</a>
 main->main("1223334444");

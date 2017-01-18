@@ -11,5 +11,5 @@ main->begin
   intOp.each(op,testOperator(op,[1..10],[1,2,3,2,2,3,1,4,3,5]));
   comparator.each(op,testOperator(op,3,3.0));
   comparator.each(op,testOperator(op,3,[5,3,8]));
-  comparator.each(op,testOperator(op,"'x'",7));
+  comparator.each(op,testOperator(op,[7,Nan],Nan));
 end;

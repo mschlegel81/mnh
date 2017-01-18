@@ -22,22 +22,15 @@ private errPrint(...)->print@(...) orElse false;
 
 private isCorrectSolution(set,text)->begin
   local result:=true;
-  not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
-  ? result:=errPrint('The input contains an invalid character.')
-  : void;
-
-  '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
-  '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)
-  ? result:=errPrint('The input contains an invalid character sequence.')
-  : void;
-
-  not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
-  ? result:=errPrint('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void))
-  : void;
+  local valids:=((set&"") | OPLIST | ['','(',')']).toSet;
+  local invalids:=text.tokenSplit.trim.each(tok,tok in valids ? void : tok);
+  invalids==[]
+  ? void
+  : result:=errPrint('The input contains invalid token(s): ',invalids);
 
   result
   ? begin
-      local expressionResult:=toExpression(text)();
+      local expressionResult:=try({toExpression(text)()},{$0});
       not(expressionResult=24)
       ? errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
       : print('The solution is valid.')

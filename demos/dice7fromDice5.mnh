@@ -3,6 +3,6 @@ dice7->dice7(dice5*5+dice5);
 dice7(n<21)->n mod 7;
 dice7(n   )->dice7;
 
-simpleHist(L)->(elementFrequency(L).getInner(0)/size(L)).join("\n");
+simpleHist(L)->(elementFrequency(L).getInner(1)/size(L)).join("\n");
 
 main->print("Distribution of seven sided dice (100000 samples): \n",simpleHist([1..100000].each(k,dice7)));

@@ -1,9 +1,16 @@
 USE inputs;
 
-private huffman(L         )->size(L)<=1 ? traverseBinaryTree("",L[0,1]).sort({length($x[0])>=length($y[0])})
-                                        : huffman(L,sortPerm(L.getInner(0)).get([0,1]));
-private huffman(L,mergeIdx)->huffman(L.get(mergeIdx[0]<>[0..size(L)-1]<>mergeIdx[1]) | [mergeNodes@(L[mergeIdx.get([0,1])])]);
-private mergeNodes(n1,n2)->[n1[0]+n2[0],[n1[1],n2[1]]];
+private huffman(L:list)->
+  size(L)<=1
+  ? traverseBinaryTree("",L[0,0]).sort({length($x[0])>=length($y[0])})
+  : huffman(L,sortPerm(L.getInner(1))[[0,1]]);
+
+private huffman(L:list,mergeIdx:intList(2))->huffman(L.get(mergeIdx[0]<>[0..size(L)-1]<>mergeIdx[1]) | [mergeNodes@(L[mergeIdx])]);
+
+private huffman(x)->huffman(x.toList);
+
+//*mergeNodes([txt0,count0],[txt1,count1])->[[txt0,txt1],[count0+count1]]
+private mergeNodes(n1,n2)->[[n1[0],n2[0]],n1[1]+n2[1]];
 
 private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
 private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T[0])|

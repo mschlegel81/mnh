@@ -3,14 +3,19 @@ USE inputs;
 private memoized words->dict.fileLines.trim;
 
 private relativeFrequency(L:list)->begin
-  local Freq:=L.elementFrequency.sort(1);
-  local f:=1/Freq.getInner(0).max;
-  Freq.each(t,[t[0]*f,t[1]]);
+  local Freq:=L.elementFrequency.sort;
+  local f:=1/Freq.getInner(1).max;
+  Freq.each(t,[t[1]*f,t[0]]);
 end;
 
 private memoized lengthTable->length(words).relativeFrequency;
 private memoized firstTable->words.copy(0,1).relativeFrequency;
-private memoized followerTable->words.each(word,word.length<2 ? void : word.copy([0..length(word)-2],2)).flatten.each(s,s.chars).group(0).each(g,[g[0,0],g.getInner(1).relativeFrequency]);
+private memoized followerTable->words.each(word,word.length<2 ? void : word.copy([0..length(word)-2],2))
+                                     .flatten
+                                     .each(s,s.chars)
+                                     .group(0)
+                                     .each(g,[g[0,0],g.getInner(1).relativeFrequency])
+                                     .toMap;
 
 private randomFromTable(T:list)->begin
   local index:=intRandom(T.size);

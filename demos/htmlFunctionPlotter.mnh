@@ -60,7 +60,7 @@ pageSet(rawParameters,parameters)->begin
     end;
 
   [['/page.html',wrapTextInHttp(htmlCode&'</BODY></HTML>')],
-   ['/plotImg.png',imageCode]];
+   ['/plotImg.png',imageCode]].toMap;
 end;
 
 memoized unhandled(method,request,protocol)->begin

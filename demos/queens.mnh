@@ -8,11 +8,11 @@ isValid([],newQueen:int)->true;
 isValid(oldQueens:intList,newQueen:int)->(abs(oldQueens-newQueen)!=[oldQueens.size..1]).agg(AND);
 
 //*No candiates left: return H
-queens(H:intList,[])->[H];
+queens(H:intList,[].toSet)->[H];
 //*Try to elongate H by each element in C, testing if it is valid. Recurse.
-queens(H:intList,C:intList)->C.pEach(c,isValid(H,c)
-                                       ? queens(H|c,C.minus([c]))
-                                       : void,|);
+queens(H:intList,C:intCollection)->C.pEach(c,isValid(H,c)
+                                             ? queens(H|c,C.minus([c]))
+                                             : void,|);
 queens(numberOfQueens>1)->queens([],[1..numberOfQueens]) orElse [];
 
 fmtSolution(solution:intList)->solution.each(k,['A'..'Z'][index],k,' ',&);
