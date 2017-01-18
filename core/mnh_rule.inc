@@ -104,8 +104,7 @@ FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
     cache^.put(P_listLiteral(param^[0]),
                              param^[1] );
     leaveCriticalSection(rule_cs);
-    result:=param^[1];
-    result^.rereference;
+    result:=param^[1]^.rereferenced;
   end;
 
 PROCEDURE T_rule.clearCache;
@@ -129,7 +128,6 @@ exit}
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
-      useParam^.rereference; //rereference useParam because it is used below
       newFirst      :=context.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
       newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
       t       ^.next:=firstRep;
