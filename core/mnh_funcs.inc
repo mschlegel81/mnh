@@ -233,6 +233,7 @@ UNARY_NUM_TO_SAME;
         lt_real: case y^.literalType of
           lt_error: result:=y^.rereferenced;
           lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
+          lt_list,lt_intList,lt_emptyList,
           lt_set ,lt_intSet ,lt_emptySet: begin
             result:=P_collectionLiteral(y)^.newOfSameType;
             yIter :=P_collectionLiteral(y)^.iteratableList;
@@ -331,6 +332,7 @@ FUNCTION sign_imp intFuncSignature;
           result:=P_collectionLiteral(x)^.newOfSameType;
           iter:=P_collectionLiteral(x)^.iteratableList;
           for sub in iter do collResult^.append(sign_rec(sub),false);
+          disposeLiteral(iter);
           if collResult^.containsError then begin
             disposeLiteral(result);
             raiseNotApplicableError('sign',x,tokenLocation,context.adapters^);
