@@ -216,10 +216,10 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   VAR i:longint;
       listSize:longint=-1;
   begin
-    for i:=1 to params^.size-1 do if params^[i]^.literalType in C_listTypes then begin
-      if listSize=-1 then listSize:=P_listLiteral(params^[i])^.size
-                  else if listSize<>P_listLiteral(params^[i])^.size then begin
-        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^[i])^.size)+' for formatting.',tokenLocation);
+    for i:=1 to params^.size-1 do if params^[i]^.literalType in C_compoundTypes then begin
+      if listSize=-1 then listSize:=P_compoundLiteral(params^[i])^.size
+                  else if listSize<>P_compoundLiteral(params^[i])^.size then begin
+        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^[i])^.size)+' for formatting.',tokenLocation);
         exit(C_EMPTY_STRING_ARRAY);
       end;
     end;
