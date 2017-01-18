@@ -805,7 +805,7 @@ CONSTRUCTOR T_setLiteral.create;
 
 CONSTRUCTOR T_mapLiteral.create;
   begin
-    inherited init(lt_emptyList);
+    inherited init(lt_emptyMap);
     dat.create();
     system.initCriticalSection(manifestationCs);
     manifestation:=nil;
@@ -3180,21 +3180,21 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
         end;
-        lt_intList: begin
+        lt_intList,lt_intSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
           then result:=newSetLiteral
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendInt(stream^.readInt64);
         end;
-        lt_realList: begin
+        lt_realList,lt_realSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
           then result:=newSetLiteral
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
         end;
-        lt_stringList: begin
+        lt_stringList,lt_stringSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
           then result:=newSetLiteral
@@ -3217,12 +3217,11 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           listSize:=stream^.readNaturalNumber;
           result:=newMapLiteral;
           for i:=0 to listSize-1 do if stream^.allOkay then begin
-            mapKey  :=literalFromStream255;
-            mapValue:=literalFromStream255;
+            mapKey  :=literalFromStream255();
+            mapValue:=literalFromStream255();
             P_mapLiteral(result)^.put(mapKey,mapValue,false);
           end;
         end;
-        lt_void:result:=newVoidLiteral;
         else begin
           errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(literalByte)+') ! Abort.');
           stream^.logWrongTypeError;
@@ -3230,6 +3229,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         end;
       end;
       if (result^.literalType<>literalType) and (adapters<>nil) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
+      if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
       if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (length(reusableLiterals)<2097151) then begin
         setLength(reusableLiterals,length(reusableLiterals)+1);
         reusableLiterals[length(reusableLiterals)-1]:=result;
@@ -3261,6 +3261,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
       start:double;
       {$endif}
       previousMapValueDummy:longint;
+      mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
 
  PROCEDURE writeLiteral(CONST L:P_literal);
     VAR i:longint;
@@ -3295,11 +3296,18 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
           for i:=0 to P_compoundLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream^.writeAnsiString(P_stringLiteral(P_compoundLiteral(L)^.value[i])^.val);
         end;
         lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
-        lt_list,lt_set,lt_map,
+        lt_list,lt_set,
         lt_numList,lt_numSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           for i:=0 to P_compoundLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_compoundLiteral(L)^.value[i]);
         end;
+        lt_map: begin
+          stream^.writeNaturalNumber(P_mapLiteral(L)^.size);
+          for mapEntry in P_mapLiteral(L)^.dat.keyValueList do begin
+            writeLiteral(mapEntry.key);
+            writeLiteral(mapEntry.value);
+          end;
+        end
         else begin
           if adapters<>nil then adapters^.raiseError  ('Cannot represent '+L^.typeString+' literal in binary form!',location)
                            else raise Exception.create('Cannot represent '+L^.typeString+' literal in binary form!');

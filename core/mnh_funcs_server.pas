@@ -262,8 +262,6 @@ FUNCTION encodeRequest_impl intFuncSignature;
       path:string='';
       parameters:string='';
       i:longint;
-      iter:T_arrayOfLiteral;
-      par:P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_map,lt_string]) then begin

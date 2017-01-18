@@ -92,7 +92,7 @@ TYPE
     tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression, tt_toId, tt_pseudoFuncPointer,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
-    tt_listBraceOpen, tt_listBraceClose, tt_list_constructor, tt_list_Constructor_ranging,
+    tt_listBraceOpen, tt_listBraceClose, tt_list_constructor, tt_list_constructor_ranging,
     tt_expBraceOpen, tt_expBraceClose,
     //separators
     tt_separatorComma, tt_separatorCnt,
