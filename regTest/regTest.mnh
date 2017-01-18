@@ -129,6 +129,12 @@ datastore runTimes;
 //*Export datastore
 main('export',filename:string)->writeFile(filename,runTimes.serialize);
 
+//*Export datastore
+main('export_txt',filename:string)->writeFile(filename,runTimes.toString);
+
+//*Export datastore
+main('import_txt',filename:string)->runTimes:=filename.fileContents.toExpression()();
+
 //*Limit number of samples to count per flavour/testcase retaining the newest samples
 main('limit',count:string)->begin
   local limit:=count.softCast;
