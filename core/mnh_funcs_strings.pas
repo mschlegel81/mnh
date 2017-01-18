@@ -291,10 +291,9 @@ FUNCTION join_impl intFuncSignature;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
       if params^.size=2 then joiner:=str1^.value;
       if (arg0^.literalType in C_listTypes+C_setTypes) then begin
-        if list0^.size=0 then exit(newStringLiteral(''));
-        resTxt:=stringOfLit(list0^[0]);
-        for i:=1 to list0^.size-1 do
-          resTxt:=resTxt+joiner+stringOfLit(list0^[i]);
+        if collection0^.size=0 then exit(newStringLiteral(''));
+        resTxt:=stringOfLit(collection0^[0]);
+        for i:=1 to collection0^.size-1 do resTxt:=resTxt+joiner+stringOfLit(collection0^[i]);
         result:=newStringLiteral(resTxt);
       end else if (arg0^.literalType in C_scalarTypes) then
         result:=newStringLiteral(stringOfLit(arg0));

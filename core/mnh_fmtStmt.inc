@@ -192,8 +192,8 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       fpar:=newListLiteral;
       for k:=1 to params^.size-1 do
       if params^[k]^.literalType in C_compoundTypes
-      then fpar^.append(P_listLiteral(params^[k])^[index],true)
-      else fpar^.append(              params^[k]         ,true);
+      then fpar^.append(P_compoundLiteral(params^[k])^[index],true)
+      else fpar^.append(                  params^[k]         ,true);
 
       if formatSubrule<>nil then begin
         temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(

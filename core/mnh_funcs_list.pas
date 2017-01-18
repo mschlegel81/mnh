@@ -237,7 +237,7 @@ FUNCTION getInner_imp intFuncSignature;
       i:longint;
   begin
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes)
-    then result:=list0^.getInner(arg1)
+    then result:=compound0^.getInner(arg1)
     else if (params<>nil) and (params^.size>=2) and (arg0^.literalType in C_compoundTypes) then begin
       tmpPar.create(2);
       tmpPar.append(arg0,true)^
