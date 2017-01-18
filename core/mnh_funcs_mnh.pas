@@ -126,18 +126,18 @@ FUNCTION ord_imp intFuncSignature;
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then
-    result:=newListLiteral(9)^
-      .append(newListLiteral(2)^.appendString('isFullVersion'  )^.appendBool  ({$ifdef fullVersion}true{$else}false{$endif}),false)^
-      .append(newListLiteral(2)^.appendString('isDebugVersion' )^.appendBool  ({$ifdef debugMode}  true{$else}false{$endif}),false)^
-      .append(newListLiteral(2)^.appendString('is64bit'        )^.appendBool  ({$ifdef CPU64}      true{$else}false{$endif}),false)^
-      .append(newListLiteral(2)^.appendString('compileTime'    )^.appendString( {$I %DATE%}+' '+{$I %TIME%}                ),false)^
-      .append(newListLiteral(2)^.appendString('compilerVersion')^.appendString( {$I %FPCVERSION%}                          ),false)^
-      .append(newListLiteral(2)^.appendString('targetCpu'      )^.appendString( {$I %FPCTARGET%}                           ),false)^
-      .append(newListLiteral(2)^.appendString('targetOs'       )^.appendString( {$I %FPCTargetOS%}                         ),false)^
-      .append(newListLiteral(2)^.appendString('codeVersion'    )^.appendString( CODE_HASH                                  ),false)^
-      .append(newListLiteral(2)^.appendString('flavour'        )^.appendString({$ifdef fullVersion}'F'{$else}'L'{$endif}+
-                                                                               {$ifdef debugMode}  'D'{$else}'O'{$endif}+
-                                                                               {$I %FPCTargetOS%}                          ),false)
+    result:=newMapLiteral^
+      .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
+      .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
+      .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
+      .put('compileTime'    , {$I %DATE%}+' '+{$I %TIME%}                )^
+      .put('compilerVersion', {$I %FPCVERSION%}                          )^
+      .put('targetCpu'      , {$I %FPCTARGET%}                           )^
+      .put('targetOs'       , {$I %FPCTargetOS%}                         )^
+      .put('codeVersion'    , CODE_HASH                                  )^
+      .put('flavour'        ,{$ifdef fullVersion}'F'{$else}'L'{$endif}+
+                             {$ifdef debugMode}  'D'{$else}'O'{$endif}+
+                             {$I %FPCTargetOS%}                          )
     else result:=nil;
   end;
 
