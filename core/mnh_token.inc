@@ -644,9 +644,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
-  PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation);
+  PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation; CONST LHS:P_literal);
     begin
-      context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans.',location);
+      context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans. Got '+LHS^.typeString,location);
     end;
 
   PROCEDURE resolveEach(eachType:T_tokenType);
@@ -795,7 +795,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             tt_operatorLazyAnd, tt_operatorLazyOr: if resultLiteral=nil then begin
               if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-              else raiseLazyBooleanError(aggregatorLocation);
+              else raiseLazyBooleanError(aggregatorLocation,L);
               if booleanResult=(aggregatorToken=tt_operatorLazyOr) then begin
                 lazyAbort:=true;
                 resultLiteral:=L;
@@ -944,8 +944,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       then itList:=P_compoundLiteral(first^.data)^.iteratableList
       else begin
         setLength(itList,1);
-        itList[0]:=P_literal(first^.data)^.rereferenced;
+        itList[0]:=P_literal(first^.data);
       end;
+      disposeLiteral(first^.data);
       first^.next:=context.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if (aggregatorPresent<>no) and (length(itList)=0) then begin
@@ -962,9 +963,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
+      disposeLiteral(itList);
       if aggregatorPresent=yes_as_expression then disposeLiteral(aggregatorExpression);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
-      disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
     end;
@@ -1055,24 +1056,23 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
-        {$ifndef DEBUGMODE}
         try
-        {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if (P_rule(first^.data)^.id=MAIN_RULE_ID)
             then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,LineEnding+P_rule(first^.data)^.getCmdLineHelpText,true)
             else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location);
             exit;
           end;
-        {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
             context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
             context.adapters^.raiseSystemError(e.message,first^.location);
+            {$ifdef debugMode}
+            raise Exception.create('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id);
+            {$endif}
             exit;
           end;
         end;
-        {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
         firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
@@ -1092,7 +1092,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
-        newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+        try
+          newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+        except
+          on e:Exception do begin
+            context.adapters^.raiseSystemError('Severe error trying to apply builtin rule '+first^.txt,first^.location);
+            context.adapters^.raiseSystemError(e.message,first^.location);
+            {$ifdef debugMode}
+            raise Exception.create('Severe error trying to apply builtin rule '+first^.txt);
+            {$endif}
+            exit;
+          end;
+        end;
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
@@ -1163,7 +1174,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:=true;
     end;
 
-  PROCEDURE startOrPushParameterList; inline;
+  PROCEDURE startOrPushParameterList; {$ifndef DEBUGMODE}inline;{$endif}
     begin
       stack.push(first);
       if first^.tokType=tt_braceOpen then begin
@@ -1339,7 +1350,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first^.next:=p;
             didSubstitution:=true;
           end;
-        end else raiseLazyBooleanError(first^.next^.location);
+        end else raiseLazyBooleanError(first^.next^.location,P_literal(first^.data));
         tt_operatorLazyOr:if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
           if (P_boolLiteral(first^.data)^.value) then begin
             //true OR ... -> true
@@ -1357,7 +1368,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first:=context.disposeToken(first); //drop OR
             didSubstitution:=true;
           end;
-        end else raiseLazyBooleanError(first^.next^.location);
+        end else raiseLazyBooleanError(first^.next^.location,P_literal(first^.data));
         tt_operatorOrElse: if (cTokType[0]=tt_literal) then begin
           if (P_literal(first^.data)^.literalType = lt_void) then begin
             //void orElse ... -> ...
