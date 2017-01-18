@@ -73,9 +73,8 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     L:=parameterList[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
     if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.accept(L,context));
-    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) and not(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx)) then exit(false);
-    if (restrictionIdx>=0) and (restrictionType in C_modifieableTypeChecks)
-      and (P_listLiteral(L)^.size<>restrictionIdx) then exit(false);
+    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx));
+    if (restrictionIdx>=0) and (restrictionType in C_modifieableTypeChecks) and (P_collectionLiteral(L)^.size<>restrictionIdx) then exit(false);
     result:=true;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
@@ -207,8 +206,6 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
       tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
       tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
       tt_typeCheckMap:
-        //if e.restrictionType<>tt_typeCheckExpression then exit(false)
-        //else
         exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
       tt_comparatorListEq,
       tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (getValueRelation=vr_equal));
