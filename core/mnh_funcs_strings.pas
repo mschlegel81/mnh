@@ -137,7 +137,7 @@ FUNCTION chars_imp intFuncSignature;
       for i:=0 to list0^.size-1 do listResult^.append(chars_internal(list0^[i]),false);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
-      for i:=0 to 126 do listResult^.appendString(chr(i));
+      for i:=0 to 255 do listResult^.appendString(chr(i));
     end;
   end;
 
@@ -371,18 +371,18 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
         setLength(lookFor,1);
         lookFor[0]:=P_stringLiteral(L)^.value;
       end else begin
-        setLength(lookFor,P_listLiteral(L)^.size);
+        setLength(lookFor,P_compoundLiteral(L)^.size);
         for i:=0 to length(lookFor)-1 do
-          lookFor[i]:=P_stringLiteral(P_listLiteral(L)^[i])^.value;
+          lookFor[i]:=P_stringLiteral(P_compoundLiteral(L)^[i])^.value;
       end;
       L:=arg2;
       if L^.literalType=lt_string then begin
         setLength(replaceBy,1);
         replaceBy[0]:=P_stringLiteral(L)^.value;
       end else begin
-        setLength(replaceBy,P_listLiteral(L)^.size);
+        setLength(replaceBy,P_compoundLiteral(L)^.size);
         for i:=0 to length(replaceBy)-1 do
-          replaceBy[i]:=P_stringLiteral(P_listLiteral(L)^[i])^.value;
+          replaceBy[i]:=P_stringLiteral(P_compoundLiteral(L)^[i])^.value;
       end;
       while length(replaceBy)<length(lookFor) do elongate(replaceBy);
       while length(lookFor)<length(replaceBy) do elongate(lookFor);
@@ -398,38 +398,28 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     end;
 
   begin
+    if not((params<>nil) and (params^.size=3) and
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet]) and
+       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet]) and
+       (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet])) then exit(nil);
+    i:=0;
+    if (arg0^.literalType in C_setTypes) then inc(i);
+    if (arg1^.literalType in C_setTypes) then inc(i);
+    if (arg2^.literalType in C_setTypes) then inc(i);
+    if i>1 then exit;
+
     initArrays;
     if arg0^.literalType=lt_string then result:=newStringLiteral(modify(str0^.value))
     else begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do
-        listResult^.appendString(modify(P_stringLiteral(list0^[i])^.value));
+      result:=collection0^.newOfSameType;
+      for i:=0 to collection0^.size-1 do listResult^.appendString(modify(P_stringLiteral(list0^[i])^.value));
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
   end;
 
-FUNCTION replaceOne_impl intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=3) and
-       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
-      result:=replace_one_or_all(params,false);
-    end;
-  end;
-
-FUNCTION replace_impl intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=3) and
-       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
-      result:=replace_one_or_all(params,true);
-    end;
-  end;
+FUNCTION replaceOne_impl intFuncSignature; begin result:=replace_one_or_all(params,false); end;
+FUNCTION replace_impl    intFuncSignature; begin result:=replace_one_or_all(params,true);  end;
 
 FUNCTION repeat_impl intFuncSignature;
   VAR sub,res:ansistring;
@@ -446,43 +436,106 @@ FUNCTION repeat_impl intFuncSignature;
     end;
   end;
 
-//FUNCTION clean_impl intFuncSignature;
-//  //clean(input,whitelist,instead)
-//  VAR whiteList:charSet;
-//      instead:char;
-//      tmp:ansistring;
-//      i:longint;
-//
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=3) and
-//       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-//       (arg1^.literalType=lt_stringList) and
-//       (arg2^.literalType=lt_string) and
-//       (length(str2^.value)=1) then begin
-//      whiteList:=[];
-//      for i:=0 to list1^.size-1 do begin
-//        tmp:=P_stringLiteral(list1^[i])^.value;
-//        if (length(tmp)=1) and (tmp[1]<=#127) then include(whiteList,tmp[1])
-//        else begin
-//          context.adapters^.raiseError('Built in function clean expects a list of ASCII characters as whitelist (second argument)',tokenLocation);
-//          exit(nil);
-//        end;
-//      end;
-//      if length(str2^.value)<>1 then begin
-//        context.adapters^.raiseError('Built in function clean expects an ASCII characters as instead (third argument)',tokenLocation);
-//        exit(nil);
-//      end;
-//      instead:=str2^.value[1];
-//      if arg0^.literalType=lt_string then begin
-//        result:=newStringLiteral(cleanString(str0^.value,whiteList,instead));
-//      end else begin
-//        result:=newListLiteral;
-//        for i:=0 to list0^.size-1 do
-//        listResult^.appendString(cleanString(P_stringLiteral(list0^[i])^.value,whiteList,instead));
-//      end;
-//    end;
-//  end;
+FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveChars}
+  VAR asciiWhitelist:charSet=[];
+      utf8WhiteList:T_setOfString;
+      instead:ansistring;
+      insteadC:char;
+      keepCharCount:boolean=true;
+
+  FUNCTION innerClean(CONST input:string):ansistring;
+    VAR i,byteIndex,charIndex:longint;
+        c:char;
+        cUtf8:string[6];
+        last:(white,black,grey)=grey;
+        thisWhite:boolean;
+    begin
+      if isAsciiEncoded(input) then begin
+        if (length(instead)=1) and keepCharCount then begin
+          setLength(result,length(input));
+          for i:=1 to length(input) do
+            if input[i] in asciiWhitelist
+            then result[i]:=input[i]
+            else result[i]:=insteadC;
+        end else begin
+          result:='';
+          for c in input do begin
+            thisWhite:= c in asciiWhitelist;
+            if thisWhite then begin
+              result:=result+c;
+              last:=white;
+            end else begin
+              if (last<>black) or keepCharCount then result:=result+instead;
+              last:=black;
+            end;
+          end;
+        end;
+      end else begin
+        result:='';
+        byteIndex:=1;
+        for charIndex:=1 to UTF8Length(input) do begin
+          cUtf8:='';
+          for i:=0 to UTF8CharacterLength(@input[byteIndex])-1 do begin
+            cUtf8:=cUtf8+input[byteIndex];
+            inc(byteIndex)
+          end;
+          if length(cUtf8)=1
+          then thisWhite:=(cUtf8[1] in asciiWhitelist)
+          else thisWhite:=utf8WhiteList.contains(cUtf8);
+          if thisWhite then begin
+            result:=result+cUtf8;
+            last:=white;
+          end else begin
+            if (last<>black) or keepCharCount then result:=result+instead;
+            last:=black;
+          end;
+        end;
+      end;
+    end;
+
+  VAR iter:T_arrayOfLiteral;
+      l   :P_literal;
+      s   :ansistring;
+      k   :longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=3) and (params^.size<=4) and
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet]) and
+       (arg1^.literalType in [lt_stringSet,lt_stringList]) and
+       (arg2^.literalType=lt_string) and
+       ((params^.size=3) or (arg3^.literalType=lt_boolean)) then begin
+      utf8WhiteList.create;
+
+      iter:=compound1^.iteratableList;
+      for l in iter do begin
+        s:=P_stringLiteral(l)^.value;
+        if length(s)=1 then include(asciiWhitelist,s[1]);
+        utf8WhiteList.put(s);
+      end;
+      disposeLiteral(iter);
+
+      instead:=str2^.value;
+      if length(instead)=1 then insteadC:=instead[1];
+
+      keepCharCount:=keepCharCount and not((params^.size>3) and bool3^.value);
+
+      case arg0^.literalType of
+        lt_string: result:=newStringLiteral(innerClean(str0^.value));
+        lt_stringList,lt_emptyList: begin
+          result:=newListLiteral(list0^.size);
+          for k:=0 to list0^.size do listResult^.appendString(innerClean(P_stringLiteral(list0^[k])^.value));
+        end;
+        lt_stringSet,lt_emptySet: begin
+          result:=newSetLiteral;
+          iter:=set0^.iteratableList;
+          for l in iter do setResult^.appendString(innerClean(P_stringLiteral(l)^.value));
+          disposeLiteral(iter);
+        end;
+      end;
+
+      utf8WhiteList.destroy;
+    end;
+  end;
 
 FUNCTION tokenSplit_impl intFuncSignature;
   VAR language:string='MNH';
@@ -804,7 +857,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'trimRight'     ,@trimRight_imp     ,true,ak_unary     ,'trimRight(S:string);//Returns string S without trailing spaces');
   registerRule(STRINGS_NAMESPACE,'upper'         ,@upper_imp         ,true,ak_unary     ,'upper(S:string);//Returns an uppercase representation of S');
   registerRule(STRINGS_NAMESPACE,'lower'         ,@lower_imp         ,true,ak_unary     ,'lower(S:string);//Returns an lowercase representation of S');
-//  registerRule(STRINGS_NAMESPACE,'clean'         ,@clean_impl        ,true,ak_ternary   ,'clean(s,whiteList:stringList,instead:string);//Replaces all characters in s which are not in whitelist by instead.#//Whitelist must be a list of ASCII characters, instead must be an ASCII character');
+  registerRule(STRINGS_NAMESPACE,'clean'         ,@clean_impl        ,true,ak_variadic_2,'clean(s,whiteList:stringCollection,instead:string);//Replaces all characters in s which are not in whitelist by instead.#clean(s,whiteList:stringCollection,instead:string,joinPlaceholders:boolean);//As above but joining placeholders');
   registerRule(STRINGS_NAMESPACE,'unbrace'       ,@unbrace_imp       ,true,ak_unary     ,'unbrace(S:string);//Returns an unbraced representation of S');
   registerRule(STRINGS_NAMESPACE,'escape'        ,@escape_imp        ,true,ak_unary     ,'escape(S:string);//Returns an escaped representation of S');
   registerRule(STRINGS_NAMESPACE,'escapePascal'  ,@escapePascal_imp  ,true,ak_unary     ,'escapePascal(S:string);//Returns an escaped representation of S for use in Pascal source code');
