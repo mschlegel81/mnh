@@ -116,7 +116,7 @@ FUNCTION toList_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_scalarTypes
       then result:=newListLiteral(1)^.append(arg0,true)
-      else result:=compound1^.toList;
+      else result:=compound0^.toList;
     end;
   end;
 
@@ -126,7 +126,7 @@ FUNCTION toSet_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_scalarTypes
       then result:=newSetLiteral^.append(arg0,true)
-      else result:=compound1^.toSet;
+      else result:=compound0^.toSet;
     end;
   end;
 
@@ -134,7 +134,7 @@ FUNCTION toMap_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_compoundTypes) then begin
-      result:=compound1^.toMap(tokenLocation,context.adapters^);
+      result:=compound0^.toMap(tokenLocation,context.adapters^);
     end;
   end;
 
@@ -200,6 +200,8 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'toList'        ,@toList_imp    ,true,ak_unary,'toList(X);#Casts X to list or wraps a scalar in a list');
   registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,true,ak_unary,'toSet(X);#Casts X to set or wraps a scalar in a set');
   registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,true,ak_unary,'toMap(X:collection);#Casts X to map or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'typeOf'        ,@typeOf_imp    ,true,ak_unary,'typeOf(x); //Returns a description of x''s type');
+  registerRule(TYPECAST_NAMESPACE,'isVoid'             ,@isVoid             ,true,ak_unary     ,'isVoid(x); //Returns true if x is void (or no arguments were given)');
   registerRule(TYPECAST_NAMESPACE,'isScalar'           ,@isScalar           ,true,ak_unary     ,'isScalar(x); //Returns true if x is a scalar');
   registerRule(TYPECAST_NAMESPACE,'isList'             ,@isList             ,true,ak_variadic_1,'isList(x); //Returns true if x is a list. Specify an additional int parameter to additionally check the size.');
   registerRule(TYPECAST_NAMESPACE,'isSet'              ,@isSet              ,true,ak_variadic_1,'isSet(x); //Returns true if x is a set. Specify an additional int parameter to additionally check the size.');
