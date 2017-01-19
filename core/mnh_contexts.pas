@@ -259,8 +259,11 @@ PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
   VAR i,i0:longint;
   begin
     clear;
+    //find first entry to be copied
     i0:=length(original.data)-1;
+    if i0<0 then i0:=0;
     while (i0>0) and (original.data[i0].marker in [vsm_none,vsm_nonBlockingVoid,vsm_nonBlockingFirst]) do dec(i0);
+    //copy entries
     setLength(data,length(original.data)-i0);
     for i:=i0 to length(original.data)-1 do with data[i-i0] do begin
       marker:=original.data[i].marker;
