@@ -6,8 +6,9 @@ T_tokenArray=object
       text:string;
       start:T_tokenLocation;
     end;
-    T:array of T_token;
-    i:longint;
+    token:array of T_token;
+    tokenFill:longint;
+    stepIndex:longint;
     FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
   public
     CONSTRUCTOR create;
@@ -41,20 +42,23 @@ end;
 {$ifdef include_implementation}
 CONSTRUCTOR T_tokenArray.create;
   begin
-    setLength(t,0);
-    i:=-1;
+    setLength(token,100);
+    tokenFill:=0;
+    stepIndex:=-1;
   end;
 
 DESTRUCTOR T_tokenArray.destroy;
   begin
-    setLength(t,0);
-    i:=-1;
+    setLength(token,0);
+    tokenFill:=0;
+    stepIndex:=-1;
   end;
 
 PROCEDURE T_tokenArray.append(CONST newTok: T_token);
   begin
-    setLength(t,length(t)+1);
-    t[length(t)-1]:=newTok;
+    if tokenFill>=length(token) then setLength(token,round(length(token)*1.1)+1);
+    token[tokenFill]:=newTok;
+    inc(tokenFill);
   end;
 
 PROCEDURE T_tokenArray.step(CONST package: P_package; VAR comments,attributes:T_arrayOfString; VAR adapters: T_adapters);
@@ -62,82 +66,82 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR comments,attributes:T_
       line:longint;
   begin
     repeat
-      inc(i);
-      if (i<length(t)) then case t[i].tokType of
-        tt_docComment: myGenerics.append(comments,t[i].txt);
-        tt_attributeComment: if (t[i].txt<>'') then myGenerics.append(attributes,t[i].txt);
-        tt_literal: if (P_literal(t[i].data)^.literalType=lt_string) and (i<length(t)-1)
-                   and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string)
-                   and (t[i].location.line=t[i+1].location.line)
+      inc(stepIndex);
+      if (stepIndex<tokenFill) then case token[stepIndex].tokType of
+        tt_docComment: myGenerics.append(comments,token[stepIndex].txt);
+        tt_attributeComment: if (token[stepIndex].txt<>'') then myGenerics.append(attributes,token[stepIndex].txt);
+        tt_literal: if (P_literal(token[stepIndex].data)^.literalType=lt_string) and (stepIndex<tokenFill-1)
+                   and (token[stepIndex+1].tokType=tt_literal) and (P_literal(token[stepIndex+1].data)^.literalType=lt_string)
+                   and (token[stepIndex].location.line=token[stepIndex+1].location.line)
         then begin
-          line:=t[i].location.line;
-          fullText:=P_stringLiteral(t[i].data)^.value;
-          disposeLiteral(t[i].data);
-          t[i].tokType:=tt_EOL;
-          while (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string) and (t[i+1].location.line=line) do begin
-            inc(i);
-            fullText:=fullText+P_stringLiteral(t[i].data)^.value;
-            disposeLiteral(t[i].data);
-            t[i].tokType:=tt_EOL;
+          line:=token[stepIndex].location.line;
+          fullText:=P_stringLiteral(token[stepIndex].data)^.value;
+          disposeLiteral(token[stepIndex].data);
+          token[stepIndex].tokType:=tt_EOL;
+          while (stepIndex<tokenFill-1) and (token[stepIndex+1].tokType=tt_literal) and (P_literal(token[stepIndex+1].data)^.literalType=lt_string) and (token[stepIndex+1].location.line=line) do begin
+            inc(stepIndex);
+            fullText:=fullText+P_stringLiteral(token[stepIndex].data)^.value;
+            disposeLiteral(token[stepIndex].data);
+            token[stepIndex].tokType:=tt_EOL;
           end;
-          t[i].data:=newStringLiteral(fullText);
-          t[i].tokType:=tt_literal;
+          token[stepIndex].data:=newStringLiteral(fullText);
+          token[stepIndex].tokType:=tt_literal;
         end;
-        tt_identifier: if (i<length(t)-2) and (t[i+1].tokType=tt_ponFlipper) and (t[i+2].tokType=tt_identifier) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
+        tt_identifier: if (stepIndex<tokenFill-2) and (token[stepIndex+1].tokType=tt_ponFlipper) and (token[stepIndex+2].tokType=tt_identifier) and (package<>nil) and package^.isImportedOrBuiltinPackage(token[stepIndex].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" if applicable
-          inc(i,2);
-          t[i].txt:=t[i-2].txt+ID_QUALIFY_CHARACTER+t[i].txt;
-          t[i].tokType:=tt_identifier;
-          package^.resolveRuleId(t[i],nil);
-        end else if package<>nil then package^.resolveRuleId(t[i],nil);
-        tt_each,tt_parallelEach: if (i<length(t)-3) and
-         (t[i+1].tokType=tt_braceOpen) and
-         (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
-         (t[i+3].tokType=tt_separatorComma) then begin
+          inc(stepIndex,2);
+          token[stepIndex].txt:=token[stepIndex-2].txt+ID_QUALIFY_CHARACTER+token[stepIndex].txt;
+          token[stepIndex].tokType:=tt_identifier;
+          package^.resolveRuleId(token[stepIndex],nil);
+        end else if package<>nil then package^.resolveRuleId(token[stepIndex],nil);
+        tt_each,tt_parallelEach: if (stepIndex<tokenFill-3) and
+         (token[stepIndex+1].tokType=tt_braceOpen) and
+         (token[stepIndex+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
+         (token[stepIndex+3].tokType=tt_separatorComma) then begin
            //resolve each ( i , ... to each(i, ... (each with identifier; expected in further processing!)
-          t[i+3].tokType:=t[i].tokType;
-          t[i+3].txt:=t[i+2].txt;
-          t[i+3].data:=nil;
-          inc(i,3); //skip tt_braceOpen, identifier and comma
-        end else adapters.raiseError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',t[i].location);
-        tt_agg: if (i<length(t)-1) and
-          (t[i+1].tokType=tt_braceOpen) then begin
-          t[i+1].tokType:=tt_each;
-          t[i+1].txt:='';
-          t[i+1].data:=nil;
-          inc(i);
+          token[stepIndex+3].tokType:=token[stepIndex].tokType;
+          token[stepIndex+3].txt:=token[stepIndex+2].txt;
+          token[stepIndex+3].data:=nil;
+          inc(stepIndex,3); //skip tt_braceOpen, identifier and comma
+        end else adapters.raiseError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',token[stepIndex].location);
+        tt_agg: if (stepIndex<tokenFill-1) and
+          (token[stepIndex+1].tokType=tt_braceOpen) then begin
+          token[stepIndex+1].tokType:=tt_each;
+          token[stepIndex+1].txt:='';
+          token[stepIndex+1].data:=nil;
+          inc(stepIndex);
         end;
-        tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
-         ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
-         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
-          if t[i].tokType=tt_operatorMinus
-          then t[i].tokType:=tt_unaryOpMinus //unary - is special token
-          else inc(i);                       //unary + is skipped
+        tt_operatorMinus,tt_operatorPlus: if (stepIndex<tokenFill-1) and
+         ((stepIndex=0) or (token[stepIndex-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
+         (token[stepIndex+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
+          if token[stepIndex].tokType=tt_operatorMinus
+          then token[stepIndex].tokType:=tt_unaryOpMinus //unary - is special token
+          else inc(stepIndex);                       //unary + is skipped
         end;
       end; //case //end if
-    until (i>=length(t)) or
-          not(t[i].tokType in [tt_EOL,tt_docComment,tt_attributeComment]);
+    until (stepIndex>=tokenFill) or
+          not(token[stepIndex].tokType in [tt_EOL,tt_docComment,tt_attributeComment]);
   end;
 
 FUNCTION T_tokenArray.current: T_token;
   begin
-    if i>=length(t) then raise Exception.create('Invalid call to T_tokenArray.current; Index to query is '+intToStr(i)+'; array length is '+intToStr(length(t)));
-    result:=t[i];
+    if stepIndex>=tokenFill then raise Exception.create('Invalid call to T_tokenArray.current; Index to query is '+intToStr(stepIndex)+'; array length is '+intToStr(tokenFill));
+    result:=token[stepIndex];
   end;
 
 PROCEDURE T_tokenArray.mutateCurrentTokType(CONST newTokType: T_tokenType);
   begin
-    t[i].tokType:=newTokType;
+    token[stepIndex].tokType:=newTokType;
   end;
 
 FUNCTION T_tokenArray.atEnd: boolean;
   begin
-    result:=i>=length(t);
+    result:=stepIndex>=tokenFill;
   end;
 
 FUNCTION T_tokenArray.lastToken:T_token;
   begin
-    if length(t)>0 then exit(t[length(t)-1]);
+    if tokenFill>0 then exit(token[tokenFill-1]);
     result.create;
     result.tokType:=tt_EOL;
     result.txt:='';
@@ -164,7 +168,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
         and intrinsicRuleMap.containsKey(txt,intrinsicFuncPtr) then tokType:=tt_intrinsicRule;
       end;
     until atEnd;
-    for k:=0 to length(t)-1 do t[k].undefine;
+    for k:=0 to tokenFill-1 do token[k].undefine;
     nullAdapter.destroy;
   end;
 
@@ -413,6 +417,7 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inputString: ansistring; CONST location
         end;
       end;
     end;
+    setLength(token,tokenFill);
   end;
 
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
@@ -455,6 +460,7 @@ PROCEDURE T_tokenArray.tokenizeAll(VAR provider: T_codeProvider; CONST inPackage
       append(next);
       blob.text:='';
     end;
+    setLength(token,tokenFill);
   end;
 
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR context:T_evaluationContext; OUT closingBracket:P_token):T_bodyParts;
@@ -1825,7 +1831,12 @@ PROCEDURE T_TokenStack.popLink(VAR first: P_token);
 PROCEDURE T_TokenStack.push(VAR first: P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,length(dat)+10);
+    if topIndex>=length(dat) then begin
+      setLength(dat,round(length(dat)*1.1)+1);
+      {$ifdef debugMode}
+      writeln('T_TokenStack - allocated: ',length(dat),' filled: ',topIndex);
+      {$endif}
+    end;
     dat[topIndex]:=first;
     first:=first^.next;
   end;
@@ -1833,7 +1844,7 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
 PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,length(dat)+10);
+    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
     dat[topIndex]:=first;
   end;
 

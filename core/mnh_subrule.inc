@@ -72,12 +72,14 @@
 {$ifdef include_implementation}
 PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEach:boolean);
   VAR t:P_token;
+      i:longint;
   begin
     setLength(preparedBody,0);
     t:=rep;
+    i:=0;
     while t<>nil do begin
-      setLength(preparedBody,length(preparedBody)+1);
-      with preparedBody[length(preparedBody)-1] do begin
+      if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
+      with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL; t:=context.disposeToken(t);
         token.next:=nil;
@@ -95,7 +97,9 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
           else parIdx:=-1;
         end;
       end;
+      inc(i);
     end;
+    setLength(preparedBody,i);
   end;
 
 CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_rule=nil);
@@ -160,20 +164,24 @@ PROCEDURE T_subrule.updatePatternForInline;
 
 CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluationContext);
   VAR t:P_token;
+      i:longint;
   begin
     init(srt_inline_for_literal,rep^.location);
     pattern.create;
     t:=rep;
+    i:=0;
     while (t<>nil) do begin
-      setLength(preparedBody,length(preparedBody)+1);
-      with preparedBody[length(preparedBody)-1] do begin
+      if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
+      with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL;
         t:=context.disposeToken(t);
         token.next:=nil;
         parIdx:=-1;
       end;
+      inc(i);
     end;
+    setLength(preparedBody,i);
     updatePatternForInline;
   end;
 
