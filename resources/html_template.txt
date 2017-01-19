@@ -1009,7 +1009,9 @@ It is recommended that type rules begin with an uppercase letter.<br><code>
   <li><h5><a href="#void">void</a></h5></li>
   <li><h5><a href="#errors">Errors</a></h5></li>
 </ul></li>
-<li><h4><a href="#lists">List types</a></h4></li>
+<li><h4><a href="#lists">List</a></h4></li>
+<li><h4><a href="#sets">Set</a></h4></li>
+<li><h4><a href="#maps">Map</a></h4></li>
 </ul>
   <li><h3><a href="operators.html">Operators</a></h4></li>
   <li><h3><a href="functions.html">Functions</a></h4></li>
@@ -1022,7 +1024,7 @@ It is recommended that type rules begin with an uppercase letter.<br><code>
 </div>
 <div class="docContent">
 <h3><a name="intro">Introduction</a></h3>
-MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime. All types are either <i>scalars</i> (i.e. atomic values) or <i>lists</i>. <br>
+MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime.<br>
 This page is about the representation and basic behaviour of the types. For details on the operators defined on these types see <a href="operators.html">MNH5 - Operators</a>.
 <br>
 <h3><br><a name="scalars">Scalar types</a></h3>
@@ -1118,10 +1120,10 @@ Errors are no functional literals. They form a fallback for cases, where a liter
 You should see them rarely and when you see them they should have a corresponding error message.<br>
 There is no way to directly write an error-literal.
 
-<h3><br><a name="lists">List types</a></h3>
+<h3><br><a name="lists">List</a></h3>
 Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.<code>
 <!--mnh-->
-  ["a",true,4.6]
+  ["a",true,4.6,['another','list']]
 <!--end-->
 </code>
 This example also shows, that types within a list can be mixed. You can use the same notation to construct lists.<br>In addition there is the <code>..</code>-separator, which is only allowed in list constructors.
@@ -1148,27 +1150,7 @@ Alternative accesses include access by a list of indexes...<code>
 <!--end-->
 </code>
 <br>
-A key-value-list is a nested list of the form <code>[[key1,value1],[key2,value2],...]</code>, where each key is a string. <br>
-For those lists there is also the possibility of accessing the values by key or a list of keys:<code>
-<!--mnh-->
-   in> keyValueList :=[['one', 1],['two', 2]];
-   in> keyValueList.get('one');
-  out> 1
-   in> keyValueList.get(['two','one']);
-  out> [2,1]
-<!--end-->
-</code>
-Additionally there is the function <code>mapGet</code> which accepts a fallback value as an additional argument:<code>
-<!--mnh-->
-   in> keyValueList.mapGet('three', 0);
-  out> 0
-   in> keyValueList.mapGet('two', 0);
-  out> 2
-<!--end-->
-</code>
-
-<br>
-Elements of general nested lists can also be accessed conveniently (or inconveniently as you can see in the following equivalent examples):<code>
+Elements of general nested lists/maps can also be accessed conveniently (or inconveniently as you can see in the following equivalent examples):<code>
 <!--mnh-->
    in> nested :=[[1, 2, 3],[4, 5, 6],[7, 8, 9]];
    in> nested.get(1).get(2);
@@ -1187,6 +1169,28 @@ And finally there is the function <code>getInner</code> which allows access by i
 out> [2,5,8]
 <!--end-->
 </code>
+
+<h3><br><a name="sets">Sets</a></h3>
+Sets are internally represented as hash maps. Like lists they can be iterated using the <a href="specials.html#each">each</a> construct.<br>
+Unlike lists, access via index or boolean mask is not possible.<br>
+If a set is cast to a list the list will be sorted. If a list is cast to a set, naturally, duplicates will be lost.
+
+<h3><br><a name="maps">Maps</a></h3>
+Maps are internally represented as hash maps. Their entry-sets can be iterated using the <a href="specials.html#each">each</a> construct.<br>
+Element access by key is possible (and encouraged for performance reasons). For maps, the following statements will return the same result:<code>
+<!--mnh-->
+  map.get(key);
+  map[key];
+  map.each(entry,entry[0]==key ? entry[1] : void,head);
+<!--end-->
+</code>
+For compound accesses there also is the getAll method, whose behavior is like the following each statement:<code>
+<!--mnh-->
+  map.getAll(keySet);
+  map.each(entry,entry[0] in keySet ? entry[1] : void);
+<!--end-->
+</code>
+
 </div>
 <!--commonFoot-->
 <!--file specials.html-->

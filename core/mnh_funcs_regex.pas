@@ -29,18 +29,18 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   begin
     if xLit<>nil then begin
       if xLit^.literalType=lt_string
-      then result.x:=P_stringLiteral(              xLit               )^.value
-      else result.x:=P_stringLiteral(P_listLiteral(xLit)^.value(index))^.value;
+      then result.x:=P_stringLiteral(                    xLit         )^.value
+      else result.x:=P_stringLiteral(P_collectionLiteral(xLit)^[index])^.value;
     end;
     if yLit<>nil then begin
       if yLit^.literalType=lt_string
-      then result.y:=P_stringLiteral(              yLit               )^.value
-      else result.y:=P_stringLiteral(P_listLiteral(yLit)^.value(index))^.value;
+      then result.y:=P_stringLiteral(                    yLit         )^.value
+      else result.y:=P_stringLiteral(P_collectionLiteral(yLit)^[index])^.value;
     end;
     if zLit<>nil then begin
       if zLit^.literalType=lt_string
-      then result.z:=P_stringLiteral(              zLit               )^.value
-      else result.z:=P_stringLiteral(P_listLiteral(zLit)^.value(index))^.value;
+      then result.z:=P_stringLiteral(                    zLit         )^.value
+      else result.z:=P_stringLiteral(P_collectionLiteral(zLit)^[index])^.value;
     end;
   end;
 
@@ -68,7 +68,7 @@ FUNCTION regexMatch_imp intFuncSignature;
       else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do lResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
+        for i:=0 to i1-1 do listResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
       end;
       regex.free;
     end;
@@ -109,7 +109,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
       else if i1=0 then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do lResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
+        for i:=0 to i1-1 do listResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
       end;
       regex.free;
     end;
@@ -145,7 +145,7 @@ FUNCTION regexSplit_imp intFuncSignature;
       else if i1=0 then result:=regexSplit(triplet(arg1,arg0,nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do lResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
+        for i:=0 to i1-1 do listResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
       end;
       regex.free;
     end;
@@ -175,7 +175,7 @@ FUNCTION regexReplace_imp intFuncSignature;
       else if i1=0 then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do lResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
+        for i:=0 to i1-1 do listResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
       end;
       regex.free;
     end;

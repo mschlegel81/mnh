@@ -1,9 +1,9 @@
 private memoized //use memoization because this will be called again...
 step(s:string)->
-  s.chars            //split the string in characters
-   .elementFrequency //transform characters to a list [[count1,char1],[count2,char2],...]
-   .flatten          //flatten to [count1,char1,count2,char2,...]
-   .join;            //join the list to one string
+  s.chars                //split the string in characters
+   .elementFrequency     //transform characters to a list [[char1,count1],[char2,count2],...]
+   .sort
+   .each(f,f[1],f[0],&); //flatten to [count1,char1,count2,char2,...] and join to one string
 
 series(i:int)->begin
   local s:=toString(i);

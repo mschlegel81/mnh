@@ -149,12 +149,14 @@ PROCEDURE T_microserver.serve;
       if not(request.isBlank) then begin
         sleepTime:=minSleepTime;
         lastActivity:=now;
-        requestLiteral.create;
-        requestLiteral.appendString(request.method)^.appendString(request.request)^.appendString(request.protocol);
+        requestLiteral.create(3);
+        requestLiteral.appendString(request.method)^
+                      .appendString(request.request)^
+                      .appendString(request.protocol);
         response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,context);
         requestLiteral.destroy;
         if (response<>nil) then begin
-          if response^.literalType in C_validScalarTypes
+          if response^.literalType in C_scalarTypes
           then socket.SendString(P_scalarLiteral(response)^.stringForm)
           else socket.SendString(response^.toString);
           disposeLiteral(response);
@@ -187,7 +189,7 @@ FUNCTION percentCode(CONST c:byte):string;
   end;
 
 FUNCTION extractParameters_impl intFuncSignature;
-  VAR parameters:P_listLiteral;
+  VAR parameters:P_mapLiteral;
   PROCEDURE addParameterPair(CONST pair:string);
 
     VAR keyAndValue:T_arrayOfString;
@@ -203,11 +205,7 @@ FUNCTION extractParameters_impl intFuncSignature;
        value:=newStringLiteral(keyAndValue[1]);
       castValue:=value^.softCast;
       disposeLiteral(value);
-      parameters^.append(
-        newListLiteral^
-          .appendString(keyAndValue[0])^
-          .append(castValue,false),
-        false);
+      parameters^.put(keyAndValue[0],castValue,false);
     end;
 
   VAR parts:T_arrayOfString;
@@ -217,11 +215,10 @@ FUNCTION extractParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       while (length(parts)<2) do append(parts,'');
-      parameters:=newListLiteral;
+      parameters:=newMapLiteral;
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
-        parameters^.toKeyValueList(false);
       end;
       exit(parameters);
     end;
@@ -248,10 +245,6 @@ FUNCTION extractPath_impl intFuncSignature;
   end;
 
 FUNCTION encodeRequest_impl intFuncSignature;
-  VAR address:string='';
-      path:string='';
-      parameters:string='';
-      i:longint;
   FUNCTION getString(CONST L:P_literal):string;
     begin
       if L^.literalType=lt_string then result:=P_stringLiteral(L)^.value
@@ -265,20 +258,23 @@ FUNCTION encodeRequest_impl intFuncSignature;
       for c in s do if c in ['A'..'Z','a'..'z','0'..'9','-','_'] then result:=result+c else result:=result+percentCode(ord(c));
     end;
 
+  VAR address:string='';
+      path:string='';
+      parameters:string='';
+      i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_keyValueList,lt_string]) then begin
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_map,lt_string]) then begin
       address:=str0^.value;
       path:=str1^.value;
       if not(startsWith(path,'/')) then path:='/'+path;
       case arg2^.literalType of
         lt_string: parameters:=percentEncode(str2^.value);
-        lt_keyValueList: for i:=0 to list2^.size-1 do begin
+        lt_map: for i:=0 to map2^.size-1 do begin
           if i>0 then parameters:=parameters+'&';
-          parameters:=parameters+percentEncode(P_stringLiteral(P_listLiteral(list2^.value(i))^.value(0))^.value)
-                            +'='+percentEncode(getString      (P_listLiteral(list2^.value(i))^.value(1))       );
+          parameters:=parameters+percentEncode(getString(P_compoundLiteral(compound2^[i])^[0]))
+                            +'='+percentEncode(getString(P_compoundLiteral(compound2^[i])^[1]));
         end;
-
       end;
       if parameters<>'' then parameters:='?'+parameters;
       result:=newStringLiteral(address+path+parameters);

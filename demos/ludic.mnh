@@ -19,7 +19,7 @@ end;
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
 main->begin
   local LUDICS:=sieve;
-  local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6).sort;
+  local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);
   print("Ludic Numbers",
       "\n  The first 25 are: ",LUDICS.head(25),'.',
       "\n  There are ",LUDICS[LUDICS<=1000].size,' lesser or equal to 1000.',

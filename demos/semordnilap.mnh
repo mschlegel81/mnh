@@ -13,5 +13,5 @@ private findSemordnilaps->
 main->begin
   local fullList:=findSemordnilaps;
   printf('Found %d Semordnilaps',size(fullList));
-  printf("%s\t%s",['Examples:','','','',''],fullList.get(intRandom(size(fullList),5)));
+  printf("%s\t%s",['Examples:','','','',''],fullList.get(intRandom(size(fullList),5)).each(s,s.join("\v, ")));
 end;

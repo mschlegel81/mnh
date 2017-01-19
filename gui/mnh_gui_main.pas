@@ -281,7 +281,7 @@ FUNCTION editors_impl intFuncSignature;
   VAR meta:T_editorMeta;
   begin
     result:=newListLiteral();
-    for meta in MnhForm.editorMeta do if meta.sheet.tabVisible then lResult^.appendString(meta.pseudoName());
+    for meta in MnhForm.editorMeta do if meta.sheet.tabVisible then listResult^.appendString(meta.pseudoName());
   end;
 
 FUNCTION editorContent_impl intFuncSignature;
@@ -292,7 +292,7 @@ FUNCTION editorContent_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       for meta in MnhForm.editorMeta do if meta.sheet.tabVisible and (meta.pseudoName()=str0^.value) then begin
         result:=newListLiteral(meta.editor.lines.count);
-        for i:=0 to meta.editor.lines.count-1 do lResult^.appendString(meta.editor.lines[i]);
+        for i:=0 to meta.editor.lines.count-1 do listResult^.appendString(meta.editor.lines[i]);
         exit(result);
       end;
       result:=newVoidLiteral;

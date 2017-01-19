@@ -18,8 +18,8 @@ json:=//!~{
 }~;
 
 main->begin
-  local struct:=json.parseJson;
+  local struct:=json.parseJson('-');
   print(struct['Inhaber','Hobbys']);
   print(struct['Deckung']);
-  print(struct.head(3).formatJson);
+  print(struct.each(e,index<3?e:void).toMap.formatJson);
 end;

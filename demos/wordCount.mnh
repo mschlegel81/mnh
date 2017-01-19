@@ -1,9 +1,10 @@
 USE inputs;
 
+private BASE_CHARSET:=['a'..'z'].toSet;
 private cleanSplitString(s:stringList)->begin
   local result:=join(s,' ')           //join lines -> processing one long string
                .lower                 //convert to lowercase
-               .clean(['a'..'z'],' ') //retain only letters
+               .clean(BASE_CHARSET,' ',true) //retain only letters
                .split(' ');           //split at spaces
   result[result<>'']; //return those elements from the result list which are not empty strings
 end;
@@ -15,16 +16,15 @@ private processLinesInChunks(lines:stringList,chunkSize)->
   .elementFrequency;
 
 private analyze(lines:stringList)->begin
-  local wordCount:=processLinesInChunks(lines,100).sort({$x[0]>=$y[0]});
-  print('Words total:    ',local total:=wordCount.getInner(0).agg(+));
+  local wordCount:=processLinesInChunks(lines,100).sort(1).reverseList;
+  print('Words total:    ',local total:=wordCount.getInner(1).agg(+));
   print('Distinct words: ',size(wordCount));
   local top50:=head(wordCount,50);
   print('Most frequent:');
   printf("%s\t%s\t%s",
-    'word' |(top50.getInner(1)),
-    'count'|(top50.getInner(0)),
-    '%'    |round(top50.getInner(0)/total*100,2));
-
+    'word' |(top50.getInner(0)),
+    'count'|(top50.getInner(1)),
+    '%'    |round(top50.getInner(1)/total*100,2));
 end;
 
 private filesWords(pattern)->files(pattern).each(file,fileLines(file),|);

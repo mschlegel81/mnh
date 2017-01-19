@@ -37,7 +37,7 @@ FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
         tt_identifier, tt_parameterIdentifier, tt_localUserRule,
         tt_importedUserRule, tt_rulePutCacheValue,
         tt_blockLocalVariable: result:=result+span('identifier',txt);
-        tt_typeCheckScalar..tt_typeCheckKeyValueList: result:=result+span('builtin',txt);
+        tt_typeCheckScalar..tt_typeCheckExpression: result:=result+span('builtin',txt);
         tt_modifier_private..tt_modifier_local: result:=result+span('modifier',txt);
         tt_comparatorEq..tt_cso_assignAppend: result:=result+span('operator',txt);
         tt_blank: begin

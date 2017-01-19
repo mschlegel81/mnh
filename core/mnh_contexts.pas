@@ -1,13 +1,6 @@
 UNIT mnh_contexts;
 INTERFACE
 USES sysutils,mnh_constants,mnh_tokens,mnh_basicTypes, mnh_out_adapters,mnh_litVar,myGenerics,EpikTimer{$ifdef fullVersion},myStringUtil{$endif};
-{$ifdef debugMode}
-VAR profilingClock:TEpikTimer;
-    contextCount:longint=0;
-    contextTime:double=0;
-    tokenCount:longint=0;
-    tokenTime:double=0;
-{$endif}
 TYPE
   T_valueStoreMarker=(vsm_none,vsm_nonBlockingVoid,vsm_blockingVoid,vsm_nonBlockingFirst,vsm_blockingFirst);
 CONST
@@ -224,7 +217,7 @@ TYPE
       {$endif}
   end;
 
-VAR showProfilingTableCallback:PROCEDURE(CONST L:P_listLiteral)=nil;
+VAR showProfilingTableCallback:PROCEDURE(CONST L:P_compoundLiteral)=nil;
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 IMPLEMENTATION
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
@@ -440,13 +433,7 @@ PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST loca
 
 CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CONST contextType: T_contextType);
   VAR i:longint;
-      {$ifdef debugMode}
-      entryTime:double;
-      {$endif}
   begin
-    {$ifdef debugMode}
-    entryTime:=profilingClock.elapsed;
-    {$endif}
     options :=C_defaultOptions[contextType];
     parentContext:=nil;
     with recycler do begin
@@ -464,10 +451,6 @@ CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CON
     {$ifdef debugMode}
     evaluationIsRunning:=false;
     {$endif}
-    {$ifdef debugMode}
-    contextTime:=contextTime+profilingClock.elapsed-entryTime;
-    interLockedIncrement(contextCount);
-    {$endif}
   end;
 
 PROCEDURE T_evaluationContext.resetOptions(CONST contextType: T_contextType);
@@ -479,13 +462,7 @@ PROCEDURE T_evaluationContext.resetOptions(CONST contextType: T_contextType);
   end;
 
 DESTRUCTOR T_evaluationContext.destroy;
-  {$ifdef debugMode}
-  VAR entryTime:double;
-  {$endif}
   begin
-    {$ifdef debugMode}
-    entryTime:=profilingClock.elapsed;
-    {$endif}
     with recycler do begin
       while fill>0 do begin
         dec(fill);
@@ -502,9 +479,6 @@ DESTRUCTOR T_evaluationContext.destroy;
     {$ifdef fullVersion}
     profilingMap.destroy;
     system.doneCriticalSection(profilingAndDebuggingCriticalSection);
-    {$endif}
-    {$ifdef debugMode}
-    contextTime:=contextTime+profilingClock.elapsed-entryTime;
     {$endif}
   end;
 
@@ -595,7 +569,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       end;
 
     VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
-        data:P_listLiteral;
+        data:P_collectionLiteral;
         swapTemp:T_profilingEntry;
         lines:T_arrayOfString;
         i,j:longint;
@@ -750,10 +724,8 @@ FUNCTION T_evaluationContext.getReadOnlyValueStore:P_valueStore;
   end;
 
 FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
-  {$ifdef debugMode}VAR entryTime:double; {$endif}
   begin with recycler do begin
     if p=nil then exit(nil);
-    {$ifdef debugMode} entryTime:=profilingClock.elapsed; {$endif}
     result:=p^.next;
     if (fill>=length(dat))
     then dispose(p,destroy)
@@ -762,7 +734,6 @@ FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
       dat[fill]:=p;
       inc(fill);
     end;
-    {$ifdef debugMode} tokenTime:=tokenTime+profilingClock.elapsed-entryTime; {$endif}
   end; end;
 
 PROCEDURE T_evaluationContext.cascadeDisposeToken(VAR p: P_token);
@@ -771,42 +742,33 @@ PROCEDURE T_evaluationContext.cascadeDisposeToken(VAR p: P_token);
   end;
 
 FUNCTION T_evaluationContext.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
-  {$ifdef debugMode}VAR entryTime:double; {$endif}
   begin with recycler do begin
-    {$ifdef debugMode} entryTime:=profilingClock.elapsed; {$endif}
     if (fill>0) then begin
       dec(fill);
       result:=dat[fill];
     end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
     result^.next:=nil;
-    {$ifdef debugMode} tokenTime:=tokenTime+profilingClock.elapsed-entryTime; interLockedIncrement(tokenCount); {$endif}
   end; end;
 
 FUNCTION T_evaluationContext.newToken(CONST original: T_token): P_token;
-  {$ifdef debugMode}VAR entryTime:double; {$endif}
   begin with recycler do begin
-    {$ifdef debugMode} entryTime:=profilingClock.elapsed; {$endif}
     if (fill>0) then begin
       dec(fill);
       result:=dat[fill];
     end else new(result,create);
     result^.define(original);
     result^.next:=nil;
-    {$ifdef debugMode} tokenTime:=tokenTime+profilingClock.elapsed-entryTime; interLockedIncrement(tokenCount); {$endif}
   end; end;
 
 FUNCTION T_evaluationContext.newToken(CONST original: P_token): P_token;
-  {$ifdef debugMode}VAR entryTime:double; {$endif}
   begin with recycler do begin
-    {$ifdef debugMode} entryTime:=profilingClock.elapsed; {$endif}
     if (fill>0) then begin
       dec(fill);
       result:=dat[fill];
     end else new(result,create);
     result^.define(original^);
     result^.next:=nil;
-    {$ifdef debugMode} tokenTime:=tokenTime+profilingClock.elapsed-entryTime; interLockedIncrement(tokenCount); {$endif}
   end; end;
 
 PROCEDURE T_evaluationContext.scopePush(CONST blocking: boolean);
@@ -1111,16 +1073,6 @@ FUNCTION T_evaluationContext.getDebuggingSnapshot:T_debuggingSnapshot;
     result:=debuggingStepper.snapshot;
     system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
   end;
-{$endif}
-
-{$ifdef debugMode}
-INITIALIZATION
-  profilingClock:=TEpikTimer.create(nil);
-  profilingClock.start;
-FINALIZATION
-  FreeAndNil(profilingClock);
-  writeln('T_evaluationContext: Created/Destroyed ',contextCount,' instances in ',contextTime:0:20,' seconds');
-  writeln('T_token            : Created/Destroyed ',tokenCount,' instances in ',tokenTime:0:20,' seconds');
 {$endif}
 
 end.

@@ -32,11 +32,11 @@
       FUNCTION getDocTxt:ansistring;
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
-      FUNCTION inspect:P_listLiteral;
+      FUNCTION inspect:P_mapLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION idForErrorFeedback:ansistring;
       FUNCTION getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
-      FUNCTION getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_listLiteral;
+      FUNCTION getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_mapLiteral;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -101,11 +101,10 @@ DESTRUCTOR T_rule.destroy;
 FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
   begin
     enterCriticalSection(rule_cs);
-    cache^.put(P_listLiteral(param^.value(0)),
-                             param^.value(1) );
+    cache^.put(P_listLiteral(param^[0]),
+                             param^[1] );
     leaveCriticalSection(rule_cs);
-    result:=param^.value(1);
-    result^.rereference;
+    result:=param^[1]^.rereferenced;
   end;
 
 PROCEDURE T_rule.clearCache;
@@ -129,9 +128,8 @@ exit}
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
-      useParam^.rereference; //rereference useParam because it is used below
       newFirst      :=context.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newOneElementListLiteral(useParam,true)); t:=newFirst^.next;
+      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
       t       ^.next:=firstRep;
       firstRep:=newFirst;
       lastRep^.next:=context.newToken(firstRep^.location, '', tt_braceClose);
@@ -162,7 +160,7 @@ exit}
           end else begin
             if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
             context.cascadeDisposeToken(firstRep);
-            firstRep:=context.newToken(declarationStart,'',tt_literal,newErrorLiteral);
+            firstRep:=context.newToken(declarationStart,'',tt_literal,newVoidLiteral);
             lastRep:=firstRep;
           end;
           called:=true;
@@ -362,7 +360,7 @@ FUNCTION T_rule.isReportable(OUT value:P_literal):boolean;
     result:=true;
   end;
 
-FUNCTION T_rule.inspect:P_listLiteral;
+FUNCTION T_rule.inspect:P_mapLiteral;
   FUNCTION privateOrPublic:string;
     begin
       if ruleType in C_publicRuleTypes then result:=PUBLIC_TEXT
@@ -370,33 +368,33 @@ FUNCTION T_rule.inspect:P_listLiteral;
     end;
 
   FUNCTION subrulesList:P_listLiteral;
-    VAR i:longint;
-        value:P_literal;
+    VAR value:P_literal;
+        sub:P_subrule;
     begin
       {$ifdef debugMode}
       writeln(stdErr,'inspecting ',id,' ',ansistring(declarationStart));
       {$endif}
       if ruleType in C_mutableRuleTypes then begin
         value:=namedValue.getValue;
-        result:=newListLiteral^.append(newListLiteral(5)^
-          .append(newListLiteral(2)^.appendString('pattern' )^.appendString('()'            ),false)^
-          .append(newListLiteral(2)^.appendString('location')^.appendString(declarationStart),false)^
-          .append(newListLiteral(2)^.appendString('type'    )^.appendString(privateOrPublic ),false)^
-          .append(newListLiteral(2)^.appendString('comment' )^.appendString(''              ),false)^
-          .append(newListLiteral(2)^.appendString('body'    )^.appendString(value^.toString ),false),false);
+        result:=newListLiteral(1);
+        result^.append(newMapLiteral^
+          .put('pattern' ,'()'            )^
+          .put('location',declarationStart)^
+          .put('type'    ,privateOrPublic )^
+          .put('comment' ,''              )^
+          .put('body'    ,value^.toString ),false);
         value^.unreference;
       end else begin
-        result:=newListLiteral;
-        for i:=0 to length(subrules)-1 do
-          result^.append(subrules[i]^.inspect,false);
+        result:=newListLiteral(length(subrules));
+        for sub in subrules do result^.append(sub^.inspect,false);
       end;
     end;
 
   begin
-    result:=newListLiteral(2)^.appendString(id)^.append(newListLiteral^
-      .append(newListLiteral(2)^.appendString('type'    )^.appendString(C_ruleTypeText[ruleType]),false)^
-      .append(newListLiteral(2)^.appendString('location')^.appendString(declarationStart        ),false)^
-      .append(newListLiteral(2)^.appendString('subrules')^.append      (subrulesList,false      ),false),false);
+    result:=newMapLiteral^.put(id,newMapLiteral^
+      .put('type'    ,C_ruleTypeText[ruleType])^
+      .put('location',declarationStart        )^
+      .put('subrules',subrulesList,false      ),false);
   end;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);
@@ -428,34 +426,27 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContex
     end;
   end;
 
-FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_listLiteral;
-  VAR attributes:P_listLiteral;
+FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_mapLiteral;
+  VAR attributes:P_setLiteral;
       subAttributes:P_listLiteral;
       sub:P_subrule;
       expressionToken:P_token;
   begin
-    attributes:=newListLiteral();
+    attributes:=newSetLiteral();
     for sub in subrules do begin
       subAttributes:=sub^.getAttributesLiteral;
       attributes^.appendAll(subAttributes);
       disposeLiteral(subAttributes);
     end;
-    attributes^.toSet;
 
     expressionToken:=context.newToken(declarationStart,id,tt_importedUserRule,@self);
     expressionToken^.next:=getParametersForPseudoFuncPointer(context,declarationStart);
     new(sub,createFromInline(expressionToken,context));
 
-    result:=newListLiteral(3)^
-              .append(newListLiteral(2)^
-                .appendString('id')^
-                .appendString(id),false)^
-              .append(newListLiteral(2)^
-                .appendString('rule')^
-                .append(newExpressionLiteral(sub),false),false)^
-              .append(newListLiteral(2)^
-                .appendString('attributes')^
-                .append(attributes,false),false);
+    result:=newMapLiteral^
+              .put('id'        ,id)^
+              .put('rule'      ,newExpressionLiteral(sub),false)^
+              .put('attributes',attributes               ,false);
   end;
 
 {$endif}

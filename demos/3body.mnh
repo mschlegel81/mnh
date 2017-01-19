@@ -22,9 +22,9 @@ private mutable trace0:=[];
 private mutable trace1:=[];
 private mutable trace2:=[];
 private synchronized plotState(F)->begin
-  local p0:=F[0]; trace0:=trace0.add(p0).trailing(50);
-  local p1:=F[2]; trace1:=trace1.add(p1).trailing(50);
-  local p2:=F[4]; trace2:=trace2.add(p2).trailing(50);
+  local p0:=F[0]; trace0:=trailing(trace0|[p0],50);
+  local p1:=F[2]; trace1:=trailing(trace1|[p1],50);
+  local p2:=F[4]; trace2:=trailing(trace2|[p2],50);
   plot(trace0,'red l');
   addPlot([p0],'red .');
   addPlot(trace1,'green l');

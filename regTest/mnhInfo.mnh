@@ -3,7 +3,7 @@ private memoized memExeInfo(exe,exeFileInfo)->
   ? mnh.mnhInfo
   : (exe.exec(['-info'],false)[0,0] orElse '[]').toExpression()();
 
-private exeInfo(executable:string)->memExeInfo(executable,fileInfo(executable)[['time','size']]);
+private exeInfo(executable:string)->memExeInfo(executable,fileInfo(executable));
 
 isLinux->mnhInfo['targetOs']='Linux';
 isLinux(exe:string)->exe.exeInfo['targetOs']=='Linux';

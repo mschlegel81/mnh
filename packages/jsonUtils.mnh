@@ -1,4 +1,21 @@
-private castWarning(s:string)->(s=='null' ? warn("Mapping null JSON value to empty string") orElse '' : s.softCast);
+json:=//!~{
+  "Herausgeber": "Xema",
+  "Nummer": "1234-5678-9012-3456",
+  "Deckung": 2e+6,
+  "Waehrung": "EURO",
+  "Inhaber":
+  {
+    "Name": "Mustermann",
+    "Vorname": "Max",
+    "maennlich": true,
+    "Hobbys": [ "Reiten", "Golfen", "Lesen"],
+    "Alter": 42,
+    "Kinder": [],
+    "Partner": null
+  }
+}~;
+
+
 private unescapeKey(s:string)->begin
   local result:=s.softCast;
   (result==s) OR not(result.isString)
@@ -7,33 +24,85 @@ private unescapeKey(s:string)->begin
   result;
 end;
 
-private joinJsonKeyValuePairs(L:list)->begin
-  local pairJoinerIndex   :=L.each(e,e==':' ? index : void);
-  local pairSeparatorIndex:=L.each(e,e==',' ? index : void);
-  pairJoinerIndex==[]
-  ? L //JSON array
-    .each(e,e==',' ? void : e.isList ? e.joinJsonKeyValuePairs : e.castWarning)
-  : begin
-      //JSON Object
-      (pairJoinerIndex.head==1 AND pairJoinerIndex.tail==pairSeparatorIndex+2) ? void : fail('Occurrences of ":" and "," do not match. Joiners: ',pairJoinerIndex,'; Separators: ',pairSeparatorIndex);
-      pairJoinerIndex
-      .each(i,L[[i-1,i+1]])
-      .each(pair,[pair[0].unescapeKey,pair[1].isList ? pair[1].joinJsonKeyValuePairs : pair[1].castWarning]);
+private castWarning(s:string,insteadOfNull:scalar)->(s=='null' ? warn("Mapping null JSON value to ",insteadOfNull) orElse '' : s.softCast);
+
+private traverseList(L:stringList,insteadOfNull:scalar)->begin
+  local parsed:=[];
+  local toParse:=L;
+  local listFinished:=false;
+  toParse.head==']' ? toParse:=toParse.tail :
+  while(toParse.size>0 AND not(listFinished),begin
+    local value:=toParse.head;
+    value='[' ? begin
+      local sub:=traverseList(toParse.tail(3));
+      value  :=sub[0];
+      toParse:=sub[1];
+    end :
+    value='{' ? begin
+      local sub:=traverseObject(toParse.tail(3));
+      value  :=sub[0];
+      toParse:=sub[1];
+    end : begin
+      value  :=value.castWarning(insteadOfNull);
+      toParse:=toParse.tail;
     end;
+    parsed|=[value];
+    toParse.head==']'
+    ? listFinished:=true
+    : toParse.head==','
+      ? void
+      : fail('Expected element-separator "," but got ',toParse.head==[] ? 'nothing' : escape(toParse.head));
+    toParse:=toParse.tail;
+  end);
+  [parsed,toParse];
 end;
 
-parseJson(S:stringList)->parseJson(S.join);
-parseJson(s:string)->begin
-  local tokenized:=s
-    .tokenSplit('java')
-    .each(tok,tok.trim)
-    .each(tok,tok=='' ? void : tok);
-  (tokenized.head=='{' AND tokenized.trailing=='}') ? void : fail('Input does not contain a valid JSON Object.');
-  tokenized:=tokenized.unflatten(['[','{'],[']','}'])[0];
-  joinJsonKeyValuePairs(tokenized);
+private traverseObject(L:stringList,insteadOfNull:scalar)->begin
+  local parsed:=[].toMap;
+  local toParse:=L;
+  local objectFinished:=false;
+  while(toParse.size>0 AND not(objectFinished),begin
+    local key:=unescapeKey(toParse[0]);
+    local value:=toParse[2];
+    toParse[1]==':' ? void : fail('Expected key-value-separator ":" but got ',escape(toParse[1]));
+    toParse:=toParse.tail(3);
+    value='[' ? begin
+      local sub:=traverseList(toParse,insteadOfNull);
+      value  :=sub[0];
+      toParse:=sub[1];
+    end :
+    value='{' ? begin
+      local sub:=traverseObject(toParse,insteadOfNull);
+      value  :=sub[0];
+      toParse:=sub[1];
+    end : begin
+      value  :=value.castWarning(insteadOfNull);
+    end;
+    parsed<<[key,value];
+    toParse.head=='}'
+    ? objectFinished:=true
+    : toParse.head==','
+      ? void
+      : fail('Expected element-separator "," but got ',toParse.head==[] ? 'nothing' : escape(toParse.head));
+    toParse:=toParse.tail;
+  end);
+  [parsed,toParse];
+end;
+
+parseJson(s:stringList,insteadOfNull:scalar)->parseJson(s.join);
+parseJson(s:string,insteadOfNull:scalar)->begin
+  local tokens:=s.tokenSplit("java").trim.each(t,t='' ? void : t);
+  tokens.head=='{'
+  ? void
+  : fail('String does not seem to contain a valid JSON Object. First token is ',tokens.head,' instead of {');
+  local resultPair:=traverseObject(tokens.tail,insteadOfNull);
+  resultPair[1]==[]
+  ? void
+  : warn('There is an unparsed rest ',resultPair[1]);
+  resultPair.head;
 end;
 
 formatJson(s:string)->s.escapeJava;
 formatJson(s:scalar)->toString(s);
-formatJson(L:keyValueList)->'{'&L.each(pair,pair[0].escapeJava&':'&formatJson(pair[1])).join(",")&'}';
+formatJson(L:map)->'{'&L.each(pair,pair[0].escapeJava&':'&formatJson(pair[1])).join(",")&'}';
 formatJson(L:list)->'['&L.each(entry,entry.formatJson).join(',')&']';

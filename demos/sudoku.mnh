@@ -1,11 +1,12 @@
-private drop(list:intList,toDrop:int)->list[list!=toDrop];
-private drop(list:intList,toDrop:intList)->list.minus(toDrop).sort;
+private drop(list:intCollection,toDrop:int          )->list.minus([toDrop]);
+private drop(list:intCollection,toDrop:intCollection)->list.minus( toDrop );
 
 //*The cells that are connected
 private
 COMPONENTS:=[0..8].each(i,i+[0..8]*9)| //same row
             [0..8].each(i,i*9+[0..8])| //same column
-            [0..8].each(i,[0..80].get(i=([0..80] div 27)*3+[0..80] mod 9 div 3)); //same block
+            [0..8].each(i,[0..80].get(i=([0..80] div 27)*3+[0..80] mod 9 div 3))
+                  .each(component,component.toSet); //same block
 //*Returns the unique indexes of all cells connected to i (excluding i)
 private memoized connectedIdx(i:int)->COMPONENTS.each(c,i in c ? drop(c,i) : void).flatten.sort;
 //*Returns the components
@@ -52,7 +53,7 @@ solve(B)->begin
           size(newList)=1
           ? begin
               needRun:=true;
-              newList.head;
+              newList.toList.head;
             end
           : components(index).each(COMP,begin
               //try to solve based on all cells (including unsolved)
@@ -60,7 +61,7 @@ solve(B)->begin
               size(tmp)=1
               ? begin
                   needRun:=true;
-                  tmp.head;
+                  tmp.toList.head;
                 end
               : void;
             end,head) orElse newList;
@@ -69,11 +70,13 @@ solve(B)->begin
   Board;
 end;
 
+private randomFromSet(s:intCollection)->s.toList[intRandom(s.size)];
+
 private restrictRandom(B)->begin
   local listIndexes:=[0..80].each(i,B[i].isInt ? void : i);
   listIndexes==[] ? B : begin
     local randomListIdx:=listIndexes[intRandom(size(listIndexes))];
-    [0..80].each(i,i=randomListIdx ? B[i,intRandom(size(B.get(i)))] : B[i]);
+    [0..80].each(i,i=randomListIdx ? B[i].randomFromSet : B[i]);
   end;
 end;
 

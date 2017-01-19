@@ -58,7 +58,7 @@ CONSTRUCTOR T_patternElement.createAnonymous;
     restrictionValue:=nil;
     restrictionIdx  :=-1;
     restrictionId   :='';
-    typeWhitelist   :=C_validNonVoidTypes;
+    typeWhitelist   :=[lt_boolean..lt_emptyMap];
   end;
 
 CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
@@ -70,17 +70,16 @@ CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
 FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
   VAR L:P_literal;
   begin
-    L:=parameterList.value(ownIndex);
+    L:=parameterList[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
     if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.accept(L,context));
-    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) and not(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx)) then exit(false);
-    if (restrictionIdx>=0) and (restrictionType in [tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList])
-      and (P_listLiteral(L)^.size<>restrictionIdx) then exit(false);
+    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx));
+    if (restrictionIdx>=0) and (restrictionType in C_modifieableTypeChecks) and (P_collectionLiteral(L)^.size<>restrictionIdx) then exit(false);
     result:=true;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
-                                        L^.isInRelationTo(restrictionType, parameterList.value(restrictionIdx))
-                           else result:=L^.isInRelationTo(restrictionType, restrictionValue                   );
+                                        L^.isInRelationTo(restrictionType, parameterList[restrictionIdx])
+                           else result:=L^.isInRelationTo(restrictionType, restrictionValue             );
     end;
   end;
 
@@ -96,13 +95,12 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_typeCheckReal      ,
       tt_typeCheckString    ,
       tt_typeCheckNumeric   : result:=(id+C_tokenInfo[restrictionType].defaultId);
-      tt_typeCheckList      ,
-      tt_typeCheckBoolList  ,
-      tt_typeCheckIntList   ,
-      tt_typeCheckRealList  ,
-      tt_typeCheckStringList,
-      tt_typeCheckNumList   ,
-      tt_typeCheckKeyValueList,
+      tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
+      tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
+      tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
+      tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
+      tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
+      tt_typeCheckMap,
       tt_typeCheckExpression  : if (restrictionIdx>=0) then result:=(id+C_tokenInfo[restrictionType].defaultId+'('+intToStr(restrictionIdx)+')')
                                                        else result:=(id+C_tokenInfo[restrictionType].defaultId);
       tt_comparatorEq,
@@ -169,7 +167,13 @@ PROCEDURE T_patternElement.thinOutWhitelist;
         lt_boolean  : typeWhitelist:=[lt_boolean];
         lt_emptyList: if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
                  then typeWhitelist:=[lt_emptyList]
-                 else typeWhitelist:=[lt_list..lt_stringList, lt_keyValueList, lt_flatList];
+                 else typeWhitelist:=C_listTypes-[lt_emptyList];
+        lt_emptySet:  if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
+                 then typeWhitelist:=[lt_emptySet]
+                 else typeWhitelist:=C_setTypes-[lt_emptySet];
+        lt_emptyMap:  if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
+                 then typeWhitelist:=[lt_emptyMap]
+                 else typeWhitelist:=[lt_map];
       end;
     end;
   end;
@@ -195,15 +199,14 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
       tt_customTypeCheck:
         exit((e.restrictionType=tt_customTypeCheck) and (customTypeCheck=e.customTypeCheck));
       tt_typeCheckExpression,
-      tt_typeCheckList,
-      tt_typeCheckBoolList,
-      tt_typeCheckIntList,
-      tt_typeCheckRealList,
-      tt_typeCheckStringList,
-      tt_typeCheckNumList,
-      tt_typeCheckKeyValueList:
-        if e.restrictionType<>tt_typeCheckExpression then exit(false)
-        else exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
+      tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
+      tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
+      tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
+      tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
+      tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
+      tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
+      tt_typeCheckMap:
+        exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
       tt_comparatorListEq,
       tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (getValueRelation=vr_equal));
       tt_comparatorNeq   : exit((e.restrictionType = tt_comparatorNeq) and (getValueRelation=vr_equal));

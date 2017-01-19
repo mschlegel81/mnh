@@ -9,19 +9,26 @@ VAR builtinLocation_group,
 
 {$define UNARY_NUM_TO_REAL:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR i:longint;
+  VAR iter:T_arrayOfLiteral;
+      y:P_literal;
   begin
     result:=nil;
     case x^.literalType of
       lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),ID_MACRO,tokenLocation);
-      lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
       lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
-      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+      lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType;
+        iter  :=P_collectionLiteral(x)^.iteratableList;
+        for y in iter do collResult^.append(recurse(y),false);
+        disposeLiteral(iter);
+        if collResult^.containsError then begin
+          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+          disposeLiteral(result);
+        end;
       end;
-      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,context.adapters^);
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
     end;
   end;
 
@@ -80,19 +87,26 @@ UNARY_NUM_TO_REAL;
 
 FUNCTION not_imp intFuncSignature;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
+    VAR y:P_literal;
+        iter:T_arrayOfLiteral;
     begin
       result:=nil;
       case x^.literalType of
         lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),'not',tokenLocation);
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
         lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
-        lt_list,lt_booleanList, lt_intList, lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
+        lt_list,lt_booleanList,lt_intList,lt_emptyList,
+        lt_set ,lt_booleanSet ,lt_intSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType;
+          iter:=P_collectionLiteral(x)^.iteratableList;
+          for y in iter do P_collectionLiteral(result)^.append(not_rec(y),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+            disposeLiteral(result);
+          end;
         end;
-        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation,context.adapters^);
+        else raiseNotApplicableError('not',x,tokenLocation,context.adapters^);
       end;
     end;
 
@@ -104,19 +118,27 @@ FUNCTION not_imp intFuncSignature;
 
 {$define UNARY_NUM_TO_SAME:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR i:longint;
+  VAR sub:P_literal;
+      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     case x^.literalType of
       lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),ID_MACRO,tokenLocation);
-      lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+      lt_error: begin result:=x; result^.rereference; end;
       lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+      lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType;
+        iter  :=P_collectionLiteral(x)^.iteratableList;
+        for sub in iter do collResult^.append(recurse(sub),false);
+        disposeLiteral(iter);
+        if collResult^.containsError then begin
+          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+          disposeLiteral(result);
+        end;
       end;
-      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,context.adapters^);
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
     end;
   end;
 
@@ -138,21 +160,27 @@ UNARY_NUM_TO_SAME;
 
 {$undef UNARY_NUM_TO_SAME}
 
-{$define ROUND_IMPLEMENTATION:=
-  FUNCTION recurse1(CONST x:P_literal):P_literal;
-    VAR i:longint;
+{$define ROUND_IMPLEMENTATION:=FUNCTION recurse1(CONST x:P_literal):P_literal;
+    VAR sub:P_literal;
+        iter:T_arrayOfLiteral;
     begin
       result:=nil;
       case x^.literalType of
         lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),ID_MACRO,tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
+        lt_error,lt_int: result:=x^.rereferenced;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false);
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType;
+          iter  :=P_collectionLiteral(x)^.iteratableList;
+          for sub in iter do collResult^.append(recurse1(sub),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+            disposeLiteral(result);
+          end;
         end;
-        else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,context.adapters^);
+        else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
       end;
     end;
 
@@ -167,34 +195,100 @@ UNARY_NUM_TO_SAME;
         while i>y do begin pot:=pot*0.1; dec(i); end;
         result:=newRealLiteral(CALL_MACRO(x*pot)/pot);
       end;
-    VAR i:longint;
+
+    FUNCTION myRound(CONST x:P_intLiteral; CONST y:int64):P_literal; inline;
+      VAR pot,i:int64;
+      begin
+        if y>=0 then exit(x^.rereferenced);
+        pot:=1;
+        i:=0;
+        while i<y do begin pot:=pot*10;inc(i); end;
+        result:=newIntLiteral(CALL_MACRO(x^.value*pot) div pot);
+      end;
+
+    VAR sub,ySub:P_literal;
+        yIter:T_arrayOfLiteral;
+        xIter:T_arrayOfLiteral;
+        i    :longint;
     begin
       result:=nil;
       case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: case y^.literalType of
-          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
-          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
-          lt_list,lt_intList,lt_emptyList: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false);
+        lt_error: result:=x^.rereferenced;
+        lt_int : case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: result:=myRound(P_intLiteral(x),P_intLiteral(y)^.value);
+          lt_list,lt_intList,lt_emptyList,
+          lt_set ,lt_intSet ,lt_emptySet: begin
+            result:=P_collectionLiteral(y)^.newOfSameType;
+            yIter :=P_collectionLiteral(y)^.iteratableList;
+            for sub in yIter do collResult^.append(recurse2(x,sub),false);
+            disposeLiteral(yIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
           end;
-          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation,context.adapters^);
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        end;
+        lt_real: case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
+          lt_list,lt_intList,lt_emptyList,
+          lt_set ,lt_intSet ,lt_emptySet: begin
+            result:=P_collectionLiteral(y)^.newOfSameType;
+            yIter :=P_collectionLiteral(y)^.iteratableList;
+            for sub in yIter do collResult^.append(recurse2(x,sub),false);
+            disposeLiteral(yIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
         end;
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
-          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
+          lt_error: result:=y^.rereferenced;
           lt_int: begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false);
+            xIter:=P_collectionLiteral(x)^.iteratableList;
+            for sub in xIter do P_listLiteral(result)^.append(recurse2(sub,y),false);
+            disposeLiteral(xIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
           end;
           lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
+            for i:=0 to P_listLiteral(x)^.size-1 do listResult^.append(recurse2(P_listLiteral(x)^[i],P_listLiteral(y)^[i]),false);
           end else context.adapters^.raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
-          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation,context.adapters^);
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
         end;
-        else raiseNotApplicableError(ID_MACRO,x^.literalType,' (first parameter)',tokenLocation,context.adapters^);
+        lt_set,lt_intSet,lt_realSet,lt_numSet,lt_emptySet: case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: begin
+            result:=newSetLiteral;
+            xIter:=P_collectionLiteral(x)^.iteratableList;
+            for sub in xIter do P_setLiteral(result)^.append(recurse2(sub,y),false);
+            disposeLiteral(xIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          lt_set,lt_intSet,lt_emptySet: begin
+            result:=newSetLiteral;
+            xIter:=P_collectionLiteral(x)^.iteratableList;
+            yIter:=P_collectionLiteral(y)^.iteratableList;
+            for sub in xIter do for ySub in yIter do setResult^.append(recurse2(sub,ySub),false);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        end;
+        else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
       end;
     end;
 
@@ -219,22 +313,32 @@ FUNCTION floor_imp intFuncSignature;
 {$define ID_MACRO:='floor'}
 ROUND_IMPLEMENTATION;
 {$undef ROUND_IMPLEMENTATION}
+{$undef CALL_MACRO}
+{$undef ID_MACRO}
 
 FUNCTION sign_imp intFuncSignature;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
+    VAR iter:T_arrayOfLiteral;
+        sub:P_literal;
     begin
       result:=nil;
       case x^.literalType of
         lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),'sign',tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_error: result:=x^.rereferenced;
         lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType;
+          iter:=P_collectionLiteral(x)^.iteratableList;
+          for sub in iter do collResult^.append(sign_rec(sub),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            disposeLiteral(result);
+            raiseNotApplicableError('sign',x,tokenLocation,context.adapters^);
+          end;
         end;
-        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation,context.adapters^);
+        else raiseNotApplicableError('sign',x,tokenLocation,context.adapters^);
       end;
     end;
 
@@ -278,7 +382,7 @@ FUNCTION time_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
-      ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_validListTypes)) then begin
+      ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
       if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
                         else res:=evaluateNullary(P_expressionLiteral(arg0));
@@ -354,7 +458,7 @@ FUNCTION async_imp intFuncSignature;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
-       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_validListTypes)) then begin
+       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         getMem(p,sizeOf(T_asyncTask));
@@ -411,11 +515,11 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
   begin
     result:=nil;
     for i:=0 to L^.size-1 do begin
-      if L^.value(i)^.literalType=lt_string
-      then subTokens:=stringToTokens(P_stringLiteral(L^.value(i))^.value,location,package,context)
+      if L^[i]^.literalType=lt_string
+      then subTokens:=stringToTokens(P_stringLiteral(L^[i])^.value,location,package,context)
       else begin
-        subTokens:=context.newToken(location,'',tt_literal,L^.value(i));
-        L^.value(i)^.rereference;
+        subTokens:=context.newToken(location,'',tt_literal,L^[i]);
+        L^[i]^.rereference;
       end;
       if subTokens=nil then begin
         if result<>nil then context.cascadeDisposeToken(result);
@@ -427,15 +531,15 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
     end;
   end;
 
-FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_scalarLiteral;
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR first:P_token=nil;
       temp:P_token;
       package:P_package;
   begin
     result:=nil;
     package:=P_package(location.package);
-    if      L^.literalType=lt_string           then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
-    else if L^.literalType in C_validListTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
+    if      L^.literalType=lt_string      then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
+    else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
     if first=nil then exit(nil);
 
     if not(first^.areBracketsPlausible(context.adapters^)) then begin
@@ -523,7 +627,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
       then src:=P_stringLiteral(arg0)^.value
       else begin
         setLength(src,0);
-        for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value(i))^.value);
+        for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^[i])^.value);
       end;
       result:=messagesToLiteralForSandbox(runAlone(src));
     end;
@@ -532,17 +636,11 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
 FUNCTION group_imp intFuncSignature;
   TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
   VAR listToGroup:P_listLiteral;
-      keyList:array of P_literal;
+      keyList:T_arrayOfLiteral;
       aggregator:P_expressionLiteral;
       groupMap:T_groupMap;
-      groupList:T_groupMap.KEY_VALUE_LIST;
-
-  PROCEDURE makeKeysByList(CONST list:P_listLiteral);
-    VAR i:longint;
-    begin
-      setLength(keyList,list^.size);
-      for i:=0 to length(keyList)-1 do keyList[i]:=list^.value(i);
-    end;
+      groupList :T_groupMap.KEY_VALUE_LIST;
+      groupEntry:T_groupMap.CACHE_ENTRY;
 
   PROCEDURE makeKeysByIndex(CONST index:longint);
     VAR i:longint;
@@ -551,8 +649,8 @@ FUNCTION group_imp intFuncSignature;
       dummy:=newErrorLiteral;
       setLength(keyList,listToGroup^.size);
       for i:=0 to length(keyList)-1 do begin
-        if (listToGroup^.value(i)^.literalType in C_validListTypes) and (P_listLiteral(listToGroup^.value(i))^.size>index)
-        then keyList[i]:=P_listLiteral(listToGroup^.value(i))^.value(index)
+        if (listToGroup^[i]^.literalType in C_listTypes) and (P_listLiteral(listToGroup^[i])^.size>index)
+        then keyList[i]:=P_listLiteral(listToGroup^[i])^[index]^.rereferenced
         else keyList[i]:=dummy;
       end;
       disposeLiteral(dummy);
@@ -584,30 +682,31 @@ FUNCTION group_imp intFuncSignature;
       groupMap.put(groupKey,resultLiteral);
     end;
 
-  VAR inputIndex,outputIndex:longint;
+  VAR inputIndex:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
-       (arg0^.literalType in C_validListTypes) and
-      ((arg1^.literalType in C_validListTypes) and (list1^.size=P_listLiteral(arg0)^.size) or (arg1^.literalType=lt_int)) and
-      ((params^.size=2) or (params^.value(2)^.literalType=lt_expression))
+       (arg0^.literalType in C_listTypes) and
+      ((arg1^.literalType in C_listTypes) and (list1^.size=list0^.size) or (arg1^.literalType=lt_int)) and
+      ((params^.size=2) or (arg2^.literalType=lt_expression))
     then begin
-      setLength(keyList,0);
       listToGroup:=P_listLiteral(arg0);
 
       if arg1^.literalType=lt_int
       then makeKeysByIndex(P_intLiteral(arg1)^.value)
-      else makeKeysByList(list1);
+      else keyList:=list1^.iteratableList;
 
-      if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
+      if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
                           else aggregator:=nil;
       if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,params,nil);
       groupMap.create();
       for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then
-        addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
+        addToAggregation(keyList[inputIndex],listToGroup^[inputIndex]);
+      disposeLiteral(keyList);
+
       groupList:=groupMap.keyValueList;
-      result:=newListLiteral;
-      for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false);
+      result:=newListLiteral(length(groupList));
+      for groupEntry in groupList do listResult^.append(groupEntry.value,false);
       groupMap.destroy;
       if aggregator<>nil then context.callStackPop();
     end;
@@ -672,9 +771,9 @@ FUNCTION formatTime_imp intFuncSignature;
         lt_realList,lt_intList,lt_numList: begin
           result:=newListLiteral;
           L:=list1;
-          for i:=0 to L^.size-1 do case(L^.value(i)^.literalType) of
-            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value(i))^.value),false);
-            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value(i))^.value),false);
+          for i:=0 to L^.size-1 do case(L^[i]^.literalType) of
+            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^[i])^.value),false);
+            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^[i])^.value),false);
           end;
         end;
       end;
@@ -738,7 +837,7 @@ FUNCTION parseTime_imp intFuncSignature;
       else if (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
         result:=newListLiteral;
         for i:=0 to list1^.size-1 do
-          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^.value(i))^.value));
+          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^[i])^.value));
       end;
     end;
   end;
@@ -779,7 +878,7 @@ FUNCTION inspect_imp intFuncSignature;
       tempPackage:P_package;
       source:TStringList;
       needDispose:boolean=false;
-      loadMessages:P_listLiteral=nil;
+      loadMessages:P_collectionLiteral=nil;
 
   PROCEDURE loadTemporaryPackage;
     VAR prevAdapters:P_adapters;
@@ -790,7 +889,7 @@ FUNCTION inspect_imp intFuncSignature;
       collector:=P_collectingOutAdapter(context.adapters^.getAdapter(at_sandboxAdapter));
       for mt in T_messageType do collector^.enableMessageType(C_messageTypeMeta[mt].mClass in [mc_echo,mc_warning],[mt]);
       tempPackage^.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
-      loadMessages:=newListLiteral(2)^.appendString('messages')^.append(messagesToLiteralForSandbox(collector^.storedMessages),false);
+      loadMessages:=messagesToLiteralForSandbox(collector^.storedMessages);
       context.leaveTryStatementReassumingPreviousAdapters(prevAdapters,true);
     end;
 
@@ -804,7 +903,7 @@ FUNCTION inspect_imp intFuncSignature;
       if tempPackage<>nil then begin
         if needDispose then loadTemporaryPackage;
         result:=tempPackage^.inspect;
-        if loadMessages<>nil then lResult^.append(loadMessages,false);
+        if loadMessages<>nil then listResult^.append(loadMessages,false);
         if needDispose then dispose(tempPackage,destroy);
         exit(result);
       end;
@@ -812,11 +911,11 @@ FUNCTION inspect_imp intFuncSignature;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       new(tempPackage,create(nil));
       source:=TStringList.create;
-      for i:=0 to list1^.size-1 do source.append(P_stringLiteral(list1^.value(i))^.value);
+      for i:=0 to list1^.size-1 do source.append(P_stringLiteral(list1^[i])^.value);
       tempPackage^.setSourceUTF8AndPath(source,str0^.value);
       FreeAndNil(source);
       loadTemporaryPackage;
-      result:=tempPackage^.inspect^.append(loadMessages,false);
+      result:=tempPackage^.inspect^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;

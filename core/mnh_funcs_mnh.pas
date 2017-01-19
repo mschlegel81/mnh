@@ -51,13 +51,13 @@ FUNCTION hash_imp intFuncSignature;
 
 FUNCTION listBuiltin_imp intFuncSignature;
   VAR keys:T_arrayOfString;
-      i:longint;
+      key:ansistring;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       keys:=intrinsicRuleMap.keySet;
-      result:=newListLiteral;
-      for i:=0 to length(keys)-1 do lResult^.appendString(keys[i]);
+      result:=newSetLiteral;
+      for key in keys do setResult^.appendString(key);
       setLength(keys,0);
     end;
   end;
@@ -104,11 +104,15 @@ FUNCTION ord_imp intFuncSignature;
         lt_string : if length(P_stringLiteral(x)^.value)=1
                     then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(newIntLiteral(-1));
-        lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation,context.adapters^));
-        else begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-            lResult^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        lt_error,lt_void, lt_real,lt_expression: begin
+          context.adapters^.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
+          exit(newVoidLiteral);
+        end else begin
+          if x^.literalType in C_listTypes
+          then result:=newListLiteral(P_compoundLiteral(x)^.size)
+          else result:=newSetLiteral;
+          for i:=0 to P_compoundLiteral(x)^.size-1 do if context.adapters^.noErrors then
+            collResult^.append(recurse(P_compoundLiteral(x)^[i]),false);
         end;
       end;
     end;
@@ -122,19 +126,19 @@ FUNCTION ord_imp intFuncSignature;
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then
-    result:=newListLiteral(9)^
-      .append(newListLiteral(2)^.appendString('isFullVersion'  )^.appendBool  ({$ifdef fullVersion}true{$else}false{$endif}),false)^
-      .append(newListLiteral(2)^.appendString('isDebugVersion' )^.appendBool  ({$ifdef debugMode}  true{$else}false{$endif}),false)^
-      .append(newListLiteral(2)^.appendString('is64bit'        )^.appendBool  ({$ifdef CPU64}      true{$else}false{$endif}),false)^
-      .append(newListLiteral(2)^.appendString('compileTime'    )^.appendString( {$I %DATE%}+' '+{$I %TIME%}                ),false)^
-      .append(newListLiteral(2)^.appendString('compilerVersion')^.appendString( {$I %FPCVERSION%}                          ),false)^
-      .append(newListLiteral(2)^.appendString('targetCpu'      )^.appendString( {$I %FPCTARGET%}                           ),false)^
-      .append(newListLiteral(2)^.appendString('targetOs'       )^.appendString( {$I %FPCTargetOS%}                         ),false)^
-      .append(newListLiteral(2)^.appendString('codeVersion'    )^.appendString( CODE_HASH                                  ),false)^
-      .append(newListLiteral(2)^.appendString('flavour'        )^.appendString({$ifdef fullVersion}'F'{$else}'L'{$endif}+
+    result:=newMapLiteral^
+      .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
+      .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
+      .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
+      .put('compileTime'    , {$I %DATE%}+' '+{$I %TIME%}                )^
+      .put('compilerVersion', {$I %FPCVERSION%}                          )^
+      .put('targetCpu'      , {$I %FPCTARGET%}                           )^
+      .put('targetOs'       , {$I %FPCTargetOS%}                         )^
+      .put('codeVersion'    , CODE_HASH                                  )^
+      .put('flavour'        ,{$ifdef fullVersion}'F'{$else}'L'{$endif}+
                                                                                {$ifdef imig}'I'{$else}''{$endif}+
-                                                                               {$ifdef debugMode}  'D'{$else}'O'{$endif}+
-                                                                               {$I %FPCTargetOS%}                          ),false)
+                             {$ifdef debugMode}  'D'{$else}'O'{$endif}+
+                             {$I %FPCTargetOS%}                          )
     else result:=nil;
   end;
 

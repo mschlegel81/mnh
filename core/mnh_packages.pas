@@ -71,9 +71,9 @@ TYPE
       PROCEDURE appendSource(CONST line:string);
       {$endif}
       FUNCTION getCodeProvider:P_codeProvider;
-      FUNCTION inspect:P_listLiteral;
+      FUNCTION inspect:P_mapLiteral;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
-      FUNCTION getDynamicUseMeta(VAR context:T_evaluationContext):P_listLiteral;
+      FUNCTION getDynamicUseMeta(VAR context:T_evaluationContext):P_mapLiteral;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -1072,7 +1072,7 @@ FUNCTION T_package.getCodeProvider:P_codeProvider;
     result:=@codeProvider;
   end;
 
-FUNCTION T_package.inspect:P_listLiteral;
+FUNCTION T_package.inspect:P_mapLiteral;
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
@@ -1090,22 +1090,11 @@ FUNCTION T_package.inspect:P_listLiteral;
     end;
 
   begin
-    result:=newListLiteral(6)^
-      .append(newListLiteral(2)^
-              .appendString('id')^
-              .appendString(codeProvider.id),false)^
-      .append(newListLiteral(2)^
-              .appendString('path')^
-              .appendString(getPath),false)^
-      .append(newListLiteral(2)^
-              .appendString('source')^
-              .appendString(join(codeProvider.getLines,C_lineBreakChar)),false)^
-      .append(newListLiteral(2)^
-              .appendString('uses')^
-              .append(usesList,false),false)^
-      .append(newListLiteral(2)^
-              .appendString('declares')^
-              .append(rulesList,false),false);
+    result:=newMapLiteral^.put('id'      ,codeProvider.id)^
+                          .put('path'    ,getPath)^
+                          .put('source'  ,join(codeProvider.getLines,C_lineBreakChar))^
+                          .put('uses'    ,usesList,false)^
+                          .put('declares',rulesList,false);
   end;
 
 FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
@@ -1126,7 +1115,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     end;
   end;
 
-FUNCTION T_package.getDynamicUseMeta(VAR context:T_evaluationContext):P_listLiteral;
+FUNCTION T_package.getDynamicUseMeta(VAR context:T_evaluationContext):P_mapLiteral;
   FUNCTION rulesMeta:P_listLiteral;
     VAR rule:P_rule;
     begin
@@ -1140,29 +1129,17 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_evaluationContext):P_listLite
         subRule:P_subrule;
     begin
       result:=newListLiteral();
-      for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.typ=srt_normal_public then begin
-        result^
-          .append(newListLiteral(3)^
-            .append(newListLiteral(2)^
-              .appendString('id')^
-              .appendString(subRule^.getId),false)^
-            .append(newListLiteral(2)^
-              .appendString('subrule')^
-              .append(newExpressionLiteral(subRule),false),false)^
-            .append(newListLiteral(2)^
-              .appendString('attributes')^
-              .append(subRule^.getAttributesLiteral,false),false),false);
-      end;
+      for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.typ=srt_normal_public then
+        result^.append(newMapLiteral^
+          .put('id'        ,subRule^.getId)^
+          .put('subrule'   ,newExpressionLiteral(subRule),false)^
+          .put('attributes',subRule^.getAttributesLiteral,false),false);
     end;
 
   begin
-    result:=newListLiteral(2)^
-              .append(newListLiteral(2)^
-                .appendString('rules')^
-                .append(rulesMeta,false),false)^
-              .append(newListLiteral(2)^
-                .appendString('subrules')^
-                .append(subRulesMeta,false),false);
+    result:=newMapLiteral^
+              .put('rules'   ,rulesMeta   ,false)^
+              .put('subrules',subRulesMeta,false);
   end;
 
 {$undef include_implementation}
