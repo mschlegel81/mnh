@@ -1831,12 +1831,7 @@ PROCEDURE T_TokenStack.popLink(VAR first: P_token);
 PROCEDURE T_TokenStack.push(VAR first: P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then begin
-      setLength(dat,round(length(dat)*1.1)+1);
-      {$ifdef debugMode}
-      writeln('T_TokenStack - allocated: ',length(dat),' filled: ',topIndex);
-      {$endif}
-    end;
+    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+10);
     dat[topIndex]:=first;
     first:=first^.next;
   end;
@@ -1844,7 +1839,7 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
 PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
+    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+10);
     dat[topIndex]:=first;
   end;
 
