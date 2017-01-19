@@ -674,21 +674,29 @@ FUNCTION configDir:string;
 
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
   VAR mt:T_messageType;
+      mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
+      i:longint;
   begin
-    result:=0;
+    for i:=0 to length(mask)-1 do mask[i]:=false;
+    i:=0;
     for mt:=low(T_messageType) to high(T_messageType) do begin
-      if mt in x then inc(result);
-      result:=result shl 1;
+      mask[i]:=mt in x;
+      inc(i);
     end;
+    move(mask,result,sizeOf(qword));
   end;
 
 OPERATOR :=(x:qword):T_messageTypeSet;
   VAR mt:T_messageType;
+      mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
+      i:longint;
   begin
+    move(x,mask,sizeOf(qword));
+    i:=0;
     result:=[];
-    for mt:=high(T_messageType) downto low(T_messageType) do begin
-      x:=x shr 1;
-      if odd(x) then result:=result+[mt];
+    for mt:=low(T_messageType) to high(T_messageType) do begin
+      if mask[i] then include(result,mt);
+      inc(i);
     end;
   end;
 
