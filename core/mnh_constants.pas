@@ -678,10 +678,10 @@ OPERATOR :=(CONST x:T_messageTypeSet):qword;
       i:longint;
   begin
     for i:=0 to length(mask)-1 do mask[i]:=false;
-    i:=0;
-    for mt:=low(T_messageType) to high(T_messageType) do begin
+    i:=length(mask)-1;
+    for mt:=low(T_messageType) to high(T_messageType) do if i>0 then begin
       mask[i]:=mt in x;
-      inc(i);
+      dec(i);
     end;
     move(mask,result,sizeOf(qword));
   end;
@@ -692,11 +692,11 @@ OPERATOR :=(x:qword):T_messageTypeSet;
       i:longint;
   begin
     move(x,mask,sizeOf(qword));
-    i:=0;
+    i:=length(mask)-1;
     result:=[];
     for mt:=low(T_messageType) to high(T_messageType) do begin
-      if mask[i] then include(result,mt);
-      inc(i);
+      if (i>0) and mask[i] then include(result,mt);
+      dec(i);
     end;
   end;
 
