@@ -401,26 +401,12 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
   end;
 
 PROCEDURE T_tokenArray.tokenizeAll(CONST inputString: ansistring; CONST location: T_tokenLocation; CONST inPackage: P_package; VAR adapters: T_adapters; CONST retainBlanks: boolean);
-  {$ifdef DEBUGMODE}
-  CONST oneSecond=1/(24*60*60);
-  VAR lastOutput:double;
-  {$endif}
   VAR next:T_token;
       workLocation:T_tokenLocation;
   begin
     workLocation:=location;
     workLocation.column:=1;
-    {$ifdef DEBUGMODE}
-    lastOutput:=now;
-    {$endif}
     while (workLocation.column<=length(inputString)) and (adapters.noErrors) do begin
-      {$ifdef DEBUGMODE}
-      if now>lastOutput+oneSecond then begin
-        lastOutput:=now;
-        writeln('Tokenized ',workLocation.column,'/',(length(inputString)),' (',
-                            (workLocation.column) /  (length(inputString))*100:0:2,'%) to ',tokenFill,' tokens');
-      end;
-      {$endif}
       next:=getToken(inputString,workLocation,inPackage,adapters,retainBlanks);
       if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
         if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
@@ -1845,7 +1831,12 @@ PROCEDURE T_TokenStack.popLink(VAR first: P_token);
 PROCEDURE T_TokenStack.push(VAR first: P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,length(dat)+10);
+    if topIndex>=length(dat) then begin
+      setLength(dat,round(length(dat)*1.1)+1);
+      {$ifdef debugMode}
+      writeln('T_TokenStack - allocated: ',length(dat),' filled: ',topIndex);
+      {$endif}
+    end;
     dat[topIndex]:=first;
     first:=first^.next;
   end;
@@ -1853,7 +1844,7 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
 PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,length(dat)+10);
+    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+1);
     dat[topIndex]:=first;
   end;
 
