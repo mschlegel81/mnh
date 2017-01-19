@@ -104,7 +104,7 @@ FUNCTION locateSources: T_arrayOfString;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR stream:TMemoryStream;
-      size,i:longint;
+      size:longint;
   begin
     stream:=TMemoryStream.create;
     accessed:=false;
@@ -114,7 +114,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
       size:=stream.size;
       stream.Seek(0,soFromBeginning);
       setLength(result,size);
-      for i:=1 to size do result[i]:=chr(stream.readByte);
+      stream.ReadBuffer(result[1],size);
     except
       accessed:=false;
     end;
@@ -183,13 +183,12 @@ FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfStri
 
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   VAR stream:TFileStream;
-      i:longint;
   begin
     ensurePath(name);
     stream:=TFileStream.create(name,fmCreate);
     try
       stream.Seek(0,soFromBeginning);
-      for i:=1 to length(textToWrite) do stream.writeByte(ord(textToWrite[i]));
+      stream.WriteBuffer(textToWrite[1],length(textToWrite));
       result:=true;
     except
       result:=false;
