@@ -1447,6 +1447,7 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
     if isKeyValueCollection then begin
       for i:=0 to fill-1 do if accessor^.equals(P_listLiteral(dat[i])^[0])
                                       then exit(P_listLiteral(dat[i])^[1]^.rereferenced);
+      result:=newVoidLiteral;
     end;
   end;
 
