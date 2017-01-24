@@ -213,6 +213,7 @@ FUNCTION getAll_imp intFuncSignature;
   VAR iter:T_arrayOfLiteral;
       sub:P_literal;
       got:P_literal;
+      i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_compoundTypes) then begin
@@ -229,6 +230,19 @@ FUNCTION getAll_imp intFuncSignature;
         end else disposeLiteral(result);
       end;
       disposeLiteral(iter);
+    end else if (params<>nil) and (params^.size=3) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_listTypes) and (arg2^.literalType in C_listTypes) and (list1^.size=list2^.size) then begin
+      result:=newListLiteral;
+      for i:=0 to list1^.size-1 do if result<>nil then begin
+        got:=compound0^.get(list1^[i]);
+        if got<>nil then begin
+          if got^.literalType<>lt_void
+          then collResult^.append(got,false)
+          else begin
+            disposeLiteral(got);
+            collResult^.append(list2^[i],true);
+          end;
+        end else disposeLiteral(result);
+      end;
     end;
   end;
 
@@ -291,7 +305,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'reverseList'     ,@reverseList_impl  ,true,ak_unary     ,'reverseList(L:list);//Returns L reversed');
   BUILTIN_GET:=
   registerRule(LIST_NAMESPACE,'get'     ,@get_imp     ,true,ak_variadic_2,'get(L,accessor);//Returns elements of list, set or map L by accessor');
-  registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,true,ak_binary    ,'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors');
+  registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,true,ak_binary    ,'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:list,fallback:list);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors');
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,true,ak_variadic_2,'getInner(L:list,index);');
   registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,true,ak_unary     ,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
 
