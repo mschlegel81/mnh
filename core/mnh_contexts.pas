@@ -193,7 +193,7 @@ TYPE
       PROCEDURE printCallStack(CONST targetAdapters:P_adapters=nil);
       PROCEDURE clearCallStack;
 
-      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
       //clock routines
       FUNCTION wallclockTime:double;
       FUNCTION wantBasicTiming:boolean;
@@ -903,9 +903,12 @@ PROCEDURE T_evaluationContext.clearCallStack;
     while length(callStack)>0 do callStackPop();
   end;
 
-PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
+PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
+  VAR totalMessage:T_arrayOfString;
   begin
-    adapters^.raiseError('Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100)+suffix,location);
+    totalMessage:='Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100);
+    if length(suffix)>0 then append(totalMessage,suffix);
+    adapters^.raiseError(totalMessage,location);
     if missingMain then adapters^.logMissingMain;
   end;
 

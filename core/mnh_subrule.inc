@@ -521,7 +521,7 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
       end;
       context.cascadeDisposeToken(firstRep);
     end else begin
-      context.raiseCannotApplyError('function',params,callLocation);
+      context.raiseCannotApplyError('function',params,callLocation,C_EMPTY_STRING_ARRAY);
       result:=nil;
     end;
   end;

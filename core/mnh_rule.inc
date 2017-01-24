@@ -28,7 +28,7 @@
       {$ifdef fullVersion}
       FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
       {$endif}
-      FUNCTION getCmdLineHelpText:ansistring;
+      FUNCTION getCmdLineHelpText:T_arrayOfString;
       FUNCTION getDocTxt:ansistring;
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
@@ -292,12 +292,13 @@ FUNCTION T_rule.complainAboutUnused(VAR adapters:T_adapters):boolean;
   end;
 {$endif}
 
-FUNCTION T_rule.getCmdLineHelpText:ansistring;
+FUNCTION T_rule.getCmdLineHelpText:T_arrayOfString;
   VAR i:longint;
+      txt:string;
   begin
-    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
-    for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getCmdLineHelpText();
-    result:=join(formatTabs(split(result)),LineEnding);
+    txt:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
+    for i:=0 to length(subrules)-1 do txt:=txt+C_lineBreakChar+subrules[i]^.getCmdLineHelpText();
+    result:=formatTabs(split(txt));
   end;
 
 FUNCTION T_rule.getDocTxt:ansistring;
