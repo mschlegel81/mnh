@@ -614,10 +614,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
                       .appendReal(timeSpent_exclusive*1E3),false);
         showProfilingTableCallback(data);
         disposeLiteral(data);
-        for j:=0 to adapters^.adapterCount-1 do if adapters^.getAdapter(j)^.adapterType=at_gui then begin
-          adapters^.logDisplayTable;
-          break;
-        end;
+        adapters^.logDisplayTable;
       end;
 
       for i:=0 to length(lines)-1 do adapters^.logTimingInfo(lines[i]);
