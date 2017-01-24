@@ -683,6 +683,7 @@ OPERATOR :=(CONST x:T_messageTypeSet):qword;
       mask[i]:=mt in x;
       dec(i);
     end;
+    result:=0;
     move(mask,result,sizeOf(qword));
   end;
 
@@ -691,6 +692,7 @@ OPERATOR :=(x:qword):T_messageTypeSet;
       mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
       i:longint;
   begin
+    initialize(mask);
     move(x,mask,sizeOf(qword));
     i:=length(mask)-1;
     result:=[];
