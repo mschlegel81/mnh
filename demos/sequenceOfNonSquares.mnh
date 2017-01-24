@@ -1,0 +1,13 @@
+nonSquares(n)->n + floor(1/2 + sqrt(n));
+
+main-> begin
+  print('OEIS: A000037 starts with ',nonSquares([1..22]).join(", "),", ...");
+  local seriesElements:=nonSquares([1..1000000]);
+  local squares:=[0..seriesElements.trailing.sqrt.ceil].sqr;
+  local squaresInSeries:=seriesElements.intersect(squares);
+  print('  The series contains ',squaresInSeries==[] ? 'no ' : '','squares');
+  local nonSquaresInRange:=[seriesElements.head..seriesElements.trailing].minus(squares);
+  nonSquaresInRange.toList==seriesElements
+  ? print('  The series contains all non-square integers')
+  : print('  Some non-square integers are missing: ',);
+end;
