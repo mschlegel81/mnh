@@ -7,7 +7,7 @@ main-> begin
   local squaresInSeries:=seriesElements.intersect(squares);
   print('  The series contains ',squaresInSeries==[] ? 'no ' : '','squares');
   local nonSquaresInRange:=[seriesElements.head..seriesElements.trailing].minus(squares);
-  nonSquaresInRange.toList==seriesElements
+  nonSquaresInRange==seriesElements.toSet
   ? print('  The series contains all non-square integers')
   : print('  Some non-square integers are missing: ',);
 end;
