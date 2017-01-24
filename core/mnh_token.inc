@@ -1065,8 +1065,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         try
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if (P_rule(first^.data)^.id=MAIN_RULE_ID)
-            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,LineEnding+P_rule(first^.data)^.getCmdLineHelpText,true)
-            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location);
+            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
+            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
             exit;
           end;
         except
@@ -1114,7 +1114,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
         end else if not(context.adapters^.noErrors) then exit else begin
-          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
+          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
           exit;
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin

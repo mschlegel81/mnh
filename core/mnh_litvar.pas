@@ -223,6 +223,7 @@ TYPE
       CONSTRUCTOR create(CONST initialSize:longint);
       DESTRUCTOR destroy; virtual;
       FUNCTION hash: T_hashInt; virtual;
+      FUNCTION equals(CONST other: P_literal): boolean; virtual;
       FUNCTION isKeyValuePair:boolean;
       FUNCTION isFlat:boolean; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
@@ -265,6 +266,7 @@ TYPE
       FUNCTION isFlat:boolean; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
       FUNCTION hash: T_hashInt; virtual;
+      FUNCTION equals(CONST other: P_literal): boolean; virtual;
       FUNCTION newOfSameType:P_collectionLiteral; virtual;
       FUNCTION size:longint;        virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
@@ -289,6 +291,7 @@ TYPE
       PROCEDURE dropManifestation;
     public
       FUNCTION hash: T_hashInt; virtual;
+      FUNCTION equals(CONST other: P_literal): boolean; virtual;
       FUNCTION size:longint;        virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
@@ -1191,7 +1194,7 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType;
         if (literalType in C_emptyCompoundTypes) and (other^.literalType in C_emptyCompoundTypes) then result:=true
         else begin
           result:=(size=P_compoundLiteral(other)^.size);
-          for i:=0 to size-1 do result:=result and value[i]^.isInRelationTo(tt_comparatorListEq,P_compoundLiteral(other)^[i]);
+          if not(equals(other)) then for i:=0 to size-1 do result:=result and value[i]^.isInRelationTo(tt_comparatorListEq,P_compoundLiteral(other)^[i]);
         end;
         if relation=tt_comparatorNeq then result:=not(result);
       end;
@@ -1330,6 +1333,41 @@ FUNCTION T_compoundLiteral.equals(CONST other: P_literal): boolean;
     if (other^.literalType<>literalType) or (P_compoundLiteral(other)^.size<>size) then exit(false);
     result:=true;
     for i:=0 to size-1 do if not(value[i]^.equals(P_compoundLiteral(other)^[i])) then exit(false);
+  end;
+
+FUNCTION T_listLiteral.equals(CONST other:P_literal):boolean;
+  VAR i:longint;
+  begin
+    if (@self = other) then exit(true);
+    if (other^.literalType<>literalType) or (P_compoundLiteral(other)^.size<>size) then exit(false);
+    result:=true;
+    for i:=0 to fill-1 do if not(dat[i]^.equals(P_listLiteral(other)^.dat[i])) then exit(false);
+  end;
+
+FUNCTION T_setLiteral.equals(CONST other:P_literal):boolean;
+  VAR iter:T_arrayOfLiteral;
+      sub:P_literal;
+  begin
+    if (@self = other) then exit(true);
+    if (other^.literalType<>literalType) or (P_compoundLiteral(other)^.size<>size) then exit(false);
+    result:=true;
+    iter:=dat.keySet;
+    for sub in iter do if not(P_setLiteral(other)^.dat.get(sub,false)) then exit(false);
+  end;
+
+FUNCTION T_mapLiteral.equals(CONST other:P_literal):boolean;
+  VAR entries:T_literalKeyLiteralValueMap.KEY_VALUE_LIST;
+      entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+      otherValue:P_literal;
+  begin
+    if (@self = other) then exit(true);
+    if (other^.literalType<>literalType) or (P_compoundLiteral(other)^.size<>size) then exit(false);
+    result:=true;
+    entries:=dat.keyValueList;
+    for entry in entries do begin
+      otherValue:=P_mapLiteral(other)^.dat.get(entry.key,nil);
+      if (otherValue=nil) or not(entry.value^.equals(otherValue)) then exit(false);
+    end;
   end;
 //=====================================================================:?.equals
 

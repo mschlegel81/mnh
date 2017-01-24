@@ -997,7 +997,7 @@ FUNCTION T_package.getHelpOnMain:ansistring;
     then exit('The package contains no main rule')
     else begin
       result:='Try one of the following:'+LineEnding;
-      docText:=split(mainRule^.getCmdLineHelpText,C_lineBreakChar);
+      docText:=mainRule^.getCmdLineHelpText;
       for i:=0 to 1 do result:=result+LineEnding+docText[i];
       dropFirst(docText,2);
       result:=result+LineEnding+join(formatTabs(docText),LineEnding);

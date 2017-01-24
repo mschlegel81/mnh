@@ -43,12 +43,10 @@ TYPE
     PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     { private declarations }
-    requested,current:record
-      literal:P_listLiteral;
-      headerData:T_arrayOfString;
-      caption:string;
-      firstIsHeader:boolean;
-    end;
+    literal:P_listLiteral;
+    headerData:T_arrayOfString;
+    firstIsHeader:boolean;
+
     displayPending:boolean;
     sorted:record
       ascending:boolean;
@@ -137,28 +135,16 @@ PROCEDURE setupCallbacks;
 
 PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
-    current.literal:=nil;
-    requested.literal:=nil;
+    literal:=nil;
   end;
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    if current.literal<>nil then begin
-      disposeLiteral(current.literal);
-      current.literal:=nil;
-    end;
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
   begin
-    if current.literal<>nil then begin
-      disposeLiteral(current.literal);
-      current.literal:=nil;
-    end;
-    if requested.literal<>nil then begin
-      disposeLiteral(requested.literal);
-      requested.literal:=nil;
-    end;
+    if literal<>nil then disposeLiteral(literal);
   end;
 
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -224,9 +210,9 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   VAR newLiteral:P_listLiteral;
   begin
     mi_transpose.Checked:=not(mi_transpose.Checked);
-    newLiteral:=current.literal^.transpose(@emptyStringSingleton);
-    disposeLiteral(current.literal);
-    current.literal:=newLiteral;
+    newLiteral:=literal^.transpose(@emptyStringSingleton);
+    disposeLiteral(literal);
+    literal:=newLiteral;
     fillTable;
   end;
 
@@ -239,22 +225,22 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
     dummyLocation.package:=nil;
     dummyLocation.column:=0;
     dummyLocation.line:=0;
-    if not(IsColumn) or (current.firstIsHeader and mi_transpose.Checked) then exit;
+    if not(IsColumn) or (firstIsHeader and mi_transpose.Checked) then exit;
     with sorted do if byColumn=index then begin
       byColumn:=index;
       ascending:=not(ascending);
 
-      newLiteral:=newListLiteral;
-      for i:=current.literal^.size-1 downto 0 do
-      newLiteral^.append(current.literal^[i],true);
-      disposeLiteral(current.literal);
-      current.literal:=newLiteral;
+      newLiteral:=newListLiteral(literal^.size);
+      for i:=literal^.size-1 downto 0 do
+      newLiteral^.append(literal^[i],true);
+      disposeLiteral(literal);
+      literal:=newLiteral;
     end else begin
       byColumn:=index;
       ascending:=true;
 
       tempAdapters.create;
-      current.literal^.sortBySubIndex(index,dummyLocation,tempAdapters);
+      literal^.sortBySubIndex(index,dummyLocation,tempAdapters);
       tempAdapters.destroy;
     end;
     fillTable;
@@ -273,35 +259,28 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_compoundLiteral; CONST newCaptio
       ascending:=false;
       byColumn:=-1;
     end;
-
-    if requested.literal<>nil then disposeLiteral(requested.literal);
-
-    requested.firstIsHeader:=firstIsHeader_;
-    if requested.firstIsHeader and (L^.size>0) and (L^[0]^.literalType in C_listTypes) then begin
+    firstIsHeader:=firstIsHeader_;
+    if firstIsHeader and (L^.size>0) and (L^[0]^.literalType in C_listTypes) then begin
       headerLiteral:=P_listLiteral(L^[0]);
-      setLength(requested.headerData,headerLiteral^.size);
+      setLength(headerData,headerLiteral^.size);
       for i:=0 to headerLiteral^.size-1 do case headerLiteral^[i]^.literalType of
-        lt_string: requested.headerData[i]:=P_stringLiteral(headerLiteral^[i])^.value
-        else       requested.headerData[i]:=                headerLiteral^[i]^.toString;
+        lt_string: headerData[i]:=P_stringLiteral(headerLiteral^[i])^.value
+        else       headerData[i]:=                headerLiteral^[i]^.toString;
       end;
-      requested.literal:=P_listLiteral(L)^.tail;
+      literal:=P_listLiteral(L)^.tail;
     end else begin
-      setLength(requested.headerData,0);
-      requested.literal:=P_listLiteral(L^.rereferenced);
+      setLength(headerData,0);
+      literal:=P_listLiteral(L^.rereferenced);
     end;
 
     displayPending:=true;
-    requested.caption:=newCaption;
+    caption:=newCaption;
   end;
 
 PROCEDURE TtableForm.conditionalDoShow;
   begin
     if displayPending then begin
       displayPending:=false;
-      caption:=requested.caption;
-      if current.literal<>nil then disposeLiteral(current.literal);
-      current:=requested;
-      requested.literal:=nil;
       Show;
       fillTable;
     end;
@@ -317,7 +296,7 @@ PROCEDURE TtableForm.fillTable;
 
   FUNCTION getHeaderCell(CONST i:longint):string;
     begin
-      if (current.firstIsHeader) and (i>=0) and (i<length(current.headerData)) then result:=current.headerData[i] else result:='';
+      if (firstIsHeader) and (i>=0) and (i<length(headerData)) then result:=headerData[i] else result:='';
       if not(mi_transpose.Checked) and (sorted.byColumn=i) then begin
         if sorted.ascending then result:=result+' v'
                             else result:=result+' ^';
@@ -325,21 +304,20 @@ PROCEDURE TtableForm.fillTable;
     end;
 
   begin
-    if current.literal=nil then exit;
-    dataRows:=current.literal^.size;
+    dataRows:=literal^.size;
     setLength(cellContents,dataRows);
-    if current.literal^.literalType=lt_stringList then begin
-      for i:=0 to current.literal^.size-1 do begin
-        cellContents[i]:=split(P_stringLiteral(current.literal^[i])^.value,C_tabChar);
+    if literal^.literalType=lt_stringList then begin
+      for i:=0 to literal^.size-1 do begin
+        cellContents[i]:=split(P_stringLiteral(literal^[i])^.value,C_tabChar);
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
       end;
     end else begin
-      for i:=0 to current.literal^.size-1 do begin
-        rowLit:=current.literal^[i];
-        if rowLit^.literalType in C_listTypes then begin
-          setLength(cellContents[i],P_listLiteral(rowLit)^.size);
-          for j:=0 to P_listLiteral(rowLit)^.size-1 do begin
-            cellLit:=P_listLiteral(rowLit)^[j];
+      for i:=0 to literal^.size-1 do begin
+        rowLit:=literal^[i];
+        if rowLit^.literalType in C_compoundTypes then begin
+          setLength(cellContents[i],P_compoundLiteral(rowLit)^.size);
+          for j:=0 to P_compoundLiteral(rowLit)^.size-1 do begin
+            cellLit:=P_compoundLiteral(rowLit)^[j];
             case cellLit^.literalType of
               lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
               lt_real,lt_realList,lt_numList:if mi_comma.Checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
@@ -364,7 +342,7 @@ PROCEDURE TtableForm.fillTable;
     end;
     StringGrid.clear;
 
-    if current.firstIsHeader and mi_transpose.Checked then begin
+    if firstIsHeader and mi_transpose.Checked then begin
       StringGrid.RowCount:=dataRows+1;
       StringGrid.ColCount:=dataColumns+1;
       StringGrid.FixedCols:=1;

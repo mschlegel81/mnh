@@ -292,7 +292,7 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     antialiasedFonts:=stream.readBoolean;
     mainForm.loadFromStream(stream);
     outputBehaviour:=stream.readNaturalNumber;
-    outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
+    outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline,mt_displayTable,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_reloadRequired,mt_plotSettingsChanged];
     doResetPlotOnEvaluation := stream.readBoolean;
     saveIntervalIdx:=stream.readByte;
     wordWrapEcho:=stream.readBoolean;

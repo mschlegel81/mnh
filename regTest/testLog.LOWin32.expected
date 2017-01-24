@@ -704,6 +704,11 @@ Call with any string parameter for continuous run.
   _/      _/    _/        _/          _/      _/      _/  _/      _/      _/      
  _/      _/  _/                      _/    _/            _/      _/    _/        
   _/_/_/    _/_/_/_/_/      _/_/_/_/    _/                _/_/_/    _/          
+***** commaQuibble *****
+{}
+{ABC}
+{ABC and DEF}
+{ABC, DEF, G and H}
 ***** concatInts *****
 998764543431
 6054854654
@@ -1700,6 +1705,10 @@ Consolidation of [{A,B} {C,D} {D,B}]
               is [{A,B,C,D}]
 Consolidation of [{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]
               is [{f,g,h,i,k},{a,b,c,d}]
+***** sequenceOfNonSquares *****
+OEIS: A000037 starts with 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, ...
+  The series contains no squares
+  The series contains all non-square integers
 ***** shannonEntropy *****
 1.84643934467102
 ***** sierpinskiCarpet *****
