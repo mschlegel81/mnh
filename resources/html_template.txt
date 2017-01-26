@@ -177,7 +177,6 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
 </ul>
 <li><h4><a href="#listOps"> List operators </a></h4></li>
 <li><h4><a href="#iifOps"> The ternary inline-if operator</a></h4></li>
-<li><h4><a href="#typecheckOps"> Type check operators</a></h4></li>
 <li><h4><a href="#assignmentOps"> Assignment operators</a></h4></li>
 <li><h4><a href="#cStyleOps"> C-Style operators</a></h4></li>
 <li><h4><a href="#funcToExp"> Function-to-Expression</a></h4></li>
@@ -204,14 +203,14 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
 <tr><td><code>+</code></td><td>4</td><td> plus</td></tr>
 <tr><td><code>-</code></td><td>4</td><td> minus</td></tr>
 <tr><td><code>&</code></td><td>5</td><td> string concatenation</td></tr>
-<tr><td><code>=</code></td><td>6</td><td> equals</td></tr>
+<tr><td><code>=</code></td><td>6</td><td> equals (mathematical)</td></tr>
 <tr><td><code><></code></td><td>6</td><td> not equals</td></tr>
 <tr><td><code>!=</code></td><td>6</td><td> not equals</td></tr>
 <tr><td><code><=</code></td><td>6</td><td> lesser/equals</td></tr>
 <tr><td><code>>=</code></td><td>6</td><td> greater/equals</td></tr>
 <tr><td><code><</code></td><td>6</td><td> lesser</td></tr>
 <tr><td><code>></code></td><td>6</td><td> greater</td></tr>
-<tr><td><code>==</code></td><td>6</td><td> list equals</td></tr>
+<tr><td><code>==</code></td><td>6</td><td> equals (technical)</td></tr>
 <tr><td><code>in</code></td><td>7</td><td> in</td></tr>
 <tr><td><code>+</code></td><td>8</td><td> unary plus</td></tr>
 <tr><td><code>-</code></td><td>8</td><td> unary minus</td></tr>
@@ -236,11 +235,14 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
 
 <h3><br><a name="scalarOps"> Scalar operators<a></h3>
 Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
-All of those operators apart from <code>==</code>, <code>AND</code>, <code>OR</code> and <code>orElse</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
-[<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span>  <span class="identifier">y</span>          <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="operator">...</span>]
- <span class="identifier">x</span>          <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> [<span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
-[<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
-</code>The last one will work if (and only if) both operators have the same number of list elements.<br>
+All of those operators apart from <code>==</code>, <code><span class="operator">AND</span></code>, <code><span class="operator">OR</span></code> and <code><span class="operator">orElse</span></code> are overloaded for lists and sets according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
+  [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>]       <span class="operator">o</span>  <span class="identifier">y</span>                <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="operator">...</span>]
+   <span class="identifier">x</span>                <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>]       <span class="operator">-></span> [<span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
+  [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>]       <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>]       <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
+  [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>].toSet <span class="operator">o</span>  <span class="identifier">y</span>                <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="operator">...</span>].toSet
+   <span class="identifier">x</span>                <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>].toSet <span class="operator">-></span> [<span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>].toSet
+  [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>].toSet <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>].toSet <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>, <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>].toSet
+</code>List operators will work only if both operands have the same number of list elements.<br>
 While this is handy in most situations, there are some counter intutive consequences:<ul>
   <li> Lazy boolean operators behave differently from non-lazy operators (see <a href="#logOps"> Logical operators </a>)</li>
   <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g. <code>
@@ -248,9 +250,12 @@ While this is handy in most situations, there are some counter intutive conseque
   [1,2]=[1,2] -> [true,true]
 <!--end-->
 </code>
-As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are equal, e.g. <code>
+As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are <i>technically</i> equal.
+Alternatively the resulting list of booleans could be <code>and</code>-aggregated: <code>
 <!--mnh-->
-  [1,2]==[1,2] -> true
+   [1,2]==[1,2  ]           -> true
+   [1,2]==[1,2.0]           -> false
+  ([1,2]= [1,2.0]).agg(and) -> true
 <!--end-->
 </code>
   </li>
@@ -285,7 +290,7 @@ out> "ab"
 
  in> [1,2,3]+[5,6]
 <!--end-->
-<span class="red">!! >Ev.Error:  :?,? Invalid list lengths 3 and 2 given for operator +</span>
+<span class="error">Error @<new 7>:1,8 Operator + cannot be applied to operands of type intList(3) and intList(2)</span>
 </code>
 </td></tr>
 <tr><td><code>-</code></td><td><h5>Subtraction</h5></td></tr><tr><td></td><td>
@@ -340,20 +345,13 @@ out> -3
 </table>
 
 <h4><br><a name="compOps"> Comparators</a></h4>
-Comparators are implemented, so that they return a boolean or a list of booleans for most cases, the only exception being comparison of lists of incompatible sizes.<br>
-Consequently all comparators <code>o</code> must be read as<code>
-x o y -> [x and y are naively comparable] and (x o y)</code><br>
-As a further consequence, the following expressions will return the same result only if x and y are comparable:<code>
-<!--mnh-->
-x > y
-not(x<=y)
-<!--end-->
-</code><br>
+Most comparators (the exception being <code>==</code>) are implemented, so that they return a boolean or a collection of booleans for <i>comparable</i> types.
+Collections are comparable if they contain comparable types. For lists an additional requirement is equal length.<br>
 Comparators can be used as in mathematical notation, e.g. <code>
 <!--mnh-->
 x < y < z
 <!--end-->
-</code> is identical to <code>
+</code> behaves identical to <code>
 <!--mnh-->
 x < y and y < z
 <!--end-->
@@ -375,53 +373,59 @@ out> [true,false,false]
  in> [7,8,9]=[7,8,9]
 out> [true,true,true]
  in> "a"=3
-out> false
 <!--end-->
+<span class="error">Error: Incompatible comparands string and int</span>
 </code></td></tr>
-<tr><td><code>==</code></td><td><h5>List equals</h5></td></tr><tr><td></td><td>
-Returns a scalar boolean.<br>Returns true if the comparands are comparable, have the same number of list elements and all list elements are equal.<br>
+<tr><td><code>==</code></td><td><h5>List equals or techical equals</h5></td></tr><tr><td></td><td>
+Returns a scalar boolean.<br>Returns true if the comparands are technically equal, which means that they have the same type and identical value. <br>
+For compound types:
 <code>
 <!--mnh-->
-[x0,x1,...] == [y0,y1,...]  ->  x0 == y0 AND x1 == y1 AND ...
+  listX==listY -> listX.typeOf == listY.typeOf 
+              AND listX.size   == listY.size
+              AND listX.each(x,x==listY[index],AND);
+
+  setX==setY -> setX.typeOf == setY.typeOf
+            AND setX.size   == setY.size
+            AND setX.each(x,x in setY);
+  
+  mapX==mapY -> mapX.size == mapY.size
+            AND mapX.each(entry,mapY.get(entry[0])==entry[1],AND);   
 <!--end-->
 </code>
-For scalars the behavior is the same as the scalar equals'.<br>Examples: <code>
-<!--mnh-->
- in> 1==1
-out> true
- in> 2==2.0
-out> true
- in> 3==[3]
-out> false
- in> 4==[4,5,6]
-out> false
- in> [7,8,9]==[7,8,9]
-out> true
- in> "a"==3
-out> false
-<!--end-->
-</code></td></tr>
-<tr><td><code><></code>, <code>!=</code></td><td><h5>Not equals</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and not equal.<br>
-In conjuction with equals, one might define a function to find out if two variables are comparable:<br><code>
-<!--mnh-->
- in> allTrue(x)->x==true OR trueCount(x)=size(x)
- in> areComparable(x,y)->allTrue(x=y or x<>y)
 
- in> areComparable(3,4.0)
-out> true
- in> areComparable(3,[1,2,"a"])
-out> false
+For scalars the behavior is mostly the same as the scalar equals', the exception being comparisons with Not-a-number and mixed integer-real comparisons<br>Examples: <code>
+<!--mnh-->
+   in> Nan= Nan;
+  out> false
+   in> Nan==Nan;
+  out> false
+   in> 3= 3.0;
+  out> true
+   in> 3==3.0;
+  out> true
 <!--end-->
+</code>
+Additionally <code>==</code> will not result in an error, even for incomparable types:<code>
+<!--mnh-->
+   in> 'a'==1;
+  out> false
+   in> 'a'= 1;
+<!--end-->
+  <span class="error">Error: Incompatible comparands string and int</span>
+</code>
+</td></tr>
+<tr><td><code><></code>, <code>!=</code></td><td><h5>Not equals</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are not (mathematically) equal.<br>
 </code></td></tr>
 <tr><td><code>> </code></td><td><h5>Greater than</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is lesser than the right hand operand.</td></tr>
 <tr><td><code>< </code></td><td><h5>Lesser than</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is greater than the right hand operand.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is greater than the right hand operand.</td></tr>
 <tr><td><code>>=</code></td><td><h5>Greater-or-equal</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is greater than the right hand operand or both comparands are equal.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is greater than the right hand operand or both comparands are equal.</td></tr>
 <tr><td><code><=</code></td><td><h5>Lesser-or-equal</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand or both comparands are equal.</td></tr>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are the left hand comparand is lesser than the right hand operand or both comparands are equal.</td></tr>
 </table>
 
 <h4><br><a name="logOps">Logical operators</a></h4>
@@ -429,41 +433,41 @@ Returns a boolean or a list of booleans.<br>Returns true if the comparands are c
 <tr><td><code>and</code></td><td><h5>Logical or bitwise and</h5></td></tr><tr><td></td><td>
 Examples: <code>
 <!--mnh-->
- in> true and false
-out> false
- in> 3 and 6
-out> 2
- in> 1 and [1..5]
-out> [1,0,1,0,1]
- in> false and 3
+   in> true and false
+  out> false
+   in> 3 and 6
+  out> 2
+   in> 1 and [1..5]
+  out> [1,0,1,0,1]
+   in> false and 3
 <!--end-->
-<span class="red">!! >Ev.Error:  :?,? Operator and is not supported for types boolean and int</span>
+  <span class="error">Error: Operator and is not supported for types boolean and int</span>
 </code></td></tr>
 <tr><td><code>or</code></td><td><h5>Logical or bitwise or</h5></td></tr><tr><td></td><td>
 Examples: <code>
 <!--mnh-->
- in> true or false
-out> true
- in> 3 or 6
-out> 7
- in> 1 or [1..5]
-out> [1,3,3,5,5]
- in> false or 3
+   in> true or false
+  out> true
+   in> 3 or 6
+  out> 7
+   in> 1 or [1..5]
+  out> [1,3,3,5,5]
+   in> false or 3
 <!--end-->
-<span class="red">!! >Ev.Error:  :?,? Operator or is not supported for types boolean and int</span>
+  <span class="error">Error: Operator or is not supported for types boolean and int</span>
 </code></td></tr>
 <tr><td><code>xor</code></td><td><h5>Logical or bitwise exclusive-or</h5></td></tr><tr><td></td><td>
 Examples: <code>
 <!--mnh-->
- in> true xor false
-out> true
- in> 3 xor 6
-out> 5
- in> 1 xor [1..5]
-out> [0,3,2,5,4]
- in> false xor 3
+   in> true xor false
+  out> true
+   in> 3 xor 6
+  out> 5
+   in> 1 xor [1..5]
+  out> [0,3,2,5,4]
+   in> false xor 3
 <!--end-->
-<span class="red">!! >Ev.Error:  :?,? Operator xor is not supported for types boolean and int</span>
+  <span class="error">Error: Operator xor is not supported for types boolean and int</span>
 </code></td></tr>
 <tr><td><code>AND</code></td><td><h5>Logical lazy and</h5></td></tr><tr><td></td><td>
 Lazy operators are executed <i>extremely</i> lazy. The left-hand-side operand must be a scalar boolean.
@@ -553,14 +557,14 @@ However the result does not have to be a flat list; e.g.<code>
 
 <tr><td><code>in</code></td><td><h5>in-operator</h5></td></tr><tr><td></td><td>
 The in-operator (inspired by SQL) tests, if the left hand side operand is contained in the right hand side operand.<br>
-For obvious reasons the right hand side operands must be a list.<br>
+For obvious reasons the right hand side operands must be a compound type.<br>
 <code>
 <!--mnh-->
-x in [y0,y1,...] -> x==y0 or x==y1 or ...;
+  x in [y0,y1,...] -> x==y0 or x==y1 or ...;
 <!--end-->
 </code> or, if you are already famliar with the <a href="specials.html#each">each-construct</a>:<code>
 <!--mnh-->
-x in Y -> Y.each(y,x==y,OR);
+  x in Y -> Y.each(y,x==y,OR);
 <!--end-->
 </code>
 </td></tr>
@@ -590,54 +594,6 @@ The ternary inline-if operator is inspired by C and it's successors.<br>Syntax i
 the result if <code>B</code> evaluates to false.<br>
 Note that <code>B</code> must be a boolean scalar; boolean lists are not allowed.<br>
 Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</code> is true and <code>Y</code> is evaluated only if <code>B</code> is false.
-
-<h3><br><a name="typecheckOps"> Type check operators</a></h3>
-Type check operators can be employed to test a value or an expression for it's type; they are only allowed in declaration patterns.
-<br>The following type checks are defined:<code>
-<!--mnh-->
-  :scalar
-  :list
-  :boolean
-  :booleanList
-  :int
-  :intList
-  :real
-  :realList
-  :string
-  :stringList
-  :numeric
-  :numericList
-  :keyValueList
-  :expression
-<!--end-->
-</code><br>
-Every type check corresponds to a builtin rule <b><code>is...</code></b>.<br>
-Examples: <code>
-<!--mnh-->
-   in> checkedType(x)->
-         (x.isScalar      ? 'scalar'      : void)|
-         (x.isList        ? 'list'        : void)|
-         (x.isBoolean     ? 'boolean'     : void)|
-         (x.isBooleanList ? 'booleanList' : void)|
-         (x.isInt         ? 'int'         : void)|
-         (x.isIntList     ? 'intList'     : void)|
-         (x.isReal        ? 'real'        : void)|
-         (x.isRealList    ? 'realList'    : void)|
-         (x.isString      ? 'string'      : void)|
-         (x.isStringList  ? 'stringList'  : void)|
-         (x.isNumeric     ? 'numeric'     : void)|
-         (x.isNumericList ? 'numericList' : void)|
-         (x.isKeyValueList? 'keyValueList': void)|
-         (x.isExpression  ? 'expression'  : void);
-
-   in> checkedType(3)
-  out> ["scalar","int","numeric"]
-   in> checkedType([1, 2.4, 5])
-  out> ["list","numericList"]
-   in> checkedType(["A", true, 5])
-  out> ["list"]
-<!--end-->
-</code>
 
 <h3><br><a name="assignmentOps"> Assignment operators</a></h3>
 For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs with side effects.
@@ -850,12 +806,36 @@ A less reasonable example would be the following declaration - a "random" number
 </code>
 <h3><br><a name="restrictions">Parameter restrictions</a></h3>
 Parameter restrictions fall in three categories:<ul>
-  <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>) or custom type checks (see <a href="#typeMod">type</a>)
-  <li> Comparison with a literal (see <a href="operators.html#compOps"> Comparators</a>)
+  <li> Type checks or custom type checks (see <a href="#typeMod">type</a>)
+  <li> Comparison with a literal using <a href="operators.html#compOps"> Comparators</a> or <a href="operators.html#listOps"><code>in</code></a>
   <li> Comparison with another parameter
 </ul>
+<br>The following type checks are defined as unary (postfix) operator:<code>
+<!--mnh-->
+  :scalar    :list          :set           :collection
+  :boolean   :booleanList   :booleanSet    :booleanCollection
+  :int       :intList       :intSet        :intCollection
+  :real      :realList      :realSet       :realCollection
+  :string    :stringList    :stringSet     :stringCollection
+  :numeric   :numericList   :numericSet    :numericCollection
+             :map
+             :expression
+<!--end-->
+</code><br>
+All typechecks in columns 2,3 and 4 can be modified to accept a compound type with a specified number of elements or an expression, which can be applied to
+a given number of parameters, e.g.: <code>
+<!--mnh-->
+  apply(f:expression(1),parameter)->f(parameter);
+  
+  cross(x:numericList(3),y:numericList(3))->
+    [x[1]*y[2]-y[1]*x[2],
+     x[2]*y[0]-y[2]*x[0],
+     x[0]*y[1]-y[0]*x[1]];
+<!--end-->
+</code><br>
+
 Apart from the type checks defined as unary operator there are two type checks which look like comparisons:<ul>
-  <li> <code>x=[]</code> matches, if x is an empty list
+  <li> <code>x==[]</code> matches, if x is an empty list
   <li> <code>x<>[]</code> matches, if x is a list but not empty
 </ul>
 If a rule has several subrules (i.e. there are several declarations with the same ID), the subrules are tested in order of their declaration and the first matching subrule will be applied.<br>
@@ -1091,18 +1071,32 @@ Expression literals returned by a function are constructed on the fly. Consequen
   f(a,b)->{a+b*$x}
 <!--end-->
 </code> will return a linear scalar function.<br>
-Expressions allow for anonymous recursion via the <code>$self</code> pseudo-literal, e.g. (Fibonacci numbers again):<code>
-<!--mnh-->
-  fib:={$i<=1 ? 1 : $self($i-1)+$self($i-2)};
-<!--end-->
-</code>
 Instead of using parameters like <code>$x</code> you can also refer to parameters by their (zero based) index. For example the following functions are equivalent:<code>
 <!--mnh-->
   f1:={$x**$y};
   f2:={$0**$1};
 <!--end-->
 </code>
-Adressing parameters by their index is recommended for expressions in <a href="formatStrings.html">format strings</a>.
+Adressing parameters by their index is recommended for expressions in <a href="formatStrings.html">format strings</a>.<br>
+Note the special behavior of operations on expressions:<code>
+<!--mnh-->
+   in> {$x}+1;
+  out> {$x+1}
+  
+   in> {$x}+{1};
+  out> {$x+1}
+  
+   in> sqr({$x}); //some functions can be inlined in expressions
+  out> {sqr($x)}
+  
+   in> {$x}+{$y}; //not quiet intuitive, but same as below
+  out> {$x+$x}
+
+   in> {$0}+{$0}; //as above but more intuitive
+  out> {$0+$0}
+<!--end-->
+</code>
+
 <h4><br><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
 <!--mnh-->

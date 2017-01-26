@@ -1107,31 +1107,37 @@ FUNCTION T_literal.isInRelationTo(CONST relation: T_tokenType; CONST other: P_li
 FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovl: boolean;
   begin
-    if (relation=tt_operatorIn) and (other^.literalType in C_compoundTypes) and (P_compoundLiteral(other)^.contains(@self)) then exit(true);
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_boolean]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
     if other^.literalType<>lt_boolean then exit(false);
     ovl:=P_boolLiteral(other)^.val;
-    result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
-           or (val<ovl) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-           or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+    result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorLeq, tt_comparatorGeq])
+         or (val<ovl) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+         or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
 FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovi: int64;
       ovr: T_myFloat;
   begin
-    if (relation=tt_operatorIn) and (other^.literalType in C_compoundTypes) and (P_compoundLiteral(other)^.contains(@self)) then exit(true);
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_int]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
     case other^.literalType of
       lt_int: begin
         ovi:=P_intLiteral(other)^.val;
-        result:=(val=ovi) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
-               or (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-               or (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        result:=(val=ovi) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       lt_real: begin
         ovr:=P_realLiteral(other)^.val;
-        result:=(val=ovr) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
-               or (val<ovr) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-               or (val>ovr) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        result:=(val=ovr) and (relation in [tt_comparatorEq, tt_comparatorLeq, tt_comparatorGeq])
+             or (val<ovr) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>ovr) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       else result:=false;
     end;
@@ -1141,19 +1147,22 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
   VAR ovi: int64;
       ovr: T_myFloat;
   begin
-    if (relation=tt_operatorIn) and (other^.literalType in C_compoundTypes) and (P_compoundLiteral(other)^.contains(@self)) then exit(true);
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_real]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
     case other^.literalType of
       lt_int: begin
         ovi:=P_intLiteral(other)^.val;
-        result:=(val=ovi) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
-               or (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-               or (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        result:=(val=ovi) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       lt_real: begin
         ovr:=P_realLiteral(other)^.val;
-        result:=(val=ovr) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
-               or (val<ovr) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-               or (val>ovr) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        result:=(val=ovr) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (val<ovr) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>ovr) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       else result:=false;
     end;
@@ -1162,10 +1171,13 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
 FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovl: ansistring;
   begin
-    if (relation=tt_operatorIn) and (other^.literalType in C_compoundTypes) and (P_compoundLiteral(other)^.contains(@self)) then exit(true);
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_string]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
     if other^.literalType<>lt_string then exit(false);
     ovl:=P_stringLiteral(other)^.val;
-    result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
+    result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorLeq, tt_comparatorGeq])
          or (val<ovl) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
          or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
@@ -1173,34 +1185,28 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
 FUNCTION T_expressionLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR myTxt,otherTxt:ansistring;
   begin
-    if (relation=tt_operatorIn) and (other^.literalType in C_compoundTypes) and (P_compoundLiteral(other)^.contains(@self)) then exit(true);
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_expression]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
     if other^.literalType<>lt_expression then exit(false);
-    if (relation in [tt_comparatorEq,tt_comparatorListEq]) and equals(other) then exit(true);
     myTxt   :=toString;
     otherTxt:=other^.toString;
-    result:=(myTxt=otherTxt) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
+    result:=(myTxt=otherTxt) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
          or (myTxt<otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
          or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
 FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType;
   CONST other: P_literal): boolean;
-  VAR i:longint;
   begin
     if not(other^.literalType in C_compoundTypes) then exit(false);
     case relation of
       tt_operatorIn: result:=P_compoundLiteral(other)^.contains(@self);
       tt_comparatorListEq,tt_comparatorNeq: begin
-        if (literalType in C_emptyCompoundTypes) and (other^.literalType in C_emptyCompoundTypes) then result:=true
-        else begin
-          result:=(size=P_compoundLiteral(other)^.size);
-          if result then begin
-            result:=equals(other);
-            if (literalType<>other^.literalType) or (literalType in [lt_list,lt_numList,lt_set,lt_numSet]) then begin
-              for i:=0 to size-1 do result:=result and value[i]^.isInRelationTo(tt_comparatorListEq,P_compoundLiteral(other)^[i]);
-            end;
-          end;
-        end;
+        if (literalType in C_emptyCompoundTypes) and (other^.literalType in C_emptyCompoundTypes)
+        then result:=true
+        else result:=equals(other);
         if relation=tt_comparatorNeq then result:=not(result);
       end;
       else result:=false;

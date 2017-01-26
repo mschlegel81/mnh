@@ -346,7 +346,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
                                                else apply(tt_operatorDivReal);
       ':': if startsWith(tt_assign)            then apply(tt_assign)
       else if startsWith(tt_pseudoFuncPointer) then apply(tt_pseudoFuncPointer)
-      else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k','f','m']) then begin
+      else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','c','e','i','l','n','s','r','k','f','m']) then begin
         id:=leadingId;
         result.tokType:=tt_iifElse;
         for tt in C_typeChecks do if id=C_tokenInfo[tt].defaultId then result.tokType:=tt;
