@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion}{$ifdef debugMode},mnh_doc,lclintf{$endif}{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
      mnh_funcs_mnh,
      mnh_funcs_server,
@@ -186,6 +186,19 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           append(filesToOpenInEditor,paramStr(i));
         end
         else if (paramStr(i)='-profile') then profilingRun:=true
+        {$ifdef debugMode}
+        else if (paramStr(i)='-doc') then begin
+          while i<paramCount do begin
+            inc(i);
+            append(filesToOpenInEditor,paramStr(i));
+          end;
+          if length(filesToOpenInEditor)>0
+          then makeHtmlFromTemplate(filesToOpenInEditor[0])
+          else makeHtmlFromTemplate();
+          writeln(expandFileName(getHtmlRoot+'/index.html'   ));
+          exit(false);
+        end
+        {$endif}
         {$endif}
         else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
         else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
