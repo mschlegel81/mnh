@@ -246,6 +246,7 @@ FUNCTION split_imp intFuncSignature;
     VAR iter:T_arrayOfLiteral;
         sub:P_literal;
     begin
+      result:=nil;
       case p^.literalType of
         lt_string: result:=splitOneString(P_stringLiteral(p));
         lt_list,lt_stringList,lt_emptyList,
@@ -405,7 +406,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     if (arg0^.literalType in C_setTypes) then inc(i);
     if (arg1^.literalType in C_setTypes) then inc(i);
     if (arg2^.literalType in C_setTypes) then inc(i);
-    if i>1 then exit;
+    if i>1 then exit(nil);
 
     initArrays;
     if arg0^.literalType=lt_string then result:=newStringLiteral(modify(str0^.value))

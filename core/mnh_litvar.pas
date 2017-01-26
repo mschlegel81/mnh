@@ -2955,21 +2955,18 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
     oldValue:=value;
     case mutation of
       tt_cso_assignPlus..tt_cso_assignDiv: begin
-        result:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location,adapters);
+        value:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location,adapters);
         disposeLiteral(oldValue);
-        value:=result;
-        result^.rereference;
+        exit(value^.rereferenced);
       end;
       tt_cso_assignStrConcat: begin
         if (oldValue^.literalType=lt_string) and (oldValue^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
           P_stringLiteral(oldValue)^.append(P_scalarLiteral(RHS)^.stringForm);
-          result:=oldValue;
-          result^.rereference;
+          exit(oldValue^.rereferenced);
         end else begin
-          result:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location,adapters);
+          value:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location,adapters);
           disposeLiteral(oldValue);
-          value:=result;
-          result^.rereference;
+          exit(value^.rereferenced);
         end;
       end;
       tt_cso_assignAppend: begin
@@ -2977,13 +2974,11 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
           if (RHS^.literalType in C_scalarTypes)
           then P_listLiteral(oldValue)^.append(RHS, true)
           else P_listLiteral(oldValue)^.appendAll(P_listLiteral(RHS));
-          result:=oldValue;
-          result^.rereference;
+          exit(oldValue^.rereferenced);
         end else begin
-          result:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location,adapters);
-          result^.rereference;
+          value:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location,adapters);
           disposeLiteral(oldValue);
-          value:=result;
+          exit(value^.rereferenced);
         end;
       end;
       tt_cso_mapPut, tt_cso_mapDrop: begin
@@ -3018,9 +3013,10 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
         end else if mutation=tt_cso_mapDrop then begin
           P_mapLiteral(value)^.drop(P_scalarLiteral(RHS));
         end;
-        result:=newVoidLiteral;
+        exit(newVoidLiteral);
       end;
     end;
+    result:=newVoidLiteral;
   end;
 
 FUNCTION T_namedVariable.getId:T_idString;
@@ -3396,7 +3392,6 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
       isNegative:=bits[length(bits)-1];
       bits[length(bits)-1]:=false;
       move(bits,significand,min(sizeOf(double),sizeOf(int64)));
-      {$WARN 5057 ON}
       exponent:=significand;
       significand:=p52+(significand and (p52-1));
       exponent:=(exponent shr 52)-1023-52;
@@ -3405,6 +3400,7 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
       result:=result+intToStr(significand);
       if exponent<0 then result:=result+'*2^'  +intToStr(exponent)
                     else result:=result+'*2.0^'+intToStr(exponent);
+      {$WARN 5057 ON}
     end;
 
   VAR i:longint;
