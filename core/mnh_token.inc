@@ -1720,7 +1720,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           didSubstitution:=true;
         end;
         tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
-        tt_identifier: context.adapters^.raiseError('Unresolved identifier "'+first^.txt+'"',first^.location);
+        tt_identifier: begin
+          P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
+          didSubstitution:=true;
+        end;
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
