@@ -1429,6 +1429,8 @@ Survivors: [30]
 ['Reiten','Golfen','Lesen']
 2000000.0
 {"Herausgeber":"Xema","Nummer":"1234-5678-9012-3456","Deckung":2000000.0}
+***** kaprekar *****
+The Kaprekar numbers up to 10000 are [1,9,45,55,99,297,703,999,2223,2728,4879,4950,5050,5292,7272,7777,9999]
 ***** lastSundays *****
 25.01.2015
 22.02.2015
