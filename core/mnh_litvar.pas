@@ -1194,7 +1194,12 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType;
         if (literalType in C_emptyCompoundTypes) and (other^.literalType in C_emptyCompoundTypes) then result:=true
         else begin
           result:=(size=P_compoundLiteral(other)^.size);
-          if not(equals(other)) then for i:=0 to size-1 do result:=result and value[i]^.isInRelationTo(tt_comparatorListEq,P_compoundLiteral(other)^[i]);
+          if result then begin
+            result:=equals(other);
+            if (literalType<>other^.literalType) or (literalType in [lt_list,lt_numList,lt_set,lt_numSet]) then begin
+              for i:=0 to size-1 do result:=result and value[i]^.isInRelationTo(tt_comparatorListEq,P_compoundLiteral(other)^[i]);
+            end;
+          end;
         end;
         if relation=tt_comparatorNeq then result:=not(result);
       end;
