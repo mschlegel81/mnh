@@ -1,0 +1,12 @@
+POWERS_OF_TEN:=10^[1..18];
+isKaprekar(i in POWERS_OF_TEN)->false;
+isKaprekar(i:int)->begin
+  local i2:=i.sqr;
+  (i2 mod POWERS_OF_TEN+i2 div POWERS_OF_TEN=i).agg(OR);
+end;
+
+//*Short run - for regression test
+main->print('The Kaprekar numbers up to 10000 are ',[1..10000].pEach(i,isKaprekar(i) ? i : void));
+
+//*Long run, as proposed by RosettaCode.org
+main('rosetta')->main orElse print('There are ',[1..1000000].pEach(i,isKaprekar(i)).trueCount,' Kaprekar numbers < 1 million');
