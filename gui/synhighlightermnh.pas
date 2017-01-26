@@ -323,7 +323,7 @@ PROCEDURE TSynMnhSyn.next;
       ':': begin
         inc(run);
         case fLine [run] of
-          'b', 'e', 'i', 'l', 'n', 's', 'r', 'k', 'f': begin
+          'm','c', 'b', 'e', 'i', 'l', 'n', 's', 'r', 'k', 'f': begin
             localId := ':';
             i:=run;
             while fLine [i] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
