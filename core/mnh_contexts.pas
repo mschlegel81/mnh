@@ -210,7 +210,6 @@ TYPE
       PROCEDURE doStepOut;
       PROCEDURE doStep;
       PROCEDURE doMicrostep;
-      PROCEDURE doStop;
       FUNCTION paused:boolean;
 
       FUNCTION getDebuggingSnapshot:T_debuggingSnapshot;
@@ -1053,13 +1052,6 @@ PROCEDURE T_evaluationContext.doMicrostep;
   begin
     system.enterCriticalSection(profilingAndDebuggingCriticalSection);
     debuggingStepper.state:=breakSoonest;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.doStop;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    debuggingStepper.state:=dontBreakAtAll;
     system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
   end;
 

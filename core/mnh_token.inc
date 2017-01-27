@@ -1420,14 +1420,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:=true;
     end;
 
-  FUNCTION tokenContextString:ansistring;
-    begin
-      result:=getEnumName(TypeInfo(cTokType[-1]),ord(cTokType[-1]))+' # '+
-              getEnumName(TypeInfo(cTokType[ 0]),ord(cTokType[ 0]))+' '+
-              getEnumName(TypeInfo(cTokType[ 1]),ord(cTokType[ 1]))+' '+
-              getEnumName(TypeInfo(cTokType[ 2]),ord(cTokType[ 2]));
-    end;
-
   PROCEDURE cleanupStackAndExpression;
     VAR clean:boolean=true;
     begin

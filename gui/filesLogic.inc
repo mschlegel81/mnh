@@ -53,7 +53,6 @@ PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShi
 
 PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE miEditUtilityScriptFileClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
@@ -455,10 +454,5 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shif
   begin
     if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[inputPageControl.activePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
-  end;
-
-PROCEDURE TMnhForm.miEditUtilityScriptFileClick(Sender: TObject);
-  begin
-    FormDropFiles(Sender,utilityScriptFileName);
   end;
 {$endif}

@@ -202,7 +202,6 @@ TYPE
 
   P_collectionLiteral=^T_collectionLiteral;
   T_collectionLiteral=object(T_compoundLiteral)
-    FUNCTION isFlat:boolean; virtual; abstract;
     FUNCTION isKeyValueCollection:boolean; virtual; abstract;
     FUNCTION newOfSameType:P_collectionLiteral; virtual; abstract;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
@@ -225,7 +224,6 @@ TYPE
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
       FUNCTION isKeyValuePair:boolean;
-      FUNCTION isFlat:boolean; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
 
       FUNCTION newOfSameType:P_collectionLiteral; virtual;
@@ -263,7 +261,6 @@ TYPE
       PROCEDURE manifest;
       PROCEDURE dropManifestation;
     public
-      FUNCTION isFlat:boolean; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -339,7 +336,6 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal; CONST location:string; CONST retainExistent:boolean=false);
     PROCEDURE addVariable(CONST namedVar:P_namedVariable; CONST location:string);
-    PROCEDURE addSubReport(VAR sub:T_variableReport; CONST pseudoLocation:string);
   end;
   {$endif}
 
@@ -561,15 +557,6 @@ PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_lite
 PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST location: string);
   begin
     addVariable(namedVar^.id,namedVar^.value,location);
-  end;
-
-PROCEDURE T_variableReport.addSubReport(VAR sub:T_variableReport; CONST pseudoLocation:string);
-  VAR i,i1:longint;
-  begin
-    i1:=length(sub.dat)-1;
-    for i:=i1 downto 0 do
-    if i=0 then addVariable('par.: '+sub.dat[i].id,sub.dat[i].value,pseudoLocation,true)
-           else addVariable('par.: '+sub.dat[i].id,sub.dat[i].value,''            ,true);
   end;
 {$endif}
 //=====================================================================================================================
@@ -1425,22 +1412,6 @@ FUNCTION T_mapLiteral.contains(CONST other: P_literal): boolean;
 //?.isKeyValuePair:=============================================================
 FUNCTION T_listLiteral.isKeyValuePair: boolean; begin result:=(fill=2); end;
 //=============================================================:?.isKeyValuePair
-FUNCTION T_listLiteral.isFlat: boolean;
-  VAR i:longint;
-  begin
-    if fill<1 then exit(true);
-    result:=true;
-    for i:=0 to fill-1 do if not(dat[i]^.literalType in C_scalarTypes) then exit(false);
-  end;
-
-FUNCTION T_setLiteral.isFlat: boolean;
-  VAR L:P_literal;
-  begin
-    if dat.fill<1 then exit(true);
-    result:=true;
-    for L in dat.keySet do if not(L^.literalType in C_scalarTypes) then exit(false);
-  end;
-
 FUNCTION T_listLiteral.isKeyValueCollection: boolean;
   VAR i:longint;
   begin

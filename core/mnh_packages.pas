@@ -58,17 +58,12 @@ TYPE
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
-      FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
       FUNCTION isMain:boolean;
       FUNCTION getPath:ansistring; virtual;
       PROCEDURE setSourcePath(CONST path:ansistring);
       PROCEDURE setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
-      FUNCTION getPackageFileNameList:T_arrayOfString;
-      {$else}
-      PROCEDURE clearSource;
-      PROCEDURE appendSource(CONST line:string);
       {$endif}
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_mapLiteral;
@@ -1013,13 +1008,6 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=false;
   end;
 
-FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
-  VAR i:longint;
-  begin
-    for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(packageUses[i]);
-    result.create(codeProvider.getPath,'',packageTokenLocation(@self),adapters);
-  end;
-
 FUNCTION T_package.getPath:ansistring; begin result:=codeProvider.getPath; end;
 FUNCTION T_package.isMain:boolean; begin result:=(@self=mainPackage); end;
 PROCEDURE T_package.setSourcePath(CONST path:ansistring);
@@ -1033,18 +1021,6 @@ PROCEDURE T_package.setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOr
     codeProvider.setLinesUTF8(sourceUtf8);
     codeProvider.setPath(pathOrPseudoPath);
   end;
-{$ifndef fullVersion}
-PROCEDURE T_package.clearSource;
-  begin
-    codeProvider.clear;
-  end;
-
-PROCEDURE T_package.appendSource(CONST line:string);
-  begin
-    codeProvider.appendLine(line);
-  end;
-{$endif}
-
 {$ifdef fullVersion}
 PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;
@@ -1057,13 +1033,6 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
     r:=packageRules.valueSet;
     for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
     setLength(r,0);
-  end;
-
-FUNCTION T_package.getPackageFileNameList:T_arrayOfString;
-  VAR i:longint;
-  begin
-    setLength(result,0);
-    for i:=0 to length(secondaryPackages)-1 do append(result,secondaryPackages[i]^.getPath);
   end;
 {$endif}
 

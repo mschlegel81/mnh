@@ -44,7 +44,6 @@
     FUNCTION toString:ansistring;
     FUNCTION toCmdLineHelpStringString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
-    FUNCTION isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
     FUNCTION hides(CONST p:T_pattern):boolean;
     FUNCTION isValidMainPattern:boolean;
     PROCEDURE toParameterIds(CONST tok:P_token);
@@ -410,14 +409,6 @@ FUNCTION T_pattern.isEquivalent(CONST p: T_pattern): boolean;
     result:=(length(sig)=length(p.sig)) and
             (hasOptionals=p.hasOptionals);
     for i:=0 to length(sig)-1 do result:=result and sig[i].isEquivalent(p.sig[i]);
-  end;
-
-FUNCTION T_pattern.isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
-  VAR i:longint;
-  begin
-    result:=(length(sig)=length(p.sig)) and
-            (hasOptionals=p.hasOptionals);
-    for i:=0 to length(sig)-1 do result:=result and (sig[i].typeWhitelist=p.sig[i].typeWhitelist);
   end;
 
 FUNCTION T_pattern.hides(CONST p:T_pattern):boolean;
