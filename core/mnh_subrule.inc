@@ -56,10 +56,8 @@
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION getParentId:T_idString;
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION arity:longint;
-      PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_mapLiteral;
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
@@ -623,11 +621,6 @@ FUNCTION T_subrule.getId:T_idString;
     end;
   end;
 
-FUNCTION T_subrule.getParentId:T_idString;
-  begin
-    if parent=nil then exit('') else result:=parent^.id;
-  end;
-
 FUNCTION T_subrule.getLocation:T_tokenLocation;
   begin
     result:=declaredAt;
@@ -636,11 +629,6 @@ FUNCTION T_subrule.getLocation:T_tokenLocation;
 FUNCTION T_subrule.arity:longint;
   begin
     result:=length(pattern.sig);
-  end;
-
-PROCEDURE T_subrule.increaseArity(CONST newArity:longint);
-  begin
-    while length(pattern.sig)<newArity do pattern.appendFreeId('');
   end;
 
 FUNCTION T_subrule.inspect:P_mapLiteral;

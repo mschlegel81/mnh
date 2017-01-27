@@ -19,18 +19,14 @@ TYPE
     PROCEDURE setLines(CONST value: T_arrayOfString);
     PROCEDURE setLinesUTF8(CONST value: TStrings);
     PROCEDURE setLines(CONST value: ansistring);
-    PROCEDURE appendLine(CONST value: ansistring);
     PROCEDURE replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
     PROCEDURE setPath(CONST path: ansistring);
-    FUNCTION numberOfLines:longint;
     FUNCTION getPath: ansistring;
     FUNCTION isPseudoFile:boolean;
     PROCEDURE load;
     PROCEDURE save;
     FUNCTION fileName: ansistring;
     FUNCTION fileHasChanged: boolean;
-    FUNCTION fileIsOutOfSync: boolean;
-    FUNCTION contentHash:T_hashInt;
     FUNCTION id: ansistring;
     PROCEDURE clear;
   end;
@@ -44,7 +40,6 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-FUNCTION locateSources: T_arrayOfString;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
@@ -77,29 +72,6 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     recursePath(rootPath);
     if result = '' then recursePath(configDir);
     if result = '' then recursePath(extractFilePath(paramStr(0)));
-  end;
-
-FUNCTION locateSources: T_arrayOfString;
-  PROCEDURE recursePath(CONST path: ansistring);
-    VAR info: TSearchRec;
-    begin
-      if (sysutils.findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) then repeat
-        appendIfNew(result,path+info.name);
-      until (sysutils.findNext(info)<>0);
-      sysutils.findClose(info);
-
-      if sysutils.findFirst(path+'*', faAnyFile, info) = 0 then repeat
-        if (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
-      until (sysutils.findNext(info)<>0);
-      sysutils.findClose(info);
-    end;
-
-  begin
-    setLength(result, 0);
-    recursePath(configDir);
-    recursePath(extractRelativePath(expandFileName(''),extractFilePath(paramStr(0))));
-    recursePath(extractFilePath(paramStr(0)));
-    recursePath('');
   end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
@@ -355,13 +327,6 @@ PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
     lineData[0] := value;
   end;
 
-PROCEDURE T_codeProvider.appendLine(CONST value: ansistring);
-  begin
-    setLength(lineData, length(lineData)+1);
-    lineData[length(lineData)-1] := value;
-    outOfSync:=true;
-  end;
-
 PROCEDURE T_codeProvider.replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
   VAR i:longint;
       partAfter,
@@ -402,11 +367,6 @@ CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
 DESTRUCTOR T_codeProvider.destroy;
   begin
     setLength(lineData, 0);
-  end;
-
-FUNCTION T_codeProvider.numberOfLines:longint;
-  begin
-    result:=length(lineData);
   end;
 
 PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
@@ -463,20 +423,6 @@ FUNCTION T_codeProvider.fileHasChanged: boolean;
       fileAge(filePath, currentFileAge);
       result:=currentFileAge>fileAccessedAtFileAge;
     end else result := false;
-  end;
-
-FUNCTION T_codeProvider.fileIsOutOfSync: boolean;
-  begin
-    result:=(filePath<>'') and outOfSync;
-  end;
-
-FUNCTION T_codeProvider.contentHash:T_hashInt;
-  VAR i:longint;
-  begin
-    {$Q-}{$R-}
-    result:=length(lineData);
-    for i:=0 to length(lineData)-1 do result:=result*T_hashInt(31)+T_hashInt(hashOfAnsiString(lineData[i]));
-    {$Q+}{$R+}
   end;
 
 FUNCTION T_codeProvider.id: ansistring;

@@ -636,8 +636,6 @@ CONST
 
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
-FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
-FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
 
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
 OPERATOR :=(x:qword):T_messageTypeSet;
@@ -646,20 +644,6 @@ IMPLEMENTATION
 FUNCTION isQualified(CONST s:string):boolean;
   begin
     result:=pos(ID_QUALIFY_CHARACTER,s)>0;
-  end;
-
-FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
-  VAR n:T_namespace;
-  begin
-    for n:=low(T_namespace) to high(T_namespace) do if id=C_namespaceString[n] then exit(true);
-    result:=false;
-  end;
-
-FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
-  VAR tt:T_tokenType;
-  begin
-    for tt:=low(T_tokenType) to high(T_tokenType) do if C_tokenInfo[tt].defaultId=wordText then exit(C_tokenInfo[tt].reservedWordClass);
-    result:=rwc_not_reserved;
   end;
 
 FUNCTION getAppName: string;

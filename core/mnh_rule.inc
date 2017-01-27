@@ -20,7 +20,6 @@
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
-      FUNCTION getSubRuleHeaders:ansistring;
       PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
       FUNCTION hasPublicSubrule:boolean;
@@ -235,14 +234,6 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evalua
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
   begin
     result:=declarationStart;
-  end;
-
-FUNCTION T_rule.getSubRuleHeaders:ansistring;
-  VAR i:longint;
-  begin
-    result:='';
-    for i:=0 to length(subrules)-1 do
-      result:=result+'#'+id+subrules[i]^.pattern.toString;
   end;
 
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);

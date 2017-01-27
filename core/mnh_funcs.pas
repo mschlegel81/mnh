@@ -61,7 +61,6 @@ VAR
 
 FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
-PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
@@ -98,13 +97,6 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
-  end;
-
-PROCEDURE unregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST fullNameOnly:boolean=false);
-  begin
-    if not(fullNameOnly) then
-    intrinsicRuleMap.dropKey(                                                  name);
-    intrinsicRuleMap.dropKey(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name);
   end;
 
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;

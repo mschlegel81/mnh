@@ -134,7 +134,6 @@ TYPE
       PROCEDURE logPlotSettingsChanged;
       PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
       PROCEDURE logDisplayTable;
-      FUNCTION isDisplayTableLogged:boolean;
       {$ifdef IMIG}
       PROCEDURE logDisplayImage;
       {$endif}
@@ -165,7 +164,6 @@ TYPE
       PROCEDURE removeOutAdapter(CONST index:longint);
       PROCEDURE setPrintTextFileAdapter(CONST filenameOrBlank:string);
 
-      FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
       FUNCTION getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
 
@@ -537,7 +535,6 @@ PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
 {$ifdef fullVersion}
 PROCEDURE T_adapters.logGuiNeeded;                begin hasNeedGUIerror:=true; end;
 FUNCTION T_adapters.isDeferredPlotLogged:boolean; begin result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay]; end;
-FUNCTION T_adapters.isDisplayTableLogged:boolean; begin result:=hasMessageOfType[mt_displayTable];                   end;
 PROCEDURE T_adapters.resetFlagsAfterPlotDone;     begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
                                                                 hasMessageOfType[mt_plotCreatedWithInstantDisplay ]:=false; end;
 PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
@@ -704,11 +701,6 @@ PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
         addOutAdapter(txtAdapter,true);
       end;
     end;
-  end;
-
-FUNCTION T_adapters.adapterCount: longint;
-  begin
-    result:=length(adapter);
   end;
 
 FUNCTION T_adapters.getAdapter(CONST index: longint): P_abstractOutAdapter;

@@ -117,7 +117,7 @@ T_settings=object(T_serializable)
   FUNCTION importWorkspace(CONST fileName:string):boolean;
   PROCEDURE exportWorkspace(CONST fileName:string);
   PROCEDURE switchWorkspace(CONST fileName:string);
-  FUNCTION deleteWorkspace:boolean;
+  FUNCTION deleteWorkspace(CONST meta:T_workspaceMeta):boolean;
 end;
 
 PROCEDURE saveSettings;
@@ -398,14 +398,13 @@ PROCEDURE T_settings.switchWorkspace(CONST fileName: string);
     end;
   end;
 
-FUNCTION T_settings.deleteWorkspace: boolean;
-  VAR toDelete:string;
+FUNCTION T_settings.deleteWorkspace(CONST meta:T_workspaceMeta): boolean;
   begin
-    result:=(workspaceFileName<>'') and (fileExists(workspaceFileName));
+    result:=(meta.fileName<>'') and (fileExists(meta.fileName));
     if result then begin
-      toDelete:=workspaceFileName;
-      switchWorkspace('');
-      DeleteFile(toDelete);
+      result:=workspaceFileName=meta.fileName;
+      if result then switchWorkspace('');
+      DeleteFile(meta.fileName);
     end;
   end;
 

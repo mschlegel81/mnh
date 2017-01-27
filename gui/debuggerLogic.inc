@@ -11,7 +11,6 @@ PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 PROCEDURE handleBreak;
 PROCEDURE updateDebugParts;
 PROCEDURE updateExpressionMemo;
-PROCEDURE miDebugCancelClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
 {$endif}
 {$ifdef includeImplementation}
@@ -257,11 +256,6 @@ PROCEDURE TMnhForm.updateDebugParts;
       DebugToolbar.visible:=false;
       DebugToolbar.enabled:=false;
     end;
-  end;
-
-PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
-  begin
-    runEvaluator.haltEvaluation;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
