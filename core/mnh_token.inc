@@ -1774,7 +1774,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     except
       on e:Exception do begin
         context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth));
-        context.adapters^.raiseSystemError(e.message);
+        if first<>nil then context.adapters^.raiseSystemError(e.message,first^.location)
+                      else context.adapters^.raiseSystemError(e.message);
       end;
     end;
     {$endif}

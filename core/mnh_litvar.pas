@@ -2210,6 +2210,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
 PROCEDURE T_listLiteral.unique;
   VAR i,j:longint;
   begin
+    if fill<=0 then exit;
     sort;
     j:=0;
     for i:=1 to fill-1 do
