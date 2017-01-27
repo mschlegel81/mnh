@@ -13,6 +13,7 @@ TYPE
   { TworkspacesForm }
 
   TworkspacesForm = class(TForm)
+    deleteButton: TButton;
     renameButton: TButton;
     exportWorkspaceButton: TButton;
     GroupBox1: TGroupBox;
@@ -24,6 +25,7 @@ TYPE
     workspaceNameEdit: TEdit;
     workspaceListBox: TListBox;
     Panel1: TPanel;
+    PROCEDURE deleteButtonClick(Sender: TObject);
     PROCEDURE exportWorkspaceButtonClick(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE importWorkspaceButtonClick(Sender: TObject);
@@ -33,6 +35,7 @@ TYPE
   private
     available:T_workspaceMetaArray;
     currentWorkspaceIndex:longint;
+    implicitWorkspaceChange:boolean;
     FUNCTION niceName(CONST index:longint):string;
     { private declarations }
   public
@@ -47,7 +50,8 @@ VAR
 FUNCTION switchWorkspace:boolean;
   begin
     if workspacesForm=nil then workspacesForm:=TworkspacesForm.create(nil);
-    result:=workspacesForm.ShowModal=mrOk;
+    workspacesForm.implicitWorkspaceChange:=false;
+    result:=(workspacesForm.ShowModal=mrOk) or workspacesForm.implicitWorkspaceChange;
   end;
 
 {$R *.lfm}
@@ -72,6 +76,14 @@ PROCEDURE TworkspacesForm.FormShow(Sender: TObject);
 PROCEDURE TworkspacesForm.exportWorkspaceButtonClick(Sender: TObject);
   begin
     if SaveDialog.execute then settings.value^.exportWorkspace(SaveDialog.fileName);
+  end;
+
+PROCEDURE TworkspacesForm.deleteButtonClick(Sender: TObject);
+  begin
+    if (workspaceListBox.ItemIndex>=0) and (workspaceListBox.ItemIndex<=length(available)) then begin
+      implicitWorkspaceChange:=settings.value^.deleteWorkspace(available[workspaceListBox.ItemIndex]);
+      FormShow(Sender);
+    end;
   end;
 
 PROCEDURE TworkspacesForm.importWorkspaceButtonClick(Sender: TObject);

@@ -10,7 +10,7 @@ object workspacesForm: TworkspacesForm
   LCLVersion = '1.6.0.4'
   object workspaceListBox: TListBox
     Left = 0
-    Height = 210
+    Height = 205
     Top = 0
     Width = 320
     Align = alClient
@@ -20,18 +20,18 @@ object workspacesForm: TworkspacesForm
   end
   object Panel1: TPanel
     Left = 0
-    Height = 70
-    Top = 210
+    Height = 75
+    Top = 205
     Width = 320
     Align = alBottom
     AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 70
+    ClientHeight = 75
     ClientWidth = 320
     TabOrder = 1
     object workspaceNameEdit: TEdit
       Left = 66
-      Height = 70
+      Height = 75
       Top = 0
       Width = 183
       Align = alClient
@@ -40,13 +40,13 @@ object workspacesForm: TworkspacesForm
     end
     object Panel2: TPanel
       Left = 0
-      Height = 70
+      Height = 75
       Top = 0
       Width = 66
       Align = alLeft
       AutoSize = True
       BevelOuter = bvNone
-      ClientHeight = 70
+      ClientHeight = 75
       ClientWidth = 66
       TabOrder = 1
       object renameButton: TButton
@@ -62,7 +62,7 @@ object workspacesForm: TworkspacesForm
       end
       object newWorkspaceButton: TButton
         Left = 0
-        Height = 45
+        Height = 25
         Top = 25
         Width = 66
         Align = alClient
@@ -71,21 +71,31 @@ object workspacesForm: TworkspacesForm
         OnClick = newWorkspaceButtonClick
         TabOrder = 1
       end
+      object deleteButton: TButton
+        Left = 0
+        Height = 25
+        Top = 50
+        Width = 66
+        Align = alBottom
+        Caption = 'delete'
+        OnClick = deleteButtonClick
+        TabOrder = 2
+      end
     end
     object GroupBox1: TGroupBox
       Left = 249
-      Height = 70
+      Height = 75
       Top = 0
       Width = 71
       Align = alRight
       AutoSize = True
       Caption = 'current'
-      ClientHeight = 50
+      ClientHeight = 55
       ClientWidth = 67
       TabOrder = 2
       object exportWorkspaceButton: TButton
         Left = 0
-        Height = 25
+        Height = 30
         Top = 25
         Width = 67
         Align = alClient
