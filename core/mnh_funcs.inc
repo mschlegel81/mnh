@@ -202,8 +202,8 @@ UNARY_NUM_TO_SAME;
         if y>=0 then exit(x^.rereferenced);
         pot:=1;
         i:=0;
-        while i<y do begin pot:=pot*10;inc(i); end;
-        result:=newIntLiteral(CALL_MACRO(x^.value*pot) div pot);
+        while i>y do begin pot:=pot*10; dec(i); end;
+        result:=newIntLiteral(CALL_MACRO(x^.value div pot) * pot);
       end;
 
     VAR sub,ySub:P_literal;
