@@ -15,6 +15,7 @@ TYPE
 T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
   isFullscreen: boolean;
+  relativeSplitterPosition:double;
   CONSTRUCTOR create;
   FUNCTION getSerialVersion:dword; virtual;
   FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
@@ -483,7 +484,7 @@ CONSTRUCTOR T_formPosition.create;
     isFullscreen:=true;
   end;
 
-FUNCTION T_formPosition.getSerialVersion:dword; begin result:=1529642236; end;
+FUNCTION T_formPosition.getSerialVersion:dword; begin result:=1529642237; end;
 FUNCTION T_formPosition.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   begin
     if not inherited loadFromStream(stream) then exit(false);
@@ -491,6 +492,7 @@ FUNCTION T_formPosition.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):
     Left  :=stream.readLongint;
     width :=stream.readLongint;
     height:=stream.readLongint;
+    relativeSplitterPosition:=stream.readWord/65535;
     isFullscreen:=stream.readBoolean;
     result:=true;
   end;
@@ -502,6 +504,9 @@ PROCEDURE T_formPosition.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeLongint(Left);
     stream.writeLongint(width);
     stream.writeLongint(height);
+    if relativeSplitterPosition<0      then stream.writeWord(0)
+    else if relativeSplitterPosition>1 then stream.writeWord(65535)
+                                       else stream.writeWord(round(65535*relativeSplitterPosition));
     stream.writeBoolean(isFullscreen);
   end;
 

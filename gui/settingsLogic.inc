@@ -48,6 +48,8 @@ PROCEDURE TMnhForm.processSettings;
       width :=formPosition.width;
       height:=formPosition.height;
       if formPosition.isFullscreen then WindowState:=wsMaximized;
+      outputPageControl.height:=round(ClientHeight*formPosition.relativeSplitterPosition);
+      StatusBar.top:=outputPageControl.top+outputPageControl.height;
 
       miDeclarationEcho .Checked:=mt_echo_declaration in settings.value^.outputBehaviour;
       miExpressionEcho  .Checked:=mt_echo_input       in settings.value^.outputBehaviour;

@@ -1,11 +1,11 @@
 object MnhForm: TMnhForm
-  Left = 491
-  Height = 733
-  Top = 5
+  Left = 497
+  Height = 621
+  Top = 11
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
-  ClientHeight = 713
+  ClientHeight = 601
   ClientWidth = 717
   Color = clWhite
   Menu = MainMenu1
@@ -19,16 +19,17 @@ object MnhForm: TMnhForm
   OnShow = FormShow
   LCLVersion = '1.6.0.4'
   object outputPageControl: TPageControl
+    AnchorSideBottom.Control = StatusBar
     Left = 0
     Height = 337
-    Top = 353
+    Top = 241
     Width = 717
     TabStop = False
-    ActivePage = outputTabSheet
+    ActivePage = debugTabSheet
     Align = alBottom
     Font.Color = clBlack
     ParentFont = False
-    TabIndex = 1
+    TabIndex = 2
     TabOrder = 5
     Options = [nboKeyboardTabSwitch]
     object assistanceTabSheet: TTabSheet
@@ -1100,7 +1101,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              504
+              521
             )
             Cells = (
               3
@@ -1641,13 +1642,13 @@ object MnhForm: TMnhForm
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
-    Top = 690
+    Top = 578
     Width = 717
     Panels = <>
   end
   object inputPageControl: TPageControl
     Left = 0
-    Height = 315
+    Height = 203
     Top = 30
     Width = 717
     TabStop = False
@@ -1661,7 +1662,7 @@ object MnhForm: TMnhForm
     Cursor = crVSplit
     Left = 0
     Height = 8
-    Top = 345
+    Top = 233
     Width = 717
     Align = alBottom
     OnMoved = Splitter1Moved
