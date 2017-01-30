@@ -735,6 +735,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
+    if settingsReady then settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
   end;
 
 PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
