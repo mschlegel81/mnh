@@ -2497,7 +2497,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRhsCases;
-          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val+P_intLiteral (RHS)^.val));
+          lt_int:    {$Q-}exit(newIntLiteral (P_intLiteral(LHS)^.val+P_intLiteral (RHS)^.val));{$Q+}
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val+P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2546,7 +2546,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRhsCases;
-          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val-P_intLiteral (RHS)^.val));
+          lt_int:    {$Q-}exit(newIntLiteral (P_intLiteral(LHS)^.val-P_intLiteral (RHS)^.val));{$Q+}
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val-P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2583,7 +2583,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRhsCases;
-          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val*P_intLiteral (RHS)^.val));
+          lt_int:    {$Q-}exit(newIntLiteral (P_intLiteral(LHS)^.val*P_intLiteral (RHS)^.val));{$Q+}
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val*P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
