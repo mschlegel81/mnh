@@ -1,32 +1,34 @@
 UNIT mnh_plotData;
 INTERFACE
 USES mnh_basicTypes, sysutils, math, mnh_constants,Interfaces, Classes, ExtCtrls, Graphics, types;
+TYPE
+  T_plotStyle=(ps_none,
+               ps_straight,
+               ps_stepLeft,
+               ps_stepRight,
+               ps_filled,
+               ps_bar,
+               ps_box,
+               ps_dot,
+               ps_plus,
+               ps_cross,
+               ps_impulse);
+  T_plotStyles=set of T_plotStyle;
+
 CONST
-  C_lineStyle_none      =   0;
-  C_lineStyle_straight  =   1;
-  C_lineStyle_stepLeft  =   2;
-  C_lineStyle_stepRight =   3;
-  C_lineStyle_filled    =   4;
-  C_lineStyle_bar       =   8;
-  C_lineStyle_box       =   9;
-  C_symbolStyle_dot     =  16;
-  C_symbolStyle_plus    =  32;
-  C_symbolStyle_cross   =  64;
-  C_symbolStyle_impulse = 128;
-  C_anyLineStyle = 15;
-  C_styleName: array[0..9] of record
-    idx: byte;
-    name: array[0..1] of string;
-  end =((idx: C_lineStyle_straight;  name: ('line'     , 'l')),
-        (idx: C_lineStyle_stepLeft;  name: ('stepLeft' , '' )),
-        (idx: C_lineStyle_stepRight; name: ('stepRight', '' )),
-        (idx: C_lineStyle_filled;    name: ('fill'     , 'f')),
-        (idx: C_lineStyle_bar;       name: ('bar'      , '' )),
-        (idx: C_lineStyle_box;       name: ('box'      , '' )),
-        (idx: C_symbolStyle_dot;     name: ('dot'      , '.')),
-        (idx: C_symbolStyle_plus;    name: ('plus'     , '+')),
-        (idx: C_symbolStyle_cross;   name: ('cross'    , 'x')),
-        (idx: C_symbolStyle_impulse; name: ('impulse'  , 'i')));
+  C_lineStyles:T_plotStyles=[ps_straight..ps_filled];
+  C_styleName: array[T_plotStyle] of array[0..1] of string=
+     {ps_none,     }  (('',''),
+     {ps_straight, }   ('line'     , 'l'),
+     {ps_stepLeft, }   ('stepLeft' , '' ),
+     {ps_stepRight,}   ('stepRight', '' ),
+     {ps_filled,   }   ('fill'     , 'f'),
+     {ps_bar,      }   ('bar'      , '' ),
+     {ps_box,      }   ('box'      , '' ),
+     {ps_dot,      }   ('dot'      , '.'),
+     {ps_plus,     }   ('plus'     , '+'),
+     {ps_cross,    }   ('cross'    , 'x'),
+     {ps_impulse); }   ('impulse'  , 'i'));
 
 TYPE
   T_colorChannel = (cc_red, cc_green, cc_blue);
@@ -42,7 +44,7 @@ TYPE
   T_dataRow = array of T_point;
   T_style = object
     title: string;
-    style: byte;
+    style: T_plotStyles;
     color: T_color;
     styleModifier: double;
     CONSTRUCTOR create(CONST index: byte);
@@ -50,17 +52,6 @@ TYPE
     PROCEDURE parseStyle(CONST styleString: ansistring);
 
     FUNCTION getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
-
-    FUNCTION wantStraightLines: boolean;
-    FUNCTION wantLeftSteps: boolean;
-    FUNCTION wantRightSteps: boolean;
-    FUNCTION wantFill: boolean;
-    FUNCTION wantBars: boolean;
-    FUNCTION wantBoxes: boolean;
-    FUNCTION wantDot: boolean;
-    FUNCTION wantPlus: boolean;
-    FUNCTION wantCross: boolean;
-    FUNCTION wantImpulses: boolean;
   end;
 
   T_boundingBox = array['x'..'y', 0..1] of double;
@@ -190,7 +181,7 @@ CONST
 CONSTRUCTOR T_style.create(CONST index: byte);
   begin
     title:='';
-    style:=C_lineStyle_straight;
+    style:=[ps_straight];
     color:=C_defaultColor[index mod length(C_defaultColor)].color;
     styleModifier:=1;
   end;
@@ -281,11 +272,11 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
 
   VAR part, options: ansistring;
       sp: longint;
-      i: longint;
       size: T_myFloat;
       mightBeColor: boolean;
+      ps:T_plotStyle;
   begin
-    style:=0;
+    style:=[];
     options:=trim(styleString);
     repeat
       sp:=pos(' ', options);
@@ -304,16 +295,16 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
           mightBeColor:=false;
         end;
       end;
-      for i:=0 to length(C_styleName)-1 do with C_styleName[i] do
-      if (part = name[0]) or (part = name[1]) then begin
-        if idx in[C_lineStyle_box, C_lineStyle_bar, C_lineStyle_straight, C_lineStyle_stepRight, C_lineStyle_stepLeft]
-        then style:=style and not(C_anyLineStyle) or idx
-        else style:=style or idx;
+      for ps in T_plotStyle do
+      if (part = C_styleName[ps,0]) or (part = C_styleName[ps,1]) then begin
+        if ps in C_lineStyles
+        then style:=style-C_lineStyles+[ps]
+        else include(style,ps);
         mightBeColor:=false;
       end;
       if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
     until options = '';
-    if style = 0 then style:=C_lineStyle_straight;
+    if style = [] then style:=[ps_straight];
   end;
 
 FUNCTION T_style.getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
@@ -338,59 +329,6 @@ FUNCTION T_style.getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColo
     end;
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
-  end;
-
-FUNCTION T_style.wantStraightLines: boolean;
-  begin
-    result:=(style and C_anyLineStyle) in [C_lineStyle_straight,
-      C_lineStyle_straight or C_lineStyle_filled];
-  end;
-
-FUNCTION T_style.wantLeftSteps: boolean;
-  begin
-    result:=(style and C_anyLineStyle) in [C_lineStyle_stepLeft,
-      C_lineStyle_stepLeft or C_lineStyle_filled];
-  end;
-
-FUNCTION T_style.wantRightSteps: boolean;
-  begin
-    result:=(style and C_anyLineStyle) in [C_lineStyle_stepRight,
-      C_lineStyle_stepRight or C_lineStyle_filled];
-  end;
-
-FUNCTION T_style.wantFill: boolean;
-  begin
-    result:=(style and C_lineStyle_filled) = C_lineStyle_filled;
-  end;
-
-FUNCTION T_style.wantBars: boolean;
-  begin
-    result:=style = C_lineStyle_bar;
-  end;
-
-FUNCTION T_style.wantBoxes: boolean;
-  begin
-    result:=style = C_lineStyle_box;
-  end;
-
-FUNCTION T_style.wantDot: boolean;
-  begin
-    result:=(style and C_symbolStyle_dot) = C_symbolStyle_dot;
-  end;
-
-FUNCTION T_style.wantPlus: boolean;
-  begin
-    result:=(style and C_symbolStyle_plus) = C_symbolStyle_plus;
-  end;
-
-FUNCTION T_style.wantCross: boolean;
-  begin
-    result:=(style and C_symbolStyle_cross) = C_symbolStyle_cross;
-  end;
-
-FUNCTION T_style.wantImpulses: boolean;
-  begin
-    result:=(style and C_symbolStyle_impulse) = C_symbolStyle_impulse;
   end;
 
 CONSTRUCTOR T_plot.createWithDefaults;
@@ -959,7 +897,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
       //-------------------------------------------------------------:major grid
       //========================================================:coordinate grid
       //row data:===============================================================
-      if scalingOptions.logscale['y'] then yBaseLine:=round(realToScreen('y', 1)*scalingFactor)
+      if scalingOptions.logscale['y'] then yBaseLine:=yOffset
                                       else yBaseLine:=round(realToScreen('y', 0)*scalingFactor);
       if yBaseLine<0 then yBaseLine:=0
       else if yBaseLine>=target.height then yBaseLine:=target.height-1;
@@ -967,8 +905,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
         scaleAndColor:=row[rowId].style.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
         patternIdx:=rowId and 3;
 
-        if row[rowId].style.wantStraightLines then
-          begin
+        if ps_straight in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
@@ -983,7 +920,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
               y:=round(sample[1]*scalingFactor);
               if lastWasValid then begin
                 target.LineTo(x, y);
-                if row[rowId].style.wantFill then
+                if ps_filled in row[rowId].style.style then
                   drawPatternRect(lastX, lastY, x, y);
               end else
                 target.MoveTo(x, y);
@@ -992,8 +929,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
             end;
             lastWasValid:=currentIsValid;
           end;
-        end else if row[rowId].style.wantLeftSteps then
-          begin
+        end else if ps_stepLeft in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
@@ -1012,7 +948,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
                 begin
                 target.LineTo(lastX, y);
                 target.LineTo(x, y);
-                if row[rowId].style.wantFill then
+                if ps_filled in row[rowId].style.style then
                   drawPatternRect(lastX, y, x, y);
                 end
               else
@@ -1023,8 +959,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
             lastWasValid:=currentIsValid;
             end;
           end
-        else if row[rowId].style.wantRightSteps then
-          begin
+        else if ps_stepRight in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
@@ -1043,7 +978,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
                 begin
                 target.LineTo(x, lastY);
                 target.LineTo(x, y);
-                if row[rowId].style.wantFill then
+                if ps_filled in row[rowId].style.style then
                   drawPatternRect(lastX, lastY, x, lastY);
                 end
               else
@@ -1054,43 +989,36 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
             lastWasValid:=currentIsValid;
             end;
           end
-        else if row[rowId].style.wantBars then
-          begin
+        else if ps_bar in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
 
           lastWasValid:=false;
-          for i:=0 to length(row[rowId].sample)-1 do
-            begin
+          for i:=0 to length(row[rowId].sample)-1 do begin
             sample:=row[rowId].sample[i];
             currentIsValid:=isSampleValid(sample);
-            if currentIsValid then
-              begin
+            if currentIsValid then begin
               sample:=realToScreen(sample);
               x:=round(sample[0]*scalingFactor);
               y:=round(sample[1]*scalingFactor);
-              if lastWasValid then
-                begin
+              if lastWasValid then  begin
                 drawPatternRect(round(lastX*0.95+x*0.05), lastY,
-                  round(lastX*0.05+x*0.95), lastY);
+                                round(lastX*0.05+x*0.95), lastY);
                 target.line(round(lastX*0.95+x*0.05), yBaseLine,
-                  round(lastX*0.95+x*0.05), lastY);
+                            round(lastX*0.95+x*0.05), lastY);
                 target.line(round(lastX*0.95+x*0.05), lastY,
-                  round(lastX*0.05+x*0.95), lastY);
+                            round(lastX*0.05+x*0.95), lastY);
                 target.line(round(lastX*0.05+x*0.95), yBaseLine,
-                  round(lastX*0.05+x*0.95), lastY);
-                end;
+                            round(lastX*0.05+x*0.95), lastY);
+              end;
               lastX:=x;
               lastY:=y;
               lastWasValid:=currentIsValid;
-              end;
             end;
-
-          end
-        else if row[rowId].style.wantBoxes then
-          begin
+          end;
+        end else if ps_box in row[rowId].style.style then begin
           target.Pen.style:=psClear;
           target.Brush.style:=bsSolid;
           target.Brush.color:=scaleAndColor.solidColor;
@@ -1115,8 +1043,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
               end;
             inc(i, 2);
             end;
-          end;
-        if row[rowId].style.wantDot then begin
+        end;
+        if ps_dot in row[rowId].style.style then begin
           target.Pen.style:=psClear;
           target.Brush.style:=bsSolid;
           target.Brush.color:=scaleAndColor.solidColor;
@@ -1141,8 +1069,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
             end;
           end;
         end;
-        if row[rowId].style.wantPlus then
-          begin
+        if ps_plus in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
@@ -1165,8 +1092,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
               end;
             end;
           end;
-        if row[rowId].style.wantCross then
-          begin
+        if ps_cross in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
@@ -1187,8 +1113,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
             end;
           end;
         end;
-        if row[rowId].style.wantImpulses then
-          begin
+        if ps_impulse in row[rowId].style.style then begin
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
