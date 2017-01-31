@@ -1,3 +1,38 @@
+clock:=//!~
+ __________
+|          |
+|GEDBAABDEG|
+|LJHFCCFHJL|
+|QOMKIIKMOQ|
+ \TRPNNPRT/
+  \WUSSUW/
+   \XVVX/
+    \YY/
+     \/ <*>
+     /\ >$<
+    /  \
+   / zz \
+  / yvvy \
+ / xuooux \
+|wtrnjjnrtw|
+|sqmiffimqs|
+|plheccehlp|
+|kgdbaabdgk|~;
+//print(clock);
+
+memoized printOnce(s:string)->print("\f\n",s);
+
+clock(i:int,finalTime,restTime)->begin
+  local retain:=chars[flatten([ord('a')-1..ord('a')-1+i,
+                               ord('A')+i-1..ord('Z')])];
+  local drop:=['a'..'z','A'..'Z'].minus(retain);
+  local l:=clock.replace(retain,'#').replace(drop,' ').split("\n");
+  (l.leading|l.trailing.replace(" ","_"))
+  .join("\n")
+  .replace('*',formatTime("hh:mm:ss",finalTime))
+  .replace('$',formatTime("hh:mm:ss",restTime));
+end;
+
 tolerantParseTime(input:string)->
   try({parseTime('hh:nn:ss',input)},
       {try({parseTime('hh:nn',input)},
@@ -22,11 +57,12 @@ private timerLoop->begin
     keypressed:=true;
   end});
 
+  local startTime:=systime;
   while(systime<endTime AND not(keypressed),begin
-    clearPrint;
-    print('Timer set for: ',formatTime('hh:nn:ss',endTime        ));
-    print('    remaining: ',formatTime('hh:nn:ss',endTime-systime));
-    sleep(1);
+    clock(round(26*(systime-startTime)/(endTime-startTime)),
+          endTime,
+          endTime-systime).printOnce;
+    sleep(0.1);
   end);
   beepOnce ? beep :
   while(not(keypressed),begin

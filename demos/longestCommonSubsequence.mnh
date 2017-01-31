@@ -10,4 +10,3 @@ LCS(A,B)->A.trailing==B.trailing
 main(A,B)->print("The\tlongest common subsequence\nof\t",escape(A),"\nand\t",escape(B),"\nis\t",LCS(A.chars,B.chars).join.escape);
 
 main->main("thisisatest","testing123testing");
-
