@@ -7,7 +7,6 @@ USES SynEdit,SynEditKeyCmds,Forms,
 TYPE
   T_abstractMnhForm=class(TForm)
     PROCEDURE onEndOfEvaluation; virtual; abstract;
-    PROCEDURE onReloadRequired(CONST fileName:string); virtual; abstract;
   end;
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
@@ -114,7 +113,6 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             end;
           end;
         mt_endOfEvaluation: parentForm.onEndOfEvaluation;
-        mt_reloadRequired: parentForm.onReloadRequired(data);
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,join(messageText,' '));

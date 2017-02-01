@@ -29,7 +29,7 @@
       {$endif}
       FUNCTION getCmdLineHelpText:T_arrayOfString;
       FUNCTION getDocTxt:ansistring;
-      FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
+      PROCEDURE writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters);
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_mapLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
@@ -182,7 +182,7 @@ exit}
         end;
         result:=false;
       end;
-      rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
+      rt_mutable_public,rt_mutable_private,rt_datastore_public,rt_datastore_private: begin
         result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
           system.enterCriticalSection(rule_cs);
@@ -302,44 +302,15 @@ FUNCTION T_rule.getDocTxt:ansistring;
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath+result;
   end;
 
-FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
+PROCEDURE T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters);
   VAR code:ansistring;
       L:P_literal;
   begin
-    if (adapters.noErrors) and valueChangedAfterDeclaration then begin
-      case ruleType of
-        rt_persistent_private,rt_persistent_public:
-        begin
-          if ruleType=rt_persistent_private then code:=C_tokenInfo[tt_modifier_private].defaultId+' '
-                                            else code:='';
-          code:=code+
-                C_tokenInfo[tt_modifier_persistent].defaultId+' '+
-                id;
-          adapters.raiseNote('Writing back: '+code,declarationStart);
-          L:=namedValue.getValue;
-          code:=code+
-                C_tokenInfo[tt_assign].defaultId+
-                serialize(L,declarationStart,@adapters,true)+
-                C_tokenInfo[tt_semicolon].defaultId;
-          disposeLiteral(L);
-          provider.replaceCode(
-            declarationStart.line-1,
-            declarationStart.column,
-            declarationEnd.line-1,
-            declarationEnd.column,
-            code);
-          result:=true;
-        end;
-        rt_datastore_private,rt_datastore_public:
-        begin
-          L:=namedValue.getValue;
-          dataStoreMeta^.writeValue(L,declarationStart,@adapters);
-          disposeLiteral(L);
-          result:=false; //because the package file remains unchanged
-        end;
-        else result:=false;
-      end;//case ruleType
-    end else result:=false;
+    if (adapters.noErrors) and valueChangedAfterDeclaration and (ruleType in [rt_datastore_private,rt_datastore_public]) then begin
+      L:=namedValue.getValue;
+      dataStoreMeta^.writeValue(L,declarationStart,@adapters);
+      disposeLiteral(L);
+    end;
   end;
 
 FUNCTION T_rule.isReportable(OUT value:P_literal):boolean;

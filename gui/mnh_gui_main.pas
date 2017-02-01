@@ -226,7 +226,6 @@ TYPE
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
 
     PROCEDURE onEndOfEvaluation; override;
-    PROCEDURE onReloadRequired(CONST fileName:string); override;
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
@@ -878,12 +877,5 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
     for j:=0 to length(editorMeta)-1 do editorMeta[j].doneDebugging;
     updateDebugParts;
   end;
-
-PROCEDURE TMnhForm.onReloadRequired(CONST fileName:string);
-  VAR j:longint;
-  begin
-    for j:=0 to length(editorMeta)-1 do editorMeta[j].reloadFile(fileName);
-  end;
-
 
 end.

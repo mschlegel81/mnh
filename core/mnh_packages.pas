@@ -361,8 +361,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           first:=context.disposeToken(first);
         end;
         evaluateBody:=evaluateBody
-                   or (tt_modifier_mutable    in ruleModifiers)
-                   or (tt_modifier_persistent in ruleModifiers);
+                   or (tt_modifier_mutable    in ruleModifiers);
 
         if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
           context.adapters^.raiseError('Declaration does not start with an identifier.',first^.location);
@@ -800,20 +799,15 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boole
 
 PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   VAR ruleList:array of P_rule;
-      wroteBack:boolean=false;
       i:longint;
   begin
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
-      if ruleList[i]^.writeBack(codeProvider,adapters) then wroteBack:=true;
+      ruleList[i]^.writeBack(codeProvider,adapters);
       if ruleList[i]^.ruleType=rt_memoized then ruleList[i]^.cache^.clear;
     end;
     setLength(ruleList,0);
-    if wroteBack then begin
-      codeProvider.save;
-      adapters.logReloadRequired(codeProvider.getPath);
-    end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;
 

@@ -21,7 +21,6 @@ TYPE
     PROCEDURE Timer1Timer(Sender: TObject);
 
     PROCEDURE onEndOfEvaluation; override;
-    PROCEDURE onReloadRequired(CONST fileName:string); override;
   private
     outputHighlighter:TSynMnhSyn;
   end;
@@ -59,10 +58,6 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin
     caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
-  end;
-
-PROCEDURE ToutputOnlyForm.onReloadRequired(CONST fileName: string);
-  begin
   end;
 
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
