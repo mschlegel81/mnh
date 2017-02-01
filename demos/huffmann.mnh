@@ -19,7 +19,7 @@ private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T[
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
 private charactersInString     (s:string)->s.chars.elementFrequency;
 
-//*Solves the "Huffman coding" task from <a href="http://rosettacode.org/wiki/Huffman_coding">RosettaCode</a>
+//*Solves the "Huffman coding" task from http://rosettacode.org/wiki/Huffman_coding
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
                        print(" code\tchar\n "&
                              huffman(charactersInFile(filename)).each(e,

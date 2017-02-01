@@ -1,4 +1,4 @@
-//*See <a href="http://rosettacode.org/wiki/Here_document">http://rosettacode.org/wiki/Here_document</a>
+//*See http://rosettacode.org/wiki/Here_document
 main->print(
 //!~
   This is a simple text...

@@ -3,6 +3,6 @@ private ackermann(m=0,n>0)->n+1;
 private ackermann(m>0,n=0)->ackermann(m-1,1);
 private ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
 
-//*Solves the "Ackermann" task from <a href="http://rosettacode.org/wiki/Ackermann_function">RosettaCode</a>
+//*Solves the "Ackermann" task from http://rosettacode.org/wiki/Ackermann_function
 main->print('See http://rosettacode.org/wiki/Ackermann_function') and
       [0..14].each(n,print('ackermann(3,',n,')=',ackermann(3,n)));

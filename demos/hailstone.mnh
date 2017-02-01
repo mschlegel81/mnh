@@ -9,7 +9,7 @@ private hailLen(i>1)->1+((i and 1)=1 ? hailLen(3*i+1) : hailLen(i div 2));
 memoized
 private sizes->0|[1..100000].each(i,hailLen(i));
 
-//*Solves the "Hailstone" task from <a href="http://rosettacode.org/wiki/Hailstone_sequence">RosettaCode</a>
+//*Solves the "Hailstone" task from http://rosettacode.org/wiki/Hailstone_sequence
 main->print('See http://rosettacode.org/wiki/Hailstone_sequence') and
       print('Series starting @27 has ',size(hailstone(27)),' elements') and
       print('Starting with: ',hailstone(27).get([0..3]),' and') and

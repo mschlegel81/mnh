@@ -36,7 +36,7 @@ private printFirstKVampires(k:int)->begin
   while(found<k,printVampire(toTest:=step(toTest)) ? found+=1 : void);
 end;
 
-//*Solves the "Vampire-Number" task from <a href="http://rosettacode.org/wiki/Vampire_number">RosettaCode</a>
+//*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number
 main('rosetta')->begin
   print('See http://rosettacode.org/wiki/Vampire_number');
   main;

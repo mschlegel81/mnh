@@ -1,5 +1,5 @@
 USE stringFib;
-//*See <a href="http://rosettacode.org/wiki/Benford%27s_law">Benford's law on Rosetta Code</a>
+//*See http://rosettacode.org/wiki/Benford%27s_law
 main->printf('%6d %8.2f',
              'actual'|[1..1000].pEach(i,stringFib(i).copy(0,1).softCast).elementFrequency.sort.getInner(1),
              'expected'|(ln(1+1/[1..9])/ln(10)*1000));

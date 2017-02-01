@@ -1,36 +1,25 @@
-clock:=//!~
- __________
-|          |
-|GEDBAABDEG|
-|LJHFCCFHJL|
-|QOMKIIKMOQ|
- \TRPNNPRT/
-  \WUSSUW/
-   \XVVX/
-    \YY/
-     \/ <*>
-     /\ >$<
-    /  \
-   / zz \
-  / yvvy \
- / xuooux \
-|wtrnjjnrtw|
-|sqmiffimqs|
-|plheccehlp|
-|kgdbaabdgk|~;
-//print(clock);
-
-memoized printOnce(s:string)->print("\f\n",s);
-
-clock(i:int,finalTime,restTime)->begin
-  local retain:=chars[flatten([ord('a')-1..ord('a')-1+i,
-                               ord('A')+i-1..ord('Z')])];
-  local drop:=['a'..'z','A'..'Z'].minus(retain);
-  local l:=clock.replace(retain,'#').replace(drop,' ').split("\n");
-  (l.leading|l.trailing.replace(" ","_"))
-  .join("\n")
-  .replace('*',formatTime("hh:mm:ss",finalTime))
-  .replace('$',formatTime("hh:mm:ss",restTime));
+private SAND_CHARS:=['a'..'z','A'..'Z','0'..'9','-','+','%','§',"'",'"'];
+private UPPER_HALF:=//!~
+ ____________
+|AumgcabehnvB|
+|LCwoidfipxDM|
+|WOEyqklrzFPX|
+ \0YQGstHRZ1/
+  \82SIJT39/
+   \-4UV5+/
+    \%67§/
+     \'"/
+      \/ <*>~;
+private LOWER_HALF:=UPPER_HALF.split("\n").tail.reverseList.join("\n").replace(['/','\','~'],['~','/','\']);
+private memoized printOnce(...)->print@...;
+private sandClock(startTime,endTime)->begin
+  local timeLeft:=endTime-systime;
+  local progress:=round(SAND_CHARS.size*max(0,min(1,(systime-startTime)/(endTime-startTime))));
+  local sandDown:=progress=0 ? [] : SAND_CHARS[[0..progress-1]];
+  local sandUp:=SAND_CHARS.minus(sandDown);
+  local allLines:=(UPPER_HALF.replace(sandDown,' ').replace(sandUp,'#').replace('*',formatTime('hh:mm:ss',endTime))&"\n"&
+                   LOWER_HALF.replace(sandDown,'#').replace(sandUp,' ').replace('*',formatTime('hh:mm:ss',timeLeft))).split("\n");
+  "\f\n"&(allLines.leading|allLines.trailing.replace(' ','_')).join("\n");
 end;
 
 tolerantParseTime(input:string)->
@@ -59,11 +48,10 @@ private timerLoop->begin
 
   local startTime:=systime;
   while(systime<endTime AND not(keypressed),begin
-    clock(round(26*(systime-startTime)/(endTime-startTime)),
-          endTime,
-          endTime-systime).printOnce;
+    sandClock(startTime,endTime).printOnce;
     sleep(0.1);
   end);
+  sandClock(startTime,endTime).printOnce;
   beepOnce ? beep :
   while(not(keypressed),begin
     beep;

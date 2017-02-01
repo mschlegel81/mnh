@@ -1,7 +1,8 @@
+memoized
 carpet(x:int,y:int)->(x mod 3)<>1 OR (y mod 3)<>1
                       ? x>2<y
                         ? carpet(x div 3,y div 3)
                         : "[]"
                       : "  ";
-//*See <a href="http://rosettacode.org/wiki/Sierpinski_carpet">http://rosettacode.org/wiki/Sierpinski_carpet</a>
+//*See http://rosettacode.org/wiki/Sierpinski_carpet
 main->printf("%s",[0..80].each(i,[0..80].each(j,carpet(i,j),&)));

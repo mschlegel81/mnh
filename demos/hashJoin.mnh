@@ -48,6 +48,7 @@ outerJoin(Tab1:list,KeyIndex1:int,Tab2:list,KeyIndex2:int)->
       Map2[key].each(row2,tab1Substitute|row2),|);
   end;
 
+//*See https://rosettacode.org/wiki/Hash_join
 main->begin
   print('Table A:');
   printf("%s",A.formatTable(['Age','Name']));

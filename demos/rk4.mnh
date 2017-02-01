@@ -45,7 +45,7 @@ private initial:=[0,1];
 private exact  :={1/16*($t^2+4)^2};
 
 
-//*Solves the Runge-Kutta task from <fga href="http://rosettacode.org/wiki/Runge-Kutta_method">Rosetta Code</a>
+//*Solves the Runge-Kutta task from http://rosettacode.org/wiki/Runge-Kutta_method
 main->begin
   local tolSteps:=initial.rk4evolve(df,0.1,100,1E-3);
   local steps:=initial.rk4evolve(df,0.1,100).each(p,[p[0],p[1],abs(p[1]-exact(p[0])),abs(tolSteps[index,1]-exact(p[0]))]);

@@ -47,7 +47,7 @@ private printAll      :={                                 print($step,': ',niceR
 main(fractions,n)->Fractran(printAll      ,parseFractions(fractions),rational(softCast(n),1),30)|
                    print('----------------------------------')|
                    Fractran(printPowersOf2,parseFractions(fractions),rational(softCast(n),1),428553);
-//*See <a href="http://rosettacode.org/wiki/Fractran">http://rosettacode.org/wiki/Fractran</a>
+//*See http://rosettacode.org/wiki/Fractran
 main('rosetta')->main(Conway_primes_algorithm,'2');
 //*As above but abridged for regression test
 main->Fractran(printAll,parseFractions(Conway_primes_algorithm),rational(2,1),30);
