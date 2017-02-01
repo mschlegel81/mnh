@@ -1,0 +1,12 @@
+longest(A,B)->A.size>B.size ? A : B;
+
+memoized
+LCS([],B)->[];
+LCS(A,[])->[];
+LCS(A,B)->A.trailing==B.trailing
+          ? LCS(A.leading,B.leading) | A.trailing
+          : longest(LCS(A.leading,B),LCS(A,B.leading));
+//*Returns nicely formatted info on the longest common subsequence of A and B
+main(A,B)->print("The\tlongest common subsequence\nof\t",escape(A),"\nand\t",escape(B),"\nis\t",LCS(A.chars,B.chars).join.escape);
+//*For regression test; see https://rosettacode.org/wiki/Longest_common_subsequence
+main->main("thisisatest","testing123testing");

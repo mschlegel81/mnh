@@ -9,5 +9,5 @@ private s(n<=54)->m109(s(n-2)-s(n-1));
 memoized
 private r(n<=54)->s((34*(n+1)) mod 55);
 private r(n)->m109(r(n-55)-r(n-24));
-//See: <a href="http://rosettacode.org/wiki/Subtractive_generator">http://rosettacode.org/wiki/Subtractive_generator</a>
+//See: http://rosettacode.org/wiki/Subtractive_generator
 main->[220..222].each(i,printf('%3d : %9d',i,r(i)));

@@ -13,7 +13,7 @@ private fibWordCharFreq(n)->fibWordCharFreq(n-1)+fibWordCharFreq(n-2);
 private fibWordLength(i)->fibWordCharFreq(i).agg(+);
 private fibWordEntropy(i)->-1*(fibWordCharFreq(i)/fibWordLength(i)).each(s,s*ln(s)/ln(2),+);
 
-//*Solves the <a href="http://rosettacode.org/wiki/Fibonacci_word">Fibonacci Word Task</a> (with cheating)
+//*Solves the task: http://rosettacode.org/wiki/Fibonacci_word (with cheating)
 main->print("N\tLength\tEntropy\tWord\n") |
       [ 1.. 9].each(i,printf('%2d %9d %15.13f %s',i,length(fibWord(i)),shannonEntropy(fibWord(i)),fibWord(i))) |
       [10..37].each(i,printf('%2d %9d %15.13f',i,fibWordLength(i),fibWordEntropy(i)));

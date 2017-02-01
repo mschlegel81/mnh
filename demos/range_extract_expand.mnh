@@ -19,8 +19,8 @@ private range(x0,x1)->[x0..x1];
 private expandRange(s:string)->split(s,",").each(run,range@softCast(split(replace(run,["0".."9"]&"-",["0".."9"]&";"),";")),|);
 
 
-//*See <a href="http://rosettacode.org/wiki/Range_expansion">http://rosettacode.org/wiki/Range_expansion</a>
-//*and <a href="http://rosettacode.org/wiki/Range_expansion">http://rosettacode.org/wiki/Range_expansion</a>
+//*See http://rosettacode.org/wiki/Range_expansion
+//*and http://rosettacode.org/wiki/Range_extraction
 main->print("Canonical form (as given by rosettacode.org):")|
       print("  The list\t"               ,                                    exampleList,
             "\n  can be represented as\t",            normalForm(extractRange(exampleList)),

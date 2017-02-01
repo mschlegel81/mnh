@@ -19,16 +19,115 @@ The solution is valid.
 + //*For regression test //comment added
   main('test')->printf("%s",unifiedDiff('original','modified',myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=6 ? line&" //comment added" : line),2));
 ***** grep *****
-./demos/24.mnh
-    33:      local expressionResult:=try({toExpression(text)()},{$0});
-./demos/htmlFunctionPlotter.mnh
-    16:  try({begin
-./demos/sudoku.mnh
-    51:          //first try to solve the cell by restricting values based on already fixed/solved cells
-    59:              //try to solve based on all cells (including unsolved)
-./demos/timer.mnh
-     2:  try({parseTime('hh:nn:ss',input)},
-     3:      {try({parseTime('hh:nn',input)},
+./demos/100doors.mnh
+     1://*See http://rosettacode.org/wiki/100_doors
+./demos/12_statements.mnh
+    33://*See http://rosettacode.org/wiki/Twelve_statements
+./demos/99bottles.mnh
+     5://*Prints out the song "99 bottles of beer", see http://rosettacode.org/wiki/99_Bottles_of_Beer or http://www.99-bottles-of-beer.net/
+./demos/ackermann.mnh
+     6://*Solves the "Ackermann" task from http://rosettacode.org/wiki/Ackermann_function
+     7:main->print('See http://rosettacode.org/wiki/Ackermann_function') and
+./demos/aks.mnh
+    17://*See http://rosettacode.org/wiki/AKS_test_for_primes
+./demos/aliquotSequence.mnh
+    21://*See http://rosettacode.org/wiki/Aliquot_sequence_classifications
+./demos/balancedBrackets.mnh
+     4://*See http://rosettacode.org/wiki/Balanced_brackets
+./demos/benford.mnh
+     2://*See http://rosettacode.org/wiki/Benford%27s_law
+./demos/bestShuffle.mnh
+     4://*See http://rosettacode.org/wiki/Best_shuffle
+./demos/concatInts.mnh
+     2://*See http://rosettacode.org/wiki/Largest_int_from_concatenated_ints
+./demos/continuedFractions.mnh
+    15://*See http://rosettacode.org/wiki/Continued_fraction
+./demos/countTheCoins.mnh
+    11://*See  http://rosettacode.org/wiki/Count_the_coins
+./demos/digitSquareSum.mnh
+     7://*See http://rosettacode.org/wiki/Iterated_digits_squaring
+./demos/ethiopian.mnh
+    27://*See http://rosettacode.org/wiki/Ethiopian_multiplication
+./demos/fibonacci.mnh
+     5://*Solves the "Fibonacci n-step" task from http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences
+     6:main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and
+./demos/fibonacciWord.mnh
+    16://*Solves the task: http://rosettacode.org/wiki/Fibonacci_word (with cheating)
+./demos/fractran.mnh
+    50://*See http://rosettacode.org/wiki/Fractran
+./demos/hailstone.mnh
+    12://*Solves the "Hailstone" task from http://rosettacode.org/wiki/Hailstone_sequence
+    13:main->print('See http://rosettacode.org/wiki/Hailstone_sequence') and
+./demos/hamming.mnh
+     5://*See http://rosettacode.org/wiki/Hamming_numbers
+./demos/harshad.mnh
+     9://*See http://rosettacode.org/wiki/Harshad_or_Niven_series
+./demos/hashJoin.mnh
+    51://*See https://rosettacode.org/wiki/Hash_join
+./demos/hereDoc.mnh
+     1://*See http://rosettacode.org/wiki/Here_document
+./demos/hofstadterConway.mnh
+    24://*This solves the task: http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence
+./demos/huffmann.mnh
+    22://*Solves the "Huffman coding" task from http://rosettacode.org/wiki/Huffman_coding
+    23:main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
+./demos/josephus.mnh
+     7://*See http://rosettacode.org/wiki/Josephus_problem
+./demos/levenshtein.mnh
+     5://*This solves the Levenshtein distance task: http://rosettacode.org/wiki/Levenshtein_distance
+./demos/longestCommonSubsequence.mnh
+    11://*For regression test; see https://rosettacode.org/wiki/Longest_common_subsequence
+./demos/ludic.mnh
+    19://*See http://rosettacode.org/wiki/Ludic_numbers
+./demos/magicSquare.mnh
+    16://*Print out an n x n magic square; See http://rosettacode.org/wiki/Magic_squares_of_odd_order
+./demos/maze.mnh
+    41://*See http://rosettacode.org/wiki/Maze_generation
+./demos/monteCarloPi.mnh
+     8://*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
+     9:main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
+./demos/pascal.mnh
+     8://*See http://rosettacode.org/wiki/Pascal%27s_triangle
+./demos/pernicousNumbers.mnh
+     4://*See http://rosettacode.org/wiki/Pernicious_numbers
+./demos/pythagoras.mnh
+    11://*See http://rosettacode.org/wiki/Pythagorean_triples
+./demos/range_extract_expand.mnh
+    22://*See http://rosettacode.org/wiki/Range_expansion
+    23://*and http://rosettacode.org/wiki/Range_extraction
+    24:main->print("Canonical form (as given by rosettacode.org):")|
+./demos/rk4.mnh
+    48://*Solves the Runge-Kutta task from http://rosettacode.org/wiki/Runge-Kutta_method
+./demos/root.mnh
+    31://*Solves the "Roots of a function" task from http://rosettacode.org/wiki/Roots_of_a_function
+    32:main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and
+./demos/rotatingCube.mnh
+    20://*This solves the "rotating cube" task: http://rosettacode.org/wiki/Draw_a_rotating_cube
+./demos/selfRefSeq.mnh
+    19://*See http://rosettacode.org/wiki/Self-referential_sequence
+./demos/semordnilap.mnh
+    12://*See http://rosettacode.org/wiki/Semordnilap
+./demos/setConsolidation.mnh
+    21://*See http://rosettacode.org/wiki/Set_consolidation
+./demos/shannonEntropy.mnh
+     8://*See http://rosettacode.org/wiki/Entropy
+./demos/sierpinskiCarpet.mnh
+     7://*See http://rosettacode.org/wiki/Sierpinski_carpet
+./demos/sierpinskiTriangle.mnh
+     1://*Solves the "Sierpinski-Triangle" task from http://rosettacode.org/wiki/Sierpinski_triangle
+./demos/subGen.mnh
+    12://See: http://rosettacode.org/wiki/Subtractive_generator
+./demos/unbiasedRandom.mnh
+    12://*See http://rosettacode.org/wiki/Unbias_a_random_generator
+./demos/vampire.mnh
+    39://*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number
+    41:  print('See http://rosettacode.org/wiki/Vampire_number');
+./demos/variadic.mnh
+     1://*See http://rosettacode.org/wiki/Variadic_function
+./demos/weasel.mnh
+    31://*See http://rosettacode.org/wiki/Evolutionary_algorithm
+./demos/y.mnh
+     5://*Solves the http://rosettacode.org/wiki/Y_combinator
 ***** emptyFolders *****
 
 ***** 100doors *****
@@ -1345,6 +1444,49 @@ The 1691st Hamming number is    : 2125764000
 The first Harshad Number >1000 is 1002
 ***** hash *****
 982D6E49
+***** hashJoin *****
+Table A:
+Age | Name
+----+-------
+27  | Jonah
+18  | Alan
+28  | Glory
+18  | Popeye
+28  | Alan
+
+Table B:
+Character | Nemesis
+----------+--------
+Jonah     | Whales
+Jonah     | Spiders
+Alan      | Ghosts
+Alan      | Zombies
+Glory     | Buffy
+Me        | Things
+
+Inner join:
+A.Age | A.Name | B.Character | B.Nemesis
+------+--------+-------------+----------
+27    | Jonah  | Jonah       | Whales
+27    | Jonah  | Jonah       | Spiders
+18    | Alan   | Alan        | Ghosts
+18    | Alan   | Alan        | Zombies
+28    | Glory  | Glory       | Buffy
+28    | Alan   | Alan        | Ghosts
+28    | Alan   | Alan        | Zombies
+
+Outer join:
+A.Age | A.Name | B.Character | B.Nemesis
+------+--------+-------------+----------
+27    | Jonah  | Jonah       | Whales
+27    | Jonah  | Jonah       | Spiders
+18    | Alan   | Alan        | Ghosts
+18    | Alan   | Alan        | Zombies
+28    | Glory  | Glory       | Buffy
+18    | Popeye |             |
+28    | Alan   | Alan        | Ghosts
+28    | Alan   | Alan        | Zombies
+      |        | Me          | Things
 ***** helloWorld *****
 Hello world
 ***** hereDoc *****
@@ -1448,6 +1590,11 @@ The Kaprekar numbers up to 10000 are [1,9,45,55,99,297,703,999,2223,2728,4879,49
 3
 ***** lindenmayer *****
 [[0,0],[0.0,1.0],[1.0,1.0],[1.0,0.0],[3.0,0.0],[3.0,1.0],[2.0,1.0],[2.0,2.0],[3.0,2.0],[3.0,3.0],[1.0,3.0],[1.0,2.0],[0.0,2.0],[0.0,4.0],[1.0,4.0],[1.0,5.0],[0.0,5.0],[0.0,7.0],[1.0,7.0],[1.0,6.0],[2.0,6.0],[2.0,7.0],[3.0,7.0],[3.0,5.0],[2.0,5.0],[2.0,4.0],[4.0,4.0],[5.0,4.0],[5.0,5.0],[4.0,5.0],[4.0,7.0],[5.0,7.0],[5.0,6.0],[6.0,6.0],[6.0,7.0],[7.0,7.0],[7.0,5.0],[6.0,5.0],[6.0,4.0],[7.0,4.0],[7.0,2.0],[6.0,2.0],[6.0,3.0],[4.0,3.0],[4.0,2.0],[5.0,2.0],[5.0,1.0],[4.0,1.0],[4.0,0.0],[6.0,0.0],[6.0,1.0],[7.0,1.0],[7.0,0.0]]
+***** longestCommonSubsequence *****
+The longest common subsequence
+of  'thisisatest'
+and 'testing123testing'
+is  'tsitest'
 ***** ludic *****
 Ludic Numbers
   The first 25 are: [1,2,3,5,7,11,13,17,23,25,29,37,41,43,47,53,61,67,71,77,83,89,91,97,107].
@@ -2925,36 +3072,22 @@ A
 B
 C
 ***** weasel *****
-  20 WGMRHYJYGGO DK GHGKJJEXFAMBE (229)
-  40 KGDMHPHOCXT OR ICNC GGUFHNDM (168)
-  60 LGOMHPGY GR LP ICKC ICUFJSHM (106)
-  80 LGSHHPGQ GT JU ILKC I XEASHM ( 39)
- 100 LGSHHPGQ GT JU KLKE A VEASEL ( 23)
- 120 LGSHIPNQ JT JT KLKE A VEASEL ( 19)
- 140 MESHIPNT IT IT KIKE A VEASEL ( 10)
- 160 MESHIPJT IT IS LIKE A VEASEL (  6)
- 180 MESHIPJT IT IS LIKE A VEASEL (  6)
- 200 MESHIOJT IT IS LIKE A VEASEL (  5)
- 220 MESHIOJT IT IS LIKE A VEASEL (  5)
- 240 MESHINJT IT IS LIKE A VEASEL (  4)
- 260 MESHINJT IT IS LIKE A VEASEL (  4)
- 280 MESHINJT IT IS LIKE A VEASEL (  4)
- 300 MESHINJT IT IS LIKE A VEASEL (  4)
- 320 MESHINKT IT IS LIKE A VEASEL (  3)
- 340 MESHINKT IT IS LIKE A VEASEL (  3)
- 360 MESHINKT IT IS LIKE A WEASEL (  2)
- 380 MESHINKS IT IS LIKE A WEASEL (  1)
- 400 MESHINKS IT IS LIKE A WEASEL (  1)
- 420 MESHINKS IT IS LIKE A WEASEL (  1)
- 440 MESHINKS IT IS LIKE A WEASEL (  1)
- 460 MESHINKS IT IS LIKE A WEASEL (  1)
- 480 MESHINKS IT IS LIKE A WEASEL (  1)
- 500 MESHINKS IT IS LIKE A WEASEL (  1)
- 520 MESHINKS IT IS LIKE A WEASEL (  1)
- 540 MESHINKS IT IS LIKE A WEASEL (  1)
- 560 MESHINKS IT IS LIKE A WEASEL (  1)
- 580 MESHINKS IT IS LIKE A WEASEL (  1)
- 589 METHINKS IT IS LIKE A WEASEL
+  20 HDSGMFMUDIR QT UTGD C MDAVEW (123)
+  40 ODVGMNMUDIU KT KHGD C SDAQEN ( 72)
+  60 ODVGINKU IT KY KIMD B SEAQEQ ( 32)
+  80 MDVGINKU IU KS KIMD B UEAQEQ ( 23)
+ 100 MEUHINKS IU KS KIMD B UEAQEO ( 16)
+ 120 MEUHINKS IU KS KIJE B UEAQEK ( 12)
+ 140 METHINKS IU KS KIKE B WEATEK (  7)
+ 160 METHINKS IU KS KIKE B WEATEK (  7)
+ 180 METHINKS IU KS KIKE B WEASEL (  5)
+ 200 METHINKS IU IS KIKE B WEASEL (  3)
+ 220 METHINKS IU IS KIKE B WEASEL (  3)
+ 240 METHINKS IU IS LIKE B WEASEL (  2)
+ 260 METHINKS IU IS LIKE B WEASEL (  2)
+ 280 METHINKS IT IS LIKE B WEASEL (  1)
+ 300 METHINKS IT IS LIKE B WEASEL (  1)
+ 305 METHINKS IT IS LIKE A WEASEL
 ***** wordCount *****
 Words total:    794914
 Distinct words: 12892
@@ -3207,11 +3340,11 @@ time approximation                      error error with step size control
 ***** root *****
 See http://rosettacode.org/wiki/Roots_of_a_function
 Analyzing $x^3-3*$x^2+2*$x
-Root found at   4.49734756343447E-165
+Root found at   1.81662201177176E-182
 Root found at   1.0
 Root found at   2.0
 ***** barnsleyFern *****
-Hash of regTest/../demos/barnsleyFern.png is BE2E9E99
+Hash of regTest/../demos/barnsleyFern.png is 580419D0
 ***** fractalPlant *****
 Hash of regTest/../demos/fractalPlant.png is D2104128
 ***** kochCurve *****

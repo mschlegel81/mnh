@@ -2,6 +2,6 @@ private H(nMax)->unique(flatten((2^[0..floor(ln(nMax      )/ln(2))]).each(i,
                         flatten((3^[0..floor(ln(nMax/ i   )/ln(3))]).each(j,
                                        5^[0..floor(ln(nMax/(i*j))/ln(5))]*i*j))))).sort;
 private H:=H(2^31);
-//*See <a href="http://rosettacode.org/wiki/Hamming_numbers">http://rosettacode.org/wiki/Hamming_numbers</a>
+//*See http://rosettacode.org/wiki/Hamming_numbers
 main->print('The first 20 Hamming numbers are: ',head(H,20))|
       print('The 1691st Hamming number is    : ',H.get(1690));

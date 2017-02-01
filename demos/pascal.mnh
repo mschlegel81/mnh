@@ -5,5 +5,5 @@ private printTri(n:int)->printf("%s",[1..n].each(i,repeat("\t",n-i)&tri(i).join(
 
 //*Simple output
 main->printTri(10);
-//*See <a href="http://rosettacode.org/wiki/Pascal%27s_triangle">http://rosettacode.org/wiki/Pascal's_triangle</a>
+//*See http://rosettacode.org/wiki/Pascal%27s_triangle
 main(lineCount)->printTri(softCast(lineCount));

@@ -1,6 +1,7 @@
 memoized
 private pascal(n<1)->1;
 private pascal(n)->pascal(n-1)|0+0|pascal(n-1);
+memoized
 private AKSPoly(n)->pascal(n)*(-1^[0..n]);
 private powerOfX(0)->"1";
 private powerOfX(1)->"x";
@@ -13,7 +14,7 @@ private AKSPolyToString(coeff:intList)->[0..size(coeff)-1].each(i,
 
 private AKS_isPrime(n)->trueCount(AKSPoly(n)[[1..n-1]] mod n<>0)=0;
 
-//*See <a href="http://rosettacode.org/wiki/AKS_test_for_primes">http://rosettacode.org/wiki/AKS_test_for_primes</a>
+//*See http://rosettacode.org/wiki/AKS_test_for_primes
 main->print('Polynomial expansions:') |
       printf("(x-1)^%{$0}d = %{AKSPolyToString(AKSPoly($0))}s",[0..7])|
       print("\nPrimes <= 66 are : ",[2..66].each(i,AKS_isPrime(i) ? i : void));

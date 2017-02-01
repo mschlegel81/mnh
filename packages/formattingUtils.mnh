@@ -1,4 +1,4 @@
-//*Formats a kust as a table for printout. The result is a stringList
+//*Formats a list as a table for printout. The result is a stringList
 formatTable(L:list)->begin
   local columnCount:=0;
   local txt:=L.each(row,begin
@@ -13,3 +13,6 @@ formatTable(L:list)->begin
   columnCount:=txt.length.max;
   txt.each(line,index=1 ? line.replace([' ','|'],['-','+'])&repeat('-',columnCount-line.length) : line);
 end;
+
+//*Formats a list as a table for printout. The result is a stringList
+formatTable(L:list,header:stringList)->formatTable([header]|L);

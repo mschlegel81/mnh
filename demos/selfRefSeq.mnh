@@ -16,5 +16,5 @@ series(i:int)->begin
   result;
 end;
 
-//*See <a href="http://rosettacode.org/wiki/Self-referential_sequence">http://rosettacode.org/wiki/Self-referential_sequence</a>
+//*See http://rosettacode.org/wiki/Self-referential_sequence
 main->print([1..10000].pEach(i,series(i),aggregator({size($x)<size($y) ? $y : $x})).join(', '));

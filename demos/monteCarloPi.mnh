@@ -5,6 +5,6 @@ private samplesInCircle(sampleSize>10000)->[1..9].each(i,samplesInCircle(sampleS
 
 private samplesInCircle(sampleSize>0)->trueCount(random(sampleSize)^2+random(sampleSize)^2<1);
 
-//*Solves the "Monte carlo methods" task from <a href="http://rosettacode.org/wiki/Monte_Carlo_methods">RosettaCode</a>
+//*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
 main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
       printf("n=%7d pi approximated as %-9.7g",10^[1..6],(10^[1..6]).each(n,monteCarloPi(n)));

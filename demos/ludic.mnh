@@ -16,7 +16,7 @@ sieve->begin
   L;
 end;
 
-//*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
+//*See http://rosettacode.org/wiki/Ludic_numbers
 main->begin
   local LUDICS:=sieve;
   local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);

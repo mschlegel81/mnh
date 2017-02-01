@@ -1,0 +1,61 @@
+USE formattingUtils;
+
+A:=[[27,'Jonah'],
+    [18,'Alan' ],
+    [28,'Glory'],
+    [18,'Popeye'],
+    [28,'Alan']];
+B:=[['Jonah','Whales'],
+    ['Jonah','Spiders'],
+    ['Alan' ,'Ghosts'],
+    ['Alan' ,'Zombies'],
+    ['Glory','Buffy'],
+    ['Me'   ,'Things']];
+
+private TabToMap(Table:list,KeyIndex:int)->begin
+  local map:=[];
+  Table.each(row,begin
+    local key:=row[KeyIndex];
+    local value:=(map.get(key) orElse [])|[row];
+    map<<[key,value];
+    void;
+  end);
+  map;
+end;
+
+innerJoin(Tab1:list,KeyIndex1:int,Tab2:list,KeyIndex2:int)->
+  begin
+    local Map2:=TabToMap(Tab2,KeyIndex2);
+    Tab1.each(row,begin
+      local key:=row[KeyIndex1];
+      local toJoin:=Map2[key] orElse [];
+      toJoin==[] ? void : toJoin.each(row2,row|row2);
+    end,|);
+  end;
+
+outerJoin(Tab1:list,KeyIndex1:int,Tab2:list,KeyIndex2:int)->
+  begin
+    local tab1Substitute:=[1..Tab1.each(row,row.size,max)].each(n,'');
+    local Map2:=TabToMap(Tab2,KeyIndex2);
+    local mappedKeys:=[];
+    Tab1.each(row,begin
+      local key:=row[KeyIndex1];
+      mappedKeys|=key;
+      local toJoin:=Map2[key] orElse [];
+      toJoin==[] ? [row] : toJoin.each(row2,row|row2);
+    end,|)|
+    Map2.getInner(0).minus(mappedKeys).each(key,
+      Map2[key].each(row2,tab1Substitute|row2),|);
+  end;
+
+//*See https://rosettacode.org/wiki/Hash_join
+main->begin
+  print('Table A:');
+  printf("%s",A.formatTable(['Age','Name']));
+  print("\nTable B:");
+  printf("%s",B.formatTable(['Character','Nemesis']));
+  print("\nInner join:");
+  printf("%s",innerJoin(A,1,B,0).formatTable(['A.Age','A.Name','B.Character','B.Nemesis']));
+  print("\nOuter join:");
+  printf("%s",outerJoin(A,1,B,0).formatTable(['A.Age','A.Name','B.Character','B.Nemesis']));
+end;

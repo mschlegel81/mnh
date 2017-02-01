@@ -9,7 +9,7 @@ private findSemordnilaps->
           size(semordnilapGroup)==0 ? void : semordnilapGroup;
         end);
 
-//*See <a href="http://rosettacode.org/wiki/Semordnilap">http://rosettacode.org/wiki/Semordnilap</a>
+//*See http://rosettacode.org/wiki/Semordnilap
 main->begin
   local fullList:=findSemordnilaps;
   printf('Found %d Semordnilaps',size(fullList));

@@ -5,7 +5,7 @@ shannonEntropy(s:string)->s.chars //split s in characters
                            .{$L*ln($L)/ln(2)}
                            .agg(+)*-1;
 
-//*See <a href="http://rosettacode.org/wiki/Entropy">Entropy task from RosettaCode</a>
+//*See http://rosettacode.org/wiki/Entropy
 main->main("1223334444");
 //*Print out the Shannon entropy of <code>s</code>
 main(s)->print(shannonEntropy(s));
