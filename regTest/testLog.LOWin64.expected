@@ -71,6 +71,8 @@ The solution is valid.
 ./demos/huffmann.mnh
     22://*Solves the "Huffman coding" task from http://rosettacode.org/wiki/Huffman_coding
     23:main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
+./demos/jaro.mnh
+    43://*See http://rosettacode.org/wiki/Jaro_distance
 ./demos/josephus.mnh
      7://*See http://rosettacode.org/wiki/Josephus_problem
 ./demos/levenshtein.mnh
@@ -1567,6 +1569,13 @@ See http://rosettacode.org/wiki/Huffman_coding
 Prisoners: 41
 Step size: 3
 Survivors: [30]
+***** jaro *****
+The Jaro distance of 'MARTHA'
+                 and 'MARHTA' is 0.944444444444445
+The Jaro distance of 'DIXON'
+                 and 'DICKSONX' is 0.766666666666667
+The Jaro distance of 'JELLYFISH'
+                 and 'SMELLYFISH' is 0.896296296296296
 ***** json *****
 ['Reiten','Golfen','Lesen']
 2000000.0
