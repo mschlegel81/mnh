@@ -38,7 +38,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
       doStartEvaluation;
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,preferredContextType);
+      runEvaluator.callMain(@(editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,preferredContextType);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
@@ -47,7 +47,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     if not(runEvaluator.evaluationRunningOrPending) then begin
       doStartEvaluation;
       lastStart.mainCall:=false;
-      with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,preferredContextType);
+      runEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]),preferredContextType);
     end;
   end;
 

@@ -1,7 +1,7 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion}{$ifdef debugMode},mnh_doc,lclintf{$endif}{$endif},mnh_packages,
-     myStringUtil,sysutils,myGenerics,mnh_contexts,
+     myStringUtil,sysutils,myGenerics,mnh_contexts,mnh_fileWrappers,
      mnh_funcs_mnh,
      mnh_funcs_server,
      mnh_funcs_types,
@@ -126,8 +126,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR context:T_evaluationContext;
         package:T_package;
     begin
-      package.create(nil);
-      package.setSourcePath(fileOrCommandToInterpret);
+      package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
       {$ifdef fullVersion}
       if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling) else
       {$endif}

@@ -21,7 +21,6 @@ TYPE
     PROCEDURE Timer1Timer(Sender: TObject);
 
     PROCEDURE onEndOfEvaluation; override;
-    PROCEDURE onReloadRequired(CONST fileName:string); override;
   private
     outputHighlighter:TSynMnhSyn;
   end;
@@ -61,10 +60,6 @@ PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
     caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
   end;
 
-PROCEDURE ToutputOnlyForm.onReloadRequired(CONST fileName: string);
-  begin
-  end;
-
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
     registerForm(self,true,true);
@@ -98,6 +93,7 @@ PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseActi
 
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);
   begin
+    mnh_evalThread.earlyFinalization;
     Timer1.enabled:=false;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;

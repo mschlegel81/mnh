@@ -115,8 +115,8 @@ TYPE
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE reEvaluateWithGUI(CONST contextType:T_contextType);
-      PROCEDURE evaluate         (CONST path:ansistring; CONST L: TStrings; CONST contextType:T_contextType);
-      PROCEDURE callMain         (CONST path:ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
+      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_contextType);
+      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_contextType);
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
@@ -139,7 +139,7 @@ TYPE
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
 
-      PROCEDURE evaluate(CONST path:ansistring; CONST L: TStrings);
+      PROCEDURE evaluate(CONST provider:P_codeProvider);
 
       FUNCTION isErrorLocation(CONST lineIndex,tokenStart,tokenEnd:longint):byte;
       FUNCTION getErrorHints:T_arrayOfString;
@@ -156,6 +156,8 @@ VAR runEvaluator:T_runEvaluator;
 PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
+
+PROCEDURE earlyFinalization;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
     assistanceIsInitialized:boolean=false;
@@ -214,13 +216,11 @@ FUNCTION main(p:pointer):ptrint;
       setupEdit(editContext);
       if utilityScriptPackage=nil then begin
         {$ifdef debugMode} writeln('Creating script package'); {$endif}
-        new(utilityScriptPackage,create(nil));
-        utilityScriptPackage^.setSourcePath(utilityScriptFileName);
-      end else if not(utilityScriptPackage^.getCodeProvider^.fileHasChanged) then exit;
+        new(utilityScriptPackage,create(newFileCodeProvider(utilityScriptFileName),nil));
+      end else if not(utilityScriptPackage^.codeChanged) then exit;
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
       {$ifdef debugMode} writeln('Loading script package: ',utilityScriptPackage^.getPath); {$endif}
-      utilityScriptPackage^.getCodeProvider^.load;
       utilityScriptPackage^.load(lu_forImport,editContext,C_EMPTY_STRING_ARRAY);
       if editContext.adapters^.noErrors then begin
         for scriptType in T_scriptType do
@@ -257,7 +257,7 @@ FUNCTION main(p:pointer):ptrint;
           er_evaluate: package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
           er_callMain: package.load(lu_forCallingMain    ,context,parametersForMainCall);
           er_reEvaluateWithGUI: begin
-            package.setSourcePath(getFileOrCommandToInterpretFromCommandLine);
+            package.replaceCodeProvider(newFileCodeProvider(getFileOrCommandToInterpretFromCommandLine));
             package.load(lu_forCallingMain,context,parametersForMainCall);
           end;
           er_ensureEditScripts: ensureEditScripts_impl;
@@ -391,7 +391,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     request:=er_none;
     state:=es_dead;
     thread:=threadFunc;
-    package.create(nil);
+    package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
     adapter:=adapters;
     context.createContext(adapter,ct_normal);
   end;
@@ -492,7 +492,7 @@ PROCEDURE T_runEvaluator.reEvaluateWithGUI(CONST contextType:T_contextType);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CONST contextType:T_contextType);
+PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_contextType);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) then begin
@@ -501,12 +501,12 @@ PROCEDURE T_runEvaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CON
     end;
     requestedContextType:=contextType;
     request:=er_evaluate;
-    package.setSourceUTF8AndPath(L,path);
+    package.replaceCodeProvider(provider);
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_assistanceEvaluator.evaluate(CONST path: ansistring; CONST L: TStrings);
+PROCEDURE T_assistanceEvaluator.evaluate(CONST provider:P_codeProvider);
   begin
     system.enterCriticalSection(cs);
     ensureThread;
@@ -515,11 +515,11 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST path: ansistring; CONST L: TStrin
       exit;
     end;
     request:=er_evaluate;
-    package.setSourceUTF8AndPath(L,path);
+    package.replaceCodeProvider(provider);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring; CONST contextType:T_contextType);
+PROCEDURE T_runEvaluator.callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_contextType);
   VAR sp:longint;
   begin
     system.enterCriticalSection(cs);
@@ -540,7 +540,7 @@ PROCEDURE T_runEvaluator.callMain(CONST path: ansistring; CONST L: TStrings; par
         params:=trim(copy(params,sp+1,length(params)));
       end;
     end;
-    package.setSourceUTF8AndPath(L,path);
+    package.replaceCodeProvider(provider);
     request:=er_callMain;
     ensureThread;
     system.leaveCriticalSection(cs);
@@ -917,12 +917,18 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
     unitIsInitialized:=true;
   end;
 
-FINALIZATION
-  if unitIsInitialized then begin
-    runEvaluator.destroy;
-    if assistanceIsInitialized then begin
-      assistancEvaluator.destroy;
-      silentAdapters.destroy;
+PROCEDURE earlyFinalization;
+  begin
+    if unitIsInitialized then begin
+      runEvaluator.destroy;
+      if assistanceIsInitialized then begin
+        assistancEvaluator.destroy;
+        silentAdapters.destroy;
+      end;
     end;
+    unitIsInitialized:=false;
   end;
+
+FINALIZATION
+  earlyFinalization;
 end.

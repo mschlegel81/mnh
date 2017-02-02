@@ -141,7 +141,6 @@ TYPE
       PROCEDURE logTimingInfo(CONST infoText:T_arrayOfString);
       PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
       PROCEDURE logMissingMain;
-      PROCEDURE logReloadRequired(CONST fileName:string);
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
       PROCEDURE clearAll;
@@ -188,7 +187,7 @@ CONST
     mt_echo_continued,
     mt_el3_evalError..high(T_messageTypeSet)];
 
-  C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_el3_evalError..mt_reloadRequired
+  C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_el3_evalError..mt_endOfEvaluation
     {$ifdef fullVersion},
     mt_plotFileCreated,
     mt_plotCreatedWithDeferredDisplay,
@@ -515,7 +514,6 @@ PROCEDURE T_adapters.raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST
 PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation); begin raiseCustomMessage(message(mt_el4_systemError ,errorMessage        ,errorLocation)); end;
 PROCEDURE T_adapters.logTimingInfo    (CONST infoText:T_arrayOfString);                                                 begin raiseCustomMessage(message(mt_timing_info     ,infoText            ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logCallStackInfo (CONST infoText:ansistring; CONST location:T_searchTokenLocation);                begin raiseCustomMessage(message(mt_el3_stackTrace  ,infoText            ,location)); end;
-PROCEDURE T_adapters.logReloadRequired(CONST fileName:string);                                                          begin raiseCustomMessage(message(mt_reloadRequired  ,fileName            ,C_nilTokenLocation,fileName)); end;
 PROCEDURE T_adapters.printOut         (CONST s: T_arrayOfString);                                                       begin raiseCustomMessage(message(mt_printline       ,s                   ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.clearPrint;                                                                                        begin raiseCustomMessage(message(mt_clearConsole    ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.echoDeclaration(CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_declaration,m                   ,C_nilTokenLocation)); end;
@@ -741,8 +739,7 @@ PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters;
     if (collector<>nil) then
     for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
       mt_el4_haltMessageReceived,
-      mt_endOfEvaluation,
-      mt_reloadRequired: raiseCustomMessage(collector^.storedMessages[i]);
+      mt_endOfEvaluation: raiseCustomMessage(collector^.storedMessages[i]);
       else begin
         if not(errorCase) then raiseCustomMessage(collector^.storedMessages[i]);
       end;

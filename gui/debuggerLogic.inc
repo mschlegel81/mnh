@@ -18,11 +18,9 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
     if not(runEvaluator.evaluationRunning) then begin
       doStartEvaluation;
-      if lastStart.mainCall then begin
-        with editorMeta[inputPageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters,ct_debugging);
-      end else begin
-        with editorMeta[inputPageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,ct_debugging);
-      end;
+      if lastStart.mainCall
+      then runEvaluator.callMain(@(editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,ct_debugging)
+      else runEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]),ct_debugging);
     end else if runEvaluator.context.paused then runEvaluator.context.doContinue
                                             else runEvaluator.context.doMicrostep;
     updateDebugParts;

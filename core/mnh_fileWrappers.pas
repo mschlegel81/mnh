@@ -4,32 +4,42 @@ USES mnh_basicTypes, mySys,FileUtil,sysutils,Classes,Process,UTF8Process, myGene
 TYPE
   P_codeProvider = ^T_codeProvider;
   T_codeProvider = object
-  private
-    filePath: ansistring;
-    lineData: T_arrayOfString;
-    fileContentsEnforced,
-    outOfSync:boolean;
-    fileAccessedAtFileAge:double;
-  public
-    CONSTRUCTOR create;
-    CONSTRUCTOR create(CONST path: ansistring);
-    DESTRUCTOR destroy;
-    FUNCTION getLines: T_arrayOfString;
-    PROCEDURE getLinesUTF8(CONST value: TStrings);
-    PROCEDURE setLines(CONST value: T_arrayOfString);
-    PROCEDURE setLinesUTF8(CONST value: TStrings);
-    PROCEDURE setLines(CONST value: ansistring);
-    PROCEDURE replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
-    PROCEDURE setPath(CONST path: ansistring);
-    FUNCTION getPath: ansistring;
-    FUNCTION isPseudoFile:boolean;
-    PROCEDURE load;
-    PROCEDURE save;
-    FUNCTION fileName: ansistring;
-    FUNCTION fileHasChanged: boolean;
-    FUNCTION id: ansistring;
-    PROCEDURE clear;
+    DESTRUCTOR destroy;                 virtual; abstract;
+    FUNCTION getLines: T_arrayOfString; virtual; abstract;
+    FUNCTION getPath: ansistring;       virtual; abstract;
+    FUNCTION stateHash:T_hashInt;       virtual; abstract;
+    FUNCTION isPseudoFile:boolean;      virtual; abstract;
+    FUNCTION disposeOnPackageDestruction:boolean; virtual;
+    FUNCTION id:      ansistring;
   end;
+
+  P_fileCodeProvider=^T_fileCodeProvider;
+  T_fileCodeProvider=object(T_codeProvider)
+    private
+      filePath: ansistring;
+    public
+      CONSTRUCTOR create(CONST path:ansistring);
+      DESTRUCTOR destroy;                 virtual;
+      FUNCTION getLines: T_arrayOfString; virtual;
+      FUNCTION getPath: ansistring;       virtual;
+      FUNCTION stateHash:T_hashInt;       virtual;
+      FUNCTION isPseudoFile:boolean;      virtual;
+  end;
+
+  P_virtualFileCodeProvider=^T_virtualFileCodeProvider;
+  T_virtualFileCodeProvider=object(T_fileCodeProvider)
+    private
+      lines:T_arrayOfString;
+    public
+      CONSTRUCTOR create(CONST path:ansistring; CONST lineData:T_arrayOfString);
+      DESTRUCTOR destroy;                 virtual;
+      FUNCTION getLines: T_arrayOfString; virtual;
+      FUNCTION stateHash:T_hashInt;       virtual;
+      FUNCTION isPseudoFile:boolean;      virtual;
+  end;
+
+FUNCTION newFileCodeProvider(CONST path:ansistring):P_fileCodeProvider;
+FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
@@ -73,6 +83,12 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     if result = '' then recursePath(configDir);
     if result = '' then recursePath(extractFilePath(paramStr(0)));
   end;
+
+FUNCTION newFileCodeProvider(CONST path: ansistring): P_fileCodeProvider;
+  begin new(result,create(path)); end;
+
+FUNCTION newVirtualFileCodeProvider(CONST path: ansistring; CONST lineData: T_arrayOfString): P_virtualFileCodeProvider;
+  begin new(result,create(path,lineData)); end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR stream:TMemoryStream;
@@ -274,167 +290,80 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
     result:=ExtractFileNameOnly(filenameOrPath);
   end;
 
-{ T_codeProvider }
 
-FUNCTION T_codeProvider.getLines: T_arrayOfString;
-  VAR i: longint;
+CONSTRUCTOR T_virtualFileCodeProvider.create(CONST path: ansistring; CONST lineData: T_arrayOfString);
   begin
-    setLength(result, length(lineData));
-    for i := 0 to length(lineData)-1 do begin
-      result[i] := lineData[i];
-    end;
+    inherited create(path);
+    lines:=lineData;
   end;
 
-PROCEDURE T_codeProvider.getLinesUTF8(CONST value: TStrings);
+DESTRUCTOR T_virtualFileCodeProvider.destroy;
+  begin
+    setLength(lines,0);
+  end;
+
+CONSTRUCTOR T_fileCodeProvider.create(CONST path: ansistring);
+  begin
+    filePath:=path;
+  end;
+
+DESTRUCTOR T_fileCodeProvider.destroy;
+  begin
+  end;
+
+FUNCTION T_fileCodeProvider.getLines: T_arrayOfString;
+  VAR accessed:boolean;
+  begin
+    result:=fileLines(filePath,accessed);
+    if not(accessed) then exit(C_EMPTY_STRING_ARRAY);
+  end;
+
+FUNCTION T_virtualFileCodeProvider.getLines: T_arrayOfString;
   VAR i:longint;
   begin
-    value.clear;
-    for i:=0 to length(lineData)-1 do value.append(SysToUTF8(lineData[i]));
+    setLength(result,length(lines));
+    for i:=0 to length(lines)-1 do result[i]:=lines[i];
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
-  VAR i: longint;
+FUNCTION T_fileCodeProvider.getPath: ansistring;
   begin
-    outOfSync:=length(lineData)<>length(value);
-    setLength(lineData, length(value));
-    for i := 0 to length(value)-1 do begin
-      outOfSync:=outOfSync or (lineData[i]<>value[i]);
-      lineData[i] := value[i];
-    end;
+    result:=filePath;
   end;
 
-PROCEDURE T_codeProvider.setLinesUTF8(CONST value: TStrings);
-  VAR i: longint;
-    cleanCount: longint;
+FUNCTION T_fileCodeProvider.stateHash:T_hashInt;
   begin
-    cleanCount := value.count;
-    while (cleanCount>0) and (trim(value[cleanCount-1]) = '') do dec(cleanCount);
-    if length(lineData)<>cleanCount then begin
-      setLength(lineData, cleanCount);
-      outOfSync:=true;
-    end;
-    for i := 0 to cleanCount-1 do begin
-      outOfSync := outOfSync or (trim(lineData[i])<>trim(value[i]));
-      lineData[i] := value[i];
-    end;
-    fileContentsEnforced:=true;
+    result:=T_hashInt(fileAge(filePath));
+    if result=0 then result:=1;
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
+FUNCTION T_virtualFileCodeProvider.stateHash:T_hashInt;
+  VAR s:ansistring;
   begin
-    outOfSync:=(length(lineData)<>1) or (lineData[0]<>value);
-    setLength(lineData, 1);
-    lineData[0] := value;
+    {$Q-}{$R-}
+    result:=length(lines);
+    for s in lines do result:=result*31+hashOfAnsiString(s);
+    {$Q+}{$R+}
+    if result=0 then result:=1;
   end;
 
-PROCEDURE T_codeProvider.replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
-  VAR i:longint;
-      partAfter,
-      partBefore:ansistring;
+FUNCTION T_fileCodeProvider.isPseudoFile: boolean;
   begin
-    //Remember partBefore and part after for later reference
-    if (line1>=length(lineData)) or (line1<0) or (col1<=0) then begin
-      partAfter:='';
-      line1:=length(lineData)+1;
-    end else begin
-      partAfter:=copy(lineData[line1],col1+1,length(lineData[line1]));
-    end;
-    partBefore:=copy(lineData[line0],1,col0-1);
-    //clear all related lines
-    for i:=line0 to line1-1 do lineData[i]:='';
-    //rewrite lines
-    lineData[line0]:=partBefore+newText;
-    if line1=line0 then lineData[line0]:=lineData[line0]+partAfter;
-    outOfSync:=true;
+    result:=false;
   end;
 
-CONSTRUCTOR T_codeProvider.create;
+FUNCTION T_virtualFileCodeProvider.isPseudoFile: boolean;
   begin
-    clear;
-    filePath:='';
-    outOfSync:=false;
-    fileContentsEnforced:=false;
+    result:=true;
   end;
 
-CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
+FUNCTION T_codeProvider.disposeOnPackageDestruction: boolean;
   begin
-    clear;
-    filePath := path;
-    if fileExists(path) then load;
-    fileContentsEnforced:=false;
-  end;
-
-DESTRUCTOR T_codeProvider.destroy;
-  begin
-    setLength(lineData, 0);
-  end;
-
-PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
-  begin
-    filePath := path;
-  end;
-
-FUNCTION T_codeProvider.getPath: ansistring;
-  begin
-    result := filePath;
-  end;
-
-FUNCTION T_codeProvider.isPseudoFile:boolean;
-  begin
-    result:=not((pos('<',filePath)<=0) and (pos('>',filePath)<=0) and fileExists(filePath));
-  end;
-
-PROCEDURE T_codeProvider.load;
-  VAR accessed: boolean;
-      L: T_arrayOfString;
-      i: longint;
-  begin
-    L := fileLines(filePath, accessed);
-    if accessed then begin
-      setLength(lineData, length(L));
-      for i := 0 to length(L)-1 do lineData[i] := L[i];
-      i := length(lineData);
-      while (i>0) and (trim(lineData[i-1]) = '') do begin
-        setLength(lineData, i-1);
-        dec(i);
-      end;
-      fileAge(filePath,fileAccessedAtFileAge);
-      outOfSync:=false;
-    end;
-  end;
-
-PROCEDURE T_codeProvider.save;
-  begin
-    if (filePath<>'') and writeFileLines(filePath, lineData,'',false) then begin
-      fileAge(filePath,fileAccessedAtFileAge);
-      outOfSync:=false;
-    end;
-  end;
-
-FUNCTION T_codeProvider.fileName: ansistring;
-  begin
-    result := extractFileName(filePath);
-  end;
-
-FUNCTION T_codeProvider.fileHasChanged: boolean;
-  VAR currentFileAge: double;
-  begin
-    if (filePath<>'') and fileExists(filePath) and not(fileContentsEnforced) then begin
-      fileAge(filePath, currentFileAge);
-      result:=currentFileAge>fileAccessedAtFileAge;
-    end else result := false;
+    result:=true;
   end;
 
 FUNCTION T_codeProvider.id: ansistring;
   begin
-    result:=filenameToPackageId(filePath);
-  end;
-
-PROCEDURE T_codeProvider.clear;
-  begin
-    filePath := '';
-    setLength(lineData, 0);
-
+    result:=filenameToPackageId(getPath);
   end;
 
 end.

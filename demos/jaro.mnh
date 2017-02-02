@@ -1,0 +1,46 @@
+private setFlag(B:booleanList,i:int,newValue:boolean)->0<=i<B.size ? B.each(b,index=i ? newValue : b) : fail;
+private setFlag(B:booleanList,i:int)->setFlag(B,i,true);
+private dropFromList(S:stringList,toDrop:string)->begin
+  local indexToDrop:=indexOf(S=toDrop)[0] orElse -1;
+  indexToDrop<0
+  ? S
+  : S.head(indexToDrop)|S.tail(indexToDrop+1);
+end;
+
+jaroDistance("","")->1;
+jaroDistance(A:string,B:string)->begin
+  local matchDistance:=max(A.length,B.length) div 2-1;
+                   local aChars:=A.chars;
+  local bMatches:=(local bChars:=B.chars).each(c,false);
+  local lastK:=-1;
+  local aMatches:=
+  aChars.each(a,begin
+    local matched:=false;
+    [max(0      ,index-matchDistance  )..
+     min(bChars.size-1,index+matchDistance-1)].each(k,
+       bMatches[k]
+       ? false
+       : bChars[k]==a
+         ? begin
+             lastK:=k;
+             bMatches:=bMatches.setFlag(k);
+             matched:=true;
+           end
+         : false
+    ,OR);
+    matched;
+  end);
+  (local matchCount:=aMatches.trueCount)==0 ? 0 : begin
+    local transpositions:=trueCount(aChars[aMatches]<>bChars[bMatches]);
+    (matchCount/A.length+
+     matchCount/B.length+
+     (matchCount-transpositions/2)/matchCount)/3;
+  end;
+end;
+
+private testJaro(A,B)->printf("The Jaro distance\v of\t%{$0.escape}s\t\n\vand\t%{$1.escape}s\tis\t%{jaroDistance($0,$1)}",A,B);
+
+//*See http://rosettacode.org/wiki/Jaro_distance
+main->testJaro(   "MARTHA",      "MARHTA") orElse
+      testJaro(    "DIXON",    "DICKSONX") orElse
+      testJaro("JELLYFISH",  "SMELLYFISH");

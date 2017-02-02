@@ -690,7 +690,6 @@ For built-in rules:<code>
 <li><h5><a href="#memoizedMod">memoized</a></h5></li>
 <li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
 <li><h5><a href="#mutableMod">mutable</a></h5></li>
-<li><h5><a href="#persistentMod">persistent</a></h5></li>
 <li><h5><a href="#datastoreMod">datastore</a></h5></li>
 <li><h5><a href="#localMod">local</a></h5></li>
 <li><h5><a href="#typeMod">type</a></h5></li></ul></li>
@@ -914,15 +913,6 @@ The <i>mutable modifier</i> allows for a rule to be mutable. The following restr
   <li> A mutable rule's subrule must be nullary </li>
 </ul>
 Functions modifying the value of a mutable value should be <a href="#synchronizedMod">synchronized</a>.
-
-<h4><br><a name="persistentMod">persistent</a></h4>
-The <i>persistent modifier</i> allows for a rule to be persistent, by writing the assigned value to the source file after successful evaluation. The following restrictions apply:<ul>
-  <li> A persistent rule also is mutable per definition </li>
-  <li> A persistent rule also is not memoized per definition </li>
-  <li> A persistent rule must have exactly one subrule </li>
-  <li> A persistent rule's subrule must be nullary </li>
-</ul>
-Functions modifying the value of a persistent value should be <a href="#synchronizedMod">synchronized</a>.
 
 <h4><br><a name="datastoreMod">datastore</a></h4>
 The <i>datastore modifier</i> allows for a rule to be persistent, by writing the assigned value to the an additional file after successful evaluation. This file is automatically named based on the package source name.<br>

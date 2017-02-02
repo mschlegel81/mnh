@@ -137,7 +137,6 @@ TYPE
     tt_modifier_private,
     tt_modifier_memoized,
     tt_modifier_mutable,
-    tt_modifier_persistent,
     tt_modifier_datastore,
     tt_modifier_synchronized,
     tt_modifier_local,
@@ -260,7 +259,6 @@ CONST
     tt_modifier_private,
     tt_modifier_memoized,
     tt_modifier_mutable,
-    tt_modifier_persistent,
     tt_modifier_datastore,
     tt_modifier_synchronized,
     tt_modifier_customType,
@@ -464,7 +462,6 @@ CONST
 {tt_modifier_private}           (defaultId:PRIVATE_TEXT;    defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
 {tt_modifier_memoized}          (defaultId:'memoized';      defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
 {tt_modifier_mutable}           (defaultId:'mutable';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
-{tt_modifier_persistent}        (defaultId:'persistent';    defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier persistent#Makes the rule persistent.#Persistent rules also are mutable'),
 {tt_modifier_datastore}         (defaultId:'datastore';     defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
 {tt_modifier_synchronized}      (defaultId:'synchronized';  defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
 {tt_modifier_local}             (defaultId:'local';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier local#Used for declaring block-local variables'),
@@ -498,28 +495,24 @@ TYPE
               rt_memoized,
               rt_mutable_public,
               rt_mutable_private,
-              rt_persistent_public,
-              rt_persistent_private,
               rt_datastore_public,
               rt_datastore_private,
               rt_synchronized,
               rt_customTypeCheck);
-CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
-      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private,rt_customTypeCheck];
-      C_csProtectedRuleTypes:       set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
-      C_publicRuleTypes:            set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public,rt_customTypeCheck];
+CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_datastore_public,rt_datastore_private];
+      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_datastore_public,rt_datastore_private,rt_customTypeCheck];
+      C_csProtectedRuleTypes:       set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
+      C_publicRuleTypes:            set of T_ruleType=[rt_mutable_public,rt_datastore_public,rt_customTypeCheck];
       C_ruleTypeText:array[T_ruleType] of string=(
       '',
       'memoized ',
       'mutable ',
       'private mutable ',
-      'persistent ',
-      'private persistent ',
       'datastore ',
       'private datastore ',
       'synchronized ',
       'type ');
-      C_validModifierCombinations:array[0..14] of record
+      C_validModifierCombinations:array[0..12] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
       end=((modifiers:[];                                             ruleType:rt_normal),
@@ -528,8 +521,6 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_muta
            (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
            (modifiers:[tt_modifier_mutable];                          ruleType:rt_mutable_public),
            (modifiers:[tt_modifier_mutable     ,tt_modifier_private]; ruleType:rt_mutable_private),
-           (modifiers:[tt_modifier_persistent];                       ruleType:rt_persistent_public),
-           (modifiers:[tt_modifier_persistent  ,tt_modifier_private]; ruleType:rt_persistent_private),
            (modifiers:[tt_modifier_datastore];                        ruleType:rt_datastore_public),
            (modifiers:[tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore_private),
            (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
@@ -574,7 +565,6 @@ TYPE
     mt_el4_haltMessageReceived,
     mt_el4_haltMessageQuiet,
     mt_endOfEvaluation,
-    mt_reloadRequired,
     mt_timing_info
     {$ifdef fullVersion},
     mt_plotFileCreated,
@@ -617,7 +607,6 @@ CONST
 {mt_el4_haltMessageReceived}             (level: 4; mClass:mc_error;   prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_el4_haltMessageQuiet   }             (level: 4; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_endOfEvaluation        }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_reloadRequired         }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_timing_info            }             (level:-1; mClass:mc_timing;  prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0)
 {$ifdef fullVersion},
 {mt_plotFileCreated                    } (level:-1; mClass:mc_note;    prefix: 'Image:'               ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),

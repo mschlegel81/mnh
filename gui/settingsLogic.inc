@@ -84,7 +84,7 @@ PROCEDURE TMnhForm.processSettings;
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
+      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then assistancEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]));
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;

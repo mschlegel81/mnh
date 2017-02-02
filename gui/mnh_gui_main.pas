@@ -227,7 +227,6 @@ TYPE
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
 
     PROCEDURE onEndOfEvaluation; override;
-    PROCEDURE onReloadRequired(CONST fileName:string); override;
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
@@ -530,6 +529,7 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
+    mnh_evalThread.earlyFinalization;
     UpdateTimeTimer.enabled:=false;
     saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
@@ -573,7 +573,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (inputPageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
 
-    with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
+    assistancEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]));
     caption:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
   end;
 
@@ -728,7 +728,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
     if (inputPageControl.activePageIndex>=0) then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       settings.value^.workspace.activePage:=inputPageControl.activePageIndex;
-      with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(pseudoName,editor.lines);
+      with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]));
       enableMenuForLanguage(editorMeta[inputPageControl.activePageIndex].language);
     end;
   end;
@@ -878,15 +878,5 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
     for j:=0 to length(editorMeta)-1 do editorMeta[j].doneDebugging;
     updateDebugParts;
   end;
-
-PROCEDURE TMnhForm.onReloadRequired(CONST fileName:string);
-  VAR j:longint;
-  begin
-    for j:=0 to length(editorMeta)-1 do editorMeta[j].reloadFile(fileName);
-    {$ifdef imig}
-    mnh_imig_form.guiAdapters:=@guiAdapters;
-    {$endif}
-  end;
-
 
 end.
