@@ -29,7 +29,7 @@
       {$endif}
       FUNCTION getCmdLineHelpText:T_arrayOfString;
       FUNCTION getDocTxt:ansistring;
-      PROCEDURE writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters);
+      PROCEDURE writeBack(VAR adapters:T_adapters);
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_mapLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
@@ -302,7 +302,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath+result;
   end;
 
-PROCEDURE T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters);
+PROCEDURE T_rule.writeBack(VAR adapters:T_adapters);
   VAR code:ansistring;
       L:P_literal;
   begin
@@ -368,7 +368,7 @@ PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);
 
 FUNCTION T_rule.idForErrorFeedback:ansistring;
   begin
-    result:=P_package(declarationStart.package)^.codeProvider.id+'.'+id+' ('+ansistring(declarationStart)+')';
+    result:=P_package(declarationStart.package)^.codeProvider^.id+'.'+id+' ('+ansistring(declarationStart)+')';
   end;
 
 FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;

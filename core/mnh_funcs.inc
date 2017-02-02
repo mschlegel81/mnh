@@ -852,7 +852,7 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
     then fileName:=expandFileName(filenameOrId)
     else id      :=filenameOrId;
     for p in callerPackage^.mainPackage^.secondaryPackages do
-      if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.getCodeProvider^.id    ))
+      if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.codeProvider^.id    ))
       or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
       then exit(p);
     if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
@@ -860,8 +860,7 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
       context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
       exit(nil);
     end;
-    new(result,create(callerPackage^.mainPackage));
-    result^.setSourcePath(fileName);
+    new(result,create(newFileCodeProvider(fileName),callerPackage^.mainPackage));
     result^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
     freshlyCreated:=true;
     if registerAsSecondaryPackage then begin
@@ -876,7 +875,7 @@ FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
       tempPackage:P_package;
-      source:TStringList;
+      source:T_arrayOfString;
       needDispose:boolean=false;
       loadMessages:P_collectionLiteral=nil;
 
@@ -909,11 +908,9 @@ FUNCTION inspect_imp intFuncSignature;
       end;
       result:=newListLiteral;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
-      new(tempPackage,create(nil));
-      source:=TStringList.create;
-      for i:=0 to list1^.size-1 do source.append(P_stringLiteral(list1^[i])^.value);
-      tempPackage^.setSourceUTF8AndPath(source,str0^.value);
-      FreeAndNil(source);
+      setLength(source,list1^.size);
+      for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^[i])^.value;
+      new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage;
       result:=tempPackage^.inspect^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);

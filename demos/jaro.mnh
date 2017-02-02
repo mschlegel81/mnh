@@ -44,4 +44,3 @@ private testJaro(A,B)->printf("The Jaro distance\v of\t%{$0.escape}s\t\n\vand\t%
 main->testJaro(   "MARTHA",      "MARHTA") orElse
       testJaro(    "DIXON",    "DICKSONX") orElse
       testJaro("JELLYFISH",  "SMELLYFISH");
-

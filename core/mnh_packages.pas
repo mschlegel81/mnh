@@ -37,13 +37,16 @@ TYPE
       secondaryPackages:array of P_package;
       packageRules,importedRules:T_ruleMap;
       packageUses,dynamicUses:array of T_packageReference;
-      ready:T_packageLoadUsecase;
-      codeProvider:T_codeProvider;
+      readyForUsecase:T_packageLoadUsecase;
+      readyForCodeState:T_hashInt;
+      codeProvider:P_codeProvider;
       pseudoCallees:T_packageProfilingCalls;
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
-      CONSTRUCTOR create(CONST mainPackage_:P_package);
+      CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
+      PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
+      FUNCTION codeChanged:boolean;
       PROCEDURE clear(CONST includeSecondaries:boolean);
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
@@ -60,8 +63,6 @@ TYPE
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION isMain:boolean;
       FUNCTION getPath:ansistring; virtual;
-      PROCEDURE setSourcePath(CONST path:ansistring);
-      PROCEDURE setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
@@ -94,9 +95,7 @@ FUNCTION isTypeToType(CONST id:T_idString):T_idString;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
   begin
-    new(result,create(nil));
-    result^.codeProvider.setLines(code);
-    result^.codeProvider.setPath(nameOrPseudoName);
+    new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
@@ -104,8 +103,7 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
       package:T_package;
   begin
     context.createContext(adapter,ct_silentlyRunAlone);
-    package.create(nil);
-    package.codeProvider.setLines(input);
+    package.create(newVirtualFileCodeProvider('?',input),nil);
     package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
     package.destroy;
     context.destroy;
@@ -185,9 +183,12 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
   begin
     with containingPackage^.mainPackage^ do begin
       for i:=0 to length(secondaryPackages)-1 do
-        if secondaryPackages[i]^.codeProvider.id = id then begin
-          if secondaryPackages[i]^.ready<>lu_NONE then begin
-            if secondaryPackages[i]^.ready<>lu_forImport then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+        if secondaryPackages[i]^.codeProvider^.id = id then begin
+          if  (secondaryPackages[i]^.readyForUsecase=lu_NONE) and
+              (secondaryPackages[i]^.codeProvider^.stateHash<>secondaryPackages[i]^.readyForCodeState)
+          then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
+          if secondaryPackages[i]^.readyForUsecase<>lu_NONE then begin
+            if secondaryPackages[i]^.readyForUsecase<>lu_forImport then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -195,8 +196,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
             exit;
           end;
         end;
-      new(pack,create(containingPackage^.mainPackage));
-      pack^.setSourcePath(path);
+      new(pack,create(newFileCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
       pack^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
@@ -287,7 +287,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             begin
               j:=length(packageUses);
               setLength(packageUses,j+1);
-              packageUses[j].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
+              packageUses[j].create(codeProvider^.getPath,first^.txt,first^.location,context.adapters);
             end;
           end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
             newId:=P_stringLiteral(first^.data)^.value;
@@ -525,7 +525,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       VAR ruleModifiers:T_modifierSet=[];
           loc:T_tokenLocation;
       begin
-        if (codeProvider.isPseudoFile) then begin
+        if (codeProvider^.isPseudoFile) then begin
           context.adapters^.raiseError('data stores require the package to be saved to a file.',first^.location);
           context.cascadeDisposeToken(first);
           exit;
@@ -624,7 +624,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         t:P_token;
         i:longint;
     begin
-      if not(ready=lu_forCallingMain) or not(context.adapters^.noErrors) then exit;
+      if not(readyForUsecase=lu_forCallingMain) or not(context.adapters^.noErrors) then exit;
       if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
@@ -729,25 +729,26 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     clear(false);
 
-    if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;
-    fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
+    fileTokens.tokenizeAll(@self,context.adapters^);
     commentLines  :=C_EMPTY_STRING_ARRAY;
     attributeLines:=C_EMPTY_STRING_ARRAY;
     fileTokens.step(@self,commentLines,attributeLines,context.adapters^);
     if profile then context.timeBaseComponent(pc_tokenizing);
     processTokens(fileTokens);
-
-    ready:=usecase;
-    case usecase of
-      lu_forCodeAssistance: resolveRuleIds(context.adapters);
-      lu_forCallingMain:    executeMain;
-    end;
-    {$ifdef fullVersion}
-    if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forCodeAssistance]) and gui_started and context.adapters^.noErrors
-    then complainAboutUnused(true,context.adapters^);
-    {$endif}
+    if context.adapters^.noErrors then begin
+      readyForUsecase:=usecase;
+      readyForCodeState:=codeProvider^.stateHash;
+      case usecase of
+        lu_forCodeAssistance: resolveRuleIds(context.adapters);
+        lu_forCallingMain:    executeMain;
+      end;
+      {$ifdef fullVersion}
+      if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forCodeAssistance]) and gui_started and context.adapters^.noErrors
+      then complainAboutUnused(true,context.adapters^);
+      {$endif}
+    end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then begin
       finalize(context.adapters^);
@@ -760,20 +761,33 @@ PROCEDURE disposeRule(VAR rule:P_rule);
     dispose(rule,destroy);
   end;
 
-CONSTRUCTOR T_package.create(CONST mainPackage_:P_package);
+CONSTRUCTOR T_package.create(CONST provider: P_codeProvider;
+  CONST mainPackage_: P_package);
   begin
     mainPackage:=mainPackage_;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
     setLength(packageUses,0);
     setLength(dynamicUses,0);
-    codeProvider.create;
+    codeProvider:=provider;
     packageRules.create(@disposeRule);
     importedRules.create;
     pseudoCallees:=blankProfilingCalls;
   end;
 
-PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
+PROCEDURE T_package.replaceCodeProvider(CONST newProvider: P_codeProvider);
+  begin
+    if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+    codeProvider:=newProvider;
+    readyForCodeState:=0;
+  end;
+
+FUNCTION T_package.codeChanged:boolean;
+  begin
+    result:=codeProvider^.stateHash<>readyForCodeState;
+  end;
+
+PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
   VAR i:longint;
   begin
     if includeSecondaries then begin
@@ -784,7 +798,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
     for i:=0 to length(dynamicUses)-1 do dynamicUses[i].destroy; setLength(dynamicUses,0);
     packageRules.clear;
     importedRules.clear;
-    ready:=lu_NONE;
+    readyForUsecase:=lu_NONE;
   end;
 
 PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
@@ -793,18 +807,18 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boole
   begin
     for rule in packageRules.valueSet do
       if rule^.ruleType in [rt_datastore_private,rt_datastore_public]
-      then rule^.writeBack(codeProvider,adapters);
+      then rule^.writeBack(adapters);
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(adapters,recurse);
   end;
 
-PROCEDURE T_package.finalize(VAR adapters:T_adapters);
+PROCEDURE T_package.finalize(VAR adapters: T_adapters);
   VAR ruleList:array of P_rule;
       i:longint;
   begin
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
-      ruleList[i]^.writeBack(codeProvider,adapters);
+      ruleList[i]^.writeBack(adapters);
       if ruleList[i]^.ruleType=rt_memoized then ruleList[i]^.cache^.clear;
     end;
     setLength(ruleList,0);
@@ -815,7 +829,7 @@ DESTRUCTOR T_package.destroy;
   VAR c:T_profileCategory;
   begin
     clear(true);
-    codeProvider.destroy;
+    if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
     packageRules.destroy;
     importedRules.destroy;
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
@@ -924,7 +938,7 @@ PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
 FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
   VAR i:longint;
   begin
-    for i:=0 to length(secondaryPackages)-1 do if secondaryPackages[i]^.getCodeProvider^.id=id then exit(secondaryPackages[i]^.getPath);
+    for i:=0 to length(secondaryPackages)-1 do if secondaryPackages[i]^.codeProvider^.id=id then exit(secondaryPackages[i]^.getPath);
     result:='';
   end;
 
@@ -966,7 +980,7 @@ PROCEDURE T_package.complainAboutUnused(CONST inMainPackage:boolean; VAR adapter
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if not(ruleList[i]^.complainAboutUnused(adapters)) then anyCalled:=true;
-    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused import '+codeProvider.id,packageTokenLocation(@self));
+    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused import '+codeProvider^.id+' ('+codeProvider^.getPath+')',packageTokenLocation(@self));
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
         packageUses[i].pack^.complainAboutUnused(false,adapters);
@@ -1002,21 +1016,10 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=false;
   end;
 
-FUNCTION T_package.getPath:ansistring; begin result:=codeProvider.getPath; end;
-FUNCTION T_package.isMain:boolean; begin result:=(@self=mainPackage); end;
-PROCEDURE T_package.setSourcePath(CONST path:ansistring);
-  begin
-    codeProvider.setPath(path);
-    codeProvider.load;
-  end;
-
-PROCEDURE T_package.setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
-  begin
-    codeProvider.setLinesUTF8(sourceUtf8);
-    codeProvider.setPath(pathOrPseudoPath);
-  end;
+FUNCTION T_package.getPath: ansistring; begin result:=codeProvider^.getPath; end;
+FUNCTION T_package.isMain: boolean; begin result:=(@self=mainPackage); end;
 {$ifdef fullVersion}
-PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
+PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
   VAR i:longint;
       r:T_ruleMap.VALUE_TYPE_ARRAY;
       value:P_literal;
@@ -1032,7 +1035,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
 
 FUNCTION T_package.getCodeProvider:P_codeProvider;
   begin
-    result:=@codeProvider;
+    result:=codeProvider;
   end;
 
 FUNCTION T_package.inspect:P_mapLiteral;
@@ -1053,9 +1056,9 @@ FUNCTION T_package.inspect:P_mapLiteral;
     end;
 
   begin
-    result:=newMapLiteral^.put('id'      ,codeProvider.id)^
+    result:=newMapLiteral^.put('id'      ,codeProvider^.id)^
                           .put('path'    ,getPath)^
-                          .put('source'  ,join(codeProvider.getLines,C_lineBreakChar))^
+                          .put('source'  ,join(codeProvider^.getLines,C_lineBreakChar))^
                           .put('uses'    ,usesList,false)^
                           .put('declares',rulesList,false);
   end;

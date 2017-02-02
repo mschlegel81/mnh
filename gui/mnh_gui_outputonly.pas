@@ -93,6 +93,7 @@ PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseActi
 
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);
   begin
+    mnh_evalThread.earlyFinalization;
     Timer1.enabled:=false;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;

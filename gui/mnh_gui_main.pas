@@ -528,6 +528,7 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
+    mnh_evalThread.earlyFinalization;
     UpdateTimeTimer.enabled:=false;
     saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
@@ -571,7 +572,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (inputPageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[inputPageControl.activePageIndex].sheet.tabVisible)) then exit;
 
-    with editorMeta[inputPageControl.activePageIndex] do assistancEvaluator.evaluate(pseudoName,editor.lines);
+    assistancEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]));
     caption:=editorMeta[inputPageControl.activePageIndex].updateSheetCaption;
   end;
 
@@ -726,7 +727,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
     if (inputPageControl.activePageIndex>=0) then begin
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
       settings.value^.workspace.activePage:=inputPageControl.activePageIndex;
-      with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(pseudoName,editor.lines);
+      with editorMeta[inputPageControl.activePageIndex] do if language=LANG_MNH then assistancEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]));
       enableMenuForLanguage(editorMeta[inputPageControl.activePageIndex].language);
     end;
   end;

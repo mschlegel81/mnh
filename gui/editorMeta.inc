@@ -1,6 +1,9 @@
 {$ifdef includeInterface}
 P_editorMeta=^T_editorMeta;
-T_editorMeta=object
+
+{ T_editorMeta }
+
+T_editorMeta=object(T_codeProvider)
   index:longint;
   paintedWithState:longint;
   fileInfo:record
@@ -17,7 +20,13 @@ T_editorMeta=object
   CONSTRUCTOR create(CONST idx:longint);
   CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
   PROCEDURE initWithState(VAR state:T_editorState);
-  DESTRUCTOR destroy;
+  DESTRUCTOR destroy; virtual;
+
+  FUNCTION getLines: T_arrayOfString; virtual;
+  FUNCTION getPath: ansistring;                                    virtual;
+  FUNCTION stateHash:T_hashInt;                                    virtual;
+  FUNCTION disposeOnPackageDestruction:boolean;                    virtual;
+  FUNCTION isPseudoFile:boolean;                                   virtual;
 
   PROCEDURE startDebugging;
   PROCEDURE doneDebugging;
@@ -189,7 +198,38 @@ PROCEDURE T_editorMeta.initWithState(VAR state:T_editorState);
 
 DESTRUCTOR T_editorMeta.destroy;
   begin
+  end;
 
+FUNCTION T_editorMeta.getLines: T_arrayOfString;
+  VAR i:longint;
+  begin
+    setLength(result,editor.lines.count);
+    for i:=0 to length(result)-1 do result[i]:=editor.lines[i];
+  end;
+
+FUNCTION T_editorMeta.getPath: ansistring;
+  begin
+    result:=pseudoName(false);
+  end;
+
+FUNCTION T_editorMeta.stateHash:T_hashInt;
+  VAR s:ansistring;
+  begin
+    {$Q-}{$R-}
+    result:=editor.lines.count;
+    for s in editor.lines do result:=result*31+hashOfAnsiString(s);
+    {$Q+}{$R+}
+    if result=0 then result:=1;
+  end;
+
+FUNCTION T_editorMeta.disposeOnPackageDestruction: boolean;
+  begin
+    result:=false;
+  end;
+
+FUNCTION T_editorMeta.isPseudoFile: boolean;
+  begin
+    result:=fileInfo.filePath='';
   end;
 
 PROCEDURE T_editorMeta.startDebugging;
@@ -287,10 +327,6 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=false;
       fileInfo.isChanged:=false;
-    end else if sheet.tabVisible and (fileName=pseudoName) and (runEvaluator.getCodeProvider^.getPath=pseudoName) then begin
-      runEvaluator.getCodeProvider^.getLinesUTF8(editor.lines);
-      fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
-      editor.modified:=changed;
     end;
   end;
 
@@ -487,7 +523,8 @@ FUNCTION T_editorMeta.languageName:string;
     result:='';
   end;
 
-PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
+PROCEDURE T_editorMeta.updateContentAfterEditScript(
+  CONST stringListLiteral: P_listLiteral);
   VAR concatenatedText:ansistring='';
       i:longint;
   begin
