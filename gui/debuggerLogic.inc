@@ -19,8 +19,8 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     if not(runEvaluator.evaluationRunning) then begin
       doStartEvaluation;
       if lastStart.mainCall
-      then runEvaluator.callMain(@(editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,ct_debugging)
-      else runEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]),ct_debugging);
+      then runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,ct_debugging)
+      else runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),ct_debugging);
     end else if runEvaluator.context.paused then runEvaluator.context.doContinue
                                             else runEvaluator.context.doMicrostep;
     updateDebugParts;
@@ -157,10 +157,10 @@ PROCEDURE TMnhForm.handleBreak;
         inputPageControl.activePageIndex:=pageIdx;
         newCaret.x:=snapshot.location.column;
         newCaret.y:=snapshot.location.line;
-        editorMeta[pageIdx].editor.CaretXY:=newCaret;
-        debugLine.editor:=editorMeta[pageIdx].editor;
+        editorMeta[pageIdx]^.editor.CaretXY:=newCaret;
+        debugLine.editor:=editorMeta[pageIdx]^.editor;
         debugLine.line:=newCaret.y;
-        editorMeta[pageIdx].editor.Repaint;
+        editorMeta[pageIdx]^.editor.Repaint;
       end;
     end;
 
@@ -234,7 +234,7 @@ PROCEDURE TMnhForm.updateDebugParts;
     if miDebug.Checked then begin
       debugTabSheet.visible:=true;
       debugTabSheet.tabVisible:=true;
-      for i:=0 to length(editorMeta)-1 do with editorMeta[i] do if language=LANG_MNH then editor.Gutter.MarksPart.visible:=true;
+      for i:=0 to length(editorMeta)-1 do with editorMeta[i]^ do if language=LANG_MNH then editor.Gutter.MarksPart.visible:=true;
       DebugToolbar.visible:=true;
       DebugToolbar.enabled:=true;
       DebugToolbar.top:=0;
@@ -249,7 +249,7 @@ PROCEDURE TMnhForm.updateDebugParts;
     end else begin
       debugTabSheet.visible:=false;
       debugTabSheet.tabVisible:=false;
-      for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
+      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.Gutter.MarksPart.visible:=false;
       outputPageControl.activePage:=outputTabSheet;
       DebugToolbar.visible:=false;
       DebugToolbar.enabled:=false;

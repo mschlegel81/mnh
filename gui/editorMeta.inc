@@ -1,8 +1,5 @@
 {$ifdef includeInterface}
 P_editorMeta=^T_editorMeta;
-
-{ T_editorMeta }
-
 T_editorMeta=object(T_codeProvider)
   index:longint;
   paintedWithState:longint;

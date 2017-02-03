@@ -184,8 +184,8 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
     with containingPackage^.mainPackage^ do begin
       for i:=0 to length(secondaryPackages)-1 do
         if secondaryPackages[i]^.codeProvider^.id = id then begin
-          if  (secondaryPackages[i]^.readyForUsecase=lu_NONE) and
-              (secondaryPackages[i]^.codeProvider^.stateHash<>secondaryPackages[i]^.readyForCodeState)
+          if  (secondaryPackages[i]^.readyForUsecase<>lu_NONE) and
+              (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_NONE then begin
             if secondaryPackages[i]^.readyForUsecase<>lu_forImport then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
@@ -777,7 +777,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider;
 
 PROCEDURE T_package.replaceCodeProvider(CONST newProvider: P_codeProvider);
   begin
-    if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+    if (codeProvider<>nil) and (codeProvider^.disposeOnPackageDestruction) then dispose(codeProvider,destroy);
     codeProvider:=newProvider;
     readyForCodeState:=0;
   end;
@@ -830,6 +830,7 @@ DESTRUCTOR T_package.destroy;
   begin
     clear(true);
     if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+    codeProvider:=nil;
     packageRules.destroy;
     importedRules.destroy;
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);

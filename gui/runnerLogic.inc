@@ -20,10 +20,10 @@ PROCEDURE TMnhForm.doStartEvaluation;
     UpdateTimeTimerTimer(self);
     doConditionalPlotReset;
     resetTableForms;
-    editorMeta[inputPageControl.activePageIndex].setWorkingDir;
+    editorMeta[inputPageControl.activePageIndex]^.setWorkingDir;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
-      for i:=0 to length(editorMeta)-1 do editorMeta[i].startDebugging;
+      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.startDebugging;
       updateDebugParts;
     end;
     breakPointHandlingPending:=true;
@@ -38,7 +38,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
       doStartEvaluation;
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      runEvaluator.callMain(@(editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,preferredContextType);
+      runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,preferredContextType);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
@@ -47,7 +47,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     if not(runEvaluator.evaluationRunningOrPending) then begin
       doStartEvaluation;
       lastStart.mainCall:=false;
-      runEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]),preferredContextType);
+      runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),preferredContextType);
     end;
   end;
 
@@ -56,8 +56,8 @@ PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
   begin
     k:=inputPageControl.activePageIndex;
     if (k<0) or (k>=length(editorMeta)) then exit;
-    for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.readonly:=true;
-    runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editorMeta[k].editor.lines,editorMeta[k].languageName,editorMeta[k].pseudoName());
+    for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.readonly:=true;
+    with editorMeta[k]^ do runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editor.lines,languageName,pseudoName());
   end;
 
 FUNCTION TMnhForm.preferredContextType:T_contextType;
