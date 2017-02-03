@@ -1047,13 +1047,13 @@ FUNCTION T_package.inspect:P_mapLiteral;
       for i:=0 to length(packageUses)-1 do result^.append(newListLiteral^.appendString(packageUses[i].id)^.appendString(packageUses[i].path),false);
     end;
 
-  FUNCTION rulesList:P_listLiteral;
+  FUNCTION rulesList:P_mapLiteral;
     VAR allRules:array of P_rule;
         rule:P_rule;
     begin
       allRules:=packageRules.valueSet;
-      result:=newListLiteral(length(allRules));
-      for rule in allRules do result^.append(rule^.inspect,false);
+      result:=newMapLiteral();
+      for rule in allRules do result^.put(rule^.id,rule^.inspect,false);
     end;
 
   begin
