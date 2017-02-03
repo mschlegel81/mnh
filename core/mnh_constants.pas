@@ -236,7 +236,7 @@ CONST
     {lt_realList}    [lt_expression,           lt_int,lt_real,          lt_list,               lt_intList,lt_realList,lt_numList              ],
     {lt_numList}     [lt_expression,           lt_int,lt_real,          lt_list,               lt_intList,lt_realList,lt_numList              ],
     {lt_stringList}  [lt_expression,                          lt_string,lt_list,                                                 lt_stringList],
-    {lt_emptyList}   [lt_expression,                                                                                                           lt_emptyList],
+    {lt_emptyList}   [lt_expression,lt_boolean,lt_int,lt_real,lt_string,                                                                       lt_emptyList],
     {lt_set}         [lt_expression,lt_boolean,lt_int,lt_real,lt_string,lt_set ,lt_booleanSet ,lt_intSet ,lt_realSet ,lt_numSet ,lt_stringSet ,lt_emptySet],
     {lt_booleanSet}  [lt_expression,lt_boolean,                         lt_set ,lt_booleanSet ,                                                lt_emptySet],
     {lt_intSet}      [lt_expression,           lt_int,lt_real,          lt_set ,               lt_intSet ,lt_realSet ,lt_numSet ,              lt_emptySet],
