@@ -200,7 +200,7 @@ begin
   collectOutput;
   executeMainCall('24',doLog,'demo');
   executeMainCall('diff',doLog,'test');
-  executeMainCall('grep',doLog,'\Wrosettacode.org\W','*.mnh');
+  executeMainCall('grep',doLog,'\Wrosettacode.org\W','-r','*.mnh');
   executeMainCall('emptyFolders',doLog,'demos');
   inspect['uses'].getInner(0).leading(plotDemoCount).tail(6).each(import,executeMainCall(import,doLog));
   canPlot
