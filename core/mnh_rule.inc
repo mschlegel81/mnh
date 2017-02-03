@@ -354,10 +354,10 @@ FUNCTION T_rule.inspect:P_mapLiteral;
     end;
 
   begin
-    result:=newMapLiteral^.put(id,newMapLiteral^
+    result:=newMapLiteral^
       .put('type'    ,C_ruleTypeText[ruleType])^
       .put('location',declarationStart        )^
-      .put('subrules',subrulesList,false      ),false);
+      .put('subrules',subrulesList,false      );
   end;
 
 PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);

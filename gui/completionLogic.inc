@@ -9,11 +9,11 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
       i:longint;
   begin
-    with editorMeta[inputPageControl.activePageIndex] do caret:=editor.CaretXY;
+    with editorMeta[inputPageControl.activePageIndex]^ do caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
     lastWordsCaret:=caret.y;
     wordsInEditor.clear;
-    with editorMeta[inputPageControl.activePageIndex] do begin
+    with editorMeta[inputPageControl.activePageIndex]^ do begin
       for i:=0 to editor.lines.count-1 do
         if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);

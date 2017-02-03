@@ -1,20 +1,37 @@
-//*searchPattern can be a regex
-//*the remaining parameters are file patterns; if none is given, * is assumed
+private showIndex(matchMask:booleanList, additional:int)->begin
+  local matchIndex:=indexOf(matchMask);
+  matchIndex:=[-additional..additional].each(offset,matchIndex+offset).flatten.unique;
+  matchIndex[0<=matchIndex<matchMask.size];
+end;
+
+//*Usage: grep pattern [options] [filePattern1,[filePattern2,...]]
+//*if no file pattern is given, * is assumed
+//*Options: -i  case insensitive matching
+//*         -n# show # additional lines before and after
+//*         -l  only list files
+//*         -r  recurse subdirectories
 main(searchPattern,...)->begin
-  local filesToScan:=size(...)=0
-                     ? files(allFolders('.')&'/*')
-                     : ... .each(pattern,files(allFolders('.')&'/'&pattern)).flatten;
-  filesToScan.each(file,begin
-    local nameDisplayed:=false;
-    fileLines(file).each(line,
-      line.matches(searchPattern)
-      ? begin
-          nameDisplayed OR begin
-            print(file);
-            nameDisplayed:=true;
-          end;
-          printf('  %4d:%s',index+1,line);
-        end
-      : void);
+  local filePatterns:=[];
+  local additionalLines   :=0;
+  local matchCaseSensitive:=true;
+  local listOnly          :=false;
+  local recurseDirs       :=false;
+  //Parse:
+  ... .each(e,e='-i' ? matchCaseSensitive:=false :
+              e='-l' ? listOnly          :=true  :
+              e='-r' ? recurseDirs       :=true  :
+              e.matches('-n\d+') ? additionalLines:=toInt(e.copy(2,e.length-2)) :
+              filePatterns|=e);
+
+  //Search:
+  allFiles('.',filePatterns,recurseDirs)
+  .each(file,begin
+    local lines:=fileLines(file);
+    local toShow:=lines.matches(searchPattern).showIndex(additionalLines);
+    toShow==[]
+    ? void
+    : print(file) orElse listOnly ? void : printf('  %4d:%s',toShow+1,lines[toShow]);
   end);
 end;
+
+main->inspect['declares','main','subrules'].each(subrule,subrule['comment'],&).replaceOne('grep',myPath).print;

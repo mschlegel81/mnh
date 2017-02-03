@@ -18,7 +18,7 @@ PROCEDURE TMnhForm.miFindClick(Sender: TObject);
       if wordUnderCursor='' then wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
       outputFocusedOnFind:=true;
     end else begin
-      with editorMeta[inputPageControl.activePageIndex] do begin
+      with editorMeta[inputPageControl.activePageIndex]^ do begin
         wordUnderCursor:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
         if wordUnderCursor='' then wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
       end;
@@ -38,7 +38,7 @@ PROCEDURE TMnhForm.miReplaceClick(Sender: TObject);
       if wordUnderCursor='' then wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
       outputFocusedOnFind:=true;
     end else begin
-      with editorMeta[inputPageControl.activePageIndex] do begin
+      with editorMeta[inputPageControl.activePageIndex]^ do begin
         wordUnderCursor:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
         if wordUnderCursor='' then wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
       end;
@@ -94,7 +94,7 @@ PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
   begin
     i:=inputPageControl.activePageIndex;
     if (i<0) or (i>=length(editorMeta)) then exit;
-    with editorMeta[i] do begin
+    with editorMeta[i]^ do begin
       askForm.initWithQuestion('Go to line');
       askForm.ShowModal;
       i:=strToIntDef(askForm.getLastAnswerReleasing(nil),-1);

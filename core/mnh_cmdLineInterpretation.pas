@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion}{$ifdef debugMode},mnh_doc,lclintf{$endif}{$endif},mnh_packages,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_settings{$ifdef debugMode},lclintf{$endif}{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,mnh_fileWrappers,
      mnh_funcs_mnh,
      mnh_funcs_server,
@@ -181,7 +181,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
         else if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
         {$ifdef fullVersion}
-        else if (paramStr(i)='-edit') then while i<paramCount do begin
+        else if (paramStr(i)='-install') then begin
+          ensureDemos;
+          saveSettings;
+          halt(0);
+        end else if (paramStr(i)='-edit') then while i<paramCount do begin
           inc(i);
           append(filesToOpenInEditor,paramStr(i));
         end

@@ -327,7 +327,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         end else begin
           result.tokType:=tt_EOL;
           if startsWith(DOC_COMMENT_PREFIX) then begin
-            result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column));
+            result.txt:=trimRight(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column));
             result.tokType:=tt_docComment;
           end else if startsWith(ATTRIBUTE_COMMENT_PREFIX) then begin
             result.txt:=trim(copy(line,length(ATTRIBUTE_COMMENT_PREFIX)+lineLocation.column,length(line)-length(ATTRIBUTE_COMMENT_PREFIX)+1-lineLocation.column));
@@ -950,7 +950,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       then itList:=P_compoundLiteral(first^.data)^.iteratableList
       else begin
         setLength(itList,1);
-        itList[0]:=P_literal(first^.data);
+        itList[0]:=P_literal(first^.data)^.rereferenced;
       end;
       disposeLiteral(first^.data);
       first^.next:=context.disposeToken(first^.next);

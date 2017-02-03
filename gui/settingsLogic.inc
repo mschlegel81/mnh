@@ -71,20 +71,21 @@ PROCEDURE TMnhForm.processSettings;
       setLength(editorMeta,length(settings.value^.workspace.editorState));
       runEvaluator.context.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do begin
-        editorMeta[i].create(i,settings.value^.workspace.editorState[i]);
-        editorMeta[i].setStepperBreakpoints;
+        new(editorMeta[i],create(i,settings.value^.workspace.editorState[i]));
+        editorMeta[i]^.setStepperBreakpoints;
       end;
-
       i:=settings.value^.workspace.activePage;
       inputPageControl.activePageIndex:=i;
-      if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex].editor;
+
+      for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
+
+      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex]^.editor;
       {$ifdef UNIX}
       miIncFontSize.ShortCut:=16605;
       {$endif}
-      for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then assistancEvaluator.evaluate(@(editorMeta[inputPageControl.activePageIndex]));
+      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
@@ -92,7 +93,7 @@ PROCEDURE TMnhForm.processSettings;
     if SettingsForm.AntialiasCheckbox.Checked
     then OutputEdit.Font.quality:=fqCleartypeNatural
     else OutputEdit.Font.quality:=fqNonAntialiased;
-    for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Font:=OutputEdit.Font;
+    for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.Font:=OutputEdit.Font;
 
     currentExpressionMemo.Font:=OutputEdit.Font;
     assistanceSynEdit.Font:=OutputEdit.Font;
