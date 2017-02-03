@@ -1,4 +1,18 @@
 USE make;
+barPlot(captions:list,samples:numericList,targetWidth>0)->
+barPlot(captions     ,samples            ,targetWidth,'%s');
+
+barPlot(captions:list,samples:numericList,targetWidth>0,sampleFormat:string)->
+  begin
+    local factor:=targetWidth/samples.max;
+    samples.each(s,
+      captions[index],
+      "\t",
+      format(sampleFormat,s),
+      "\t",
+      repeat("=",round(factor*s)),
+      "\n",&);
+  end;
 
 timedExecute(exe:string,params)->begin
   local t0:=time;
@@ -8,5 +22,5 @@ end;
 
 main(...)->begin
   local timedExes:=VALID_TARGETS.each(target,fileExists(target) ? [target,timedExecute(target,...)]  : void);
-  printf("%s\t%s",timedExes.getInner(0),timedExes.getInner(1));
+  barPlot(timedExes.getInner(0),timedExes.getInner(1),100).print;
 end;

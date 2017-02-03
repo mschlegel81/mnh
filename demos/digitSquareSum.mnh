@@ -3,6 +3,6 @@ private digitSquareFinal(1)->1;
 private digitSquareFinal(89)->89;
 private digitSquareFinal(x)->digitSquareFinal(sqr(x.digits).agg(+));
 
-private count89->([1..100000].each(i,digitSquareFinal(i))=89).trueCount;
+private count89->([100000..1].each(i,digitSquareFinal(i))=89).trueCount;
 //*See http://rosettacode.org/wiki/Iterated_digits_squaring
 main->print(count89);

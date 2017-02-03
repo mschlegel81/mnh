@@ -38,11 +38,11 @@ end;
 
 main->begin
   print('(1+1/n)^n');
-  guessEpsilons(         eSeries(100000));
+  guessEpsilons(         eSeries(10000));
   print("\n1 + 1/2 + 1/3 + 1/4 + ...");
-  guessEpsilons(harmonicSummands(100000).runningSum);
+  guessEpsilons(harmonicSummands(10000).runningSum);
   print("\n1 + 1/2^2 + 1/3^2 + 1/4^2 + ...");
-  guessEpsilons(harmonicSummands(100000).sqr.runningSum);
+  guessEpsilons(harmonicSummands(10000).sqr.runningSum);
   print("\n1 - 1/3 + 1/5 - 1/7 + 1/9 - 1/11 ...");
-  guessEpsilons(arctanSummands  (100000).runningSum);
+  guessEpsilons(arctanSummands  (10000).runningSum);
 end;
