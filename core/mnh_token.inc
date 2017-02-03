@@ -950,7 +950,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       then itList:=P_compoundLiteral(first^.data)^.iteratableList
       else begin
         setLength(itList,1);
-        itList[0]:=P_literal(first^.data);
+        itList[0]:=P_literal(first^.data)^.rereferenced;
       end;
       disposeLiteral(first^.data);
       first^.next:=context.disposeToken(first^.next);
