@@ -79,9 +79,8 @@ FUNCTION driveInfo_imp intFuncSignature;
     begin
       DriveLetter := drive + ':\';
       driveType:=GetDriveType(PChar(DriveLetter));
-      if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK]
-      then result:=newListLiteral
-      else exit(nil);
+      if not(driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK])
+      then exit(nil);
       infoMap:=newMapLiteral;
       case driveType of
         DRIVE_REMOVABLE: infoMap^.put('type','removable');
@@ -97,6 +96,7 @@ FUNCTION driveInfo_imp intFuncSignature;
       SetString(DriveLetter, Buf, StrLen(Buf));
       infoMap^.put('serial',VolumeSerialNumber);
       infoMap^.put('label' ,DriveLetter);
+      result:=infoMap;
     end;
 
   VAR c:char;
