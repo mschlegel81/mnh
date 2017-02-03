@@ -20,14 +20,16 @@ private doAnalysis(rt:list)->begin
   rt.getInner(0).unique.pEach(testCase,
     begin
       local debugSamples:=rt[rt.getInner(0)=testCase];
-      local optSamples  :=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? void : sample[2]).sort;
-            debugSamples:=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? sample[2] : void).sort;
+      local debugMask:=debugSamples.getInner(1).matches('^[F|L]D');
+            debugSamples:=debugSamples.getInner(2);
+      local optSamples  :=debugSamples[not(debugMask)];// debugSamples.each(sample,sample[1].matches('^[F|L]D') ? void : sample[2]).sort;
+            debugSamples:=debugSamples[    debugMask ];// debugSamples.each(sample,sample[1].matches('^[F|L]D') ? sample[2] : void).sort;
       [testCase,'|',
        optSamples.size,
-       optSamples[[1,2,3]*(optSamples.size div 4)].round(4),'|',
+       local optQ:=optSamples.quartiles.round(4),'|',
        debugSamples.size,
-       debugSamples[[1,2,3]*(debugSamples.size div 4)].round(4),'|',
-       round(debugSamples[[1,2,3]*(debugSamples.size div 4)]/optSamples[[1,2,3]*(optSamples.size div 4)],2)].flatten;
+       local debQ:=debugSamples.quartiles.round(4),'|',
+       round(debQ/optQ,2)].flatten;
     end)
   ).showTable('Test times',true);
 
@@ -76,7 +78,7 @@ private analyzeCase(data,testCase:string)->begin
                : optSamples  |=[sample[[2,1]]]);
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
-  local allSamples:=debugSamples.union(optSamples);
+  local allSamples:=debugSamples|optSamples;
   allSamples.showTable;
   print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
 
