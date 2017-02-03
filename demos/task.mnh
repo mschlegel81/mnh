@@ -1,18 +1,20 @@
 //*Format is [[name1,timeSpent1],[name2,timeSpent2],...]
-private persistent allTasks:=[];
-//*Format is [name,timeSpent,startedAt]
-private persistent runningTask:=[];
+private datastore allTasks;
+//*Format is [name,startedAt]
+private datastore runningTask;
+private initHook:=begin
+  allTasks   :=allTasks    orElse [].toMap;
+  runningTask:=runningTask orElse [];
+end;
 
 private endTask->runningTask==[] ? void : //If there is no running task, there is nothing to do
 begin
-  allTasks:=allTasks.each(t,
-                 t[0]==runningTask[0]
-                 ? begin
-                     printf("Task %s finished after %{formatTime('hh:nn:ss',$1)}s; total time spent: %{formatTime('hh:nn:ss',$2)}s",
-                      t[0],systime-runningTask[2],t[1]+systime-runningTask[2]);
-                     [t[0],                       t[1]+systime-runningTask[2]];
-                   end
-                 : t);
+  local timeSpentNow   :=systime- runningTask[1];
+  printf("Task %s finished after %{formatTime('hh:nn:ss',$1)}s; total time spent: %{formatTime('hh:nn:ss',$2)}s",
+         runningTask[0],
+         timeSpentNow,
+         local timeSpentTotal:=timeSpentNow+(allTasks[runningTask[0]] orElse 0));
+  allTasks<<[runningTask[0],timeSpentTotal];
   runningTask:=[];
 end;
 
@@ -33,13 +35,13 @@ main('?')->size(allTasks)>0
 //*Resumes a task or starts a new one
 main(taskName)->begin
   endTask;
-  (allTasks.getInner(0)=taskName).agg(OR)
+  (allTasks.getInner(0)=taskName).agg(OR) orElse false
   ? begin
-      runningTask:=(allTasks.get(allTasks.getInner(0)=taskName).get(0))|systime;
       print('Resmuming task ',taskName);
     end
   : begin
-      allTasks|=[leading(runningTask:=[taskName,0,systime])];
+      allTasks<<[taskName,0];
       print('New task ',taskName);
     end;
+  runningTask:=[taskName,systime];
 end;
