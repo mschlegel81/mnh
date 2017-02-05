@@ -1,7 +1,7 @@
 UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
+USES myGenerics,mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL:P_intFuncCallback;
 
 IMPLEMENTATION
@@ -100,9 +100,9 @@ FUNCTION transpose_imp intFuncSignature;
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes)
     then begin
       result:=list0^.transpose(nil);
-      P_listLiteral(result)^.containsError then begin
+      if P_listLiteral(result)^.containsError then begin
         disposeLiteral(result);
-        context.adapters^.raiseError('The given list cannot be transposed without a filler.');
+        context.adapters^.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
       end;
     end;
   end;
