@@ -96,7 +96,15 @@ FUNCTION transpose_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_listTypes)
-    then result:=list0^.transpose(arg1);
+    then result:=list0^.transpose(arg1)
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes)
+    then begin
+      result:=list0^.transpose(nil);
+      P_listLiteral(result)^.containsError then begin
+        disposeLiteral(result);
+        context.adapters^.raiseError('The given list cannot be transposed without a filler.');
+      end;
+    end;
   end;
 
 FUNCTION getElementFreqency intFuncSignature;
@@ -295,7 +303,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,true,ak_unary     ,'sortPerm(L);//Returns indexes I so that L%I==sort(L)');
   registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,true,ak_unary     ,'unique(L:list);//Returns list L without duplicates and enhanced for faster lookup');
   registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,true,ak_unary     ,'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
-  registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,true,ak_unary     ,'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.');
+  registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,true,ak_unary     ,'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.#transpose(L);//Returns list L transposed. If sub lists of L have different lengths, filler is used.');
   registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,true,ak_variadic_1,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,true,ak_variadic_1,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,true,ak_binary    ,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');

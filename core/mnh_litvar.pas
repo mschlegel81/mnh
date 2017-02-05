@@ -1008,13 +1008,14 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
     else innerSize:=max(innerSize,1);
 
     result:=newListLiteral;
-    for i:=0 to innerSize-1 do begin
+    for i:=0 to innerSize-1 do if not(result^.containsError) then begin
       innerList:=newListLiteral(fill);
-      for j:=0 to fill-1 do begin
+      for j:=0 to fill-1 do if not(result^.containsError) then begin
         if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i)
-        then                                                        innerList^.append(P_listLiteral(dat[j])^.dat[i],true)
-        else if (dat[j]^.literalType in C_listTypes) and (i=0) then innerList^.append(              dat[j]         ,true)
-        else                                                        innerList^.append(filler                       ,true);
+        then                                                          innerList^.append(P_listLiteral(dat[j])^.dat[i],true)
+        else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then innerList^.append(              dat[j]         ,true)
+        else if filler<>nil                                      then innerList^.append(filler                       ,true)
+        else result^.containsError:=true;
       end;
       result^.append(innerList,false);
     end;
