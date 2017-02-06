@@ -3862,9 +3862,9 @@ out> 'expression(2)'
  in> x :=transpose([1,[1, 2, 3],[1, 2]], 0);
 Note  Creating new rule: x
  in> x;
-out> [[0,1,1],[0,2,2],[0,3,0]]
+out> [[1,1,1],[0,2,2],[0,3,0]]
  in> x.transpose(0);
-out> [[0,0,0],[1,2,3],[1,2,0]]
+out> [[1,0,0],[1,2,3],[1,2,0]]
  in> resetRandom(12157);
 out> void
  in> resetRandom;

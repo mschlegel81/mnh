@@ -999,9 +999,9 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
   VAR innerSize:longint=-1;
       i,j:longint;
       innerList:P_listLiteral;
-
+      doneRow:boolean;
   begin
-    if literalType=lt_emptyList then begin result:=@self; result^.rereference; end;
+    if literalType=lt_emptyList then exit(P_listLiteral(rereferenced));
     for i:=0 to fill-1 do
     if (dat[i]^.literalType in C_listTypes)
     then innerSize:=max(innerSize,P_listLiteral(dat[i])^.size)
@@ -1009,13 +1009,24 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
 
     result:=newListLiteral;
     for i:=0 to innerSize-1 do if not(result^.containsError) then begin
-      innerList:=newListLiteral(fill);
-      for j:=0 to fill-1 do if not(result^.containsError) then begin
-        if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i)
-        then                                                          innerList^.append(P_listLiteral(dat[j])^.dat[i],true)
-        else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then innerList^.append(              dat[j]         ,true)
-        else if filler<>nil                                      then innerList^.append(filler                       ,true)
-        else result^.containsError:=true;
+      if filler=nil then begin
+        innerList:=newListLiteral;
+        doneRow:=false;
+        for j:=0 to fill-1 do if not(result^.containsError) then begin
+          if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i) then
+          begin innerList^.append(P_listLiteral(dat[j])^.dat[i],true); result^.containsError:=doneRow or result^.containsError; end
+          else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then
+          begin innerList^.append(              dat[j]         ,true); result^.containsError:=doneRow or result^.containsError; end
+          else doneRow:=true;
+        end;
+      end else begin
+        innerList:=newListLiteral(fill);
+        for j:=0 to fill-1 do if not(result^.containsError) then begin
+          if (dat[j]^.literalType in C_listTypes) and (P_listLiteral(dat[j])^.fill>i)
+          then                                                          innerList^.append(P_listLiteral(dat[j])^.dat[i],true)
+          else if (dat[j]^.literalType in C_scalarTypes) and (i=0) then innerList^.append(              dat[j]         ,true)
+          else                                                          innerList^.append(filler                       ,true);
+        end;
       end;
       result^.append(innerList,false);
     end;
