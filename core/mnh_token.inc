@@ -1300,39 +1300,60 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
   PROCEDURE process_op_lit; {$ifndef DEBUGMODE} inline;{$endif}
     begin
-      if (cTokType[1] in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]]) or
-         (cTokType[1] in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse])
-      then begin
-        newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                stack.dat[stack.topIndex]^.tokType,
-                                first^.data,
-                                stack.dat[stack.topIndex]^.location,
-                                context.adapters^);
-        disposeLiteral(first^.data);
-        first^.data:=newLit; //store new literal in head
-        first^.location:=stack.dat[stack.topIndex]^.location;
-        stack.popDestroy(context); //pop operator from stack
-        stack.popDestroy(context); //pop LHS-Literal from stack
-        didSubstitution:=true;
-      end
-      else if (cTokType[1]=tt_parList) then begin
-        if cTokType[2]=tt_listToParameterList then begin
-          stack.push(first);
-          stack.push(first);
-          stack.push(first);
-          didSubstitution:=true;
-        end else applyRule(first^.next,first^.next^.next)
-      end
-      else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
-      else if cTokType[1]=tt_ponFlipper then pon_flip
-      else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach(cTokType[1])
-      else if cTokType[1]= tt_listBraceOpen then begin stack.push(first); didSubstitution:=true; end
-      else if cTokType[1] in [tt_comparatorEq..tt_operatorIn] then begin
-        stack.push(first);
-        stack.push(first);
-        didSubstitution:=true;
-      end else begin
-        context.adapters^.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',first^.location);
+      case cTokType[1] of
+        tt_comparatorEq..tt_operatorIn:
+          if C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]] then begin
+            newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                                    stack.dat[stack.topIndex]^.tokType,
+                                    first^.data,
+                                    stack.dat[stack.topIndex]^.location,
+                                    context.adapters^);
+            disposeLiteral(first^.data);
+            first^.data:=newLit; //store new literal in head
+            first^.location:=stack.dat[stack.topIndex]^.location;
+            stack.popDestroy(context); //pop operator from stack
+            stack.popDestroy(context); //pop LHS-Literal from stack
+            didSubstitution:=true;
+          end else begin
+            stack.push(first);
+            stack.push(first);
+            didSubstitution:=true;
+          end;
+        tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
+          begin
+            newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                                    stack.dat[stack.topIndex]^.tokType,
+                                    first^.data,
+                                    stack.dat[stack.topIndex]^.location,
+                                    context.adapters^);
+            disposeLiteral(first^.data);
+            first^.data:=newLit; //store new literal in head
+            first^.location:=stack.dat[stack.topIndex]^.location;
+            stack.popDestroy(context); //pop operator from stack
+            stack.popDestroy(context); //pop LHS-Literal from stack
+            didSubstitution:=true;
+          end;
+        tt_parList:
+          begin
+            if cTokType[2]=tt_listToParameterList then begin
+              stack.push(first);
+              stack.push(first);
+              stack.push(first);
+              didSubstitution:=true;
+            end else applyRule(first^.next,first^.next^.next)
+          end;
+        tt_parList_constructor,tt_braceOpen,tt_listToParameterList:
+          startOrPushParameterList;
+        tt_ponFlipper:
+          pon_flip;
+        tt_each,tt_parallelEach:
+          resolveEach(cTokType[1]);
+        tt_listBraceOpen:
+          begin
+            stack.push(first);
+            didSubstitution:=true;
+          end;
+        else context.adapters^.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',first^.location);
       end;
     end;
 
