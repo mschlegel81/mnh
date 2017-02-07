@@ -1327,10 +1327,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else if cTokType[1]=tt_ponFlipper then pon_flip
       else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach(cTokType[1])
       else if cTokType[1]= tt_listBraceOpen then begin stack.push(first); didSubstitution:=true; end
-      else begin
+      else if cTokType[1] in [tt_comparatorEq..tt_operatorIn] then begin
         stack.push(first);
         stack.push(first);
         didSubstitution:=true;
+      end else begin
+        context.adapters^.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',first^.location);
       end;
     end;
 
