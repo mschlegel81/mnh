@@ -94,6 +94,7 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_typeCheckReal      ,
       tt_typeCheckString    ,
       tt_typeCheckNumeric   : result:=(id+C_tokenInfo[restrictionType].defaultId);
+      tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
       tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
       tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
       tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
