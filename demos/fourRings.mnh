@@ -1,0 +1,33 @@
+isPartialSolution(a,b,c,d      )-> a+b = b+c+d;
+isPartialSolution(a,b,c,d,e,f  )-> a+b = b+c+d = d+e+f;
+findG            (a,b,c,d,e,f  )-> a+b-f;
+isSolution       (a,b,c,d,e,f,g)-> a+b = b+c+d = d+e+f = f+g;
+
+//*See: http://rosettacode.org/wiki/4-rings_or_4-squares_puzzle
+main->begin
+  print(//!~Four rings:
+     ___   ___   ___   ___
+    /   \ /   \ /   \ /   \
+   /     X     X     X     \
+  (   A (B) C (D) E (F) G   )
+   \     X     X     X     /
+    \___/ \___/ \___/ \___/~);
+  print('The solutions for 1..7 (unique) are: ');
+  permutations([1..7]).pEach(p,isSolution@p ? p : void).each(s,print('  ',s));
+  print('The solutions for 3..9 (unique) are: ');
+  permutations([3..9]).pEach(p,isSolution@p ? p : void).each(s,print('  ',s));
+  print('The number of solutions for 0..9 (nonunique) is: ',
+  [0..9999].pEach(c0,
+    begin
+      local abcd:=c0 div 10^[3..0] mod 10;
+      isPartialSolution@abcd
+      ? [0..99].each(c1,
+          begin
+            local abcdef:=abcd|[c1 div 10,c1 mod 10];
+            isPartialSolution@abcdef and (0<=(findG@abcdef)<=9)
+            ? 1
+            : 0;
+          end,+)
+      : void;
+    end,+));
+end;
