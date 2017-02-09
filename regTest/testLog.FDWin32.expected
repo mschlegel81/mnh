@@ -53,6 +53,8 @@ The solution is valid.
      6:main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and
 ./demos/fibonacciWord.mnh
     16://*Solves the task: http://rosettacode.org/wiki/Fibonacci_word (with cheating)
+./demos/fourRings.mnh
+     6://*See: http://rosettacode.org/wiki/4-rings_or_4-squares_puzzle
 ./demos/fractran.mnh
     50://*See http://rosettacode.org/wiki/Fractran
 ./demos/hailstone.mnh
@@ -997,6 +999,29 @@ N Length Entropy Word
 28: 5^3*7^1*17^1 = 14875
 29: 2^1*3^1*5^2*7^1*13^1 = 13650
 30: 2^1*3^1*5^2*17^1 = 2550
+***** fourRings *****
+Four rings:
+     ___   ___   ___   ___
+    /   \ /   \ /   \ /   \
+   /     X     X     X     \
+  (   A (B) C (D) E (F) G   )
+   \     X     X     X     /
+    \___/ \___/ \___/ \___/
+The solutions for 1..7 (unique) are: 
+  [5,6,2,3,1,7,4]
+  [4,7,1,3,2,6,5]
+  [6,4,5,1,2,7,3]
+  [7,3,2,5,1,4,6]
+  [4,5,3,1,6,2,7]
+  [6,4,1,5,2,3,7]
+  [3,7,2,1,5,4,6]
+  [7,2,6,1,3,5,4]
+The solutions for 3..9 (unique) are: 
+  [8,7,3,5,4,6,9]
+  [9,6,5,4,3,8,7]
+  [7,8,3,4,5,6,9]
+  [9,6,4,5,3,7,8]
+The number of solutions for 0..9 (nonunique) is: 2860
 ***** gcd *****
 The greatest common denominator of 1238124 and 1236 is 12
 ***** gol *****
