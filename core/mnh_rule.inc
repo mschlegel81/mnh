@@ -299,7 +299,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt();
     if ruleType in C_mutableRuleTypes then result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
     result:=join(formatTabs(split(result)),LineEnding);
-    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath+result;
+    result:=ECHO_MARKER+C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath+result;
   end;
 
 PROCEDURE T_rule.writeBack(VAR adapters:T_adapters);

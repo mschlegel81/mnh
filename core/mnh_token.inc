@@ -1062,23 +1062,24 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
+        {$ifndef DEBUGMODE}
         try
+        {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if (P_rule(first^.data)^.id=MAIN_RULE_ID)
             then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
             else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
             exit;
           end;
+        {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
             context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
             context.adapters^.raiseSystemError(e.message,first^.location);
-            {$ifdef debugMode}
-            raise Exception.create('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id);
-            {$endif}
             exit;
           end;
         end;
+        {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
         firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
@@ -1098,18 +1099,19 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
+        {$ifndef DEBUGMODE}
         try
+        {$endif}
           newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+        {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
             context.adapters^.raiseSystemError('Severe error trying to apply builtin rule '+first^.txt,first^.location);
             context.adapters^.raiseSystemError(e.message,first^.location);
-            {$ifdef debugMode}
-            raise Exception.create('Severe error trying to apply builtin rule '+first^.txt);
-            {$endif}
             exit;
           end;
         end;
+        {$endif}
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
