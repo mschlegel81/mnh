@@ -673,21 +673,9 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         appendBuiltinRuleInfo;
       end;
-      tt_importedUserRule: begin
+      tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
-        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
-      end;
-      tt_localUserRule: begin
-        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
-        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
-      end;
-      tt_customTypeRule, tt_customTypeCheck: begin
-        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Custom type'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
+        info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
