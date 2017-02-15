@@ -287,6 +287,55 @@ FUNCTION indexOf_impl intFuncSignature;
     end;
   end;
 
+FUNCTION cross_impl intFuncSignature;
+  VAR i:longint;
+      resultSize:longint=1;
+      allCompound:boolean=true;
+      resultList:P_listLiteral;
+
+  PROCEDURE recurseBuild(CONST index:longint; CONST lit:T_arrayOfLiteral);
+    VAR iter:T_arrayOfLiteral;
+        subLit:T_arrayOfLiteral;
+        resultElement:P_listLiteral;
+        l:P_literal;
+        k:longint;
+    begin
+      if index>=params^.size then begin
+        resultElement:=newListLiteral(length(lit));
+        for l in lit do resultElement^.append(l,true);
+        resultList^.append(resultElement,false);
+      end else begin
+        setLength(subLit,length(lit)+1);
+        for k:=0 to length(lit)-1 do subLit[k]:=lit[k];
+        k:=length(lit);
+
+        iter:=P_compoundLiteral(params^[index])^.iteratableList;
+        for l in iter do begin
+          subLit[k]:=l;
+          recurseBuild(index+1,subLit);
+        end;
+        disposeLiteral(iter);
+      end;
+    end;
+
+  VAR emptyList:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType in C_compoundTypes) then begin
+      if (params^.size=1) then exit(arg0^.rereferenced);
+      resultSize:=compound0^.size;
+      for i:=1 to params^.size-1 do
+        if (params^[i]^.literalType in C_compoundTypes)
+        then resultSize:=resultSize*P_compoundLiteral(params^[i])^.size
+        else allCompound:=false;
+      if not(allCompound) then exit(nil);
+      resultList:=newListLiteral(resultSize);
+      setLength(emptyList,0);
+      recurseBuild(0,emptyList);
+      result:=resultList;
+    end;
+  end;
+
 INITIALIZATION
   //Functions on lists:
   BUILTIN_HEAD:=
@@ -316,6 +365,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,true,ak_binary    ,'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:list,fallback:list);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors');
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,true,ak_variadic_2,'getInner(L:list,index);');
   registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,true,ak_unary     ,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
+  registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,true,ak_variadic_2,'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)');
 
 FINALIZATION
   builtinLocation_sort.destroy;
