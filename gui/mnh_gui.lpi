@@ -31,7 +31,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir);..\core"/>
-            <OtherUnitFiles Value="..\core;..\..\common;..\..\common\synapse"/>
+            <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -360,7 +360,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core"/>
-      <OtherUnitFiles Value="..\core;..\..\common;..\..\common\synapse"/>
+      <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
