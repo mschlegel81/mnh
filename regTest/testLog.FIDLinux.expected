@@ -3393,7 +3393,7 @@ Hash of regTest/../demos/turtleGfx.png is FB769509
 ***** heart *****
 Hash of regTest/../demos/heart.png is 88B30F70
 ***** examples from file *****
-Examples file has 685 lines
+Examples file has 687 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -4018,3 +4018,5 @@ out> [['x',0],['y','3*x']].toMap
 out> 'x=0&y=3%2Ax'
  in> encodeRequest('127.0.0.1:3126','rest',[['user','anonymous'],['request','3*&7']].toMap);
 out> '127.0.0.1:3126/rest?request=3%2A%267&user=anonymous'
+ in> cross(['1'..'3'],['A'..'C']);
+out> [['1','A'],['1','B'],['1','C'],['2','A'],['2','B'],['2','C'],['3','A'],['3','B'],['3','C']]
