@@ -46,6 +46,7 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CO
   end;
 
 PROCEDURE displayHelp;
+  VAR s:string;
   begin
     writeln('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
                     {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
@@ -53,6 +54,8 @@ PROCEDURE displayHelp;
     writeln('         at: '+{$I %TIME%});
     writeln('FPC version: '+{$I %FPCVERSION%});
     writeln('Target CPU : '+{$I %FPCTARGET%});
+    writeln('');
+    for s in LOGO do writeln(s);
     writeln('');
     writeln('Accepted parameters: ');
     writeln('  [mnh_options] [(-cmd commandToExecute) | (filename [parameters])]');

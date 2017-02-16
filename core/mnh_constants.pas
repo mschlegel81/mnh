@@ -3,14 +3,28 @@ INTERFACE
 USES sysutils;
 CONST
   {$i code_hash.inc}
-  LOGO:array[0..6] of string=(
+  LOGO:array[0..20] of string=(
   ' ___      ___ ___   ___ ___   ___',
   '|   \    /   |   \ |   |   | |   |  ______',
   '|    \  /    |    \|   |   |_|   | |   ___|',
   '|     \/     |     \   |         | |  |__',
   '|   \    /   |   \     |    _    | |___  \',
   '|   |\  /|   |   |\    |   | |   |  ___)  |',
-  '|___| \/ |___|___| \___|___| |___| |_____/');
+  '|___| \/ |___|___| \___|___| |___| |_____/',
+  '             (c) Martin Schlegel, 2010-2017',
+  '',
+  'This program is distributed in the hope that it will be useful,',
+  'but WITHOUT ANY WARRANTY; without even the implied warranty of',
+  'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.',
+  '',
+  'You may freely redistribute this software.',
+  '',
+  'Includes functionality provided by the following projects:',
+  '  Free Pascal    (c) 1993-2015 by Florian Klaempfl and others  http://www.freepascal.org/  ',
+  '  Ararat Synapse (c) 1999-2003 by Lukas Gebauer                http://www.ararat.cz/synapse/',
+  '  EpikTimer      (c) 2003-2014 by Tom Lisjac                   <netdxr@gmail.com>',
+  '  TRegExpr lib   (c) 1999-2004 by Andrey V. Sorokin            http://RegExpStudio.com',
+  '  Lazarus Component Library (LCL) ');
 
   //UTF-8 zero width and invisible characters
   ECHO_MARKER   =#226#128#139;

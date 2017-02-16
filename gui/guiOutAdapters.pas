@@ -35,10 +35,20 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm);
+  VAR i:longint;
+      m:T_storedMessage;
   begin
     inherited create(at_gui,C_collectAllOutputBehavior);
     parentForm:=owner;
     flushing:=false;
+    with m do begin
+      messageType:=mt_printline;
+      location:=C_nilTokenLocation;
+      setLength(messageText,length(LOGO));
+      for i:=0 to length(LOGO)-1 do messageText[i]:=LOGO[i];
+      data:='';
+    end;
+    append(m);
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
