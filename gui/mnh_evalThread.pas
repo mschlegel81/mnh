@@ -184,6 +184,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       P_runEvaluator(p)^.editAdapters^.clearAll;
       context.createContext(P_runEvaluator(p)^.editAdapters,ct_normal);
+      context.removeOption(cp_clearAdaptersOnStart);
       context.removeOption(cp_timing);
       context.removeOption(cp_spawnWorker);
       context.removeOption(cp_createDetachedTask);
@@ -195,7 +196,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       context.afterEvaluation;
       if (context.adapters^.hasPrintOut) or
-         not(context.adapters^.noErrors) then begin
+         (context.adapters^.hasNonSilentError) then begin
         collector:=P_collectingOutAdapter(context.adapters^.getAdapter(0));
         {$ifdef debugMode}
         writeln('Raising ',length(collector^.storedMessages),' stored messages');

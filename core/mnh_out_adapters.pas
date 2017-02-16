@@ -140,6 +140,7 @@ TYPE
       PROCEDURE clearAll;
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
+      FUNCTION hasNonSilentError:boolean;
       FUNCTION hasHaltMessage(CONST includeQuiet:boolean=true): boolean;
       FUNCTION hasFatalError: boolean;
       FUNCTION hasStackTrace:boolean;
@@ -551,12 +552,24 @@ PROCEDURE T_adapters.stopEvaluation;
     maxErrorLevel:=5;
   end;
 
+
+
 FUNCTION T_adapters.noErrors: boolean;
   begin
     result:=(maxErrorLevel<3)
     {$ifdef fullVersion}
     and not(hasNeedGUIerror)
     {$endif};
+  end;
+
+FUNCTION T_adapters.hasNonSilentError:boolean;
+  VAR m:T_messageType;
+  begin
+    for m in [mt_el3_evalError,
+              mt_el3_noMatchingMain,
+              mt_el3_userDefined,
+              mt_el4_systemError] do if hasMessageOfType[m] then exit(true);
+    result:=false;
   end;
 
 FUNCTION T_adapters.hasHaltMessage(CONST includeQuiet:boolean=true):boolean;
