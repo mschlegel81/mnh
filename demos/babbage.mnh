@@ -1,0 +1,15 @@
+squareEndsWith269696(n:int)->n          //take the input
+                            .sqr        //compute the square
+                            mod 1000000 //take the last 6 digits
+                            = 269696;
+
+//*See http://rosettacode.org/wiki/Babbage_problem
+main->begin
+  local intToCheck:=1;
+  while(not(squareEndsWith269696(intToCheck)),
+    intToCheck+=1);
+  print(intToCheck);
+end;
+
+
+

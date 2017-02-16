@@ -17,13 +17,12 @@ main->begin
   print('The solutions for 3..9 (unique) are: ');
   permutations([3..9]).pEach(p,isSolution@p ? p : void).each(s,print('  ',s));
   print('The number of solutions for 0..9 (nonunique) is: ',
-  [0..9999].pEach(c0,
+  cross([0..9],[0..9],[0..9],[0..9]).pEach(abcd,
     begin
-      local abcd:=c0 div 10^[3..0] mod 10;
       isPartialSolution@abcd
-      ? [0..99].each(c1,
+      ? cross([0..9],[0..9]).pEach(ef,
           begin
-            local abcdef:=abcd|[c1 div 10,c1 mod 10];
+            local abcdef:=abcd|ef;
             isPartialSolution@abcdef and (0<=(findG@abcdef)<=9)
             ? 1
             : 0;
