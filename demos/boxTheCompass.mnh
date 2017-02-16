@@ -13,4 +13,3 @@ main->begin
   local wind:=SAMPLES.each(s,box32(s,WIND_POINTS));
   printf("%s\t%s\t%s\t%s",SAMPLES,box,name,wind);
 end;
-
