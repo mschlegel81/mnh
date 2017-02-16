@@ -2221,7 +2221,7 @@ object MnhForm: TMnhForm
     end
     object tbMicroStep: TToolButton
       Left = 103
-      Hint = 'microStep (F10)'
+      Hint = 'microStep (Shift+F7)'
       Top = 2
       Caption = 'tbMicroStep'
       ImageIndex = 10

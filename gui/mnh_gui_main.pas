@@ -453,7 +453,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       SynVBSyn1             .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
     end;
 
-  VAR i:longint;
   begin
     initGuiOutAdapters(MnhForm);
     guiTaskQueue.create;
@@ -490,9 +489,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     initHighlighters;
     OutputEdit.clearAll;
-    for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     assistanceSynEdit.clearAll;
-    for i:=0 to length(LOGO)-1 do assistanceSynEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}

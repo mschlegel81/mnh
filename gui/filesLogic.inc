@@ -399,7 +399,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShif
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
       if (key=118) and tbStep     .enabled then tbStepClick(Sender);
       if (key=119) and tbStepOut  .enabled then tbStepOutClick(Sender);
-      if (key=121) and tbMicroStep.enabled then tbMicroStepClick(Sender);
+      if (key=118) and (ssShift in Shift) and tbMicroStep.enabled then tbMicroStepClick(Sender);
     end;
   end;
 
