@@ -600,11 +600,16 @@ FUNCTION T_subrule.getCmdLineHelpText:ansistring;
   end;
 
 FUNCTION T_subrule.getDocTxt():ansistring;
+  VAR att:T_subruleAttribute;
   begin
     result:=ECHO_MARKER+'@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+getId+';';
     if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
+    for att in attributes do begin
+      result:=result+C_lineBreakChar+C_tabChar+'@'+att.key;
+      if att.value<>'' then result:=result+'='+att.value;
+    end;
   end;
 
 FUNCTION T_subrule.getId:T_idString;
