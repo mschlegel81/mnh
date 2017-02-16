@@ -1,6 +1,7 @@
 UNIT mnh_imig;
 INTERFACE
 USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mnh_basicTypes,sysutils,myGenerics,
+     imageGeneration,
      mypics,
      ig_gradient,
      ig_perlin,
@@ -290,6 +291,16 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
     leaveCriticalSection(imigCS);
   end;
 
+FUNCTION listManipulations_imp intFuncSignature;
+  VAR imt:T_imageManipulationType;
+      alg:P_algorithmMeta;
+  begin
+    result:=newListLiteral();
+    for imt:=imt_loadImage to high(T_imageManipulationType) do
+      listResult^.appendString(stepParamDescription[imt]^.getDefaultParameterString);
+    for alg in algorithms do listResult^.appendString(alg^.prototype^.toString(false));
+  end;
+
 INITIALIZATION
   initialize(imigCS);
   initCriticalSection(imigCS);
@@ -305,6 +316,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,false,ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
   registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,false,ak_nullary,'displayImage;//Displays the current image.');
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,false,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
+  registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,true,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.
