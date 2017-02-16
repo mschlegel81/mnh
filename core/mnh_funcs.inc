@@ -902,7 +902,7 @@ FUNCTION inspect_imp intFuncSignature;
       if tempPackage<>nil then begin
         if needDispose then loadTemporaryPackage;
         result:=tempPackage^.inspect;
-        if loadMessages<>nil then listResult^.append(loadMessages,false);
+        if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         if needDispose then dispose(tempPackage,destroy);
         exit(result);
       end;
