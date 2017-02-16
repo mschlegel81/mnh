@@ -1,0 +1,4 @@
+isSemiprime(n>1)->factorize(n).size=2;
+isSemiprime(n  )->false;
+//*See http://rosettacode.org/wiki/Semiprime
+main->[1..100].each(i,isSemiprime(i) ? i : void).print;

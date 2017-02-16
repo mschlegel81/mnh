@@ -1,0 +1,24 @@
+//*Overloaded getName to work with any type:
+private getName(s:scalar,isMapEntry      )->s.toString;
+private getName(l       ,isMapEntry=false)->'\';
+private getName(l       ,isMapEntry=true )->l.head;
+private getChildren(s:scalar,isMapEntry      )->[];
+private getChildren(l       ,isMapEntry=false)->l;
+private getChildren(l       ,isMapEntry=true )->l.trailing;
+
+treePrint(Tree,indent,isMapEntry:boolean,last:boolean)->begin
+  print(indent,last ? '\--' : '+--',Tree.getName(isMapEntry));
+  local newIndent:=last
+                   ? indent+'   '
+                   : indent+'|  ';
+  local children:=Tree.getChildren(isMapEntry);
+  children.each(child,child.treePrint(newIndent,Tree.isMap,index=children.size-1));
+end;
+
+treePrint(Tree)->begin
+  print(Tree.getName(false));
+  local children:=Tree.getChildren(false);
+  children.each(child,child.treePrint('',Tree.isMap,index=children.size-1));
+end;
+
+main->[1,2,[[3,['X'..'Z']],[4,5]].toMap,['a'..'c']].treePrint;

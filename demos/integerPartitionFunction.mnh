@@ -1,0 +1,9 @@
+memoized
+G(n,k>n)->0;
+G(n,n  )->1;
+G(n  ,0)->0;
+G(n>1,k<n)->G(n-1,k-1)+G(n-k,k);
+P(n)->[1..n].each(k,G(n,k),+);
+
+//*See http://rosettacode.org/wiki/9_billion_names_of_God_the_integer
+main->printf("%s",[1..25].each(n,P(n)&repeat("\t",26-n)&([1..n].each(k,G(n,k)).join("\v \v"))));
