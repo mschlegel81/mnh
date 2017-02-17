@@ -303,8 +303,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
   end;
 
 PROCEDURE T_rule.writeBack(VAR adapters:T_adapters);
-  VAR code:ansistring;
-      L:P_literal;
+  VAR L:P_literal;
   begin
     if (adapters.noErrors) and valueChangedAfterDeclaration and (ruleType in [rt_datastore_private,rt_datastore_public]) then begin
       L:=namedValue.getValue;
