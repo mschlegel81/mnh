@@ -33,7 +33,7 @@ table {display: inline-table}
 h3{margin-before: 5em; margin-after: 5em;}
 <!--file index.html-->
 <!--begin commonHead-->
-<html><head><title>MNH 5</title><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><link rel="stylesheet" href="style.css" type="text/css"></head>
+<html><head><title>MNH 5</title><meta http-equiv="Content-Type" content="text/html; charset=UTF8"><link rel="stylesheet" href="style.css" type="text/css"></head>
 <body><div class="Container"><div class="Header">MNH5 Documentation</div><div class="Content"><div class="Wrapper">
 <!--end-->
 <!--commonHead-->
