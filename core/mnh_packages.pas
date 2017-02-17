@@ -188,6 +188,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
+            if secondaryPackages[i]^.readyForUsecase<>lu_forImport then
             secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
