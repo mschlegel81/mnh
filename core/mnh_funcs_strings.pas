@@ -1,7 +1,7 @@
 UNIT mnh_funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64;
+USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64,LConvEncoding;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -748,14 +748,14 @@ FUNCTION utf8ToAnsi_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(Utf8ToAnsi(str0^.value));
+    then result:=newStringLiteral(UTF8ToCP1252(str0^.value));
   end;
 
 FUNCTION ansiToUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(AnsiToUtf8(str0^.value));
+    then result:=newStringLiteral(CP1252ToUTF8(str0^.value));
   end;
 
 FUNCTION base64encode_impl intFuncSignature;
