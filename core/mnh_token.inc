@@ -650,6 +650,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
+  FUNCTION errorLocation(CONST preferredToken:P_token=nil):T_searchTokenLocation;
+    begin
+      if preferredToken<>nil then exit(preferredToken           ^.location);
+      if first         <>nil then exit(first                    ^.location);
+      if stack.topIndex>=0   then exit(stack.dat[stack.topIndex]^.location);
+      result:=C_nilTokenLocation;
+    end;
+
   PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation; CONST LHS:P_literal);
     begin
       context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans. Got '+LHS^.typeString,location);
@@ -992,7 +1000,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if length(bodyParts)<>2 then begin
-          context.adapters^.raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',first^.location);
+          context.adapters^.raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',errorLocation);
           exit(false);
         end;
 
@@ -1097,7 +1105,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           inlineRule^.pattern.appendOptional;
           firstReplace:=context.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
-        end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
+        end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifndef DEBUGMODE}
         try
@@ -1149,7 +1157,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
         stack.popLink(first);
-        context.adapters^.raiseError('Cannot evaluate inline-if; cannot locate then-marker',first^.location);
+        context.adapters^.raiseError('Cannot evaluate inline-if; cannot locate then-marker',errorLocation);
         exit;
       end;
       tokenBeforeElse:=prev;
@@ -1160,7 +1168,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
         stack.popLink(first);
-        context.adapters^.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',first^.location);
+        context.adapters^.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',errorLocation);
         exit;
       end;
       lastThen:=prev;
@@ -1355,7 +1363,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             stack.push(first);
             didSubstitution:=true;
           end;
-        else context.adapters^.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',first^.location);
+        else context.adapters^.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',errorLocation);
       end;
     end;
 
@@ -1705,13 +1713,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
-          end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',first^.location);
+          end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
         end;
         tt_operatorPlus:                 begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
         tt_operatorMinus:                begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
         tt_unaryOpPlus, tt_unaryOpMinus: begin                                  stack.push(first); didSubstitution:=true; end;
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
-          context.adapters^.raiseError('Undefined prefix operator '+first^.singleTokenToString,first^.location);
+          context.adapters^.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
         tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
         tt_expBraceOpen: begin
           digestInlineExpression(first,context);
@@ -1790,8 +1798,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
-          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
-        end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
+          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
+        end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
         tt_pseudoFuncPointer: if cTokType[1] in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule] then resolvePseudoFuncPointer;
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
@@ -1799,14 +1807,14 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     except
       on e:Exception do begin
         context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth));
-        if first<>nil then context.adapters^.raiseSystemError(e.message,first^.location)
+        if first<>nil then context.adapters^.raiseSystemError(e.message,errorLocation)
                       else context.adapters^.raiseSystemError(e.message);
       end;
     end;
     {$endif}
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
-        context.adapters^.raiseError('Irreducible expression: '+tokenStackToString(@stack,first,100),first^.location);
+        context.adapters^.raiseError('Irreducible expression: '+tokenStackToString(@stack,first,100),errorLocation);
         if not(context.adapters^.hasStackTrace) then context.printCallStack;
         cleanupStackAndExpression;
       end;
