@@ -397,9 +397,14 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShif
     if runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning then begin
       if (key=116) and tbRun      .enabled then tbRunClick(Sender);
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
-      if (key=118) and tbStep     .enabled then tbStepClick(Sender);
+      if (key=118) then begin
+        if (ssShift in Shift) then begin
+          if tbMicroStep.enabled then tbMicroStepClick(Sender);
+        end else begin
+          if tbStep     .enabled then tbStepClick(Sender);
+        end;
+      end;
       if (key=119) and tbStepOut  .enabled then tbStepOutClick(Sender);
-      if (key=118) and (ssShift in Shift) and tbMicroStep.enabled then tbMicroStepClick(Sender);
     end;
   end;
 
