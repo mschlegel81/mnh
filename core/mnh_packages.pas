@@ -20,7 +20,7 @@ TYPE
   {$include mnh_futureTask.inc}
   {$include mnh_procBlock.inc}
   {$include mnh_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_NONE,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
+  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
   T_packageReference=object
     id,path:ansistring;
@@ -187,8 +187,8 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
           if  (secondaryPackages[i]^.readyForUsecase<>lu_NONE) and
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
-          if secondaryPackages[i]^.readyForUsecase<>lu_NONE then begin
-            if secondaryPackages[i]^.readyForUsecase<>lu_forImport then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+          if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
+            secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -724,10 +724,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
   begin
-    if usecase=lu_NONE then raise Exception.create('Invalid usecase: lu_NONE');
+    if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
+    if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     if isMain then context.adapters^.clearErrors;
     profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     clear(false);
+    readyForUsecase:=lu_beingLoaded;
 
     if profile then context.timeBaseComponent(pc_tokenizing);
     fileTokens.create;
