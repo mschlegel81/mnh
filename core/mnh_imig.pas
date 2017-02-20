@@ -301,6 +301,18 @@ FUNCTION listManipulations_imp intFuncSignature;
     for alg in algorithms do listResult^.appendString(alg^.prototype^.toString(false));
   end;
 
+FUNCTION getThumbnail_imp intFuncSignature;
+  VAR img:T_rawImage;
+  begin
+    result:=nil;
+    if (params<>nil) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int) and (arg2^.literalType=lt_int) then begin
+      img.create(str0^.value);
+      img.resize(int1^.value,int2^.value,res_fit);
+      result:=newStringLiteral(img.getJpgFileData(80));
+      img.destroy;
+    end;
+  end;
+
 INITIALIZATION
   initialize(imigCS);
   initCriticalSection(imigCS);
@@ -317,6 +329,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,false,ak_nullary,'displayImage;//Displays the current image.');
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,false,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,true,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
+  registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,true,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.
