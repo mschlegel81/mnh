@@ -572,12 +572,13 @@ CONSTRUCTOR G_literalKeyMap.create();
 CONSTRUCTOR G_literalKeyMap.createClone(VAR map:MY_TYPE);
   VAR i,j:longint;
   begin
+    fill:=0;
     setLength(dat,length(map.dat));
     for i:=0 to length(dat)-1 do begin
       setLength(dat[i],length(map.dat[i]));
+      inc(fill,length(dat[i]));
       for j:=0 to length(dat[i])-1 do dat[i,j]:=map.dat[i,j];
     end;
-    fill:=map.fill;
   end;
 
 DESTRUCTOR G_literalKeyMap.destroy;
@@ -622,8 +623,6 @@ PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
       end;
       setLength(dat,i0);
     end;
-    k:=0;
-    for i:=0 to length(dat)-1 do inc(k,length(dat[i]));
   end;
 
 PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
@@ -657,8 +656,8 @@ FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE
       setLength(dat[binIdx],j+1);
       dat[binIdx,j].key:=entry.key;
       dat[binIdx,j].keyHash:=entry.keyHash;
-      inc(fill);
       result:=true;
+      inc(fill);
     end else begin
       result:=false;
       previousValue:=dat[binIdx,j].value;
@@ -681,8 +680,8 @@ FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT
       setLength(dat[binIdx],j+1);
       dat[binIdx,j].key:=key;
       dat[binIdx,j].keyHash:=hash;
-      inc(fill);
       result:=true;
+      inc(fill);
     end else begin
       result:=false;
       previousValue:=dat[binIdx,j].value;
@@ -727,9 +726,11 @@ FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
     setLength(result,fill);
     k:=0;
     for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
+      if k>=length(result) then setLength(result,k+1);
       result[k]:=dat[i,j];
       inc(k);
     end;
+    if k<length(result) then setLength(result,k);
   end;
 
 FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
@@ -1891,8 +1892,6 @@ FUNCTION T_mapLiteral.put(CONST key,newValue:ansistring                 ):P_mapL
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:int64    ):P_mapLiteral; begin result:=put(newStringLiteral(key), newIntLiteral   (newValue),false); end;
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:T_myFloat):P_mapLiteral; begin result:=put(newStringLiteral(key), newRealLiteral  (newValue),false); end;
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:boolean  ):P_mapLiteral; begin result:=put(newStringLiteral(key), newBoolLiteral  (newValue),false); end;
-
-
 FUNCTION T_mapLiteral.put(CONST key:ansistring; CONST newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
   begin
     if incRefs then newValue^.rereference;
@@ -1936,90 +1935,6 @@ PROCEDURE T_mapLiteral.drop(CONST L: P_scalarLiteral);
     disposeLiteral(dropped.key);
     disposeLiteral(dropped.value);
   end;
-
-//PROCEDURE T_mapLiteral.dropAll(CONST L: P_compoundLiteral);
-//  VAR i:longint;
-//      key:P_literal;
-//      anyDropped:boolean=false;
-//      dropped:T_literalKeyLiteralValueMap.CACHE_ENTRY;
-//  begin
-//    for i:=0 to L^.size-1 do begin
-//      key:=L^[i];
-//      dropped:=dat.drop(key);
-//      if dropped.key<>nil then begin
-//        disposeLiteral(dropped.key);
-//        disposeLiteral(dropped.value);
-//      end;
-//      anyDropped:=true;
-//    end;
-//    if anyDropped then dropManifestation;
-//  end;
-
-//PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
-//  VAR
-//    last: P_literal;
-//    i0, i1: int64;
-//    c0, c1: char;
-//    newLen: longint;
-//  begin
-//    if not (nextAppendIsRange) then begin
-//      append(L, true);
-//      exit;
-//    end;
-//    nextAppendIsRange:=false;
-//
-//    if datFill = 0 then begin
-//      adapters.raiseError('Cannot append range to empty list', tokenLocation);
-//      exit;
-//    end;
-//    last:=dat[datFill-1];
-//    if (last^.literalType = lt_int) and (L^.literalType = lt_int) then begin
-//      i0:=P_intLiteral(last)^.val;
-//      i1:=P_intLiteral(L)^.val;
-//      newLen:=datFill+abs(i1-i0)+1;
-//      if newLen>length(dat) then setLength(dat,newLen);
-//      while (i0<i1) and adapters.noErrors do begin
-//        inc(i0);
-//        appendInt(i0);
-//      end;
-//      while (i0>i1) and adapters.noErrors do begin
-//        dec(i0);
-//        appendInt(i0);
-//      end;
-//    end else if (last^.literalType = lt_string) and
-//      (length(P_stringLiteral(last)^.val) = 1) and (L^.literalType = lt_string) and
-//      (length(P_stringLiteral(L   )^.val) = 1) then begin
-//      c0:=P_stringLiteral(last)^.val [1];
-//      c1:=P_stringLiteral(L)^.val [1];
-//      newLen:=datFill+abs(ord(c1)-ord(c0))+1;
-//      if newLen>length(dat) then setLength(dat,newLen);
-//      while c0<c1 do begin
-//        inc(c0);
-//        appendString(c0);
-//      end;
-//      while c0>c1 do begin
-//        dec(c0);
-//        appendString(c0);
-//      end;
-//    end else begin
-//      literalType:=lt_list;
-//      adapters.raiseError('Invalid range expression '+
-//        last^.toString+'..'+L^.toString, tokenLocation);
-//    end;
-//  end;
-//
-//PROCEDURE T_listLiteral.setRangeAppend;
-//  begin
-//    nextAppendIsRange:=true;
-//  end;
-//
-//PROCEDURE T_listLiteral.dropIndexes;
-//  begin
-//    system.enterCriticalSection(lockCs);
-//    if setMap           <>nil then dispose(setMap           ,destroy); setMap           :=nil;
-//    if keyValuePairByKey<>nil then dispose(keyValuePairByKey,destroy); keyValuePairByKey:=nil;
-//    system.leaveCriticalSection(lockCs);
-//  end;
 
 PROCEDURE T_listLiteral.sort;
   VAR temp: T_arrayOfLiteral;

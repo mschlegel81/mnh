@@ -29,6 +29,14 @@ IMPLEMENTATION
 VAR serverCS:system.TRTLCriticalSection;
     currentUpServers:array of P_microserver;
 
+PROCEDURE killAllServers;
+  VAR server:P_microserver;
+  begin
+    enterCriticalSection(serverCS);
+    for server in currentUpServers do server^.hasKillRequest:=true;
+    leaveCriticalSection(serverCS);
+  end;
+
 FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
   begin
@@ -314,8 +322,25 @@ FUNCTION openUrl_imp intFuncSignature;
     else result:=nil;
   end;
 
+FUNCTION stopAllHttpServers_impl intFuncSignature;
+  VAR allKilled:boolean;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      killAllServers;
+      repeat
+        ThreadSwitch;
+        sleep(1);
+        enterCriticalSection(serverCS);
+        allKilled:=length(currentUpServers)=0;
+        leaveCriticalSection(serverCS);
+      until allKilled;
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   {$WARN 5058 OFF}
+  killServersCallback:=@killAllServers;
   system.initCriticalSection(serverCS);
   registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,false,ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,true ,ak_variadic_1,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
@@ -328,6 +353,7 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,false,ak_unary     ,'httpPut(URL:string);');
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,false,ak_unary     ,'httpPost(URL:string);');
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,false,ak_unary     ,'openUrl(URL:string);//Opens the URL in the default browser');
+  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,false,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
 FINALIZATION
   doneCriticalSection(serverCS);

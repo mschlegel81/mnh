@@ -32,9 +32,11 @@ main->begin
   startHttpServer(ipAndPort,::serve,0);
   openUrl(address+'/index.html');
   ask('Press Enter to shutdown server');
+  stopAllHttpServers;
 end;
 
 main('test')->begin
   startHttpServer(ipAndPort,::serve,0);
   print(httpGet(address&'/ping'));
+  stopAllHttpServers;
 end;
