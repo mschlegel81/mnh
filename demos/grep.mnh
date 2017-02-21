@@ -6,7 +6,7 @@ end;
 
 //*Usage: grep pattern [options] [filePattern1,[filePattern2,...]]
 //*if no file pattern is given, * is assumed
-//*Options: -i  case insensitive matching
+//*Options: -i  case insensitive matching (by converting input to lowercase)
 //*         -n# show # additional lines before and after
 //*         -l  only list files
 //*         -r  recurse subdirectories
@@ -25,12 +25,18 @@ main(searchPattern,...)->begin
 
   //Search:
   allFiles('.',filePatterns,recurseDirs)
+  .sort
   .each(file,begin
     local lines:=fileLines(file);
-    local toShow:=lines.matches(searchPattern).showIndex(additionalLines);
+    local linesToScan:=matchCaseSensitive
+                       ? lines
+                       : lines.lower;
+    local toShow:=linesToScan.matches(searchPattern).showIndex(additionalLines);
     toShow==[]
     ? void
-    : print(file) orElse listOnly ? void : printf('  %4d:%s',toShow+1,lines[toShow]);
+    : print(file) orElse listOnly
+                         ? void
+                         : printf('  %4d:%s',toShow+1,lines[toShow]);
   end);
 end;
 
