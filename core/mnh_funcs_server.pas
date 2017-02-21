@@ -272,7 +272,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_map,lt_string]) then begin
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_map,lt_string,lt_emptyMap]) then begin
       address:=str0^.value;
       path:=str1^.value;
       if not(startsWith(path,'/')) then path:='/'+path;
