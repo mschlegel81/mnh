@@ -83,6 +83,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 
 FUNCTION tokenStackToString(CONST stack:pointer; CONST first: P_token; CONST lengthLimit: longint): ansistring;
 {$undef include_interface}
+VAR killServersCallback:PROCEDURE;
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT={$ifdef Windows}60000{$else}3000{$endif};
 VAR pendingTasks     :T_taskQueue;
@@ -818,6 +819,7 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
   VAR ruleList:array of P_rule;
       i:longint;
   begin
+    killServersCallback;
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin

@@ -80,6 +80,7 @@ main->begin
   startHttpServer('localhost:43210',::serve,0);
   openUrl('http://localhost:43210/page.html');
   ask('Press o.k. to shutdown server.',['o.k.']);
+  stopAllHttpServers;
 end;
 
 req:='/page.html?f=sin%28x%5E2%29*s%5E2&x0=0&x1=10&samples=1000';
