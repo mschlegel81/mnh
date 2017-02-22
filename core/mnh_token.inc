@@ -538,7 +538,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
   end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContext);
-  VAR t,prev,inlineRule:P_token;
+  VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
   begin
@@ -548,7 +548,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
       exit;
     end;
     t:=rep^.next; prev:=rep;
-    inlineRule:=t;
+    inlineRuleTokens:=t;
     while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
       case t^.tokType of
         tt_expBraceOpen: begin
@@ -568,10 +568,10 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
     prev^.next:=nil; //unlink closing curly bracket
     context.disposeToken(t); //dispose closing curly bracket
     if context.adapters^.noErrors then begin
-      new(inlineSubRule,createFromInline(inlineRule,context));
+      new(inlineSubRule,createFromInline(inlineRuleTokens,context));
       if context.adapters^.noErrors then begin
         rep^.tokType:=tt_literal;
-        rep^.data:=newExpressionLiteral(inlineSubRule);
+        rep^.data:=inlineSubRule;
       end else dispose(inlineSubRule,destroy);
     end;
   end;
@@ -827,7 +827,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             if resultLiteral=nil then begin
               resultLiteral:=L; L^.rereference;
             end else begin
-              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,eachLocation,context,callDepth+1);
+              newLit:=P_subrule(aggregatorExpression)^.directEvaluateAggregator(resultLiteral,L,eachLocation,context,callDepth+1);
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
@@ -1084,10 +1084,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
           if parameterListLiteral^[0]^.getReferenceCount=1 then begin
             newLiteral:=parameterListLiteral^[0]^.rereferenced;
-            inlineRule:=P_expressionLiteral(newLiteral)^.value;
+            inlineRule:=P_subrule(newLiteral);
           end else begin
-            new(inlineRule,clone(P_subrule(P_expressionLiteral(parameterListLiteral^[0])^.value)));
-            newLiteral:=newExpressionLiteral(inlineRule);
+            new(inlineRule,clone(P_subrule(parameterListLiteral^[0])));
+            newLiteral:=inlineRule;
           end;
           inlineRule^.pattern.appendOptional;
           firstReplace:=context.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
@@ -1115,7 +1115,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           exit;
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
-        inlineRule:=P_expressionLiteral(first^.data)^.value;
+        inlineRule:=first^.data;
         //failing "replaces" for inline rules will raise evaluation error.
         if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),first^.location,firstReplace,lastReplace,context,false)) and
            not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),first^.location,firstReplace,lastReplace,context,true )) then exit;
@@ -1435,7 +1435,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       then ruleToken^.next:=P_rule(ruleToken^.data)^.getParametersForPseudoFuncPointer(context,location)
       else ruleToken^.next:=getParametersForPseudoFuncPtr(ruleToken^.data,context,location);
       new(exRule,createFromInline(ruleToken,context));
-      first:=context.newToken(location,'',tt_literal,newExpressionLiteral(exRule)); // {f@$params}
+      first:=context.newToken(location,'',tt_literal,exRule); // {f@$params}
       first^.next:=temp; //-> {f@$params} ...
       didSubstitution:=true;
     end;

@@ -14,7 +14,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),ID_MACRO,tokenLocation);
+      lt_expression: new(P_subrule(result),createFromInlineWithOp(P_expressionLiteral(x),ID_MACRO,tokenLocation));
       lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
@@ -92,7 +92,7 @@ FUNCTION not_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),'not',tokenLocation);
+        lt_expression: new(P_subrule(result),createFromInlineWithOp(P_expressionLiteral(x),'not',tokenLocation));
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
         lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
         lt_list,lt_booleanList,lt_intList,lt_emptyList,
@@ -123,7 +123,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),ID_MACRO,tokenLocation);
+      lt_expression: new(P_subrule(result),createFromInlineWithOp(P_expressionLiteral(x),ID_MACRO,tokenLocation));
       lt_error: begin result:=x; result^.rereference; end;
       lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
@@ -166,7 +166,7 @@ UNARY_NUM_TO_SAME;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),ID_MACRO,tokenLocation);
+        lt_expression: new(P_subrule(result),createFromInlineWithOp(P_expressionLiteral(x),ID_MACRO,tokenLocation));
         lt_error,lt_int: result:=x^.rereferenced;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
@@ -323,7 +323,7 @@ FUNCTION sign_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=subruleApplyFuncImpl(P_expressionLiteral(x),'sign',tokenLocation);
+        lt_expression: new(P_subrule(result),createFromInlineWithOp(P_expressionLiteral(x),'sign',tokenLocation));
         lt_error: result:=x^.rereferenced;
         lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
@@ -360,7 +360,7 @@ FUNCTION time_imp intFuncSignature;
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
     begin
       t:=context.wallclockTime;
-      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(tokenLocation,context,0);
+      result:=P_subrule(subruleLiteral)^.directEvaluateNullary(tokenLocation,context,0);
       t:=context.wallclockTime-t;
     end;
 
@@ -407,7 +407,7 @@ FUNCTION try_imp intFuncSignature;
       ((params^.size=1) or (params^.size=2)) then begin
       context.callStackPush(tokenLocation,@builtinLocation_try,params,nil);
       oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
-      result:=P_subrule(P_expressionLiteral(arg0)^.value)^.directEvaluateNullary(tokenLocation,context,0);
+      result:=P_subrule(arg0)^.directEvaluateNullary(tokenLocation,context,0);
       if context.adapters^.noErrors
       then errorCase:=false
       else begin
@@ -420,8 +420,8 @@ FUNCTION try_imp intFuncSignature;
         if params^.size=2 then begin
           if arg1^.literalType=lt_expression then begin
             if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)
-            then result:=P_subrule(P_expressionLiteral(arg1)^.value)^.directEvaluateUnary(messages,tokenLocation,context,0)
-            else result:=P_subrule(P_expressionLiteral(arg1)^.value)^.directEvaluateNullary       (tokenLocation,context,0);
+            then result:=P_subrule(arg1)^.directEvaluateUnary(messages,tokenLocation,context,0)
+            else result:=P_subrule(arg1)^.directEvaluateNullary       (tokenLocation,context,0);
           end else begin
             result:=arg1;
             result^.rereference;
@@ -600,7 +600,7 @@ FUNCTION arity_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=newIntLiteral(P_subrule (P_expressionLiteral(arg0)^.value)^.arity);
+    then result:=newIntLiteral(P_expressionLiteral(arg0)^.arity);
   end;
 
 FUNCTION parameterNames_imp intFuncSignature;
@@ -614,7 +614,7 @@ FUNCTION parameterNames_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=getNames(P_subrule(P_expressionLiteral(arg0)^.value));
+    then result:=getNames(P_subrule(arg0));
   end;
 
 FUNCTION sandBoxExecute_imp intFuncSignature;
@@ -669,7 +669,7 @@ FUNCTION group_imp intFuncSignature;
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,tokenLocation,context,0);
+          newLit:=P_subrule(aggregator)^.directEvaluateAggregator(resultLiteral,L,tokenLocation,context,0);
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;

@@ -196,7 +196,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       else fpar^.append(                  params^[k]         ,true);
 
       if formatSubrule<>nil then begin
-        temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(
+        temp:=P_subrule(formatSubrule)^.directEvaluate(
           fpar,
           tokenLocation,
           context,
@@ -227,7 +227,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
 
     if formatSubrule=nil
     then i:=length(parts) shr 1
-    else i:=length(P_subrule(P_expressionLiteral(formatSubrule)^.value)^.pattern.sig);
+    else i:=length(P_subrule(formatSubrule)^.pattern.sig);
     if i<>(params^.size-1) then begin
       context.adapters^.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin

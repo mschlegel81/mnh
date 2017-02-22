@@ -4,7 +4,7 @@ USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typ
      mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
      mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
      Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,
      mnh_datastores;
 
 {$define include_interface}
@@ -649,7 +649,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
+          P_subrule(t^.data)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
         end;
         //----------------------:special handling if main returns an expression
         context.cascadeDisposeToken(t);
@@ -1103,7 +1103,7 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_evaluationContext):P_mapLiter
       for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.typ=srt_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
-          .put('subrule'   ,newExpressionLiteral(subRule),false)^
+          .put('subrule'   ,subRule^.rereferenced,false)^
           .put('attributes',subRule^.getAttributesLiteral,false),false);
     end;
 
