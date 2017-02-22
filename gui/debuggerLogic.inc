@@ -204,7 +204,7 @@ PROCEDURE TMnhForm.updateExpressionMemo;
     end;
 
     currentExpressionMemo.lines.clear;
-    tokens:=tokenSplit(tokenStackToString(snapshot.tokenStack,snapshot.first,round(lines*chars*0.9)));
+    tokens:=tokenSplit(snapshot.tokenStack^.toString(snapshot.first,round(lines*chars*0.9)));
 
     while k<length(tokens) do begin
       txt:='';

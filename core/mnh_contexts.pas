@@ -94,7 +94,7 @@ TYPE
   {$ifdef fullVersion}
   T_debuggingSnapshot=record
     location:T_tokenLocation;
-    tokenStack:pointer;
+    tokenStack:P_tokenStack;
     first:pointer;
     callStack:T_callStack;
   end;

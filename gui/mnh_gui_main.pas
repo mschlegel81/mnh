@@ -3,6 +3,7 @@ UNIT mnh_gui_main;
 {$mode objfpc}{$H+}
 INTERFACE
 USES
+  mnh_tokens,
   mnhFormHandler, Classes, sysutils, FileUtil, SynEdit, SynEditTypes,
   SynCompletion, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls,
   Grids, SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
