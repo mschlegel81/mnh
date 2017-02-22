@@ -675,8 +675,7 @@ FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
       interLockedIncrement(asyncChildCount);
       new(result,createContext(myAdapters,ct_normal));
       result^.parentContext:=@self;
-      result^.options:=options-[cp_timing];
-      result^.options:=[cp_notifyParentOfAsyncTaskEnd];
+      result^.options:=options-[cp_timing,cp_logEndOfEvaluation]+[cp_notifyParentOfAsyncTaskEnd];
     end else begin
       result:=parentContext^.getNewAsyncContext();
     end;
