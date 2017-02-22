@@ -103,7 +103,7 @@ TYPE
   T_profilingMap=specialize G_stringKeyMap<T_profilingEntry>;
 
   P_evaluationContext=^T_evaluationContext;
-  T_evaluationContext=object
+  T_evaluationContext=object(T_tokenRecycler)
     private
       {$ifdef debugMode}
       evaluationIsRunning:boolean;
@@ -114,11 +114,6 @@ TYPE
       parentContext:P_evaluationContext;
       asyncChildCount:longint;
       myAdapters:P_adapters;
-      //token recycling
-      recycler:record
-        dat:array[0..2047] of P_token;
-        fill:longint;
-      end;
       //local variables
       valueStore:T_valueStore;
       //call stack
@@ -170,12 +165,6 @@ TYPE
       PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
       PROCEDURE detachWorkerContext(CONST expectedParent:P_evaluationContext);
       FUNCTION getReadOnlyValueStore:P_valueStore;
-      //Recycler routines:
-      FUNCTION disposeToken(p:P_token):P_token; inline;
-      PROCEDURE cascadeDisposeToken(VAR p:P_token);
-      FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
-      FUNCTION newToken(CONST original:T_token):P_token; inline;
-      FUNCTION newToken(CONST original:P_token):P_token; inline;
       //Local scope routines:
       PROCEDURE scopePush(CONST blocking:boolean); inline;
       PROCEDURE scopePop; inline;
@@ -434,14 +423,10 @@ PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST loca
 {$endif}
 
 CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CONST contextType: T_contextType);
-  VAR i:longint;
   begin
+    inherited create;
     options :=C_defaultOptions[contextType];
     parentContext:=nil;
-    with recycler do begin
-      for i:=0 to length(dat)-1 do dat[i]:=nil;
-      fill:=0;
-    end;
     valueStore.create;
     myAdapters:=outAdapters;
     setLength(callStack,0);
@@ -465,16 +450,7 @@ PROCEDURE T_evaluationContext.resetOptions(CONST contextType: T_contextType);
 
 DESTRUCTOR T_evaluationContext.destroy;
   begin
-    with recycler do begin
-      while fill>0 do begin
-        dec(fill);
-        try
-          dispose(dat[fill],destroy);
-        except
-          dat[fill]:=nil;
-        end;
-      end;
-    end;
+    inherited destroy;
     valueStore.destroy;
     clearCallStack;
     wallClock.destroy;
@@ -720,54 +696,6 @@ FUNCTION T_evaluationContext.getReadOnlyValueStore:P_valueStore;
   begin
     result:=valueStore.readOnlyClone;
   end;
-
-FUNCTION T_evaluationContext.disposeToken(p: P_token): P_token;
-  begin with recycler do begin
-    if p=nil then exit(nil);
-    result:=p^.next;
-    if (fill>=length(dat))
-    then dispose(p,destroy)
-    else begin
-      p^.undefine;
-      dat[fill]:=p;
-      inc(fill);
-    end;
-  end; end;
-
-PROCEDURE T_evaluationContext.cascadeDisposeToken(VAR p: P_token);
-  begin
-    while p<>nil do p:=disposeToken(p);
-  end;
-
-FUNCTION T_evaluationContext.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
-  begin with recycler do begin
-    if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-    end else new(result,create);
-    result^.define(tokenLocation,tokenText,tokenType,ptr);
-    result^.next:=nil;
-  end; end;
-
-FUNCTION T_evaluationContext.newToken(CONST original: T_token): P_token;
-  begin with recycler do begin
-    if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-    end else new(result,create);
-    result^.define(original);
-    result^.next:=nil;
-  end; end;
-
-FUNCTION T_evaluationContext.newToken(CONST original: P_token): P_token;
-  begin with recycler do begin
-    if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-    end else new(result,create);
-    result^.define(original^);
-    result^.next:=nil;
-  end; end;
 
 PROCEDURE T_evaluationContext.scopePush(CONST blocking: boolean);
   begin
