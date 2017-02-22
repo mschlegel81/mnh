@@ -2,6 +2,8 @@ UNIT mnh_funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64,LConvEncoding;
+TYPE T_expressionToTokensCallback=FUNCTION(CONST subruleLiteral:P_expressionLiteral):P_listLiteral;
+VAR expressionToTokensCallback:T_expressionToTokensCallback;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 

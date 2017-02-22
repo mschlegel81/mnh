@@ -15,7 +15,7 @@
 
   T_subruleArray=array of P_subrule;
 
-  T_subrule=object(T_objectWithIdAndLocation)
+  T_subrule=object(T_expressionLiteral)
     private
       attributes:array of T_subruleAttribute;
       firstCallCs:TRTLCriticalSection;
@@ -40,29 +40,40 @@
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
-      DESTRUCTOR destroy;
+      DESTRUCTOR destroy; virtual;
+      //Literal routines:
+
+      FUNCTION arity:longint; virtual;
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+      FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
+      FUNCTION hash: T_hashInt; virtual;
+      FUNCTION typeString:string; virtual;
+
       //Evaluation calls:
       FUNCTION replaces                (CONST param:P_listLiteral;  CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+      FUNCTION evaluate            (CONST parameters:P_listLiteral; CONST location    :T_tokenLocation;                             CONST context:pointer):P_literal; virtual;
       FUNCTION directEvaluate          (CONST params:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal; inline;
       FUNCTION directEvaluateNullary   (                            CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
       FUNCTION directEvaluateUnary     (CONST x:P_literal;          CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+      FUNCTION evaluateToBoolean       (CONST a,b:P_literal;            CONST location:T_tokenLocation; CONST context:pointer):boolean;   virtual;
       FUNCTION directEvaluateComparator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext;                               CONST callDepth:word):boolean;
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext;                               CONST callDepth:word):P_literal;
       FUNCTION accept                  (CONST x:P_literal;                                                                            VAR context:T_evaluationContext):boolean;
       FUNCTION getInlineValue:P_literal;
 
       //Inspection/documentation calls
-      FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
+      FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
-      FUNCTION arity:longint;
       FUNCTION inspect:P_mapLiteral;
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
-      FUNCTION acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
+      FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION getAttributesLiteral:P_listLiteral;
   end;
 
@@ -102,6 +113,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
 
 CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_rule=nil);
   begin
+    inherited init(lt_expression);
     initCriticalSection(firstCallCs);
     setLength(attributes,0);
     functionIdsReady:=false;
@@ -245,6 +257,7 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
+    inherited destroy;
     declaredAt.package:=nil;
     declaredAt.column:=0;
     declaredAt.line:=0;
@@ -255,21 +268,47 @@ DESTRUCTOR T_subrule.destroy;
     doneCriticalSection(firstCallCs);
   end;
 
+FUNCTION T_subrule.canApplyToNumberOfParameters(CONST parCount:longint):boolean;
+  begin
+    result:=(arity<=parCount) and (pattern.hasOptionals or (arity=parCount));
+  end;
+
+FUNCTION T_subrule.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+  VAR myTxt,otherTxt:ansistring;
+  begin
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_expression]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
+    if other^.literalType<>lt_expression then exit(false);
+    myTxt   :=toString;
+    otherTxt:=other^.toString;
+    result:=(myTxt=otherTxt) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+         or (myTxt<otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+         or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+  end;
+
+FUNCTION T_subrule.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
+  begin result:=newVoidLiteral; adapters.raiseError('Cannot negate expression. Please use "-1*..." instead.', minusLocation); end;
+
+FUNCTION T_subrule.typeString: string; begin result:=C_typeString[literalType]+'('+intToStr(arity)+')'; end;
+
+FUNCTION T_subrule.hash: T_hashInt;
+  VAR i:longint;
+      s:string;
+  begin
+    {$Q-}{$R-}
+    s:= toString;
+    result:=T_hashInt(lt_expression)+T_hashInt(length(s));
+    for i:=1 to length(s) do result:=result*31+ord(s[i]);
+    {$Q+}{$R+}
+  end;
+
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
   VAR subRule:P_subrule;
   begin
     new(subRule,createPrimitiveAggregator(tok,context));
-    result:=newExpressionLiteral(subRule);
-  end;
-
-PROCEDURE disposeSubruleImpl (VAR p:pointer);
-  begin
-    case P_subrule(p)^.typ of
-      srt_normal_private,srt_normal_public: begin end;
-      srt_inline_for_literal: dispose(P_subrule(p),destroy)
-      else raise Exception.create('Unexpected subrule type; rule is declared '+ansistring(P_subrule(p)^.declaredAt));
-    end;
-    p:=nil;
+    result:=subRule;
   end;
 
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
@@ -397,16 +436,16 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     //Pattern (including final parameter names)
     if LHS^.literalType=lt_expression then begin
       if RHS^.literalType=lt_expression
-      then pattern.combineForInline(P_subrule(P_expressionLiteral(LHS)^.value)^.pattern,
-                                    P_subrule(P_expressionLiteral(RHS)^.value)^.pattern)
-      else pattern.clone(P_subrule(P_expressionLiteral(LHS)^.value)^.pattern);
+      then pattern.combineForInline(P_subrule(LHS)^.pattern,
+                                    P_subrule(RHS)^.pattern)
+      else pattern.clone(P_subrule(LHS)^.pattern);
     end else begin
       if RHS^.literalType=lt_expression
-      then pattern.clone(P_subrule(P_expressionLiteral(RHS)^.value)^.pattern)
+      then pattern.clone(P_subrule(RHS)^.pattern)
       else pattern.create;
     end;
     if LHS^.literalType=lt_expression then begin
-      r:=P_expressionLiteral(LHS)^.value;
+      r:=P_subrule(LHS);
       embrace:=r^.needEmbrace(C_opPrecedence[op]);
       if embrace then appendToExpression(tt_braceOpen);
       for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
@@ -414,7 +453,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end else appendToExpression(LHS);
     appendToExpression(op);
     if RHS^.literalType=lt_expression then begin
-      r:=P_expressionLiteral(RHS)^.value;
+      r:=P_subrule(RHS);
       embrace:=r^.needEmbrace(C_opPrecedence[op]);
       if embrace then appendToExpression(tt_braceOpen);
       for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
@@ -422,7 +461,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end else appendToExpression(RHS);
   end;
 
-FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):pointer;
+FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):P_expressionLiteral;
   VAR newRule:P_subrule;
   begin
     new(newRule,createFromOp(LHS,op,RHS,tokenLocation));
@@ -454,7 +493,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
 
   begin
     init(srt_inline_for_literal,funcLocation);
-    origRule:=original^.value;
+    origRule:=P_subrule(original);
     pattern.create;
     setLength(preparedBody,1);
     with preparedBody[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
@@ -464,14 +503,10 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     updatePatternForInline;
   end;
 
-FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
-  VAR newRule:P_subrule;
-  begin
-    new(newRule,createFromInlineWithOp(original,intrinsicRuleId,funcLocation));
-    result:=newExpressionLiteral(newRule);
-  end;
+FUNCTION T_subrule.toString(CONST lengthLimit:longint=maxLongint): ansistring;
+  begin result:=toDocString(true,lengthLimit); end;
 
-FUNCTION T_subrule.toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
+FUNCTION T_subrule.toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
   VAR i,remainingLength:longint;
       prevIdLike,idLike:boolean;
   begin
@@ -490,19 +525,9 @@ FUNCTION T_subrule.toString(CONST includePattern:boolean=true; CONST lengthLimit
     else                                 result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION subruleToStringImpl(CONST p:pointer; CONST lengthLimit:longint):string;
+FUNCTION T_subrule.evaluate(CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal;
   begin
-    result:=P_subrule(p)^.toString(true,lengthLimit);
-  end;
-
-FUNCTION subruleToArityImpl(CONST p:pointer):longint;
-  begin
-    result:=P_subrule(p)^.arity;
-  end;
-
-FUNCTION subruleAcceptsParCount(CONST p:pointer; CONST parCount:longint):boolean;
-  begin
-    result:=(P_subrule(p)^.arity<=parCount) and (P_subrule(p)^.pattern.hasOptionals or (P_subrule(p)^.arity=parCount));
+    result:=directEvaluate(parameters,location,P_evaluationContext(context)^,0);
   end;
 
 FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
@@ -524,11 +549,6 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
     end;
   end;
 
-FUNCTION evaluateSubrule(CONST subruleLiteral:P_expressionLiteral; CONST location:T_tokenLocation; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
-  begin
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluate(parameters,location,P_evaluationContext(context)^,0);
-  end;
-
 FUNCTION T_subrule.directEvaluateNullary(CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
   begin
     result:=directEvaluate(nil,callLocation,context,callDepth);
@@ -540,6 +560,11 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_t
     param:=P_listLiteral(newListLiteral(1)^.append(x,true));
     result:=directEvaluate(param,callLocation,context,callDepth);
     disposeLiteral(param);
+  end;
+
+FUNCTION T_subrule.evaluateToBoolean(CONST a,b:P_literal; CONST location:T_tokenLocation; CONST context:pointer):boolean;
+  begin
+    result:=directEvaluateComparator(a,b,location,P_evaluationContext(context)^,0);
   end;
 
 FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):boolean;
@@ -555,14 +580,6 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocat
       context.adapters^.raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
     end;
     if lit<>nil then disposeLiteral(lit);
-  end;
-
-FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
-  VAR tempcontext:T_evaluationContext;
-  begin
-    tempcontext.createContext(P_adapters(@adapters),ct_silentlyRunAlone);
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,callLocation,tempcontext,0);
-    tempcontext.destroy;
   end;
 
 FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
@@ -637,7 +654,7 @@ FUNCTION T_subrule.arity:longint;
   end;
 
 FUNCTION T_subrule.inspect:P_mapLiteral;
-  FUNCTION typeString:string;
+  FUNCTION srtString:string;
     begin
       case typ of
         srt_normal_public     : result:=PUBLIC_TEXT;
@@ -660,10 +677,10 @@ FUNCTION T_subrule.inspect:P_mapLiteral;
     result:=newMapLiteral;
     P_mapLiteral(result)^.put('pattern'   ,pattern.toString)^
                          .put('location'  ,declaredAt      )^
-                         .put('type'      ,typeString      )^
+                         .put('type'      ,srtString       )^
                          .put('comment'   ,comment         )^
                          .put('attributes',attributeList   ,false)^
-                         .put('body'      ,toString(false) );
+                         .put('body'      ,toDocString(false) );
   end;
 
 FUNCTION T_subrule.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
@@ -713,9 +730,9 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
     end;
   end;
 
-FUNCTION T_subrule.acceptsSingleLiteral(CONST literalType:T_literalType):boolean;
+FUNCTION T_subrule.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
   begin
-    result:=(length(pattern.sig)=1) and (literalType in pattern.sig[0].typeWhitelist);
+    result:=(length(pattern.sig)=1) and (literalTypeToAccept in pattern.sig[0].typeWhitelist);
   end;
 
 FUNCTION T_subrule.getAttributesLiteral:P_listLiteral;
@@ -960,7 +977,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     end;
 
   begin
-    subRule:=P_subrule(f^.value);
+    subRule:=P_subrule(f);
 
     tempAdapters.create;
     tempcontext.createContext(@tempAdapters,ct_silentlyRunAlone);
@@ -993,7 +1010,7 @@ FUNCTION expressionToTokens(CONST subruleLiteral:P_expressionLiteral):P_listLite
   VAR sub:P_subrule;
       i:longint;
   begin
-    sub:=P_subrule(subruleLiteral^.value);
+    sub:=P_subrule(subruleLiteral);
     result:=newListLiteral(length(sub^.preparedBody));
     for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
       if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
@@ -1001,19 +1018,12 @@ FUNCTION expressionToTokens(CONST subruleLiteral:P_expressionLiteral):P_listLite
       else result^.appendString(safeTokenToString(@token));
     end;
   end;
-
 {$endif}
 {$ifdef include_initialization}
 {$ifdef fullVersion}
 generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
 {$endif}
-disposeSubruleCallback :=@disposeSubruleImpl;
-subruleToStringCallback:=@subruleToStringImpl;
-subruleToArityCallback:=@subruleToArityImpl;
-subruleAcceptParCountCallback:=@subruleAcceptsParCount;
 subruleApplyOpCallback :=@subruleApplyOpImpl;
-evaluateCompatorCallback:=@evaluateComparator;
-evaluateSubruleCallback:=@evaluateSubrule;
 expressionToTokensCallback:=@expressionToTokens;
 {$endif}
 {$ifdef include_finalization}

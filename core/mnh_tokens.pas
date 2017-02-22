@@ -27,6 +27,35 @@ TYPE
     FUNCTION getRawToken:T_rawToken;
   end;
 
+  P_tokenRecycler=^T_tokenRecycler;
+  T_tokenRecycler=object
+    private
+      dat:array[0..2047] of P_token;
+      fill:longint;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION disposeToken(p:P_token):P_token; inline;
+      PROCEDURE cascadeDisposeToken(VAR p:P_token);
+      FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
+      FUNCTION newToken(CONST original:T_token):P_token; inline;
+      FUNCTION newToken(CONST original:P_token):P_token; inline;
+  end;
+
+  P_tokenStack=^T_TokenStack;
+  T_TokenStack=object
+    topIndex:longint;
+    dat:array of P_token;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE popDestroy(CONST recycler:P_tokenRecycler);
+    PROCEDURE popLink(VAR first:P_token);
+    PROCEDURE push(VAR first:P_token);
+    PROCEDURE quietPush(CONST first:P_token);
+    PROCEDURE quietPop;
+    FUNCTION toString(CONST first:P_token; CONST lengthLimit:longint=maxLongint):ansistring;
+  end;
+
   T_bodyParts=array of record first,last:P_token; end;
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
@@ -254,6 +283,139 @@ FUNCTION T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
+  end;
+
+CONSTRUCTOR T_tokenRecycler.create;
+  VAR i:longint;
+  begin
+    for i:=0 to length(dat)-1 do dat[i]:=nil;
+    fill:=0;
+  end;
+
+DESTRUCTOR T_tokenRecycler.destroy;
+  begin
+    while fill>0 do begin
+      dec(fill);
+      try
+        dispose(dat[fill],destroy);
+      except
+        dat[fill]:=nil;
+      end;
+    end;
+  end;
+
+
+FUNCTION T_tokenRecycler.disposeToken(p: P_token): P_token;
+  begin
+    if p=nil then exit(nil);
+    result:=p^.next;
+    if (fill>=length(dat))
+    then dispose(p,destroy)
+    else begin
+      p^.undefine;
+      dat[fill]:=p;
+      inc(fill);
+    end;
+  end;
+
+PROCEDURE T_tokenRecycler.cascadeDisposeToken(VAR p: P_token);
+  begin
+    while p<>nil do p:=disposeToken(p);
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(tokenLocation,tokenText,tokenType,ptr);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST original: T_token): P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(original);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST original: P_token): P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(original^);
+    result^.next:=nil;
+  end;
+
+CONSTRUCTOR T_TokenStack.create;
+  begin
+    setLength(dat,0);
+    topIndex:=-1;
+  end;
+
+DESTRUCTOR T_TokenStack.destroy;
+  begin
+    setLength(dat,0);
+  end;
+
+PROCEDURE T_TokenStack.popDestroy(CONST recycler:P_tokenRecycler);
+  begin
+    recycler^.disposeToken(dat[topIndex]);
+    dec(topIndex);
+    if topIndex<length(dat)-100 then setLength(dat,topIndex+1);
+  end;
+
+PROCEDURE T_TokenStack.popLink(VAR first: P_token);
+  begin
+    dat[topIndex]^.next:=first;
+    first:=dat[topIndex];
+    dec(topIndex);
+    if topIndex<length(dat)-100 then setLength(dat,topIndex+1);
+  end;
+
+PROCEDURE T_TokenStack.push(VAR first: P_token);
+  begin
+    inc(topIndex);
+    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+10);
+    dat[topIndex]:=first;
+    first:=first^.next;
+  end;
+
+PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
+  begin
+    inc(topIndex);
+    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+10);
+    dat[topIndex]:=first;
+  end;
+
+PROCEDURE T_TokenStack.quietPop;
+  begin
+    dec(topIndex);
+  end;
+
+FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint): ansistring;
+  VAR i0,i:longint;
+      prevWasIdLike:boolean=false;
+  begin
+    if topIndex>=0 then begin
+      i0:=topIndex;
+      result:='';
+      while (i0>0) and (length(result)<lengthLimit) do begin
+        result:=dat[i0]^.toString(prevWasIdLike,prevWasIdLike,lengthLimit-length(result))+result;
+        dec(i0);
+      end;
+      if i0>0 then result:='... '
+              else result:='';
+      prevWasIdLike:=false;
+      for i:=i0 to topIndex do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
+    end else result:='';
+    result:=result+' # '+tokensToString(first,lengthLimit);
   end;
 
 end.

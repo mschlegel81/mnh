@@ -333,9 +333,6 @@ FUNCTION T_rule.inspect:P_mapLiteral;
     VAR value:P_literal;
         sub:P_subrule;
     begin
-      {$ifdef debugMode}
-      writeln(stdErr,'inspecting ',id,' ',ansistring(declarationStart));
-      {$endif}
       if ruleType in C_mutableRuleTypes then begin
         value:=namedValue.getValue;
         result:=newListLiteral(1);
@@ -407,8 +404,8 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_mapL
 
     result:=newMapLiteral^
               .put('id'        ,id)^
-              .put('rule'      ,newExpressionLiteral(sub),false)^
-              .put('attributes',attributes               ,false);
+              .put('rule'      ,sub^.rereferenced,false)^
+              .put('attributes',attributes       ,false);
   end;
 
 {$endif}
