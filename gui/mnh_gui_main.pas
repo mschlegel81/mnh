@@ -3,22 +3,40 @@ UNIT mnh_gui_main;
 {$mode objfpc}{$H+}
 INTERFACE
 USES
-  mnh_tokens,
-  mnhFormHandler, Classes, sysutils, FileUtil, SynEdit, SynEditTypes,
-  SynCompletion, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls,
-  Grids, SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
-  mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants, types, LCLType,
-  mnh_plotData, mnh_funcs, mnh_litVar, mnh_doc, lclintf, StdCtrls, mnh_packages,
-  closeDialog, askDialog, SynEditKeyCmds, SynMemo, myGenerics, mnh_fileWrappers,
-  mySys, mnh_cmdLineInterpretation, mnh_plotForm,
-  newCentralPackageDialog, SynGutterMarks, SynEditMarks, mnh_contexts,
-  SynPluginMultiCaret, SynEditMiscClasses,
+  //basic classes
+  Classes, sysutils, FileUtil, LazUTF8, LCLType, lclintf, types,
+  //my utilities:
+  mySys, mnhFormHandler, myStringUtil, myGenerics,
+  //GUI: LCL components
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
+  //GUI: SynEdit
+  SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
+  //GUI: highlighters
+  SynHighlighterMnh,
   SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
-  LazUTF8, mnh_tables, openDemoDialog, mnh_workspaces, guiOutAdapters;
+  //Other Forms:
+  newCentralPackageDialog,
+  mnh_gui_settings,
+  closeDialog,
+  askDialog,
+  mnh_tables,
+  openDemoDialog,
+  mnh_workspaces,
+  mnh_plotForm,
+  //MNH:
+  mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
+  mnh_out_adapters,
+  mnh_litVar,
+  mnh_funcs, mnh_tokens, mnh_plotData, valueStore,
+  mnh_contexts,
+  mnh_packages, mnh_doc,
+  mnh_cmdLineInterpretation,
+  mnh_evalThread,
+  guiOutAdapters;
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -797,7 +815,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       miEvaluateNow.enabled:=canRun;
       miCallMain.enabled:=canRun;
     end;
-
 
     if currentRunnerInfo.hasPendingEditResult then begin
       processEditResult(runEvaluator.getCurrentEdit,currentRunnerInfo.state in [es_debugHalted,es_debugRunning]);

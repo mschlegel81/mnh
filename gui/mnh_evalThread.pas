@@ -1,7 +1,14 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_basicTypes,mnh_funcs,mnh_litVar,
-     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8, mnh_fileWrappers;
+USES FileUtil,sysutils,Classes,LazUTF8,
+     myGenerics,myStringUtil,
+     mnh_constants,mnh_basicTypes,mnh_fileWrappers,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_tokens,valueStore,
+     mnh_funcs,mnh_contexts,
+     mnh_packages,mnh_doc,
+     mnh_cmdLineInterpretation;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript,er_die);
   T_evaluationState=(es_dead,es_idle,es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning);

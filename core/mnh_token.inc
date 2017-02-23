@@ -1202,15 +1202,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.createVariable(first^.txt,newValue,false);
+          context.valueStore.createVariable(first^.txt,newValue,false);
           first:=context.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.setVariableValue(first^.txt,newValue,first^.location);
+          context.valueStore.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
           first:=context.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_mapDrop: if first^.data=nil then begin
-          newValue:=context.mutateVariableValue(first^.txt,kind,newValue,first^.location);
+          newValue:=context.valueStore.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters);
           if context.adapters^.noErrors then begin
             first:=context.disposeToken(first);
             disposeLiteral(first^.data);
@@ -1254,7 +1254,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
         if tokType=tt_blockLocalVariable then begin
-          expression:=context.getVariableValue(newFunctionToken^.txt);
+          expression:=context.valueStore.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
             if expression^.literalType<>lt_expression then expression^.unreference
             else begin
@@ -1696,7 +1696,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           didSubstitution:=true;
         end;
         tt_blockLocalVariable: begin
-          first^.data:=context.getVariableValue(first^.txt);
+          first^.data:=context.valueStore.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;

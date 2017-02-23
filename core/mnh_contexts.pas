@@ -1,37 +1,7 @@
 UNIT mnh_contexts;
 INTERFACE
-USES sysutils,mnh_constants,mnh_tokens,mnh_basicTypes, mnh_out_adapters,mnh_litVar,myGenerics,EpikTimer{$ifdef fullVersion},myStringUtil{$endif};
+USES sysutils,abstractContext,tokenStack,valueStore, mnh_constants,mnh_tokens,mnh_basicTypes, mnh_out_adapters,mnh_litVar,myGenerics,EpikTimer{$ifdef fullVersion},myStringUtil{$endif};
 TYPE
-  T_valueStoreMarker=(vsm_none,vsm_nonBlockingVoid,vsm_blockingVoid,vsm_nonBlockingFirst,vsm_blockingFirst);
-CONST
-  C_voidOfBlocking:array[false..true] of T_valueStoreMarker=(vsm_nonBlockingVoid,vsm_blockingVoid);
-  C_firstOfVoid   :array[vsm_nonBlockingVoid..vsm_blockingVoid] of T_valueStoreMarker=(vsm_nonBlockingFirst,vsm_blockingFirst);
-TYPE
-  P_valueStore=^T_valueStore;
-  T_valueStore=object
-    private
-      cs:TRTLCriticalSection;
-      parentStore:P_valueStore;
-      data:array of record
-        marker:T_valueStoreMarker;
-        v:P_namedVariable;
-      end;
-      PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
-      FUNCTION getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
-      PROCEDURE scopePush(CONST blocking:boolean);
-      PROCEDURE scopePop;
-      PROCEDURE copyDataAsReadOnly(VAR original:T_valueStore);
-    public
-      CONSTRUCTOR create;
-      FUNCTION readOnlyClone:P_valueStore;
-      DESTRUCTOR destroy;
-      PROCEDURE clear;
-      {$ifdef fullVersion}
-      //For debugging:
-      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
-      PROCEDURE writeStore;
-      {$endif}
-  end;
 
   T_contextOption=(cp_ask,
                    cp_spawnWorker,
@@ -103,7 +73,7 @@ TYPE
   T_profilingMap=specialize G_stringKeyMap<T_profilingEntry>;
 
   P_evaluationContext=^T_evaluationContext;
-  T_evaluationContext=object(T_tokenRecycler)
+  T_evaluationContext=object(T_abstractContext)
     private
       {$ifdef debugMode}
       evaluationIsRunning:boolean;
@@ -113,9 +83,6 @@ TYPE
       //links to other objects
       parentContext:P_evaluationContext;
       asyncChildCount:longint;
-      myAdapters:P_adapters;
-      //local variables
-      valueStore:T_valueStore;
       //call stack
       callStack:T_callStack;
       //timing and profiling
@@ -145,33 +112,27 @@ TYPE
       {$endif}
 
     public
+      valueStore:T_valueStore;
       CONSTRUCTOR createContext(CONST outAdapters:P_adapters; CONST contextType:T_contextType);
-      PROCEDURE resetOptions(CONST contextType:T_contextType);
       DESTRUCTOR destroy;
 
       PROCEDURE resetForEvaluation(CONST package:P_objectWithPath);
       PROCEDURE afterEvaluation;
 
-      //Basic property queries:
-      PROPERTY adapters:P_adapters read myAdapters;
+      //Basic property routines:
+      PROCEDURE resetOptions(CONST contextType:T_contextType);
       FUNCTION hasOption(CONST option:T_contextOption):boolean; inline;
       PROCEDURE removeOption(CONST option:T_contextOption);
       PROCEDURE addOption(CONST option:T_contextOption);
       //Delegation routines:
       PROCEDURE notifyAsyncTaskEnd;
       FUNCTION getNewAsyncContext:P_evaluationContext;
-      FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
-      PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters:P_adapters; CONST tryBodyFailed:boolean);
       PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
       PROCEDURE detachWorkerContext(CONST expectedParent:P_evaluationContext);
       FUNCTION getReadOnlyValueStore:P_valueStore;
       //Local scope routines:
       PROCEDURE scopePush(CONST blocking:boolean); inline;
       PROCEDURE scopePop; inline;
-      PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean); inline;
-      FUNCTION getVariableValue(CONST id:T_idString):P_literal; inline;
-      PROCEDURE setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation);
-      FUNCTION mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       //call stack routines
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
@@ -236,154 +197,6 @@ FUNCTION T_packageProfilingCall.getLocation: T_tokenLocation;
     result.line:=-1-ord(category);
   end;
 
-CONSTRUCTOR T_valueStore.create;
-  begin
-    parentStore:=nil;
-    system.initCriticalSection(cs);
-    setLength(data,0);
-  end;
-
-PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
-  VAR i,i0:longint;
-  begin
-    clear;
-    //find first entry to be copied
-    i0:=length(original.data)-1;
-    if i0<0 then i0:=0;
-    while (i0>0) and (original.data[i0].marker in [vsm_none,vsm_nonBlockingVoid,vsm_nonBlockingFirst]) do dec(i0);
-    //copy entries
-    setLength(data,length(original.data)-i0);
-    for i:=i0 to length(original.data)-1 do with data[i-i0] do begin
-      marker:=original.data[i].marker;
-      if original.data[i].v=nil
-      then v:=nil
-      else v:=original.data[i].v^.readOnlyClone;
-    end;
-  end;
-
-FUNCTION T_valueStore.readOnlyClone:P_valueStore;
-  begin
-    new(result,create);
-    result^.copyDataAsReadOnly(self);
-  end;
-
-DESTRUCTOR T_valueStore.destroy;
-  begin
-    clear;
-    system.doneCriticalSection(cs);
-  end;
-
-PROCEDURE T_valueStore.clear;
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    for i:=0 to length(data)-1 do if data[i].v<>nil then dispose(data[i].v,destroy);
-    setLength(data,0);
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    i:=length(data);
-    setLength(data,i+1);
-    with data[i] do begin
-      v:=nil;
-      marker:=C_voidOfBlocking[blocking];
-    end;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_valueStore.scopePop;
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    i:=length(data);
-    repeat
-      dec(i);
-      with data[i] do if v<>nil then begin
-        dispose(v,destroy);
-        v:=nil;
-      end;
-    until data[i].marker<>vsm_none;
-    setLength(data,i);
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_valueStore.getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
-  VAR i:longint;
-  begin
-    blockEncountered:=false;
-    result:=nil;
-    for i:=length(data)-1 downto 0 do with data[i] do
-    if (v<>nil) and (v^.getId=id) then begin
-      result:=v;
-      exit(result);
-    end else if marker in [vsm_blockingFirst,vsm_blockingVoid] then begin
-      blockEncountered:=true;
-      exit(nil);
-    end;
-    if parentStore<>nil then result:=parentStore^.getVariable(id,blockEncountered);
-  end;
-
-PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    i:=length(data);
-    with data[i-1] do if marker in [vsm_blockingVoid,vsm_nonBlockingVoid] then begin
-      marker:=C_firstOfVoid[marker];
-      new(v,create(id,value,readonly));
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    setLength(data,i+1);
-    with data[i] do begin
-      marker:=vsm_none;
-      new(v,create(id,value,readonly));
-    end;
-    system.leaveCriticalSection(cs);
-  end;
-
-{$ifdef fullVersion}
-PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
-  VAR i :longint;
-      i0:longint=0;
-      up:longint=0;
-  begin
-    system.enterCriticalSection(cs);
-    for i:=0 to length(data)-1 do case data[i].marker of
-      vsm_nonBlockingVoid,vsm_nonBlockingFirst: inc(up);
-      vsm_blockingVoid,vsm_blockingFirst: begin up:=1; i0:=i; end;
-    end;
-    if (i0>0) and (parentStore<>nil) then parentStore^.reportVariables(variableReport);
-    for i:=i0 to length(data)-1 do begin
-      if data[i].marker<>vsm_none then dec(up);
-      with data[i] do if v<>nil then begin
-        if up=0 then variableReport.addVariable(v,'local')
-                else variableReport.addVariable(v,'local (+'+intToStr(up)+')');
-      end;
-    end;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_valueStore.writeStore;
-  FUNCTION vts(CONST v:P_namedVariable):string;
-    begin
-      if v=nil then result:='<nil>'
-               else result:=v^.toString(100);
-    end;
-
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    if parentStore<>nil then parentStore^.writeStore;
-    for i:=0 to length(data)-1 do writeln(data[i].marker,' ',vts(data[i].v));
-    system.leaveCriticalSection(cs);
-  end;
-
-{$endif}
 FUNCTION initTimer:TEpikTimer;
   begin
     result:=TEpikTimer.create(nil);
@@ -424,11 +237,10 @@ PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST loca
 
 CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CONST contextType: T_contextType);
   begin
-    inherited create;
+    inherited create(outAdapters);
     options :=C_defaultOptions[contextType];
     parentContext:=nil;
     valueStore.create;
-    myAdapters:=outAdapters;
     setLength(callStack,0);
     wallClock.create(@initTimer,@disposeTimer);
     {$ifdef fullVersion}
@@ -537,7 +349,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
         append(timingMessage,timeString[cat]);
       end;
-      adapters^.logTimingInfo(timingMessage);
+      myAdapters^.logTimingInfo(timingMessage);
     end;
   {$ifdef fullVersion}
   PROCEDURE logProfilingInfo;
@@ -589,10 +401,10 @@ PROCEDURE T_evaluationContext.afterEvaluation;
                       .appendReal(timeSpent_exclusive*1E3),false);
         showProfilingTableCallback(data);
         disposeLiteral(data);
-        adapters^.logDisplayTable;
+        myAdapters^.logDisplayTable;
       end;
 
-      for i:=0 to length(lines)-1 do adapters^.logTimingInfo(lines[i]);
+      for i:=0 to length(lines)-1 do myAdapters^.logTimingInfo(lines[i]);
     end;
   {$endif}
 
@@ -613,9 +425,9 @@ PROCEDURE T_evaluationContext.afterEvaluation;
       myAdapters^.logEndOfEvaluation;
       if wantBasicTiming then logTimingInfo;
       {$ifdef fullVersion}
-      if (cp_profile in options) and adapters^.doShowTimingInfo then logProfilingInfo;
+      if (cp_profile in options) and myAdapters^.doShowTimingInfo then logProfilingInfo;
       {$endif}
-      if (cp_beepOnError in options) and adapters^.triggersBeep then beep;
+      if (cp_beepOnError in options) and myAdapters^.triggersBeep then beep;
     end;
     if cp_notifyParentOfAsyncTaskEnd in options then parentContext^.notifyAsyncTaskEnd;
   end;
@@ -657,18 +469,6 @@ FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
     end;
   end;
 
-FUNCTION T_evaluationContext.enterTryStatementReturningPreviousAdapters: P_adapters;
-  begin
-    result:=myAdapters;
-    myAdapters:=result^.collectingClone;
-  end;
-
-PROCEDURE T_evaluationContext.leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
-  begin
-    previousAdapters^.copyDataFromCollectingCloneDisposing(myAdapters,tryBodyFailed);
-    myAdapters:=previousAdapters;
-  end;
-
 PROCEDURE T_evaluationContext.attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
   begin
     {$ifdef debugMode}
@@ -685,7 +485,7 @@ PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evalua
   begin
     {$ifdef debugMode}
     if parentContext<>expectedParent then raise Exception.create('Detaching excepts another context');
-    if (length(valueStore.data)<>0) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
+    if not(valueStore.isEmpty) and (myAdapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
     {$endif}
     parentContext:=nil;
     valueStore.clear;
@@ -705,47 +505,6 @@ PROCEDURE T_evaluationContext.scopePush(CONST blocking: boolean);
 PROCEDURE T_evaluationContext.scopePop;
   begin
     valueStore.scopePop;
-  end;
-
-PROCEDURE T_evaluationContext.createVariable(CONST id: T_idString; CONST value: P_literal; CONST readonly: boolean);
-  begin
-    valueStore.createVariable(id,value,readonly);
-  end;
-
-FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
-  VAR named:P_namedVariable;
-      blocked:boolean;
-  begin
-    system.enterCriticalSection(valueStore.cs);
-    named:=valueStore.getVariable(id,blocked);
-    if named<>nil then result:=named^.getValue
-    else result:=nil;
-    system.leaveCriticalSection(valueStore.cs);
-  end;
-
-PROCEDURE T_evaluationContext.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation);
-  VAR named:P_namedVariable;
-      blocked:boolean;
-  begin
-    system.enterCriticalSection(valueStore.cs);
-    named:=valueStore.getVariable(id,blocked);
-    if named<>nil then named^.setValue(value)
-    else adapters^.raiseError('Cannot assign value to unknown local variable '+id,location);
-    system.leaveCriticalSection(valueStore.cs);
-  end;
-
-FUNCTION T_evaluationContext.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-  VAR named:P_namedVariable;
-      blocked:boolean;
-  begin
-    system.enterCriticalSection(valueStore.cs);
-    named:=valueStore.getVariable(id,blocked);
-    if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^)
-    else begin
-      adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
-      result:=nil;
-    end;
-    system.leaveCriticalSection(valueStore.cs);
   end;
 
 PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_listLiteral; CONST expressionLiteral:P_expressionLiteral);

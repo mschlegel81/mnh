@@ -1,6 +1,7 @@
 UNIT mnh_packages;
 INTERFACE
 USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
+     tokenStack,valueStore,
      mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
      mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
      Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}

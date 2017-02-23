@@ -99,7 +99,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
     if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
     context.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
-    context.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
+    context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
     idxLit^.unreference;
     if context.adapters^.noErrors
     then evaluationResult:=eachRule^.directEvaluateUnary(eachParameter,eachLocation,context,callDepth)
