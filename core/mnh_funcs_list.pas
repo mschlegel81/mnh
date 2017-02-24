@@ -3,11 +3,11 @@ INTERFACE
 {$WARN 5024 OFF}
 USES myGenerics,mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL:P_intFuncCallback;
+{$i mnh_func_defines.inc}
 
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION flatten_imp intFuncSignature;
 IMPLEMENTATION
 VAR builtinLocation_sort:T_identifiedInternalFunction;
-{$i mnh_func_defines.inc}
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;
