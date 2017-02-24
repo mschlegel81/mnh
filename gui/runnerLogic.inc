@@ -4,7 +4,6 @@ PROCEDURE MenuItem4Click(Sender: TObject);
 PROCEDURE doStartEvaluation;
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miRunCustomUtilScript(Sender: TObject);
-FUNCTION preferredContextType:T_contextType;
 PROCEDURE doConditionalPlotReset;
 {$endif}
 {$ifdef includeImplementation}
@@ -38,7 +37,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
       doStartEvaluation;
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,preferredContextType);
+      runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,miProfile.Checked,miDebug.Checked);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
@@ -47,7 +46,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     if not(runEvaluator.evaluationRunningOrPending) then begin
       doStartEvaluation;
       lastStart.mainCall:=false;
-      runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),preferredContextType);
+      runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),miProfile.Checked,miDebug.Checked);
     end;
   end;
 
@@ -58,14 +57,6 @@ PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
     if (k<0) or (k>=length(editorMeta)) then exit;
     for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.readonly:=true;
     with editorMeta[k]^ do runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editor.lines,languageName,pseudoName());
-  end;
-
-FUNCTION TMnhForm.preferredContextType:T_contextType;
-  begin
-    if miDebug.Checked then result:=ct_debugging
-    else if miProfile.Checked
-    then result:=ct_profiling
-    else result:=ct_normal;
   end;
 
 PROCEDURE TMnhForm.doConditionalPlotReset;

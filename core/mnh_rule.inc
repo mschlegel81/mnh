@@ -17,11 +17,11 @@
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       PROCEDURE clearCache;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
-      PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
+      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean;
+      PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_threadContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
-      FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+      FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
       {$ifdef fullVersion}
@@ -34,8 +34,8 @@
       FUNCTION inspect:P_mapLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION idForErrorFeedback:ansistring;
-      FUNCTION getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
-      FUNCTION getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_mapLiteral;
+      FUNCTION getParametersForPseudoFuncPointer(VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
+      FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -114,24 +114,23 @@ PROCEDURE T_rule.clearCache;
     leaveCriticalSection(rule_cs);
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR context:T_evaluationContext): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR context:T_threadContext): boolean;
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
 system.leaveCriticalSection(rule_cs);
 exit}
-  VAR i:longint;
-      lit:P_literal;
+  VAR lit:P_literal;
       useParam:P_listLiteral;
-      useUncurryingFallback:boolean;
-
+      uncurrying:boolean;
+      sub:P_subrule;
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
-      newFirst      :=context.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
+      newFirst      :=context.recycler.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
+      newFirst^.next:=context.recycler.newToken(firstRep^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
       t       ^.next:=firstRep;
       firstRep:=newFirst;
-      lastRep^.next:=context.newToken(firstRep^.location, '', tt_braceClose);
+      lastRep^.next:=context.recycler.newToken(firstRep^.location, '', tt_braceClose);
       lastRep:=lastRep^.next;
     end;
 
@@ -145,11 +144,11 @@ exit}
         lit:=cache^.get(useParam);
         if lit<>nil then begin
           lit^.rereference;
-          firstRep:=context.newToken(declarationStart,'',tt_literal,lit);
+          firstRep:=context.recycler.newToken(declarationStart,'',tt_literal,lit);
           lastRep:=firstRep;
           CLEAN_EXIT(true);
-        end else for useUncurryingFallback:=false to true do
-                 for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
+        end else for uncurrying:=false to true do
+                 for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,context,uncurrying) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
@@ -158,8 +157,8 @@ exit}
             lastRep:=firstRep;
           end else begin
             if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
-            context.cascadeDisposeToken(firstRep);
-            firstRep:=context.newToken(declarationStart,'',tt_literal,newVoidLiteral);
+            context.recycler.cascadeDisposeToken(firstRep);
+            firstRep:=context.recycler.newToken(declarationStart,'',tt_literal,newVoidLiteral);
             lastRep:=firstRep;
           end;
           called:=true;
@@ -168,8 +167,8 @@ exit}
         CLEAN_EXIT(false);
       end;
       rt_synchronized: begin
-        for useUncurryingFallback:=false to true do
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
+        for uncurrying:=false to true do
+        for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
           if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseSystemError('Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
@@ -187,24 +186,25 @@ exit}
         if result then begin
           system.enterCriticalSection(rule_cs);
           if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
-          firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
+          firstRep:=context.recycler.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;
           called:=true;
         end;
       end;
       rt_customTypeCheck: begin
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,false) then begin
+        for uncurrying:=false to true do
+        for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
           called:=true;
           exit(true);
         end;
-        firstRep:=context.newToken(declarationStart,'',tt_literal,newBoolLiteral(false));
+        firstRep:=context.recycler.newToken(declarationStart,'',tt_literal,newBoolLiteral(false));
         lastRep:=firstRep;
         exit(true);
       end;
       rt_normal: begin
-        for useUncurryingFallback:=false to true do
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,location,firstRep,lastRep,context,useUncurryingFallback) then begin
+        for uncurrying:=false to true do
+        for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
           called:=true;
           exit(true);
         end;
@@ -213,7 +213,7 @@ exit}
     end;
   end;
 
-PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evaluationContext);
+PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_threadContext);
   VAR i,j:longint;
   begin
     if (id=MAIN_RULE_ID) and not(rule^.pattern.isValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.declaredAt);
@@ -244,7 +244,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
     system.leaveCriticalSection(rule_cs);
   end;
 
-FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
   begin
     system.enterCriticalSection(rule_cs);
     if not(called) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
@@ -367,14 +367,14 @@ FUNCTION T_rule.idForErrorFeedback:ansistring;
     result:=P_package(declarationStart.package)^.codeProvider^.id+'.'+id+' ('+ansistring(declarationStart)+')';
   end;
 
-FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
       sub:P_subrule;
   begin
     if ruleType in C_mutableRuleTypes then begin
-      result:=context.newToken(location,'',tt_braceOpen);
-      result^.next:=context.newToken(location,'',tt_braceClose);
+      result      :=context.recycler.newToken(location,'',tt_braceOpen);
+      result^.next:=context.recycler.newToken(location,'',tt_braceClose);
     end else begin
       for sub in subrules do begin
         minPatternLength:=min(minPatternLength,length(sub^.pattern.sig));
@@ -385,7 +385,7 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_evaluationContex
     end;
   end;
 
-FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_mapLiteral;
+FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral;
   VAR attributes:P_setLiteral;
       subAttributes:P_listLiteral;
       sub:P_subrule;
@@ -398,7 +398,7 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_evaluationContext):P_mapL
       disposeLiteral(subAttributes);
     end;
 
-    expressionToken:=context.newToken(declarationStart,id,tt_importedUserRule,@self);
+    expressionToken:=context.recycler.newToken(declarationStart,id,tt_importedUserRule,@self);
     expressionToken^.next:=getParametersForPseudoFuncPointer(context,declarationStart);
     new(sub,createFromInline(expressionToken,context));
 

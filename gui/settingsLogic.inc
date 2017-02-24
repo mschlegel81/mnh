@@ -69,7 +69,7 @@ PROCEDURE TMnhForm.processSettings;
       SettingsForm.ensureFont(OutputEdit.Font);
 
       setLength(editorMeta,length(settings.value^.workspace.editorState));
-      runEvaluator.context.clearBreakpoints;
+      runEvaluator.context.stepper^.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do begin
         new(editorMeta[i],create(i,settings.value^.workspace.editorState[i]));
         editorMeta[i]^.setStepperBreakpoints;

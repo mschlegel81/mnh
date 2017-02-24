@@ -110,15 +110,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR context:T_evaluationContext;
         package:P_package;
     begin
-      {$ifdef fullVersion}
-      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling) else
-      {$endif}
-      context.createContext(P_adapters(@consoleAdapters),ct_normal);
+      context.create(@consoleAdapters);
+
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
-      context.removeOption(cp_clearAdaptersOnStart);
-      context.addOption(cp_beepOnError);
-      context.resetForEvaluation(package);
-      package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
+      context.resetForEvaluation(package,{$ifdef fullVersion}profilingRun{$else}false{$endif},false,false);
+      package^.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
       dispose(package,destroy);
       context.destroy;
@@ -130,23 +126,17 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:T_package;
     begin
       package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
-      {$ifdef fullVersion}
-      if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling) else
-      {$endif}
-      context.createContext(P_adapters(@consoleAdapters),ct_normal);
-
+      context.create(@consoleAdapters);
+      context.resetForEvaluation(@package,{$ifdef fullVersion}profilingRun{$else}false{$endif},false,false);
       if wantHelpDisplay then begin
-        package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
+        package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
         writeln(package.getHelpOnMain);
         package.destroy;
         wantHelpDisplay:=false;
         context.destroy;
         exit;
       end;
-      context.removeOption(cp_clearAdaptersOnStart);
-      context.addOption(cp_beepOnError);
-      context.resetForEvaluation(@package);
-      package.load(lu_forCallingMain,context,mainParameters);
+      package.load(lu_forCallingMain,context.threadContext^,mainParameters);
       {$ifdef fullVersion} if not(context.adapters^.hasNeedGUIerror) then {$endif}
       context.afterEvaluation;
       package.destroy;

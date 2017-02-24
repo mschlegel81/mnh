@@ -357,35 +357,24 @@ FUNCTION time_imp intFuncSignature;
       P_listLiteral(result)^.append(newListLiteral^.appendString(el0)^.append(el1,false),false);
     end;
 
-  FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
-    begin
-      t:=context.wallclockTime;
-      result:=P_subrule(subruleLiteral)^.directEvaluateNullary(tokenLocation,context,0);
-      t:=context.wallclockTime-t;
-    end;
-
-  FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
+  FUNCTION evaluate(CONST subruleLiteral:P_subrule; CONST parameters:P_listLiteral=nil):P_literal;
     VAR first:P_token;
     begin
-      first:=context.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
-      first^.next:=context.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
-      t:=context.wallclockTime;
+      first:=subruleLiteral^.replaces(parameters,tokenLocation,context);
+      t:=context.wallclockTime(true);
       reduceExpression(first,0,context);
-      t:=context.wallclockTime-t;
-      if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
-      then begin result:=first^.data; result^.rereference; end
-      else result:=nil;
-      if first<>nil then context.cascadeDisposeToken(first);
+      t:=context.wallclockTime(true)-t;
+      result:=context.recycler.cascaseDisposeToLiteral(first,not(context.adapters^.noErrors));
     end;
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime(true)))
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
-      if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
-                        else res:=evaluateNullary(P_expressionLiteral(arg0));
+      if params^.size=2 then res:=evaluate(P_subrule(arg0),list1)
+                        else res:=evaluate(P_subrule(arg0));
       context.callStackPop();
       if res<>nil then begin
         result:=newListLiteral;
@@ -436,17 +425,16 @@ FUNCTION try_imp intFuncSignature;
 TYPE P_asyncTask=^T_asyncTask;
      T_asyncTask=record
        task:P_token;
-       context:P_evaluationContext;
+       context:P_threadContext;
      end;
 
 FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      context^.resetForEvaluation(nil);
       reduceExpression(task,0,context^);
-      context^.cascadeDisposeToken(task);
-      context^.afterEvaluation;
+      context^.recycler.cascadeDisposeToken(task);
+      context^.doneEvaluating;
       dispose(context,destroy);
     end;
     freeMem(p,sizeOf(T_asyncTask));
@@ -454,7 +442,8 @@ FUNCTION doAsync(p:pointer):ptrint;
 
 FUNCTION async_imp intFuncSignature;
   VAR p:P_asyncTask;
-      childContext:P_evaluationContext;
+      childContext:P_threadContext;
+      parameters:P_listLiteral=nil;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
@@ -463,13 +452,14 @@ FUNCTION async_imp intFuncSignature;
       if childContext<>nil then begin
         getMem(p,sizeOf(T_asyncTask));
         p^.context:=childContext;
-        p^.task:=context.newToken(tokenLocation,'',tt_literal,arg0);
-        arg0^.rereference;
-        if params^.size=2 then begin
-          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,arg1);
-          arg1^.rereference;
-        end else
-          p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
+        if params^.size=2 then parameters:=list1;
+        p^.task:=P_subrule(arg0)^.replaces(parameters,tokenLocation,context);
+        if p^.task=nil then begin
+          freeMem(p,sizeOf(T_asyncTask));
+          childContext^.doneEvaluating;
+          dispose(childContext,destroy);
+          exit(nil);
+        end;
         beginThread(@doAsync,p);
         result:=newVoidLiteral;
       end else begin
@@ -478,7 +468,7 @@ FUNCTION async_imp intFuncSignature;
     end;
   end;
 
-FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_token;
+FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_threadContext):P_token;
   VAR exTokens:T_tokenArray;
       commentDummy,
       attributeDummy:T_arrayOfString;
@@ -497,18 +487,18 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       exTokens.destroy;
       exit(nil); //Parsing error ocurred
     end;
-    result:=context.newToken(exTokens.current); exTokens.current.undefine;
+    result:=context.recycler.newToken(exTokens.current); exTokens.current.undefine;
     last:=result;
     exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
     while not(exTokens.atEnd) do begin
-      last^.next:=context.newToken(exTokens.current);  exTokens.current.undefine;
+      last^.next:=context.recycler.newToken(exTokens.current);  exTokens.current.undefine;
       last:=last^.next;
       exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
     end;
     exTokens.destroy;
   end;
 
-FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_token;
+FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_threadContext):P_token;
   VAR last:P_token=nil;
       i:longint;
       subTokens:P_token;
@@ -518,11 +508,11 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
       if L^[i]^.literalType=lt_string
       then subTokens:=stringToTokens(P_stringLiteral(L^[i])^.value,location,package,context)
       else begin
-        subTokens:=context.newToken(location,'',tt_literal,L^[i]);
+        subTokens:=context.recycler.newToken(location,'',tt_literal,L^[i]);
         L^[i]^.rereference;
       end;
       if subTokens=nil then begin
-        if result<>nil then context.cascadeDisposeToken(result);
+        if result<>nil then context.recycler.cascadeDisposeToken(result);
         exit(nil);
       end;
       if result=nil then result:=subTokens
@@ -531,7 +521,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
     end;
   end;
 
-FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
   VAR first:P_token=nil;
       temp:P_token;
       package:P_package;
@@ -543,31 +533,31 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if first=nil then exit(nil);
 
     if not(first^.areBracketsPlausible(context.adapters^)) then begin
-      context.cascadeDisposeToken(first);
+      context.recycler.cascadeDisposeToken(first);
       exit(nil);
     end;
     if first^.tokType<>tt_expBraceOpen then begin
-      temp:=context.newToken(location,'',tt_expBraceOpen);
+      temp:=context.recycler.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
       temp:=first^.last;
-      temp^.next:=context.newToken(location,'',tt_expBraceClose);
+      temp^.next:=context.recycler.newToken(location,'',tt_expBraceClose);
     end;
 
     digestInlineExpression(first,context);
     if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.adapters^.noErrors) then begin
-      context.cascadeDisposeToken(first);
+      context.recycler.cascadeDisposeToken(first);
       exit(newErrorLiteral);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-      context.disposeToken(first);
+      context.recycler.disposeToken(first);
       context.adapters^.raiseSystemError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
       exit(newErrorLiteral);
     end;
     result:=P_expressionLiteral(first^.data);
     first^.tokType:=tt_EOL;
     first^.data:=nil;
-    context.disposeToken(first);
+    context.recycler.disposeToken(first);
   end;
 
 FUNCTION toExpression_imp intFuncSignature;
@@ -575,15 +565,15 @@ FUNCTION toExpression_imp intFuncSignature;
     VAR first:P_token;
     begin
       //Create token-series { <Literal> }
-      first            :=context.newToken(tokenLocation,'',tt_expBraceOpen);
-      first^.next      :=context.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
-      first^.next^.next:=context.newToken(tokenLocation,'',tt_expBraceClose);
+      first            :=context.recycler.newToken(tokenLocation,'',tt_expBraceOpen);
+      first^.next      :=context.recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
+      first^.next^.next:=context.recycler.newToken(tokenLocation,'',tt_expBraceClose);
       //Reduce to inline expression
       digestInlineExpression(first,context);
       result:=P_expressionLiteral(first^.data);
       first^.tokType:=tt_EOL;
       first^.data:=nil;
-      context.disposeToken(first);
+      context.recycler.disposeToken(first);
     end;
 
   begin
@@ -842,7 +832,7 @@ FUNCTION parseTime_imp intFuncSignature;
     end;
   end;
 
-FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_evaluationContext; CONST registerAsSecondaryPackage:boolean; OUT freshlyCreated:boolean):P_package;
+FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext; CONST registerAsSecondaryPackage:boolean; OUT freshlyCreated:boolean):P_package;
   VAR fileName:string='';
       id      :string='';
       p       :P_package;

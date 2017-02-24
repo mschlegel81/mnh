@@ -8,7 +8,7 @@ USES
   mnhFormHandler,
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
   mnh_litVar, mnh_funcs,mnh_constants,mnh_contexts,mnh_out_adapters,mnh_basicTypes,
-  myGenerics,myStringUtil,mnh_fileWrappers;
+  myGenerics,myStringUtil,mnh_fileWrappers,mnh_profiling;
 
 TYPE
 
@@ -98,7 +98,7 @@ PROCEDURE conditionalShowTables;
     leaveCriticalSection(tableFormCs);
   end;
 
-FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
+FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
   VAR caption:string='MNH table';
       header:boolean=false;
       i:longint;
@@ -130,7 +130,7 @@ PROCEDURE showProfilingTable(CONST data: P_compoundLiteral);
 
 PROCEDURE setupCallbacks;
   begin
-    mnh_contexts.showProfilingTableCallback:=@showProfilingTable;
+    showProfilingTableCallback:=@showProfilingTable;
   end;
 
 PROCEDURE TtableForm.FormCreate(Sender: TObject);

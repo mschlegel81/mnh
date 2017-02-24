@@ -11,11 +11,11 @@
     public
       CONSTRUCTOR createAnonymous;
       CONSTRUCTOR create(CONST parameterId:T_idString);
-      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
+      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_threadContext):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
-      PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
+      PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_threadContext);
       PROCEDURE thinOutWhitelist;
       FUNCTION hides(CONST e:T_patternElement):boolean;
       DESTRUCTOR destroy;
@@ -37,9 +37,9 @@
     FUNCTION indexOfId(CONST id:T_idString):longint;
     FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
     FUNCTION idForIndexInline(CONST index:longint):T_idString;
-    PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
-    FUNCTION matches(VAR par:T_listLiteral; VAR context:T_evaluationContext):boolean;
-    FUNCTION matchesForFallback(VAR par:T_listLiteral; VAR context:T_evaluationContext):boolean;
+    PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
+    FUNCTION matches(VAR par:T_listLiteral; VAR context:T_threadContext):boolean;
+    FUNCTION matchesForFallback(VAR par:T_listLiteral; VAR context:T_threadContext):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION toCmdLineHelpStringString:ansistring;
@@ -66,7 +66,7 @@ CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
     id:=parameterId;
   end;
 
-FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
+FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_threadContext):boolean;
   VAR L:P_literal;
   begin
     L:=parameterList[ownIndex];
@@ -138,18 +138,17 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
   end;
 
-PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
+PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_threadContext);
   VAR tok:P_token;
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
-      tok:=context.newToken(location,restrictionId,tt_identifier,nil);
+      tok:=context.recycler.newToken(location,restrictionId,tt_identifier,nil);
       reduceExpression(tok,0,context);
       if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
         restrictionId:='';
-        restrictionValue:=tok^.data;
-        restrictionValue^.rereference;
+        restrictionValue:=P_literal(tok^.data)^.rereferenced;
       end else context.adapters^.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
-      context.cascadeDisposeToken(tok);
+      context.recycler.cascadeDisposeToken(tok);
     end;
   end;
 
@@ -328,7 +327,7 @@ FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
     if result='' then result:='$'+intToStr(index);
   end;
 
-PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
+PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
   VAR i,j:longint;
 
   begin
@@ -360,12 +359,12 @@ FUNCTION T_pattern.matchesNilPattern: boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par: T_listLiteral; VAR context:T_evaluationContext): boolean;
+FUNCTION T_pattern.matches(VAR par: T_listLiteral; VAR context:T_threadContext): boolean;
   begin
     result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,context);
   end;
 
-FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; VAR context:T_evaluationContext):boolean;
+FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; VAR context:T_threadContext):boolean;
   VAR i:longint;
   begin
     if (par.size<length(sig)) then exit(false);

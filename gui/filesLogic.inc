@@ -394,7 +394,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShif
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
     then inputEditReposition(editorMeta[inputPageControl.activePageIndex]^.editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[inputPageControl.activePageIndex]^.editor.CaretXY,false,false);
-    if runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning then begin
+    if runEvaluator.context.isPaused then begin
       if (key=116) and tbRun      .enabled then tbRunClick(Sender);
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
       if (key=118) then begin

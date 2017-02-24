@@ -450,7 +450,7 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inPackage: P_package; VAR adapters: T_a
     setLength(token,tokenFill);
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR context:T_evaluationContext; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR context:T_threadContext; OUT closingBracket:P_token):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -486,12 +486,12 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
     closingBracket:=t;
     for i:=0 to length(result)-1 do begin
-      if result[i].last^.next<>closingBracket then context.disposeToken(result[i].last^.next);
+      if result[i].last^.next<>closingBracket then context.recycler.disposeToken(result[i].last^.next);
       result[i].last^.next:=nil;
     end;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_evaluationContext);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_threadContext);
   VAR t:P_token;
       rule:P_rule;
   begin
@@ -510,7 +510,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
                   t^.tokType:=t^.next^.tokType;
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
                   t^.txt:=t^.txt;
-                  t^.next:=context.disposeToken(t^.next);
+                  t^.next:=context.recycler.disposeToken(t^.next);
                 end else context.adapters^.raiseError('You can only mutate mutable rules! Rule '+rule^.idForErrorFeedback+' is not mutable',t^.next^.location);
               end else context.adapters^.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
             end else context.adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
@@ -520,24 +520,24 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
           t^.tokType:=tt_assignNewBlockLocal;
           t^.data:=nil;
           t^.txt:=t^.next^.txt;
-          t^.next:=context.disposeToken(t^.next);
-          t^.next:=context.disposeToken(t^.next);
+          t^.next:=context.recycler.disposeToken(t^.next);
+          t^.next:=context.recycler.disposeToken(t^.next);
         end;
         tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignExistingBlockLocal;
           t^.data:=nil;
-          t^.next:=context.disposeToken(t^.next);
+          t^.next:=context.recycler.disposeToken(t^.next);
         end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
           t^.tokType:=t^.next^.tokType;
           t^.data:=nil;
-          t^.next:=context.disposeToken(t^.next);
+          t^.next:=context.recycler.disposeToken(t^.next);
         end;
         end;
       t:=t^.next;
     end;
   end;
 
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContext);
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
@@ -566,7 +566,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
 
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
-    context.disposeToken(t); //dispose closing curly bracket
+    context.recycler.disposeToken(t); //dispose closing curly bracket
     if context.adapters^.noErrors then begin
       new(inlineSubRule,createFromInline(inlineRuleTokens,context));
       if context.adapters^.noErrors then begin
@@ -576,41 +576,41 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
     end;
   end;
 
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
   VAR last:P_token;
       i:longint;
   begin
-    result:=context.newToken(location,'',tt_braceOpen);
+    result:=context.recycler.newToken(location,'',tt_braceOpen);
     last:=result;
     for i:=0 to minPatternLength-1 do begin
       if i>0 then begin
-        last^.next:=context.newToken(location,'',tt_separatorComma);
+        last^.next:=context.recycler.newToken(location,'',tt_separatorComma);
         last:=last^.next;
       end;
-      last^.next:=context.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
+      last^.next:=context.recycler.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
       last:=last^.next;
     end;
-    last^.next:=context.newToken(location,'',tt_braceClose);
+    last^.next:=context.recycler.newToken(location,'',tt_braceClose);
     last:=last^.next;
     if variadic then begin
-      last^.next:=context.newToken(location,'',tt_listToParameterList);
+      last^.next:=context.recycler.newToken(location,'',tt_listToParameterList);
       last:=last^.next;
       if minPatternLength>0 then begin
-        last^.next:=context.newToken(location,'',tt_optionalParameters);
+        last^.next:=context.recycler.newToken(location,'',tt_optionalParameters);
       end else begin
-        last^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
+        last^.next:=context.recycler.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
       end;
     end;
   end;
 
-FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_evaluationContext; CONST location:T_tokenLocation):P_token;
+FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
   VAR a:T_arityKind;
   begin
     a:=getMeta(builtinRulePointer).arityKind;
     result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
   end;
 
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
   VAR stack:T_TokenStack;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -737,7 +737,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end;
         result:=true;
         if aggregatorPresent<>no then begin
-          context.disposeToken(bodyParts[lastPart].first);
+          context.recycler.disposeToken(bodyParts[lastPart].first);
           setLength(bodyParts,length(bodyParts)-1);
         end else if isPureAggregator then begin
           result:=false;
@@ -852,7 +852,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           first^.data:=resultLiteral;
         end;
         first^.txt:='';
-        first^.next:=context.disposeToken(bracketClosingEach);
+        first^.next:=context.recycler.disposeToken(bracketClosingEach);
       end;
 
     {$ifndef fullVersion}
@@ -892,7 +892,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
-        store:=context.getReadOnlyValueStore;
+        store:=context.valueStore.readOnlyClone;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*length(itList));
         for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do begin
@@ -922,7 +922,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       if (eachType=tt_parallelEach) and
          ((callDepth>=STACK_DEPTH_LIMIT-16) or
-         not(context.hasOption(cp_spawnWorker)) or
+         not(tco_spawnWorker in context.threadOptions) or
          (workerThreadCount<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
@@ -948,7 +948,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         itList[0]:=P_literal(first^.data)^.rereferenced;
       end;
       disposeLiteral(first^.data);
-      first^.next:=context.disposeToken(first^.next);
+      first^.next:=context.recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if (aggregatorPresent<>no) and (length(itList)=0) then begin
         resultLiteral:=newVoidLiteral;
@@ -992,7 +992,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end;
 
         for i:=0 to length(bodyParts)-1 do begin
-          if bodyParts[i].last^.next<>bracketClosingWhile then context.disposeToken(bodyParts[i].last^.next);
+          if bodyParts[i].last^.next<>bracketClosingWhile then context.recycler.disposeToken(bodyParts[i].last^.next);
           bodyParts[i].last^.next:=nil;
         end;
 
@@ -1040,7 +1040,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
-      first^.next:=context.disposeToken(bracketClosingWhile);
+      first^.next:=context.recycler.disposeToken(bracketClosingWhile);
       //cleanup----------------------------------------------------------------------
       dispose(headRule,destroy);
       dispose(bodyRule,destroy);
@@ -1077,7 +1077,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
-        firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
+        firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^[0]^.literalType=lt_expression) then begin
@@ -1090,7 +1090,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             newLiteral:=inlineRule;
           end;
           inlineRule^.pattern.appendOptional;
-          firstReplace:=context.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
+          firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
@@ -1108,7 +1108,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end;
         {$endif}
         if newLiteral<>nil then begin
-          firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
+          firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
         end else if not(context.adapters^.noErrors) then exit else begin
           context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
@@ -1117,14 +1117,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=first^.data;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),first^.location,firstReplace,lastReplace,context,false)) and
-           not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),first^.location,firstReplace,lastReplace,context,true )) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,false)) and
+           not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,true )) then exit;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
-      context.disposeToken(first);
-      if parameterListToken<>nil then context.disposeToken(parameterListToken);
+      context.recycler.disposeToken(first);
+      if parameterListToken<>nil then context.recycler.disposeToken(parameterListToken);
       first:=firstReplace;
       lastReplace^.next:=firstTokenAfterCall;
       didSubstitution:=true;
@@ -1164,16 +1164,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         p:=tokenBeforeElse^.next;              //store tt_iifElse-token
         tokenBeforeElse^.next:=lastThen^.next; //unlink else-expression (head)
         lastThen^.next:=nil;                   //unlink else-expression (tail);
-        context.cascadeDisposeToken(p);       //dispose else-expression
+        context.recycler.cascadeDisposeToken(p);       //dispose else-expression
       end else begin
         //take else-subexpression -> drop then-subexpression
         p:=first;
         first:=tokenBeforeElse^.next^.next;
         tokenBeforeElse^.next^.next:=nil;
-        context.cascadeDisposeToken(p);
+        context.recycler.cascadeDisposeToken(p);
       end;
-      stack.popDestroy(@context); //pop "?"
-      stack.popDestroy(@context); //pop condition literal
+      stack.popDestroy(context.recycler); //pop "?"
+      stack.popDestroy(context.recycler); //pop condition literal
       didSubstitution:=true;
     end;
 
@@ -1193,7 +1193,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       newValue:=first^.next^.data;
       P_rule(first^.data)^.setMutableValue(newValue,false);
-      first:=context.disposeToken(first);
+      first:=context.recycler.disposeToken(first);
     end;
 
   PROCEDURE applyLocalAssignment(CONST kind:T_tokenType);
@@ -1202,24 +1202,24 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.createVariable(first^.txt,newValue,false);
-          first:=context.disposeToken(first);
+          context.valueStore.createVariable(first^.txt,newValue,false);
+          first:=context.recycler.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.setVariableValue(first^.txt,newValue,first^.location);
-          first:=context.disposeToken(first);
+          context.valueStore.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
+          first:=context.recycler.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_mapDrop: if first^.data=nil then begin
-          newValue:=context.mutateVariableValue(first^.txt,kind,newValue,first^.location);
+          newValue:=context.valueStore.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters);
           if context.adapters^.noErrors then begin
-            first:=context.disposeToken(first);
+            first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end else begin
           newValue:=P_rule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
           if context.adapters^.noErrors then begin
-            first:=context.disposeToken(first);
+            first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
@@ -1243,7 +1243,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       //Transforms:
       //  <Lit> . func     -> func(<Lit>)
       //  <Lit> . func(... -> func(<Lit>,...
-      newFunctionToken:=context.newToken(first^.next^.next);
+      newFunctionToken:=context.recycler.newToken(first^.next^.next);
 
       if cTokType[2]=tt_EOL then cTokType3:=tt_EOL else begin
         oldSecond:=first^.next^.next^.next;
@@ -1254,7 +1254,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
         if tokType=tt_blockLocalVariable then begin
-          expression:=context.getVariableValue(newFunctionToken^.txt);
+          expression:=context.valueStore.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
             if expression^.literalType<>lt_expression then expression^.unreference
             else begin
@@ -1272,25 +1272,25 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       if ruleIdResolved then begin
         //resolved rule ID mutate x . y -> y(x)
-        newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newListLiteral(1)^.append(first^.data,false));
+        newParameterListToken:=context.recycler.newToken(first^.next^.next^.location,'',tt_parList,newListLiteral(1)^.append(first^.data,false));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
                                //Disposing from:   <Lit> . func ...
-        oldSecond:=context.disposeToken(         //|   | | ^^^^
-                   context.disposeToken(         //|   | ^
-                   context.disposeToken(first)));//^^^^^
+        oldSecond:=context.recycler.disposeToken(         //|   | | ^^^^
+                   context.recycler.disposeToken(         //|   | ^
+                   context.recycler.disposeToken(first)));//^^^^^
 
         first:=newFunctionToken; newFunctionToken^.next:=newParameterListToken; newParameterListToken^.next:=oldSecond;
 
         if cTokType3=tt_braceOpen then begin
-          newParameterListToken^.next:=context.disposeToken(oldSecond);
+          newParameterListToken^.next:=context.recycler.disposeToken(oldSecond);
           newParameterListToken^.tokType:=tt_parList_constructor;
         end;
         didSubstitution:=true;
         exit;
       end else begin
         context.adapters^.raiseError('Unresolved identifier: '+newFunctionToken^.txt,newFunctionToken^.location);
-        context.disposeToken(newFunctionToken);
+        context.recycler.disposeToken(newFunctionToken);
         exit;
       end;
     end;
@@ -1308,8 +1308,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
-            stack.popDestroy(@context); //pop operator from stack
-            stack.popDestroy(@context); //pop LHS-Literal from stack
+            stack.popDestroy(context.recycler); //pop operator from stack
+            stack.popDestroy(context.recycler); //pop LHS-Literal from stack
             didSubstitution:=true;
           end else begin
             stack.push(first);
@@ -1326,8 +1326,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
-            stack.popDestroy(@context); //pop operator from stack
-            stack.popDestroy(@context); //pop LHS-Literal from stack
+            stack.popDestroy(context.recycler); //pop operator from stack
+            stack.popDestroy(context.recycler); //pop LHS-Literal from stack
             didSubstitution:=true;
           end;
         tt_parList:
@@ -1362,8 +1362,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         tt_operatorLazyAnd: if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
           if (P_boolLiteral(first^.data)^.value) then begin
             //true AND ... -> ...
-            first:=context.disposeToken(first); //drop true
-            first:=context.disposeToken(first); //drop AND
+            first:=context.recycler.disposeToken(first); //drop true
+            first:=context.recycler.disposeToken(first); //drop AND
             didSubstitution:=true;
           end else begin
             //false AND ... -> false
@@ -1371,7 +1371,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               if      p^.tokType in C_openingBrackets then inc(bracketLevel)
               else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-              p:=context.disposeToken(p);
+              p:=context.recycler.disposeToken(p);
             end;
             first^.next:=p;
             didSubstitution:=true;
@@ -1384,22 +1384,22 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
               if      p^.tokType in C_openingBrackets then inc(bracketLevel)
               else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-              p:=context.disposeToken(p);
+              p:=context.recycler.disposeToken(p);
             end;
             first^.next:=p;
             didSubstitution:=true;
           end else begin
             //false OR ... -> ...
-            first:=context.disposeToken(first); //drop false
-            first:=context.disposeToken(first); //drop OR
+            first:=context.recycler.disposeToken(first); //drop false
+            first:=context.recycler.disposeToken(first); //drop OR
             didSubstitution:=true;
           end;
         end else raiseLazyBooleanError(first^.next^.location,P_literal(first^.data));
         tt_operatorOrElse: if (cTokType[0]=tt_literal) then begin
           if (P_literal(first^.data)^.literalType = lt_void) then begin
             //void orElse ... -> ...
-            first:=context.disposeToken(first); //drop void
-            first:=context.disposeToken(first); //drop orElse
+            first:=context.recycler.disposeToken(first); //drop void
+            first:=context.recycler.disposeToken(first); //drop orElse
             didSubstitution:=true;
           end else begin
             //<Lit> orElse ... -> <Lit>
@@ -1407,7 +1407,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               if      p^.tokType in C_openingBrackets then inc(bracketLevel)
               else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-              p:=context.disposeToken(p);
+              p:=context.recycler.disposeToken(p);
             end;
             first^.next:=p;
             didSubstitution:=true;
@@ -1429,13 +1429,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       //state @pre: ::f ...
       location:=first^.location;;
-      ruleToken:=context.disposeToken(first); //dispose ::, store f
+      ruleToken:=context.recycler.disposeToken(first); //dispose ::, store f
       temp:=ruleToken^.next; //store ...
       if (ruleToken^.tokType in [tt_localUserRule,tt_importedUserRule])
       then ruleToken^.next:=P_rule(ruleToken^.data)^.getParametersForPseudoFuncPointer(context,location)
       else ruleToken^.next:=getParametersForPseudoFuncPtr(ruleToken^.data,context,location);
       new(exRule,createFromInline(ruleToken,context));
-      first:=context.newToken(location,'',tt_literal,exRule); // {f@$params}
+      first:=context.recycler.newToken(location,'',tt_literal,exRule); // {f@$params}
       first^.next:=temp; //-> {f@$params} ...
       didSubstitution:=true;
     end;
@@ -1445,21 +1445,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       while (first<>nil) and clean do begin
         case first^.tokType of
-          tt_beginBlock,tt_beginExpression,tt_beginRule: context.scopePush( first^.tokType=tt_beginRule);
+          tt_beginBlock,tt_beginExpression,tt_beginRule: context.valueStore.scopePush( first^.tokType=tt_beginRule);
           tt_endBlock,tt_endExpression,tt_endRule: begin
             while (stack.topIndex>=0) and not(stack.dat[stack.topIndex]^.tokType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
-            stack.popDestroy(@context);
+            stack.popDestroy(context.recycler);
             if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.dat[stack.topIndex]^.tokType]) then begin
               if (stack.dat[stack.topIndex]^.tokType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
-              stack.popDestroy(@context);
-              context.scopePop;
+              stack.popDestroy(context.recycler);
+              context.valueStore.scopePop;
             end else clean:=false;
           end;
         end;
-        first:=context.disposeToken(first);
+        first:=context.recycler.disposeToken(first);
       end;
-      while (stack.topIndex>=0) do stack.popDestroy(@context);
-      if first<>nil then context.cascadeDisposeToken(first);
+      while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
+      if first<>nil then context.recycler.cascadeDisposeToken(first);
     end;
 
 {$MACRO ON}
@@ -1495,25 +1495,29 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
     if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
-    stack.popDestroy(@context);
-    first^.next:=context.disposeToken(first^.next);
-    first^.next:=context.disposeToken(first^.next);
-    context.scopePop;
+    stack.popDestroy(context.recycler);
+    first^.next:=context.recycler.disposeToken(first^.next);
+    first^.next:=context.recycler.disposeToken(first^.next);
+    context.valueStore.scopePop;
     didSubstitution:=true;
   end else begin
-    first:=context.disposeToken(first);
-    first:=context.disposeToken(first);
+    first:=context.recycler.disposeToken(first);
+    first:=context.recycler.disposeToken(first);
     didSubstitution:=true;
   end;
 end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
+  VAR debugRun:boolean=true;
   begin
     stack.create;
     {$ifndef DEBUGMODE}try{$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if context.hasOption(cp_debug) then context.stepping(first,@stack); {$endif}
+
+      {$ifdef fullVersion}
+      debugRun:=debugRun and context.stepping(first,@stack);
+      {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
@@ -1526,25 +1530,25 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             pon_flip;
           end;
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_listTypes then begin
-            stack.popDestroy(@context);
+            stack.popDestroy(context.recycler);
             first^.tokType:=tt_parList;
             stack.popLink(first);
             while first^.tokType=tt_parList do begin
               P_listLiteral(first^.data)^.appendAll(P_listLiteral(first^.next^.data));
-              first^.next:=context.disposeToken(first^.next);
+              first^.next:=context.recycler.disposeToken(first^.next);
               stack.popLink(first);
             end;
             didSubstitution:=true;
           end;
           tt_unaryOpPlus: begin
-            stack.popDestroy(@context);
+            stack.popDestroy(context.recycler);
             didSubstitution:=true;
           end;
           tt_unaryOpMinus: begin
             newLit:=P_literal(first^.data)^.negate(stack.dat[stack.topIndex]^.location,context.adapters^);
             disposeLiteral(first^.data);
             first^.data:=newLit;
-            stack.popDestroy(@context);
+            stack.popDestroy(context.recycler);
             didSubstitution:=true;
           end;
           tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
@@ -1569,8 +1573,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorConcat, tt_operatorIn: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
-              stack.popDestroy(@context);
-              first^.next:=context.disposeToken(first^.next);
+              stack.popDestroy(context.recycler);
+              first^.next:=context.recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end;
             COMMON_SEMICOLON_HANDLING;
@@ -1586,8 +1590,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                 if first^.next^.tokType=tt_separatorCnt
                 then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
                 else stack.dat[stack.topIndex]^.tokType:=tt_list_constructor;
-                first:=context.disposeToken(first);
-                first:=context.disposeToken(first);
+                first:=context.recycler.disposeToken(first);
+                first:=context.recycler.disposeToken(first);
               until (first=nil) or (first^.tokType<>tt_literal) or
                     (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
               didSubstitution:=true;
@@ -1595,8 +1599,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             tt_listBraceClose: begin // [ | <Lit> ] ...
               P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
                             stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
+              first:=context.recycler.disposeToken(first);
+              first:=context.recycler.disposeToken(first);
               stack.popLink(first);   // -> ? | [ ...
               first^.tokType:=tt_literal; // -> ? | <NewList>
               didSubstitution:=true;
@@ -1622,16 +1626,16 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
               P_listLiteral(stack.dat[stack.topIndex]^.data)^.append(first^.data,true);
               stack.dat[stack.topIndex]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
-              first:=context.disposeToken(first); //dispose literal
-              first:=context.disposeToken(first); //dispose closing bracket
+              first:=context.recycler.disposeToken(first); //dispose literal
+              first:=context.recycler.disposeToken(first); //dispose closing bracket
               stack.popLink(first); //pop parameter list
               stack.popLink(first); //pop FUNCTION
               didSubstitution:=true;
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
               P_listLiteral(stack.dat[stack.topIndex]^.data)^.append(first^.data,true);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
+              first:=context.recycler.disposeToken(first);
+              first:=context.recycler.disposeToken(first);
               didSubstitution:=true;
             end;
             tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
@@ -1641,10 +1645,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
-              stack.popDestroy(@context);
-              first^.next:=context.disposeToken(first^.next);
-              first^.next:=context.disposeToken(first^.next);
-              context.scopePop;
+              stack.popDestroy(context.recycler);
+              first^.next:=context.recycler.disposeToken(first^.next);
+              first^.next:=context.recycler.disposeToken(first^.next);
+              context.valueStore.scopePop;
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1660,11 +1664,11 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
-              first:=context.disposeToken(first);
+              first:=context.recycler.disposeToken(first);
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
-              first^.next:=context.disposeToken(first^.next);
-              first^.next:=context.disposeToken(first^.next);
-              context.scopePop;
+              first^.next:=context.recycler.disposeToken(first^.next);
+              first^.next:=context.recycler.disposeToken(first^.next);
+              context.valueStore.scopePop;
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1687,7 +1691,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
         end;
         tt_beginBlock,tt_beginRule,tt_beginExpression: begin
-          context.scopePush(cTokType[0]=tt_beginRule);
+          context.valueStore.scopePush(cTokType[0]=tt_beginRule);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1696,7 +1700,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           didSubstitution:=true;
         end;
         tt_blockLocalVariable: begin
-          first^.data:=context.getVariableValue(first^.txt);
+          first^.data:=context.valueStore.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
@@ -1713,7 +1717,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           didSubstitution:=true;
         end;
         tt_braceClose: if cTokType[-1]=tt_parList_constructor then begin
-          first:=context.disposeToken(first);
+          first:=context.recycler.disposeToken(first);
           stack.popLink(first);
           first^.tokType:=tt_parList;
           stack.popLink(first);
@@ -1723,7 +1727,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           //empty list
           first^.data:=newListLiteral;
           first^.tokType:=tt_literal;
-          first^.next:=context.disposeToken(first^.next);
+          first^.next:=context.recycler.disposeToken(first^.next);
           didSubstitution:=true;
         end else begin
           first^.data:=newListLiteral;
@@ -1745,9 +1749,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               // || aggregator ( + )
               first^.tokType:=tt_aggregatorExpressionLiteral;
               first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next,context);
-              first^.next:=context.disposeToken(first^.next); //drop (
-              first^.next:=context.disposeToken(first^.next); //drop +
-              first^.next:=context.disposeToken(first^.next); //drop )
+              first^.next:=context.recycler.disposeToken(first^.next); //drop (
+              first^.next:=context.recycler.disposeToken(first^.next); //drop +
+              first^.next:=context.recycler.disposeToken(first^.next); //drop )
               didSubstitution:=true;
             end else startOrPushParameterList;
           end;
@@ -1766,7 +1770,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
               P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
-              first^.next:=context.disposeToken(first^.next);
+              first^.next:=context.recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
           end else if (cTokType[2]=tt_listToParameterList) then begin
@@ -1779,7 +1783,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_ponFlipper, tt_each,tt_parallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
-          first^.next:=context.disposeToken(first^.next);
+          first^.next:=context.recycler.disposeToken(first^.next);
           resolveWhile;
         end;
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
@@ -1802,17 +1806,17 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         context.adapters^.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
-        if not(context.adapters^.hasStackTrace) then context.printCallStack;
+        if not(context.adapters^.hasStackTrace) then context.callStackPrint;
         cleanupStackAndExpression;
       end;
     end else if (context.adapters^.hasFatalError) then begin
       if not(context.adapters^.hasHaltMessage) and
-         not(context.adapters^.hasStackTrace) then context.printCallStack;
-      context.clearCallStack;
-      while (stack.topIndex>=0) do stack.popDestroy(@context);
-      if (callDepth=0) then context.cascadeDisposeToken(first);
+         not(context.adapters^.hasStackTrace) then context.callStackPrint;
+      context.callStackClear;
+      while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
+      if (callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
-      if not(context.adapters^.hasStackTrace) then context.printCallStack;
+      if not(context.adapters^.hasStackTrace) then context.callStackPrint;
       cleanupStackAndExpression;
     end;
     stack.destroy;

@@ -19,10 +19,10 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     if not(runEvaluator.evaluationRunning) then begin
       doStartEvaluation;
       if lastStart.mainCall
-      then runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,ct_debugging)
-      else runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),ct_debugging);
-    end else if runEvaluator.context.paused then runEvaluator.context.doContinue
-                                            else runEvaluator.context.doMicrostep;
+      then runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,miProfile.Checked,true)
+      else runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),miProfile.Checked,true);
+    end else if runEvaluator.context.isPaused then runEvaluator.context.stepper^.doContinue
+                                              else runEvaluator.context.stepper^.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
     lastReportedRunnerInfo.state:=es_dead;
@@ -35,7 +35,7 @@ PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
   begin
-    runEvaluator.context.doStepInto;
+    runEvaluator.context.stepper^.doStepInto;
     updateDebugParts;
     breakPointHandlingPending:=true;
     lastReportedRunnerInfo.state:=es_dead;
@@ -43,7 +43,7 @@ PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
   begin
-    runEvaluator.context.doStep;
+    runEvaluator.context.stepper^.doStep;
     updateDebugParts;
     breakPointHandlingPending:=true;
     lastReportedRunnerInfo.state:=es_dead;
@@ -51,7 +51,7 @@ PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
   begin
-    runEvaluator.context.doStepOut;
+    runEvaluator.context.stepper^.doStepOut;
     updateDebugParts;
     breakPointHandlingPending:=true;
     lastReportedRunnerInfo.state:=es_dead;
@@ -66,7 +66,7 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
   begin
-    runEvaluator.context.doMicrostep;
+    runEvaluator.context.stepper^.doMicrostep;
     updateDebugParts;
     breakPointHandlingPending:=true;
     lastReportedRunnerInfo.state:=es_dead;
@@ -119,24 +119,24 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
     end;
 
   begin
-    if not(runEvaluator.context.paused and runEvaluator.evaluationRunning) then exit;
-    snapshot:=runEvaluator.context.getDebuggingSnapshot;
-    stackIdx:=length(snapshot.callStack)-1-callStackList.ItemIndex;
+    if not(runEvaluator.context.isPaused and runEvaluator.evaluationRunning) then exit;
+    snapshot:=runEvaluator.context.stepper^.getDebuggingSnapshot;
+    stackIdx:=snapshot.callStack^.size-1-callStackList.ItemIndex;
     variablesTreeView.items.clear;
 
-    if (stackIdx>=0) and (stackIdx<length(snapshot.callStack)) then begin
-      callStackInfoStringGrid.Cells[1,0]:=ansistring(snapshot.callStack[stackIdx].callerLocation);
-      if snapshot.callStack[stackIdx].calleeLiteral=nil
-      then callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack[stackIdx].callee^.getId
-      else callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack[stackIdx].calleeLiteral^.toString(200);
-      callStackInfoStringGrid.Cells[1,2]:=ansistring(snapshot.callStack[stackIdx].callee^.getLocation);
-      addVariable('$params',snapshot.callStack[stackIdx].callParameters);
+    if (stackIdx>=0) and (stackIdx<snapshot.callStack^.size) then begin
+      callStackInfoStringGrid.Cells[1,0]:=ansistring(snapshot.callStack^[stackIdx].callerLocation);
+      if snapshot.callStack^[stackIdx].calleeLiteral=nil
+      then callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack^[stackIdx].callee^.getId
+      else callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack^[stackIdx].calleeLiteral^.toString(200);
+      callStackInfoStringGrid.Cells[1,2]:=ansistring(snapshot.callStack^[stackIdx].callee^.getLocation);
+      addVariable('$params',snapshot.callStack^[stackIdx].callParameters);
     end;
 
     if (callStackList.ItemIndex<=0) then begin
       report.create;
       runEvaluator.reportVariables(report);
-      runEvaluator.context.reportVariables(report);
+      runEvaluator.context.threadContext^.reportVariables(report);
       for i:=length(report.dat)-1 downto 0 do
         addVariable(report.dat[i].id+' ['+report.dat[i].location+']',report.dat[i].value);
       report.destroy;
@@ -166,10 +166,10 @@ PROCEDURE TMnhForm.handleBreak;
 
   VAR i:longint;
   begin
-    if not(runEvaluator.context.paused) then exit;
+    if not(runEvaluator.context.isPaused) then exit;
     updateDebugParts;
 
-    snapshot:=runEvaluator.context.getDebuggingSnapshot;
+    snapshot:=runEvaluator.context.stepper^.getDebuggingSnapshot;
 
     breakPointHandlingPending:=false;
     jumpToFile;
@@ -178,8 +178,8 @@ PROCEDURE TMnhForm.handleBreak;
     for i:=0 to callStackInfoStringGrid.RowCount-1 do callStackInfoStringGrid.Cells[1,i]:='';
 
     callStackList.items.clear;
-    for i:=length(snapshot.callStack)-1 downto 0 do
-    callStackList.items.add(snapshot.callStack[i].callee^.getId);
+    for i:=snapshot.callStack^.size-1 downto 0 do
+    callStackList.items.add(snapshot.callStack^[i].callee^.getId);
     callStackList.ItemIndex:=0;
     updateExpressionMemo;
 
@@ -194,8 +194,8 @@ PROCEDURE TMnhForm.updateExpressionMemo;
       k:longint=0;
       firstInLine:boolean;
   begin
-    if not(runEvaluator.context.paused and runEvaluator.evaluationRunning) then exit;
-    snapshot:=runEvaluator.context.getDebuggingSnapshot;
+    if not(runEvaluator.context.isPaused and runEvaluator.evaluationRunning) then exit;
+    snapshot:=runEvaluator.context.stepper^.getDebuggingSnapshot;
     lines:=currentExpressionMemo.LinesInWindow;
     chars:=currentExpressionMemo.charsInWindow;
     if (lines*chars<50) then begin
@@ -238,7 +238,7 @@ PROCEDURE TMnhForm.updateDebugParts;
       DebugToolbar.visible:=true;
       DebugToolbar.enabled:=true;
       DebugToolbar.top:=0;
-      isPaused:=runEvaluator.context.paused;
+      isPaused:=runEvaluator.context.isPaused;
       isRunning:=runEvaluator.evaluationRunning;
       handleButton(tbStop     ,    isRunning             ,2);
       handleButton(tbRun      ,not(isRunning) or isPaused,0,true);
@@ -259,7 +259,6 @@ PROCEDURE TMnhForm.updateDebugParts;
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   begin
     miDebug.Checked:=not(miDebug.Checked);
-    if miDebug.Checked then miProfile.Checked:=true;
     updateDebugParts;
   end;
 

@@ -3,23 +3,41 @@ UNIT mnh_gui_main;
 {$mode objfpc}{$H+}
 INTERFACE
 USES
-  mnh_tokens,
-  mnhFormHandler, Classes, sysutils, FileUtil, SynEdit, SynEditTypes,
-  SynCompletion, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls,
-  Grids, SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
-  mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants, types, LCLType,
-  mnh_plotData, mnh_funcs, mnh_litVar, mnh_doc, lclintf, StdCtrls, mnh_packages,
-  closeDialog, askDialog, SynEditKeyCmds, SynMemo, myGenerics, mnh_fileWrappers,
-  mySys, mnh_cmdLineInterpretation, mnh_plotForm,
-  newCentralPackageDialog, SynGutterMarks, SynEditMarks, mnh_contexts,
-  {$ifdef imig}mnh_imig_form,{$endif}
-  SynPluginMultiCaret, SynEditMiscClasses,
+  //basic classes
+  Classes, sysutils, FileUtil, LazUTF8, LCLType, lclintf, types,
+  //my utilities:
+  mySys, mnhFormHandler, myStringUtil, myGenerics,
+  //GUI: LCL components
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
+  //GUI: SynEdit
+  SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
+  //GUI: highlighters
+  SynHighlighterMnh,
   SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
-  LazUTF8, mnh_tables, openDemoDialog, mnh_workspaces, guiOutAdapters;
+  //Other Forms:
+  newCentralPackageDialog,
+  mnh_gui_settings,
+  closeDialog,
+  askDialog,
+  mnh_tables,
+  openDemoDialog,
+  mnh_workspaces,
+  mnh_plotForm,
+  //MNH:
+  mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
+  mnh_out_adapters,
+  mnh_litVar,
+  mnh_funcs, mnh_plotData, valueStore,
+  mnh_debugging,
+  mnh_contexts,
+  mnh_packages, mnh_doc,
+  mnh_cmdLineInterpretation,
+  mnh_evalThread,
+  guiOutAdapters;
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -599,7 +617,7 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
     end;
     if (command=ecUserDefinedFirst+3) then begin
       editorMeta[inputPageControl.activePageIndex]^.toggleBreakpoint;
-      runEvaluator.context.clearBreakpoints;
+      runEvaluator.context.stepper^.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i]^.setStepperBreakpoints;
       miDebug.Checked:=true;
       updateDebugParts;
@@ -700,7 +718,7 @@ PROCEDURE TMnhForm.updateScriptMenus;
 
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
-    miProfile.Checked:=not(miProfile.Checked) or miDebug.Checked;
+    miProfile.Checked:=not(miProfile.Checked);
     if miProfile.Checked and not(miTimingInfo.Checked) then miTimingInfoClick(Sender);
   end;
 
@@ -870,7 +888,7 @@ PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
 
 PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 PROCEDURE TMnhForm.onEndOfEvaluation;

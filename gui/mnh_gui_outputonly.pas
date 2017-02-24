@@ -103,8 +103,7 @@ VAR firstShow:boolean=true;
 PROCEDURE ToutputOnlyForm.FormShow(Sender: TObject);
   begin
     if firstShow then begin
-      if profilingRun then runEvaluator.reEvaluateWithGUI(ct_profiling)
-                      else runEvaluator.reEvaluateWithGUI(ct_normal);
+      runEvaluator.reEvaluateWithGUI;
       firstShow:=false;
       Hide;
     end;

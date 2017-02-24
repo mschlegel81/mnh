@@ -16,7 +16,7 @@ USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mn
 {$i mnh_func_defines.inc}
 IMPLEMENTATION
 VAR imigCS:TRTLCriticalSection;
-FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):T_imageManipulationWorkflow;
+FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT isValid:boolean; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_imageManipulationWorkflow;
   PROCEDURE warn(CONST message:string);
     begin
       isValid:=false;
@@ -142,7 +142,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
     end else result:=nil;
   end;
 
-PROCEDURE doCloseImage(VAR context:T_evaluationContext);
+PROCEDURE doCloseImage(VAR context:T_threadContext);
   begin
     enterCriticalSection(imigCS);
     with context.adapters^.picture do begin
