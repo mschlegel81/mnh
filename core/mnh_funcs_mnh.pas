@@ -13,14 +13,14 @@ FUNCTION sleep_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) then begin
-      sleepUntil:=context.wallclockTime;
+      sleepUntil:=context.wallclockTime(true);
       result:=newVoidLiteral;
       if arg0^.literalType=lt_int
       then sleepUntil:=sleepUntil+P_intLiteral (arg0)^.value
       else sleepUntil:=sleepUntil+P_realLiteral(arg0)^.value;
-      while (context.wallclockTime<sleepUntil) and (context.adapters^.noErrors) do begin
-        sleepInt:=round(900*(sleepUntil-context.wallclockTime));
-        if sleepInt>100 then sleepInt:=100;
+      while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
+        sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
+        if sleepInt>1000 then sleepInt:=1000;
         if (sleepInt>0) then sleep(sleepInt);
       end;
     end;
@@ -144,11 +144,9 @@ FUNCTION mnhInfo_imp intFuncSignature;
 FUNCTION getMnhInfo:string;
   VAR L:P_literal;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
-      context:T_evaluationContext;
+      dummyContext:T_threadContext;
   begin
-    context.createContext(nil,ct_normal);
-    L:=mnhInfo_imp(nil,pseudoLoc,context);
-    context.destroy;
+    L:=mnhInfo_imp(nil,pseudoLoc,dummyContext);
     result:=L^.toString();
     disposeLiteral(L);
   end;

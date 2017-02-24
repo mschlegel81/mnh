@@ -4,9 +4,9 @@ T_preparedFormatStatement=object
   parts:T_arrayOfString;
   formats:array of T_format;
   formatSubrule:P_literal;
-  CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
+  CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   DESTRUCTOR destroy;
-  FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):T_arrayOfString;
+  FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
 end;
 
 {$endif}
@@ -14,7 +14,7 @@ end;
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
   begin;
     if not(context.adapters^.noErrors) then exit(nil);
     system.enterCriticalSection(cachedFormatCS);
@@ -31,7 +31,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     system.leaveCriticalSection(cachedFormatCS);
   end;
 
-CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
+CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
     CONST FORMAT_CHARS:charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
@@ -166,7 +166,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
     setLength(formats,0);
   end;
 
-FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):T_arrayOfString;
+FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
   FUNCTION getFormattedString(CONST index:longint):ansistring;
     FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
       VAR i,k:longint;

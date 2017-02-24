@@ -62,7 +62,7 @@ FUNCTION sort_imp intFuncSignature;
       else result:=map0^.getManifestation^.clone;
       context.callStackPush(tokenLocation,@builtinLocation_sort,params,nil);
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.adapters^);
-      context.callStackPop();
+      context.callStackPop;
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_compoundTypes)
             and (arg1^.literalType=lt_int) then begin

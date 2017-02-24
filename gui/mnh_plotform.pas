@@ -342,7 +342,7 @@ PROCEDURE TplotForm.doOrPostPlot;
     else doPlot();
   end;
 
-FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   begin
     result:=newBoolLiteral(gui_started and plotForm.showing);
   end;

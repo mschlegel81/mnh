@@ -12,10 +12,10 @@ TYPE
     feedbackLocation:T_tokenLocation;
     hasKillRequest:boolean;
     up:boolean;
-    context:P_evaluationContext;
+    context:P_threadContext;
     socket:T_socketPair;
 
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_evaluationContext);
+    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_threadContext);
     DESTRUCTOR destroy;
     PROCEDURE serve;
     PROCEDURE killQuickly;
@@ -67,7 +67,7 @@ FUNCTION startServer_impl intFuncSignature;
   VAR microserver:P_microserver;
       timeout:double;
       servingExpression:P_expressionLiteral;
-      childContext:P_evaluationContext;
+      childContext:P_threadContext;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -95,7 +95,7 @@ FUNCTION startServer_impl intFuncSignature;
     end;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_evaluationContext);
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_threadContext);
   VAR i:longint;
   begin
     system.enterCriticalSection(serverCS);
@@ -111,7 +111,6 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     setLength(currentUpServers,length(currentUpServers)+1);
     currentUpServers[length(currentUpServers)-1]:=@self;
     socket.create(ip);
-    context^.resetForEvaluation(nil);
     system.leaveCriticalSection(serverCS);
   end;
 
@@ -119,7 +118,7 @@ DESTRUCTOR T_microserver.destroy;
   VAR i,j:longint;
   begin
     disposeLiteral(servingExpression);
-    context^.afterEvaluation;
+    context^.doneEvaluating;
     dispose(context,destroy);
     system.enterCriticalSection(serverCS);
     socket.destroy;
@@ -289,7 +288,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
     end;
   end;
 
-FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost');
   VAR resultText:ansistring='';
   begin

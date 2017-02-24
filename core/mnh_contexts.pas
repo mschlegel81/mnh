@@ -1,309 +1,212 @@
 UNIT mnh_contexts;
 INTERFACE
-USES sysutils,abstractContext,tokenStack,valueStore, mnh_constants,mnh_tokens,mnh_basicTypes, mnh_out_adapters,mnh_litVar,myGenerics,EpikTimer{$ifdef fullVersion},myStringUtil{$endif};
+USES //FPC/LCL libraries
+     sysutils,
+     //3rd party libraries
+     EpikTimer,
+     //my libraries
+     myGenerics,
+     //MNH:
+     mnh_constants, mnh_basicTypes,
+     mnh_out_adapters,mnh_litVar,
+     {$ifdef fullVersion}
+     mnh_tokens,
+     {$endif}
+     tokenStack,valueStore,tokenRecycler,
+     mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
-
-  T_contextOption=(cp_ask,
-                   cp_spawnWorker,
-                   cp_timing,              //not granted to child
-                   {$ifdef fullVersion}
-                   cp_profile,             //granted to child
-                   cp_debug,
-                   {$endif}
-                   cp_createDetachedTask,
-                   cp_clearTimerOnStart,
-                   cp_clearAdaptersOnStart,
-                   cp_logEndOfEvaluation,
-                   cp_beepOnError,
-                   cp_notifyParentOfAsyncTaskEnd);
-  T_contextOptions=set of T_contextOption;
-  T_contextType=(ct_normal{$ifdef fullVersion},ct_profiling,ct_debugging{$endif},ct_silentlyRunAlone);
+  T_evaluationContextOption =(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
+  T_threadContextOption     =(tco_ask,tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_notifyParentOfAsyncTaskEnd);
+  T_evaluationContextOptions=set of T_evaluationContextOption;
+  T_threadContextOptions    =set of T_threadContextOption;
+  T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging{$endif},ect_silentlyRunAlone);
 
 CONST
-  C_defaultOptions:array[T_contextType] of T_contextOptions=(
-  {ct_normal}          [cp_ask,cp_timing,cp_spawnWorker,                    cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
-  {$ifdef fullVersion}
-  {ct_profiling}       [cp_ask,cp_timing,cp_spawnWorker,cp_profile,         cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
-  {ct_debugging}       [cp_ask,cp_timing,               cp_profile,cp_debug,cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart,cp_logEndOfEvaluation],
-  {$endif}
-  {ct_silentlyRunAlone}[                 cp_spawnWorker,                    cp_createDetachedTask,cp_clearTimerOnStart,cp_clearAdaptersOnStart]);
+  C_defaultOptions:T_evaluationContextOptions=[eco_ask,eco_spawnWorker,eco_createDetachedTask];
+  C_equivalentOption:array[tco_ask..tco_createDetachedTask] of T_evaluationContextOption=(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask);
 
 TYPE
-  T_profileCategory=(pc_importing,pc_tokenizing,pc_declaration,pc_interpretation,pc_unknown,pc_total);
-
-  P_packageProfilingCall=^T_packageProfilingCall;
-  T_packageProfilingCalls=array[T_profileCategory] of P_packageProfilingCall;
-  T_packageProfilingCall=object(T_objectWithIdAndLocation)
-    package: P_objectWithPath;
-    category:T_profileCategory;
-    CONSTRUCTOR create(CONST package_: P_objectWithPath;
-                       CONST category_:T_profileCategory);
-    DESTRUCTOR destroy;
-    FUNCTION getId:T_idString; virtual;
-    FUNCTION getLocation:T_tokenLocation; virtual;
-  end;
-
-  T_profilingEntry=record
-    id:T_idString;
-    location:string;
-    timeSpent_inclusive,
-    timeSpent_exclusive:double;
-    callCount:longint;
-  end;
-
-  T_callStack=array of record
-    callerLocation:T_tokenLocation;
-    callee:P_objectWithIdAndLocation;
-    callParameters:P_listLiteral;
-    calleeLiteral:P_expressionLiteral;
-    {$ifdef fullVersion}
-    timeForProfiling_inclusive,
-    timeForProfiling_exclusive:double;
-    {$endif}
-  end;
-  {$ifdef fullVersion}
-  T_debuggingSnapshot=record
-    location:T_tokenLocation;
-    tokenStack:P_tokenStack;
-    first:pointer;
-    callStack:T_callStack;
-  end;
-  {$endif}
-
-  T_profilingMap=specialize G_stringKeyMap<T_profilingEntry>;
-
   P_evaluationContext=^T_evaluationContext;
-  T_evaluationContext=object(T_abstractContext)
+  P_threadContext=^T_threadContext;
+  T_threadContext=object
     private
-      {$ifdef debugMode}
-      evaluationIsRunning:boolean;
-      {$endif}
       //privileges and obligations
-      options:T_contextOptions;
-      //links to other objects
-      parentContext:P_evaluationContext;
-      asyncChildCount:longint;
+      options:T_threadContextOptions;
       //call stack
-      callStack:T_callStack;
-      //timing and profiling
-      wallClock: specialize G_lazyVar<TEpikTimer>;
+      parent:P_evaluationContext;
+      callingContext:P_threadContext;
+      callStack :T_callStack;
+      CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
+    public
+      recycler  :T_tokenRecycler;
+      valueStore:T_valueStore;
+      adapters  :P_adapters;
+      CONSTRUCTOR createWorkerContext;
+      DESTRUCTOR destroy;
+
+      FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
+      PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
+
+      PROCEDURE doneEvaluating;
+      FUNCTION getNewAsyncContext:P_threadContext;
+
+      PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST callingContext_:P_threadContext);
+      PROCEDURE detachWorkerContext;
+
+      FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
+      PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
+
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
+      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
+      PROCEDURE callStackPop();
+      PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
+      PROCEDURE callStackClear();
+
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
+
+      {$ifdef fullVersion}
+      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; inline;
+      PROCEDURE reportVariables(VAR variableReport: T_variableReport);
+      {$endif}
+
+      PROPERTY threadOptions:T_threadContextOptions read options;
+
+  end;
+
+  T_evaluationContext=object
+    private
+      wallClock:TEpikTimer;
+      {$ifdef fullVersion}
+      profiler:P_profiler;
+      debuggingStepper:P_debuggingStepper;
+      {$endif}
       timingInfo:record
         startOfProfiling:double;
         timeSpent:array[pc_importing..pc_interpretation] of double;
       end;
-      {$ifdef fullVersion}
-      profilingAndDebuggingCriticalSection:TRTLCriticalSection;
-      profilingMap:T_profilingMap;
-      debuggingStepper:record
-        breakpoints:array of T_searchTokenLocation;
-        state:(breakSoonest,
-               breakOnLineChange,
-               breakOnStepOut,
-               breakOnStepIn,
-               runUntilBreakpoint,
-               dontBreakAtAll,
-               waitingForGUI);
-        lastBreakLine:T_tokenLocation;
-        lastBreakLevel:longint;
-        snapshot:T_debuggingSnapshot;
-      end;
-
-      PROCEDURE addToProfilingMap(CONST id:T_idString; CONST location:ansistring; CONST dt_inclusive,dt_exclusive:double);
-      {$endif}
-
+      detachedAsyncChildCount:longint;
+      disposeAdaptersOnDestruction:boolean;
+      contextAdapters:P_adapters;
+      options :T_evaluationContextOptions;
+      primaryThreadContext:P_threadContext;
+      PROCEDURE setupThreadContext(CONST context:P_threadContext);
     public
-      valueStore:T_valueStore;
-      CONSTRUCTOR createContext(CONST outAdapters:P_adapters; CONST contextType:T_contextType);
+      CONSTRUCTOR create(CONST outAdapters:P_adapters);
+      CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath);
       DESTRUCTOR destroy;
-
-      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath);
+      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean);
       PROCEDURE afterEvaluation;
-
-      //Basic property routines:
-      PROCEDURE resetOptions(CONST contextType:T_contextType);
-      FUNCTION hasOption(CONST option:T_contextOption):boolean; inline;
-      PROCEDURE removeOption(CONST option:T_contextOption);
-      PROCEDURE addOption(CONST option:T_contextOption);
-      //Delegation routines:
-      PROCEDURE notifyAsyncTaskEnd;
-      FUNCTION getNewAsyncContext:P_evaluationContext;
-      PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
-      PROCEDURE detachWorkerContext(CONST expectedParent:P_evaluationContext);
-      FUNCTION getReadOnlyValueStore:P_valueStore;
-      //Local scope routines:
-      PROCEDURE scopePush(CONST blocking:boolean); inline;
-      PROCEDURE scopePop; inline;
-      //call stack routines
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
-      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
-      PROCEDURE callStackPop();
+      PROPERTY evaluationOptions:T_evaluationContextOptions read options;
+      PROPERTY threadContext:P_threadContext read primaryThreadContext;
+      PROPERTY adapters:P_adapters read contextAdapters;
       {$ifdef fullVersion}
-      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
-      {$endif}
-      PROCEDURE printCallStack(CONST targetAdapters:P_adapters=nil);
-      PROCEDURE clearCallStack;
-
-      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
-      //clock routines
-      FUNCTION wallclockTime:double;
-      FUNCTION wantBasicTiming:boolean;
-      PROCEDURE timeBaseComponent(CONST component:T_profileCategory);
-
-      {$ifdef fullVersion}
-      PROCEDURE stepping(CONST first:P_token; CONST stack:pointer);
-      //GUI interaction
-      PROCEDURE haltEvaluation;
-      PROCEDURE clearBreakpoints;
-      PROCEDURE addBreakpoint(CONST fileName:string; CONST line:longint);
-      PROCEDURE doContinue;
-      PROCEDURE doStepInto;
-      PROCEDURE doStepOut;
-      PROCEDURE doStep;
-      PROCEDURE doMicrostep;
-      FUNCTION paused:boolean;
-
-      FUNCTION getDebuggingSnapshot:T_debuggingSnapshot;
+      FUNCTION stepper:P_debuggingStepper;
+      FUNCTION isPaused:boolean;
       {$endif}
   end;
 
-VAR showProfilingTableCallback:PROCEDURE(CONST L:P_compoundLiteral)=nil;
-FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 IMPLEMENTATION
-FUNCTION blankProfilingCalls:T_packageProfilingCalls;
-  VAR p:T_profileCategory;
+VAR globalLock:TRTLCriticalSection;
+CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
   begin
-    for p in T_profileCategory do result[p]:=nil;
-  end;
-
-CONSTRUCTOR T_packageProfilingCall.create(CONST package_: P_objectWithPath; CONST category_: T_profileCategory);
-  begin
-    package:=package_;
-    category:=category_;
-  end;
-
-DESTRUCTOR T_packageProfilingCall.destroy;
-  begin end;
-
-FUNCTION T_packageProfilingCall.getId: T_idString;
-  CONST categoryText:array[T_profileCategory] of string=('importing','tokenizing','declarations','evaluation','unknown','total');
-  begin
-    result:=':'+categoryText[category];
-  end;
-
-FUNCTION T_packageProfilingCall.getLocation: T_tokenLocation;
-  begin
-    result:=packageTokenLocation(package);
-    result.column:=0;
-    result.line:=-1-ord(category);
-  end;
-
-FUNCTION initTimer:TEpikTimer;
-  begin
-    result:=TEpikTimer.create(nil);
-    result.clear;
-    result.start;
-  end;
-
-PROCEDURE disposeTimer(t:TEpikTimer);
-  begin
-    t.destroy;
-  end;
-
-{$ifdef fullVersion}
-PROCEDURE T_evaluationContext.addToProfilingMap(CONST id: T_idString; CONST location: ansistring; CONST dt_inclusive,dt_exclusive:double);
-  VAR profilingEntry:T_profilingEntry;
-  begin
-    if parentContext<>nil then begin
-      parentContext^.addToProfilingMap(id,location,dt_inclusive,dt_exclusive);
-      exit;
-    end;
-    enterCriticalSection(profilingAndDebuggingCriticalSection);
-    if profilingMap.containsKey(location,profilingEntry)
-    then with profilingEntry do begin
-      timeSpent_exclusive:=timeSpent_exclusive+dt_exclusive;
-      timeSpent_inclusive:=timeSpent_inclusive+dt_inclusive;
-      inc(callCount);
-    end else begin
-      profilingEntry.id:=id;
-      profilingEntry.location:=location;
-      profilingEntry.timeSpent_exclusive:=dt_exclusive;
-      profilingEntry.timeSpent_inclusive:=dt_inclusive;
-      profilingEntry.callCount:=1;
-    end;
-    profilingMap.put(location,profilingEntry);
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-{$endif}
-
-CONSTRUCTOR T_evaluationContext.createContext(CONST outAdapters: P_adapters; CONST contextType: T_contextType);
-  begin
-    inherited create(outAdapters);
-    options :=C_defaultOptions[contextType];
-    parentContext:=nil;
+    recycler  .create;
     valueStore.create;
-    setLength(callStack,0);
-    wallClock.create(@initTimer,@disposeTimer);
-    {$ifdef fullVersion}
-    system.initCriticalSection(profilingAndDebuggingCriticalSection);
-    profilingMap.create();
-    {$endif}
-    {$ifdef debugMode}
-    evaluationIsRunning:=false;
-    {$endif}
+    callStack .create;
+    parent        :=parent_;
+    adapters      :=outAdapters;
+    callingContext:=nil;
+    if adapters=nil then adapters:=parent^.adapters;
   end;
 
-PROCEDURE T_evaluationContext.resetOptions(CONST contextType: T_contextType);
+CONSTRUCTOR T_threadContext.createWorkerContext;
   begin
-    {$ifdef debugMode}
-    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
+    recycler  .create;
+    valueStore.create;
+    callStack .create;
+    parent        :=nil;
+    adapters      :=nil;
+    callingContext:=nil;
+  end;
+
+DESTRUCTOR T_threadContext.destroy;
+  begin
+    valueStore.destroy;
+    recycler  .destroy;
+  end;
+
+CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
+  begin
+    wallClock:=nil;
+    {$ifdef fullVersion}
+    profiler:=nil;
+    debuggingStepper:=nil;
     {$endif}
-    options:=C_defaultOptions[contextType];
+    contextAdapters:=outAdapters;
+    disposeAdaptersOnDestruction:=false;
+    detachedAsyncChildCount:=0;
+    new(primaryThreadContext,createThreadContext(@self,adapters));
+  end;
+
+CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_objectWithPath);
+  VAR tempAdapters:P_adapters;
+  begin
+    new(tempAdapters,create);
+    create(tempAdapters);
+    disposeAdaptersOnDestruction:=true;
+    resetForEvaluation(package,false,false,true);
   end;
 
 DESTRUCTOR T_evaluationContext.destroy;
   begin
-    inherited destroy;
-    valueStore.destroy;
-    clearCallStack;
-    wallClock.destroy;
+    if wallClock<>nil then FreeAndNil(wallClock);
     {$ifdef fullVersion}
-    profilingMap.destroy;
-    system.doneCriticalSection(profilingAndDebuggingCriticalSection);
+    if profiler<>nil then dispose(profiler,destroy);
+    if debuggingStepper<>nil then dispose(debuggingStepper,destroy);
     {$endif}
+    dispose(primaryThreadContext,destroy);
+    if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
   end;
 
-PROCEDURE T_evaluationContext.resetForEvaluation(CONST package: P_objectWithPath);
+PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean);
   VAR pc:T_profileCategory;
   begin
-    {$ifdef debugMode}
-    if evaluationIsRunning then raise Exception.create('Evaluation already is running!');
-    evaluationIsRunning:=true;
-    {$endif}
-
-    valueStore.clear;
-    clearCallStack;
+    //set options
+    options:=[eco_ask,eco_spawnWorker,eco_createDetachedTask,eco_beepOnError];
+    if adapters^.doShowTimingInfo then options:=options+[eco_timing];
+    if doProfiling then options:=options+[eco_profiling];
+    if doDebugging then options:=options+[eco_debugging]-[eco_createDetachedTask,eco_spawnWorker];
+    if silentMode  then options:=options-[eco_ask,eco_beepOnError,eco_debugging,eco_timing,eco_profiling];
     {$ifdef fullVersion}
-    profilingMap.clear;
-    {$endif}
-    if cp_clearTimerOnStart in options then begin
-      if {$ifdef fullVersion} (cp_profile in options) or {$endif} myAdapters^.doShowTimingInfo then begin
-        wallClock.value.clear;
-        wallClock.value.start;
-        with timingInfo do begin
-          for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
-          startOfProfiling:=wallClock.value.elapsed;
-        end;
-      end;
-      {$ifdef fullVersion}
-      if (cp_debug in options) then begin
-        debuggingStepper.state:=runUntilBreakpoint;
-        debuggingStepper.lastBreakLevel:=-1;
-        debuggingStepper.lastBreakLine.line:=-1;
-        debuggingStepper.lastBreakLine.package:=package;
-      end;
-      {$endif}
+    //prepare or dispose profiler:
+    if eco_profiling in options then begin
+      if profiler=nil then new(profiler,create)
+                      else profiler^.clear;
+    end else if profiler<>nil then begin
+      dispose(profiler,destroy);
+      profiler:=nil;
     end;
-    if cp_clearAdaptersOnStart in options then myAdapters^.clearAll;
+    //prepare or dispose stepper:
+    if eco_debugging in options then begin
+      if debuggingStepper=nil then new(debuggingStepper,create);
+      debuggingStepper^.resetForDebugging(package);
+    end else if debuggingStepper<>nil then begin
+      dispose(debuggingStepper,destroy);
+      debuggingStepper:=nil;
+    end;
+
+    {$endif}
+    //prepare primary context
+    setupThreadContext(primaryThreadContext);
+
+    detachedAsyncChildCount:=0;
+    //timing:
+    if (eco_timing in options) or (eco_profiling in options) then begin
+      if wallClock=nil then wallClock:=TEpikTimer.create(nil);
+      with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
+      wallClock.clear;
+      wallClock.start;
+      timingInfo.startOfProfiling:=wallClock.elapsed;
+    end;
   end;
 
 PROCEDURE T_evaluationContext.afterEvaluation;
@@ -328,7 +231,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
     FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
     FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
     begin
-      timeValue[pc_total]:=wallClock.value.elapsed-timingInfo.startOfProfiling;
+      timeValue[pc_total]:=wallClock.elapsed-timingInfo.startOfProfiling;
       timeValue[pc_unknown]:=timeValue[pc_total];
       for cat:=low(timingInfo.timeSpent) to high(timingInfo.timeSpent) do begin
         timeValue[cat]:=timingInfo.timeSpent[cat];
@@ -349,243 +252,160 @@ PROCEDURE T_evaluationContext.afterEvaluation;
         if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
         append(timingMessage,timeString[cat]);
       end;
-      myAdapters^.logTimingInfo(timingMessage);
+      adapters^.logTimingInfo(timingMessage);
     end;
-  {$ifdef fullVersion}
-  PROCEDURE logProfilingInfo;
-    FUNCTION nicestTime(CONST seconds:double):string;
-      begin
-         result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms';
-      end;
-
-    VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
-        data:P_collectionLiteral;
-        swapTemp:T_profilingEntry;
-        lines:T_arrayOfString;
-        i,j:longint;
-
-    begin
-      profilingData:=profilingMap.valueSet;
-      for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do if profilingData[i].timeSpent_inclusive<profilingData[j].timeSpent_inclusive then begin
-        swapTemp:=profilingData[i];
-        profilingData[i]:=profilingData[j];
-        profilingData[j]:=swapTemp;
-      end;
-      setLength(lines,length(profilingData)+1);
-      lines[0]:='Location'+C_tabChar+
-                'id'+C_tabChar+
-                'count'+C_tabChar+
-                'inclusive'+C_invisibleTabChar+' time'+C_tabChar+
-                'exclusive'+C_invisibleTabChar+' time';
-
-      for i:=0 to length(profilingData)-1 do with profilingData[i] do
-        lines[i+1]:=location+C_tabChar+
-                    id+C_tabChar+
-                    intToStr(callCount)+C_tabChar+
-                    nicestTime(timeSpent_inclusive)+C_tabChar+
-                    nicestTime(timeSpent_exclusive);
-      lines:=formatTabs(lines);
-      if Assigned(showProfilingTableCallback) then begin
-        data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
-              .appendString('Location')^
-              .appendString('id')^
-              .appendString('count')^
-              .appendString('inclusive (ms)')^
-              .appendString('exclusive (ms)'),false);
-        for i:=0 to length(profilingData)-1 do with profilingData[i] do
-          data^.append(newListLiteral(5)^
-                      .appendString(location)^
-                      .appendString(id)^
-                      .appendInt(callCount)^
-                      .appendReal(timeSpent_inclusive*1E3)^
-                      .appendReal(timeSpent_exclusive*1E3),false);
-        showProfilingTableCallback(data);
-        disposeLiteral(data);
-        myAdapters^.logDisplayTable;
-      end;
-
-      for i:=0 to length(lines)-1 do myAdapters^.logTimingInfo(lines[i]);
-    end;
-  {$endif}
 
   begin
-    {$ifdef debugMode}
-    if not(evaluationIsRunning) then raise Exception.create('Evaluation is not running!');
-    evaluationIsRunning:=false;
+    adapters^.stopEvaluation;
+    while detachedAsyncChildCount>0 do begin
+      ThreadSwitch;
+      sleep(1);
+    end;
+    adapters^.logEndOfEvaluation;
+    if (adapters^.doShowTimingInfo) and (wallClock<>nil) then logTimingInfo;
+    {$ifdef fullVersion}
+    if (eco_profiling in options) and (profiler<>nil) then profiler^.logInfo(adapters);
     {$endif}
+    if (eco_beepOnError in options) and adapters^.triggersBeep then beep;
+  end;
 
+PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
+  VAR threadOptions:T_threadContextOptions=[];
+      threadOption :T_threadContextOption;
+  begin
+    for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in options then include(threadOptions,threadOption);
+    context^.options:=threadOptions;
+    context^.parent:=@self;
+    context^.callStack.clear;
+    context^.valueStore.clear;
+    context^.adapters:=adapters;
+  end;
+
+{$ifdef fullVersion}
+FUNCTION T_evaluationContext.stepper:P_debuggingStepper;
+  begin
+    if debuggingStepper=nil then new(debuggingStepper,create);
+    result:=debuggingStepper;
+  end;
+
+FUNCTION T_evaluationContext.isPaused:boolean;
+  begin
+    result:=(debuggingStepper<>nil) and debuggingStepper^.paused;
+  end;
+{$endif}
+
+FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
+  begin
+    if parent^.wallClock=nil then begin
+      if forceInit then begin
+        enterCriticalSection(globalLock);
+        if parent^.wallClock=nil then begin
+          parent^.wallClock:=TEpikTimer.create(nil);
+          parent^.wallClock.clear;
+          parent^.wallClock.start;
+        end;
+        leaveCriticalSection(globalLock);
+      end else exit(0);
+    end;
+    result:=parent^.wallClock.elapsed;
+  end;
+
+PROCEDURE T_threadContext.timeBaseComponent(CONST component: T_profileCategory);
+  begin
+    with parent^.timingInfo do timeSpent[component]:=wallclockTime-timeSpent[component];
+  end;
+
+PROCEDURE T_threadContext.doneEvaluating;
+  begin
+    if tco_notifyParentOfAsyncTaskEnd in options then interlockedDecrement(parent^.detachedAsyncChildCount);
+    callStack.clear;
     valueStore.clear;
-    clearCallStack;
-    if cp_logEndOfEvaluation in options then begin
-      myAdapters^.stopEvaluation;
-      while asyncChildCount>0 do begin
-        ThreadSwitch;
-        sleep(1);
-      end;
-      myAdapters^.logEndOfEvaluation;
-      if wantBasicTiming then logTimingInfo;
-      {$ifdef fullVersion}
-      if (cp_profile in options) and myAdapters^.doShowTimingInfo then logProfilingInfo;
-      {$endif}
-      if (cp_beepOnError in options) and myAdapters^.triggersBeep then beep;
-    end;
-    if cp_notifyParentOfAsyncTaskEnd in options then parentContext^.notifyAsyncTaskEnd;
   end;
 
-FUNCTION T_evaluationContext.hasOption(CONST option: T_contextOption): boolean;
-  begin result:=option in options; end;
-
-PROCEDURE T_evaluationContext.removeOption(CONST option:T_contextOption);
+FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
   begin
-    {$ifdef debugMode}
-    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
-    {$endif}
-    options:=options-[option];
+    if not(tco_createDetachedTask in options) then exit(nil);
+    interLockedIncrement(parent^.detachedAsyncChildCount);
+    new(result,createThreadContext(nil,adapters));
+    result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
   end;
 
-PROCEDURE T_evaluationContext.addOption(CONST option:T_contextOption);
+PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CONST callingContext_:P_threadContext);
   begin
-    {$ifdef debugMode}
-    if evaluationIsRunning then raise Exception.create('Options must not be changed during evaluation!');
-    {$endif}
-    options:=options+[option];
-  end;
-
-PROCEDURE T_evaluationContext.notifyAsyncTaskEnd;
-  begin
-    interlockedDecrement(asyncChildCount);
-  end;
-
-FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
-  begin
-    if not(cp_createDetachedTask in options) then exit(nil);
-    if parentContext=nil then begin
-      interLockedIncrement(asyncChildCount);
-      new(result,createContext(myAdapters,ct_normal));
-      result^.parentContext:=@self;
-      result^.options:=options-[cp_timing,cp_logEndOfEvaluation]+[cp_notifyParentOfAsyncTaskEnd];
-    end else begin
-      result:=parentContext^.getNewAsyncContext();
-    end;
-  end;
-
-PROCEDURE T_evaluationContext.attachWorkerContext(CONST valueScope:P_valueStore; CONST newParent:P_evaluationContext);
-  begin
-    {$ifdef debugMode}
-    if parentContext<>nil then raise Exception.create('Attaching overrides already attached parent context');
-    {$endif}
-    myAdapters:=newParent^.myAdapters;
-    parentContext:=newParent;
-    options:=parentContext^.options-[cp_timing];
+    callingContext:=callingContext_;
+    parent        :=callingContext^.parent;
+    adapters      :=callingContext^.adapters;
+    options       :=callingContext^.options;
     valueStore.clear;
     valueStore.parentStore:=valueScope;
+    callStack.clear;
   end;
 
-PROCEDURE T_evaluationContext.detachWorkerContext(CONST expectedParent: P_evaluationContext);
+PROCEDURE T_threadContext.detachWorkerContext;
   begin
     {$ifdef debugMode}
-    if parentContext<>expectedParent then raise Exception.create('Detaching excepts another context');
-    if not(valueStore.isEmpty) and (myAdapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
+    if not(valueStore.isEmpty) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
     {$endif}
-    parentContext:=nil;
+    parent:=nil;
+    callingContext:=nil;
     valueStore.clear;
     valueStore.parentStore:=nil;
+    callStack.clear;
   end;
 
-FUNCTION T_evaluationContext.getReadOnlyValueStore:P_valueStore;
+FUNCTION T_threadContext.enterTryStatementReturningPreviousAdapters: P_adapters;
   begin
-    result:=valueStore.readOnlyClone;
+    result:=adapters;
+    adapters:=result^.collectingClone;
   end;
 
-PROCEDURE T_evaluationContext.scopePush(CONST blocking: boolean);
+PROCEDURE T_threadContext.leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
   begin
-    valueStore.scopePush(blocking);
+    previousAdapters^.copyDataFromCollectingCloneDisposing(adapters,tryBodyFailed);
+    adapters:=previousAdapters;
   end;
 
-PROCEDURE T_evaluationContext.scopePop;
+PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
   begin
-    valueStore.scopePop;
+    callStack.push(wallclockTime,callerLocation,callee,callParameters,expressionLiteral);
   end;
 
-PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
-  VAR topIdx:longint;
-  begin
-    topIdx:=length(callStack);
-    setLength(callStack,topIdx+1);
-    callStack[topIdx].callerLocation:=callerLocation;
-    callStack[topIdx].callee        :=callee;
-    callStack[topIdx].callParameters:=callParameters;
-    callStack[topIdx].calleeLiteral :=expressionLiteral;
-    if callParameters<>nil then callParameters^.rereference;
-    if expressionLiteral<>nil then expressionLiteral^.rereference;
-    {$ifdef fullVersion}
-    if cp_profile in options then begin
-      if topIdx>0 then with callStack[topIdx-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
-      callStack[topIdx].timeForProfiling_exclusive:=wallclockTime;
-      callStack[topIdx].timeForProfiling_inclusive:=wallclockTime;
-    end;
-    {$endif}
-  end;
-
-PROCEDURE T_evaluationContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
+PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
   begin
     if calls[category]=nil then new(calls[category],create(package,category));
-    callStackPush(calls[category]^.getLocation,calls[category],nil,nil);
+    callStack.push(wallclockTime,calls[category]^.getLocation,calls[category],nil,nil);
   end;
 
-PROCEDURE T_evaluationContext.callStackPop;
-  VAR topIdx:longint;
+PROCEDURE T_threadContext.callStackPop;
   begin
-    topIdx:=length(callStack)-1;
-    if topIdx<0 then exit;
-    {$ifdef fullVersion}
-    if cp_profile in options then begin
-      with callStack[topIdx] do begin
-        timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
-        timeForProfiling_inclusive:=wallclockTime-timeForProfiling_inclusive;
-        addToProfilingMap(callee^.getId,callee^.getLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
-       end;
-      if topIdx>0 then with callStack[topIdx-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
-    end;
-    {$endif}
-    with callStack[topIdx] do begin
-      if callParameters<>nil then disposeLiteral(callParameters);
-      if calleeLiteral <>nil then disposeLiteral(calleeLiteral);
-    end;
-    setLength(callStack,topIdx);
+    callStack.pop({$ifdef fullVersion}wallclockTime,parent^.profiler{$endif});
   end;
 {$ifdef fullVersion}
-PROCEDURE T_evaluationContext.reportVariables(
-  VAR variableReport: T_variableReport);
+PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
   begin
-    if parentContext<>nil then parentContext^.reportVariables(variableReport);
+    if callingContext<>nil then callingContext^.reportVariables(variableReport);
     valueStore.reportVariables(variableReport);
   end;
 {$endif}
 
-PROCEDURE T_evaluationContext.printCallStack(CONST targetAdapters:P_adapters=nil);
-  VAR i:longint;
-      p:P_evaluationContext;
+PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
+  VAR p:P_threadContext;
       a:P_adapters;
   begin
     a:=targetAdapters;
-    if a=nil then a:=myAdapters;
+    if a=nil then a:=adapters;
     if a=nil then exit;
-
-    p:=parentContext;
-    for i:=length(callStack)-1 downto 0 do with callStack[i] do
-    a^.logCallStackInfo(callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
-    if p<>nil then p^.printCallStack(a);
+    p:=callingContext;
+    callStack.print(a^);
+    if p<>nil then p^.callStackPrint(a);
   end;
 
-PROCEDURE T_evaluationContext.clearCallStack;
+PROCEDURE T_threadContext.callStackClear;
   begin
-    //If the evaluation was not finished cleanly, the call stack may not be empty
-    //Make sure that the elements are profiled correctly and references to expressions are dropped
-    while length(callStack)>0 do callStackPop();
+    callStack.clear;
   end;
 
-PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
+PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
   VAR totalMessage:T_arrayOfString;
   begin
     totalMessage:='Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100);
@@ -594,166 +414,18 @@ PROCEDURE T_evaluationContext.raiseCannotApplyError(CONST ruleWithType:string; C
     if missingMain then adapters^.logMissingMain;
   end;
 
-FUNCTION T_evaluationContext.wallclockTime: double;
-  begin
-    if parentContext<>nil then exit(parentContext^.wallclockTime);
-    result:=wallClock.value.elapsed;
-  end;
-
-FUNCTION T_evaluationContext.wantBasicTiming: boolean;
-  begin
-    result:=(cp_timing in options) and (adapters^.doShowTimingInfo);
-  end;
-
-PROCEDURE T_evaluationContext.timeBaseComponent(
-  CONST component: T_profileCategory);
-  begin
-    timingInfo.timeSpent[component]:=wallclockTime-timingInfo.timeSpent[component];
-  end;
 {$ifdef fullVersion}
-PROCEDURE T_evaluationContext.stepping(CONST first: P_token; CONST stack: pointer);
-  FUNCTION isEqualLine(CONST loc1,loc2:T_tokenLocation):boolean; inline;
-    begin
-      result:=(loc1.package=loc2.package) and
-              (loc1.line   =loc2.line);
-    end;
-
-  FUNCTION isEqualLine(CONST loc1:T_tokenLocation; CONST loc2:T_searchTokenLocation):boolean; inline;
-    begin
-      result:=(loc1.package^.getPath=loc2.fileName) and
-              (loc1.line            =loc2.line);
-    end;
-
-  FUNCTION breakpointEncountered:boolean;
-    VAR i:longint;
-    begin
-      result:=false;
-      with debuggingStepper do for i:=0 to length(breakpoints)-1 do if isEqualLine(first^.location,breakpoints[i]) then exit(true);
-    end;
-
-  PROCEDURE prepareSnapshot;
-    VAR i:longint;
-    begin
-      debuggingStepper.snapshot.location:=first^.location;
-      debuggingStepper.snapshot.tokenStack:=stack;
-      debuggingStepper.snapshot.first:=first;
-      setLength(debuggingStepper.snapshot.callStack,length(callStack));
-      for i:=0 to length(callStack)-1 do debuggingStepper.snapshot.callStack[i]:=callStack[i];
-    end;
-
-  VAR lineChanged:boolean;
+FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; inline;
   begin
-    if not(cp_debug in options) or (debuggingStepper.state=dontBreakAtAll) then exit;
-    if parentContext<>nil then begin parentContext^.stepping(first,stack); exit; end;
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    wallClock.value.stop;
-    with debuggingStepper do begin
-      if state=breakSoonest then state:=waitingForGUI
-      else begin
-        lineChanged:=not(isEqualLine(lastBreakLine,first^.location));
-        if (state=breakOnLineChange ) and ((length(callStack)< lastBreakLevel) or lineChanged) or
-           (state=breakOnStepOut    ) and  (length(callStack)< lastBreakLevel) or
-           (state=breakOnStepIn     ) and  (length(callStack)> lastBreakLevel) or
-           (state=runUntilBreakpoint) and ((length(callStack)<>lastBreakLevel) or lineChanged) and breakpointEncountered
-        then state:=waitingForGUI;
-      end;
-
-      if state=waitingForGUI then begin
-        lastBreakLine:=first^.location;
-        lastBreakLevel:=length(callStack);
-        prepareSnapshot;
-      end;
-      while state=waitingForGUI do begin
-        system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-        ThreadSwitch;
-        sleep(1);
-        system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-      end;
-    end;
-    wallClock.value.start;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.haltEvaluation;
-  begin
-    adapters^.haltEvaluation;
-    if cp_debug in options then begin
-      system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-      debuggingStepper.state:=dontBreakAtAll;
-      system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-      if parentContext<>nil then parentContext^.haltEvaluation;
-    end;
-  end;
-
-PROCEDURE T_evaluationContext.clearBreakpoints;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    setLength(debuggingStepper.breakpoints,0);
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-    if parentContext<>nil then parentContext^.clearBreakpoints;
-  end;
-
-PROCEDURE T_evaluationContext.addBreakpoint(CONST fileName: string; CONST line: longint);
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    with debuggingStepper do begin
-      i:=length(breakpoints);
-      setLength(breakpoints,i+1);
-      breakpoints[i].fileName:=fileName;
-      breakpoints[i].line    :=line;
-    end;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.doContinue;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    debuggingStepper.state:=runUntilBreakpoint;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.doStepInto;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    debuggingStepper.state:=breakOnStepIn;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.doStepOut;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    debuggingStepper.state:=breakOnStepOut;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.doStep;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    debuggingStepper.state:=breakOnLineChange;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-PROCEDURE T_evaluationContext.doMicrostep;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    debuggingStepper.state:=breakSoonest;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-FUNCTION T_evaluationContext.paused:boolean;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    result:=debuggingStepper.state=waitingForGUI;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
-  end;
-
-FUNCTION T_evaluationContext.getDebuggingSnapshot:T_debuggingSnapshot;
-  begin
-    system.enterCriticalSection(profilingAndDebuggingCriticalSection);
-    result:=debuggingStepper.snapshot;
-    system.leaveCriticalSection(profilingAndDebuggingCriticalSection);
+    if parent^.debuggingStepper=nil then exit(false);
+    parent^.debuggingStepper^.stepping(first,stack,@callStack);
+    result:=true;
   end;
 {$endif}
+
+INITIALIZATION
+  initCriticalSection(globalLock);
+FINALIZATION
+  doneCriticalSection(globalLock);
 
 end.

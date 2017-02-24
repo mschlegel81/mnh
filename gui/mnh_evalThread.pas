@@ -60,7 +60,7 @@ TYPE
       done  :boolean;
       CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
       DESTRUCTOR destroy;
-      PROCEDURE execute(VAR context:T_evaluationContext);
+      PROCEDURE execute(VAR context:T_threadContext);
     public
       FUNCTION getOutput:P_literal;
       FUNCTION getOutputLanguage:string;
@@ -105,7 +105,8 @@ TYPE
   T_runEvaluator=object(T_evaluator)
     private
       //request variables
-      requestedContextType:T_contextType;
+      profilingRequested:boolean;
+      debuggingRequested:boolean;
       mainParameters:T_arrayOfString;
       //internal state variables
       startOfEvaluation:double;
@@ -121,9 +122,9 @@ TYPE
     public
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE reEvaluateWithGUI(CONST contextType:T_contextType);
-      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_contextType);
-      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_contextType);
+      PROCEDURE reEvaluateWithGUI;
+      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST profiling,debugging:boolean);
+      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST profiling,debugging:boolean);
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
@@ -141,6 +142,7 @@ TYPE
       stateCounter:longint;
       userRules,
       completionList:T_setOfString;
+      PROCEDURE preEval; virtual;
       PROCEDURE postEval; virtual;
     public
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
@@ -190,12 +192,8 @@ FUNCTION main(p:pointer):ptrint;
   PROCEDURE setupEdit(OUT context:T_evaluationContext);
     begin
       P_runEvaluator(p)^.editAdapters^.clearAll;
-      context.createContext(P_runEvaluator(p)^.editAdapters,ct_normal);
-      context.removeOption(cp_clearAdaptersOnStart);
-      context.removeOption(cp_timing);
-      context.removeOption(cp_spawnWorker);
-      context.removeOption(cp_createDetachedTask);
-      context.resetForEvaluation(nil);
+      context.create(P_runEvaluator(p)^.editAdapters);
+      context.resetForEvaluation(nil,false,false,true);
     end;
 
   PROCEDURE doneEdit(VAR context:T_evaluationContext);
@@ -229,7 +227,7 @@ FUNCTION main(p:pointer):ptrint;
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
       {$ifdef debugMode} writeln('Loading script package: ',utilityScriptPackage^.getPath); {$endif}
-      utilityScriptPackage^.load(lu_forImport,editContext,C_EMPTY_STRING_ARRAY);
+      utilityScriptPackage^.load(lu_forImport,editContext.threadContext^,C_EMPTY_STRING_ARRAY);
       if editContext.adapters^.noErrors then begin
         for scriptType in T_scriptType do
         for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
@@ -248,7 +246,7 @@ FUNCTION main(p:pointer):ptrint;
     VAR editContext:T_evaluationContext;
     begin
       setupEdit(editContext);
-      P_runEvaluator(p)^.currentEdit^.execute(editContext);
+      P_runEvaluator(p)^.currentEdit^.execute(editContext.threadContext^);
       doneEdit(editContext);
     end;
 
@@ -262,11 +260,11 @@ FUNCTION main(p:pointer):ptrint;
         sleepTime:=0;
         preEval;
         case r of
-          er_evaluate: package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
-          er_callMain: package.load(lu_forCallingMain    ,context,parametersForMainCall);
+          er_evaluate: package.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
+          er_callMain: package.load(lu_forCallingMain    ,context.threadContext^,parametersForMainCall);
           er_reEvaluateWithGUI: begin
             package.replaceCodeProvider(newFileCodeProvider(getFileOrCommandToInterpretFromCommandLine));
-            package.load(lu_forCallingMain,context,parametersForMainCall);
+            package.load(lu_forCallingMain,context.threadContext^,parametersForMainCall);
           end;
           er_ensureEditScripts: ensureEditScripts_impl;
           er_runEditScript: executeEditScript_impl;
@@ -291,7 +289,7 @@ FUNCTION docMain(p:pointer):ptrint;
       if (pendingRequest in [er_evaluate,er_callMain,er_reEvaluateWithGUI])  then begin
         {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation request');{$endif}
         preEval;
-        package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
+        package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
         postEval;
         {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' finished assistance evaluation request');{$endif}
       end;
@@ -365,7 +363,7 @@ DESTRUCTOR T_editScriptTask.destroy;
     if output<>nil then disposeLiteral(output);
   end;
 
-PROCEDURE T_editScriptTask.execute(VAR context:T_evaluationContext);
+PROCEDURE T_editScriptTask.execute(VAR context:T_threadContext);
   begin
     output:=script^.editRule^.directEvaluateUnary(input,script^.editRule^.getLocation,context,0);
     disposeLiteral(input);
@@ -401,7 +399,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     thread:=threadFunc;
     package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
     adapter:=adapters;
-    context.createContext(adapter,ct_normal);
+    context.create(adapter);
   end;
 
 CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
@@ -421,7 +419,6 @@ CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadF
 CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
   begin
     inherited create(adapters,threadFunc);
-    context.resetOptions(ct_silentlyRunAlone);
     stateCounter:=0;
     setLength(localErrors,0);
     setLength(externalErrors,0);
@@ -467,7 +464,8 @@ DESTRUCTOR T_assistanceEvaluator.destroy;
 PROCEDURE T_evaluator.haltEvaluation;
   begin
     system.enterCriticalSection(cs);
-    context.haltEvaluation;
+    killServersCallback;
+    context.adapters^.haltEvaluation;
     while not(adapter^.hasHaltMessage) do begin
       system.leaveCriticalSection(cs);
       ThreadSwitch;
@@ -486,28 +484,30 @@ PROCEDURE T_runEvaluator.haltEvaluation;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.reEvaluateWithGUI(CONST contextType:T_contextType);
+PROCEDURE T_runEvaluator.reEvaluateWithGUI;
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) or (request<>er_none) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
-    requestedContextType:=contextType;
+    debuggingRequested:=false;
+    profilingRequested:=mnh_cmdLineInterpretation.profilingRun;
     mainParameters:=mnh_cmdLineInterpretation.mainParameters;
     request:=er_reEvaluateWithGUI;
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_contextType);
+PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST profiling,debugging:boolean);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
-    requestedContextType:=contextType;
+    profilingRequested:=profiling;
+    debuggingRequested:=debugging;
     request:=er_evaluate;
     package.replaceCodeProvider(provider);
     ensureThread;
@@ -527,7 +527,7 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST provider:P_codeProvider);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.callMain(CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_contextType);
+PROCEDURE T_runEvaluator.callMain(CONST provider:P_codeProvider; params: ansistring; CONST profiling,debugging:boolean);
   VAR sp:longint;
   begin
     system.enterCriticalSection(cs);
@@ -535,7 +535,8 @@ PROCEDURE T_runEvaluator.callMain(CONST provider:P_codeProvider; params: ansistr
       system.leaveCriticalSection(cs);
       exit;
     end;
-    requestedContextType:=contextType;
+    profilingRequested:=profiling;
+    debuggingRequested:=debugging;
     setLength(mainParameters,0);
     params:=trim(params);
     while params<>'' do begin
@@ -702,7 +703,7 @@ FUNCTION T_runEvaluator.getRunnerStateInfo:T_runnerStateInfo;
   begin
     system.enterCriticalSection(cs);
     result.state:=state;
-    if (context.hasOption(cp_debug)) and (context.paused) then result.state:=es_debugHalted;
+    if (context.isPaused) then result.state:=es_debugHalted;
     result.request:=request;
     result.message:=endOfEvaluationText;
     result.hasPendingEditResult:=(currentEdit<>nil) and (currentEdit^.done);
@@ -762,27 +763,31 @@ PROCEDURE T_evaluator.threadStopped;
 PROCEDURE T_evaluator.preEval;
   begin
     system.enterCriticalSection(cs);
-    if context.hasOption(cp_debug)
-    then state:=es_debugRunning
-    else state:=es_running;
+    state:=es_running;
     case request of
       er_ensureEditScripts: state:=es_editEnsuring;
       er_runEditScript    : state:=es_editRunning;
-      er_reEvaluateWithGUI: context.removeOption(cp_clearAdaptersOnStart);
     end;
     request:=er_none;
     if state in [es_editEnsuring,es_editRunning]
-    then adapter^.clearErrors
-    else context.resetForEvaluation(@package);
+    then adapter^.clearErrors;
     system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_runEvaluator.preEval;
   begin
     system.enterCriticalSection(cs);
-    context.resetOptions(requestedContextType);
     inherited preEval;
     startOfEvaluation:=now;
+    context.resetForEvaluation(@package,profilingRequested,debuggingRequested,false);
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_assistanceEvaluator.preEval;
+  begin
+    system.enterCriticalSection(cs);
+    inherited preEval;
+    context.resetForEvaluation(@package,false,false,true);
     system.leaveCriticalSection(cs);
   end;
 

@@ -4,7 +4,7 @@ USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typ
      tokenStack,valueStore,
      mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
      mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
-     Classes,{$ifdef fullVersion}mnh_doc,mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
+     Classes,mnh_profiling,{$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
      mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,
      mnh_datastores;
 
@@ -29,7 +29,7 @@ TYPE
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
-    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
+    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   end;
 
   T_package=object(T_objectWithPath)
@@ -46,7 +46,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
-      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
+      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
       FUNCTION codeChanged:boolean;
       PROCEDURE clear(CONST includeSecondaries:boolean);
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
@@ -70,17 +70,17 @@ TYPE
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_mapLiteral;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
-      FUNCTION getDynamicUseMeta(VAR context:T_evaluationContext):P_mapLiteral;
+      FUNCTION getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
 
 {$undef include_interface}
 VAR killServersCallback:PROCEDURE;
@@ -103,9 +103,10 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
   VAR context:T_evaluationContext;
       package:T_package;
   begin
-    context.createContext(adapter,ct_silentlyRunAlone);
+    context.create(adapter);
     package.create(newVirtualFileCodeProvider('?',input),nil);
-    package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
+    context.resetForEvaluation(@package,false,false,true);
+    package.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
     package.destroy;
     context.destroy;
   end;
@@ -179,7 +180,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
 
-PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
+PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   VAR i:longint;
   begin
     with containingPackage^.mainPackage^ do begin
@@ -235,7 +236,7 @@ DESTRUCTOR T_packageReference.destroy;
     pack:=nil;
   end;
 
-PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
+PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
   VAR statementCounter:longint=0;
       commentLines,
       attributeLines:T_arrayOfString;
@@ -276,7 +277,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       begin
         initialize(newId);
         locationForErrorFeedback:=first^.location;
-        first:=context.disposeToken(first);
+        first:=context.recycler.disposeToken(first);
         while first<>nil do begin
           j:=-1;
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
@@ -303,7 +304,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                            or (packageUses[i].id   =               packageUses[j].id)
             then context.adapters^.raiseError('Duplicate import: '+newId,first^.location);
 
-          first:=context.disposeToken(first);
+          first:=context.recycler.disposeToken(first);
         end;
         if not(context.adapters^.noErrors) then begin
           for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
@@ -323,7 +324,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if firstOfPart=nil
           then context.adapters^.raiseError('Invalid declaration pattern element.',partLocation)
           else context.adapters^.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
-          context.cascadeDisposeToken(firstOfPart);
+          context.recycler.cascadeDisposeToken(firstOfPart);
         end;
 
       PROCEDURE assertNil(VAR firstOfPart:P_token);
@@ -355,39 +356,39 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         //plausis:
         if (ruleBody=nil) then begin
           context.adapters^.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
-          context.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(first);
           exit;
         end;
         while (first<>nil) and (first^.tokType in C_ruleModifiers) do begin
           include(ruleModifiers,first^.tokType);
-          first:=context.disposeToken(first);
+          first:=context.recycler.disposeToken(first);
         end;
         evaluateBody:=evaluateBody
                    or (tt_modifier_mutable    in ruleModifiers);
 
         if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
           context.adapters^.raiseError('Declaration does not start with an identifier.',first^.location);
-          context.cascadeDisposeToken(first);
-          context.cascadeDisposeToken(ruleBody);
+          context.recycler.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(ruleBody);
           exit;
         end;
         p:=first;
         while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
           if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(first^.txt) then begin
             context.adapters^.raiseError('Declaration head contains qualified ID.',p^.location);
-            context.cascadeDisposeToken(first);
-            context.cascadeDisposeToken(ruleBody);
+            context.recycler.cascadeDisposeToken(first);
+            context.recycler.cascadeDisposeToken(ruleBody);
             exit;
           end;
           p:=p^.next;
         end;
         //:plausis
         ruleId:=trim(first^.txt);
-        first:=context.disposeToken(first);
+        first:=context.recycler.disposeToken(first);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
           context.adapters^.raiseError('Invalid declaration head.',first^.location);
-          context.cascadeDisposeToken(first);
-          context.cascadeDisposeToken(ruleBody);
+          context.recycler.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(ruleBody);
           exit;
         end;
         rulePattern.create;
@@ -404,16 +405,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                 if i<>length(parts)-1 then context.adapters^.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
                 //Optionals: f(...)->
                 rulePattern.appendOptional;
-                parts[i].first:=context.disposeToken(parts[i].first);
+                parts[i].first:=context.recycler.disposeToken(parts[i].first);
                 assertNil(parts[i].first);
               end else if (parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
                 //Identified parameter: f(x)->
                 rulePatternElement.create(parts[i].first^.txt);
-                parts[i].first:=context.disposeToken(parts[i].first);
+                parts[i].first:=context.recycler.disposeToken(parts[i].first);
                 if (parts[i].first<>nil) then begin
                   if (parts[i].first^.tokType in C_typeChecks) then begin
                     rulePatternElement.restrictionType:=parts[i].first^.tokType;
-                    parts[i].first:=context.disposeToken(parts[i].first);
+                    parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
                     if rulePatternElement.restrictionType in C_modifieableTypeChecks then begin
                       if (parts[i].first=nil) then begin end else
@@ -426,25 +427,25 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                          (parts[i].first^.next^.next^.tokType=tt_braceClose) and
                          (parts[i].first^.next^.next^.next=nil) then begin
                         rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.next^.data)^.value;
-                        context.cascadeDisposeToken(parts[i].first);
+                        context.recycler.cascadeDisposeToken(parts[i].first);
                       end else fail(parts[i].first);
                     end else assertNil(parts[i].first);
 
                   end else if (parts[i].first^.tokType in C_patternElementComparators) then begin
                     rulePatternElement.restrictionType:=parts[i].first^.tokType;
-                    parts[i].first:=context.disposeToken(parts[i].first);
+                    parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
                     if (parts[i].first=nil) then fail(parts[i].first) else
                     if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
                       rulePatternElement.restrictionId:=parts[i].first^.txt;
-                      parts[i].first:=context.disposeToken(parts[i].first);
+                      parts[i].first:=context.recycler.disposeToken(parts[i].first);
                       assertNil(parts[i].first);
                     end else begin
                       reduceExpression(parts[i].first,0,context);
                       if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
                         rulePatternElement.restrictionValue:=parts[i].first^.data;
                         rulePatternElement.restrictionValue^.rereference;
-                        parts[i].first:=context.disposeToken(parts[i].first);
+                        parts[i].first:=context.recycler.disposeToken(parts[i].first);
                         assertNil(parts[i].first);
                       end else fail(parts[i].first);
                     end;
@@ -452,7 +453,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                   end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
                     rulePatternElement.restrictionType:=parts[i].first^.tokType;
                     rulePatternElement.customTypeCheck:=P_rule(parts[i].first^.data)^.subrules[0];
-                    parts[i].first:=context.disposeToken(parts[i].first);
+                    parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
                     assertNil(parts[i].first);
                   end else fail(parts[i].first);
@@ -466,7 +467,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                   rulePatternElement.restrictionType:=tt_comparatorListEq;
                   rulePatternElement.restrictionValue:=parts[i].first^.data;
                   rulePatternElement.restrictionValue^.rereference;
-                  parts[i].first:=context.disposeToken(parts[i].first);
+                  parts[i].first:=context.recycler.disposeToken(parts[i].first);
                   assertNil(parts[i].first);
                   rulePattern.append(rulePatternElement);
                 end else fail(parts[i].first);
@@ -475,14 +476,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             parts:=nil;
           end;
           rulePattern.finalizeRefs(ruleDeclarationStart,context);
-          context.disposeToken(first);
-          first:=context.disposeToken(closingBracket);
+          context.recycler.disposeToken(first);
+          first:=context.recycler.disposeToken(closingBracket);
         end;
         if first<>nil then begin
-          first:=context.disposeToken(first);
+          first:=context.recycler.disposeToken(first);
         end else begin
           context.adapters^.raiseError('Invalid declaration.',ruleDeclarationStart);
-          context.cascadeDisposeToken(ruleBody);
+          context.recycler.cascadeDisposeToken(ruleBody);
           exit;
         end;
         rulePattern.toParameterIds(ruleBody);
@@ -514,12 +515,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;
           end else begin
-            context.cascadeDisposeToken(first);
-            context.cascadeDisposeToken(ruleBody);
+            context.recycler.cascadeDisposeToken(first);
+            context.recycler.cascadeDisposeToken(ruleBody);
           end;
         end else begin
-          context.cascadeDisposeToken(first);
-          context.cascadeDisposeToken(ruleBody);
+          context.recycler.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(ruleBody);
         end;
       end;
 
@@ -529,19 +530,19 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       begin
         if (codeProvider^.isPseudoFile) then begin
           context.adapters^.raiseError('data stores require the package to be saved to a file.',first^.location);
-          context.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(first);
           exit;
         end;
         while (first<>nil) and (first^.tokType in C_ruleModifiers) do begin
           include(ruleModifiers,first^.tokType);
           loc:=first^.location;
-          first:=context.disposeToken(first);
+          first:=context.recycler.disposeToken(first);
         end;
         if (first=nil) or not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
            (first^.next<>nil) then begin
           if first<>nil then loc:=first^.location;
           context.adapters^.raiseError('Invalid datastore definition: '+tokensToString(first),loc);
-          context.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(first);
           exit;
         end;
         ensureRuleId(first^.txt,
@@ -554,7 +555,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
 
       if not(context.adapters^.noErrors) then begin
-        context.cascadeDisposeToken(first);
+        context.recycler.cascadeDisposeToken(first);
         exit;
       end;
       inc(statementCounter);
@@ -575,7 +576,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         context.callStackPush(@self,pc_declaration,pseudoCallees);
         if profile then context.timeBaseComponent(pc_declaration);
         if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
-          context.cascadeDisposeToken(first);
+          context.recycler.cascadeDisposeToken(first);
           exit;
         end;
         predigest(assignmentToken,@self,context);
@@ -596,7 +597,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             context.callStackPush(@self,pc_interpretation,pseudoCallees);
             if profile then context.timeBaseComponent(pc_interpretation);
             if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
-              context.cascadeDisposeToken(first);
+              context.recycler.cascadeDisposeToken(first);
               exit;
             end;
             predigest(first,@self,context);
@@ -614,7 +615,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,50),first^.location);
         end;
       end;
-      if first<>nil then context.cascadeDisposeToken(first);
+      if first<>nil then context.recycler.cascadeDisposeToken(first);
       first:=nil;
     end;
 
@@ -630,11 +631,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
-        t:=context.newToken(packageTokenLocation(@self),MAIN_RULE_ID,tt_localUserRule,mainRule);
+        t:=context.recycler.newToken(packageTokenLocation(@self),MAIN_RULE_ID,tt_localUserRule,mainRule);
         parametersForMain:=newListLiteral;
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
-        t^.next:=context.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
+        t^.next:=context.recycler.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
         context.callStackPush(@self,pc_interpretation,pseudoCallees);
         if profile then context.timeBaseComponent(pc_interpretation);
         reduceExpression(t,0,context);
@@ -653,7 +654,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           P_subrule(t^.data)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
         end;
         //----------------------:special handling if main returns an expression
-        context.cascadeDisposeToken(t);
+        context.recycler.cascadeDisposeToken(t);
         disposeLiteral(parametersForMain);
         parametersForMain:=nil;
       end;
@@ -673,10 +674,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       while not(fileTokens.atEnd) do begin
         if fileTokens.current.tokType=tt_beginBlock then begin
           if first=nil then begin
-            first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            first:=context.recycler.newToken(fileTokens.current); fileTokens.current.undefine;
             last :=first;
           end else begin
-            last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last^.next:=context.recycler.newToken(fileTokens.current); fileTokens.current.undefine;
             last      :=last^.next;
           end;
           localIdStack.clear;
@@ -692,23 +693,23 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               end else if (localIdStack.hasId(fileTokens.current.txt)) then
                 fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
             end;
-            last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last^.next:=context.recycler.newToken(fileTokens.current); fileTokens.current.undefine;
             last      :=last^.next;
             stepToken;
           end;
         end else if (fileTokens.current.tokType=tt_semicolon) then begin
           if (first<>nil)
           then interpret(first,fileTokens.current.location)
-          else context.cascadeDisposeToken(first);
+          else context.recycler.cascadeDisposeToken(first);
           last:=nil;
           first:=nil;
           stepToken;
         end else begin
           if first=nil then begin
-            first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            first:=context.recycler.newToken(fileTokens.current); fileTokens.current.undefine;
             last :=first
           end else begin
-            last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last^.next:=context.recycler.newToken(fileTokens.current); fileTokens.current.undefine;
             last      :=last^.next;
           end;
           last^.next:=nil;
@@ -722,14 +723,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
       if (context.adapters^.noErrors)
       then begin if first<>nil then interpret(first,first^.location); end
-      else context.cascadeDisposeToken(first);
+      else context.recycler.cascadeDisposeToken(first);
     end;
 
   begin
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     if isMain then context.adapters^.clearErrors;
-    profile:=context.wantBasicTiming and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
+    profile:=context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     clear(false);
     readyForUsecase:=lu_beingLoaded;
 
@@ -1087,7 +1088,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     end;
   end;
 
-FUNCTION T_package.getDynamicUseMeta(VAR context:T_evaluationContext):P_mapLiteral;
+FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
   FUNCTION rulesMeta:P_listLiteral;
     VAR rule:P_rule;
     begin

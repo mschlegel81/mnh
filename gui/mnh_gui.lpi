@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="57">
+    <Units Count="59">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -350,6 +350,14 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_gui_outputOnly"/>
       </Unit56>
+      <Unit57>
+        <Filename Value="..\core\tokenStack.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit57>
+      <Unit58>
+        <Filename Value="..\core\tokenRecycler.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit58>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -7,8 +7,10 @@ USES {$ifdef UNIX} cthreads, {$else}
   {$ifdef debugMode}heaptrc,{$endif}{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms,
+  mySys,
+  mnh_cmdLineInterpretation,
   mnh_gui_main,
-  mnh_cmdLineInterpretation, mySys, mnh_gui_outputOnly;
+  mnh_gui_outputOnly;
 
 {$R *.res}
 

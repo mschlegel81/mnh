@@ -28,17 +28,17 @@
       preparedBody:array of T_preparedToken;
 
       PROCEDURE updatePatternForInline;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEach:boolean);
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
       CONSTRUCTOR init(CONST srt: T_subruleType; CONST location: T_tokenLocation; CONST parentRule:P_rule=nil);
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
     public
-      CONSTRUCTOR create           (CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_evaluationContext);
-      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
-      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
+      CONSTRUCTOR create           (CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
+      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
+      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
-      CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
+      CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_threadContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy; virtual;
       //Literal routines:
@@ -52,15 +52,19 @@
       FUNCTION typeString:string; virtual;
 
       //Evaluation calls:
-      FUNCTION replaces                (CONST param:P_listLiteral;  CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext):P_token;
+      FUNCTION replacesUnary (CONST x  :P_literal; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext):P_token;
+      FUNCTION replacesBinary(CONST x,y:P_literal; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext):P_token;
+
       FUNCTION evaluate            (CONST parameters:P_listLiteral; CONST location    :T_tokenLocation;                             CONST context:pointer):P_literal; virtual;
-      FUNCTION directEvaluate          (CONST params:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal; inline;
-      FUNCTION directEvaluateNullary   (                            CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
-      FUNCTION directEvaluateUnary     (CONST x:P_literal;          CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluate          (CONST params:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext; CONST callDepth:word):P_literal; inline;
+      FUNCTION directEvaluateNullary   (                            CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateUnary     (CONST x:P_literal;          CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext; CONST callDepth:word):P_literal;
       FUNCTION evaluateToBoolean       (CONST a,b:P_literal;            CONST location:T_tokenLocation; CONST context:pointer):boolean;   virtual;
-      FUNCTION directEvaluateComparator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext;                               CONST callDepth:word):boolean;
-      FUNCTION directEvaluateAggregator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext;                               CONST callDepth:word):P_literal;
-      FUNCTION accept                  (CONST x:P_literal;                                                                            VAR context:T_evaluationContext):boolean;
+      FUNCTION directEvaluateComparator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_threadContext;                               CONST callDepth:word):boolean;
+      FUNCTION directEvaluateAggregator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_threadContext;                               CONST callDepth:word):P_literal;
+      FUNCTION accept                  (CONST x:P_literal;                                                                            VAR context:T_threadContext):boolean;
       FUNCTION getInlineValue:P_literal;
 
       //Inspection/documentation calls
@@ -79,7 +83,7 @@
 
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEach:boolean);
+PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
   VAR t:P_token;
       i:longint;
   begin
@@ -90,7 +94,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
       if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
       with preparedBody[i] do begin
         token:=t^;
-        t^.tokType:=tt_EOL; t:=context.disposeToken(t);
+        t^.tokType:=tt_EOL; t:=context.recycler.disposeToken(t);
         token.next:=nil;
         case token.tokType of
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
@@ -124,7 +128,7 @@ CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocati
     setLength(preparedBody,0);
   end;
 
-CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
   begin
     init(srt_normal_public,declAt,parent_);
     if       forWhile then typ:=srt_inline_for_while
@@ -134,7 +138,7 @@ CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST re
     resolveIds(nil);
   end;
 
-CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
   begin
     init(srt_inline_for_each,rep^.location);
     pattern.create;
@@ -172,7 +176,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_threadContext);
   VAR t:P_token;
       i:longint;
   begin
@@ -185,7 +189,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
       with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL;
-        t:=context.disposeToken(t);
+        t:=context.recycler.disposeToken(t);
         token.next:=nil;
         parIdx:=-1;
       end;
@@ -195,7 +199,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
     updatePatternForInline;
   end;
 
-CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_threadContext);
   VAR dummyBool:boolean;
       funcPtr:P_intFuncCallback=nil;
   begin
@@ -304,14 +308,37 @@ FUNCTION T_subrule.hash: T_hashInt;
     {$Q+}{$R+}
   end;
 
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
   VAR subRule:P_subrule;
   begin
     new(subRule,createPrimitiveAggregator(tok,context));
     result:=subRule;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_threadContext):P_token;
+  VAR last:P_token;
+  begin
+    if not(replaces(param,callLocation,result,last,context,false)) then result:=nil;
+  end;
+
+FUNCTION T_subrule.replacesUnary (CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext):P_token;
+  VAR parameterList:P_listLiteral;
+  begin
+    parameterList:=P_listLiteral(newListLiteral(1)^.append(x,true));
+    result:=replaces(parameterList,callLocation,context);
+    disposeLiteral(parameterList);
+  end;
+
+FUNCTION T_subrule.replacesBinary(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext):P_token;
+  VAR parameterList:P_listLiteral;
+  begin
+    parameterList:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
+    result:=replaces(parameterList,callLocation,context);
+    disposeLiteral(parameterList);
+  end;
+
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
   VAR i:longint;
   FUNCTION fallbackFeasible:boolean;
     begin
@@ -336,7 +363,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
     begin
       if not(functionIdsReady) then resolveIds(context.adapters);
       blocking:=typ in [srt_normal_private,srt_normal_public];
-      firstRep:=context.newToken(declaredAt,'',beginToken[blocking]);
+      firstRep:=context.recycler.newToken(declaredAt,'',beginToken[blocking]);
       lastRep:=firstRep;
       for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
         if parIdx>=0 then begin
@@ -353,14 +380,14 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
           {$ifdef debugMode}
           if L=nil then raise Exception.create('Whoops! Unressolved parameter pointer.');
           {$endif}
-          lastRep^.next:=context.newToken(token.location,'',tt_literal,L);
+          lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L);
           L^.rereference;
-        end else lastRep^.next:=context.newToken(token);
+        end else lastRep^.next:=context.recycler.newToken(token);
         lastRep:=lastRep^.next;
       end;
-      lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
+      lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_semicolon);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(declaredAt,'',endToken[blocking]);
+      lastRep^.next:=context.recycler.newToken(declaredAt,'',endToken[blocking]);
       lastRep:=lastRep^.next;
     end;
 
@@ -371,14 +398,14 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOr
        (param<>nil) and pattern.matches(param^,context) then begin
       prepareResult;
       result:=true;
-      context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
+      context.callStackPush(callLocation,@self,param,@self);
     end else if fallbackFeasible then begin
       prepareResult;
       result:=true;
-      context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
+      context.callStackPush(callLocation,@self,param,@self);
       tempInnerParam:=newListLiteral;
       for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^[i],true);
-      lastRep^.next:=context.newToken(declaredAt,'',tt_parList,tempInnerParam);
+      lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_parList,tempInnerParam);
       lastRep:=lastRep^.next;
     end else begin
       result:=false;
@@ -527,13 +554,13 @@ FUNCTION T_subrule.toDocString(CONST includePattern:boolean=true; CONST lengthLi
 
 FUNCTION T_subrule.evaluate(CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal;
   begin
-    result:=directEvaluate(parameters,location,P_evaluationContext(context)^,0);
+    result:=directEvaluate(parameters,location,P_threadContext(context)^,0);
   end;
 
-FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(params, nil, callLocation, firstRep,lastRep,context,false) then begin
+    if replaces(params, callLocation, firstRep,lastRep,context,false) then begin
       reduceExpression(firstRep,callDepth,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
@@ -542,19 +569,19 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
       end else begin
         result:=nil;
       end;
-      context.cascadeDisposeToken(firstRep);
+      context.recycler.cascadeDisposeToken(firstRep);
     end else begin
       context.raiseCannotApplyError('function',params,callLocation,C_EMPTY_STRING_ARRAY);
       result:=nil;
     end;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
   begin
     result:=directEvaluate(nil,callLocation,context,callDepth);
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
   VAR param:P_listLiteral;
   begin
     param:=P_listLiteral(newListLiteral(1)^.append(x,true));
@@ -564,10 +591,10 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_t
 
 FUNCTION T_subrule.evaluateToBoolean(CONST a,b:P_literal; CONST location:T_tokenLocation; CONST context:pointer):boolean;
   begin
-    result:=directEvaluateComparator(a,b,location,P_evaluationContext(context)^,0);
+    result:=directEvaluateComparator(a,b,location,P_threadContext(context)^,0);
   end;
 
-FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):boolean;
+FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):boolean;
   VAR param:P_listLiteral;
       lit:P_literal;
   begin
@@ -582,7 +609,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocat
     if lit<>nil then disposeLiteral(lit);
   end;
 
-FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
   VAR param:P_listLiteral;
   begin
     param:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
@@ -590,7 +617,7 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocati
     disposeLiteral(param);
   end;
 
-FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
+FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_threadContext):boolean;
   VAR param:P_listLiteral;
       L:P_literal;
   begin
@@ -806,7 +833,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
 
 {$ifdef fullVersion}
 VAR generateRowIdentification:T_identifiedInternalFunction;
-FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;
+FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
   VAR subRule:P_subrule=nil;
 
       firstRep:P_token=nil;
@@ -818,7 +845,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
       resultLiteral:P_listLiteral;
 
-      tempAdapters:T_adapters;
       tempcontext:T_evaluationContext;
 
       dataReadyVectorized:boolean=false;
@@ -826,29 +852,29 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   FUNCTION evaluateOk:boolean;
     begin
-      reduceExpression(firstRep,0,tempcontext);
-      result:=tempAdapters.noErrors and
+      reduceExpression(firstRep,0,tempcontext.threadContext^);
+      result:=tempcontext.adapters^.noErrors and
               (firstRep<>nil) and
               (firstRep^.next=nil) and
               (firstRep^.tokType=tt_literal) and
               (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(firstRep^.data)^.size = TList^.size);
-      tempAdapters.clearErrors;
-      if not(result) then context.cascadeDisposeToken(firstRep);
+      tempcontext.adapters^.clearErrors;
+      if not(result) then context.recycler.cascadeDisposeToken(firstRep);
     end;
 
   FUNCTION evaluatePEachExpressionOk:boolean;
     begin
-      firstRep:=context.newToken(location,'',tt_literal,TList); TList^.rereference;
-      firstRep^.next:=context.newToken(location,'t',tt_parallelEach);
+      firstRep:=context.recycler.newToken(location,'',tt_literal,TList); TList^.rereference;
+      firstRep^.next:=context.recycler.newToken(location,'t',tt_parallelEach);
       lastRep:=firstRep^.next;
-      lastRep^.next:=context.newToken(location,'t',tt_identifier);
+      lastRep^.next:=context.recycler.newToken(location,'t',tt_identifier);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(location,'',tt_ponFlipper);
+      lastRep^.next:=context.recycler.newToken(location,'',tt_ponFlipper);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(location,'',tt_literal,f); f^.rereference;
+      lastRep^.next:=context.recycler.newToken(location,'',tt_literal,f); f^.rereference;
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(location,'',tt_braceClose);
+      lastRep^.next:=context.recycler.newToken(location,'',tt_braceClose);
       result:=evaluateOk;
     end;
 
@@ -857,8 +883,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       params.create(1);
       params.append(TList,true);
-      result:=(subRule^.replaces(@params,nil,location,firstRep,lastRep,tempcontext,false) or
-               subRule^.replaces(@params,nil,location,firstRep,lastRep,tempcontext,true)) and evaluateOk;
+      result:=subRule^.replaces(@params,location,firstRep,lastRep,tempcontext.threadContext^,false) and evaluateOk;
       params.destroy;
     end;
 
@@ -970,7 +995,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           end;
           //------------------------------------------------------:Merge samples
         end;
-        context.cascadeDisposeToken(firstRep);
+        context.recycler.cascadeDisposeToken(firstRep);
         disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;
@@ -978,10 +1003,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   begin
     subRule:=P_subrule(f);
-
-    tempAdapters.create;
-    tempcontext.createContext(@tempAdapters,ct_silentlyRunAlone);
-
+    tempcontext.createAndResetSilentContext(nil);
     constructInitialTList;
 
     dataReadyVectorized:=evaluateVectorExpressionOk;
@@ -992,16 +1014,14 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
-      context.cascadeDisposeToken(firstRep);
+      context.recycler.cascadeDisposeToken(firstRep);
       disposeLiteral(TList);
       refineDataRow;
     end else begin
       context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       setLength(dataRow,0);
     end;
-    tempAdapters.destroy;
     tempcontext.destroy;
-
     result:=dataRow;
   end;
 

@@ -31,7 +31,8 @@ USES
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
-  mnh_funcs, mnh_tokens, mnh_plotData, valueStore,
+  mnh_funcs, mnh_plotData, valueStore,
+  mnh_debugging,
   mnh_contexts,
   mnh_packages, mnh_doc,
   mnh_cmdLineInterpretation,
@@ -616,7 +617,7 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
     end;
     if (command=ecUserDefinedFirst+3) then begin
       editorMeta[inputPageControl.activePageIndex]^.toggleBreakpoint;
-      runEvaluator.context.clearBreakpoints;
+      runEvaluator.context.stepper^.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i]^.setStepperBreakpoints;
       miDebug.Checked:=true;
       updateDebugParts;
@@ -717,7 +718,7 @@ PROCEDURE TMnhForm.updateScriptMenus;
 
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
-    miProfile.Checked:=not(miProfile.Checked) or miDebug.Checked;
+    miProfile.Checked:=not(miProfile.Checked);
     if miProfile.Checked and not(miTimingInfo.Checked) then miTimingInfoClick(Sender);
   end;
 
@@ -887,7 +888,7 @@ PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
 
 PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 PROCEDURE TMnhForm.onEndOfEvaluation;
