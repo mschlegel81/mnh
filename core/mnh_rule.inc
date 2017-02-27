@@ -1,5 +1,5 @@
 {$ifdef include_interface}
-  T_rule=object
+  T_rule=object(T_objectWithIdAndLocation)
     private
       idResolved,called,valueChangedAfterDeclaration:boolean;
       dataStoreMeta:P_datastoreMeta;
@@ -13,6 +13,10 @@
       subrules:array of P_subrule;
       PROCEDURE readDataStore(CONST adapters:P_adapters);
     public
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION getLocation:T_tokenLocation; virtual;
+
+
       CONSTRUCTOR create(CONST ruleId:T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
@@ -49,6 +53,16 @@ PROCEDURE T_rule.readDataStore(CONST adapters:P_adapters);
         lit^.unreference;
       end;
     end;
+  end;
+
+FUNCTION T_rule.getId:T_idString;
+  begin
+    result:=id;
+  end;
+
+FUNCTION T_rule.getLocation:T_tokenLocation;
+  begin
+    result:=declarationStart;
   end;
 
 CONSTRUCTOR T_rule.create(CONST ruleId: T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
@@ -148,7 +162,7 @@ exit}
           lastRep:=firstRep;
           CLEAN_EXIT(true);
         end else for uncurrying:=false to true do
-                 for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,context,uncurrying) then begin
+                 for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,context,uncurrying) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
@@ -168,7 +182,7 @@ exit}
       end;
       rt_synchronized: begin
         for uncurrying:=false to true do
-        for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
+        for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
           if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseSystemError('Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
@@ -194,7 +208,7 @@ exit}
       end;
       rt_customTypeCheck: begin
         for uncurrying:=false to true do
-        for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
+        for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
           called:=true;
           exit(true);
         end;
@@ -204,7 +218,7 @@ exit}
       end;
       rt_normal: begin
         for uncurrying:=false to true do
-        for sub in subrules do if (includePrivateRules or (sub^.typ=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
+        for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
           called:=true;
           exit(true);
         end;
@@ -216,18 +230,18 @@ exit}
 PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_threadContext);
   VAR i,j:longint;
   begin
-    if (id=MAIN_RULE_ID) and not(rule^.pattern.isValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.declaredAt);
+    if (id=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
     i:=0;
-    while (i<length(subrules)) and not(rule^.pattern.isEquivalent(subrules[i]^.pattern)) do inc(i);
+    while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);
     if i>=length(subrules) then begin
       setLength(subrules,i+1);
-      for j:=0 to i-1 do if subrules[j]^.pattern.hides(rule^.pattern) then context.adapters^.raiseWarning('Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.declaredAt),rule^.declaredAt);
+      for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.adapters^.raiseWarning('Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation),rule^.getLocation);
     end else begin
       dispose(subrules[i],destroy);
-      context.adapters^.raiseWarning('Overriding rule '+rule^.getId,rule^.declaredAt);
+      context.adapters^.raiseWarning('Overriding rule '+rule^.getId,rule^.getLocation);
     end;
     subrules[i]:=rule;
-    if (length(subrules)>1) and (ruleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[ruleType]+'rule!',rule^.declaredAt);
+    if (length(subrules)>1) and (ruleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[ruleType]+'rule!',rule^.getLocation);
     if (ruleType=rt_memoized) then cache^.clear;
   end;
 
@@ -258,7 +272,7 @@ FUNCTION T_rule.hasPublicSubrule: boolean;
   VAR i:longint;
   begin
     if ruleType in C_publicRuleTypes then exit(true);
-    for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then exit(true);
+    for i:=0 to length(subrules)-1 do if subrules[i]^.getType=srt_normal_public then exit(true);
     result:=false;
   end;
 
@@ -377,9 +391,9 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_threadContext; C
       result^.next:=context.recycler.newToken(location,'',tt_braceClose);
     end else begin
       for sub in subrules do begin
-        minPatternLength:=min(minPatternLength,length(sub^.pattern.sig));
-        maxPatternLength:=max(maxPatternLength,length(sub^.pattern.sig));
-        if sub^.pattern.hasOptionals then maxPatternLength:=maxLongint;
+        minPatternLength:=min(minPatternLength,sub^.arity);
+        maxPatternLength:=max(maxPatternLength,sub^.arity);
+        if sub^.isVariadic then maxPatternLength:=maxLongint;
       end;
       result:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
     end;

@@ -1,4 +1,19 @@
-{$ifdef include_interface}
+UNIT mnh_subrules;
+INTERFACE
+USES sysutils,math,
+     myGenerics,myStringUtil,
+     mnh_basicTypes,mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_tokens,
+     tokenStack,
+     mnh_contexts,
+     {$ifdef fullVersion}
+     mnh_plotData,mnh_funcs_plot,
+     {$endif}
+     mnh_funcs,mnh_funcs_math,mnh_funcs_list,mnh_funcs_strings,
+     mnh_patterns;
+TYPE
   T_subruleType=(srt_normal_public,
                  srt_normal_private,
                  srt_inline_for_literal,
@@ -13,6 +28,7 @@
     token:T_token;
   end;
 
+  P_subrule=^T_subrule;
   T_subruleArray=array of P_subrule;
 
   T_subrule=object(T_expressionLiteral)
@@ -21,7 +37,7 @@
       firstCallCs:TRTLCriticalSection;
       functionIdsReady:boolean;
       comment:ansistring;
-      parent:P_rule;
+      parent:P_objectWithIdAndLocation;
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
@@ -29,11 +45,11 @@
 
       PROCEDURE updatePatternForInline;
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
-      CONSTRUCTOR init(CONST srt: T_subruleType; CONST location: T_tokenLocation; CONST parentRule:P_rule=nil);
-      PROCEDURE resolveIds(CONST adapters:P_adapters);
+      CONSTRUCTOR init(CONST srt: T_subruleType; CONST location: T_tokenLocation; CONST parentRule:P_objectWithIdAndLocation=nil);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
     public
-      CONSTRUCTOR create           (CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
+      PROCEDURE resolveIds(CONST adapters:P_adapters);
+      CONSTRUCTOR create           (CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
@@ -41,10 +57,15 @@
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_threadContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy; virtual;
-      //Literal routines:
-
+      //Pattern related:
       FUNCTION arity:longint; virtual;
+      FUNCTION isVariadic:boolean;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      FUNCTION hasValidMainPattern:boolean;
+      FUNCTION hasEquivalentPattern(CONST s:P_subrule):boolean;
+      FUNCTION hidesSubrule(CONST s:P_subrule):boolean;
+      FUNCTION getParameterNames:P_listLiteral;
+      //Literal routines:
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
@@ -70,6 +91,8 @@
       FUNCTION getParentId:T_idString; virtual;
 
       //Inspection/documentation calls
+      PROCEDURE setComment(CONST commentText:ansistring);
+      PROPERTY getType:T_subruleType read typ;
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
@@ -83,8 +106,9 @@
       FUNCTION getAttributesLiteral:P_listLiteral;
   end;
 
-{$endif}
-{$ifdef include_implementation}
+PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
+IMPLEMENTATION
 PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
   VAR t:P_token;
       i:longint;
@@ -117,7 +141,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadC
     setLength(preparedBody,i);
   end;
 
-CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_rule=nil);
+CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_objectWithIdAndLocation=nil);
   begin
     inherited init(lt_expression);
     initCriticalSection(firstCallCs);
@@ -130,7 +154,7 @@ CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocati
     setLength(preparedBody,0);
   end;
 
-CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
+CONSTRUCTOR T_subrule.create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
   begin
     init(srt_normal_public,declAt,parent_);
     if       forWhile then typ:=srt_inline_for_while
@@ -276,7 +300,32 @@ DESTRUCTOR T_subrule.destroy;
 
 FUNCTION T_subrule.canApplyToNumberOfParameters(CONST parCount:longint):boolean;
   begin
-    result:=(arity<=parCount) and (pattern.hasOptionals or (arity=parCount));
+    result:=(arity<=parCount) and pattern.hasOptionals or (arity=parCount);
+  end;
+
+FUNCTION T_subrule.isVariadic:boolean;
+  begin
+    result:=pattern.hasOptionals;
+  end;
+
+FUNCTION T_subrule.hasValidMainPattern:boolean;
+  begin
+    result:=pattern.isValidMainPattern;
+  end;
+
+FUNCTION T_subrule.hasEquivalentPattern(CONST s:P_subrule):boolean;
+  begin
+    result:=pattern.isEquivalent(s^.pattern);
+  end;
+
+FUNCTION T_subrule.hidesSubrule(CONST s:P_subrule):boolean;
+  begin
+    result:=pattern.hides(s^.pattern);
+  end;
+
+FUNCTION T_subrule.getParameterNames:P_listLiteral;
+  begin
+    result:=pattern.getParameterNames;
   end;
 
 FUNCTION T_subrule.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
@@ -535,6 +584,11 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
 FUNCTION T_subrule.toString(CONST lengthLimit:longint=maxLongint): ansistring;
   begin result:=toDocString(true,lengthLimit); end;
 
+PROCEDURE T_subrule.setComment(CONST commentText:ansistring);
+  begin
+    comment:=commentText;
+  end;
+
 FUNCTION T_subrule.toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
   VAR i,remainingLength:longint;
       prevIdLike,idLike:boolean;
@@ -563,7 +617,7 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(params, callLocation, firstRep,lastRep,context,false) then begin
-      reduceExpression(firstRep,callDepth,context);
+      context.reduceExpression(firstRep,callDepth);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -641,7 +695,7 @@ FUNCTION T_subrule.getInlineValue:P_literal;
 
 FUNCTION T_subrule.getParentId:T_idString;
   begin
-    result:=parent^.id;
+    result:=parent^.getId;
   end;
 
 FUNCTION T_subrule.getCmdLineHelpText:ansistring;
@@ -671,7 +725,7 @@ FUNCTION T_subrule.getId:T_idString;
       srt_inline_for_while  : result:='while body';
       else begin
         if parent=nil then result:='?'
-                      else result:=parent^.id;
+                      else result:=parent^.getId;
         result:=result+pattern.toString;
       end;
     end;
@@ -798,7 +852,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
-          P_package(location.package)^.resolveRuleId(t^,adapters);
+          resolveRuleId(nil,adapters);
       end;
       t:=t^.next;
     end;
@@ -829,7 +883,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          P_package(token.location.package)^.resolveRuleId(token,adapters);
+          token.resolveRuleId(nil,adapters);
           functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
         end;
       end;
@@ -859,7 +913,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   FUNCTION evaluateOk:boolean;
     begin
-      reduceExpression(firstRep,0,tempcontext.threadContext^);
+      tempcontext.threadContext^.reduceExpression(firstRep,0);
       result:=tempcontext.adapters^.noErrors and
               (firstRep<>nil) and
               (firstRep^.next=nil) and
@@ -1045,16 +1099,33 @@ FUNCTION expressionToTokens(CONST subruleLiteral:P_expressionLiteral):P_listLite
       else result^.appendString(safeTokenToString(@token));
     end;
   end;
-{$endif}
-{$ifdef include_initialization}
-{$ifdef fullVersion}
-generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
-{$endif}
-subruleApplyOpCallback :=@subruleApplyOpImpl;
-expressionToTokensCallback:=@expressionToTokens;
-{$endif}
-{$ifdef include_finalization}
-{$ifdef fullVersion}
-generateRowIdentification.destroy;
-{$endif}
-{$endif}
+
+{$i mnh_func_defines.inc}
+FUNCTION arity_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
+    then result:=newIntLiteral(P_expressionLiteral(arg0)^.arity);
+  end;
+
+FUNCTION parameterNames_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
+    then result:=P_subrule(arg0)^.getParameterNames;
+  end;
+
+INITIALIZATION
+  {$ifdef fullVersion}
+  generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
+  {$endif}
+  subruleApplyOpCallback :=@subruleApplyOpImpl;
+  expressionToTokensCallback:=@expressionToTokens;
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
+
+FINALIZATION
+  {$ifdef fullVersion}
+  generateRowIdentification.destroy;
+  {$endif}
+end.

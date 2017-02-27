@@ -59,6 +59,7 @@ TYPE
     FUNCTION hides(CONST p:T_pattern):boolean;
     FUNCTION isValidMainPattern:boolean;
     PROCEDURE toParameterIds(CONST tok:P_token);
+    FUNCTION getParameterNames:P_listLiteral;
     PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);
   end;
 
@@ -461,6 +462,13 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
       and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
+  end;
+
+FUNCTION T_pattern.getParameterNames:P_listLiteral;
+  VAR el:T_patternElement;
+  begin
+    result:=newListLiteral(length(sig));
+    for el in sig do result^.appendString(el.getId);
   end;
 
 PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);

@@ -586,27 +586,6 @@ FUNCTION toExpression_imp intFuncSignature;
     end;
   end;
 
-FUNCTION arity_imp intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=newIntLiteral(P_expressionLiteral(arg0)^.arity);
-  end;
-
-FUNCTION parameterNames_imp intFuncSignature;
-  FUNCTION getNames(CONST subRule:P_subrule):P_listLiteral;
-    VAR i:longint;
-    begin
-      result:=newListLiteral;
-      for i:=0 to length(subRule^.pattern.sig)-1 do result^.appendString(subRule^.pattern.sig[i].getId);
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression)
-    then result:=getNames(P_subrule(arg0));
-  end;
-
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
       i:longint;
@@ -925,7 +904,7 @@ FUNCTION clearRuleCache_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       ruleIdToken.create;
       ruleIdToken.define(tokenLocation,P_stringLiteral(arg0)^.value,tt_identifier);
-      P_package(tokenLocation.package)^.resolveRuleId(ruleIdToken,context.adapters);
+      ruleIdToken.resolveRuleId(tokenLocation.package,context.adapters);
       if ruleIdToken.tokType in [tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule] then P_rule(ruleIdToken.data)^.clearCache;
       ruleIdToken.destroy;
       result:=newVoidLiteral;
@@ -1011,8 +990,6 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
   registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,false,ak_unary,'toExpression(S);//Returns an expression parsed from S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,true,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,false,ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');

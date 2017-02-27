@@ -6,17 +6,15 @@ USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typ
      tokenRecycler,
      mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
      Classes,mnh_profiling,{$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,mnh_subrules,
      mnh_datastores;
 
 {$define include_interface}
 TYPE
   P_package=^T_package;
   {$include mnh_token.inc}
-  P_subrule=^T_subrule;
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_subrule.inc}
   {$include mnh_rule.inc}
   {$include mnh_futureTask.inc}
   {$include mnh_procBlock.inc}
@@ -52,7 +50,7 @@ TYPE
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
-      PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
+      //PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
@@ -78,7 +76,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
 
@@ -172,7 +169,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 
 {$define include_implementation}
 {$include mnh_token.inc}
-{$include mnh_subrule.inc}
 {$include mnh_futureTask.inc}
 {$include mnh_procBlock.inc}
 {$include mnh_rule.inc}
@@ -390,7 +386,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           if (context.adapters^.noErrors) and (ruleGroup^.ruleType in C_mutableRuleTypes) and not(hasTrivialPattern) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
-            subRule^.comment:=join(commentLines,C_lineBreakChar);
+            subRule^.setComment(join(commentLines,C_lineBreakChar));
             commentLines:=C_EMPTY_STRING_ARRAY;
             subRule^.setAttributes(attributeLines);
             attributeLines:=C_EMPTY_STRING_ARRAY;
@@ -735,51 +731,6 @@ DESTRUCTOR T_package.destroy;
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
   end;
 
-PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adapters);
-  VAR userRule:P_rule;
-      intrinsicFuncPtr:P_intFuncCallback;
-      ruleId:T_idString;
-  begin
-    ruleId   :=token.txt;
-    if packageRules.containsKey(ruleId,userRule) then begin
-      if userRule^.ruleType=rt_customTypeCheck
-      then token.tokType:=tt_customTypeRule
-      else token.tokType:=tt_localUserRule;
-      token.data:=userRule;
-      userRule^.idResolved:=true;
-      exit;
-    end;
-    if importedRules.containsKey(ruleId,userRule) then begin
-      if userRule^.ruleType=rt_customTypeCheck
-      then token.tokType:=tt_customTypeRule
-      else token.tokType:=tt_importedUserRule;
-      token.data:=userRule;
-      userRule^.idResolved:=true;
-      exit;
-    end;
-    if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
-      token.tokType:=tt_intrinsicRule;
-      token.data:=intrinsicFuncPtr;
-      exit;
-    end;
-    ruleId:=isTypeToType(ruleId);
-    if ruleId<>'' then begin
-      if packageRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
-        token.tokType:=tt_customTypeRule;
-        token.data:=userRule;
-        userRule^.idResolved:=true;
-        exit;
-      end;
-      if importedRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
-        token.tokType:=tt_customTypeRule;
-        token.data:=userRule;
-        userRule^.idResolved:=true;
-        exit;
-      end;
-    end;
-    if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
-  end;
-
 FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
@@ -995,7 +946,7 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
         subRule:P_subrule;
     begin
       result:=newListLiteral();
-      for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.typ=srt_normal_public then
+      for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.getType=srt_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
           .put('subrule'   ,subRule^.rereferenced,false)^
@@ -1008,13 +959,58 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
               .put('subrules',subRulesMeta,false);
   end;
 
+PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNil:P_adapters);
+  VAR userRule:P_rule;
+      intrinsicFuncPtr:P_intFuncCallback;
+      ruleId:T_idString;
+  begin
+    ruleId   :=token.txt;
+    if P_package(package)^.packageRules.containsKey(ruleId,userRule) then begin
+      if userRule^.ruleType=rt_customTypeCheck
+      then token.tokType:=tt_customTypeRule
+      else token.tokType:=tt_localUserRule;
+      token.data:=userRule;
+      userRule^.idResolved:=true;
+      exit;
+    end;
+    if P_package(package)^.importedRules.containsKey(ruleId,userRule) then begin
+      if userRule^.ruleType=rt_customTypeCheck
+      then token.tokType:=tt_customTypeRule
+      else token.tokType:=tt_importedUserRule;
+      token.data:=userRule;
+      userRule^.idResolved:=true;
+      exit;
+    end;
+    if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
+      token.tokType:=tt_intrinsicRule;
+      token.data:=intrinsicFuncPtr;
+      exit;
+    end;
+    ruleId:=isTypeToType(ruleId);
+    if ruleId<>'' then begin
+      if P_package(package)^.packageRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+        token.tokType:=tt_customTypeRule;
+        token.data:=userRule;
+        userRule^.idResolved:=true;
+        exit;
+      end;
+      if P_package(package)^.importedRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+        token.tokType:=tt_customTypeRule;
+        token.data:=userRule;
+        userRule^.idResolved:=true;
+        exit;
+      end;
+    end;
+    if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
+  end;
+
 {$undef include_implementation}
 INITIALIZATION
 {$define include_initialization}
   {$include mnh_token.inc}
   {$include mnh_fmtStmt.inc}
-  {$include mnh_subrule.inc}
   {$include mnh_rule.inc}
+  resolveIDsCallback:=@resolveId;
   pendingTasks.create;
   reduceExpressionCallback:=@reduceExpression;
   //callbacks in mnh_litvar:
@@ -1022,7 +1018,6 @@ INITIALIZATION
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
-  mnh_funcs_plot.generateRow:=@generateRow;
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
   {$include mnh_funcs.inc}
@@ -1033,5 +1028,4 @@ FINALIZATION
   pendingTasks.destroy;
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
-{$include mnh_subrule.inc}
 end.

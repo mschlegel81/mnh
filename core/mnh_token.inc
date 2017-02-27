@@ -79,8 +79,8 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR comments,attributes:T_
           inc(stepIndex,2);
           token[stepIndex].txt:=token[stepIndex-2].txt+ID_QUALIFY_CHARACTER+token[stepIndex].txt;
           token[stepIndex].tokType:=tt_identifier;
-          package^.resolveRuleId(token[stepIndex],nil);
-        end else if package<>nil then package^.resolveRuleId(token[stepIndex],nil);
+          token[stepIndex].resolveRuleId(package,nil);
+        end else if package<>nil then token[stepIndex].resolveRuleId(package,nil);
         tt_each,tt_parallelEach: if (stepIndex<tokenFill-3) and
          (token[stepIndex+1].tokType=tt_braceOpen) and
          (token[stepIndex+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
@@ -459,7 +459,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
       case t^.tokType of
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
-          if t^.tokType=tt_identifier then inPackage^.resolveRuleId(t^,nil);
+          if t^.tokType=tt_identifier then t^.resolveRuleId(inPackage,nil);
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
@@ -974,8 +974,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           result:=P_boolLiteral(res)^.value;
         end else begin
           if res<>nil
-          then context.adapters^.raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.declaredAt)
-          else context.adapters^.raiseError('Evaluation of the head-part of a while statement failed.',headRule^.declaredAt);
+          then context.adapters^.raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.getLocation)
+          else context.adapters^.raiseError('Evaluation of the head-part of a while statement failed.',headRule^.getLocation);
           result:=false;
         end;
         if res<>nil then disposeLiteral(res);
@@ -1039,8 +1039,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
-        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^[0]^.literalType=lt_expression) then begin
-
+        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
+           (parameterListLiteral^[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^[0])^.canApplyToNumberOfParameters(2))
+        then begin
           if parameterListLiteral^[0]^.getReferenceCount=1 then begin
             newLiteral:=parameterListLiteral^[0]^.rereferenced;
             inlineRule:=P_subrule(newLiteral);
@@ -1048,10 +1049,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             new(inlineRule,clone(P_subrule(parameterListLiteral^[0])));
             newLiteral:=inlineRule;
           end;
-          inlineRule^.pattern.appendOptional;
           firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
-        end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',errorLocation);
+        end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifndef DEBUGMODE}
         try
@@ -1696,7 +1696,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end;
         tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
         tt_identifier: begin
-          P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
+          first^.resolveRuleId(nil,context.adapters);
           didSubstitution:=true;
         end;
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
@@ -1728,7 +1728,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
-              P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
+              first^.resolveRuleId(nil,context.adapters);
               first^.next:=context.recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
