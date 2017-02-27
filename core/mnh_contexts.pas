@@ -103,10 +103,8 @@ TYPE
       {$endif}
   end;
 
-  T_reduceExpressionCallback=PROCEDURE(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
-
-VAR reduceExpressionCallback:T_reduceExpressionCallback;
-
+VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
 IMPLEMENTATION
 VAR globalLock:TRTLCriticalSection;
 CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);

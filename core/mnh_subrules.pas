@@ -473,6 +473,11 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
     end;
   end;
 
+FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
+  begin
+    result:=P_subrule(subrulePointer)^.replaces(param,callLocation,firstRep,lastRep,context,useUncurryingFallback);
+  end;
+
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
   VAR i:longint;
       r:P_subrule;
@@ -1087,18 +1092,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
   end;
 
 {$endif}
-FUNCTION expressionToTokens(CONST subruleLiteral:P_expressionLiteral):P_listLiteral;
-  VAR sub:P_subrule;
-      i:longint;
-  begin
-    sub:=P_subrule(subruleLiteral);
-    result:=newListLiteral(length(sub^.preparedBody));
-    for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
-      if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
-      then result^.append(token.data,true)
-      else result^.appendString(safeTokenToString(@token));
-    end;
-  end;
 
 {$i mnh_func_defines.inc}
 FUNCTION arity_imp intFuncSignature;
@@ -1115,14 +1108,54 @@ FUNCTION parameterNames_imp intFuncSignature;
     then result:=P_subrule(arg0)^.getParameterNames;
   end;
 
+FUNCTION tokenSplit_impl intFuncSignature;
+  FUNCTION expressionToTokens(CONST subruleLiteral:P_expressionLiteral):P_listLiteral;
+    VAR sub:P_subrule;
+        i:longint;
+    begin
+      sub:=P_subrule(subruleLiteral);
+      result:=newListLiteral(length(sub^.preparedBody));
+      for i:=0 to length(sub^.preparedBody)-1 do with sub^.preparedBody[i] do begin
+        if (token.tokType=tt_literal) and not(P_literal(token.data)^.literalType in [lt_void,lt_string])
+        then result^.append(token.data,true)
+        else result^.appendString(safeTokenToString(@token));
+      end;
+    end;
+
+  VAR language:string='MNH';
+      stringToSplit:ansistring;
+      tokens:T_arrayOfString;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) then begin
+      if (arg1^.literalType=lt_string)
+      then language:=str1^.value
+      else exit(nil);
+    end;
+    if (params<>nil) and (params^.size>=1) then
+    case arg0^.literalType of
+      lt_string:begin
+        stringToSplit:=str0^.value;
+        tokens:=tokenSplit(stringToSplit,language);
+        result:=newListLiteral;
+        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(tokens[i]);
+      end;
+      lt_expression: if uppercase(language)='MNH' then
+        result:=expressionToTokens(P_expressionLiteral(arg0));
+    end;
+  end;
+
+
 INITIALIZATION
   {$ifdef fullVersion}
   generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
   {$endif}
-  subruleApplyOpCallback :=@subruleApplyOpImpl;
-  expressionToTokensCallback:=@expressionToTokens;
+  subruleApplyOpCallback    :=@subruleApplyOpImpl;
+  subruleReplacesCallback   :=@subruleReplaces;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
+  registerRule(STRINGS_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl   ,true,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
 
 FINALIZATION
   {$ifdef fullVersion}
