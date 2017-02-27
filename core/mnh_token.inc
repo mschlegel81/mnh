@@ -450,47 +450,6 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inPackage: P_package; VAR adapters: T_a
     setLength(token,tokenFill);
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR context:T_threadContext; OUT closingBracket:P_token):T_bodyParts;
-  VAR t,p:P_token;
-      bracketLevel,i:longint;
-      partLength:longint=-1;
-  begin
-    closingBracket:=nil;
-    bracketLevel:=initialBracketLevel;
-    t:=first; p:=nil;
-    if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
-      setLength(result,1);
-      result[0].first:=first^.next;
-    end else begin
-      context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
-      setLength(result,0);
-      exit;
-    end;
-    while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-      if t^.tokType in C_openingBrackets then inc(bracketLevel)
-      else if t^.tokType in C_closingBrackets then dec(bracketLevel)
-      else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-        if partLength=0 then context.adapters^.raiseError('Empty body part.',result[length(result)-1].first^.location);
-        result[length(result)-1].last:=p; //end of body part is token before comma
-        setLength(result,length(result)+1);
-        result[length(result)-1].first:=t^.next; //start of next body part is token after comma
-        partLength:=-1; //excluding delimiting separators
-      end;
-      p:=t; t:=t^.next; inc(partLength);
-    end;
-    result[length(result)-1].last:=p; //end of body part is token before comma
-    if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-      context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
-      setLength(result,0);
-      exit;
-    end;
-    closingBracket:=t;
-    for i:=0 to length(result)-1 do begin
-      if result[i].last^.next<>closingBracket then context.recycler.disposeToken(result[i].last^.next);
-      result[i].last^.next:=nil;
-    end;
-  end;
-
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_threadContext);
   VAR t:P_token;
       rule:P_rule;
@@ -679,7 +638,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           exit(false);
         end;
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(eachToken,0,context,bracketClosingEach);
+        bodyParts:=getBodyParts(eachToken,0,context.recycler,context.adapters,bracketClosingEach);
         if (bracketClosingEach=nil) or not(context.adapters^.noErrors) then exit(false);
         if (length(bodyParts)>1) and isPureAggregator then begin
           context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
@@ -984,7 +943,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         result:=false;
         //first token is <while>-Token
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
+        bodyParts:=getBodyParts(first,1,context.recycler,context.adapters,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if length(bodyParts)<>2 then begin
           context.adapters^.raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',errorLocation);

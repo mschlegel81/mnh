@@ -598,7 +598,7 @@ FUNCTION parameterNames_imp intFuncSignature;
     VAR i:longint;
     begin
       result:=newListLiteral;
-      for i:=0 to length(subRule^.pattern.sig)-1 do result^.appendString(subRule^.pattern.sig[i].id);
+      for i:=0 to length(subRule^.pattern.sig)-1 do result^.appendString(subRule^.pattern.sig[i].getId);
     end;
 
   begin

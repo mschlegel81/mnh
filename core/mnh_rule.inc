@@ -408,4 +408,13 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiter
               .put('attributes',attributes       ,false);
   end;
 
+FUNCTION customTypeCheckToExpression(CONST rule:pointer):P_expressionLiteral;
+  begin
+    result:=P_rule(rule)^.subrules[0];
+  end;
+
 {$endif}
+{$ifdef include_initialization}
+  customTypeCheckToExpressionCallback:=@customTypeCheckToExpression;
+{$endif}
+

@@ -64,8 +64,10 @@
       FUNCTION evaluateToBoolean       (CONST a,b:P_literal;            CONST location:T_tokenLocation; CONST context:pointer):boolean;   virtual;
       FUNCTION directEvaluateComparator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_threadContext;                               CONST callDepth:word):boolean;
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_threadContext;                               CONST callDepth:word):P_literal;
-      FUNCTION accept                  (CONST x:P_literal;                                                                            VAR context:T_threadContext):boolean;
+
+      FUNCTION accept(CONST a:P_literal; CONST context:pointer): boolean; virtual;
       FUNCTION getInlineValue:P_literal;
+      FUNCTION getParentId:T_idString; virtual;
 
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
@@ -617,12 +619,12 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocati
     disposeLiteral(param);
   end;
 
-FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_threadContext):boolean;
+FUNCTION T_subrule.accept(CONST a:P_literal; CONST context:pointer):boolean;
   VAR param:P_listLiteral;
       L:P_literal;
   begin
-    param:=P_listLiteral(newListLiteral(1)^.append(x,true));
-    L:=directEvaluate(param,declaredAt,context,0);
+    param:=P_listLiteral(newListLiteral(1)^.append(a,true));
+    L:=directEvaluate(param,declaredAt,P_threadContext(context)^,0);
     dispose(param,destroy);
     result:=(L<>nil) and (L^.literalType=lt_boolean) and P_boolLiteral(L)^.value;
     if L<>nil then disposeLiteral(L);
@@ -635,6 +637,11 @@ FUNCTION T_subrule.getInlineValue:P_literal;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
+  end;
+
+FUNCTION T_subrule.getParentId:T_idString;
+  begin
+    result:=parent^.id;
   end;
 
 FUNCTION T_subrule.getCmdLineHelpText:ansistring;
@@ -759,7 +766,7 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
 
 FUNCTION T_subrule.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
   begin
-    result:=(length(pattern.sig)=1) and (literalTypeToAccept in pattern.sig[0].typeWhitelist);
+    result:=(length(pattern.sig)=1) and (pattern.sig[0].acceptType(literalTypeToAccept));
   end;
 
 FUNCTION T_subrule.getAttributesLiteral:P_listLiteral;

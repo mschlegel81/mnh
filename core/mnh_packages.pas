@@ -3,9 +3,10 @@ INTERFACE
 USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
      tokenStack,valueStore,
      mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
+     tokenRecycler,
      mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
      Classes,mnh_profiling,{$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,
      mnh_datastores;
 
 {$define include_interface}
@@ -13,7 +14,6 @@ TYPE
   P_package=^T_package;
   {$include mnh_token.inc}
   P_subrule=^T_subrule;
-  {$include mnh_pattern.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   {$include mnh_subrule.inc}
@@ -172,7 +172,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 
 {$define include_implementation}
 {$include mnh_token.inc}
-{$include mnh_pattern.inc}
 {$include mnh_subrule.inc}
 {$include mnh_futureTask.inc}
 {$include mnh_procBlock.inc}
@@ -317,22 +316,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         ruleDeclarationStart:T_tokenLocation;
 
     PROCEDURE parseRule;
-      VAR partLocation:T_tokenLocation;
-
-      PROCEDURE fail(VAR firstOfPart:P_token);
-        begin
-          if firstOfPart=nil
-          then context.adapters^.raiseError('Invalid declaration pattern element.',partLocation)
-          else context.adapters^.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
-          context.recycler.cascadeDisposeToken(firstOfPart);
-        end;
-
-      PROCEDURE assertNil(VAR firstOfPart:P_token);
-        begin
-          if firstOfPart<>nil then fail(firstOfPart);
-        end;
-
-      CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
       VAR p:P_token; //iterator
           hasTrivialPattern:boolean=true;
           //rule meta data
@@ -340,13 +323,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           ruleId:T_idString='';
           evaluateBody:boolean;
           rulePattern:T_pattern;
-          rulePatternElement:T_patternElement;
           ruleBody:P_token;
           subRule:P_subrule;
           ruleGroup:P_rule;
-          parts:T_bodyParts;
-          closingBracket:P_token;
-          i:longint;
           inlineValue:P_literal;
       begin
         ruleDeclarationStart:=first^.location;
@@ -392,93 +371,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           exit;
         end;
         rulePattern.create;
-        if first^.tokType=tt_braceOpen then begin
-          if (first^.next<>nil) and (first^.next^.tokType=tt_braceClose) then begin
-            setLength(parts,0);
-            closingBracket:=first^.next;
-          end else begin
-            hasTrivialPattern:=false;
-            parts:=getBodyParts(first,0,context,closingBracket);
-            for i:=0 to length(parts)-1 do begin
-              partLocation:=parts[i].first^.location;
-              if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
-                if i<>length(parts)-1 then context.adapters^.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
-                //Optionals: f(...)->
-                rulePattern.appendOptional;
-                parts[i].first:=context.recycler.disposeToken(parts[i].first);
-                assertNil(parts[i].first);
-              end else if (parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
-                //Identified parameter: f(x)->
-                rulePatternElement.create(parts[i].first^.txt);
-                parts[i].first:=context.recycler.disposeToken(parts[i].first);
-                if (parts[i].first<>nil) then begin
-                  if (parts[i].first^.tokType in C_typeChecks) then begin
-                    rulePatternElement.restrictionType:=parts[i].first^.tokType;
-                    parts[i].first:=context.recycler.disposeToken(parts[i].first);
-
-                    if rulePatternElement.restrictionType in C_modifieableTypeChecks then begin
-                      if (parts[i].first=nil) then begin end else
-                      if (parts[i].first^.tokType=tt_braceOpen) and
-                         (parts[i].first^.next<>nil) and
-                         (parts[i].first^.next^.tokType=tt_literal) and
-                         (P_literal(parts[i].first^.next^.data)^.literalType=lt_int) and
-                         (P_intLiteral(parts[i].first^.next^.data)^.value>=0) and
-                         (parts[i].first^.next^.next<>nil) and
-                         (parts[i].first^.next^.next^.tokType=tt_braceClose) and
-                         (parts[i].first^.next^.next^.next=nil) then begin
-                        rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.next^.data)^.value;
-                        context.recycler.cascadeDisposeToken(parts[i].first);
-                      end else fail(parts[i].first);
-                    end else assertNil(parts[i].first);
-
-                  end else if (parts[i].first^.tokType in C_patternElementComparators) then begin
-                    rulePatternElement.restrictionType:=parts[i].first^.tokType;
-                    parts[i].first:=context.recycler.disposeToken(parts[i].first);
-
-                    if (parts[i].first=nil) then fail(parts[i].first) else
-                    if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
-                      rulePatternElement.restrictionId:=parts[i].first^.txt;
-                      parts[i].first:=context.recycler.disposeToken(parts[i].first);
-                      assertNil(parts[i].first);
-                    end else begin
-                      reduceExpression(parts[i].first,0,context);
-                      if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
-                        rulePatternElement.restrictionValue:=parts[i].first^.data;
-                        rulePatternElement.restrictionValue^.rereference;
-                        parts[i].first:=context.recycler.disposeToken(parts[i].first);
-                        assertNil(parts[i].first);
-                      end else fail(parts[i].first);
-                    end;
-
-                  end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
-                    rulePatternElement.restrictionType:=parts[i].first^.tokType;
-                    rulePatternElement.customTypeCheck:=P_rule(parts[i].first^.data)^.subrules[0];
-                    parts[i].first:=context.recycler.disposeToken(parts[i].first);
-
-                    assertNil(parts[i].first);
-                  end else fail(parts[i].first);
-                end;
-                rulePattern.append(rulePatternElement);
-              end else begin
-                //Anonymous equals: f(1)->
-                reduceExpression(parts[i].first,0,context);
-                if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
-                  rulePatternElement.createAnonymous;
-                  rulePatternElement.restrictionType:=tt_comparatorListEq;
-                  rulePatternElement.restrictionValue:=parts[i].first^.data;
-                  rulePatternElement.restrictionValue^.rereference;
-                  parts[i].first:=context.recycler.disposeToken(parts[i].first);
-                  assertNil(parts[i].first);
-                  rulePattern.append(rulePatternElement);
-                end else fail(parts[i].first);
-              end;
-            end;
-            parts:=nil;
-          end;
-          rulePattern.finalizeRefs(ruleDeclarationStart,context);
-          context.recycler.disposeToken(first);
-          first:=context.recycler.disposeToken(closingBracket);
-        end;
+        if first^.tokType=tt_braceOpen then rulePattern.parse(first,ruleDeclarationStart,context);
         if first<>nil then begin
           first:=context.recycler.disposeToken(first);
         end else begin
@@ -1121,8 +1014,9 @@ INITIALIZATION
   {$include mnh_token.inc}
   {$include mnh_fmtStmt.inc}
   {$include mnh_subrule.inc}
+  {$include mnh_rule.inc}
   pendingTasks.create;
-
+  reduceExpressionCallback:=@reduceExpression;
   //callbacks in mnh_litvar:
 
   //callbacks in doc

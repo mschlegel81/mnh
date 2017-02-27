@@ -136,6 +136,9 @@ TYPE
     FUNCTION evaluateToBoolean(CONST a,b:P_literal;            CONST location:T_tokenLocation; CONST context:pointer):boolean;   virtual; abstract;
     FUNCTION arity:longint; virtual; abstract;
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
+
+    FUNCTION accept(CONST a:P_literal; CONST context:pointer): boolean; virtual; abstract;
+    FUNCTION getParentId:T_idString; virtual; abstract;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object

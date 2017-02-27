@@ -9,9 +9,7 @@ USES //FPC/LCL libraries
      //MNH:
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,mnh_litVar,
-     {$ifdef fullVersion}
      mnh_tokens,
-     {$endif}
      tokenStack,valueStore,tokenRecycler,
      mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
@@ -70,7 +68,7 @@ TYPE
       {$endif}
 
       PROPERTY threadOptions:T_threadContextOptions read options;
-
+      PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word); inline;
   end;
 
   T_evaluationContext=object
@@ -104,6 +102,10 @@ TYPE
       FUNCTION isPaused:boolean;
       {$endif}
   end;
+
+  T_reduceExpressionCallback=PROCEDURE(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+
+VAR reduceExpressionCallback:T_reduceExpressionCallback;
 
 IMPLEMENTATION
 VAR globalLock:TRTLCriticalSection;
@@ -387,6 +389,9 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
     valueStore.reportVariables(variableReport);
   end;
 {$endif}
+
+PROCEDURE T_threadContext.reduceExpression(VAR first:P_token; CONST callDepth:word); begin reduceExpressionCallback(first,callDepth,self); end;
+
 
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
   VAR p:P_threadContext;

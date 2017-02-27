@@ -1,6 +1,7 @@
 UNIT tokenRecycler;
 INTERFACE
-USES mnh_basicTypes,mnh_constants,
+USES myGenerics,
+     mnh_basicTypes,mnh_constants,
      mnh_litVar,
      mnh_tokens,mnh_out_adapters;
 TYPE
@@ -21,7 +22,49 @@ TYPE
       FUNCTION cascaseDisposeToLiteral(p:P_token; CONST errorBefore:boolean):P_literal;
   end;
 
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
 IMPLEMENTATION
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
+  VAR t,p:P_token;
+      bracketLevel,i:longint;
+      partLength:longint=-1;
+  begin
+    closingBracket:=nil;
+    bracketLevel:=initialBracketLevel;
+    t:=first; p:=nil;
+    if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
+      setLength(result,1);
+      result[0].first:=first^.next;
+    end else begin
+      adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      setLength(result,0);
+      exit;
+    end;
+    while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+      if t^.tokType in C_openingBrackets then inc(bracketLevel)
+      else if t^.tokType in C_closingBrackets then dec(bracketLevel)
+      else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
+        if partLength=0 then adapters^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        result[length(result)-1].last:=p; //end of body part is token before comma
+        setLength(result,length(result)+1);
+        result[length(result)-1].first:=t^.next; //start of next body part is token after comma
+        partLength:=-1; //excluding delimiting separators
+      end;
+      p:=t; t:=t^.next; inc(partLength);
+    end;
+    result[length(result)-1].last:=p; //end of body part is token before comma
+    if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+      adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      setLength(result,0);
+      exit;
+    end;
+    closingBracket:=t;
+    for i:=0 to length(result)-1 do begin
+      if result[i].last^.next<>closingBracket then recycler.disposeToken(result[i].last^.next);
+      result[i].last^.next:=nil;
+    end;
+  end;
+
 CONSTRUCTOR T_tokenRecycler.create;
   VAR i:longint;
   begin
