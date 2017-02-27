@@ -17,7 +17,6 @@ TYPE
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   {$include mnh_rule.inc}
   {$include mnh_futureTask.inc}
-  {$include mnh_procBlock.inc}
   {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
@@ -170,7 +169,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$define include_implementation}
 {$include mnh_token.inc}
 {$include mnh_futureTask.inc}
-{$include mnh_procBlock.inc}
 {$include mnh_rule.inc}
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}

@@ -143,16 +143,4 @@ FUNCTION T_tokenRecycler.cascaseDisposeToLiteral(p:P_token; CONST errorBefore:bo
     end;
   end;
 
-//FUNCTION T_tokenRecycler.enterTryStatementReturningPreviousAdapters: P_adapters;
-//  begin
-//    result:=myAdapters;
-//    myAdapters:=result^.collectingClone;
-//  end;
-//
-//PROCEDURE T_tokenRecycler.leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
-//  begin
-//    previousAdapters^.copyDataFromCollectingCloneDisposing(myAdapters,tryBodyFailed);
-//    myAdapters:=previousAdapters;
-//  end;
-
 end.
