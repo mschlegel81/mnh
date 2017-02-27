@@ -311,7 +311,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
 
     PROCEDURE parseRule;
       VAR p:P_token; //iterator
-          hasTrivialPattern:boolean=true;
           //rule meta data
           ruleModifiers:T_modifierSet=[];
           ruleId:T_idString='';
@@ -381,7 +380,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
 
         if context.adapters^.noErrors then begin
           ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,semicolonPosition,context.adapters^);
-          if (context.adapters^.noErrors) and (ruleGroup^.ruleType in C_mutableRuleTypes) and not(hasTrivialPattern) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
+          if (context.adapters^.noErrors) and (ruleGroup^.ruleType in C_mutableRuleTypes) and ((length(rulePattern.sig)<>0) or rulePattern.hasOptionals) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
             subRule^.setComment(join(commentLines,C_lineBreakChar));

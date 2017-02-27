@@ -475,7 +475,6 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
-      hasTrivialPattern:boolean;
       i:longint;
       partLocation:T_tokenLocation;
       rulePatternElement:T_patternElement;
@@ -498,7 +497,6 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       setLength(parts,0);
       closingBracket:=first^.next;
     end else begin
-      hasTrivialPattern:=false;
       parts:=getBodyParts(first,0,context.recycler,context.adapters,closingBracket);
       for i:=0 to length(parts)-1 do begin
         partLocation:=parts[i].first^.location;
