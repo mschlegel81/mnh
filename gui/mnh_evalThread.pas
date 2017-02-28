@@ -788,6 +788,7 @@ PROCEDURE T_assistanceEvaluator.preEval;
   begin
     system.enterCriticalSection(cs);
     inherited preEval;
+    adapter^.clearAll;
     context.resetForEvaluation(@package,false,false,true);
     system.leaveCriticalSection(cs);
   end;
