@@ -1,6 +1,13 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_basicTypes,mnh_constants,mnh_out_adapters,myGenerics;
+USES //basic classes
+     sysutils,
+     //my utilities
+     myGenerics,
+     //MNH:
+     mnh_basicTypes,mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar;
 TYPE
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;
@@ -28,11 +35,9 @@ TYPE
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
     PROCEDURE resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
-
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
-
   T_resolveIDsCallback=PROCEDURE(VAR token:T_token; CONST package:pointer; CONST adaptersOrNil:P_adapters);
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;

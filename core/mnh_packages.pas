@@ -15,6 +15,7 @@ USES //basic classes
      mnh_profiling,
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
      mnh_subrules,
+     mnh_aggregators,
      mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,
      mnh_datastores;
 

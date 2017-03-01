@@ -1,7 +1,10 @@
 UNIT mnh_subrules;
 INTERFACE
-USES sysutils,math,
+USES //basic classes
+     sysutils,math,
+     //my utilities
      myGenerics,myStringUtil,
+     //MNH:
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,

@@ -63,7 +63,7 @@ TYPE
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
 
       {$ifdef fullVersion}
-      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; inline;
+      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableReport);
       {$endif}
 
@@ -327,6 +327,7 @@ FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
     if not(tco_createDetachedTask in options) then exit(nil);
     interLockedIncrement(parent^.detachedAsyncChildCount);
     new(result,createThreadContext(nil,adapters));
+    parent^.setupThreadContext(result);
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
   end;
 

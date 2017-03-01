@@ -330,7 +330,7 @@ PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 FUNCTION newBoolLiteral          (CONST value: boolean       ): P_boolLiteral;       inline;
 FUNCTION newIntLiteral           (CONST value: int64         ): P_intLiteral;        inline;
 FUNCTION newRealLiteral          (CONST value: T_myFloat     ): P_realLiteral;       inline;
-FUNCTION newStringLiteral        (CONST value: ansistring    ): P_stringLiteral;     inline;
+FUNCTION newStringLiteral        (CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
 FUNCTION newListLiteral          (CONST initialSize:longint=0): P_listLiteral;       inline;
 FUNCTION newSetLiteral                                        : P_setLiteral;        inline;
 FUNCTION newMapLiteral                                        : P_mapLiteral;        inline;
@@ -416,9 +416,9 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
     else new(result, create(value));
   end;
 
-FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
+FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;
   begin
-    if length(value)<=1 then begin
+    if (length(value)<=1) and not(enforceNewString) then begin
       if length(value)=1 then result:=P_stringLiteral(charLit[value[1]]   .rereferenced)
                          else result:=P_stringLiteral(emptyStringSingleton.rereferenced);
     end else new(result, create(value));
@@ -1586,6 +1586,9 @@ FUNCTION T_stringLiteral.escape: P_stringLiteral;
 
 PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
   begin
+    {$ifdef debugMode}
+    if numberOfReferences>1 then raise Exception.create('You must not append suffixes to strings which are used elsewhere!');
+    {$endif}
     val:=val+suffix;
   end;
 
