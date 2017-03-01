@@ -1,12 +1,21 @@
 UNIT mnh_packages;
 INTERFACE
-USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
-     tokenStack,valueStore,
-     mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
+USES //basic classes
+     math, sysutils,typinfo, FileUtil, Classes,
+     //my utilities:
+     myGenerics, myStringUtil,
+     //MNH:
+     mnh_constants, mnh_basicTypes,
+     mnh_litVar, mnh_fileWrappers, mnh_out_adapters,
+     mnh_caches,
      tokenRecycler,
-     mnh_funcs, mnh_out_adapters, mnh_caches, //even more specific
-     Classes,mnh_profiling,{$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,mnh_subrules,
+     tokenStack,valueStore,
+     mnh_tokens, mnh_contexts, //types
+     mnh_funcs,  //even more specific
+     mnh_profiling,
+     {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
+     mnh_subrules,
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,
      mnh_datastores;
 
 {$define include_interface}
