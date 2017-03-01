@@ -295,11 +295,25 @@ end;
 main('beep')->beep;
 
 //*Build one specific target
-main(target:string)->
-  BUILTS.each(B,isSameFileName(B[2],target) OR target=B[1] ? buildExe(B) orElse true : false,OR) OR
-  BUILTS.each(B,isSimilarFile (B[2],target)                ? buildExe(B) orElse true : false,or)
+main(target:string)->begin
+  local testAfterBuild:=false;
+  local tgt:=target;
+  target.copy(target.length-1,1)=='!'
+  ? begin
+      tgt:=target.copy(0,target.length-1);
+      testAfterBuild:=true;
+    end
+  : void;
+  local buildAndTest:=
+    testAfterBuild ? {buildExe($B) orElse testExe($B) orElse true}
+                   : {buildExe($B) orElse true};
+
+  BUILTS.each(B,isSameFileName(B[2],tgt) OR tgt=B[1] ? buildAndTest(B) orElse true : false,OR) OR
+  BUILTS.each(B,isSimilarFile (B[2],tgt)             ? buildAndTest(B) orElse true : false,or)
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | VALID_TARGETS).join("\n"));
+end;
+
 //*Several steps in succession
 main(...)->... .each(step,
   print('******************************'),
