@@ -2,8 +2,6 @@ UNIT mnh_funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64,LConvEncoding;
-TYPE T_expressionToTokensCallback=FUNCTION(CONST subruleLiteral:P_expressionLiteral):P_listLiteral;
-VAR expressionToTokensCallback:T_expressionToTokensCallback;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -539,31 +537,6 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
     end;
   end;
 
-FUNCTION tokenSplit_impl intFuncSignature;
-  VAR language:string='MNH';
-      stringToSplit:ansistring;
-      tokens:T_arrayOfString;
-      i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) then begin
-      if (arg1^.literalType=lt_string)
-      then language:=str1^.value
-      else exit(nil);
-    end;
-    if (params<>nil) and (params^.size>=1) then
-    case arg0^.literalType of
-      lt_string:begin
-        stringToSplit:=str0^.value;
-        tokens:=tokenSplit(stringToSplit,language);
-        result:=newListLiteral;
-        for i:=0 to length(tokens)-1 do result:=listResult^.appendString(tokens[i]);
-      end;
-      lt_expression: if uppercase(language)='MNH' then
-        result:=expressionToTokensCallback(P_expressionLiteral(arg0));
-    end;
-  end;
-
 FUNCTION reverseString_impl intFuncSignature;
   FUNCTION rev(CONST input:P_literal):ansistring;
     VAR charIndex,
@@ -867,7 +840,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'replaceOne'    ,@replaceOne_impl   ,true,ak_ternary   ,'replaceOne(source:string,lookFor,replaceBy);//Replaces the first occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
   registerRule(STRINGS_NAMESPACE,'replace'       ,@replace_impl      ,true,ak_ternary   ,'replace(source:string,lookFor,replaceBy);//Recursively replaces all occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList');
   registerRule(STRINGS_NAMESPACE,'repeat'        ,@repeat_impl       ,true,ak_binary    ,'repeat(s:string,k:int);//Returns a string containing s repeated k times');
-  registerRule(STRINGS_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl   ,true,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
   registerRule(STRINGS_NAMESPACE,'reverseString' ,@reverseString_impl,true,ak_unary     ,'reverseString(S:string);//reverseString(S:stringList);//Returns returns S reversed (character wise not bytewise)');
   registerRule(STRINGS_NAMESPACE,'diff'          ,@diff_impl         ,true,ak_variadic_2,'diff(A,B);//Shows diff statistics and edit script for strings A and B or string lists A and B#diff(A,B,convertModifies:boolean);//As above but optionally convert modifies to adds and deletes');
   registerRule(STRINGS_NAMESPACE,'diffStats'     ,@diffStats_impl    ,true,ak_binary    ,'diffStats(A,B);//Shows diff statistics for strings A and B or string lists A and B');

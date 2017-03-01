@@ -1,17 +1,17 @@
 private gcd(a,0)->a;
 private gcd(a,b)->gcd(b, a mod b);
-type rational(l:intList(2))->true;
+type Rational(l:intList(2))->true;
 
-shorten(r:rational)->begin
+shorten(r:Rational)->begin
   local val:=abs(r);
   local sig:=sign(r).agg(*);
   val div gcd@val * [sig,1];
 end;
 
 ratInt(x:int)->[x,1];
-ratPlus (a:rational,b:rational)->shorten([a[0]*b[1]+b[0]*a[1],a[1]*b[1]]);
+ratPlus (a:Rational,b:Rational)->shorten([a[0]*b[1]+b[0]*a[1],a[1]*b[1]]);
 ratPlus (a:int     ,b         )->ratPlus(ratInt(a),b);
-ratPlus (a:rational,b:int     )->ratPlus(a,ratInt(b));
+ratPlus (a:Rational,b:int     )->ratPlus(a,ratInt(b));
 
 private arctanSeries(n:int)->shorten([0..n].each(i,[(-1)^i,2*i+1],aggregator(::ratPlus))*ratInt(4));
 

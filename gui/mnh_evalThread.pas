@@ -7,6 +7,7 @@ USES FileUtil,sysutils,Classes,LazUTF8,
      mnh_litVar,
      mnh_tokens,valueStore,
      mnh_funcs,mnh_contexts,
+     mnh_subrules,
      mnh_packages,mnh_doc,
      mnh_cmdLineInterpretation;
 TYPE
@@ -670,7 +671,7 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
     tokens.getRawTokensUndefining;
     tokens.destroy;
 
-    if tokenToExplain.tokType=tt_identifier then package.resolveRuleId(tokenToExplain,nil);
+    if tokenToExplain.tokType=tt_identifier then tokenToExplain.resolveRuleId(@package,nil);
 
     info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain.tokType].helpText,'#',C_lineBreakChar);
     for i:=0 to length(C_specialWordInfo)-1 do
@@ -787,6 +788,7 @@ PROCEDURE T_assistanceEvaluator.preEval;
   begin
     system.enterCriticalSection(cs);
     inherited preEval;
+    adapter^.clearAll;
     context.resetForEvaluation(@package,false,false,true);
     system.leaveCriticalSection(cs);
   end;

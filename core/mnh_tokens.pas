@@ -1,6 +1,13 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_basicTypes,mnh_constants,mnh_out_adapters,myGenerics;
+USES //basic classes
+     sysutils,
+     //my utilities
+     myGenerics,
+     //MNH:
+     mnh_basicTypes,mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar;
 TYPE
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;
@@ -27,12 +34,15 @@ TYPE
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
+    PROCEDURE resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
+  T_resolveIDsCallback=PROCEDURE(VAR token:T_token; CONST package:pointer; CONST adaptersOrNil:P_adapters);
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
+VAR resolveIDsCallback:T_resolveIDsCallback;
 IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
@@ -292,6 +302,14 @@ FUNCTION T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
+  end;
+
+PROCEDURE T_token.resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
+  VAR package:pointer;
+  begin
+    if packageOrNil<>nil then package:=packageOrNil
+                         else package:=location.package;
+    resolveIDsCallback(self,package,adaptersOrNil);
   end;
 
 end.

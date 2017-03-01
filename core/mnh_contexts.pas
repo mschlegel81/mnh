@@ -9,9 +9,7 @@ USES //FPC/LCL libraries
      //MNH:
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,mnh_litVar,
-     {$ifdef fullVersion}
      mnh_tokens,
-     {$endif}
      tokenStack,valueStore,tokenRecycler,
      mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
@@ -65,12 +63,12 @@ TYPE
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
 
       {$ifdef fullVersion}
-      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; inline;
+      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableReport);
       {$endif}
 
       PROPERTY threadOptions:T_threadContextOptions read options;
-
+      PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word); inline;
   end;
 
   T_evaluationContext=object
@@ -105,6 +103,8 @@ TYPE
       {$endif}
   end;
 
+VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
 IMPLEMENTATION
 VAR globalLock:TRTLCriticalSection;
 CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
@@ -327,6 +327,7 @@ FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
     if not(tco_createDetachedTask in options) then exit(nil);
     interLockedIncrement(parent^.detachedAsyncChildCount);
     new(result,createThreadContext(nil,adapters));
+    parent^.setupThreadContext(result);
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
   end;
 
@@ -387,6 +388,9 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
     valueStore.reportVariables(variableReport);
   end;
 {$endif}
+
+PROCEDURE T_threadContext.reduceExpression(VAR first:P_token; CONST callDepth:word); begin reduceExpressionCallback(first,callDepth,self); end;
+
 
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
   VAR p:P_threadContext;

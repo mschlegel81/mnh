@@ -79,8 +79,8 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR comments,attributes:T_
           inc(stepIndex,2);
           token[stepIndex].txt:=token[stepIndex-2].txt+ID_QUALIFY_CHARACTER+token[stepIndex].txt;
           token[stepIndex].tokType:=tt_identifier;
-          package^.resolveRuleId(token[stepIndex],nil);
-        end else if package<>nil then package^.resolveRuleId(token[stepIndex],nil);
+          token[stepIndex].resolveRuleId(package,nil);
+        end else if package<>nil then token[stepIndex].resolveRuleId(package,nil);
         tt_each,tt_parallelEach: if (stepIndex<tokenFill-3) and
          (token[stepIndex+1].tokType=tt_braceOpen) and
          (token[stepIndex+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
@@ -450,47 +450,6 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inPackage: P_package; VAR adapters: T_a
     setLength(token,tokenFill);
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR context:T_threadContext; OUT closingBracket:P_token):T_bodyParts;
-  VAR t,p:P_token;
-      bracketLevel,i:longint;
-      partLength:longint=-1;
-  begin
-    closingBracket:=nil;
-    bracketLevel:=initialBracketLevel;
-    t:=first; p:=nil;
-    if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
-      setLength(result,1);
-      result[0].first:=first^.next;
-    end else begin
-      context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
-      setLength(result,0);
-      exit;
-    end;
-    while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-      if t^.tokType in C_openingBrackets then inc(bracketLevel)
-      else if t^.tokType in C_closingBrackets then dec(bracketLevel)
-      else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-        if partLength=0 then context.adapters^.raiseError('Empty body part.',result[length(result)-1].first^.location);
-        result[length(result)-1].last:=p; //end of body part is token before comma
-        setLength(result,length(result)+1);
-        result[length(result)-1].first:=t^.next; //start of next body part is token after comma
-        partLength:=-1; //excluding delimiting separators
-      end;
-      p:=t; t:=t^.next; inc(partLength);
-    end;
-    result[length(result)-1].last:=p; //end of body part is token before comma
-    if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-      context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
-      setLength(result,0);
-      exit;
-    end;
-    closingBracket:=t;
-    for i:=0 to length(result)-1 do begin
-      if result[i].last^.next<>closingBracket then context.recycler.disposeToken(result[i].last^.next);
-      result[i].last^.next:=nil;
-    end;
-  end;
-
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_threadContext);
   VAR t:P_token;
       rule:P_rule;
@@ -500,7 +459,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
       case t^.tokType of
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
-          if t^.tokType=tt_identifier then inPackage^.resolveRuleId(t^,nil);
+          if t^.tokType=tt_identifier then t^.resolveRuleId(inPackage,nil);
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
@@ -653,10 +612,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
   PROCEDURE resolveEach(eachType:T_tokenType);
     VAR bracketClosingEach:P_token=nil;
         bodyRule:array of P_subrule;
-        aggregatorLocation:T_tokenLocation;
-        aggregatorToken:T_tokenType=tt_EOL;
-        aggregatorExpression:P_expressionLiteral=nil;
-        aggregatorPresent:(no,yes_as_operator,yes_as_expression,yes_as_head)=no;
+        aggregator:P_aggregator=nil;
+        aggregatorPresent:boolean=false;
         maxFutureForwardInitialization:longint=16;
         eachToken:P_token;
 
@@ -679,7 +636,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           exit(false);
         end;
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(eachToken,0,context,bracketClosingEach);
+        bodyParts:=getBodyParts(eachToken,0,context.recycler,context.adapters,bracketClosingEach);
         if (bracketClosingEach=nil) or not(context.adapters^.noErrors) then exit(false);
         if (length(bodyParts)>1) and isPureAggregator then begin
           context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
@@ -687,7 +644,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end;
 
         //process aggregator part (if any)----------------------------------------------
-        aggregatorPresent:=no;
         lastPart:=length(bodyParts)-1;
         t:=bodyParts[lastPart].first;
         if (t^.tokType=tt_aggregatorConstructor) or (t^.tokType=tt_pseudoFuncPointer) and isPureAggregator then begin
@@ -697,51 +653,34 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end;
         if t^.next=nil then begin
           case t^.tokType of
-            tt_comparatorEq..tt_operatorIn: begin
-              aggregatorToken:=t^.tokType;
-              aggregatorPresent:=yes_as_operator;
-              aggregatorLocation:=t^.location;
-            end;
-            tt_aggregatorExpressionLiteral: begin
-              aggregatorExpression:=P_expressionLiteral(t^.data);
-              aggregatorExpression^.rereference;
-              aggregatorPresent:=yes_as_expression;
-              aggregatorLocation:=t^.location
-            end;
-            tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression) then begin
-              aggregatorExpression:=P_expressionLiteral(t^.data);
-              aggregatorExpression^.rereference;
-              aggregatorPresent:=yes_as_expression;
-              aggregatorLocation:=t^.location
-            end else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
-            tt_intrinsicRule: if (P_intFuncCallback(t^.data)=BUILTIN_MIN) or
-                                 (P_intFuncCallback(t^.data)=BUILTIN_MAX) then begin
-              aggregatorExpression:=createPrimitiveAggregatorLiteral(t,context);
-              aggregatorPresent:=yes_as_expression;
-              aggregatorLocation:=t^.location
-            end else if (P_intFuncCallback(t^.data)=BUILTIN_HEAD) then begin
-              aggregatorPresent:=yes_as_head;
-              aggregatorLocation:=t^.location
-            end;
+            tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
+              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
+              else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
+            tt_intrinsicRule:
+              if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
+              if (P_intFuncCallback(t^.data)=BUILTIN_MAX ) then aggregator:=newMaxAggregator else
+              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD) then aggregator:=newHeadAggregator;
           end;
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
-            if context.adapters^.noErrors then begin
-              aggregatorExpression:=P_expressionLiteral(t^.data);
-              aggregatorExpression^.rereference;
-              aggregatorPresent:=yes_as_expression;
-              aggregatorLocation:=t^.location
-            end;
+            if context.adapters^.noErrors
+            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
           end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
-        if aggregatorPresent<>no then begin
+        aggregatorPresent:=(aggregator<>nil);
+        if aggregatorPresent then begin
           context.recycler.disposeToken(bodyParts[lastPart].first);
           setLength(bodyParts,length(bodyParts)-1);
-        end else if isPureAggregator then begin
-          result:=false;
-          context.adapters^.raiseError('Invalid agg-construct: aggregator is missing.',eachToken^.location);
+        end else begin
+          aggregator:=newListAggregator;
+          if isPureAggregator then begin
+            result:=false;
+            context.adapters^.raiseError('Invalid agg-construct: aggregator is missing.',eachToken^.location);
+          end;
         end;
         //----------------------------------------------process aggregator part (if any)
         //process other body parts (if any)---------------------------------------------
@@ -754,105 +693,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR itList:T_arrayOfLiteral;
         i:longint;
         eachLocation:T_tokenLocation;
-        resultLiteral:P_literal=nil;
-        booleanResult:boolean=false;
-        lazyAbort:boolean=false;
-
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean);
-      VAR newLit:P_literal;
-      begin
-        if not(context.adapters^.noErrors) then begin
-          if (L<>nil) and doDispose then disposeLiteral(L);
-          exit;
-        end;
-        if (L=nil) then begin
-          if resultLiteral=nil then resultLiteral:=newVoidLiteral;
-          context.adapters^.raiseError('Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
-          exit;
-        end else if L^.literalType=lt_void then exit
-        else if L^.literalType in [lt_error] then begin
-          if doDispose then disposeLiteral(L);
-          context.adapters^.raiseError('Error performing aggregation in each-construct - ERROR literal encountered',eachLocation);
-          exit;
-        end;
-        case aggregatorPresent of
-          no: begin
-            if resultLiteral=nil then resultLiteral:=newListLiteral;
-            P_listLiteral(resultLiteral)^.append(L,true);
-          end;
-          yes_as_head: begin
-            if (L^.literalType<>lt_void) and (resultLiteral=nil) then begin
-              resultLiteral:=L;
-              L^.rereference;
-              lazyAbort:=true;
-            end;
-          end;
-          yes_as_operator: case aggregatorToken of
-            tt_operatorConcat: begin
-              if resultLiteral=nil then resultLiteral:=newListLiteral;
-              if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
-              then P_listLiteral(resultLiteral)^.append   (L, true)
-              else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
-            end;
-            tt_operatorLazyAnd, tt_operatorLazyOr: if resultLiteral=nil then begin
-              if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-              else raiseLazyBooleanError(aggregatorLocation,L);
-              if booleanResult=(aggregatorToken=tt_operatorLazyOr) then begin
-                lazyAbort:=true;
-                resultLiteral:=L;
-                L^.rereference;
-              end;
-            end;
-            tt_operatorOrElse: if resultLiteral=nil then begin
-              lazyAbort:=true;
-              resultLiteral:=L;
-              L^.rereference;
-            end;
-            else begin
-              if resultLiteral=nil then begin
-                resultLiteral:=L; L^.rereference;
-              end else begin
-                newLit:=resolveOperator(resultLiteral,
-                                        aggregatorToken,
-                                        L,
-                                        eachLocation,context.adapters^);
-                if newLit<>nil then begin
-                  disposeLiteral(resultLiteral);
-                  resultLiteral:=newLit;
-                end else context.adapters^.raiseError('Error performing aggregation in each-construct with aggregator ('+C_tokenInfo[aggregatorToken].defaultId+')',eachLocation);
-              end;
-            end;
-          end;
-          yes_as_expression: begin
-            if resultLiteral=nil then begin
-              resultLiteral:=L; L^.rereference;
-            end else begin
-              newLit:=P_subrule(aggregatorExpression)^.directEvaluateAggregator(resultLiteral,L,eachLocation,context,callDepth+1);
-              if newLit<>nil then begin
-                disposeLiteral(resultLiteral);
-                resultLiteral:=newLit;
-              end else context.adapters^.raiseError('Error performing aggregation in each-construct with aggregator '+aggregatorExpression^.toString,eachLocation);
-            end;
-          end;
-        end;
-        if doDispose then disposeLiteral(L);
-      end;
 
     PROCEDURE finalizeAggregation;
       begin
-        first^.tokType:=tt_literal;
-        if (resultLiteral=nil) and (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr]) then begin
-          resultLiteral:=newBoolLiteral(booleanResult);
-        end;
-        if resultLiteral=nil then begin
-          if aggregatorPresent<>no
-          then first^.data:=newVoidLiteral
-          else first^.data:=newListLiteral;
-        end else begin
-          first^.data:=resultLiteral;
-        end;
+        first^.data:=aggregator^.getResult;
         first^.txt:='';
         first^.next:=context.recycler.disposeToken(bracketClosingEach);
+        dispose(aggregator,destroy);
       end;
 
     {$ifndef fullVersion}
@@ -877,7 +724,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
             while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
-            addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
+            aggregator^.addToAggregation(future[nextFuture]^.getResultAsLiteral,true,eachLocation,context.adapters);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
           end;
@@ -889,14 +736,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
       VAR i,j:longint;
       begin
-        if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
-        then maxFutureForwardInitialization:=workerThreadCount
-        else maxFutureForwardInitialization:=1024;
+        maxFutureForwardInitialization:=4*workerThreadCount;
         store:=context.valueStore.readOnlyClone;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*length(itList));
         for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do begin
-          if (context.adapters^.noErrors) and not(lazyAbort) then begin
+          if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
             future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
@@ -910,10 +755,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR task:T_futureTask;
           i,j:longint;
       begin
-        for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
+        for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
           task.createTask(bodyRule[j],eachLocation,i,itList[i],@context,nil);
           task.evaluate(callDepth+1,context,false);
-          addToAggregation(task.getResultAsLiteral,true);
+          aggregator^.addToAggregation(task.getResultAsLiteral,true,eachLocation,context.adapters);
           task.destroy;
         end;
         finalizeAggregation;
@@ -950,8 +795,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       disposeLiteral(first^.data);
       first^.next:=context.recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
-      if (aggregatorPresent<>no) and (length(itList)=0) then begin
-        resultLiteral:=newVoidLiteral;
+      if (aggregatorPresent) and (length(itList)=0) then begin
         finalizeAggregation;
       end else if length(bodyRule)>0 then begin
         if eachType in [tt_parallelEach]
@@ -959,13 +803,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         else initNonFutures;
       end else begin
         if eachType in [tt_parallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
-        for i:=0 to length(itList)-1 do addToAggregation(itList[i],false);
+        for i:=0 to length(itList)-1 do aggregator^.addToAggregation(itList[i],false,eachLocation,context.adapters);
         finalizeAggregation;
       end;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       disposeLiteral(itList);
-      if aggregatorPresent=yes_as_expression then disposeLiteral(aggregatorExpression);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
@@ -984,7 +827,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         result:=false;
         //first token is <while>-Token
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
+        bodyParts:=getBodyParts(first,1,context.recycler,context.adapters,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if length(bodyParts)<>2 then begin
           context.adapters^.raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',errorLocation);
@@ -1015,8 +858,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           result:=P_boolLiteral(res)^.value;
         end else begin
           if res<>nil
-          then context.adapters^.raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.declaredAt)
-          else context.adapters^.raiseError('Evaluation of the head-part of a while statement failed.',headRule^.declaredAt);
+          then context.adapters^.raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.getLocation)
+          else context.adapters^.raiseError('Evaluation of the head-part of a while statement failed.',headRule^.getLocation);
           result:=false;
         end;
         if res<>nil then disposeLiteral(res);
@@ -1080,8 +923,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
-        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^[0]^.literalType=lt_expression) then begin
-
+        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
+           (parameterListLiteral^[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^[0])^.canApplyToNumberOfParameters(2))
+        then begin
           if parameterListLiteral^[0]^.getReferenceCount=1 then begin
             newLiteral:=parameterListLiteral^[0]^.rereferenced;
             inlineRule:=P_subrule(newLiteral);
@@ -1089,10 +933,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             new(inlineRule,clone(P_subrule(parameterListLiteral^[0])));
             newLiteral:=inlineRule;
           end;
-          inlineRule^.pattern.appendOptional;
           firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
-        end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',errorLocation);
+        end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifndef DEBUGMODE}
         try
@@ -1737,7 +1580,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end;
         tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
         tt_identifier: begin
-          P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
+          first^.resolveRuleId(nil,context.adapters);
           didSubstitution:=true;
         end;
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
@@ -1769,7 +1612,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
-              P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
+              first^.resolveRuleId(nil,context.adapters);
               first^.next:=context.recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
