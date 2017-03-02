@@ -464,7 +464,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
                 rule:=t^.data;
-                if rule^.ruleType in C_mutableRuleTypes then begin
+                if rule^.getRuleType in C_mutableRuleTypes then begin
                   t^.data:=rule;
                   t^.tokType:=t^.next^.tokType;
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
@@ -533,40 +533,6 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
         rep^.data:=inlineSubRule;
       end else dispose(inlineSubRule,destroy);
     end;
-  end;
-
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-  VAR last:P_token;
-      i:longint;
-  begin
-    result:=context.recycler.newToken(location,'',tt_braceOpen);
-    last:=result;
-    for i:=0 to minPatternLength-1 do begin
-      if i>0 then begin
-        last^.next:=context.recycler.newToken(location,'',tt_separatorComma);
-        last:=last^.next;
-      end;
-      last^.next:=context.recycler.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
-      last:=last^.next;
-    end;
-    last^.next:=context.recycler.newToken(location,'',tt_braceClose);
-    last:=last^.next;
-    if variadic then begin
-      last^.next:=context.recycler.newToken(location,'',tt_listToParameterList);
-      last:=last^.next;
-      if minPatternLength>0 then begin
-        last^.next:=context.recycler.newToken(location,'',tt_optionalParameters);
-      end else begin
-        last^.next:=context.recycler.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
-      end;
-    end;
-  end;
-
-FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-  VAR a:T_arityKind;
-  begin
-    a:=getMeta(builtinRulePointer).arityKind;
-    result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
   end;
 
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
@@ -890,15 +856,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
-            if (P_rule(first^.data)^.id=MAIN_RULE_ID)
-            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
-            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+            if (P_rule(first^.data)^.getId=MAIN_RULE_ID)
+            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
+            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
             exit;
           end;
         {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
-            context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
+            context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId,first^.location);
             context.adapters^.raiseSystemError(e.message,first^.location);
             exit;
           end;

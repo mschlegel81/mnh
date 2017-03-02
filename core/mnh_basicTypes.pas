@@ -8,6 +8,7 @@ TYPE
 
   P_objectWithPath=^T_objectWithPath;
   T_objectWithPath=object
+    FUNCTION getId:T_idString; virtual; abstract;
     FUNCTION getPath:ansistring; virtual; abstract;
   end;
 

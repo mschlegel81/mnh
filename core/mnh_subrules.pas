@@ -608,7 +608,6 @@ FUNCTION T_subrule.evaluate(CONST location:T_tokenLocation; CONST context:pointe
 
 FUNCTION T_subrule.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   VAR parameterList:T_listLiteral;
-      toReduce,dummy:P_token;
   begin
     parameterList.create(2);
     if a<>nil then parameterList.append(a,true);

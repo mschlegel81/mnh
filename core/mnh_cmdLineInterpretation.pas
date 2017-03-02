@@ -1,7 +1,12 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_settings{$ifdef debugMode},lclintf{$endif}{$endif},mnh_packages,
-     myStringUtil,sysutils,myGenerics,mnh_contexts,mnh_fileWrappers,
+USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
+     myStringUtil,myGenerics,
+     mnh_constants,
+     mnh_fileWrappers,
+     mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,mnh_settings,{$endif}
+     mnh_contexts,
+     mnh_funcs,
      mnh_funcs_mnh,
      mnh_funcs_server,
      mnh_funcs_types,
@@ -11,7 +16,8 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
      mnh_funcs_system,
      mnh_funcs_files,
      mnh_funcs_regex,
-     mnh_funcs_xml;
+     mnh_funcs_xml,
+     mnh_packages;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;

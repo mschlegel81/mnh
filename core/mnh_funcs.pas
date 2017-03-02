@@ -45,6 +45,7 @@ TYPE
   T_mnhSystemPseudoPackage=object(T_objectWithPath)
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
+    FUNCTION getId:T_idString; virtual;
     FUNCTION getPath:ansistring; virtual;
   end;
 
@@ -225,6 +226,11 @@ DESTRUCTOR T_mnhSystemPseudoPackage.destroy;
 FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
   begin
     result:='[MNH]';
+  end;
+
+FUNCTION T_mnhSystemPseudoPackage.getId:T_idString;
+  begin
+    result:=getPath;
   end;
 
 CONSTRUCTOR T_identifiedInternalFunction.create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
