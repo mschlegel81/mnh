@@ -61,6 +61,7 @@ TYPE
       FUNCTION isEmpty:boolean;
 
       PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
+      PROCEDURE createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean);
       FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
       PROCEDURE setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters);
       FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
@@ -307,6 +308,14 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal
       new(v,create(id,value,readonly));
     end;
     system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean);
+  VAR lit:P_intLiteral;
+  begin
+    lit:=newIntLiteral(value);
+    createVariable(id,lit,readonly);
+    disposeLiteral(lit);
   end;
 
 FUNCTION T_valueStore.getVariableValue(CONST id: T_idString): P_literal;
