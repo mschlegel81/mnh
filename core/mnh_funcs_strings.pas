@@ -523,7 +523,7 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
         lt_string: result:=newStringLiteral(innerClean(str0^.value));
         lt_stringList,lt_emptyList: begin
           result:=newListLiteral(list0^.size);
-          for k:=0 to list0^.size do listResult^.appendString(innerClean(P_stringLiteral(list0^[k])^.value));
+          for k:=0 to list0^.size-1 do listResult^.appendString(innerClean(P_stringLiteral(list0^[k])^.value));
         end;
         lt_stringSet,lt_emptySet: begin
           result:=newSetLiteral;

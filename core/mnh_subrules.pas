@@ -77,19 +77,10 @@ TYPE
 
       //Evaluation calls:
       FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext):P_token;
-      FUNCTION replacesUnary (CONST x  :P_literal; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext):P_token;
-      FUNCTION replacesBinary(CONST x,y:P_literal; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext):P_token;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual;
 
-      FUNCTION evaluate            (CONST parameters:P_listLiteral; CONST location    :T_tokenLocation;                             CONST context:pointer):P_literal; virtual;
-      FUNCTION directEvaluate          (CONST params:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext; CONST callDepth:word):P_literal; inline;
-      FUNCTION directEvaluateNullary   (                            CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext; CONST callDepth:word):P_literal;
-      FUNCTION directEvaluateUnary     (CONST x:P_literal;          CONST callLocation:T_tokenLocation;                               VAR context:T_threadContext; CONST callDepth:word):P_literal;
-      FUNCTION evaluateToBoolean       (CONST a,b:P_literal;            CONST location:T_tokenLocation; CONST context:pointer):boolean;   virtual;
-      FUNCTION directEvaluateComparator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_threadContext;                               CONST callDepth:word):boolean;
-      FUNCTION directEvaluateAggregator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_threadContext;                               CONST callDepth:word):P_literal;
-
-      FUNCTION accept(CONST a:P_literal; CONST context:pointer): boolean; virtual;
       FUNCTION getInlineValue:P_literal;
       FUNCTION getParentId:T_idString; virtual;
 
@@ -369,36 +360,13 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
     result:=subRule;
   end;
 
-
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_threadContext):P_token;
-  VAR last:P_token;
-  begin
-    if not(replaces(param,callLocation,result,last,context,false)) then result:=nil;
-  end;
-
-FUNCTION T_subrule.replacesUnary (CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext):P_token;
-  VAR parameterList:P_listLiteral;
-  begin
-    parameterList:=P_listLiteral(newListLiteral(1)^.append(x,true));
-    result:=replaces(parameterList,callLocation,context);
-    disposeLiteral(parameterList);
-  end;
-
-FUNCTION T_subrule.replacesBinary(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext):P_token;
-  VAR parameterList:P_listLiteral;
-  begin
-    parameterList:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
-    result:=replaces(parameterList,callLocation,context);
-    disposeLiteral(parameterList);
-  end;
-
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
   VAR i:longint;
   FUNCTION fallbackFeasible:boolean;
     begin
       result:=useUncurryingFallback and
               //The given parameters must match
-             (param<>nil) and pattern.matchesForFallback(param^,context) and
+             (param<>nil) and pattern.matchesForFallback(param^,callLocation,context) and
               //The function result must (likely) be an expression
          (    (preparedBody[0].token.tokType=tt_literal)
           and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
@@ -449,7 +417,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
   begin
     lastRep:=nil;
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^,context) then begin
+       (param<>nil) and pattern.matches(param^,callLocation,context) then begin
       prepareResult;
       result:=true;
       context.callStackPush(callLocation,@self,param,@self);
@@ -616,80 +584,36 @@ FUNCTION T_subrule.toDocString(CONST includePattern:boolean=true; CONST lengthLi
     else                                 result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION T_subrule.evaluate(CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal;
+FUNCTION T_subrule.evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;
+  VAR resultLiteral:P_literal;
   begin
-    result:=directEvaluate(parameters,location,P_threadContext(context)^,0);
-  end;
-
-FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
-  VAR firstRep,lastRep:P_token;
-  begin
-    if replaces(params, callLocation, firstRep,lastRep,context,false) then begin
-      context.reduceExpression(firstRep,callDepth);
-      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
-      then begin
-        result:=firstRep^.data;
-        result^.rereference;
-      end else begin
-        result:=nil;
-      end;
-      context.recycler.cascadeDisposeToken(firstRep);
+    resultLiteral:=evaluateToLiteral(location,context,a,b);
+    if (resultLiteral<>nil) and (resultLiteral^.literalType=lt_boolean) then begin
+      result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
-      context.raiseCannotApplyError('function',params,callLocation,C_EMPTY_STRING_ARRAY);
-      result:=nil;
-    end;
-  end;
-
-FUNCTION T_subrule.directEvaluateNullary(CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
-  begin
-    result:=directEvaluate(nil,callLocation,context,callDepth);
-  end;
-
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
-  VAR param:P_listLiteral;
-  begin
-    param:=P_listLiteral(newListLiteral(1)^.append(x,true));
-    result:=directEvaluate(param,callLocation,context,callDepth);
-    disposeLiteral(param);
-  end;
-
-FUNCTION T_subrule.evaluateToBoolean(CONST a,b:P_literal; CONST location:T_tokenLocation; CONST context:pointer):boolean;
-  begin
-    result:=directEvaluateComparator(a,b,location,P_threadContext(context)^,0);
-  end;
-
-FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):boolean;
-  VAR param:P_listLiteral;
-      lit:P_literal;
-  begin
-    param:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
-    lit:=directEvaluate(param,callLocation,context,callDepth);
-    disposeLiteral(param);
-    if (context.adapters^.noErrors) and (lit<>nil) and (lit^.literalType=lt_boolean) then result:=P_boolLiteral(lit)^.value
-    else begin
       result:=false;
-      context.adapters^.raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
+      P_threadContext(context)^.adapters^.raiseError('Expression does not return a boolean.',location);
     end;
-    if lit<>nil then disposeLiteral(lit);
   end;
 
-FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocation:T_tokenLocation; VAR context:T_threadContext; CONST callDepth:word):P_literal;
-  VAR param:P_listLiteral;
+FUNCTION T_subrule.evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;
+  VAR toReduce,dummy:P_token;
   begin
-    param:=P_listLiteral(newListLiteral(2)^.append(x,true)^.append(y,true));
-    result:=directEvaluate(param,callLocation,context,callDepth);
-    disposeLiteral(param);
+    if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^,false)
+    then begin
+      P_threadContext(context)^.reduceExpression(toReduce);
+      result:=P_threadContext(context)^.cascadeDisposeToLiteral(toReduce);
+    end else result:=nil;
   end;
 
-FUNCTION T_subrule.accept(CONST a:P_literal; CONST context:pointer):boolean;
-  VAR param:P_listLiteral;
-      L:P_literal;
+FUNCTION T_subrule.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
+  VAR parameterList:T_listLiteral;
   begin
-    param:=P_listLiteral(newListLiteral(1)^.append(a,true));
-    L:=directEvaluate(param,declaredAt,P_threadContext(context)^,0);
-    dispose(param,destroy);
-    result:=(L<>nil) and (L^.literalType=lt_boolean) and P_boolLiteral(L)^.value;
-    if L<>nil then disposeLiteral(L);
+    parameterList.create(2);
+    if a<>nil then parameterList.append(a,true);
+    if b<>nil then parameterList.append(b,true);
+    result:=evaluate(location,context,@parameterList);
+    parameterList.destroy;
   end;
 
 FUNCTION T_subrule.getInlineValue:P_literal;
@@ -921,7 +845,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   FUNCTION evaluateOk:boolean;
     begin
-      tempcontext.threadContext^.reduceExpression(firstRep,0);
+      tempcontext.threadContext^.reduceExpression(firstRep);
       result:=tempcontext.adapters^.noErrors and
               (firstRep<>nil) and
               (firstRep^.next=nil) and

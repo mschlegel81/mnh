@@ -464,7 +464,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
                 rule:=t^.data;
-                if rule^.ruleType in C_mutableRuleTypes then begin
+                if rule^.getRuleType in C_mutableRuleTypes then begin
                   t^.data:=rule;
                   t^.tokType:=t^.next^.tokType;
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
@@ -535,41 +535,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
     end;
   end;
 
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-  VAR last:P_token;
-      i:longint;
-  begin
-    result:=context.recycler.newToken(location,'',tt_braceOpen);
-    last:=result;
-    for i:=0 to minPatternLength-1 do begin
-      if i>0 then begin
-        last^.next:=context.recycler.newToken(location,'',tt_separatorComma);
-        last:=last^.next;
-      end;
-      last^.next:=context.recycler.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
-      last:=last^.next;
-    end;
-    last^.next:=context.recycler.newToken(location,'',tt_braceClose);
-    last:=last^.next;
-    if variadic then begin
-      last^.next:=context.recycler.newToken(location,'',tt_listToParameterList);
-      last:=last^.next;
-      if minPatternLength>0 then begin
-        last^.next:=context.recycler.newToken(location,'',tt_optionalParameters);
-      end else begin
-        last^.next:=context.recycler.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
-      end;
-    end;
-  end;
-
-FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-  VAR a:T_arityKind;
-  begin
-    a:=getMeta(builtinRulePointer).arityKind;
-    result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
-  end;
-
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   VAR stack:T_TokenStack;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -647,16 +613,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         lastPart:=length(bodyParts)-1;
         t:=bodyParts[lastPart].first;
         if (t^.tokType=tt_aggregatorConstructor) or (t^.tokType=tt_pseudoFuncPointer) and isPureAggregator then begin
-          reduceExpression(bodyParts[lastPart].first,callDepth+1,context);
+          reduceExpression(bodyParts[lastPart].first,context);
           bodyParts[lastPart].last:=bodyParts[lastPart].first^.last;
           t:=bodyParts[lastPart].first;
         end;
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
+              then aggregator:=newCustomAggregator(P_subrule(t^.data),@context)
               else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
@@ -667,7 +633,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
             if context.adapters^.noErrors
-            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            then aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
           end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
@@ -702,28 +668,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         dispose(aggregator,destroy);
       end;
 
-    {$ifndef fullVersion}
-    FUNCTION workerThreadCount:longint;
-      begin
-        result:=getNumberOfCPUs-1;
-        if result<0 then result:=0;
-      end;
-    {$endif}
-
     PROCEDURE initFutures;
       VAR future:array of P_futureTask;
           nextFuture:longint=0;
           initializedFutures:longint=0;
           store:P_valueStore;
-
+          queue:P_taskQueue;
       PROCEDURE aggregateFutures(CONST finalizing:boolean);
         begin
           while (nextFuture<initializedFutures)
             and (future[nextFuture]<>nil)
-            and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
+            and ((queue^.getQueuedCount>maxFutureForwardInitialization) or
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do queue^.activeDeqeue(context);
             aggregator^.addToAggregation(future[nextFuture]^.getResultAsLiteral,true,eachLocation,context.adapters);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
@@ -736,16 +694,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
       VAR i,j:longint;
       begin
-        maxFutureForwardInitialization:=4*workerThreadCount;
+        context.getParent^.ensureTaskQueue;
+        queue:=context.getParent^.getTaskQueue;
+        maxFutureForwardInitialization:=4*{$ifdef fullVersion} workerThreadCount{$else}(getNumberOfCPUs-1){$endif};
         store:=context.valueStore.readOnlyClone;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*length(itList));
         for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
+            future[initializedFutures]:=queue^.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
-          if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
+          if ((initializedFutures and 255)=0) or (queue^.getQueuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
         aggregateFutures(true);
         dispose(store,destroy);
@@ -757,7 +717,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
           task.createTask(bodyRule[j],eachLocation,i,itList[i],@context,nil);
-          task.evaluate(callDepth+1,context,false);
+          task.evaluate(context,false);
           aggregator^.addToAggregation(task.getResultAsLiteral,true,eachLocation,context.adapters);
           task.destroy;
         end;
@@ -766,9 +726,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     begin
       if (eachType=tt_parallelEach) and
-         ((callDepth>=STACK_DEPTH_LIMIT-16) or
+         ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
          not(tco_spawnWorker in context.threadOptions) or
-         (workerThreadCount<=0))
+         ({$ifdef fullVersion} workerThreadCount{$else}(getNumberOfCPUs-1){$endif}<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
       initialize(bodyRule);
@@ -777,7 +737,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
-      if callDepth>STACK_DEPTH_LIMIT then begin
+      if context.callDepth>STACK_DEPTH_LIMIT then begin
         {$ifdef debugMode}
         raise Exception.create('Stack overflow in (p)each construct.');
         {$else}
@@ -849,37 +809,23 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
     VAR whileLocation:T_tokenLocation;
-
-    FUNCTION evaluateHead:boolean;
-      VAR res:P_literal;
+    PROCEDURE evaluateBody; inline;
+      VAR toReduce,dummy:P_token;
       begin
-        res:=headRule^.directEvaluateNullary(whileLocation,context,callDepth+1);
-        if (res<>nil) and (res^.literalType=lt_boolean) then begin
-          result:=P_boolLiteral(res)^.value;
-        end else begin
-          if res<>nil
-          then context.adapters^.raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.getLocation)
-          else context.adapters^.raiseError('Evaluation of the head-part of a while statement failed.',headRule^.getLocation);
-          result:=false;
+        if bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,false) then begin
+          reduceExpression(toReduce,context);
+          context.recycler.cascadeDisposeToken(toReduce);
         end;
-        if res<>nil then disposeLiteral(res);
-      end;
-
-    PROCEDURE evaluateBody;
-      VAR res:P_literal;
-      begin
-        res:=bodyRule^.directEvaluateNullary(whileLocation,context,callDepth+1);
-        if res<>nil then disposeLiteral(res);
       end;
 
     begin
       whileLocation:=first^.location;
-      if callDepth>STACK_DEPTH_LIMIT then begin
+      if context.callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseSystemError('Stack overflow in while construct.',whileLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
-      while evaluateHead and (context.adapters^.noErrors) do evaluateBody;
+      while headRule^.evaluateToBoolean(whileLocation,@context) and (context.adapters^.noErrors) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
@@ -903,16 +849,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$ifndef DEBUGMODE}
         try
         {$endif}
-          if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
-            if (P_rule(first^.data)^.id=MAIN_RULE_ID)
-            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
-            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.id,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+          if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
+            if (P_rule(first^.data)^.getId=MAIN_RULE_ID)
+            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
+            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
             exit;
           end;
         {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
-            context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
+            context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId,first^.location);
             context.adapters^.raiseSystemError(e.message,first^.location);
             exit;
           end;
@@ -1350,8 +1296,11 @@ tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression
   end;
 end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
+  {$ifdef fullVersion}
   VAR debugRun:boolean=true;
+  {$endif}
   begin
+    inc(context.callDepth);
     stack.create;
     {$ifndef DEBUGMODE}try{$endif}
     repeat
@@ -1640,12 +1589,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$ifndef DEBUGMODE}
     except
       on e:Exception do begin
-        context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth));
+        context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth));
         if first<>nil then context.adapters^.raiseSystemError(e.message,errorLocation)
                       else context.adapters^.raiseSystemError(e.message);
       end;
     end;
     {$endif}
+    dec(context.callDepth);
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         context.adapters^.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
@@ -1657,7 +1607,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
          not(context.adapters^.hasStackTrace) then context.callStackPrint;
       context.callStackClear;
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
-      if (callDepth=0) then context.recycler.cascadeDisposeToken(first);
+      if (context.callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
       if not(context.adapters^.hasStackTrace) then context.callStackPrint;
       cleanupStackAndExpression;

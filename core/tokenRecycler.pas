@@ -19,7 +19,6 @@ TYPE
       FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
       FUNCTION newToken(CONST original:T_token):P_token; inline;
       FUNCTION newToken(CONST original:P_token):P_token; inline;
-      FUNCTION cascaseDisposeToLiteral(p:P_token; CONST errorBefore:boolean):P_literal;
   end;
 
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
@@ -130,17 +129,6 @@ FUNCTION T_tokenRecycler.newToken(CONST original: P_token): P_token;
     end else new(result,create);
     result^.define(original^);
     result^.next:=nil;
-  end;
-
-FUNCTION T_tokenRecycler.cascaseDisposeToLiteral(p:P_token; CONST errorBefore:boolean):P_literal;
-  begin
-    if not(errorBefore) and (p<>nil) and (p^.tokType=tt_literal) and (p^.next=nil) then begin
-      result:=P_literal(p^.data)^.rereferenced;
-      disposeToken(p);
-    end else begin
-      result:=nil;
-      cascadeDisposeToken(p);
-    end;
   end;
 
 end.

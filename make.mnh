@@ -99,12 +99,14 @@ private hashFiles:=['../3rd_party/diff/diff.pas',
                     '../common/serializationUtil.pas',
                     'consoles/mnh_light.lpr',
                     'core/consoleAsk.pas',
+                    'core/mnh_aggregators.pas',
                     'core/mnh_basicTypes.pas',
                     'core/mnh_caches.pas',
                     'core/mnh_cmdLineInterpretation.pas',
                     'core/mnh_constants.pas',
                     'core/mnh_contexts.pas',
                     'core/mnh_datastores.pas',
+                    'core/mnh_debugging.pas',
                     'core/mnh_doc.pas',
                     'core/mnh_fileWrappers.pas',
                     'core/mnh_fmtStmt.inc',
@@ -128,12 +130,12 @@ private hashFiles:=['../3rd_party/diff/diff.pas',
                     'core/mnh_litvar.pas',
                     'core/mnh_out_adapters.pas',
                     'core/mnh_packages.pas',
-                    'core/mnh_pattern.inc',
+                    'core/mnh_patterns.pas',
                     'core/mnh_plotData.pas',
-                    'core/mnh_procBlock.inc',
-                    'core/mnh_rule.inc',
+                    'core/mnh_profiling.pas',
+                    'core/mnh_rule.pas',
                     'core/mnh_settings.pas',
-                    'core/mnh_subrule.inc',
+                    'core/mnh_subrules.pas',
                     'core/mnh_token.inc',
                     'core/mnh_tokens.pas',
                     'core/res_ensureAssoc.inc',
@@ -142,6 +144,9 @@ private hashFiles:=['../3rd_party/diff/diff.pas',
                     'core/res_examples.inc',
                     'core/res_html_template.inc',
                     'core/res_removeAssoc.inc',
+                    'core/tokenRecycler.pas',
+                    'core/tokenStack.pas',
+                    'core/valueStore.pas',
                     'gui/askdialog.pas',
                     'gui/closedialog.pas',
                     'gui/completionLogic.inc',
@@ -323,11 +328,25 @@ end;
 main('beep')->beep;
 
 //*Build one specific target
-main(target:string)->
-  BUILTS.each(B,isSameFileName(B[2],target) OR target=B[1] ? buildExe(B) orElse true : false,OR) OR
-  BUILTS.each(B,isSimilarFile (B[2],target)                ? buildExe(B) orElse true : false,or)
+main(target:string)->begin
+  local testAfterBuild:=false;
+  local tgt:=target;
+  target.copy(target.length-1,1)=='!'
+  ? begin
+      tgt:=target.copy(0,target.length-1);
+      testAfterBuild:=true;
+    end
+  : void;
+  local buildAndTest:=
+    testAfterBuild ? {buildExe($B) orElse testExe($B) orElse true}
+                   : {buildExe($B) orElse true};
+
+  BUILTS.each(B,isSameFileName(B[2],tgt) OR tgt=B[1] ? buildAndTest(B) orElse true : false,OR) OR
+  BUILTS.each(B,isSimilarFile (B[2],tgt)             ? buildAndTest(B) orElse true : false,or)
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | VALID_TARGETS).join("\n"));
+end;
+
 //*Several steps in succession
 main(...)->... .each(step,
   print('******************************'),

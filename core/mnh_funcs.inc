@@ -358,13 +358,10 @@ FUNCTION time_imp intFuncSignature;
     end;
 
   FUNCTION evaluate(CONST subruleLiteral:P_subrule; CONST parameters:P_listLiteral=nil):P_literal;
-    VAR first:P_token;
     begin
-      first:=subruleLiteral^.replaces(parameters,tokenLocation,context);
       t:=context.wallclockTime(true);
-      reduceExpression(first,0,context);
+      result:=subruleLiteral^.evaluate(tokenLocation,@context,parameters);
       t:=context.wallclockTime(true)-t;
-      result:=context.recycler.cascaseDisposeToLiteral(first,not(context.adapters^.noErrors));
     end;
 
   begin
@@ -396,7 +393,7 @@ FUNCTION try_imp intFuncSignature;
       ((params^.size=1) or (params^.size=2)) then begin
       context.callStackPush(tokenLocation,@builtinLocation_try,params,nil);
       oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
-      result:=P_subrule(arg0)^.directEvaluateNullary(tokenLocation,context,0);
+      result:=P_subrule(arg0)^.evaluateToLiteral(tokenLocation,@context);
       if context.adapters^.noErrors
       then errorCase:=false
       else begin
@@ -409,8 +406,8 @@ FUNCTION try_imp intFuncSignature;
         if params^.size=2 then begin
           if arg1^.literalType=lt_expression then begin
             if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)
-            then result:=P_subrule(arg1)^.directEvaluateUnary(messages,tokenLocation,context,0)
-            else result:=P_subrule(arg1)^.directEvaluateNullary       (tokenLocation,context,0);
+            then result:=P_subrule(arg1)^.evaluateToLiteral(tokenLocation,@context,messages)
+            else result:=P_subrule(arg1)^.evaluateToLiteral(tokenLocation,@context);
           end else begin
             result:=arg1;
             result^.rereference;
@@ -432,7 +429,7 @@ FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      reduceExpression(task,0,context^);
+      reduceExpression(task,context^);
       context^.recycler.cascadeDisposeToken(task);
       context^.doneEvaluating;
       dispose(context,destroy);
@@ -444,6 +441,7 @@ FUNCTION async_imp intFuncSignature;
   VAR p:P_asyncTask;
       childContext:P_threadContext;
       parameters:P_listLiteral=nil;
+      dummy:P_token;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
@@ -453,8 +451,7 @@ FUNCTION async_imp intFuncSignature;
         getMem(p,sizeOf(T_asyncTask));
         p^.context:=childContext;
         if params^.size=2 then parameters:=list1;
-        p^.task:=P_subrule(arg0)^.replaces(parameters,tokenLocation,context);
-        if p^.task=nil then begin
+        if not(P_subrule(arg0)^.replaces(parameters,tokenLocation,p^.task,dummy,context,false)) then begin
           freeMem(p,sizeOf(T_asyncTask));
           childContext^.doneEvaluating;
           dispose(childContext,destroy);
@@ -638,7 +635,7 @@ FUNCTION group_imp intFuncSignature;
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_subrule(aggregator)^.directEvaluateAggregator(resultLiteral,L,tokenLocation,context,0);
+          newLit:=P_subrule(aggregator)^.evaluateToLiteral(tokenLocation,@context,resultLiteral,L);
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;

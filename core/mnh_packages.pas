@@ -15,9 +15,9 @@ USES //basic classes
      mnh_profiling,
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
      mnh_subrules,
+     mnh_rule,
      mnh_aggregators,
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns,
-     mnh_datastores;
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns;
 
 {$define include_interface}
 TYPE
@@ -25,8 +25,6 @@ TYPE
   {$include mnh_token.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_rule.inc}
-  {$include mnh_futureTask.inc}
   {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
@@ -60,7 +58,7 @@ TYPE
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       //PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
@@ -70,6 +68,7 @@ TYPE
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION isMain:boolean;
+      FUNCTION getId:T_idString; virtual;
       FUNCTION getPath:ansistring; virtual;
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -81,7 +80,7 @@ TYPE
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
@@ -91,8 +90,6 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 {$undef include_interface}
 VAR killServersCallback:PROCEDURE;
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT={$ifdef Windows}60000{$else}3000{$endif};
-VAR pendingTasks     :T_taskQueue;
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
   begin
     if (length(id)>=3) and (id[1]='i') and (id[2]='s')
@@ -178,8 +175,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 
 {$define include_implementation}
 {$include mnh_token.inc}
-{$include mnh_futureTask.inc}
-{$include mnh_rule.inc}
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
 
@@ -272,7 +267,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       end;
     end;
 
-  PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
+  PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
       VAR i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
@@ -385,12 +380,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         rulePattern.toParameterIds(ruleBody);
         //[marker 1]
         if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then begin
-          reduceExpression(ruleBody,0,context);
+          reduceExpression(ruleBody,context);
         end;
 
         if context.adapters^.noErrors then begin
-          ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,semicolonPosition,context.adapters^);
-          if (context.adapters^.noErrors) and (ruleGroup^.ruleType in C_mutableRuleTypes) and ((length(rulePattern.sig)<>0) or rulePattern.hasOptionals) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
+          ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^);
+          if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and ((length(rulePattern.sig)<>0) or rulePattern.hasOptionals) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
             subRule^.setComment(join(commentLines,C_lineBreakChar));
@@ -398,7 +393,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             subRule^.setAttributes(attributeLines);
             attributeLines:=C_EMPTY_STRING_ARRAY;
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
-            if (ruleGroup^.ruleType in C_mutableRuleTypes)
+            if (ruleGroup^.getRuleType in C_mutableRuleTypes)
             then begin
               if (usecase<>lu_forCodeAssistance)
               then begin
@@ -443,7 +438,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         end;
         ensureRuleId(first^.txt,
                      ruleModifiers,
-                     first^.location,first^.location,context.adapters^);
+                     first^.location,context.adapters^);
       end;
 
     begin
@@ -498,7 +493,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             end;
             predigest(first,@self,context);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
-            reduceExpression(first,0,context);
+            reduceExpression(first,context);
             if profile then context.timeBaseComponent(pc_interpretation);
             context.callStackPop();
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
@@ -534,7 +529,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         t^.next:=context.recycler.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
         context.callStackPush(@self,pc_interpretation,pseudoCallees);
         if profile then context.timeBaseComponent(pc_interpretation);
-        reduceExpression(t,0,context);
+        reduceExpression(t,context);
         if profile then context.timeBaseComponent(pc_interpretation);
         context.callStackPop();
         //error handling if main returns more than one token:------------------
@@ -547,7 +542,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_subrule(t^.data)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
+          P_subrule(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
         end;
         //----------------------:special handling if main returns an expression
         context.recycler.cascadeDisposeToken(t);
@@ -595,7 +590,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           end;
         end else if (fileTokens.current.tokType=tt_semicolon) then begin
           if (first<>nil)
-          then interpret(first,fileTokens.current.location)
+          then interpret(first)
           else context.recycler.cascadeDisposeToken(first);
           last:=nil;
           first:=nil;
@@ -618,7 +613,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       if profile then context.timeBaseComponent(pc_tokenizing);
 
       if (context.adapters^.noErrors)
-      then begin if first<>nil then interpret(first,first^.location); end
+      then begin if first<>nil then interpret(first); end
       else context.recycler.cascadeDisposeToken(first);
     end;
 
@@ -707,7 +702,7 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boole
       i:longint;
   begin
     for rule in packageRules.valueSet do
-      if rule^.ruleType in [rt_datastore_private,rt_datastore_public]
+      if rule^.getRuleType in [rt_datastore_private,rt_datastore_public]
       then rule^.writeBack(adapters);
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(adapters,recurse);
   end;
@@ -721,7 +716,7 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
       ruleList[i]^.writeBack(adapters);
-      if ruleList[i]^.ruleType=rt_memoized then ruleList[i]^.cache^.clear;
+      if ruleList[i]^.getRuleType=rt_memoized then ruleList[i]^.clearCache;
     end;
     setLength(ruleList,0);
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
@@ -738,7 +733,7 @@ DESTRUCTOR T_package.destroy;
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
   PROCEDURE raiseModifierComplaint;
@@ -775,13 +770,12 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
       else adapters.raiseNote('Creating new rule: '+ruleId,ruleDeclarationStart);
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
-      if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
-      then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
+      if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
+      then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
       else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
       then adapters.raiseError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
       else adapters.raiseNote('Extending rule: '+ruleId,ruleDeclarationStart);
     end;
-    result^.declarationEnd:=ruleDeclarationEnd;
   end;
 
 PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
@@ -789,7 +783,7 @@ PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
       i:longint;
   begin
     r:=packageRules.valueSet;
-    for i:=0 to length(r)-1 do if r[i]^.ruleType=rt_memoized then r[i]^.clearCache;
+    for i:=0 to length(r)-1 do if r[i]^.getRuleType=rt_memoized then r[i]^.clearCache;
     if recurse then for i:=0 to length(secondaryPackages)-1 do secondaryPackages[i]^.clearPackageCache(true);
   end;
 
@@ -822,12 +816,12 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
   begin
     userDefinedRules.clear;
     for rule in packageRules.valueSet do begin
-      userDefinedRules.put(rule^.id);
-      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.id));
+      userDefinedRules.put(rule^.getId);
+      if rule^.getRuleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.getId));
     end;
     for rule in importedRules.valueSet do  begin
-      userDefinedRules.put(rule^.id);
-      if rule^.ruleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.id));
+      userDefinedRules.put(rule^.getId);
+      if rule^.getRuleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.getId));
     end;
   end;
 
@@ -874,6 +868,7 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=false;
   end;
 
+FUNCTION T_package.getId:T_idString; begin result:=codeProvider^.id; end;
 FUNCTION T_package.getPath: ansistring; begin result:=codeProvider^.getPath; end;
 FUNCTION T_package.isMain: boolean; begin result:=(@self=mainPackage); end;
 {$ifdef fullVersion}
@@ -883,10 +878,10 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
       value:P_literal;
   begin
     r:=importedRules.valueSet;
-    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
+    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.getId, value,r[i]^.getLocation);
     setLength(r,0);
     r:=packageRules.valueSet;
-    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
+    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.getId, value,r[i]^.getLocation);
     setLength(r,0);
   end;
 {$endif}
@@ -910,7 +905,7 @@ FUNCTION T_package.inspect:P_mapLiteral;
     begin
       allRules:=packageRules.valueSet;
       result:=newMapLiteral();
-      for rule in allRules do result^.put(rule^.id,rule^.inspect,false);
+      for rule in allRules do result^.put(rule^.getId,rule^.inspect,false);
     end;
 
   begin
@@ -929,7 +924,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   begin
     setLength(result,0);
     for rule in packageRules.valueSet do
-    for subRule in rule^.subrules do begin
+    for subRule in rule^.getSubrules do begin
       matchesAll:=true;
       for key in attributeKeys do matchesAll:=matchesAll and subRule^.hasAttribute(key,caseSensitive);
       if matchesAll then begin
@@ -953,7 +948,7 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
         subRule:P_subrule;
     begin
       result:=newListLiteral();
-      for rule in packageRules.valueSet do for subRule in rule^.subrules do if subRule^.getType=srt_normal_public then
+      for rule in packageRules.valueSet do for subRule in rule^.getSubrules do if subRule^.getType=srt_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
           .put('subrule'   ,subRule^.rereferenced,false)^
@@ -973,19 +968,19 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
   begin
     ruleId   :=token.txt;
     if P_package(package)^.packageRules.containsKey(ruleId,userRule) then begin
-      if userRule^.ruleType=rt_customTypeCheck
+      if userRule^.getRuleType=rt_customTypeCheck
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_localUserRule;
       token.data:=userRule;
-      userRule^.idResolved:=true;
+      userRule^.setIdResolved;
       exit;
     end;
     if P_package(package)^.importedRules.containsKey(ruleId,userRule) then begin
-      if userRule^.ruleType=rt_customTypeCheck
+      if userRule^.getRuleType=rt_customTypeCheck
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_importedUserRule;
       token.data:=userRule;
-      userRule^.idResolved:=true;
+      userRule^.setIdResolved;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -995,16 +990,16 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
     end;
     ruleId:=isTypeToType(ruleId);
     if ruleId<>'' then begin
-      if P_package(package)^.packageRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+      if P_package(package)^.packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
-        userRule^.idResolved:=true;
+        userRule^.setIdResolved;
         exit;
       end;
-      if P_package(package)^.importedRules.containsKey(ruleId,userRule) and (userRule^.ruleType=rt_customTypeCheck) then begin
+      if P_package(package)^.importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
-        userRule^.idResolved:=true;
+        userRule^.setIdResolved;
         exit;
       end;
     end;
@@ -1016,9 +1011,7 @@ INITIALIZATION
 {$define include_initialization}
   {$include mnh_token.inc}
   {$include mnh_fmtStmt.inc}
-  {$include mnh_rule.inc}
   resolveIDsCallback:=@resolveId;
-  pendingTasks.create;
   reduceExpressionCallback:=@reduceExpression;
   //callbacks in mnh_litvar:
 
@@ -1032,7 +1025,6 @@ INITIALIZATION
 
 FINALIZATION
 {$define include_finalization}
-  pendingTasks.destroy;
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
 end.
