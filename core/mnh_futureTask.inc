@@ -84,7 +84,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_token
   begin
     eachIndex       :=idx;
     eachRule        :=expr;
-    eachParameter   :=x;
+    eachParameter   :=newListLiteral(1)^.append(x,true);
     eachLocation    :=location;
     scope           :=context;
     valueScope      :=values;
@@ -95,7 +95,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_token
 
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_threadContext; CONST calledFromWorkerThread:boolean);
   VAR idxLit:P_intLiteral;
-      toReduce:P_token;
+      toReduce,dummy:P_token;
   begin
     if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
     context.valueStore.scopePush(false);
@@ -104,9 +104,10 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_threadCont
     idxLit^.unreference;
     if context.adapters^.noErrors
     then begin
-      toReduce:=eachRule^.replacesUnary(eachParameter,eachLocation,context);
-      if toReduce<>nil then reduceExpression(toReduce,callDepth,context);
-      evaluationResult:=context.recycler.cascaseDisposeToLiteral(toReduce,not(context.adapters^.noErrors));
+      if eachRule^.replaces(P_listLiteral(eachParameter),eachLocation,toReduce,dummy,context,false)
+      then reduceExpression(toReduce,callDepth,context);
+      evaluationResult:=context.cascadeDisposeToLiteral(toReduce);
+      disposeLiteral(eachParameter);
     end else evaluationResult:=nil;
     context.valueStore.scopePop;
     if calledFromWorkerThread then context.detachWorkerContext;

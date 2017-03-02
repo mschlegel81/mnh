@@ -69,6 +69,7 @@ TYPE
 
       PROPERTY threadOptions:T_threadContextOptions read options;
       PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word); inline;
+      FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
   end;
 
   T_evaluationContext=object
@@ -391,6 +392,16 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
 
 PROCEDURE T_threadContext.reduceExpression(VAR first:P_token; CONST callDepth:word); begin reduceExpressionCallback(first,callDepth,self); end;
 
+FUNCTION T_threadContext.cascadeDisposeToLiteral(VAR p:P_token):P_literal;
+  begin
+    if adapters^.noErrors and (p<>nil) and (p^.tokType=tt_literal) and (p^.next=nil) then begin
+      result:=P_literal(p^.data)^.rereferenced;
+      recycler.disposeToken(p);
+    end else begin
+      result:=nil;
+      recycler.cascadeDisposeToken(p);
+    end;
+  end;
 
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
   VAR p:P_threadContext;

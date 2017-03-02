@@ -547,7 +547,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_subrule(t^.data)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
+          P_subrule(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
         end;
         //----------------------:special handling if main returns an expression
         context.recycler.cascadeDisposeToken(t);

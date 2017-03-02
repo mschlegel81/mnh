@@ -132,12 +132,11 @@ TYPE
 
   P_expressionLiteral = ^T_expressionLiteral;
   T_expressionLiteral = object(T_scalarLiteral)
-    FUNCTION evaluate         (CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST context:pointer):P_literal; virtual; abstract;
-    FUNCTION evaluateToBoolean(CONST a,b:P_literal;            CONST location:T_tokenLocation; CONST context:pointer):boolean;   virtual; abstract;
+    FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;   virtual; abstract;
+    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual; abstract;
+    FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual; abstract;
     FUNCTION arity:longint; virtual; abstract;
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
-
-    FUNCTION accept(CONST a:P_literal; CONST context:pointer): boolean; virtual; abstract;
     FUNCTION getParentId:T_idString; virtual; abstract;
   end;
 
@@ -327,15 +326,17 @@ FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); inline;
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
-FUNCTION newBoolLiteral          (CONST value: boolean       ): P_boolLiteral;       inline;
-FUNCTION newIntLiteral           (CONST value: int64         ): P_intLiteral;        inline;
-FUNCTION newRealLiteral          (CONST value: T_myFloat     ): P_realLiteral;       inline;
-FUNCTION newStringLiteral        (CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
-FUNCTION newListLiteral          (CONST initialSize:longint=0): P_listLiteral;       inline;
-FUNCTION newSetLiteral                                        : P_setLiteral;        inline;
-FUNCTION newMapLiteral                                        : P_mapLiteral;        inline;
-FUNCTION newVoidLiteral: P_voidLiteral; inline;
-FUNCTION newErrorLiteral:P_literal; inline;
+FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
+FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
+FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
+FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
+FUNCTION newListLiteral  (CONST initialSize:longint=0): P_listLiteral;       inline;
+FUNCTION newListLiteral  (CONST a:P_literal;
+                          CONST b:P_literal=nil)      : P_listLiteral; inline;
+FUNCTION newSetLiteral                                : P_setLiteral;        inline;
+FUNCTION newMapLiteral                                : P_mapLiteral;        inline;
+FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
+FUNCTION newErrorLiteral                              : P_literal; inline;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
@@ -426,6 +427,15 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
 
 FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;       begin new(result,create(value));       end;
 FUNCTION newListLiteral(CONST initialSize:longint=0): P_listLiteral;       begin new(result,create(initialSize)); end;
+FUNCTION newListLiteral(CONST a:P_literal; CONST b:P_literal=nil): P_listLiteral;
+  VAR initialSize:longint=2;
+  begin
+    if b=nil then dec(initialSize);
+    new(result,create(initialSize));
+                   result^.append(a,true);
+    if b<>nil then result^.append(b,true);
+  end;
+
 FUNCTION newSetLiteral                              : P_setLiteral;        begin new(result,create);              end;
 FUNCTION newMapLiteral                              : P_mapLiteral;        begin new(result,create);              end;
 FUNCTION newVoidLiteral                             : P_voidLiteral;       begin result:=P_voidLiteral(voidLit       .rereferenced); end;
@@ -1909,7 +1919,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
-  FUNCTION isLeq(a,b:P_literal):boolean; inline; begin result:=leqExpression^.evaluateToBoolean(a,b,location,context); end;
+  FUNCTION isLeq(CONST a,b:P_literal):boolean; inline; begin result:=leqExpression^.evaluateToBoolean(location,context,a,b); end;
 
   begin
     if fill<=1 then exit;

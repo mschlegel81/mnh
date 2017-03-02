@@ -5,7 +5,10 @@ USES //my libraries
      //MNH:
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
-     mnh_litVar;
+     mnh_litVar,
+     mnh_tokens,
+     mnh_contexts,
+     mnh_subrules;
 TYPE
   T_aggregator=object
     DESTRUCTOR destroy; virtual; abstract;
@@ -87,10 +90,10 @@ TYPE
 
   T_expressionAggregator=object(T_aggregatorWithResultLiteral)
     private
-      aggregator:P_expressionLiteral;
-      aggregationContext:pointer;
+      aggregator:P_subrule;
+      aggregationContext:P_threadContext;
     public
-      CONSTRUCTOR create(CONST ex:P_expressionLiteral; CONST contextPointer:pointer);
+      CONSTRUCTOR create(CONST ex:P_subrule; CONST contextPointer:P_threadContext);
       DESTRUCTOR destroy; virtual;
       PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST adapters:P_adapters); virtual;
   end;
@@ -112,7 +115,7 @@ FUNCTION newListAggregator                  :P_listAggregator;
 FUNCTION newMinAggregator                   :P_minAggregator;
 FUNCTION newMaxAggregator                   :P_maxAggregator;
 FUNCTION newHeadAggregator                  :P_headAggregator;
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:pointer):P_expressionAggregator;
+FUNCTION newCustomAggregator(CONST ex:P_subrule; CONST contextPointer:P_threadContext):P_expressionAggregator;
 IMPLEMENTATION
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
   begin
@@ -130,7 +133,7 @@ FUNCTION newListAggregator:P_listAggregator; begin new(result,create); end;
 FUNCTION newMinAggregator :P_minAggregator;  begin new(result,create); end;
 FUNCTION newMaxAggregator :P_maxAggregator;  begin new(result,create); end;
 FUNCTION newHeadAggregator:P_headAggregator; begin new(result,create); end;
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:pointer):P_expressionAggregator;
+FUNCTION newCustomAggregator(CONST ex:P_subrule; CONST contextPointer:P_threadContext):P_expressionAggregator;
   begin
     new(result,create(ex,contextPointer));
   end;
@@ -149,9 +152,8 @@ CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType);
     inherited create(newVoidLiteral);
     op:=operatorToken;
   end;
-CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral; CONST contextPointer: pointer);
+CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_subrule; CONST contextPointer: P_threadContext);
   begin
-    //writeln('Creating T_expressionAggregator');
     inherited create(nil);
     aggregator:=ex; aggregator^.rereference;
     aggregationContext:=contextPointer;
@@ -250,14 +252,19 @@ PROCEDURE T_opAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; 
 
 PROCEDURE T_expressionAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR aggParams:P_listLiteral;
+      toReduce,dummy:P_token;
   begin
     //writeln('Aggregating using T_expressionAggregator - ',resultLiteral=nil);
     if resultLiteral=nil
     then resultLiteral:=L^.rereferenced
     else begin
-      aggParams:=newListLiteral(2);
-      aggParams^.append(resultLiteral,false)^.append(L,true);
-      resultLiteral:=aggregator^.evaluate(aggParams,location,aggregationContext);
+      aggParams:=newListLiteral(resultLiteral,L);
+      disposeLiteral(resultLiteral);
+      if aggregator^.replaces(aggParams,location,toReduce,dummy,aggregationContext^,false)
+      then begin
+        aggregationContext^.reduceExpression(toReduce,0);
+        resultLiteral:=aggregationContext^.cascadeDisposeToLiteral(toReduce);
+      end;
       if resultLiteral=nil then begin
         adapters^.raiseError('Aggregation failed for element '+L^.toString(50),location);
         resultLiteral:=newVoidLiteral;

@@ -21,7 +21,7 @@ TYPE
     public
       CONSTRUCTOR createAnonymous;
       CONSTRUCTOR create(CONST parameterId:T_idString);
-      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_threadContext):boolean;
+      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION acceptType(CONST literalType:T_literalType):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
@@ -50,8 +50,8 @@ TYPE
     FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
     FUNCTION idForIndexInline(CONST index:longint):T_idString;
     PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
-    FUNCTION matches(VAR par:T_listLiteral; VAR context:T_threadContext):boolean;
-    FUNCTION matchesForFallback(VAR par:T_listLiteral; VAR context:T_threadContext):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+    FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION toCmdLineHelpStringString:ansistring;
@@ -83,12 +83,12 @@ CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
     id:=parameterId;
   end;
 
-FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_threadContext):boolean;
+FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
   VAR L:P_literal;
   begin
     L:=parameterList[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
-    if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.accept(L,@context));
+    if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.evaluateToBoolean(location,@context,L));
     if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx));
     if (restrictionIdx>=0) and (restrictionType in C_modifieableTypeChecks) and (P_collectionLiteral(L)^.size<>restrictionIdx) then exit(false);
     result:=true;
@@ -381,16 +381,16 @@ FUNCTION T_pattern.matchesNilPattern: boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par: T_listLiteral; VAR context:T_threadContext): boolean;
+FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext): boolean;
   begin
-    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,context);
+    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,location,context);
   end;
 
-FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; VAR context:T_threadContext):boolean;
+FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
   VAR i:longint;
   begin
     if (par.size<length(sig)) then exit(false);
-    for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i,context)) then exit(false);
+    for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i,location,context)) then exit(false);
     result:=true;
   end;
 

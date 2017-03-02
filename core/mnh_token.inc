@@ -654,9 +654,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
+              then aggregator:=newCustomAggregator(P_subrule(t^.data),@context)
               else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
@@ -667,7 +667,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
             if context.adapters^.noErrors
-            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            then aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
           end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
@@ -849,27 +849,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
     VAR whileLocation:T_tokenLocation;
-
-    FUNCTION evaluateHead:boolean;
-      VAR res:P_literal;
+    PROCEDURE evaluateBody; inline;
+      VAR toReduce,dummy:P_token;
       begin
-        res:=headRule^.directEvaluateNullary(whileLocation,context,callDepth+1);
-        if (res<>nil) and (res^.literalType=lt_boolean) then begin
-          result:=P_boolLiteral(res)^.value;
-        end else begin
-          if res<>nil
-          then context.adapters^.raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.getLocation)
-          else context.adapters^.raiseError('Evaluation of the head-part of a while statement failed.',headRule^.getLocation);
-          result:=false;
+        if bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,false) then begin
+          reduceExpression(toReduce,callDepth,context);
+          context.recycler.cascadeDisposeToken(toReduce);
         end;
-        if res<>nil then disposeLiteral(res);
-      end;
-
-    PROCEDURE evaluateBody;
-      VAR res:P_literal;
-      begin
-        res:=bodyRule^.directEvaluateNullary(whileLocation,context,callDepth+1);
-        if res<>nil then disposeLiteral(res);
       end;
 
     begin
@@ -879,7 +865,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         exit;
       end;
       if not(parseBodyOk) then exit;
-      while evaluateHead and (context.adapters^.noErrors) do evaluateBody;
+      while headRule^.evaluateToBoolean(whileLocation,@context) and (context.adapters^.noErrors) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
