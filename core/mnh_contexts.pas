@@ -41,6 +41,7 @@ TYPE
       recycler  :T_tokenRecycler;
       valueStore:T_valueStore;
       adapters  :P_adapters;
+      callDepth:longint;
       CONSTRUCTOR createWorkerContext;
       DESTRUCTOR destroy;
 
@@ -70,7 +71,7 @@ TYPE
       {$endif}
 
       PROPERTY threadOptions:T_threadContextOptions read options;
-      PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word); inline;
+      PROCEDURE reduceExpression(VAR first:P_token); inline;
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
   end;
@@ -130,7 +131,7 @@ TYPE
       state:T_futureTaskState;
 
     CONSTRUCTOR createTask(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
-    PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
+    PROCEDURE   evaluate(VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
     FUNCTION    getResultAsLiteral:P_literal;
     DESTRUCTOR  destroy;
   end;
@@ -147,11 +148,11 @@ TYPE
     DESTRUCTOR destroy;
     FUNCTION  enqueue(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
-    PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_threadContext);
+    PROCEDURE activeDeqeue(VAR context:T_threadContext);
     PROPERTY getQueuedCount:longint read queuedCount;
   end;
 
-VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; VAR context:T_threadContext);
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
 IMPLEMENTATION
 VAR globalLock:TRTLCriticalSection;
@@ -164,6 +165,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     parent        :=parent_;
     adapters      :=outAdapters;
     callingContext:=nil;
+    callDepth:=0;
     if adapters=nil then adapters:=parent^.adapters;
   end;
 
@@ -331,6 +333,7 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
     context^.callStack.clear;
     context^.valueStore.clear;
     context^.adapters:=adapters;
+    context^.callDepth:=0;
   end;
 
 {$ifdef fullVersion}
@@ -404,6 +407,7 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CON
     valueStore.clear;
     valueStore.parentStore:=valueScope;
     callStack.clear;
+    callDepth:=0;
   end;
 
 PROCEDURE T_threadContext.detachWorkerContext;
@@ -453,7 +457,7 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
   end;
 {$endif}
 
-PROCEDURE T_threadContext.reduceExpression(VAR first:P_token; CONST callDepth:word); begin reduceExpressionCallback(first,callDepth,self); end;
+PROCEDURE T_threadContext.reduceExpression(VAR first:P_token); begin reduceExpressionCallback(first,self); end;
 
 FUNCTION T_threadContext.cascadeDisposeToLiteral(VAR p:P_token):P_literal;
   begin
@@ -518,7 +522,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           ThreadSwitch;
           sleep(sleepTime div 5);
         end else begin
-          currentTask^.evaluate(0,tempcontext,true);
+          currentTask^.evaluate(tempcontext,true);
           sleepTime:=0;
         end;
       until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue^.destructionPending) or not(adapters^.noErrors);
@@ -541,7 +545,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_expressionLiteral; CONST locati
     evaluationResult:=nil;
   end;
 
-PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_threadContext; CONST calledFromWorkerThread:boolean);
+PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWorkerThread:boolean);
   VAR idxLit:P_intLiteral;
       toReduce,dummy:P_token;
   begin
@@ -635,11 +639,11 @@ FUNCTION T_taskQueue.dequeue: P_futureTask;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth: word; VAR context: T_threadContext);
+PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(callDepth,context,false);
+    if task<>nil then task^.evaluate(context,false);
   end;
 
 

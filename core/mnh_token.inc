@@ -535,7 +535,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
     end;
   end;
 
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   VAR stack:T_TokenStack;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -613,7 +613,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         lastPart:=length(bodyParts)-1;
         t:=bodyParts[lastPart].first;
         if (t^.tokType=tt_aggregatorConstructor) or (t^.tokType=tt_pseudoFuncPointer) and isPureAggregator then begin
-          reduceExpression(bodyParts[lastPart].first,callDepth+1,context);
+          reduceExpression(bodyParts[lastPart].first,context);
           bodyParts[lastPart].last:=bodyParts[lastPart].first^.last;
           t:=bodyParts[lastPart].first;
         end;
@@ -681,7 +681,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             and ((queue^.getQueuedCount>maxFutureForwardInitialization) or
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do queue^.activeDeqeue(callDepth+1,context);
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do queue^.activeDeqeue(context);
             aggregator^.addToAggregation(future[nextFuture]^.getResultAsLiteral,true,eachLocation,context.adapters);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
@@ -696,7 +696,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         context.getParent^.ensureTaskQueue;
         queue:=context.getParent^.getTaskQueue;
-        maxFutureForwardInitialization:=4*workerThreadCount;
+        maxFutureForwardInitialization:=4*{$ifdef fullVersion} workerThreadCount{$else}(getNumberOfCPUs-1){$endif};
         store:=context.valueStore.readOnlyClone;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*length(itList));
@@ -717,7 +717,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
           task.createTask(bodyRule[j],eachLocation,i,itList[i],@context,nil);
-          task.evaluate(callDepth+1,context,false);
+          task.evaluate(context,false);
           aggregator^.addToAggregation(task.getResultAsLiteral,true,eachLocation,context.adapters);
           task.destroy;
         end;
@@ -726,9 +726,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     begin
       if (eachType=tt_parallelEach) and
-         ((callDepth>=STACK_DEPTH_LIMIT-16) or
+         ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
          not(tco_spawnWorker in context.threadOptions) or
-         (workerThreadCount<=0))
+         ({$ifdef fullVersion} workerThreadCount{$else}(getNumberOfCPUs-1){$endif}<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
       initialize(bodyRule);
@@ -737,7 +737,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
-      if callDepth>STACK_DEPTH_LIMIT then begin
+      if context.callDepth>STACK_DEPTH_LIMIT then begin
         {$ifdef debugMode}
         raise Exception.create('Stack overflow in (p)each construct.');
         {$else}
@@ -813,14 +813,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR toReduce,dummy:P_token;
       begin
         if bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,false) then begin
-          reduceExpression(toReduce,callDepth,context);
+          reduceExpression(toReduce,context);
           context.recycler.cascadeDisposeToken(toReduce);
         end;
       end;
 
     begin
       whileLocation:=first^.location;
-      if callDepth>STACK_DEPTH_LIMIT then begin
+      if context.callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseSystemError('Stack overflow in while construct.',whileLocation);
         exit;
       end;
@@ -849,7 +849,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$ifndef DEBUGMODE}
         try
         {$endif}
-          if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
+          if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if (P_rule(first^.data)^.getId=MAIN_RULE_ID)
             then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
             else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
@@ -1296,8 +1296,11 @@ tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression
   end;
 end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
+  {$ifdef fullVersion}
   VAR debugRun:boolean=true;
+  {$endif}
   begin
+    inc(context.callDepth);
     stack.create;
     {$ifndef DEBUGMODE}try{$endif}
     repeat
@@ -1586,12 +1589,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$ifndef DEBUGMODE}
     except
       on e:Exception do begin
-        context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth));
+        context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth));
         if first<>nil then context.adapters^.raiseSystemError(e.message,errorLocation)
                       else context.adapters^.raiseSystemError(e.message);
       end;
     end;
     {$endif}
+    dec(context.callDepth);
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         context.adapters^.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
@@ -1603,7 +1607,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
          not(context.adapters^.hasStackTrace) then context.callStackPrint;
       context.callStackClear;
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
-      if (callDepth=0) then context.recycler.cascadeDisposeToken(first);
+      if (context.callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
       if not(context.adapters^.hasStackTrace) then context.callStackPrint;
       cleanupStackAndExpression;

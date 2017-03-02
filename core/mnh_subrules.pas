@@ -601,7 +601,7 @@ FUNCTION T_subrule.evaluate(CONST location:T_tokenLocation; CONST context:pointe
   begin
     if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^,false)
     then begin
-      P_threadContext(context)^.reduceExpression(toReduce,0);
+      P_threadContext(context)^.reduceExpression(toReduce);
       result:=P_threadContext(context)^.cascadeDisposeToLiteral(toReduce);
     end else result:=nil;
   end;
@@ -845,7 +845,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   FUNCTION evaluateOk:boolean;
     begin
-      tempcontext.threadContext^.reduceExpression(firstRep,0);
+      tempcontext.threadContext^.reduceExpression(firstRep);
       result:=tempcontext.adapters^.noErrors and
               (firstRep<>nil) and
               (firstRep^.next=nil) and

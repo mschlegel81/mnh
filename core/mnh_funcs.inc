@@ -429,7 +429,7 @@ FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      reduceExpression(task,0,context^);
+      reduceExpression(task,context^);
       context^.recycler.cascadeDisposeToken(task);
       context^.doneEvaluating;
       dispose(context,destroy);

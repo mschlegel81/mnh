@@ -131,6 +131,7 @@ TYPE
   P_mapLiteral       = ^T_mapLiteral     ;
 
   P_expressionLiteral = ^T_expressionLiteral;
+  T_expressionList = array of P_expressionLiteral;
   T_expressionLiteral = object(T_scalarLiteral)
     FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;   virtual; abstract;
     FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual; abstract;

@@ -58,7 +58,7 @@ TYPE
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       //PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
@@ -80,7 +80,7 @@ TYPE
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
+PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
@@ -267,7 +267,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       end;
     end;
 
-  PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
+  PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
       VAR i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
@@ -380,11 +380,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         rulePattern.toParameterIds(ruleBody);
         //[marker 1]
         if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then begin
-          reduceExpression(ruleBody,0,context);
+          reduceExpression(ruleBody,context);
         end;
 
         if context.adapters^.noErrors then begin
-          ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,semicolonPosition,context.adapters^);
+          ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^);
           if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and ((length(rulePattern.sig)<>0) or rulePattern.hasOptionals) then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
@@ -438,7 +438,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         end;
         ensureRuleId(first^.txt,
                      ruleModifiers,
-                     first^.location,first^.location,context.adapters^);
+                     first^.location,context.adapters^);
       end;
 
     begin
@@ -493,7 +493,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             end;
             predigest(first,@self,context);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
-            reduceExpression(first,0,context);
+            reduceExpression(first,context);
             if profile then context.timeBaseComponent(pc_interpretation);
             context.callStackPop();
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
@@ -529,7 +529,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         t^.next:=context.recycler.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
         context.callStackPush(@self,pc_interpretation,pseudoCallees);
         if profile then context.timeBaseComponent(pc_interpretation);
-        reduceExpression(t,0,context);
+        reduceExpression(t,context);
         if profile then context.timeBaseComponent(pc_interpretation);
         context.callStackPop();
         //error handling if main returns more than one token:------------------
@@ -590,7 +590,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           end;
         end else if (fileTokens.current.tokType=tt_semicolon) then begin
           if (first<>nil)
-          then interpret(first,fileTokens.current.location)
+          then interpret(first)
           else context.recycler.cascadeDisposeToken(first);
           last:=nil;
           first:=nil;
@@ -613,7 +613,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       if profile then context.timeBaseComponent(pc_tokenizing);
 
       if (context.adapters^.noErrors)
-      then begin if first<>nil then interpret(first,first^.location); end
+      then begin if first<>nil then interpret(first); end
       else context.recycler.cascadeDisposeToken(first);
     end;
 
@@ -733,7 +733,7 @@ DESTRUCTOR T_package.destroy;
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
   PROCEDURE raiseModifierComplaint;

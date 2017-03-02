@@ -38,7 +38,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       PROCEDURE clearCache;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_threadContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
@@ -185,7 +185,7 @@ PROCEDURE T_rule.clearCache;
     leaveCriticalSection(rule_cs);
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR context:T_threadContext): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep: P_token; CONST includePrivateRules: boolean; VAR context:T_threadContext): boolean;
 {$MACRO ON}
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
@@ -221,14 +221,13 @@ exit}
           CLEAN_EXIT(true);
         end else for uncurrying:=false to true do
                  for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,context,uncurrying) then begin
-          if (callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
-          if (context.adapters^.noErrors) then context.reduceExpression(firstRep,callDepth+1);
+          if (context.callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
+          if (context.adapters^.noErrors) then context.reduceExpression(firstRep);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,lit);
             lastRep:=firstRep;
           end else begin
-            if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
             context.recycler.cascadeDisposeToken(firstRep);
             firstRep:=context.recycler.newToken(declarationStart,'',tt_literal,newVoidLiteral);
             lastRep:=firstRep;
@@ -241,10 +240,10 @@ exit}
       rt_synchronized: begin
         for uncurrying:=false to true do
         for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
-          if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseSystemError('Stack depth limit exceeded calling '+id+'.',declarationStart)
+          if context.callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseSystemError('Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
-            context.reduceExpression(firstRep,callDepth+1);
+            context.reduceExpression(firstRep);
             lastRep:=firstRep^.last;
             system.leaveCriticalSection(rule_cs);
           end;

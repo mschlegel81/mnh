@@ -165,7 +165,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
       tok:=context.recycler.newToken(location,restrictionId,tt_identifier,nil);
-      context.reduceExpression(tok,0);
+      context.reduceExpression(tok);
       if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
         restrictionId:='';
         restrictionValue:=P_literal(tok^.data)^.rereferenced;
@@ -540,7 +540,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                 parts[i].first:=context.recycler.disposeToken(parts[i].first);
                 assertNil(parts[i].first);
               end else begin
-                context.reduceExpression(parts[i].first,0);
+                context.reduceExpression(parts[i].first);
                 if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
                   rulePatternElement.restrictionValue:=parts[i].first^.data;
                   rulePatternElement.restrictionValue^.rereference;
@@ -560,7 +560,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           append(rulePatternElement);
         end else begin
           //Anonymous equals: f(1)->
-          context.reduceExpression(parts[i].first,0);
+          context.reduceExpression(parts[i].first);
           if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
             rulePatternElement.createAnonymous;
             rulePatternElement.restrictionType:=tt_comparatorListEq;
