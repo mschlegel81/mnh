@@ -5,9 +5,10 @@ USES //FPC/LCL libraries
      //3rd party libraries
      EpikTimer,
      //my libraries
-     myGenerics,
+     myGenerics,{$ifndef fullVersion}mySys,{$endif}
      //MNH:
      mnh_constants, mnh_basicTypes,
+     {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_out_adapters,mnh_litVar,
      mnh_tokens,
      tokenStack,valueStore,tokenRecycler,
@@ -26,6 +27,7 @@ CONST
 TYPE
   P_evaluationContext=^T_evaluationContext;
   P_threadContext=^T_threadContext;
+  P_taskQueue=^T_taskQueue;
   T_threadContext=object
     private
       //privileges and obligations
@@ -70,6 +72,7 @@ TYPE
       PROPERTY threadOptions:T_threadContextOptions read options;
       PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word); inline;
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
+      PROPERTY getParent:P_evaluationContext read parent;
   end;
 
   T_evaluationContext=object
@@ -88,6 +91,7 @@ TYPE
       contextAdapters:P_adapters;
       options :T_evaluationContextOptions;
       primaryThreadContext:P_threadContext;
+      taskQueue:P_taskQueue;
       PROCEDURE setupThreadContext(CONST context:P_threadContext);
     public
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
@@ -102,12 +106,56 @@ TYPE
       FUNCTION stepper:P_debuggingStepper;
       FUNCTION isPaused:boolean;
       {$endif}
+      PROCEDURE ensureTaskQueue;
+      PROPERTY getTaskQueue:P_taskQueue read taskQueue;
+  end;
+
+  T_futureTaskState=(fts_pending, //set on construction
+                     fts_evaluating, //set on dequeue
+                     fts_ready); //set after evaluation
+
+  P_futureTask=^T_futureTask;
+  T_futureTask=object
+    private
+      eachIndex:longint;
+      eachRule:P_expressionLiteral;
+      eachParameter:P_literal;
+      eachLocation:T_tokenLocation;
+      scope:P_threadContext;
+      valueScope:P_valueStore;
+      next:P_futureTask;
+
+      evaluationResult:P_literal;
+    public
+      state:T_futureTaskState;
+
+    CONSTRUCTOR createTask(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
+    PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
+    FUNCTION    getResultAsLiteral:P_literal;
+    DESTRUCTOR  destroy;
+  end;
+
+  T_taskQueue=object
+    private
+      first,last:P_futureTask;
+      queuedCount:longint;
+      cs:system.TRTLCriticalSection;
+      destructionPending:boolean;
+      poolThreadsRunning:longint;
+    public
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION  enqueue(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore):P_futureTask;
+    FUNCTION  dequeue:P_futureTask;
+    PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_threadContext);
+    PROPERTY getQueuedCount:longint read queuedCount;
   end;
 
 VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; CONST callDepth:word; VAR context:T_threadContext);
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
 IMPLEMENTATION
 VAR globalLock:TRTLCriticalSection;
+
 CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
   begin
     recycler  .create;
@@ -142,6 +190,7 @@ CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
     profiler:=nil;
     debuggingStepper:=nil;
     {$endif}
+    taskQueue:=nil;
     contextAdapters:=outAdapters;
     disposeAdaptersOnDestruction:=false;
     detachedAsyncChildCount:=0;
@@ -153,6 +202,7 @@ CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_obje
   begin
     new(tempAdapters,create);
     create(tempAdapters);
+    taskQueue:=nil;
     disposeAdaptersOnDestruction:=true;
     resetForEvaluation(package,false,false,true);
   end;
@@ -165,6 +215,7 @@ DESTRUCTOR T_evaluationContext.destroy;
     if debuggingStepper<>nil then dispose(debuggingStepper,destroy);
     {$endif}
     dispose(primaryThreadContext,destroy);
+    if taskQueue<>nil then dispose(taskQueue,destroy);
     if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
   end;
 
@@ -294,6 +345,18 @@ FUNCTION T_evaluationContext.isPaused:boolean;
     result:=(debuggingStepper<>nil) and debuggingStepper^.paused;
   end;
 {$endif}
+
+PROCEDURE T_evaluationContext.ensureTaskQueue;
+  begin
+    if taskQueue=nil then begin
+      enterCriticalSection(globalLock);
+      if taskQueue=nil then begin
+        new(taskQueue,create);
+
+      end;
+      leaveCriticalSection(globalLock);
+    end;
+  end;
 
 FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
   begin
@@ -437,6 +500,148 @@ FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack)
     result:=true;
   end;
 {$endif}
+
+FUNCTION threadPoolThread(p:pointer):ptrint;
+  //means that 0.511 seconds have passed since the last activity
+  CONST SLEEP_TIME_TO_QUIT=73;
+  VAR sleepTime:longint;
+      currentTask:P_futureTask;
+      tempcontext:T_threadContext;
+  begin
+    sleepTime:=0;
+    tempcontext.createWorkerContext;
+    with P_evaluationContext(p)^ do begin
+      repeat
+        currentTask:=taskQueue^.dequeue;
+        if currentTask=nil then begin
+          inc(sleepTime);
+          ThreadSwitch;
+          sleep(sleepTime div 5);
+        end else begin
+          currentTask^.evaluate(0,tempcontext,true);
+          sleepTime:=0;
+        end;
+      until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue^.destructionPending) or not(adapters^.noErrors);
+      tempcontext.destroy;
+      result:=0;
+      interlockedDecrement(taskQueue^.poolThreadsRunning);
+    end;
+  end;
+
+CONSTRUCTOR T_futureTask.createTask(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
+  begin
+    eachIndex       :=idx;
+    eachRule        :=expr;
+    eachParameter   :=x;
+    eachLocation    :=location;
+    scope           :=context;
+    valueScope      :=values;
+    next            :=nil;
+    state           :=fts_pending;
+    evaluationResult:=nil;
+  end;
+
+PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_threadContext; CONST calledFromWorkerThread:boolean);
+  VAR idxLit:P_intLiteral;
+      toReduce,dummy:P_token;
+  begin
+    if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
+    context.valueStore.scopePush(false);
+    idxLit:=newIntLiteral(eachIndex);
+    context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
+    idxLit^.unreference;
+    if context.adapters^.noErrors
+    then evaluationResult:=eachRule^.evaluateToLiteral(eachLocation,@context,eachParameter)
+    else evaluationResult:=nil;
+    context.valueStore.scopePop;
+    if calledFromWorkerThread then context.detachWorkerContext;
+    repeat state:=fts_ready until state=fts_ready;
+  end;
+
+FUNCTION T_futureTask.getResultAsLiteral: P_literal;
+  VAR sleepTime:longint=0;
+  begin
+    while state in [fts_pending,fts_evaluating] do begin
+      ThreadSwitch;
+      sleep(sleepTime);
+      if sleepTime<100 then inc(sleepTime);
+    end;
+    result:=evaluationResult;
+  end;
+
+DESTRUCTOR T_futureTask.destroy;
+  begin
+  end;
+
+CONSTRUCTOR T_taskQueue.create;
+  begin
+    system.initCriticalSection(cs);
+    destructionPending:=false;
+    first:=nil;
+    last:=nil;
+    queuedCount:=0;
+  end;
+
+DESTRUCTOR T_taskQueue.destroy;
+  begin
+    while poolThreadsRunning>0 do begin
+      destructionPending:=true;
+      sleep(1);
+      ThreadSwitch;
+    end;
+    system.doneCriticalSection(cs);
+  end;
+
+FUNCTION T_taskQueue.enqueue(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore):P_futureTask;
+  PROCEDURE ensurePoolThreads();
+    begin
+      {$ifdef fullVersion}
+      if (poolThreadsRunning<workerThreadCount) then begin
+      {$else}
+      if (poolThreadsRunning<getNumberOfCPUs-1) then begin
+      {$endif}
+        interLockedIncrement(poolThreadsRunning);
+        beginThread(@threadPoolThread,context^.parent);
+      end;
+    end;
+  begin
+    new(result,createTask(expr,location,idx,x,context,values));
+    if result^.state=fts_pending then begin
+      system.enterCriticalSection(cs);
+      if first=nil then begin
+        queuedCount:=1;
+        first:=result;
+        last:=result;
+      end else begin
+        inc(queuedCount);
+        last^.next:=result;
+        last:=result;
+      end;
+      ensurePoolThreads();
+      system.leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_taskQueue.dequeue: P_futureTask;
+  begin
+    system.enterCriticalSection(cs);
+    if first=nil then result:=nil
+    else begin
+      dec(queuedCount);
+      result:=first;
+      first:=first^.next;
+      result^.state:=fts_evaluating;
+    end;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth: word; VAR context: T_threadContext);
+  VAR task:P_futureTask;
+  begin
+    task:=dequeue;
+    if task<>nil then task^.evaluate(callDepth,context,false);
+  end;
+
 
 INITIALIZATION
   initCriticalSection(globalLock);

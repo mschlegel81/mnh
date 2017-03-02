@@ -668,28 +668,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         dispose(aggregator,destroy);
       end;
 
-    {$ifndef fullVersion}
-    FUNCTION workerThreadCount:longint;
-      begin
-        result:=getNumberOfCPUs-1;
-        if result<0 then result:=0;
-      end;
-    {$endif}
-
     PROCEDURE initFutures;
       VAR future:array of P_futureTask;
           nextFuture:longint=0;
           initializedFutures:longint=0;
           store:P_valueStore;
-
+          queue:P_taskQueue;
       PROCEDURE aggregateFutures(CONST finalizing:boolean);
         begin
           while (nextFuture<initializedFutures)
             and (future[nextFuture]<>nil)
-            and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
+            and ((queue^.getQueuedCount>maxFutureForwardInitialization) or
                  finalizing or
                  (future[nextFuture]^.state in [fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do queue^.activeDeqeue(callDepth+1,context);
             aggregator^.addToAggregation(future[nextFuture]^.getResultAsLiteral,true,eachLocation,context.adapters);
             dispose(future[nextFuture],destroy);
             inc(nextFuture);
@@ -702,16 +694,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
       VAR i,j:longint;
       begin
+        context.getParent^.ensureTaskQueue;
+        queue:=context.getParent^.getTaskQueue;
         maxFutureForwardInitialization:=4*workerThreadCount;
         store:=context.valueStore.readOnlyClone;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*length(itList));
         for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
+            future[initializedFutures]:=queue^.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
-          if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
+          if ((initializedFutures and 255)=0) or (queue^.getQueuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
         aggregateFutures(true);
         dispose(store,destroy);

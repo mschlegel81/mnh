@@ -25,7 +25,6 @@ TYPE
   {$include mnh_token.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_futureTask.inc}
   {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
@@ -91,7 +90,6 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 {$undef include_interface}
 VAR killServersCallback:PROCEDURE;
 IMPLEMENTATION
-VAR pendingTasks     :T_taskQueue;
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
   begin
     if (length(id)>=3) and (id[1]='i') and (id[2]='s')
@@ -177,7 +175,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 
 {$define include_implementation}
 {$include mnh_token.inc}
-{$include mnh_futureTask.inc}
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
 
@@ -1015,7 +1012,6 @@ INITIALIZATION
   {$include mnh_token.inc}
   {$include mnh_fmtStmt.inc}
   resolveIDsCallback:=@resolveId;
-  pendingTasks.create;
   reduceExpressionCallback:=@reduceExpression;
   //callbacks in mnh_litvar:
 
@@ -1029,7 +1025,6 @@ INITIALIZATION
 
 FINALIZATION
 {$define include_finalization}
-  pendingTasks.destroy;
 {$include mnh_funcs.inc}
 {$include mnh_fmtStmt.inc}
 end.
