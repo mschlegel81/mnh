@@ -78,7 +78,7 @@ The solution is valid.
 ./demos/integerPartitionFunction.mnh
      8://*See http://rosettacode.org/wiki/9_billion_names_of_God_the_integer
 ./demos/jaro.mnh
-    43://*See http://rosettacode.org/wiki/Jaro_distance
+    31://*See http://rosettacode.org/wiki/Jaro_distance
 ./demos/josephus.mnh
      7://*See http://rosettacode.org/wiki/Josephus_problem
 ./demos/levenshtein.mnh
