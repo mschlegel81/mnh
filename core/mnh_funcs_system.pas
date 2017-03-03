@@ -6,7 +6,7 @@ USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGener
      LazFileUtils,LazUTF8;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
-
+VAR builtinLocation_time:T_identifiedInternalFunction;
 FUNCTION resetRandom_impl intFuncSignature;
   begin
     result:=nil;
@@ -186,6 +186,37 @@ FUNCTION setExitCode_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION time_imp intFuncSignature;
+  VAR res:P_literal;
+      t:double=0;
+
+  FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral=nil):P_literal;
+    begin
+      t:=context.wallclockTime(true);
+      result:=subruleLiteral^.evaluate(tokenLocation,@context,parameters);
+      t:=context.wallclockTime(true)-t;
+    end;
+
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime(true)))
+    else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+      ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
+      if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
+                        else res:=evaluate(P_expressionLiteral(arg0));
+      context.callStackPop();
+      if res<>nil then begin
+        result:=newMapLiteral
+          ^.put('expression',arg0^.toString)
+          ^.put('time',t );
+        if res^.literalType<>lt_void then P_mapLiteral(result)^.put('result',res,false)
+                                     else disposeLiteral(res);
+      end;
+    end;
+  end;
+
+
 INITIALIZATION
   collector.create(@newCollectingOutAdapter,nil);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,false,ak_variadic  ,'resetRandom(seed:int);#Resets internal PRNG with the given seed');
@@ -202,6 +233,12 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,false,ak_binary    ,'logTo(logName:string,appendMode:boolean);#Adds a log with given name and write mode and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,false,ak_unary     ,'printTo(logName:string);#Adds a log receiving only print messages with given name and and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,false,ak_unary     ,'setExitCode(code:int);#Sets the exit code of the executable.#Might be overridden by an evaluation error.');
+  builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,false,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
+               'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
+               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
 FINALIZATION
   collector.destroy;
+  builtinLocation_time.destroy;
+
 end.
