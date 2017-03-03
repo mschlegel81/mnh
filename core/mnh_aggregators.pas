@@ -5,8 +5,7 @@ USES //my libraries
      //MNH:
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
-     mnh_litVar,
-     mnh_tokens;
+     mnh_litVar;
 TYPE
   T_aggregator=object
     DESTRUCTOR destroy; virtual; abstract;
@@ -259,7 +258,6 @@ PROCEDURE T_opAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; 
 
 PROCEDURE T_expressionAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR newValue:P_literal;
-      toReduce,dummy:P_token;
   begin
     if L=nil then exit;
     //writeln('Aggregating using T_expressionAggregator - ',resultLiteral=nil);

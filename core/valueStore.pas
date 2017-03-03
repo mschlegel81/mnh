@@ -315,7 +315,7 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:int64;   
   begin
     lit:=newIntLiteral(value);
     createVariable(id,lit,readonly);
-    disposeLiteral(lit);
+    lit^.unreference;
   end;
 
 FUNCTION T_valueStore.getVariableValue(CONST id: T_idString): P_literal;

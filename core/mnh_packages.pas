@@ -16,7 +16,7 @@ USES //basic classes
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
      mnh_subrules,
      mnh_rule,
-     mnh_aggregators,
+     mnh_aggregators,listProcessing,
      mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns;
 
 {$define include_interface}
