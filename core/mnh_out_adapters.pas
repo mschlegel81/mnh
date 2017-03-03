@@ -99,8 +99,9 @@ TYPE
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
       hasMessageOfType:array[T_messageType] of boolean;
+      {$ifdef fullVersion}
       privatePlot:P_plot;
-      //PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      {$endif}
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
     public
       {$ifdef fullVersion}
@@ -172,7 +173,9 @@ TYPE
       PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
       PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
 
+      {$ifdef fullVersion}
       FUNCTION plot:P_plot;
+      {$endif}
   end;
 
 CONST
@@ -204,7 +207,9 @@ FUNCTION defaultFormatting(CONST message:T_storedMessage; CONST includeGuiMarker
 OPERATOR :=(s:string):T_messageTypeSet;
 FUNCTION clearConsoleMessage:T_storedMessage;
 IMPLEMENTATION
+{$ifdef fullVersion}
 VAR globalLockCs:TRTLCriticalSection;
+{$endif}
 
 FUNCTION message(CONST messageType: T_messageType;
                  CONST messageText: T_arrayOfString;
@@ -760,6 +765,7 @@ FUNCTION T_adapters.triggersBeep:boolean;
     result:=false;
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_adapters.plot:P_plot;
   begin
     if privatePlot=nil then begin
@@ -769,14 +775,17 @@ FUNCTION T_adapters.plot:P_plot;
     end;
     result:=privatePlot;
   end;
-
+{$endif}
 //===================================================================:T_adapters
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+  {$ifdef fullVersion}
   initCriticalSection(globalLockCs);
+  {$endif}
 
 FINALIZATION
+  {$ifdef fullVersion}
   doneCriticalSection(globalLockCs);
-
+  {$endif}
 end.
