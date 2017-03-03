@@ -134,7 +134,7 @@ TYPE
       PROCEDURE logPlotSettingsChanged;
       PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
       PROCEDURE logDisplayTable;
-      {$ifdef IMIG}
+      {$ifdef imig}
       PROCEDURE logDisplayImage;
       {$endif}
       {$endif}
@@ -542,7 +542,7 @@ PROCEDURE T_adapters.logDeferredPlot;                                           
 PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location,fileName)); end;
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
-{$ifdef IMIG}
+{$ifdef imig}
 PROCEDURE T_adapters.logDisplayImage;
   begin
     raiseCustomMessage(message(mt_displayImage,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
