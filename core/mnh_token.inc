@@ -577,10 +577,9 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
   PROCEDURE resolveEach(eachType:T_tokenType);
     VAR bracketClosingEach:P_token=nil;
-        bodyRule:array of P_subrule;
+        bodyRule:T_expressionList;
         aggregator:P_aggregator=nil;
         aggregatorPresent:boolean=false;
-        maxFutureForwardInitialization:longint=16;
         eachToken:P_token;
 
     FUNCTION parseBodyOk:boolean;
@@ -652,7 +651,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         //process other body parts (if any)---------------------------------------------
         setLength(bodyRule,length(bodyParts));
         for i:=0 to length(bodyParts)-1 do
-          new(bodyRule[i],createForEachBody(eachToken^.txt,bodyParts[i].first,context));
+          new(P_subrule(bodyRule[i]),createForEachBody(eachToken^.txt,bodyParts[i].first,context));
         //---------------------------------------------process other body parts (if any)
       end;
 
@@ -667,63 +666,6 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         first^.next:=context.recycler.disposeToken(bracketClosingEach);
         dispose(aggregator,destroy);
       end;
-
-    PROCEDURE initFutures;
-      VAR future:array of P_futureTask;
-          nextFuture:longint=0;
-          initializedFutures:longint=0;
-          store:P_valueStore;
-          queue:P_taskQueue;
-      PROCEDURE aggregateFutures(CONST finalizing:boolean);
-        begin
-          while (nextFuture<initializedFutures)
-            and (future[nextFuture]<>nil)
-            and ((queue^.getQueuedCount>maxFutureForwardInitialization) or
-                 finalizing or
-                 (future[nextFuture]^.state in [fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do queue^.activeDeqeue(context);
-            aggregator^.addToAggregation(future[nextFuture]^.getResultAsLiteral,true,eachLocation,context.adapters);
-            dispose(future[nextFuture],destroy);
-            inc(nextFuture);
-          end;
-          if finalizing then begin
-            finalizeAggregation;
-            setLength(future,0);
-          end;
-        end;
-
-      VAR i,j:longint;
-      begin
-        context.getParent^.ensureTaskQueue;
-        queue:=context.getParent^.getTaskQueue;
-        maxFutureForwardInitialization:=4*{$ifdef fullVersion} workerThreadCount{$else}(getNumberOfCPUs-1){$endif};
-        store:=context.valueStore.readOnlyClone;
-        initializedFutures:=0;
-        setLength(future,length(bodyRule)*length(itList));
-        for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do begin
-          if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
-            future[initializedFutures]:=queue^.enqueue(bodyRule[j],eachLocation,i,itList[i],@context,store);
-          end else future[initializedFutures]:=nil;
-          inc(initializedFutures);
-          if ((initializedFutures and 255)=0) or (queue^.getQueuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
-        end;
-        aggregateFutures(true);
-        dispose(store,destroy);
-      end;
-
-    PROCEDURE initNonFutures;
-      VAR task:T_futureTask;
-          i,j:longint;
-      begin
-        for i:=0 to length(itList)-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(aggregator^.earlyAbort) then begin
-          task.createTask(bodyRule[j],eachLocation,i,itList[i],@context,nil);
-          task.evaluate(context,false);
-          aggregator^.addToAggregation(task.getResultAsLiteral,true,eachLocation,context.adapters);
-          task.destroy;
-        end;
-        finalizeAggregation;
-      end;
-
     begin
       if (eachType=tt_parallelEach) and
          ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
@@ -756,16 +698,15 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       first^.next:=context.recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if (aggregatorPresent) and (length(itList)=0) then begin
-        finalizeAggregation;
       end else if length(bodyRule)>0 then begin
         if eachType in [tt_parallelEach]
-        then initFutures
-        else initNonFutures;
+        then processListParallel(itList,bodyRule,aggregator,eachLocation,context)
+        else processListSerial  (itList,bodyRule,aggregator,eachLocation,context);
       end else begin
         if eachType in [tt_parallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to length(itList)-1 do aggregator^.addToAggregation(itList[i],false,eachLocation,context.adapters);
-        finalizeAggregation;
       end;
+      finalizeAggregation;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       disposeLiteral(itList);
