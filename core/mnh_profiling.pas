@@ -102,7 +102,7 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_adapters);
     end;
 
   VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
-      data:P_collectionLiteral;
+      {$ifdef fullVersion} data:P_collectionLiteral;{$endif}
       swapTemp:T_profilingEntry;
       lines:T_arrayOfString;
       i,j:longint;

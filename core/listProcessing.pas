@@ -36,7 +36,7 @@ PROCEDURE processListParallel(CONST inputList: T_arrayOfLiteral;
   CONST eachLocation: T_tokenLocation; VAR context: T_threadContext);
 
   VAR firstToAggregate:P_futureTask=nil;
-      lastToAggregate:P_futureTask;
+      lastToAggregate:P_futureTask=nil;
 
     PROCEDURE enqueueForAggregation(CONST task:P_futureTask); inline;
       begin
