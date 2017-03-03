@@ -111,8 +111,8 @@ FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['+','-']) then begin
-      if key='+' then guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
-                 else guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
+      if key='+' then guiAdapters^.plot^.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
+                 else guiAdapters^.plot^.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
       pullPlotSettingsToGui();
       doOrPostPlot();
     end;
@@ -168,18 +168,18 @@ PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
 PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
   VAR o:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot.options;
+    o:=guiAdapters^.plot^.options;
     o.relativeFontSize:=o.relativeFontSize/1.1;
-    guiAdapters^.plot.options:=o;
+    guiAdapters^.plot^.options:=o;
     doOrPostPlot();
   end;
 
 PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
   VAR o:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot.options;
+    o:=guiAdapters^.plot^.options;
     o.relativeFontSize:=o.relativeFontSize*1.1;
-    guiAdapters^.plot.options:=o;
+    guiAdapters^.plot^.options:=o;
     doOrPostPlot();
   end;
 
@@ -252,10 +252,10 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
 PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
-    p:=guiAdapters^.plot.screenToReal(x,y);
+    p:=guiAdapters^.plot^.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
-      guiAdapters^.plot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
+      guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
       mouseUpTriggersPlot:=true;
     end;
     with plotSubsystem do begin
@@ -281,7 +281,7 @@ PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TplotForm.pullPlotSettingsToGui;
   VAR o:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot.options;
+    o:=guiAdapters^.plot^.options;
     miXTics.Checked         :=(o.axisStyle['x'] and C_tics)=C_tics;
     miXGrid.Checked         :=(o.axisStyle['x'] and C_grid)=C_grid;
     miXFinerGrid.Checked    :=(o.axisStyle['x'] and C_finerGrid)=C_finerGrid;
@@ -298,7 +298,7 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
   VAR o:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot.options;
+    o:=guiAdapters^.plot^.options;
     o.axisStyle['x']:=0;
     if miXTics.Checked      then o.axisStyle['x']:=C_tics;
     if miXGrid.Checked      then o.axisStyle['x']:=o.axisStyle['x'] or C_grid;
@@ -312,7 +312,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     o.logscale['y']:=miLogscaleY.Checked;
     o.autoscale['x']:=miAutoscaleX.Checked;
     o.autoscale['y']:=miAutoscaleY.Checked;
-    guiAdapters^.plot.options:=o;
+    guiAdapters^.plot^.options:=o;
     pullPlotSettingsToGui();
     doOrPostPlot();
   end;
@@ -332,7 +332,7 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
     guiAdapters^.resetFlagsAfterPlotDone;
-    guiAdapters^.plot.renderPlot(plotImage,factor);
+    guiAdapters^.plot^.renderPlot(plotImage,factor);
   end;
 
 PROCEDURE TplotForm.doOrPostPlot;

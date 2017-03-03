@@ -918,7 +918,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       while stillOk and (length(dataRow)<samples) do begin
         //Prepare threshold:----------------------------------------------------
-        oLogRow:=context.adapters^.plot.olxy(dataRow);
+        oLogRow:=context.adapters^.plot^.olxy(dataRow);
         for i:=1 to length(dataRow)-1 do
         if not(isNan(oLogRow[i,0])) and not(isNan(oLogRow[i-1,0])) and
            not(isNan(oLogRow[i,1])) and not(isNan(oLogRow[i-1,1])) then begin
