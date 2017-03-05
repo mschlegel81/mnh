@@ -464,6 +464,12 @@ CONSTRUCTOR T_adapters.create;
     setLength(adapter,0);
     clearAll;
   end;
+{$ifdef imig}
+PROCEDURE dropImage(pic:P_rawImage);
+  begin
+    dispose(pic,destroy);
+  end;
+{$endif}
 
 DESTRUCTOR T_adapters.destroy;
   VAR i:longint;
@@ -474,7 +480,7 @@ DESTRUCTOR T_adapters.destroy;
     if privatePlot<>nil then dispose(privatePlot,destroy);
     {$endif}
     {$ifdef imig}
-    if (picture.value<>nil) then dispose(picture.value,destroy);
+    if (picture.value<>nil) then dropImage(picture.value);
     picture.destroy;
     {$endif}
   end;
@@ -566,7 +572,7 @@ PROCEDURE T_adapters.clearAll;
     clearErrors;
     clearPrint;
     {$ifdef imig}
-    if picture.value<>nil then dispose(picture.value,destroy);
+    if picture.value<>nil then dropImage(picture.value);
     picture.value:=nil;
     {$endif}
     someEchoInput        :=false;
