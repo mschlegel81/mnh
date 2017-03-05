@@ -50,16 +50,18 @@ TYPE
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
       CONSTRUCTOR init(CONST srt: T_subruleType; CONST location: T_tokenLocation; CONST parentRule:P_objectWithIdAndLocation=nil);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
     public
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       CONSTRUCTOR create           (CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
-      CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_threadContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy; virtual;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral; virtual;
+
       //Pattern related:
       FUNCTION arity:longint; virtual;
       FUNCTION isVariadic:boolean;
@@ -522,6 +524,11 @@ FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RH
     result:=newRule;
   end;
 
+FUNCTION T_subrule.applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
+  begin
+    new(P_subrule(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation));
+  end;
+
 CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
   VAR origRule:P_subrule;
       i:longint;
@@ -911,7 +918,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       while stillOk and (length(dataRow)<samples) do begin
         //Prepare threshold:----------------------------------------------------
-        oLogRow:=context.adapters^.plot.olxy(dataRow);
+        oLogRow:=context.adapters^.plot^.olxy(dataRow);
         for i:=1 to length(dataRow)-1 do
         if not(isNan(oLogRow[i,0])) and not(isNan(oLogRow[i-1,0])) and
            not(isNan(oLogRow[i,1])) and not(isNan(oLogRow[i-1,1])) then begin

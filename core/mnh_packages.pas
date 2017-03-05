@@ -23,7 +23,6 @@ USES //basic classes
 TYPE
   P_package=^T_package;
   {$include mnh_token.inc}
-  P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);

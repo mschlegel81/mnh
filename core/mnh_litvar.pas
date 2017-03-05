@@ -136,6 +136,7 @@ TYPE
     FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;   virtual; abstract;
     FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual; abstract;
     FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual; abstract;
+    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION arity:longint; virtual; abstract;
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
     FUNCTION getParentId:T_idString; virtual; abstract;

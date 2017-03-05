@@ -8,6 +8,7 @@ USES FileUtil,sysutils,Classes,LazUTF8,
      mnh_tokens,valueStore,
      mnh_funcs,mnh_contexts,
      mnh_subrules,
+     mnh_rule,
      mnh_packages,mnh_doc,
      mnh_cmdLineInterpretation;
 TYPE
@@ -467,6 +468,7 @@ PROCEDURE T_evaluator.haltEvaluation;
     system.enterCriticalSection(cs);
     killServersCallback;
     context.adapters^.haltEvaluation;
+    context.stepper^.haltEvaluation;
     while not(adapter^.hasHaltMessage) do begin
       system.leaveCriticalSection(cs);
       ThreadSwitch;

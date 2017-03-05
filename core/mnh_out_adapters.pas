@@ -99,12 +99,13 @@ TYPE
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
       hasMessageOfType:array[T_messageType] of boolean;
-      //PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      {$ifdef fullVersion}
+      privatePlot:P_plot;
+      {$endif}
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
     public
       {$ifdef fullVersion}
       hasNeedGUIerror:boolean;
-      plot:T_plot;
       {$endif}
       {$ifdef imig}
       picture:specialize G_safeVar<P_rawImage>;
@@ -177,6 +178,10 @@ TYPE
       PROPERTY doEchoDeclaration:   boolean read someEchoDeclaration  ;
       PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
       PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
+
+      {$ifdef fullVersion}
+      FUNCTION plot:P_plot;
+      {$endif}
   end;
 
 CONST
@@ -211,6 +216,10 @@ FUNCTION defaultFormatting(CONST message:T_storedMessage; CONST includeGuiMarker
 OPERATOR :=(s:string):T_messageTypeSet;
 FUNCTION clearConsoleMessage:T_storedMessage;
 IMPLEMENTATION
+{$ifdef fullVersion}
+VAR globalLockCs:TRTLCriticalSection;
+{$endif}
+
 FUNCTION message(CONST messageType: T_messageType;
                  CONST messageText: T_arrayOfString;
                  CONST location   : T_searchTokenLocation;
@@ -447,7 +456,7 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 CONSTRUCTOR T_adapters.create;
   begin
     {$ifdef fullVersion}
-    plot.createWithDefaults;
+    privatePlot:=nil;
     {$endif}
     {$ifdef imig}
     picture.create(nil);
@@ -462,7 +471,7 @@ DESTRUCTOR T_adapters.destroy;
     for i:=0 to length(adapter)-1 do if adapter[i]^.autodestruct then dispose(adapter[i],destroy);
     setLength(adapter,0);
     {$ifdef fullVersion}
-    plot.destroy;
+    if privatePlot<>nil then dispose(privatePlot,destroy);
     {$endif}
     {$ifdef imig}
     if (picture.value<>nil) then dispose(picture.value,destroy);
@@ -734,7 +743,10 @@ FUNCTION T_adapters.collectingClone: P_adapters;
     collector^.messageTypesToInclude:=[low(T_messageType)..high(T_messageType)];
     result^.addOutAdapter(collector,true);
     {$ifdef fullVersion}
-    result^.plot.CopyFrom(plot);
+    if privatePlot<>nil then begin
+      new(result^.privatePlot,createWithDefaults);
+      result^.privatePlot^.CopyFrom(privatePlot^);
+    end;
     {$endif}
   end;
 
@@ -744,10 +756,15 @@ PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters;
   begin
     collector:=P_collectingOutAdapter(clone^.getAdapter(at_sandboxAdapter));
     {$ifdef fullVersion}
-    if not(errorCase) and (clone^.hasMessageOfType[mt_plotFileCreated] or
+    if not(errorCase) and (clone^.privatePlot<>nil) and
+                          (clone^.hasMessageOfType[mt_plotFileCreated] or
                            clone^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] or
                            clone^.hasMessageOfType[mt_plotCreatedWithInstantDisplay] or
-                           clone^.hasMessageOfType[mt_plotSettingsChanged]) then plot.CopyFrom(clone^.plot);
+                           clone^.hasMessageOfType[mt_plotSettingsChanged]) then begin
+      if privatePlot<>nil then dispose(privatePlot,destroy);
+      privatePlot:=clone^.privatePlot;
+      clone^.privatePlot:=nil;
+    end;
     {$endif}
     if (collector<>nil) then
     for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
@@ -774,9 +791,28 @@ FUNCTION T_adapters.triggersBeep:boolean;
     for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>0) then exit(true);
     result:=false;
   end;
+
+{$ifdef fullVersion}
+FUNCTION T_adapters.plot:P_plot;
+  begin
+    if privatePlot=nil then begin
+      enterCriticalSection(globalLockCs);
+      if privatePlot=nil then new(privatePlot,createWithDefaults);
+      leaveCriticalSection(globalLockCs);
+    end;
+    result:=privatePlot;
+  end;
+{$endif}
 //===================================================================:T_adapters
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+  {$ifdef fullVersion}
+  initCriticalSection(globalLockCs);
+  {$endif}
 
+FINALIZATION
+  {$ifdef fullVersion}
+  doneCriticalSection(globalLockCs);
+  {$endif}
 end.

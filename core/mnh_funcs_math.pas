@@ -6,6 +6,347 @@ VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
+{$define UNARY_NUM_TO_REAL:=
+FUNCTION recurse(CONST x:P_literal):P_literal;
+  VAR iter:T_arrayOfLiteral;
+      y:P_literal;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation);
+      lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
+      lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
+      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+      lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType;
+        iter  :=P_collectionLiteral(x)^.iteratableList;
+        for y in iter do collResult^.append(recurse(y),false);
+        disposeLiteral(iter);
+        if collResult^.containsError then begin
+          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+          disposeLiteral(result);
+        end;
+      end;
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+    end;
+  end;
+
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1)
+  then result:=recurse(arg0);
+end}
+
+FUNCTION sqrt_imp intFuncSignature;
+{$define CALL_MACRO:=sqrt}
+{$define ID_MACRO:='sqrt'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION sin_imp intFuncSignature;
+{$define CALL_MACRO:=sin}
+{$define ID_MACRO:='sin'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION arcsin_imp intFuncSignature;
+{$define CALL_MACRO:=arcsin}
+{$define ID_MACRO:='arcsin'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION cos_imp intFuncSignature;
+{$define CALL_MACRO:=cos}
+{$define ID_MACRO:='cos'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION arccos_imp intFuncSignature;
+{$define CALL_MACRO:=arccos}
+{$define ID_MACRO:='arccos'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION tan_imp intFuncSignature;
+{$define CALL_MACRO:=tan}
+{$define ID_MACRO:='tan'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION arctan_imp intFuncSignature;
+{$define CALL_MACRO:=arctan}
+{$define ID_MACRO:='arctan'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION exp_imp intFuncSignature;
+{$define CALL_MACRO:=exp}
+{$define ID_MACRO:='exp'}
+UNARY_NUM_TO_REAL;
+
+FUNCTION ln_imp intFuncSignature;
+{$define CALL_MACRO:=ln}
+{$define ID_MACRO:='ln'}
+UNARY_NUM_TO_REAL;
+
+{$undef UNARY_NUM_TO_REAL}
+
+FUNCTION not_imp intFuncSignature;
+  FUNCTION not_rec(CONST x:P_literal):P_literal;
+    VAR y:P_literal;
+        iter:T_arrayOfLiteral;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('not',tokenLocation);
+        lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
+        lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
+        lt_list,lt_booleanList,lt_intList,lt_emptyList,
+        lt_set ,lt_booleanSet ,lt_intSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType;
+          iter:=P_collectionLiteral(x)^.iteratableList;
+          for y in iter do P_collectionLiteral(result)^.append(not_rec(y),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+            disposeLiteral(result);
+          end;
+        end;
+        else raiseNotApplicableError('not',x,tokenLocation,context.adapters^);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=not_rec(arg0);
+  end;
+
+{$define UNARY_NUM_TO_SAME:=
+FUNCTION recurse(CONST x:P_literal):P_literal;
+  VAR sub:P_literal;
+      iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation);
+      lt_error: begin result:=x; result^.rereference; end;
+      lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
+      lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+      lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType;
+        iter  :=P_collectionLiteral(x)^.iteratableList;
+        for sub in iter do collResult^.append(recurse(sub),false);
+        disposeLiteral(iter);
+        if collResult^.containsError then begin
+          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+          disposeLiteral(result);
+        end;
+      end;
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+    end;
+  end;
+
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1)
+  then result:=recurse(arg0);
+end}
+
+FUNCTION abs_imp intFuncSignature;
+{$define CALL_MACRO:=abs}
+{$define ID_MACRO:='abs'}
+UNARY_NUM_TO_SAME;
+
+FUNCTION sqr_imp intFuncSignature;
+{$define CALL_MACRO:=sqr}
+{$define ID_MACRO:='sqr'}
+UNARY_NUM_TO_SAME;
+
+{$undef UNARY_NUM_TO_SAME}
+
+{$define ROUND_IMPLEMENTATION:=FUNCTION recurse1(CONST x:P_literal):P_literal;
+    VAR sub:P_literal;
+        iter:T_arrayOfLiteral;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation);
+        lt_error,lt_int: result:=x^.rereferenced;
+        lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType;
+          iter  :=P_collectionLiteral(x)^.iteratableList;
+          for sub in iter do collResult^.append(recurse1(sub),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+            disposeLiteral(result);
+          end;
+        end;
+        else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+      end;
+    end;
+
+  FUNCTION recurse2(CONST x,y:P_literal):P_literal;
+    FUNCTION myRound(CONST x:T_myFloat; CONST y:int64):P_literal; inline;
+      VAR pot:T_myFloat;
+          i:int64;
+      begin
+        pot:=1;
+        i:=0;
+        while i<y do begin pot:=pot*10;  inc(i); end;
+        while i>y do begin pot:=pot*0.1; dec(i); end;
+        result:=newRealLiteral(CALL_MACRO(x*pot)/pot);
+      end;
+
+    FUNCTION myRound(CONST x:P_intLiteral; CONST y:int64):P_literal; inline;
+      VAR pot,i:int64;
+      begin
+        if y>=0 then exit(x^.rereferenced);
+        pot:=1;
+        i:=0;
+        while i>y do begin pot:=pot*10; dec(i); end;
+        result:=newIntLiteral(CALL_MACRO(x^.value div pot) * pot);
+      end;
+
+    VAR sub,ySub:P_literal;
+        yIter:T_arrayOfLiteral;
+        xIter:T_arrayOfLiteral;
+        i    :longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_error: result:=x^.rereferenced;
+        lt_int : case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: result:=myRound(P_intLiteral(x),P_intLiteral(y)^.value);
+          lt_list,lt_intList,lt_emptyList,
+          lt_set ,lt_intSet ,lt_emptySet: begin
+            result:=P_collectionLiteral(y)^.newOfSameType;
+            yIter :=P_collectionLiteral(y)^.iteratableList;
+            for sub in yIter do collResult^.append(recurse2(x,sub),false);
+            disposeLiteral(yIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        end;
+        lt_real: case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
+          lt_list,lt_intList,lt_emptyList,
+          lt_set ,lt_intSet ,lt_emptySet: begin
+            result:=P_collectionLiteral(y)^.newOfSameType;
+            yIter :=P_collectionLiteral(y)^.iteratableList;
+            for sub in yIter do collResult^.append(recurse2(x,sub),false);
+            disposeLiteral(yIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        end;
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: begin
+            result:=newListLiteral;
+            xIter:=P_collectionLiteral(x)^.iteratableList;
+            for sub in xIter do P_listLiteral(result)^.append(recurse2(sub,y),false);
+            disposeLiteral(xIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
+            result:=newListLiteral;
+            for i:=0 to P_listLiteral(x)^.size-1 do listResult^.append(recurse2(P_listLiteral(x)^[i],P_listLiteral(y)^[i]),false);
+          end else context.adapters^.raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        end;
+        lt_set,lt_intSet,lt_realSet,lt_numSet,lt_emptySet: case y^.literalType of
+          lt_error: result:=y^.rereferenced;
+          lt_int: begin
+            result:=newSetLiteral;
+            xIter:=P_collectionLiteral(x)^.iteratableList;
+            for sub in xIter do P_setLiteral(result)^.append(recurse2(sub,y),false);
+            disposeLiteral(xIter);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          lt_set,lt_intSet,lt_emptySet: begin
+            result:=newSetLiteral;
+            xIter:=P_collectionLiteral(x)^.iteratableList;
+            yIter:=P_collectionLiteral(y)^.iteratableList;
+            for sub in xIter do for ySub in yIter do setResult^.append(recurse2(sub,ySub),false);
+            if collResult^.containsError then begin
+              disposeLiteral(result);
+              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+            end;
+          end;
+          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        end;
+        else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then result:=recurse1(arg0) else
+    if (params<>nil) and (params^.size=2) then result:=recurse2(arg0,arg1);
+  end}
+
+FUNCTION round_imp intFuncSignature;
+{$define CALL_MACRO:=round}
+{$define ID_MACRO:='round'}
+ROUND_IMPLEMENTATION;
+
+FUNCTION ceil_imp intFuncSignature;
+{$define CALL_MACRO:=ceil}
+{$define ID_MACRO:='ceil'}
+ROUND_IMPLEMENTATION;
+
+FUNCTION floor_imp intFuncSignature;
+{$define CALL_MACRO:=floor}
+{$define ID_MACRO:='floor'}
+ROUND_IMPLEMENTATION;
+{$undef ROUND_IMPLEMENTATION}
+{$undef CALL_MACRO}
+{$undef ID_MACRO}
+
+FUNCTION sign_imp intFuncSignature;
+  FUNCTION sign_rec(CONST x:P_literal):P_literal;
+    VAR iter:T_arrayOfLiteral;
+        sub:P_literal;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation);
+        lt_error: result:=x^.rereferenced;
+        lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
+        lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType;
+          iter:=P_collectionLiteral(x)^.iteratableList;
+          for sub in iter do collResult^.append(sign_rec(sub),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            disposeLiteral(result);
+            raiseNotApplicableError('sign',x,tokenLocation,context.adapters^);
+          end;
+        end;
+        else raiseNotApplicableError('sign',x,tokenLocation,context.adapters^);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=sign_rec(arg0);
+  end;
+
 
 FUNCTION pi_imp intFuncSignature;
   begin
@@ -330,6 +671,27 @@ FUNCTION arctan2_impl intFuncSignature;
   end;
 
 INITIALIZATION
+  //Unary Numeric -> real
+  registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,true,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sin'   ,@sin_imp   ,true,ak_unary,'sin(n);//Returns the sine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,true,ak_unary,'arcsin(n);//Returns the arcsine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'cos'   ,@cos_imp   ,true,ak_unary,'cos(n);//Returns the cosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,true,ak_unary,'arccos(n);//Returns the arccosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'tan'   ,@tan_imp   ,true,ak_unary,'tan(n);//Returns the tangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,true,ak_unary,'arctan(n);//Returns the arctangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'exp'   ,@exp_imp   ,true,ak_unary,'exp(n);//Returns the exponential of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ln'    ,@ln_imp    ,true,ak_unary,'ln(n);//Returns the natural logarithm of numeric or expression parameter n');
+  //Unary Boolean -> boolean
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,true,ak_unary,'not(b:boolean);#not(b:booleanList);//Returns the negated value of b#not(i:int);#not(i:intList);//Returns the bitwise negated value of i');
+  //Unary Numeric -> same (i.e. I -> I, R -> R)
+  registerRule(MATH_NAMESPACE,'abs',@abs_imp,true,ak_unary,'abs(n);//Returns the absolute value of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,true,ak_unary,'sqr(n);//Returns the square of numeric or expression parameter n');
+  //Unary Numeric -> Integer
+  registerRule(MATH_NAMESPACE,'sign' ,@sign_imp ,true,ak_unary     ,'sign(n);//Returns the sign of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ceil' ,@ceil_imp ,true,ak_variadic_1,'ceil(x);//Returns the smallest integer >=x#ceil(x,k);//Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'floor',@floor_imp,true,ak_variadic_1,'floor(x);//Returns the largest integer <=x#floor(x,k);//Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'round',@round_imp,true,ak_variadic_1,'round(x);//Returns the value of x, rounded to the nearest integer#round(x,k);//Returns the value of x rounded to k-digits precision');
+
   registerRule(MATH_NAMESPACE,'pi'          ,@pi_imp           ,true,ak_nullary   ,'pi;//Returns pi');
   BUILTIN_MAX:=
   registerRule(MATH_NAMESPACE,'max'         ,@max_imp          ,true,ak_variadic_1,'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters');

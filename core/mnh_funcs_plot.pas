@@ -64,7 +64,7 @@ FUNCTION addPlot intFuncSignature;
         sizeWithoutOptions:=params^.size;
       end;
       if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
-        context.adapters^.plot.addRow(options,newDataRow(list0));
+        context.adapters^.plot^.addRow(options,newDataRow(list0));
         context.adapters^.logDeferredPlot;
         exit(newVoidLiteral);
       end;
@@ -72,7 +72,7 @@ FUNCTION addPlot intFuncSignature;
          (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (list0^.size=list1^.size) then begin
-        context.adapters^.plot.addRow(options,newDataRow(list1,list0));
+        context.adapters^.plot^.addRow(options,newDataRow(list1,list0));
         context.adapters^.logDeferredPlot;
         exit(newVoidLiteral);
       end;
@@ -81,7 +81,7 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_int,lt_real]) and
          (arg2^.literalType in [lt_int,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
          (arg3^.literalType=lt_int) and (int3^.value>=2) then begin
-        context.adapters^.plot.addRow(options,generateRow(P_expressionLiteral(arg0),
+        context.adapters^.plot^.addRow(options,generateRow(P_expressionLiteral(arg0),
                                                           fReal(arg1),
                                                           fReal(arg2),
                                                           int3^.value,
@@ -95,7 +95,7 @@ FUNCTION addPlot intFuncSignature;
 
 FUNCTION plot intFuncSignature;
   begin
-    context.adapters^.plot.clear;
+    context.adapters^.plot^.clear;
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,context);
@@ -106,7 +106,7 @@ FUNCTION getOptions intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      opt:=context.adapters^.plot.options;
+      opt:=context.adapters^.plot^.options;
       result:=newMapLiteral^
         .put('x0'             ,opt.range['x',0]    )^
         .put('x1'             ,opt.range['x',1]    )^
@@ -181,7 +181,7 @@ FUNCTION setOptions intFuncSignature;
       i:longint;
   begin
     result:=nil;
-    opt:=context.adapters^.plot.options;
+    opt:=context.adapters^.plot^.options;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
       for i:=0 to compound0^.size-1 do begin
         pair:=P_listLiteral(compound0^.value[i]);
@@ -198,7 +198,7 @@ FUNCTION setOptions intFuncSignature;
       result:=newBoolLiteral(allOkay);
     end else allOkay:=false;
     if allOkay then begin
-      context.adapters^.plot.options:=opt;
+      context.adapters^.plot^.options:=opt;
       context.adapters^.logPlotSettingsChanged;
     end;
   end;
@@ -206,7 +206,7 @@ FUNCTION setOptions intFuncSignature;
 FUNCTION resetOptions_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      context.adapters^.plot.setDefaults;
+      context.adapters^.plot^.setDefaults;
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -235,7 +235,7 @@ FUNCTION renderToFile_impl intFuncSignature;
       end;
       try
         fileName:=ChangeFileExt(fileName,'.png');
-        context.adapters^.plot.renderToFile(fileName,width,height,supersampling);
+        context.adapters^.plot^.renderToFile(fileName,width,height,supersampling);
         context.adapters^.logPlotFileCreated(expandFileName(ChangeFileExt(fileName,'.png')),tokenLocation);
       except
         on e:Exception do begin
@@ -266,7 +266,7 @@ FUNCTION renderToString_impl intFuncSignature;
           tokenLocation);
         exit(nil);
       end;
-      result:=newStringLiteral(context.adapters^.plot.renderToString(width,height,supersampling));
+      result:=newStringLiteral(context.adapters^.plot^.renderToString(width,height,supersampling));
     end;
   end;
 

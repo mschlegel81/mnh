@@ -62,7 +62,7 @@ PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
 PROCEDURE TMnhForm.doConditionalPlotReset;
   begin
     if settings.value^.doResetPlotOnEvaluation then begin
-      guiAdapters.plot.setDefaults;
+      guiAdapters.plot^.setDefaults;
       if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
     end;
   end;
