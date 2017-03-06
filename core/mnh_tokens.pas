@@ -12,6 +12,11 @@ TYPE
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;
 
+  P_abstractRule=^T_abstractRule;
+  T_abstractRule=object(T_objectWithIdAndLocation)
+    FUNCTION getRuleType:T_ruleType; virtual; abstract;
+  end;
+
   P_token=^T_token;
   T_token=object
     next    :P_token;
@@ -37,11 +42,29 @@ TYPE
     PROCEDURE resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
   end;
 
+  P_tokenRecycler=^T_tokenRecycler;
+  T_tokenRecycler=object
+    private
+      dat:array[0..2047] of P_token;
+      fill:longint;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+
+      FUNCTION disposeToken(p:P_token):P_token; inline;
+      PROCEDURE cascadeDisposeToken(VAR p:P_token);
+      FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
+      FUNCTION newToken(CONST original:T_token):P_token; inline;
+      FUNCTION newToken(CONST original:P_token):P_token; inline;
+  end;
+
   T_bodyParts=array of record first,last:P_token; end;
   T_resolveIDsCallback=PROCEDURE(VAR token:T_token; CONST package:pointer; CONST adaptersOrNil:P_adapters);
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:pointer; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
 VAR resolveIDsCallback:T_resolveIDsCallback;
 IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
@@ -67,6 +90,94 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     if t=nil then result:='<EOL>'
     else result:=t^.singleTokenToString;
   end;
+
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
+  VAR t,p:P_token;
+      bracketLevel,i:longint;
+      partLength:longint=-1;
+  begin
+    closingBracket:=nil;
+    bracketLevel:=initialBracketLevel;
+    t:=first; p:=nil;
+    if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
+      setLength(result,1);
+      result[0].first:=first^.next;
+    end else begin
+      adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      setLength(result,0);
+      exit;
+    end;
+    while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+      if t^.tokType in C_openingBrackets then inc(bracketLevel)
+      else if t^.tokType in C_closingBrackets then dec(bracketLevel)
+      else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
+        if partLength=0 then adapters^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        result[length(result)-1].last:=p; //end of body part is token before comma
+        setLength(result,length(result)+1);
+        result[length(result)-1].first:=t^.next; //start of next body part is token after comma
+        partLength:=-1; //excluding delimiting separators
+      end;
+      p:=t; t:=t^.next; inc(partLength);
+    end;
+    result[length(result)-1].last:=p; //end of body part is token before comma
+    if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+      adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      setLength(result,0);
+      exit;
+    end;
+    closingBracket:=t;
+    for i:=0 to length(result)-1 do begin
+      if result[i].last^.next<>closingBracket then recycler.disposeToken(result[i].last^.next);
+      result[i].last^.next:=nil;
+    end;
+  end;
+
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:pointer; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
+  VAR t:P_token;
+      rule:P_abstractRule;
+  begin
+    t:=first;
+    while t<>nil do begin
+      case t^.tokType of
+        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
+          if t^.data=nil then t^.data:=inPackage;
+          if t^.tokType=tt_identifier then t^.resolveRuleId(inPackage,nil);
+          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+            if t^.tokType<>tt_identifier then begin
+              if t^.tokType=tt_localUserRule then begin
+                rule:=t^.data;
+                if rule^.getRuleType in C_mutableRuleTypes then begin
+                  t^.data:=rule;
+                  t^.tokType:=t^.next^.tokType;
+                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
+                  t^.txt:=t^.txt;
+                  t^.next:=recycler.disposeToken(t^.next);
+                end else adapters^.raiseError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
+              end else adapters^.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+            end else adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
+          end;
+        end;
+        tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignNewBlockLocal;
+          t^.data:=nil;
+          t^.txt:=t^.next^.txt;
+          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
+        tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignExistingBlockLocal;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+          t^.tokType:=t^.next^.tokType;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
+        end;
+      t:=t^.next;
+    end;
+  end;
+
 
 CONSTRUCTOR T_token.create;
   begin
@@ -311,5 +422,73 @@ PROCEDURE T_token.resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:
                          else package:=location.package;
     resolveIDsCallback(self,package,adaptersOrNil);
   end;
+
+CONSTRUCTOR T_tokenRecycler.create;
+  VAR i:longint;
+  begin
+    for i:=0 to length(dat)-1 do dat[i]:=nil;
+    fill:=0;
+  end;
+
+DESTRUCTOR T_tokenRecycler.destroy;
+  begin
+    while fill>0 do begin
+      dec(fill);
+      try
+        dispose(dat[fill],destroy);
+      except
+        dat[fill]:=nil;
+      end;
+    end;
+  end;
+
+FUNCTION T_tokenRecycler.disposeToken(p: P_token): P_token;
+  begin
+    if p=nil then exit(nil);
+    result:=p^.next;
+    if (fill>=length(dat))
+    then dispose(p,destroy)
+    else begin
+      p^.undefine;
+      dat[fill]:=p;
+      inc(fill);
+    end;
+  end;
+
+PROCEDURE T_tokenRecycler.cascadeDisposeToken(VAR p: P_token);
+  begin
+    while p<>nil do p:=disposeToken(p);
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(tokenLocation,tokenText,tokenType,ptr);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST original: T_token): P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(original);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST original: P_token): P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(original^);
+    result^.next:=nil;
+  end;
+
 
 end.

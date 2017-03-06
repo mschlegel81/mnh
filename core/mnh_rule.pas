@@ -13,7 +13,7 @@ TYPE
   P_rule=^T_rule;
   T_subruleArray=array of P_subrule;
 
-  T_rule=object(T_objectWithIdAndLocation)
+  T_rule=object(T_abstractRule)
     private
       idResolved,
       called,valueChangedAfterDeclaration:boolean;
@@ -30,7 +30,7 @@ TYPE
     public
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
-      PROPERTY getRuleType:T_ruleType read ruleType;
+      FUNCTION getRuleType:T_ruleType; virtual;
       PROPERTY getSubrules:T_subruleArray read subrules;
       PROCEDURE setIdResolved;
 
@@ -116,6 +116,11 @@ FUNCTION T_rule.getId:T_idString;
 FUNCTION T_rule.getLocation:T_tokenLocation;
   begin
     result:=declarationStart;
+  end;
+
+FUNCTION T_rule.getRuleType:T_ruleType;
+  begin
+    result:=ruleType;
   end;
 
 PROCEDURE T_rule.setIdResolved;

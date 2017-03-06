@@ -8,7 +8,6 @@ USES //basic classes
      mnh_constants, mnh_basicTypes,
      mnh_litVar, mnh_fileWrappers, mnh_out_adapters,
      mnh_caches,
-     tokenRecycler,
      tokenStack,valueStore,
      mnh_tokens, mnh_contexts, //types
      mnh_funcs,  //even more specific
@@ -469,7 +468,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           context.recycler.cascadeDisposeToken(first);
           exit;
         end;
-        predigest(assignmentToken,@self,context);
+        predigest(assignmentToken,@self,context.recycler,context.adapters);
         if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(first)+';');
         parseRule;
         if profile then context.timeBaseComponent(pc_declaration);
@@ -490,7 +489,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
               context.recycler.cascadeDisposeToken(first);
               exit;
             end;
-            predigest(first,@self,context);
+            predigest(first,@self,context.recycler,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
             reduceExpression(first,context);
             if profile then context.timeBaseComponent(pc_interpretation);
@@ -498,7 +497,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
           end;
           lu_forCodeAssistance: if (first<>nil) and first^.areBracketsPlausible(context.adapters^) then begin
-            predigest(first,@self,context);
+            predigest(first,@self,context.recycler,context.adapters);
             resolveBuiltinIDs(first,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
           end

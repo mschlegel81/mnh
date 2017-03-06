@@ -23,8 +23,6 @@ T_tokenArray=object
     PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean);
     PROCEDURE tokenizeAll(CONST inPackage:P_package; VAR adapters:T_adapters);
 end;
-
-
 {$endif}
 {$ifdef include_implementation}
 CONSTRUCTOR T_tokenArray.create;
@@ -448,91 +446,6 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inPackage: P_package; VAR adapters: T_a
       blob.text:='';
     end;
     setLength(token,tokenFill);
-  end;
-
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_threadContext);
-  VAR t:P_token;
-      rule:P_rule;
-  begin
-    t:=first;
-    while t<>nil do begin
-      case t^.tokType of
-        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
-          if t^.data=nil then t^.data:=inPackage;
-          if t^.tokType=tt_identifier then t^.resolveRuleId(inPackage,nil);
-          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
-            if t^.tokType<>tt_identifier then begin
-              if t^.tokType=tt_localUserRule then begin
-                rule:=t^.data;
-                if rule^.getRuleType in C_mutableRuleTypes then begin
-                  t^.data:=rule;
-                  t^.tokType:=t^.next^.tokType;
-                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
-                  t^.txt:=t^.txt;
-                  t^.next:=context.recycler.disposeToken(t^.next);
-                end else context.adapters^.raiseError('You can only mutate mutable rules! Rule '+rule^.idForErrorFeedback+' is not mutable',t^.next^.location);
-              end else context.adapters^.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
-            end else context.adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
-          end;
-        end;
-        tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
-          t^.tokType:=tt_assignNewBlockLocal;
-          t^.data:=nil;
-          t^.txt:=t^.next^.txt;
-          t^.next:=context.recycler.disposeToken(t^.next);
-          t^.next:=context.recycler.disposeToken(t^.next);
-        end;
-        tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
-          t^.tokType:=tt_assignExistingBlockLocal;
-          t^.data:=nil;
-          t^.next:=context.recycler.disposeToken(t^.next);
-        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
-          t^.tokType:=t^.next^.tokType;
-          t^.data:=nil;
-          t^.next:=context.recycler.disposeToken(t^.next);
-        end;
-        end;
-      t:=t^.next;
-    end;
-  end;
-
-PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
-  VAR t,prev,inlineRuleTokens:P_token;
-      bracketLevel:longint=0;
-      inlineSubRule:P_subrule;
-  begin
-    predigest(rep,nil,context);
-    if (rep^.tokType<>tt_expBraceOpen) then begin
-      context.adapters^.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
-      exit;
-    end;
-    t:=rep^.next; prev:=rep;
-    inlineRuleTokens:=t;
-    while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
-      case t^.tokType of
-        tt_expBraceOpen: begin
-          digestInlineExpression(t,context);
-          if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
-        end;
-      end;
-      prev:=t;
-      t:=t^.next;
-    end;
-    if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-      context.adapters^.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
-      exit;
-    end;
-
-    rep^.next:=t^.next; //remove expression from parent expression
-    prev^.next:=nil; //unlink closing curly bracket
-    context.recycler.disposeToken(t); //dispose closing curly bracket
-    if context.adapters^.noErrors then begin
-      new(inlineSubRule,createFromInline(inlineRuleTokens,context));
-      if context.adapters^.noErrors then begin
-        rep^.tokType:=tt_literal;
-        rep^.data:=inlineSubRule;
-      end else dispose(inlineSubRule,destroy);
-    end;
   end;
 
 PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);

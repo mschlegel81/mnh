@@ -4,7 +4,7 @@ USES //MNH:
      mnh_basicTypes,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_tokens,tokenRecycler
+     mnh_tokens
      {$ifdef fullVersion},mnh_profiling{$endif};
 TYPE
   P_tokenStack=^T_TokenStack;
