@@ -15,6 +15,7 @@ USES //basic classes
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
      mnh_subrules,
      mnh_rule,
+     mnh_tokenArray,
      mnh_aggregators,listProcessing,
      mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns;
 
@@ -35,7 +36,7 @@ TYPE
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   end;
 
-  T_package=object(T_objectWithPath)
+  T_package=object(T_abstractPackage)
     private
       mainPackage:P_package;
       secondaryPackages:array of P_package;
@@ -43,7 +44,6 @@ TYPE
       packageUses,dynamicUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       readyForCodeState:T_hashInt;
-      codeProvider:P_codeProvider;
       pseudoCallees:T_packageProfilingCalls;
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
@@ -64,7 +64,7 @@ TYPE
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
-      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       FUNCTION isMain:boolean;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getPath:ansistring; virtual;
@@ -1016,7 +1016,6 @@ INITIALIZATION
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
-  rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
   {$include mnh_funcs.inc}
 {$undef include_initialization}
