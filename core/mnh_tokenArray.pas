@@ -30,18 +30,20 @@ TYPE
     tokenFill:longint;
     stepIndex:longint;
     FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_objectWithPath; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
+    PROCEDURE append(CONST newTok:T_token);
   public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE append(CONST newTok:T_token);
     PROCEDURE step(CONST package:P_abstractPackage; VAR comments,attributes:T_arrayOfString; VAR adapters:T_adapters);
     FUNCTION current:T_token;
     PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
     FUNCTION atEnd:boolean;
+    PROCEDURE tokenizeAll(CONST inPackage:P_abstractPackage; VAR adapters:T_adapters);
+    PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage; VAR adapters:T_adapters; CONST retainBlanks:boolean);
+    {$ifdef fullVersion}
     FUNCTION lastToken:T_token;
     FUNCTION getRawTokensUndefining:T_rawTokenArray;
-    PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage; VAR adapters:T_adapters; CONST retainBlanks:boolean);
-    PROCEDURE tokenizeAll(CONST inPackage:P_abstractPackage; VAR adapters:T_adapters);
+    {$endif}
   end;
 
 IMPLEMENTATION
@@ -144,6 +146,7 @@ FUNCTION T_tokenArray.atEnd: boolean;
     result:=stepIndex>=tokenFill;
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_tokenArray.lastToken:T_token;
   begin
     if tokenFill>0 then exit(token[tokenFill-1]);
@@ -176,6 +179,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
     for k:=0 to tokenFill-1 do token[k].undefine;
     nullAdapter.destroy;
   end;
+{$endif}
 
 FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_tokenLocation; CONST inPackage: P_objectWithPath; VAR adapters: T_adapters; CONST retainBlanks: boolean): T_token;
   VAR parsedLength:longint=0;
@@ -425,6 +429,7 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inputString: ansistring; CONST location
     setLength(token,tokenFill);
   end;
 
+{$ifdef fullVersion}
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
   VAR tokenArray:T_tokenArray;
       location:T_tokenLocation;
@@ -440,6 +445,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     result:=tokenArray.getRawTokensUndefining;
     tokenArray.destroy;
   end;
+{$endif}
 
 PROCEDURE T_tokenArray.tokenizeAll(CONST inPackage: P_abstractPackage; VAR adapters: T_adapters);
   VAR location:T_tokenLocation;

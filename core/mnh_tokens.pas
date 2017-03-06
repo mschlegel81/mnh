@@ -9,8 +9,10 @@ USES //basic classes
      mnh_out_adapters,
      mnh_litVar;
 TYPE
+  {$ifdef fullVersion}
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;
+  {$endif}
 
   P_abstractRule=^T_abstractRule;
   T_abstractRule=object(T_objectWithIdAndLocation)
@@ -38,7 +40,9 @@ TYPE
     FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_adapters):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
+    {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
+    {$endif}
     PROCEDURE resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
   end;
 
@@ -409,11 +413,13 @@ FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
     result:=nil;
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
   end;
+{$endif}
 
 PROCEDURE T_token.resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
   VAR package:pointer;
