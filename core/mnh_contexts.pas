@@ -11,7 +11,7 @@ USES //FPC/LCL libraries
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_out_adapters,mnh_litVar,
      mnh_tokens,
-     tokenStack,valueStore,tokenRecycler,
+     tokenStack,valueStore,
      mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
   T_evaluationContextOption =(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);

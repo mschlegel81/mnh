@@ -8,7 +8,6 @@ USES //basic classes
      mnh_constants, mnh_basicTypes,
      mnh_litVar, mnh_fileWrappers, mnh_out_adapters,
      mnh_caches,
-     tokenRecycler,
      tokenStack,valueStore,
      mnh_tokens, mnh_contexts, //types
      mnh_funcs,  //even more specific
@@ -16,6 +15,7 @@ USES //basic classes
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
      mnh_subrules,
      mnh_rule,
+     mnh_tokenArray,
      mnh_aggregators,listProcessing,
      mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns;
 
@@ -36,7 +36,7 @@ TYPE
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   end;
 
-  T_package=object(T_objectWithPath)
+  T_package=object(T_abstractPackage)
     private
       mainPackage:P_package;
       secondaryPackages:array of P_package;
@@ -44,7 +44,6 @@ TYPE
       packageUses,dynamicUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       readyForCodeState:T_hashInt;
-      codeProvider:P_codeProvider;
       pseudoCallees:T_packageProfilingCalls;
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
@@ -65,7 +64,7 @@ TYPE
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
-      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       FUNCTION isMain:boolean;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getPath:ansistring; virtual;
@@ -469,7 +468,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           context.recycler.cascadeDisposeToken(first);
           exit;
         end;
-        predigest(assignmentToken,@self,context);
+        predigest(assignmentToken,@self,context.recycler,context.adapters);
         if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(first)+';');
         parseRule;
         if profile then context.timeBaseComponent(pc_declaration);
@@ -490,7 +489,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
               context.recycler.cascadeDisposeToken(first);
               exit;
             end;
-            predigest(first,@self,context);
+            predigest(first,@self,context.recycler,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
             reduceExpression(first,context);
             if profile then context.timeBaseComponent(pc_interpretation);
@@ -498,7 +497,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
           end;
           lu_forCodeAssistance: if (first<>nil) and first^.areBracketsPlausible(context.adapters^) then begin
-            predigest(first,@self,context);
+            predigest(first,@self,context.recycler,context.adapters);
             resolveBuiltinIDs(first,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
           end
@@ -1017,7 +1016,6 @@ INITIALIZATION
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
-  rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
   {$include mnh_funcs.inc}
 {$undef include_initialization}

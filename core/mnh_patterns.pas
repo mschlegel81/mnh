@@ -6,7 +6,6 @@ USES sysutils,
      mnh_basicTypes,mnh_constants,
      mnh_litVar,
      mnh_tokens,
-     tokenRecycler,
      mnh_contexts;
 TYPE
   T_patternElement=object

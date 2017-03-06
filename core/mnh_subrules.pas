@@ -104,7 +104,47 @@ TYPE
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 IMPLEMENTATION
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
+  VAR t,prev,inlineRuleTokens:P_token;
+      bracketLevel:longint=0;
+      inlineSubRule:P_subrule;
+  begin
+    predigest(rep,nil,context.recycler,context.adapters);
+    if (rep^.tokType<>tt_expBraceOpen) then begin
+      context.adapters^.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
+      exit;
+    end;
+    t:=rep^.next; prev:=rep;
+    inlineRuleTokens:=t;
+    while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
+      case t^.tokType of
+        tt_expBraceOpen: begin
+          digestInlineExpression(t,context);
+          if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
+        end;
+      end;
+      prev:=t;
+      t:=t^.next;
+    end;
+    if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
+      context.adapters^.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
+      exit;
+    end;
+
+    rep^.next:=t^.next; //remove expression from parent expression
+    prev^.next:=nil; //unlink closing curly bracket
+    context.recycler.disposeToken(t); //dispose closing curly bracket
+    if context.adapters^.noErrors then begin
+      new(inlineSubRule,createFromInline(inlineRuleTokens,context));
+      if context.adapters^.noErrors then begin
+        rep^.tokType:=tt_literal;
+        rep^.data:=inlineSubRule;
+      end else dispose(inlineSubRule,destroy);
+    end;
+  end;
+
 PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
   VAR t:P_token;
       i:longint;
