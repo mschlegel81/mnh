@@ -13,18 +13,18 @@ USES //basic classes
      mnh_funcs,  //even more specific
      mnh_profiling,
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
+     mnh_patterns,
      mnh_subrules,
      mnh_rule,
      mnh_tokenArray,
      mnh_aggregators,listProcessing,
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_patterns;
+     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_funcs_format;
 
 {$define include_interface}
 TYPE
   P_package=^T_package;
   {$include mnh_token.inc}
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
   T_packageReference=object
@@ -83,7 +83,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
+
 
 {$undef include_interface}
 VAR killServersCallback:PROCEDURE;
@@ -174,7 +174,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$define include_implementation}
 {$include mnh_token.inc}
 {$include mnh_funcs.inc}
-{$include mnh_fmtStmt.inc}
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   VAR i:longint;
@@ -1008,7 +1007,6 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
 INITIALIZATION
 {$define include_initialization}
   {$include mnh_token.inc}
-  {$include mnh_fmtStmt.inc}
   resolveIDsCallback:=@resolveId;
   reduceExpressionCallback:=@reduceExpression;
   //callbacks in mnh_litvar:
@@ -1023,5 +1021,4 @@ INITIALIZATION
 FINALIZATION
 {$define include_finalization}
 {$include mnh_funcs.inc}
-{$include mnh_fmtStmt.inc}
 end.

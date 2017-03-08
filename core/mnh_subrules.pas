@@ -11,6 +11,7 @@ USES //basic classes
      mnh_tokens,
      tokenStack,
      mnh_contexts,
+     mnh_tokenArray,
      {$ifdef fullVersion}
      mnh_plotData,mnh_funcs_plot,
      {$endif}
@@ -105,6 +106,7 @@ TYPE
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 IMPLEMENTATION
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
   VAR t,prev,inlineRuleTokens:P_token;
@@ -1120,6 +1122,124 @@ FUNCTION tokenSplit_impl intFuncSignature;
     end;
   end;
 
+FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_threadContext):P_token;
+  VAR exTokens:T_tokenArray;
+      commentDummy,
+      attributeDummy:T_arrayOfString;
+      last:P_token;
+  begin
+    commentDummy  :=C_EMPTY_STRING_ARRAY;
+    attributeDummy:=C_EMPTY_STRING_ARRAY;
+    exTokens.create;
+    exTokens.tokenizeAll(s,location,package,context.adapters^,false);
+    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
+    if exTokens.atEnd then begin
+      context.adapters^.raiseError('The parsed expression appears to be empty',location);
+      exTokens.destroy;
+      exit(nil);
+    end else if not(context.adapters^.noErrors) then begin
+      exTokens.destroy;
+      exit(nil); //Parsing error ocurred
+    end;
+    result:=context.recycler.newToken(exTokens.current); exTokens.current.undefine;
+    last:=result;
+    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
+    while not(exTokens.atEnd) do begin
+      last^.next:=context.recycler.newToken(exTokens.current);  exTokens.current.undefine;
+      last:=last^.next;
+      exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
+    end;
+    exTokens.destroy;
+  end;
+
+FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_threadContext):P_token;
+  VAR last:P_token=nil;
+      i:longint;
+      subTokens:P_token;
+  begin
+    result:=nil;
+    for i:=0 to L^.size-1 do begin
+      if L^[i]^.literalType=lt_string
+      then subTokens:=stringToTokens(P_stringLiteral(L^[i])^.value,location,package,context)
+      else begin
+        subTokens:=context.recycler.newToken(location,'',tt_literal,L^[i]);
+        L^[i]^.rereference;
+      end;
+      if subTokens=nil then begin
+        if result<>nil then context.recycler.cascadeDisposeToken(result);
+        exit(nil);
+      end;
+      if result=nil then result:=subTokens
+                    else last^.next:=subTokens;
+      last:=subTokens^.last;
+    end;
+  end;
+
+FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  VAR first:P_token=nil;
+      temp:P_token;
+      package:P_abstractPackage;
+  begin
+    result:=nil;
+    package:=P_abstractPackage(location.package);
+    if      L^.literalType=lt_string      then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
+    else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
+    if first=nil then exit(nil);
+
+    if not(first^.areBracketsPlausible(context.adapters^)) then begin
+      context.recycler.cascadeDisposeToken(first);
+      exit(nil);
+    end;
+    if first^.tokType<>tt_expBraceOpen then begin
+      temp:=context.recycler.newToken(location,'',tt_expBraceOpen);
+      temp^.next:=first; first:=temp;
+      temp:=first^.last;
+      temp^.next:=context.recycler.newToken(location,'',tt_expBraceClose);
+    end;
+
+    digestInlineExpression(first,context);
+    if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if not(context.adapters^.noErrors) then begin
+      context.recycler.cascadeDisposeToken(first);
+      exit(newErrorLiteral);
+    end;
+    if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
+      context.recycler.disposeToken(first);
+      context.adapters^.raiseSystemError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+      exit(newErrorLiteral);
+    end;
+    result:=P_expressionLiteral(first^.data);
+    first^.tokType:=tt_EOL;
+    first^.data:=nil;
+    context.recycler.disposeToken(first);
+  end;
+
+FUNCTION toExpression_imp intFuncSignature;
+  FUNCTION primitiveExpression(CONST l:P_literal):P_expressionLiteral;
+    VAR first:P_token;
+    begin
+      //Create token-series { <Literal> }
+      first            :=context.recycler.newToken(tokenLocation,'',tt_expBraceOpen);
+      first^.next      :=context.recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
+      first^.next^.next:=context.recycler.newToken(tokenLocation,'',tt_expBraceClose);
+      //Reduce to inline expression
+      digestInlineExpression(first,context);
+      result:=P_expressionLiteral(first^.data);
+      first^.tokType:=tt_EOL;
+      first^.data:=nil;
+      context.recycler.disposeToken(first);
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then case arg0^.literalType of
+      lt_expression:  begin result:=arg0; arg0^.rereference; end;
+      lt_boolean,lt_int,lt_real: result:=primitiveExpression(arg0);
+      else result:=stringOrListToExpression(arg0,tokenLocation,context);
+    end;
+  end;
+
 
 INITIALIZATION
   {$ifdef fullVersion}
@@ -1130,6 +1250,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   registerRule(STRINGS_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl   ,true,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,false,ak_unary,'toExpression(S);//Returns an expression parsed from S');
 
 FINALIZATION
   {$ifdef fullVersion}
