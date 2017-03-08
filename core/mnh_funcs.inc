@@ -1,8 +1,6 @@
 {$ifdef include_implementation}
 VAR builtinLocation_group,
-    builtinLocation_try,
-    builtinLocation_printf,
-    builtinLocation_format:T_identifiedInternalFunction;
+    builtinLocation_try:T_identifiedInternalFunction;
 
 {$i mnh_func_defines.inc}
 
@@ -89,123 +87,7 @@ FUNCTION async_imp intFuncSignature;
     end;
   end;
 
-FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_threadContext):P_token;
-  VAR exTokens:T_tokenArray;
-      commentDummy,
-      attributeDummy:T_arrayOfString;
-      last:P_token;
-  begin
-    commentDummy  :=C_EMPTY_STRING_ARRAY;
-    attributeDummy:=C_EMPTY_STRING_ARRAY;
-    exTokens.create;
-    exTokens.tokenizeAll(s,location,package,context.adapters^,false);
-    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
-    if exTokens.atEnd then begin
-      context.adapters^.raiseError('The parsed expression appears to be empty',location);
-      exTokens.destroy;
-      exit(nil);
-    end else if not(context.adapters^.noErrors) then begin
-      exTokens.destroy;
-      exit(nil); //Parsing error ocurred
-    end;
-    result:=context.recycler.newToken(exTokens.current); exTokens.current.undefine;
-    last:=result;
-    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
-    while not(exTokens.atEnd) do begin
-      last^.next:=context.recycler.newToken(exTokens.current);  exTokens.current.undefine;
-      last:=last^.next;
-      exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
-    end;
-    exTokens.destroy;
-  end;
 
-FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_threadContext):P_token;
-  VAR last:P_token=nil;
-      i:longint;
-      subTokens:P_token;
-  begin
-    result:=nil;
-    for i:=0 to L^.size-1 do begin
-      if L^[i]^.literalType=lt_string
-      then subTokens:=stringToTokens(P_stringLiteral(L^[i])^.value,location,package,context)
-      else begin
-        subTokens:=context.recycler.newToken(location,'',tt_literal,L^[i]);
-        L^[i]^.rereference;
-      end;
-      if subTokens=nil then begin
-        if result<>nil then context.recycler.cascadeDisposeToken(result);
-        exit(nil);
-      end;
-      if result=nil then result:=subTokens
-                    else last^.next:=subTokens;
-      last:=subTokens^.last;
-    end;
-  end;
-
-FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  VAR first:P_token=nil;
-      temp:P_token;
-      package:P_package;
-  begin
-    result:=nil;
-    package:=P_package(location.package);
-    if      L^.literalType=lt_string      then first:=stringToTokens(P_stringLiteral(L)^.value,location,package,context)
-    else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
-    if first=nil then exit(nil);
-
-    if not(first^.areBracketsPlausible(context.adapters^)) then begin
-      context.recycler.cascadeDisposeToken(first);
-      exit(nil);
-    end;
-    if first^.tokType<>tt_expBraceOpen then begin
-      temp:=context.recycler.newToken(location,'',tt_expBraceOpen);
-      temp^.next:=first; first:=temp;
-      temp:=first^.last;
-      temp^.next:=context.recycler.newToken(location,'',tt_expBraceClose);
-    end;
-
-    digestInlineExpression(first,context);
-    if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-    if not(context.adapters^.noErrors) then begin
-      context.recycler.cascadeDisposeToken(first);
-      exit(newErrorLiteral);
-    end;
-    if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-      context.recycler.disposeToken(first);
-      context.adapters^.raiseSystemError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
-      exit(newErrorLiteral);
-    end;
-    result:=P_expressionLiteral(first^.data);
-    first^.tokType:=tt_EOL;
-    first^.data:=nil;
-    context.recycler.disposeToken(first);
-  end;
-
-FUNCTION toExpression_imp intFuncSignature;
-  FUNCTION primitiveExpression(CONST l:P_literal):P_expressionLiteral;
-    VAR first:P_token;
-    begin
-      //Create token-series { <Literal> }
-      first            :=context.recycler.newToken(tokenLocation,'',tt_expBraceOpen);
-      first^.next      :=context.recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
-      first^.next^.next:=context.recycler.newToken(tokenLocation,'',tt_expBraceClose);
-      //Reduce to inline expression
-      digestInlineExpression(first,context);
-      result:=P_expressionLiteral(first^.data);
-      first^.tokType:=tt_EOL;
-      first^.data:=nil;
-      context.recycler.disposeToken(first);
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then case arg0^.literalType of
-      lt_expression:  begin result:=arg0; arg0^.rereference; end;
-      lt_boolean,lt_int,lt_real: result:=primitiveExpression(arg0);
-      else result:=stringOrListToExpression(arg0,tokenLocation,context);
-    end;
-  end;
 
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
@@ -299,136 +181,6 @@ FUNCTION group_imp intFuncSignature;
       for groupEntry in groupList do listResult^.append(groupEntry.value,false);
       groupMap.destroy;
       if aggregator<>nil then context.callStackPop();
-    end;
-  end;
-
-FUNCTION format_imp intFuncSignature;
-  VAR txt:T_arrayOfString;
-      i:longint;
-      preparedStatement:P_preparedFormatStatement;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      context.callStackPush(tokenLocation,@builtinLocation_format,params,nil);
-      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
-      context.callStackPop();
-      if not(context.adapters^.noErrors) then exit(nil);
-      txt:=preparedStatement^.format(params,tokenLocation,context);
-      if length(txt)=1 then result:=newStringLiteral(txt[0])
-      else begin
-        result:=newListLiteral;
-        for i:=0 to length(txt)-1 do P_listLiteral(result)^.appendString(txt[i]);
-      end;
-    end;
-  end;
-
-FUNCTION printf_imp intFuncSignature;
-  VAR preparedStatement:P_preparedFormatStatement;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
-      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
-      if not(context.adapters^.noErrors) then begin
-        context.callStackPop();
-        exit(nil);
-      end;
-      system.enterCriticalSection(print_cs);
-      context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
-      system.leaveCriticalSection(print_cs);
-      result:=newVoidLiteral;
-      context.callStackPop();
-    end;
-  end;
-
-FUNCTION formatTime_imp intFuncSignature;
-  VAR L:P_listLiteral;
-      i:longint;
-      fmt:ansistring;
-  FUNCTION fmtIt(CONST t:double):P_stringLiteral;
-    begin
-      result:=newStringLiteral(FormatDateTime(fmt,t));
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
-      fmt:=P_stringLiteral(arg0)^.value;
-      case arg1^.literalType of
-        lt_int:  result:=fmtIt(P_intLiteral (arg1)^.value);
-        lt_real: result:=fmtIt(P_realLiteral(arg1)^.value);
-        lt_emptyList: result:=newListLiteral;
-        lt_realList,lt_intList,lt_numList: begin
-          result:=newListLiteral;
-          L:=list1;
-          for i:=0 to L^.size-1 do case(L^[i]^.literalType) of
-            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^[i])^.value),false);
-            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^[i])^.value),false);
-          end;
-        end;
-      end;
-    end;
-  end;
-
-FUNCTION parseTime_imp intFuncSignature;
-  VAR format:ansistring;
-  FUNCTION encodeDateTime(input:ansistring):double;
-    CONST digits:charSet=['0'..'9'];
-    VAR yStr:string='';
-        mStr:string='';
-        dStr:string='';
-        hStr:string='';
-        nStr:string='';
-        sStr:string='';
-        zStr:string='';
-        i:word;
-        yNum,mNum,dNum:word;
-        hNum:word=0;
-        nNum:word=0;
-        sNum:word=0;
-        zNum:word=0;
-    begin
-      if length(format)<>length(input) then begin
-        context.adapters^.raiseError('parseTime expects two strings of equal length as parameters',tokenLocation);
-        exit;
-      end;
-      input:=cleanString(input,digits,'0');
-      for i:=1 to length(format) do case format[i] of
-        'Y': yStr:=yStr+input[i];
-        'M': mStr:=mStr+input[i];
-        'D': dStr:=dStr+input[i];
-        'H': hStr:=hStr+input[i];
-        'N': nStr:=nStr+input[i];
-        'S': sStr:=sStr+input[i];
-        'Z': zStr:=zStr+input[i];
-      end;
-      DecodeDate(now,yNum,mNum,dNum);
-      yNum:=strToIntDef(yStr,yNum);
-      mNum:=strToIntDef(mStr,mNum);
-      dNum:=strToIntDef(dStr,dNum);
-      hNum:=strToIntDef(hStr,hNum);
-      nNum:=strToIntDef(nStr,nNum);
-      sNum:=strToIntDef(sStr,sNum);
-      zNum:=strToIntDef(zStr,zNum);
-      try
-        result:=EncodeDate(yNum,mNum,dNum)+EncodeTime(hNum,nNum,sNum,zNum);
-      except
-        on E:Exception do context.adapters^.raiseError('parseTime failed:'+E.message,tokenLocation);
-      end;
-    end;
-
-  VAR i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
-      format:= uppercase(P_stringLiteral(arg0)^.value);
-      if (arg1^.literalType=lt_string) then
-        result:=newRealLiteral(encodeDateTime(P_stringLiteral(arg1)^.value))
-      else if (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
-        result:=newListLiteral;
-        for i:=0 to list1^.size-1 do
-          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^[i])^.value));
-      end;
     end;
   end;
 
@@ -586,16 +338,9 @@ FUNCTION writeDataStores_imp intFuncSignature;
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,false,ak_unary,'toExpression(S);//Returns an expression parsed from S');
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,true,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,false,ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
-  builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,true,ak_variadic_1,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
-  builtinLocation_format.create(STRINGS_NAMESPACE,'format');
-  registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,true ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,true ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,false,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,false,ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'import'           ,@import_imp           ,false,ak_unary     ,'import(idOrPath:string);//Returns information on rules of an imported package or a specified MNH source file');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache'   ,@clearRuleCache_imp   ,false,ak_unary     ,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
@@ -609,6 +354,4 @@ FUNCTION writeDataStores_imp intFuncSignature;
 {$ifdef include_finalization}
   builtinLocation_group .destroy;
   builtinLocation_try   .destroy;
-  builtinLocation_printf.destroy;
-  builtinLocation_format.destroy;
 {$endif}

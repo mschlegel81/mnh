@@ -1,4 +1,14 @@
-{$ifdef include_interface}
+UNIT mnh_funcs_format;
+INTERFACE
+USES sysutils,
+     myGenerics,myStringUtil,
+     mnh_basicTypes,mnh_constants,
+     mnh_litVar,
+     mnh_subrules,
+     mnh_contexts,
+     mnh_tokenArray,
+     mnh_funcs;
+TYPE
 P_preparedFormatStatement=^T_preparedFormatStatement;
 T_preparedFormatStatement=object
   parts:T_arrayOfString;
@@ -9,10 +19,25 @@ T_preparedFormatStatement=object
   FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
 end;
 
-{$endif}
-{$ifdef include_implementation}
+PROCEDURE clearCachedFormats;
+IMPLEMENTATION
+{$i mnh_func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
+    builtinLocation_printf,
+    builtinLocation_format:T_identifiedInternalFunction;
+
+PROCEDURE clearCachedFormats;
+  VAR f:cachedFormats.VALUE_TYPE_ARRAY;
+      i:longint;
+  begin
+    system.enterCriticalSection(cachedFormatCS);
+    f:=cachedFormats.valueSet;
+    for i:=0 to length(f)-1 do dispose(f[i],destroy);
+    setLength(f,0);
+    cachedFormats.clear;
+    system.leaveCriticalSection(cachedFormatCS);
+  end;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
   begin;
@@ -238,26 +263,153 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     if not(context.adapters^.noErrors) then setLength(result,0);
   end;
 
-PROCEDURE clearCachedFormats;
-  VAR f:cachedFormats.VALUE_TYPE_ARRAY;
+FUNCTION format_imp intFuncSignature;
+  VAR txt:T_arrayOfString;
       i:longint;
+      preparedStatement:P_preparedFormatStatement;
   begin
-    system.enterCriticalSection(cachedFormatCS);
-    f:=cachedFormats.valueSet;
-    for i:=0 to length(f)-1 do dispose(f[i],destroy);
-    setLength(f,0);
-    cachedFormats.clear;
-    system.leaveCriticalSection(cachedFormatCS);
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_format,params,nil);
+      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
+      context.callStackPop();
+      if not(context.adapters^.noErrors) then exit(nil);
+      txt:=preparedStatement^.format(params,tokenLocation,context);
+      if length(txt)=1 then result:=newStringLiteral(txt[0])
+      else begin
+        result:=newListLiteral;
+        for i:=0 to length(txt)-1 do P_listLiteral(result)^.appendString(txt[i]);
+      end;
+    end;
   end;
 
-{$endif}
-{$ifdef include_initialization}
-cachedFormats.create;
-initialize(cachedFormatCS);
-system.initCriticalSection(cachedFormatCS);
-{$endif}
-{$ifdef include_finalization}
-clearCachedFormats;
-cachedFormats.destroy;
-system.doneCriticalSection(cachedFormatCS);
-{$endif}
+FUNCTION printf_imp intFuncSignature;
+  VAR preparedStatement:P_preparedFormatStatement;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
+      preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
+      if not(context.adapters^.noErrors) then begin
+        context.callStackPop();
+        exit(nil);
+      end;
+      system.enterCriticalSection(print_cs);
+      context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
+      system.leaveCriticalSection(print_cs);
+      result:=newVoidLiteral;
+      context.callStackPop();
+    end;
+  end;
+
+FUNCTION formatTime_imp intFuncSignature;
+  VAR L:P_listLiteral;
+      i:longint;
+      fmt:ansistring;
+  FUNCTION fmtIt(CONST t:double):P_stringLiteral;
+    begin
+      result:=newStringLiteral(FormatDateTime(fmt,t));
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
+      fmt:=P_stringLiteral(arg0)^.value;
+      case arg1^.literalType of
+        lt_int:  result:=fmtIt(P_intLiteral (arg1)^.value);
+        lt_real: result:=fmtIt(P_realLiteral(arg1)^.value);
+        lt_emptyList: result:=newListLiteral;
+        lt_realList,lt_intList,lt_numList: begin
+          result:=newListLiteral;
+          L:=list1;
+          for i:=0 to L^.size-1 do case(L^[i]^.literalType) of
+            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^[i])^.value),false);
+            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^[i])^.value),false);
+          end;
+        end;
+      end;
+    end;
+  end;
+
+FUNCTION parseTime_imp intFuncSignature;
+  VAR format:ansistring;
+  FUNCTION encodeDateTime(input:ansistring):double;
+    CONST digits:charSet=['0'..'9'];
+    VAR yStr:string='';
+        mStr:string='';
+        dStr:string='';
+        hStr:string='';
+        nStr:string='';
+        sStr:string='';
+        zStr:string='';
+        i:word;
+        yNum,mNum,dNum:word;
+        hNum:word=0;
+        nNum:word=0;
+        sNum:word=0;
+        zNum:word=0;
+    begin
+      if length(format)<>length(input) then begin
+        context.adapters^.raiseError('parseTime expects two strings of equal length as parameters',tokenLocation);
+        exit;
+      end;
+      input:=cleanString(input,digits,'0');
+      for i:=1 to length(format) do case format[i] of
+        'Y': yStr:=yStr+input[i];
+        'M': mStr:=mStr+input[i];
+        'D': dStr:=dStr+input[i];
+        'H': hStr:=hStr+input[i];
+        'N': nStr:=nStr+input[i];
+        'S': sStr:=sStr+input[i];
+        'Z': zStr:=zStr+input[i];
+      end;
+      DecodeDate(now,yNum,mNum,dNum);
+      yNum:=strToIntDef(yStr,yNum);
+      mNum:=strToIntDef(mStr,mNum);
+      dNum:=strToIntDef(dStr,dNum);
+      hNum:=strToIntDef(hStr,hNum);
+      nNum:=strToIntDef(nStr,nNum);
+      sNum:=strToIntDef(sStr,sNum);
+      zNum:=strToIntDef(zStr,zNum);
+      try
+        result:=EncodeDate(yNum,mNum,dNum)+EncodeTime(hNum,nNum,sNum,zNum);
+      except
+        on E:Exception do context.adapters^.raiseError('parseTime failed:'+E.message,tokenLocation);
+      end;
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
+      format:= uppercase(P_stringLiteral(arg0)^.value);
+      if (arg1^.literalType=lt_string) then
+        result:=newRealLiteral(encodeDateTime(P_stringLiteral(arg1)^.value))
+      else if (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
+        result:=newListLiteral;
+        for i:=0 to list1^.size-1 do
+          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^[i])^.value));
+      end;
+    end;
+  end;
+
+
+INITIALIZATION
+  cachedFormats.create;
+  initialize(cachedFormatCS);
+  system.initCriticalSection(cachedFormatCS);
+  builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,true,ak_variadic_1,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  builtinLocation_format.create(STRINGS_NAMESPACE,'format');
+  registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,true ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,true ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,false,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+
+FINALIZATION
+  clearCachedFormats;
+  cachedFormats.destroy;
+  system.doneCriticalSection(cachedFormatCS);
+  builtinLocation_printf.destroy;
+  builtinLocation_format.destroy;
+
+end.

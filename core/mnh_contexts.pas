@@ -129,10 +129,11 @@ TYPE
       end;
       taskCs:TRTLCriticalSection;
       nextToEvaluate:P_futureTask;
-      CONSTRUCTOR createTask(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
       PROCEDURE   evaluate(VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
     public
       nextToAggregate:P_futureTask;
+      CONSTRUCTOR create;
+      PROCEDURE   define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
       FUNCTION    canGetResult:boolean;
       FUNCTION    getResultAsLiteral:P_literal;
       DESTRUCTOR  destroy;
@@ -148,7 +149,7 @@ TYPE
     public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore):P_futureTask;
+    PROCEDURE enqueue(CONST task:P_futureTask; CONST context:P_threadContext);
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(VAR context:T_threadContext);
     PROPERTY getQueuedCount:longint read queuedCount;
@@ -542,9 +543,13 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     end;
   end;
 
-CONSTRUCTOR T_futureTask.createTask(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
-  begin
+CONSTRUCTOR T_futureTask.create;
+  begin;
     initCriticalSection(taskCs);
+  end;
+
+PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
+  begin
     enterCriticalSection(taskCs);
     with payload do begin
       eachIndex       :=idx;
@@ -631,7 +636,7 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore):P_futureTask;
+PROCEDURE T_taskQueue.enqueue(CONST task:P_futureTask; CONST context:P_threadContext);
   PROCEDURE ensurePoolThreads();
     begin
       if (poolThreadsRunning<workerThreadCount) then begin
@@ -640,16 +645,15 @@ FUNCTION T_taskQueue.enqueue(CONST expr:P_expressionLiteral; CONST location:T_to
       end;
     end;
   begin
-    new(result,createTask(expr,location,idx,x,context,values));
     system.enterCriticalSection(cs);
     if first=nil then begin
       queuedCount:=1;
-      first:=result;
-      last:=result;
+      first:=task;
+      last:=task;
     end else begin
       inc(queuedCount);
-      last^.nextToEvaluate:=result;
-      last:=result;
+      last^.nextToEvaluate:=task;
+      last:=task;
     end;
     ensurePoolThreads();
     system.leaveCriticalSection(cs);

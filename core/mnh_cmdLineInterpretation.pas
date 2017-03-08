@@ -17,6 +17,7 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_funcs_files,
      mnh_funcs_regex,
      mnh_funcs_xml,
+     mnh_funcs_format,
      mnh_packages;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
