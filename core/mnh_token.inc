@@ -1,5 +1,3 @@
-{$ifdef include_interface}
-{$endif}
 {$ifdef include_implementation}
 
 PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
@@ -137,7 +135,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       if (eachType=tt_parallelEach) and
          ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
          not(tco_spawnWorker in context.threadOptions) or
-         ({$ifdef fullVersion} workerThreadCount{$else}(getNumberOfCPUs-1){$endif}<=0))
+         (workerThreadCount<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
       initialize(bodyRule);
@@ -161,21 +159,22 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         setLength(itList,1);
         itList[0]:=P_literal(first^.data)^.rereferenced;
       end;
+      if (eachType=tt_parallelEach) and (length(itList)*length(bodyRule)<=1) then eachType:=tt_each;
       disposeLiteral(first^.data);
       first^.next:=context.recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if (aggregatorPresent) and (length(itList)=0) then begin
       end else if length(bodyRule)>0 then begin
-        if eachType in [tt_parallelEach]
+        if eachType = tt_parallelEach
         then processListParallel(itList,bodyRule,aggregator,eachLocation,context)
         else processListSerial  (itList,bodyRule,aggregator,eachLocation,context);
       end else begin
-        if eachType in [tt_parallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
+        if eachType = tt_parallelEach then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to length(itList)-1 do aggregator^.addToAggregation(itList[i],false,eachLocation,context.adapters);
       end;
-      finalizeAggregation;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
+      finalizeAggregation;
       disposeLiteral(itList);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup

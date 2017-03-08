@@ -1,12 +1,31 @@
 UNIT mnh_funcs_regex;
 INTERFACE
-USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_basicTypes,sysutils,mnh_out_adapters,mnh_contexts,myGenerics;
+USES sysutils,Classes,
+     myGenerics,
+     RegExpr,
+     mnh_constants,mnh_basicTypes,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_funcs,
+     mnh_contexts;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 TYPE T_triplet=record
        x,y,z:ansistring;
      end;
+VAR regexCs:TRTLCriticalSection;
+    regexMap:specialize G_stringKeyMap<TRegExpr>;
+
+FUNCTION regexForExpression(CONST expression:ansistring):TRegExpr; inline;
+  begin
+    enterCriticalSection(regexCs);
+    if not(regexMap.containsKey(expression,result)) then begin
+      result:=TRegExpr.create(expression);
+      regexMap.put(expression,result);
+    end;
+    leaveCriticalSection(regexCs)
+  end;
 
 FUNCTION listSize(CONST xLit,yLit,zLit:P_literal):longint;
   begin
@@ -45,10 +64,10 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   end;
 
 FUNCTION regexMatch_imp intFuncSignature;
-  VAR regex:TRegExpr;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
+    VAR regex:TRegExpr;
     begin
-      regex.expression:=trip.x;
+      regex:=regexForExpression(trip.x);
       regex.inputString:=trip.y;
       try
         result:=regex.Exec(trip.y);
@@ -62,7 +81,6 @@ FUNCTION regexMatch_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
@@ -70,16 +88,15 @@ FUNCTION regexMatch_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
       end;
-      regex.free;
     end;
   end;
 
 FUNCTION regexMatchComposite_imp intFuncSignature;
-  VAR regex:TRegExpr;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
+        regex:TRegExpr;
     begin
-      regex.expression:=trip.x;
+      regex:=regexForExpression(trip.x);
       regex.inputString:=trip.y;
       result:=newListLiteral;
       try
@@ -103,7 +120,6 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
@@ -111,17 +127,16 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
       end;
-      regex.free;
     end;
   end;
 
 FUNCTION regexSplit_imp intFuncSignature;
-  VAR regex:TRegExpr;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
         pieces : TStrings;
+        regex:TRegExpr;
     begin
-      regex.expression:=trip.x;
+      regex:=regexForExpression(trip.x);
       pieces:=TStringList.create;
       try
         regex.split(trip.y,pieces);
@@ -139,7 +154,6 @@ FUNCTION regexSplit_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regex:=TRegExpr.create;
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=regexSplit(triplet(arg1,arg0,nil,0))
@@ -147,7 +161,6 @@ FUNCTION regexSplit_imp intFuncSignature;
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
       end;
-      regex.free;
     end;
   end;
 
@@ -181,11 +194,21 @@ FUNCTION regexReplace_imp intFuncSignature;
     end;
   end;
 
+PROCEDURE disposeRegex(VAR r:TRegExpr);
+  begin
+    r.free;
+  end;
+
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';
 INITIALIZATION
   mnh_funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,true,ak_binary ,'matches(searchString,regex);#returns true if string/-list searchString matches string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,true,ak_binary ,'matchComposite(searchString,regex);#returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#If lists are given they must have equal sizes.'+SYNTAX_LINK);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,true,ak_binary ,'split(searchString,regex);#splits the string/-list searchString using string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,true,ak_ternary,'replace(searchString,regex,replaceString);#replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
+  initCriticalSection(regexCs);
+  regexMap.create(@disposeRegex);
 
+FINALIZATION
+  doneCriticalSection(regexCs);
+  regexMap.destroy;
 end.

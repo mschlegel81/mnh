@@ -1,7 +1,7 @@
 UNIT mnh_packages;
 INTERFACE
 USES //basic classes
-     math, sysutils,typinfo, FileUtil, Classes,
+     sysutils,typinfo, FileUtil, Classes,
      //my utilities:
      myGenerics, myStringUtil,
      //MNH:
