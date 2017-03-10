@@ -3,7 +3,7 @@ INTERFACE
 USES //FPC/LCL libraries
      sysutils,
      //3rd party libraries
-     EpikTimer,
+     EpikTimer, RegExpr,
      //my libraries
      myGenerics,{$ifndef fullVersion}mySys,{$endif}
      //MNH:
@@ -11,7 +11,7 @@ USES //FPC/LCL libraries
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_out_adapters,mnh_litVar,
      mnh_tokens,
-     tokenStack,valueStore,regexCache,
+     tokenStack,valueStore,
      mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
   T_evaluationContextOption =(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
@@ -25,6 +25,8 @@ CONST
   C_equivalentOption:array[tco_ask..tco_createDetachedTask] of T_evaluationContextOption=(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask);
 
 TYPE
+  T_regexMap=specialize G_stringKeyMap<TRegExpr>;
+  P_regexMap=^T_regexMap;
   P_evaluationContext=^T_evaluationContext;
   P_threadContext=^T_threadContext;
   P_taskQueue=^T_taskQueue;
@@ -37,10 +39,10 @@ TYPE
       callingContext:P_threadContext;
       callStack :T_callStack;
 
-      regexCache: P_regexCache;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
       CONSTRUCTOR createWorkerContext;
     public
+      regexCache:P_regexMap;
       recycler  :T_tokenRecycler;
       valueStore:T_valueStore;
       adapters  :P_adapters;
@@ -76,7 +78,6 @@ TYPE
       PROCEDURE reduceExpression(VAR first:P_token); inline;
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
-      FUNCTION getRegexCache:P_regexCache;
   end;
 
   T_evaluationContext=object
@@ -484,16 +485,6 @@ FUNCTION T_threadContext.cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       result:=nil;
       recycler.cascadeDisposeToken(p);
     end;
-  end;
-
-FUNCTION T_threadContext.getRegexCache:P_regexCache;
-  begin
-    if regexCache=nil then begin
-      enterCriticalSection(globalLock);
-      if regexCache=nil then new(regexCache,create);
-      leaveCriticalSection(globalLock);
-    end;
-    result:=regexCache;
   end;
 
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
