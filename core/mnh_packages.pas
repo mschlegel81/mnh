@@ -8,17 +8,16 @@ USES //basic classes
      mnh_constants, mnh_basicTypes,
      mnh_litVar, mnh_fileWrappers, mnh_out_adapters,
      mnh_caches,
-     tokenStack,valueStore,
+     tokenStack,
      mnh_tokens, mnh_contexts, //types
      mnh_funcs,  //even more specific
      mnh_profiling,
-     {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,{$else}mySys,{$endif}
+     {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
+     mnh_funcs_format,
      mnh_patterns,
      mnh_subrules,
      mnh_rule,
-     mnh_tokenArray,
-     mnh_aggregators,listProcessing,
-     mnh_funcs_math,mnh_funcs_list,mnh_funcs_mnh,mnh_funcs_strings,mnh_funcs_format;
+     mnh_tokenArray;
 
 {$define include_interface}
 TYPE
@@ -46,19 +45,20 @@ TYPE
       readyForCodeState:T_hashInt;
       pseudoCallees:T_packageProfilingCalls;
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
+      PROCEDURE clear(CONST includeSecondaries:boolean);
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
+      PROCEDURE clearPackageCache(CONST recurse:boolean);
+      PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
+      PROCEDURE finalize(VAR adapters:T_adapters);
+      FUNCTION inspect:P_mapLiteral;
+      FUNCTION getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
-      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
-      FUNCTION codeChanged:boolean;
-      PROCEDURE clear(CONST includeSecondaries:boolean);
-      PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
-      PROCEDURE finalize(VAR adapters:T_adapters);
-      DESTRUCTOR destroy;
-      //PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
-      PROCEDURE clearPackageCache(CONST recurse:boolean);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
+      FUNCTION codeChanged:boolean;
+      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
+      DESTRUCTOR destroy;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
@@ -72,19 +72,12 @@ TYPE
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
       FUNCTION getCodeProvider:P_codeProvider;
-      FUNCTION inspect:P_mapLiteral;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
-      FUNCTION getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
-
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
-
-
-
 {$undef include_interface}
 VAR killServersCallback:PROCEDURE;
 IMPLEMENTATION
@@ -376,9 +369,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         end;
         rulePattern.toParameterIds(ruleBody);
         //[marker 1]
-        if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then begin
-          reduceExpression(ruleBody,context);
-        end;
+        if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then context.reduceExpression(ruleBody);
 
         if context.adapters^.noErrors then begin
           ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^);
@@ -490,7 +481,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             end;
             predigest(first,@self,context.recycler,context.adapters);
             if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(first)+';');
-            reduceExpression(first,context);
+            context.reduceExpression(first);
             if profile then context.timeBaseComponent(pc_interpretation);
             context.callStackPop();
             if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(first));
@@ -526,7 +517,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         t^.next:=context.recycler.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
         context.callStackPush(@self,pc_interpretation,pseudoCallees);
         if profile then context.timeBaseComponent(pc_interpretation);
-        reduceExpression(t,context);
+        context.reduceExpression(t);
         if profile then context.timeBaseComponent(pc_interpretation);
         context.callStackPop();
         //error handling if main returns more than one token:------------------
@@ -1006,11 +997,7 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
 {$undef include_implementation}
 INITIALIZATION
 {$define include_initialization}
-  {$include mnh_token.inc}
   resolveIDsCallback:=@resolveId;
-  reduceExpressionCallback:=@reduceExpression;
-  //callbacks in mnh_litvar:
-
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;

@@ -1,9 +1,5 @@
 {$ifdef include_implementation}
-
 {$i mnh_func_defines.inc}
-
-
-
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
       i:longint;
@@ -172,10 +168,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache'   ,@clearRuleCache_imp   ,false,ak_unary     ,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,false,ak_unary     ,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches'   ,@clearAllCaches_imp   ,false,ak_nullary   ,'clearAllCaches;//Clears all memoized rule caches and returns void.');
-
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,false,ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,false,ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
+{$endif}
 
-{$endif}
-{$ifdef include_finalization}
-{$endif}

@@ -18,7 +18,8 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_funcs_regex,
      mnh_funcs_xml,
      mnh_funcs_format,
-     mnh_packages;
+     mnh_packages,
+     mnh_evaluation;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
