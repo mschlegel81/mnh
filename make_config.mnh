@@ -23,6 +23,10 @@ BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,'..\lazarus64\lazbuild.exe
          [true ,'FDLinux','./mnh_debug'              ,'lazbuild'                 ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]];
 LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
 
+canBuild(B:BuildConfig)->B[0]=isLinux;
+VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
+binName(B:BuildConfig)->B[2];
+
 hashFiles:=['../3rd_party/diff/diff.pas',
             '../3rd_party/epikTimer/epiktimer.pas',
             '../3rd_party/synapse/blcksock.pas',
@@ -49,13 +53,13 @@ hashFiles:=['../3rd_party/diff/diff.pas',
             'core/mnh_datastores.pas',
             'core/mnh_debugging.pas',
             'core/mnh_doc.pas',
+            'core/mnh_evaluation.pas',
             'core/mnh_fileWrappers.pas',
             'core/mnh_func_defines.inc',
             'core/mnh_funcs.inc',
             'core/mnh_funcs.pas',
             'core/mnh_funcs_files.pas',
             'core/mnh_funcs_format.pas',
-            'core/mnh_funcs_list.pas',
             'core/mnh_funcs_math.pas',
             'core/mnh_funcs_mnh.pas',
             'core/mnh_funcs_plot.pas',
@@ -70,7 +74,6 @@ hashFiles:=['../3rd_party/diff/diff.pas',
             'core/mnh_out_adapters.pas',
             'core/mnh_packages.pas',
             'core/mnh_patterns.pas',
-            'core/mnh_plotData.pas',
             'core/mnh_profiling.pas',
             'core/mnh_rule.pas',
             'core/mnh_settings.pas',
@@ -94,22 +97,12 @@ hashFiles:=['../3rd_party/diff/diff.pas',
             'gui/filesLogic.inc',
             'gui/guiEditorInterface.inc',
             'gui/guiOutAdapters.pas',
-            'gui/mnhFormHandler.pas',
             'gui/mnh_evalThread.pas',
             'gui/mnh_gui.lpr',
-            'gui/mnh_gui_main.pas',
-            'gui/mnh_gui_outputonly.pas',
-            'gui/mnh_gui_settings.pas',
             'gui/mnh_plotform.pas',
             'gui/mnh_tables.pas',
             'gui/mnh_workspaces.pas',
-            'gui/newcentralpackagedialog.pas',
-            'gui/openDemoDialog.pas',
             'gui/runnerLogic.inc',
             'gui/searchLogic.inc',
             'gui/settingsLogic.inc',
             'gui/synhighlightermnh.pas'];
-
-canBuild(B:BuildConfig)->B[0]=isLinux;
-VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
-binName(B:BuildConfig)->B[2];

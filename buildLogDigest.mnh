@@ -35,5 +35,5 @@ main('files')->'build.log'.fileLines
 .pEach(file,fileExists(file) ? file.escape : void)
 .union(allFiles('','*.inc').minus(['core/code_hash.inc']).escape)
 .sort
-.join(",\n                    ")
-.{print('private hashFiles:=[',$s,'];')};
+.join(",\n            ")
+.{print('hashFiles:=[',$s,'];')};
