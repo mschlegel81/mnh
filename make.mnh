@@ -1,39 +1,9 @@
-USE testLog,mnhInfo,formattingUtils;
+USE testLog,mnhInfo,formattingUtils,make_config;
 
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
-type BuildConfig(L:list(7))->L[0].isBoolean AND
-                             L[1].isString AND
-                             L[2].isString AND
-                             L[3].isString AND
-                             L[4].isStringList(3) AND
-                             L[5].isString AND
-                             L[6].isBoolean;
-
-//BUILTS  linux, flavour , binary                    , compiler                  , compilerOptions                                 , compilerOutput
-BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,'..\lazarus64\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
-         [false,'FOWin64','./mnh.exe'                ,'..\lazarus64\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
-         [false,'FIOWin64','./mnhi.exe'              ,'..\lazarus64\lazbuild.exe',['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnhi.exe'                ,false],
-         [false,'LOWin32','bin32/mnh_light.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
-         [false,'FOWin32','bin32/mnh.exe'            ,'..\lazarus32\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
-         [true ,'LOLinux','./mnh_light'              ,'lazbuild'                 ,['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light'          ,false],
-         [true ,'FOLinux','./mnh'                    ,'lazbuild'                 ,['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh'                     ,false],
-         [true ,'FIOLinux','./mnhi'                  ,'lazbuild'                 ,['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnhi'                    ,false],
-         [false,'LDWin64','./mnh_light_debug.exe'    ,'..\lazarus64\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
-         [false,'FDWin64','./mnh_debug.exe'          ,'..\lazarus64\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
-         [false,'FIDWin64','./mnhi_debug.exe'        ,'..\lazarus64\lazbuild.exe',['-B','--bm=imig_debug','gui/mnh_gui.lpi']       ,'gui/mnhi_debug.exe'          ,true],
-         [false,'LDWin32','bin32/mnh_light_debug.exe','..\lazarus32\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
-         [false,'FDWin32','bin32/mnh_debug.exe'      ,'..\lazarus32\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
-         [true ,'LDLinux','./mnh_light_debug'        ,'lazbuild'                 ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
-         [true ,'FDLinux','./mnh_debug'              ,'lazbuild'                 ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true],
-         [true ,'FIDLinux','./mnhi_debug'            ,'lazbuild'                 ,['-B','--bm=imig_debug','gui/mnh_gui.lpi']       ,'gui/mnhi_debug'              ,true]];
-LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
 //Configuration:=====================================================
-private canBuild(B:BuildConfig)->B[0]=isLinux;
-VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
-private binName(B:BuildConfig)->B[2];
 private needBuilt(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
 
-private isLinux:=mnhInfo['targetOs']='Linux' orElse false;
 private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe').execPipeless(
        ['gui/lib/i386-win32',
         'gui/lib/x86_64-linux',
@@ -65,112 +35,6 @@ private ensurePackagesLines->'{'|
     sort(files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
     .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file))&']'))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}";
-
-private hashFiles:=['../3rd_party/diff/diff.pas',
-                    '../3rd_party/epikTimer/epiktimer.pas',
-                    '../3rd_party/synapse/blcksock.pas',
-                    '../3rd_party/synapse/synacode.pas',
-                    '../3rd_party/synapse/synafpc.pas',
-                    '../3rd_party/synapse/synaip.pas',
-                    '../3rd_party/synapse/synautil.pas',
-                    '../3rd_party/synapse/synsock.pas',
-                    '../art.source/igSrc/complex.pas',
-                    '../art.source/igSrc/darts.pas',
-                    '../art.source/igSrc/ig_bifurcation.pas',
-                    '../art.source/igSrc/ig_epicycles.pas',
-                    '../art.source/igSrc/ig_expoClouds.pas',
-                    '../art.source/igSrc/ig_fractals.pas',
-                    '../art.source/igSrc/ig_funcTrees.pas',
-                    '../art.source/igSrc/ig_gradient.pas',
-                    '../art.source/igSrc/ig_ifs.pas',
-                    '../art.source/igSrc/ig_perlin.pas',
-                    '../art.source/igSrc/ig_simples.pas',
-                    '../art.source/igSrc/imagegeneration.pas',
-                    '../art.source/igSrc/myColors.pas',
-                    '../art.source/igSrc/myParams.pas',
-                    '../art.source/igSrc/mypics.pas',
-                    '../art.source/igSrc/workflows.pas',
-                    '../common/httpUtil.pas',
-                    '../common/huffman.pas',
-                    '../common/myGenerics.pas',
-                    '../common/myStringUtil.pas',
-                    '../common/mySys.pas',
-                    '../common/myTools.pas',
-                    '../common/serializationUtil.pas',
-                    'consoles/mnh_light.lpr',
-                    'core/consoleAsk.pas',
-                    'core/listProcessing.pas',
-                    'core/mnh_aggregators.pas',
-                    'core/mnh_basicTypes.pas',
-                    'core/mnh_caches.pas',
-                    'core/mnh_cmdLineInterpretation.pas',
-                    'core/mnh_constants.pas',
-                    'core/mnh_contexts.pas',
-                    'core/mnh_datastores.pas',
-                    'core/mnh_debugging.pas',
-                    'core/mnh_doc.pas',
-                    'core/mnh_fileWrappers.pas',
-                    'core/mnh_func_defines.inc',
-                    'core/mnh_funcs.inc',
-                    'core/mnh_funcs.pas',
-                    'core/mnh_funcs_files.pas',
-                    'core/mnh_funcs_format.pas',
-                    'core/mnh_funcs_list.pas',
-                    'core/mnh_funcs_math.pas',
-                    'core/mnh_funcs_mnh.pas',
-                    'core/mnh_funcs_plot.pas',
-                    'core/mnh_funcs_regex.pas',
-                    'core/mnh_funcs_server.pas',
-                    'core/mnh_funcs_strings.pas',
-                    'core/mnh_funcs_system.pas',
-                    'core/mnh_funcs_types.pas',
-                    'core/mnh_funcs_xml.pas',
-                    'core/mnh_html.pas',
-                    'core/mnh_imig.pas',
-                    'core/mnh_litvar.pas',
-                    'core/mnh_out_adapters.pas',
-                    'core/mnh_packages.pas',
-                    'core/mnh_patterns.pas',
-                    'core/mnh_plotData.pas',
-                    'core/mnh_profiling.pas',
-                    'core/mnh_rule.pas',
-                    'core/mnh_settings.pas',
-                    'core/mnh_subrules.pas',
-                    'core/mnh_token.inc',
-                    'core/mnh_tokenArray.pas',
-                    'core/mnh_tokens.pas',
-                    'core/res_ensureAssoc.inc',
-                    'core/res_ensureNppHighlighting.inc',
-                    'core/res_ensurePackages.inc',
-                    'core/res_examples.inc',
-                    'core/res_html_template.inc',
-                    'core/res_removeAssoc.inc',
-                    'core/tokenStack.pas',
-                    'core/valueStore.pas',
-                    'gui/askdialog.pas',
-                    'gui/closedialog.pas',
-                    'gui/completionLogic.inc',
-                    'gui/debuggerLogic.inc',
-                    'gui/editorMeta.inc',
-                    'gui/filesLogic.inc',
-                    'gui/guiEditorInterface.inc',
-                    'gui/guiOutAdapters.pas',
-                    'gui/mnhFormHandler.pas',
-                    'gui/mnh_evalThread.pas',
-                    'gui/mnh_gui.lpr',
-                    'gui/mnh_gui_main.pas',
-                    'gui/mnh_gui_outputonly.pas',
-                    'gui/mnh_gui_settings.pas',
-                    'gui/mnh_imig_form.pas',
-                    'gui/mnh_plotform.pas',
-                    'gui/mnh_tables.pas',
-                    'gui/mnh_workspaces.pas',
-                    'gui/newcentralpackagedialog.pas',
-                    'gui/openDemoDialog.pas',
-                    'gui/runnerLogic.inc',
-                    'gui/searchLogic.inc',
-                    'gui/settingsLogic.inc',
-                    'gui/synhighlightermnh.pas'];
 
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
@@ -229,7 +93,7 @@ private buildExe(B:BuildConfig)->
     end
   : void;
 
-private testExe(B:BuildConfig,...)->
+testExe(B:BuildConfig,...)->
   not(B.canBuild)
   ? void
   : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuilt(B)
@@ -270,30 +134,8 @@ private cleanup->begin
   clearAllCaches;
 end;
 
-private call7z(fileList,suffix)->isLinux ? void : begin
-  local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix)]|fileList;
-  execPipeless("c:/Program Files/7-Zip/7z.exe",zipParams);
-  execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",zipParams);
-end;
-
-private testIsPassedAccordingToLog(B:BuildConfig)->
+testIsPassedAccordingToLog(B:BuildConfig)->
   testLog.log[testLog.log.getInner(0)=B[1] and testLog.log.getInner(1)=ensureCodeHash].size>0;
-
-private makeDistro->isLinux ? fail : begin
-  BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
-  local linuxBuiltReady:=LINUX_BUILTS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
-  ['mnh_light.exe','bin32/mnh_light.exe',linuxBuiltReady ? 'mnh_light' : void].pEach(lightBinary,execPipeless('..\upx.exe',['-9',lightBinary]));
-  [                 [[      'mnh.exe',      'mnh_light.exe'],'64bit_windows'],
-                    [['bin32/mnh.exe','bin32/mnh_light.exe'],'32bit_windows'],
-  linuxBuiltReady ? [[      'mnh'    ,      'mnh_light'    ],'linux'] : void,
-                    [[linuxBuiltReady ? 'mnh' : void,linuxBuiltReady ? 'mnh_light' : void ,
-                                        'mnh.exe',                     'mnh_light.exe',
-                                  'bin32/mnh.exe',               'bin32/mnh_light.exe'],'all']]
-  .pEach(zipTask,call7z@zipTask);
-  fileExists('distro_hook.mnh')
-  ? executor.execPipeless(['distro_hook.mnh'])
-  : void;
-end;
 
 private isSameFileName(filename1:string,filename2:string)->begin
   local case:=isLinux ? {$x} : {$x.upper};
@@ -316,8 +158,6 @@ main('status')->showStatus;
 main('prepare')->ensureCodeHash;
 //*Clean the output files
 main('clean')->tprint('Cleaning') orElse cleanup;
-//*Create 7z distro
-main('distro')->makeDistro;
 //*Deep cleaning, including deleting all executables
 main('CLEAN')->begin
   tprint('Deep cleaning');

@@ -1,13 +1,19 @@
 UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
-USES myGenerics,mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
+USES myGenerics,
+     mnh_constants, mnh_basicTypes,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_contexts,
+     mnh_funcs;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL:P_intFuncCallback;
 {$i mnh_func_defines.inc}
 
 FUNCTION flatten_imp intFuncSignature;
 IMPLEMENTATION
-VAR builtinLocation_sort:T_identifiedInternalFunction;
+VAR builtinLocation_sort,
+    builtinLocation_group:T_identifiedInternalFunction;
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;
@@ -337,6 +343,86 @@ FUNCTION cross_impl intFuncSignature;
     end;
   end;
 
+FUNCTION group_imp intFuncSignature;
+  TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
+  VAR listToGroup:P_listLiteral;
+      keyList:T_arrayOfLiteral;
+      aggregator:P_expressionLiteral;
+      groupMap:T_groupMap;
+      groupList :T_groupMap.KEY_VALUE_LIST;
+      groupEntry:T_groupMap.CACHE_ENTRY;
+
+  PROCEDURE makeKeysByIndex(CONST index:longint);
+    VAR i:longint;
+        dummy:P_literal;
+    begin
+      dummy:=newErrorLiteral;
+      setLength(keyList,listToGroup^.size);
+      for i:=0 to length(keyList)-1 do begin
+        if (listToGroup^[i]^.literalType in C_listTypes) and (P_listLiteral(listToGroup^[i])^.size>index)
+        then keyList[i]:=P_listLiteral(listToGroup^[i])^[index]^.rereferenced
+        else keyList[i]:=dummy;
+      end;
+      disposeLiteral(dummy);
+    end;
+
+  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); inline;
+    VAR newLit:P_literal;
+        resultLiteral:P_literal;
+    begin
+      resultLiteral:=groupMap.get(groupKey,nil);
+
+      if aggregator=nil then begin
+        if resultLiteral=nil then resultLiteral:=newListLiteral;
+        P_listLiteral(resultLiteral)^.append(L,true);
+      end else begin
+        if resultLiteral=nil then begin
+          resultLiteral:=L; L^.rereference;
+        end else begin
+          newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,@context,resultLiteral,L);
+          if newLit<>nil then begin
+            disposeLiteral(resultLiteral);
+            resultLiteral:=newLit;
+          end else begin
+            context.adapters^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+            exit;
+          end;
+        end;
+      end;
+      groupMap.put(groupKey,resultLiteral);
+    end;
+
+  VAR inputIndex:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
+       (arg0^.literalType in C_listTypes) and
+      ((arg1^.literalType in C_listTypes) and (list1^.size=list0^.size) or (arg1^.literalType=lt_int)) and
+      ((params^.size=2) or (arg2^.literalType=lt_expression))
+    then begin
+      listToGroup:=P_listLiteral(arg0);
+
+      if arg1^.literalType=lt_int
+      then makeKeysByIndex(P_intLiteral(arg1)^.value)
+      else keyList:=list1^.iteratableList;
+
+      if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
+                          else aggregator:=nil;
+      if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,params,nil);
+      groupMap.create();
+      for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then
+        addToAggregation(keyList[inputIndex],listToGroup^[inputIndex]);
+      disposeLiteral(keyList);
+
+      groupList:=groupMap.keyValueList;
+      result:=newListLiteral(length(groupList));
+      for groupEntry in groupList do listResult^.append(groupEntry.value,false);
+      groupMap.destroy;
+      if aggregator<>nil then context.callStackPop();
+    end;
+  end;
+
+
 INITIALIZATION
   //Functions on lists:
   BUILTIN_HEAD:=
@@ -367,7 +453,11 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,true,ak_variadic_2,'getInner(L:list,index);');
   registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,true,ak_unary     ,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
   registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,true,ak_variadic_2,'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)');
+  builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,true,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
 
 FINALIZATION
   builtinLocation_sort.destroy;
+  builtinLocation_group .destroy;
+
 end.

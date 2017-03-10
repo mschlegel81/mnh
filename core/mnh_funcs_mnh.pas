@@ -1,10 +1,19 @@
 UNIT mnh_funcs_mnh;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_contexts;
+USES sysutils,
+     myGenerics,
+     myStringUtil,
+     mnh_basicTypes,mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_tokens,
+     mnh_contexts,
+     mnh_funcs;
 FUNCTION getMnhInfo:string;
 VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorIn] of P_intFuncCallback;
 IMPLEMENTATION
+VAR builtinLocation_try:T_identifiedInternalFunction;
 {$i mnh_func_defines.inc}
 
 FUNCTION sleep_imp intFuncSignature;
@@ -152,6 +161,88 @@ FUNCTION getMnhInfo:string;
     disposeLiteral(L);
   end;
 
+FUNCTION try_imp intFuncSignature;
+  VAR oldAdapters:P_adapters;
+      errorCase:boolean;
+      messages:P_literal=nil;
+  begin
+    result:=nil;
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
+      ((params^.size=1) or (params^.size=2)) then begin
+      context.callStackPush(tokenLocation,@builtinLocation_try,params,nil);
+      oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
+      result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context);
+      if context.adapters^.noErrors
+      then errorCase:=false
+      else begin
+        if result<>nil then disposeLiteral(result);
+        messages:=messagesToLiteralForSandbox(P_collectingOutAdapter(context.adapters^.getAdapter(0))^.storedMessages);
+        errorCase:=true;
+      end;
+      context.leaveTryStatementReassumingPreviousAdapters(oldAdapters,errorCase);
+      if errorCase then begin
+        if params^.size=2 then begin
+          if arg1^.literalType=lt_expression then begin
+            if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)
+            then result:=P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,messages)
+            else result:=P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context);
+          end else begin
+            result:=arg1;
+            result^.rereference;
+          end;
+        end else result:=newVoidLiteral;
+        disposeLiteral(messages);
+      end;
+      context.callStackPop();
+    end;
+  end;
+
+TYPE P_asyncTask=^T_asyncTask;
+     T_asyncTask=record
+       task:P_token;
+       context:P_threadContext;
+     end;
+
+FUNCTION doAsync(p:pointer):ptrint;
+  begin
+    result:=0;
+    with P_asyncTask(p)^ do begin
+      context^.reduceExpression(task);
+      context^.recycler.cascadeDisposeToken(task);
+      context^.doneEvaluating;
+      dispose(context,destroy);
+    end;
+    freeMem(p,sizeOf(T_asyncTask));
+  end;
+
+FUNCTION async_imp intFuncSignature;
+  VAR p:P_asyncTask;
+      childContext:P_threadContext;
+      parameters:P_listLiteral=nil;
+      dummy:P_token;
+  begin
+    result:=nil;
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
+      childContext:=context.getNewAsyncContext;
+      if childContext<>nil then begin
+        getMem(p,sizeOf(T_asyncTask));
+        p^.context:=childContext;
+        if params^.size=2 then parameters:=list1;
+        if not(subruleReplacesCallback(arg0,parameters,tokenLocation,p^.task,dummy,context,false)) then begin
+          freeMem(p,sizeOf(T_asyncTask));
+          childContext^.doneEvaluating;
+          dispose(childContext,destroy);
+          exit(nil);
+        end;
+        beginThread(@doAsync,p);
+        result:=newVoidLiteral;
+      end else begin
+        context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
+      end;
+    end;
+  end;
+
 {$MACRO ON}
 {$define funcForOp:=intFuncSignature; begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^) else result:=nil; end}
 {$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      funcForOp;
@@ -201,6 +292,14 @@ FUNCTION funcFor_operatorOrElse intFuncSignature;
 {$undef OP}
 {$undef funcForOp}
 INITIALIZATION
+  builtinLocation_try.create(SYSTEM_BUILTIN_NAMESPACE,'try');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,false,ak_variadic,
+               'try(E:expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
+               'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
+               'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
+               'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,false,ak_unary  ,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,false,ak_nullary,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,false,ak_nullary,'executor;#returns the path to the currently executing instance of MNH');
@@ -234,5 +333,7 @@ INITIALIZATION
   intFuncForOperator[tt_operatorOrElse   ]:=@funcFor_operatorOrElse   ;
   intFuncForOperator[tt_operatorConcat   ]:=@funcFor_operatorConcat   ;
   intFuncForOperator[tt_operatorIn       ]:=@funcFor_operatorIn       ;
+FINALIZATION
+  builtinLocation_try   .destroy;
 
 end.
