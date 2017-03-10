@@ -7,7 +7,6 @@ USES sysutils,Classes,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
-     regexCache,
      mnh_contexts;
 
 IMPLEMENTATION
@@ -15,6 +14,22 @@ IMPLEMENTATION
 TYPE T_triplet=record
        x,y,z:ansistring;
      end;
+
+PROCEDURE disposeRegex(VAR r:TRegExpr); begin r.free; end;
+FUNCTION assertRegexCache(VAR context:T_threadContext):P_regexMap;
+  begin
+    if context.regexCache=nil then new(context.regexCache,create(@disposeRegex));
+    result:=context.regexCache;
+  end;
+
+FUNCTION regexForExpression(CONST cache:P_regexMap; CONST expression:ansistring):TRegExpr;
+  begin
+    if not(cache^.containsKey(expression,result)) then begin
+      result:=TRegExpr.create(expression);
+      cache^.put(expression,result);
+      result.expression:=expression;
+    end;
+  end;
 
 FUNCTION listSize(CONST xLit,yLit,zLit:P_literal):longint;
   begin
@@ -53,11 +68,11 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   end;
 
 FUNCTION regexMatch_imp intFuncSignature;
-  VAR regexCache:P_regexCache;
+  VAR regexCache:P_regexMap;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
     VAR regex:TRegExpr;
     begin
-      regex:=regexCache^.regexForExpression(trip.x);
+      regex:=regexForExpression(regexCache,trip.x);
       regex.inputString:=trip.y;
       try
         result:=regex.Exec(trip.y);
@@ -71,7 +86,9 @@ FUNCTION regexMatch_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regexCache:=context.getRegexCache;
+      regexCache:=assertRegexCache(context);
+
+
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
@@ -83,12 +100,12 @@ FUNCTION regexMatch_imp intFuncSignature;
   end;
 
 FUNCTION regexMatchComposite_imp intFuncSignature;
-  VAR regexCache:P_regexCache;
+  VAR regexCache:P_regexMap;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
         regex:TRegExpr;
     begin
-      regex:=regexCache^.regexForExpression(trip.x);
+      regex:=regexForExpression(regexCache,trip.x);
       regex.inputString:=trip.y;
       result:=newListLiteral;
       try
@@ -112,7 +129,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regexCache:=context.getRegexCache;
+      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
@@ -124,13 +141,13 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
   end;
 
 FUNCTION regexSplit_imp intFuncSignature;
-  VAR regexCache:P_regexCache;
+  VAR regexCache:P_regexMap;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
         pieces : TStrings;
         regex:TRegExpr;
     begin
-      regex:=regexCache^.regexForExpression(trip.x);
+      regex:=regexForExpression(regexCache,trip.x);
       pieces:=TStringList.create;
       try
         regex.split(trip.y,pieces);
@@ -148,7 +165,7 @@ FUNCTION regexSplit_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regexCache:=context.getRegexCache;
+      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
       if i1<0 then exit(nil)
       else if i1=0 then result:=regexSplit(triplet(arg1,arg0,nil,0))
@@ -160,11 +177,11 @@ FUNCTION regexSplit_imp intFuncSignature;
   end;
 
 FUNCTION regexReplace_imp intFuncSignature;
-  VAR regexCache:P_regexCache;
+  VAR regexCache:P_regexMap;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
     VAR regex:TRegExpr;
     begin
-      regex:=regexCache^.regexForExpression(trip.x);
+      regex:=regexForExpression(regexCache,trip.x);
       try
         result:=regex.Replace(trip.y,trip.z,false);
       except
@@ -178,7 +195,7 @@ FUNCTION regexReplace_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) then begin
-      regexCache:=context.getRegexCache;
+      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,arg2);
       if i1<0 then exit(nil)
       else if i1=0 then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
@@ -187,11 +204,6 @@ FUNCTION regexReplace_imp intFuncSignature;
         for i:=0 to i1-1 do listResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
       end;
     end;
-  end;
-
-PROCEDURE disposeRegex(VAR r:TRegExpr);
-  begin
-    r.free;
   end;
 
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';

@@ -28,17 +28,24 @@ main->'build.log'.fileLines
 .join("\n")
 .print;
 
-main('files')->'build.log'.fileLines
-.pEach(line,line.matches('\(3104\)').agg(OR) ? line : void)
-.pEach(line,line.replace(['/media/','D:\'],'').replace('\','/').replace('(3104) Compiling','').trim)
+private existing(f:string)->fileExists(f) ? f : void;
+
+main('files')->
+'build.log'.fileLines
+.{$L[$L.matches('\(3104\)')]}
 .unique
-.pEach(file,relativeFilename(myPath,'../'&file),
-            'gui/'&file                                        ,
-            relativeFilename(myPath,replace(file,'dev/','../')),
-            'consoles/'&file)
-.pEach(file,file.replace('../mnh5/',''))
-.pEach(file,fileExists(file) ? file.escape : void)
-.union(allFiles('','*.inc').minus(['core/code_hash.inc']).escape)
-.sort
-.join(",\n            ")
-.{print('hashFiles:=[',$s,'];')};
+.replace('(3104) Compiling','')
+.replace('/media/dev/mnh5','')
+.replace('/media/dev/','../')
+.replace('D:\dev\mnh5\','')
+.replace('D:\dev\','..\')
+.replace('\','/')
+.trim
+.unique
+.each(file,existing(file) orElse
+           existing('gui/'&file) orElse
+           existing('consoles/'&file))
+.union(allFiles('','*.inc').minus(['core/code_hash.inc']))
+.escape
+.join(",\n\v")
+.{print("hashFiles:=[\v",$s,'];')};
