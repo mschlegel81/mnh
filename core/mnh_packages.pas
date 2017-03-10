@@ -22,7 +22,6 @@ USES //basic classes
 {$define include_interface}
 TYPE
   P_package=^T_package;
-  {$include mnh_token.inc}
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
@@ -165,7 +164,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$endif}
 
 {$define include_implementation}
-{$include mnh_token.inc}
 {$include mnh_funcs.inc}
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
