@@ -162,6 +162,15 @@ end;
 //*Beep - just for notification purposes
 main('beep')->beep;
 
+main('distro')->isLinux ? fail('Must be executed in windows environment') : begin
+  BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
+  local linuxBuiltReady:=LINUX_BUILTS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
+  packSets(linuxBuiltReady).pEach(zipTask,call7z@zipTask);
+  {fileExists($0)
+   ? executor.execPipeless([$0])
+   : void}('distro_hook.mnh');
+end;
+
 //*Build one specific target
 main(target:string)->begin
   local testAfterBuild:=false;
