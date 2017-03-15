@@ -297,7 +297,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         stringValue:=unescapeString(line,lineLocation.column,parsedLength);
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
-          UniqueString(stringValue);
           result.tokType:=tt_literal;
           result.data:=newStringLiteral(stringValue);
         end;

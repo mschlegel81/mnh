@@ -28,7 +28,10 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
     for p in callerPackage^.mainPackage^.secondaryPackages do
       if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.codeProvider^.id    ))
       or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
-      then exit(p);
+      then begin
+        if p^.codeChanged or (p^.readyForUsecase<>lu_forImport) then p^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+        exit(p);
+      end;
     if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
     if (fileName='') or not(fileExists(fileName)) then begin
       context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
