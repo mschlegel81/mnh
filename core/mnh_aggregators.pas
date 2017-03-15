@@ -210,12 +210,14 @@ PROCEDURE T_stringConcatAggregator.addToAggregation(L:P_literal; CONST doDispose
   VAR newResult:P_literal;
   begin
     if L=nil then exit;
-    if (resultLiteral^.literalType=lt_string) and (L^.literalType in C_scalarTypes) then begin
-      P_stringLiteral(resultLiteral)^.append(P_scalarLiteral(L)^.stringForm);
-    end else begin
-      newResult:=resolveOperator(resultLiteral,tt_operatorStrConcat,L,location,adapters^);
-      disposeLiteral(resultLiteral);
-      resultLiteral:=newResult;
+    if L^.literalType<>lt_void then begin
+      if (resultLiteral^.literalType=lt_string) and (L^.literalType in C_scalarTypes) then begin
+        P_stringLiteral(resultLiteral)^.append(P_scalarLiteral(L)^.stringForm);
+      end else begin
+        newResult:=resolveOperator(resultLiteral,tt_operatorStrConcat,L,location,adapters^);
+        disposeLiteral(resultLiteral);
+        resultLiteral:=newResult;
+      end;
     end;
     if doDispose then disposeLiteral(L);
   end;
@@ -225,7 +227,7 @@ PROCEDURE T_andAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean;
     if L=nil then exit;
     if L^.literalType=lt_boolean then begin
       boolResult:=boolResult and P_boolLiteral(L)^.value;
-    end else begin
+    end else if L^.literalType<>lt_void then begin
       adapters^.raiseError('Cannot apply AND-aggregator to element of type '+L^.typeString,location);
     end;
     if doDispose then disposeLiteral(L);
@@ -236,7 +238,7 @@ PROCEDURE T_orAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; 
     if L=nil then exit;
     if L^.literalType=lt_boolean then begin
       boolResult:=boolResult or P_boolLiteral(L)^.value;
-    end else begin
+    end else if L^.literalType<>lt_void then begin
       adapters^.raiseError('Cannot apply OR-aggregator to element of type '+L^.typeString,location);
     end;
     if doDispose then disposeLiteral(L);
@@ -248,7 +250,7 @@ PROCEDURE T_opAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; 
     if L=nil then exit;
     if resultLiteral=nil
     then resultLiteral:=L^.rereferenced
-    else begin
+    else if L^.literalType<>lt_void then begin
       newResult:=resolveOperator(resultLiteral,op,L,location,adapters^);
       disposeLiteral(resultLiteral);
       resultLiteral:=newResult;
@@ -263,7 +265,7 @@ PROCEDURE T_expressionAggregator.addToAggregation(L:P_literal; CONST doDispose:b
     //writeln('Aggregating using T_expressionAggregator - ',resultLiteral=nil);
     if resultLiteral=nil
     then resultLiteral:=L^.rereferenced
-    else begin
+    else if L^.literalType<>lt_void then begin
       newValue:=aggregator^.evaluateToLiteral(location,aggregationContext,resultLiteral,L);
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
