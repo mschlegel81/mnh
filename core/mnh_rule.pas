@@ -462,15 +462,15 @@ FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_threadContext; C
   end;
 
 FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral;
-  VAR attributes:P_setLiteral;
-      subAttributes:P_listLiteral;
+  VAR attributes:P_mapLiteral;
+      subAttributes:P_mapLiteral;
       sub:P_subrule;
       expressionToken:P_token;
   begin
-    attributes:=newSetLiteral();
+    attributes:=newMapLiteral;
     for sub in subrules do begin
       subAttributes:=sub^.getAttributesLiteral;
-      attributes^.appendAll(subAttributes);
+      attributes^.putAll(subAttributes);
       disposeLiteral(subAttributes);
     end;
 
@@ -480,8 +480,8 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiter
 
     result:=newMapLiteral^
               .put('id'        ,id)^
-              .put('rule'      ,sub^.rereferenced,false)^
-              .put('attributes',attributes       ,false);
+              .put('rule'      ,sub       ,false)^
+              .put('attributes',attributes,false);
   end;
 
 FUNCTION customTypeCheckToExpression(CONST rule:pointer):P_expressionLiteral;

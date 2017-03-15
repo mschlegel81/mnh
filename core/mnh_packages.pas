@@ -376,7 +376,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
             subRule^.setComment(join(commentLines,C_lineBreakChar));
             commentLines:=C_EMPTY_STRING_ARRAY;
-            subRule^.setAttributes(attributeLines);
+            subRule^.setAttributes(attributeLines,context.adapters^);
             attributeLines:=C_EMPTY_STRING_ARRAY;
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
             if (ruleGroup^.getRuleType in C_mutableRuleTypes)

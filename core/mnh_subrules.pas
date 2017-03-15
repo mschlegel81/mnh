@@ -98,9 +98,9 @@ TYPE
       FUNCTION inspect:P_mapLiteral;
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
-      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString);
+      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; VAR adapters:T_adapters);
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
-      FUNCTION getAttributesLiteral:P_listLiteral;
+      FUNCTION getAttributesLiteral:P_mapLiteral;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
@@ -777,14 +777,20 @@ FUNCTION T_subrule.getAttribute(CONST attributeKey:string; CONST caseSensitive:b
     result:=blankAttribute;
   end;
 
-PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
+PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString; VAR adapters:T_adapters);
   VAR line:string;
       parts:T_arrayOfString;
-
-  PROCEDURE addAttribute(CONST key:ansistring);
+      newAttriuteIndex:longint=0;
+  FUNCTION addAttribute(CONST key:ansistring):longint;
+    VAR i:longint;
     begin
-      setLength(attributes,length(attributes)+1);
-      attributes[length(attributes)-1].key:=key;
+      for i:=0 to length(attributes)-1 do if attributes[i].key=key then begin
+        adapters.raiseWarning('Duplicate attribute key "'+key+'"',declaredAt);
+        exit(i);
+      end;
+      result:=length(attributes);
+      setLength(attributes,result+1);
+      attributes[result].key:=key;
     end;
 
   begin
@@ -792,9 +798,9 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString);
     for line in attributeLines do begin
       parts:=split(trim(line),'=');
       if length(parts)>0 then begin
-        addAttribute(trim(parts[0]));
+        newAttriuteIndex:=addAttribute(trim(parts[0]));
         dropFirst(parts,1);
-        attributes[length(attributes)-1].value:=trim(join(parts,'='));
+        attributes[newAttriuteIndex].value:=trim(join(parts,'='));
       end;
     end;
   end;
@@ -804,11 +810,11 @@ FUNCTION T_subrule.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType)
     result:=(length(pattern.sig)=1) and (pattern.sig[0].acceptType(literalTypeToAccept));
   end;
 
-FUNCTION T_subrule.getAttributesLiteral:P_listLiteral;
+FUNCTION T_subrule.getAttributesLiteral:P_mapLiteral;
   VAR i:longint;
   begin
-    result:=newListLiteral(length(attributes));
-    for i:=0 to length(attributes)-1 do result^.append(newListLiteral(2)^.appendString(attributes[i].key)^.appendString(attributes[i].value),false);
+    result:=newMapLiteral();
+    for i:=0 to length(attributes)-1 do result^.put(attributes[i].key,attributes[i].value);
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
