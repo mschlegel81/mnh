@@ -9,11 +9,15 @@ USES //basic classes
      mnh_litVar, mnh_fileWrappers, mnh_out_adapters,
      mnh_caches,
      tokenStack,
-     mnh_tokens, mnh_contexts, //types
-     mnh_funcs,  //even more specific
+     mnh_tokens, mnh_contexts,
      mnh_profiling,
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
-     mnh_funcs_format,
+     mnh_funcs,
+
+     mnh_funcs_mnh,  {mnh_funcs_server,}mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
+     mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files, mnh_funcs_regex, mnh_funcs_xml,
+     mnh_funcs_format,mnh_funcs_ipc,
+
      mnh_patterns,
      mnh_subrules,
      mnh_rule,
