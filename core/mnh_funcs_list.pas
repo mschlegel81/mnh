@@ -421,7 +421,6 @@ FUNCTION group_imp intFuncSignature;
     end;
   end;
 
-
 INITIALIZATION
   //Functions on lists:
   BUILTIN_HEAD:=
