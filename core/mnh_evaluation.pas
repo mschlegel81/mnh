@@ -643,11 +643,16 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       location:=first^.location;;
       ruleToken:=context.recycler.disposeToken(first); //dispose ::, store f
       temp:=ruleToken^.next; //store ...
-      if (ruleToken^.tokType in [tt_localUserRule,tt_importedUserRule])
-      then ruleToken^.next:=P_rule(ruleToken^.data)^.getParametersForPseudoFuncPointer(context,location)
-      else ruleToken^.next:=getParametersForPseudoFuncPtr(ruleToken^.data,context,location);
-      new(exRule,createFromInline(ruleToken,context));
-      first:=context.recycler.newToken(location,'',tt_literal,exRule); // {f@$params}
+      if (ruleToken^.tokType in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule])
+      then begin
+        ruleToken^.data:=P_rule(ruleToken^.data)^.getFunctionPointer(context,ruleToken^.tokType,ruleToken^.location);
+        ruleToken^.tokType:=tt_literal;
+        first:=ruleToken;
+      end else begin
+        ruleToken^.next:=getParametersForPseudoFuncPtr(ruleToken^.data,context,location);
+        new(exRule,createFromInline(ruleToken,context));
+        first:=context.recycler.newToken(location,'',tt_literal,exRule); // {f@$params}
+      end;
       first^.next:=temp; //-> {f@$params} ...
       didSubstitution:=true;
     end;

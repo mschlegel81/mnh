@@ -55,7 +55,7 @@ TYPE
       FUNCTION inspect:P_mapLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION idForErrorFeedback:ansistring;
-      FUNCTION getParametersForPseudoFuncPointer(VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
+      FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
       FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral;
     end;
 
@@ -443,21 +443,26 @@ FUNCTION T_rule.idForErrorFeedback:ansistring;
     result:=declarationStart.package^.getPath+'.'+id+' ('+ansistring(declarationStart)+')';
   end;
 
-FUNCTION T_rule.getParametersForPseudoFuncPointer(VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
+FUNCTION T_rule.getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
       sub:P_subrule;
+      tempToken:P_token=nil;
   begin
     if ruleType in C_mutableRuleTypes then begin
-      result      :=context.recycler.newToken(location,'',tt_braceOpen);
-      result^.next:=context.recycler.newToken(location,'',tt_braceClose);
+      tempToken            :=context.recycler.newToken(location,id,ruleTokenType,@self);
+      tempToken^.next      :=context.recycler.newToken(location,'',tt_braceOpen );
+      tempToken^.next^.next:=context.recycler.newToken(location,'',tt_braceClose);
     end else begin
+      if (ruleType=rt_normal) and (length(subrules)=1) then exit(P_expressionLiteral(subrules[0]^.rereferenced));
       for sub in subrules do begin
         minPatternLength:=min(minPatternLength,sub^.arity);
         maxPatternLength:=max(maxPatternLength,sub^.arity);
         if sub^.isVariadic then maxPatternLength:=maxLongint;
       end;
-      result:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
+      tempToken            :=context.recycler.newToken(location,id,ruleTokenType,@self);
+      tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
+      new(P_subrule(result),createFromInline(tempToken,context));
     end;
   end;
 
@@ -465,7 +470,6 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiter
   VAR attributes:P_mapLiteral;
       subAttributes:P_mapLiteral;
       sub:P_subrule;
-      expressionToken:P_token;
   begin
     attributes:=newMapLiteral;
     for sub in subrules do begin
@@ -474,13 +478,9 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiter
       disposeLiteral(subAttributes);
     end;
 
-    expressionToken:=context.recycler.newToken(declarationStart,id,tt_importedUserRule,@self);
-    expressionToken^.next:=getParametersForPseudoFuncPointer(context,declarationStart);
-    new(sub,createFromInline(expressionToken,context));
-
     result:=newMapLiteral^
               .put('id'        ,id)^
-              .put('rule'      ,sub       ,false)^
+              .put('rule'      ,getFunctionPointer(context,tt_importedUserRule,declarationStart),false)^
               .put('attributes',attributes,false);
   end;
 

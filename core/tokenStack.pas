@@ -116,8 +116,8 @@ PROCEDURE T_callStack.pop({$ifdef fullVersion}CONST wallclockTime: double;CONST 
         timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
         timeForProfiling_inclusive:=wallclockTime-timeForProfiling_inclusive;
         profiler^.add(callee^.getId,callee^.getLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
-       end;
-      if fill>1 then with dat[fill] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
+      end;
+      if fill>1 then with dat[fill-2] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     end;
     {$endif}
     with dat[fill-1] do begin
