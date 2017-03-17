@@ -25,13 +25,15 @@ step(w,t)->[0..size(w)-1].each(i,t.getInner(i).get(w[i]));
 playUntilStatic(w,sleepTime)->begin
   async(
  {begin
-  local world:=w;
-  while(true,begin
-    printWorld(world);
-    sleep(sleepTime);
-    world:=step(world);
-    void;
-  end);
+    local world:=w;
+    local worldHistory:=[];
+    while(not(world in worldHistory),begin
+      worldHistory:=worldHistory.trailing(16)|[world];
+      printWorld(world);
+      sleep(sleepTime);
+      world:=step(world);
+      void;
+    end);
   end});
   ask('Press Enter to quit.');
 end;
