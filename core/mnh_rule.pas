@@ -454,7 +454,7 @@ FUNCTION T_rule.getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenT
       tempToken^.next      :=context.recycler.newToken(location,'',tt_braceOpen );
       tempToken^.next^.next:=context.recycler.newToken(location,'',tt_braceClose);
     end else begin
-      if length(subrules)=1 then exit(P_expressionLiteral(subrules[0]^.rereferenced));
+      if (ruleType=rt_normal) and (length(subrules)=1) then exit(P_expressionLiteral(subrules[0]^.rereferenced));
       for sub in subrules do begin
         minPatternLength:=min(minPatternLength,sub^.arity);
         maxPatternLength:=max(maxPatternLength,sub^.arity);

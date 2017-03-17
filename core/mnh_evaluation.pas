@@ -643,7 +643,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       location:=first^.location;;
       ruleToken:=context.recycler.disposeToken(first); //dispose ::, store f
       temp:=ruleToken^.next; //store ...
-      if (ruleToken^.tokType in [tt_localUserRule,tt_importedUserRule])
+      if (ruleToken^.tokType in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule])
       then begin
         ruleToken^.data:=P_rule(ruleToken^.data)^.getFunctionPointer(context,ruleToken^.tokType,ruleToken^.location);
         ruleToken^.tokType:=tt_literal;
