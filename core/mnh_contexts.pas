@@ -199,7 +199,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext;
 
 DESTRUCTOR T_threadContext.destroy;
   begin
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
     {$endif}
     valueStore.destroy;
@@ -405,7 +405,7 @@ PROCEDURE T_threadContext.timeBaseComponent(CONST component: T_profileCategory);
 PROCEDURE T_threadContext.doneEvaluating;
   begin
     if tco_notifyParentOfAsyncTaskEnd in options then interlockedDecrement(parent^.detachedAsyncChildCount);
-    {$ifdef DEBUGMODE}
+    {$ifdef debugMode}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
     {$endif}
     callStack.clear;
