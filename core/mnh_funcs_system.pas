@@ -1,9 +1,14 @@
 UNIT mnh_funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,
-     sysutils, Classes,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,
-     LazFileUtils,LazUTF8;
+USES sysutils,
+     Classes,FileUtil,LazFileUtils,LazUTF8,
+     myGenerics,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,
+     mnh_basicTypes,mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_funcs,
+     mnh_contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 VAR builtinLocation_time:T_identifiedInternalFunction;
@@ -216,23 +221,31 @@ FUNCTION time_imp intFuncSignature;
     end;
   end;
 
+FUNCTION changeDirectory_impl intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      SetCurrentDir(str0^.value);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
 
 INITIALIZATION
   collector.create(@newCollectingOutAdapter,nil);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,false,ak_variadic  ,'resetRandom(seed:int);#Resets internal PRNG with the given seed');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,false,ak_variadic  ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,false,ak_variadic_1,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,false,ak_nullary   ,'systime;#Returns the current time as a real number');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,false,ak_variadic  ,'beep;#Makes a beep'{$ifdef Windows}+'#beep(freq:int,duration:int);#Makes a beep of given frequency and duration'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,false,ak_variadic  ,'resetRandom(seed:int);//Resets internal PRNG with the given seed');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,false,ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,false,ak_variadic_1,'intRandom(k);//Returns an integer random value in range [0,k-1]#random(k,n);//Returns a list of n integer random values in range [0,k-1]');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,false,ak_nullary   ,'systime;//Returns the current time as a real number');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,false,ak_variadic  ,'beep;//Makes a beep'{$ifdef Windows}+'#beep(freq:int,duration:int);//Makes a beep of given frequency and duration'{$endif});
   {$ifdef Windows}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,false,ak_nullary   ,'driveInfo;#Returns info on the computer''''s drives/volumes (Windows only).');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,false,ak_nullary   ,'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).');
   {$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,false,ak_nullary   ,'getEnv;#Returns the current environment variables as a nested list.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput'  ,@collectOutput_impl  ,false,ak_nullary   ,'collectOutput;#Starts collecting output messages to be accessed via function collectedOutput');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,false,ak_nullary   ,'collectedOutput;#Returns messages collected since the last call of collectOutput.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,false,ak_binary    ,'logTo(logName:string,appendMode:boolean);#Adds a log with given name and write mode and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,false,ak_unary     ,'printTo(logName:string);#Adds a log receiving only print messages with given name and and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,false,ak_unary     ,'setExitCode(code:int);#Sets the exit code of the executable.#Might be overridden by an evaluation error.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,false,ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,false,ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput'  ,@collectOutput_impl  ,false,ak_nullary   ,'collectOutput;//Starts collecting output messages to be accessed via function collectedOutput');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,false,ak_nullary   ,'collectedOutput;//Returns messages collected since the last call of collectOutput.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,false,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,false,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,false,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
   builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,false,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
