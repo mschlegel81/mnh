@@ -6,7 +6,7 @@ USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object
-    ip:string;
+    ip:ansistring;
     timeout:double;
     servingExpression:P_expressionLiteral;
     feedbackLocation:T_tokenLocation;
@@ -26,16 +26,10 @@ TYPE
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
-VAR serverCS:system.TRTLCriticalSection;
-    currentUpServers:array of P_microserver;
+VAR registry:specialize G_instanceRegistry<P_microserver>;
 
-PROCEDURE killAllServers;
-  VAR server:P_microserver;
-  begin
-    enterCriticalSection(serverCS);
-    for server in currentUpServers do server^.hasKillRequest:=true;
-    leaveCriticalSection(serverCS);
-  end;
+PROCEDURE sendKillRequest(s:P_microserver); begin s^.hasKillRequest:=true; end;
+PROCEDURE killAllServers; begin registry.forEach(@sendKillRequest); end;
 
 FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
@@ -95,11 +89,15 @@ FUNCTION startServer_impl intFuncSignature;
     end;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_threadContext);
-  VAR i:longint;
+PROCEDURE killServerWithIp(s:P_microserver; ip:pointer);
   begin
-    system.enterCriticalSection(serverCS);
+    if s^.ip=PAnsiString(ip)^ then s^.killQuickly;
+  end;
+
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_threadContext);
+  begin
     ip:=cleanIp(ip_);
+    registry.forEach(@killServerWithIp,@ip);
     if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
     then timeout:=0
     else timeout:=timeout_;
@@ -107,28 +105,17 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     feedbackLocation:=feedbackLocation_;
     context:=context_;
     hasKillRequest:=false;
-    for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]^.ip=ip then currentUpServers[i]^.killQuickly;
-    setLength(currentUpServers,length(currentUpServers)+1);
-    currentUpServers[length(currentUpServers)-1]:=@self;
     socket.create(ip);
-    system.leaveCriticalSection(serverCS);
+    registry.onCreation(@self);
   end;
 
 DESTRUCTOR T_microserver.destroy;
-  VAR i,j:longint;
   begin
     disposeLiteral(servingExpression);
     context^.doneEvaluating;
     dispose(context,destroy);
-    system.enterCriticalSection(serverCS);
     socket.destroy;
-    j:=0;
-    for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]<>@self then begin
-      currentUpServers[j]:=currentUpServers[i];
-      inc(j);
-    end;
-    setLength(currentUpServers,j);
-    system.leaveCriticalSection(serverCS);
+    registry.onDestruction(@self);
   end;
 
 PROCEDURE T_microserver.serve;
@@ -329,9 +316,7 @@ FUNCTION stopAllHttpServers_impl intFuncSignature;
       repeat
         ThreadSwitch;
         sleep(1);
-        enterCriticalSection(serverCS);
-        allKilled:=length(currentUpServers)=0;
-        leaveCriticalSection(serverCS);
+        allKilled:=registry.registeredCount=0;
       until allKilled;
       result:=newVoidLiteral;
     end else result:=nil;
@@ -340,7 +325,7 @@ FUNCTION stopAllHttpServers_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   killServersCallback:=@killAllServers;
-  system.initCriticalSection(serverCS);
+  registry.create;
   registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,false,ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,true ,ak_variadic_1,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
   registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,true ,ak_variadic  ,'httpError;//Returns http-representation of error 404.#httpError(code:int);//Returns http-representation of given error code.');
@@ -355,6 +340,6 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,false,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
 FINALIZATION
-  doneCriticalSection(serverCS);
+  registry.destroy;
 
 end.
