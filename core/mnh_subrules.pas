@@ -1250,6 +1250,7 @@ FUNCTION toExpression_imp intFuncSignature;
 INITIALIZATION
   {$ifdef fullVersion}
   generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
+  mnh_funcs_plot.generateRow:=@generateRow;
   {$endif}
   subruleApplyOpCallback    :=@subruleApplyOpImpl;
   subruleReplacesCallback   :=@subruleReplaces;
