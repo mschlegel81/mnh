@@ -35,24 +35,38 @@ TYPE
   T_myIpcServer=object(T_myIpcComunicator)
     servingExpression:P_expressionLiteral;
     servingContext:P_threadContext;
+    hasKillRequest:boolean;
     CONSTRUCTOR create(CONST serverId:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext);
     DESTRUCTOR destroy;
-    PROCEDURE serve;
+    FUNCTION serve:boolean;
   end;
 
 FUNCTION isServerRunning(CONST serverId:string):boolean;
 IMPLEMENTATION
-VAR ipcCs:TRTLCriticalSection;
-    checkingClient:TSimpleIPCClient=nil;
-    runningServers:array of P_myIpcServer;
+VAR checkingClient:TSimpleIPCClient=nil;
+    registry:specialize G_instanceRegistry<P_myIpcServer>;
 
 FUNCTION isServerRunning(CONST serverId:string):boolean;
   begin
-    enterCriticalSection(ipcCs);
+    registry.enterCs;
     if not(Assigned(checkingClient)) then checkingClient:=TSimpleIPCClient.create(nil);
     checkingClient.ServerID:=serverId;
     result:=checkingClient.ServerRunning;
-    leaveCriticalSection(ipcCs);
+    registry.leaveCs;
+  end;
+
+FUNCTION ipcServerThread(p:pointer):ptrint;
+  VAR sleepTime:longint=0;
+  begin
+    with P_myIpcServer(p)^ do while not(hasKillRequest) and (servingContext^.adapters^.noErrors) do begin
+      if serve then sleepTime:=0
+               else begin
+                 if sleepTime<100 then inc(sleepTime);
+                 sleep(sleepTime);
+               end;
+    end;
+    dispose(P_myIpcServer(p),destroy);
+    result:=0;
   end;
 
 CONSTRUCTOR T_myIpcServer.create(CONST serverId:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext);
@@ -61,33 +75,29 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId:string; CONST location: T_tokenL
     oneWayServer:=TSimpleIPCServer.create(nil);
     oneWayServer.ServerID:=serverId;
     oneWayServer.StartServer;
-    enterCriticalSection(ipcCs);
-    setLength(runningServers,length(runningServers)+1);
-    runningServers[length(runningServers)-1]:=@self;
-    leaveCriticalSection(ipcCs);
+    servingExpression:=expression;
+    servingContext:=context;
+    registry.onCreation(@self);
+    hasKillRequest:=false;
+    beginThread(@ipcServerThread,@self);
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
-  VAR i:longint;
   begin
     inherited destroy;
     if servingContext<>nil then dispose(servingContext,destroy);
     if servingExpression<>nil then disposeLiteral(servingExpression);
-    enterCriticalSection(ipcCs);
-
-    setLength(runningServers,length(runningServers)+1);
-    runningServers[length(runningServers)-1]:=@self;
-    leaveCriticalSection(ipcCs);
+    registry.onDestruction(@self);
   end;
 
-PROCEDURE T_myIpcServer.serve;
+FUNCTION T_myIpcServer.serve:boolean;
   VAR hasRequest:boolean;
       message:T_ipcMessage;
       responseBody:P_literal;
   begin
     //fetch:-------------------------------------------------
     hasRequest:=oneWayServer.PeekMessage(1,true);
-    if not(hasRequest) then exit;
+    if not(hasRequest) then exit(false);
     //-------------------------------------------------:fetch
     //decode:------------------------------------------------
     message:=receive(servingContext^.adapters);
@@ -109,6 +119,7 @@ PROCEDURE T_myIpcServer.serve;
     finally
     end;
     //------------------------------------------------:respond
+    result:=true;
   end;
 
 CONSTRUCTOR T_myIpcClient.create(CONST location: T_tokenLocation);
@@ -127,12 +138,12 @@ CONSTRUCTOR T_myIpcClient.create(CONST location: T_tokenLocation);
     end;
 
   begin
-    enterCriticalSection(ipcCs);
+    registry.enterCs;
     inherited create(location);
     oneWayServer:=TSimpleIPCServer.create(nil);
     oneWayServer.ServerID:=getNewServerId;
     oneWayServer.StartServer;
-    leaveCriticalSection(ipcCs);
+    registry.leaveCs;
   end;
 
 DESTRUCTOR T_myIpcClient.destroy;
@@ -230,13 +241,10 @@ CONSTRUCTOR T_myIpcComunicator.create(CONST location: T_tokenLocation);
   end;
 
 INITIALIZATION
-  initialize(ipcCs);
-  initCriticalSection(ipcCs);
+  registry.create;
 
 FINALIZATION
-  enterCriticalSection(ipcCs);
+  registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;
-  leaveCriticalSection(ipcCs);
-  doneCriticalSection(ipcCs);
 
 end.
