@@ -9,6 +9,7 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_funcs,
      mnh_funcs_mnh,
      mnh_funcs_server,
+     mnh_funcs_ipc,
      mnh_funcs_types,
      mnh_funcs_math,
      mnh_funcs_strings,
