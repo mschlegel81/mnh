@@ -1,8 +1,12 @@
 UNIT mnh_imig;
 INTERFACE
-USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mnh_basicTypes,sysutils,myGenerics,
-     imageGeneration,
-     mypics,
+USES sysutils,   //system
+     myGenerics,myTools, //common
+     //mnh:
+     mnh_constants, mnh_basicTypes,
+     mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,
+     //imig:
+     workflows, imageGeneration,mypics,
      ig_gradient,
      ig_perlin,
      ig_simples,
@@ -64,8 +68,9 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       yRes:longint=0;
       sizeLimit:longint=-1;
       i:longint;
-      currentProgress:string;
-      lastProgress:string='';
+
+      progressLog:T_progressLog;
+      logLinesDisplayed:longint=0;
 
   FUNCTION newFromWorkflowImage:P_rawImage;
     begin
@@ -119,9 +124,11 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         if source<>'' then workflow.executeForTarget(source,sizeLimit,dest)
                       else workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
         while progressQueue.calculating and (context.adapters^.noErrors) do begin
-          currentProgress:=progressQueue.getProgressString;
-          if currentProgress<>lastProgress then context.adapters^.raiseNote(currentProgress,tokenLocation);
-          lastProgress:=currentProgress;
+          progressLog:=progressQueue.log;
+          for i:=logLinesDisplayed to length(progressLog)-1 do begin
+            context.adapters^.raiseNote(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message,tokenLocation);
+            logLinesDisplayed:=i+1;
+          end;
           ThreadSwitch;
           sleep(1000);
         end;
