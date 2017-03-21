@@ -206,9 +206,6 @@ FUNCTION main(p:pointer):ptrint;
       if (context.adapters^.hasPrintOut) or
          (context.adapters^.hasNonSilentError) then begin
         collector:=P_collectingOutAdapter(context.adapters^.getAdapter(0));
-        {$ifdef debugMode}
-        writeln('Raising ',length(collector^.storedMessages),' stored messages');
-        {$endif}
         P_runEvaluator(p)^.adapter^.clearPrint;
         P_runEvaluator(p)^.adapter^.raiseStoredMessages(collector^.storedMessages);
       end;
@@ -254,12 +251,10 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   begin with P_runEvaluator(p)^ do begin
-    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles main evaluation loop');{$endif}
     result:=0;
     repeat
       r:=pendingRequest;
       if r in [er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript] then begin
-        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles main evaluation request ',r);{$endif}
         sleepTime:=0;
         preEval;
         case r of
@@ -273,35 +268,29 @@ FUNCTION main(p:pointer):ptrint;
           er_runEditScript: executeEditScript_impl;
         end;
         postEval;
-        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' finished main evaluation request ',r);{$endif}
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         sleep(sleepTime);
       end;
     until (pendingRequest=er_die);
     threadStopped;
-    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' stopped main evaluation loop');{$endif}
   end; end;
 
 FUNCTION docMain(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=100;
   begin with P_assistanceEvaluator(p)^ do begin
-    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation loop');{$endif}
     result:=0;
     repeat
       if (pendingRequest in [er_evaluate,er_callMain,er_reEvaluateWithGUI])  then begin
-        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' handles assistance evaluation request');{$endif}
         preEval;
         package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
         postEval;
-        {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' finished assistance evaluation request');{$endif}
       end;
       ThreadSwitch;
       sleep(MAX_SLEEP_TIME);
       ThreadSwitch;
     until (pendingRequest=er_die);
     threadStopped;
-    {$ifdef debugMode} writeln(stdErr,'Thread ',ThreadID,' stopped assistance evaluation loop');{$endif}
   end; end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);
@@ -467,7 +456,6 @@ DESTRUCTOR T_assistanceEvaluator.destroy;
 PROCEDURE T_evaluator.haltEvaluation;
   begin
     system.enterCriticalSection(cs);
-    killServersCallback;
     context.adapters^.haltEvaluation;
     context.stepper^.haltEvaluation;
     while not(adapter^.hasHaltMessage) do begin

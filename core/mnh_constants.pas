@@ -78,7 +78,8 @@ TYPE
                SYSTEM_BUILTIN_NAMESPACE ,
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE       ,
-               HTTP_NAMESPACE
+               HTTP_NAMESPACE           ,
+               IPC_NAMESPACE
                {$ifdef fullVersion},PLOT_NAMESPACE,GUI_NAMESPACE{$endif}
                {$ifdef imig},IMIG_NAMESPACE{$endif}
                );
@@ -93,7 +94,8 @@ CONST
     'system',
     'files',
     'typecast',
-    'http'
+    'http',
+    'ipc'
     {$ifdef fullVersion},'plot','gui'{$endif}
     {$ifdef imig},'imig'{$endif}
     );

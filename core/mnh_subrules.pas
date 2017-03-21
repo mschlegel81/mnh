@@ -989,7 +989,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         end;
         //fallback: ensure that new samples are always added
         if length(newTimes)=0 then begin
-          {$ifdef debugMode}writeln(stdErr,'Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
           setLength(newTimes,length(tRow)-1);
           for i:=1 to length(tRow)-1 do begin
             t:=tRow[i]*0.5+tRow[i-1]*0.5;
@@ -1013,10 +1012,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           for i:=0 to length(oldTimes)-1 do oldTimes[i]:=tRow[i];
           setLength(dataRow,length(oldRow  )+length(newRow  ));
           setLength(tRow   ,length(oldTimes)+length(newTimes));
-          {$ifdef debugMode}
-          writeln('Merging samples of size ',length(oldRow),'+',length(newRow),'->',length(dataRow));
-          writeln('                        ',length(oldTimes),'+',length(newTimes),'->',length(tRow));
-          {$endif}
           i:=0;
           j:=0;
           k:=0;

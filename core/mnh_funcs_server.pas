@@ -1,8 +1,13 @@
 UNIT mnh_funcs_server;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics,
-    fphttpclient,lclintf;
+USES sysutils,math,fphttpclient,lclintf,
+     myStringUtil,myGenerics,httpUtil,
+     mnh_basicTypes,mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_contexts,
+     mnh_funcs;
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object
@@ -21,8 +26,9 @@ TYPE
     PROCEDURE killQuickly;
   end;
 
-  T_httpMethod=(hm_get,hm_put,hm_post);
+  T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
 
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -30,6 +36,17 @@ VAR registry:specialize G_instanceRegistry<P_microserver>;
 
 PROCEDURE sendKillRequest(s:P_microserver); begin s^.hasKillRequest:=true; end;
 PROCEDURE killAllServers; begin registry.forEach(@sendKillRequest); end;
+
+FUNCTION serverIsAssociatedWithPackage(s:P_microserver; package:pointer):boolean;
+  begin
+    result:=s^.feedbackLocation.package=package;
+    if result then s^.hasKillRequest:=true;
+  end;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+  begin
+    while registry.anyMatch(@serverIsAssociatedWithPackage,package) do sleep(1);
+  end;
 
 FUNCTION wrapTextInHttp_impl intFuncSignature;
   CONST serverInfo='MNH5 via Synapse';
@@ -163,7 +180,7 @@ PROCEDURE T_microserver.serve;
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
-    until timedOut or not(context^.adapters^.noErrors);
+    until timedOut or hasKillRequest or not(context^.adapters^.noErrors);
     context^.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
     up:=false;
   end;
@@ -276,7 +293,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
   end;
 
 FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost');
+  CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
   begin
     result:=nil;
@@ -297,9 +314,10 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     end;
   end;
 
-FUNCTION httpGet_imp  intFuncSignature; begin result:=httpGetPutPost(hm_get ,params,tokenLocation,context); end;
-FUNCTION httpPut_imp  intFuncSignature; begin result:=httpGetPutPost(hm_put ,params,tokenLocation,context); end;
-FUNCTION httpPost_imp intFuncSignature; begin result:=httpGetPutPost(hm_post,params,tokenLocation,context); end;
+FUNCTION httpGet_imp    intFuncSignature; begin result:=httpGetPutPost(hm_get   ,params,tokenLocation,context); end;
+FUNCTION httpPut_imp    intFuncSignature; begin result:=httpGetPutPost(hm_put   ,params,tokenLocation,context); end;
+FUNCTION httpPost_imp   intFuncSignature; begin result:=httpGetPutPost(hm_post  ,params,tokenLocation,context); end;
+FUNCTION httpDelete_imp intFuncSignature; begin result:=httpGetPutPost(hm_delete,params,tokenLocation,context); end;
 
 FUNCTION openUrl_imp intFuncSignature;
   begin
@@ -324,7 +342,6 @@ FUNCTION stopAllHttpServers_impl intFuncSignature;
 
 INITIALIZATION
   {$WARN 5058 OFF}
-  killServersCallback:=@killAllServers;
   registry.create;
   registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,false,ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,true ,ak_variadic_1,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
@@ -336,6 +353,7 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,false,ak_unary     ,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string');
   registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,false,ak_unary     ,'httpPut(URL:string);');
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,false,ak_unary     ,'httpPost(URL:string);');
+  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,false,ak_unary     ,'httpDelete(URL:string);');
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,false,ak_unary     ,'openUrl(URL:string);//Opens the URL in the default browser');
   registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,false,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 

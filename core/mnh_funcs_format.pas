@@ -8,23 +8,55 @@ USES sysutils,
      mnh_contexts,
      mnh_funcs;
 TYPE
-P_preparedFormatStatement=^T_preparedFormatStatement;
-T_preparedFormatStatement=object
-  parts:T_arrayOfString;
-  formats:array of T_format;
-  formatSubrule:P_literal;
-  CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
-  DESTRUCTOR destroy;
-  FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
-end;
+  T_format=object
+    category:(fmtCat_decimal,
+              fmtCat_scientific,
+              fmtCat_fixedPoint,
+              fmtCat_general,
+              fmtCat_currency,
+              fmtCat_number,
+              fmtCat_string,
+              fmtCat_hex);
+    intFmt,realFmt,strFmt:string;
 
-PROCEDURE clearCachedFormats;
+    CONSTRUCTOR create(CONST formatString:ansistring);
+    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal);
+    DESTRUCTOR destroy;
+  end;
+
+
+  P_preparedFormatStatement=^T_preparedFormatStatement;
+  T_preparedFormatStatement=object
+    inPackage:P_objectWithPath;
+    parts:T_arrayOfString;
+    formats:array of T_format;
+    formatSubrule:P_literal;
+    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
+    DESTRUCTOR destroy;
+    FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+  end;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
     builtinLocation_printf,
     builtinLocation_format:T_identifiedInternalFunction;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+  VAR formats:cachedFormats.KEY_VALUE_LIST;
+      i:longint;
+  begin
+    enterCriticalSection(cachedFormatCS);
+    formats:=cachedFormats.entrySet;
+    for i:=0 to length(formats)-1 do
+    if formats[i].value^.inPackage=package then begin
+      dispose(formats[i].value,destroy);
+      cachedFormats.dropKey(formats[i].key);
+    end;
+    leaveCriticalSection(cachedFormatCS);
+  end;
 
 PROCEDURE clearCachedFormats;
   VAR f:cachedFormats.VALUE_TYPE_ARRAY;
@@ -37,6 +69,91 @@ PROCEDURE clearCachedFormats;
     cachedFormats.clear;
     system.leaveCriticalSection(cachedFormatCS);
   end;
+
+CONSTRUCTOR T_format.create(CONST formatString: ansistring);
+  begin
+    if length(formatString)>0 then case formatString[length(formatString)] of
+      'd','D': begin
+        category:=fmtCat_decimal;
+        intFmt :=formatString;
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      'e','E': begin
+        category:=fmtCat_scientific;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'f','F': begin
+        category:=fmtCat_fixedPoint;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'g','G': begin
+        category:=fmtCat_general;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'm','M': begin
+        category:=fmtCat_currency;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'n','N': begin
+        category:=fmtCat_number;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      's','S': begin
+        category:=fmtCat_string;
+        strFmt :=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      'x','X': begin
+        category:=fmtCat_hex;
+        intFmt :=formatString;
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      else begin
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+    end;
+  end;
+
+PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
+  begin
+    case category of
+      fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
+        lt_real: begin txt:=txt+sysutils.format(realFmt,[P_realLiteral(l)^.value]); exit; end;
+        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.value)]); exit; end;
+      end;
+      fmtCat_decimal, fmtCat_hex:
+      if l^.literalType=lt_int then begin
+        txt:=txt+sysutils.format(intFmt,[P_intLiteral(l)^.value]);
+        exit;
+      end;
+    end;
+    if l^.literalType in C_scalarTypes
+    then txt:=txt+sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
+    else txt:=txt+sysutils.format(strFmt,[l^.toString]);
+  end;
+
+DESTRUCTOR T_format.destroy;
+  begin
+    intFmt:='';
+    realFmt:='';
+    strFmt:='';
+  end;
+
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
   begin;
@@ -169,6 +286,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
 
   VAR i:longint;
   begin
+    inPackage:=tokenLocation.package;
     parts:=splitFormatString(formatString);
     formatSubrule:=getFormatSubrule(parts);
     if (formatSubrule<>nil) and (formatSubrule^.literalType<>lt_expression) then begin
