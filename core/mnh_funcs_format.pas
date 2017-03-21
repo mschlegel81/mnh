@@ -56,7 +56,6 @@ PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
       cachedFormats.dropKey(formats[i].key);
     end;
     leaveCriticalSection(cachedFormatCS);
-    writeln('mnh_funcs_format.onPackageFinalization() done');
   end;
 
 PROCEDURE clearCachedFormats;

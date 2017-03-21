@@ -262,7 +262,6 @@ PROCEDURE T_expressionAggregator.addToAggregation(L:P_literal; CONST doDispose:b
   VAR newValue:P_literal;
   begin
     if L=nil then exit;
-    //writeln('Aggregating using T_expressionAggregator - ',resultLiteral=nil);
     if resultLiteral=nil
     then resultLiteral:=L^.rereferenced
     else if L^.literalType<>lt_void then begin
