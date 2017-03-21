@@ -41,10 +41,22 @@ TYPE
     FUNCTION serve:boolean;
   end;
 
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 FUNCTION isServerRunning(CONST serverId:string):boolean;
 IMPLEMENTATION
 VAR checkingClient:TSimpleIPCClient=nil;
     registry:specialize G_instanceRegistry<P_myIpcServer>;
+
+FUNCTION serverIsAssociatedWithPackage(s:P_myIpcServer; package:pointer):boolean;
+  begin
+    result:=s^.feedbackLocation.package=package;
+    if result then s^.hasKillRequest:=true;
+  end;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+  begin
+    while registry.anyMatch(@serverIsAssociatedWithPackage,package) do sleep(1);
+  end;
 
 FUNCTION isServerRunning(CONST serverId:string):boolean;
   begin

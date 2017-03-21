@@ -8,23 +8,37 @@ USES sysutils,
      mnh_contexts,
      mnh_funcs;
 TYPE
-P_preparedFormatStatement=^T_preparedFormatStatement;
-T_preparedFormatStatement=object
-  parts:T_arrayOfString;
-  formats:array of T_format;
-  formatSubrule:P_literal;
-  CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
-  DESTRUCTOR destroy;
-  FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
-end;
+  P_preparedFormatStatement=^T_preparedFormatStatement;
+  T_preparedFormatStatement=object
+    inPackage:P_objectWithPath;
+    parts:T_arrayOfString;
+    formats:array of T_format;
+    formatSubrule:P_literal;
+    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
+    DESTRUCTOR destroy;
+    FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+  end;
 
-PROCEDURE clearCachedFormats;
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
     builtinLocation_printf,
     builtinLocation_format:T_identifiedInternalFunction;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+  VAR formats:cachedFormats.KEY_VALUE_LIST;
+      i:longint;
+  begin
+    enterCriticalSection(cachedFormatCS);
+    formats:=cachedFormats.entrySet;
+    for i:=0 to length(formats)-1 do if formats[i].value^.inPackage=package then begin
+      dispose(formats[i].value,destroy);
+      cachedFormats.dropKey(formats[i].key);
+    end;
+    leaveCriticalSection(cachedFormatCS);
+  end;
 
 PROCEDURE clearCachedFormats;
   VAR f:cachedFormats.VALUE_TYPE_ARRAY;
@@ -169,6 +183,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
 
   VAR i:longint;
   begin
+    inPackage:=tokenLocation.package;
     parts:=splitFormatString(formatString);
     formatSubrule:=getFormatSubrule(parts);
     if (formatSubrule<>nil) and (formatSubrule^.literalType<>lt_expression) then begin

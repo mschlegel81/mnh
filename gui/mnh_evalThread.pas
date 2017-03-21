@@ -467,7 +467,6 @@ DESTRUCTOR T_assistanceEvaluator.destroy;
 PROCEDURE T_evaluator.haltEvaluation;
   begin
     system.enterCriticalSection(cs);
-    killServersCallback;
     context.adapters^.haltEvaluation;
     context.stepper^.haltEvaluation;
     while not(adapter^.hasHaltMessage) do begin

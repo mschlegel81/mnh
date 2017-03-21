@@ -14,9 +14,9 @@ USES //basic classes
      {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
      mnh_funcs,
 
-     mnh_funcs_mnh,  {mnh_funcs_server,}mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
+     mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
      mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files, mnh_funcs_regex, mnh_funcs_xml,
-     mnh_funcs_format,
+     mnh_funcs_format,mnh_funcs_ipc,
 
      mnh_patterns,
      mnh_subrules,
@@ -82,7 +82,6 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
 {$undef include_interface}
-VAR killServersCallback:PROCEDURE;
 IMPLEMENTATION
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
   begin
@@ -638,7 +637,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then begin
       finalize(context.adapters^);
-      clearCachedFormats;
     end;
   end;
 
@@ -701,7 +699,9 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
   VAR ruleList:array of P_rule;
       i:longint;
   begin
-    killServersCallback;
+    mnh_funcs_server.onPackageFinalization(@self);
+    mnh_funcs_ipc   .onPackageFinalization(@self);
+    mnh_funcs_format.onPackageFinalization(@self);
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
