@@ -2815,6 +2815,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_emptyList: result:=newListLiteral(0);
         lt_emptySet:  result:=newSetLiteral;
         lt_emptyMap:  result:=newMapLiteral;
+        lt_void    :  result:=newVoidLiteral;
         lt_list,lt_set,
         lt_numList,lt_numSet:begin
           listSize:=stream^.readNaturalNumber;
@@ -2906,7 +2907,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           for i:=0 to P_compoundLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then stream^.writeAnsiString(P_stringLiteral(P_compoundLiteral(L)^.value[i])^.val);
         end;
-        lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
+        lt_void, lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
         lt_list,lt_set,
         lt_numList,lt_numSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
