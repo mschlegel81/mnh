@@ -2,10 +2,11 @@ UNIT mnh_funcs_ipc;
 INTERFACE
 USES sysutils, Classes, simpleipc, //RTL
      myGenerics,serializationUtil, //my tools
-     mnh_basicTypes,
+     mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_contexts,mnh_litVar,
      mnh_funcs;
+
 TYPE
   T_ipcMessage=record
     respondTo:string;
@@ -70,7 +71,7 @@ FUNCTION isServerRunning(CONST serverId:string):boolean;
 FUNCTION ipcServerThread(p:pointer):ptrint;
   VAR sleepTime:longint=0;
   begin
-    with P_myIpcServer(p)^ do while not(hasKillRequest) and (servingContext^.adapters^.noErrors) do begin
+    with P_myIpcServer(p)^ do while not(hasKillRequest) and ((servingContext=nil) or (servingContext^.adapters^.noErrors)) do begin
       if serve then sleepTime:=0
                else begin
                  if sleepTime<100 then inc(sleepTime);
@@ -86,18 +87,21 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId:string; CONST location: T_tokenL
     inherited create(location);
     oneWayServer:=TSimpleIPCServer.create(nil);
     oneWayServer.ServerID:=serverId;
+    oneWayServer.Global:=true;
     oneWayServer.StartServer;
     servingExpression:=expression;
     servingContext:=context;
     registry.onCreation(@self);
     hasKillRequest:=false;
-    beginThread(@ipcServerThread,@self);
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
   begin
     inherited destroy;
-    if servingContext<>nil then dispose(servingContext,destroy);
+    if servingContext<>nil then begin
+      servingContext^.doneEvaluating;
+      dispose(servingContext,destroy);
+    end;
     if servingExpression<>nil then disposeLiteral(servingExpression);
     registry.onDestruction(@self);
   end;
@@ -109,7 +113,7 @@ FUNCTION T_myIpcServer.serve:boolean;
   begin
     //fetch:-------------------------------------------------
     hasRequest:=oneWayServer.PeekMessage(1,true);
-    if not(hasRequest) then exit(false);
+    if not(hasRequest) or (servingExpression=nil) then exit(false);
     //-------------------------------------------------:fetch
     //decode:------------------------------------------------
     message:=receive(servingContext^.adapters);
@@ -154,6 +158,7 @@ CONSTRUCTOR T_myIpcClient.create(CONST location: T_tokenLocation);
     inherited create(location);
     oneWayServer:=TSimpleIPCServer.create(nil);
     oneWayServer.ServerID:=getNewServerId;
+    oneWayServer.Global:=true;
     oneWayServer.StartServer;
     registry.leaveCs;
   end;
@@ -221,11 +226,17 @@ PROCEDURE T_myIpcComunicator.send(CONST receiver: string; VAR message:T_ipcMessa
     memoryStream:=TStringStream.create('');
     streamWrapper.create(memoryStream);
     streamWrapper.writeAnsiString(message.respondTo);
-    message.statusOk:=message.statusOk and (adapters^.noErrors) and (message.body<>nil);
+    message.statusOk:=message.statusOk and ((adapters=nil) or (adapters^.noErrors)) and (message.body<>nil);
     streamWrapper.writeBoolean(message.statusOk);
-    if message.statusOk then writeLiteralToStream(message.body,@memoryStream,feedbackLocation,adapters);
+    try
+      if message.statusOk then writeLiteralToStream(message.body,@streamWrapper,feedbackLocation,adapters);
+    except
+      message.statusOk:=false;
+    end;
     memoryStream.position:=0;
+    oneWayClient.Active:=true;
     oneWayClient.SendStringMessage(memoryStream.DataString);
+    oneWayClient.Active:=false;
     streamWrapper.destroy;
   end;
 
@@ -252,9 +263,73 @@ CONSTRUCTOR T_myIpcComunicator.create(CONST location: T_tokenLocation);
     oneWayClient:=nil;
   end;
 
+{$i mnh_func_defines.inc}
+
+FUNCTION assertUniqueInstance_impl intFuncSignature;
+  VAR markerServer:P_myIpcServer;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      registry.enterCs;
+      if isServerRunning(tokenLocation.package^.getPath)
+      then context.adapters^.raiseError('There already is an instance of this script running',tokenLocation)
+      else begin
+        new(markerServer,create(tokenLocation.package^.getPath,tokenLocation,nil,nil));
+        beginThread(@ipcServerThread,markerServer);
+        result:=newVoidLiteral;
+      end;
+      registry.leaveCs;
+    end;
+  end;
+
+FUNCTION startIpcServer_impl intFuncSignature;
+  VAR ipcServer:P_myIpcServer;
+      childContext:P_threadContext;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+       (arg0^.literalType=lt_string) and
+       (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      registry.enterCs;
+      if isServerRunning(str0^.value) then begin
+        context.adapters^.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
+      end else begin
+        childContext:=context.getNewAsyncContext;
+        if childContext<>nil then begin
+          new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext));
+          beginThread(@ipcServerThread,ipcServer);
+          result:=newVoidLiteral;
+        end else context.adapters^.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
+      end;
+      registry.leaveCs;
+    end;
+  end;
+
+FUNCTION sendIpcRequest_impl intFuncSignature;
+  VAR ipcClient:T_myIpcClient;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+       (arg0^.literalType=lt_string) then begin
+      ipcClient.create(tokenLocation);
+      result:=ipcClient.ipcGet(str0^.value,arg1,context.adapters);
+      ipcClient.destroy;
+    end;
+  end;
+
+FUNCTION isIpcServerRunning_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then
+      result:=newBoolLiteral(isServerRunning(str0^.value));
+  end;
+
 INITIALIZATION
   registry.create;
-
+  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,true,ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
+  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl,false,ak_binary,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
+  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl,false,ak_binary,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
+  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl,false,ak_unary,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise');
 FINALIZATION
   registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;
