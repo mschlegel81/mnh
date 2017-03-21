@@ -305,21 +305,6 @@ TYPE
 
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): P_expressionLiteral;
 
-  T_format=object
-    category:(fmtCat_decimal,
-              fmtCat_scientific,
-              fmtCat_fixedPoint,
-              fmtCat_general,
-              fmtCat_currency,
-              fmtCat_number,
-              fmtCat_string,
-              fmtCat_hex);
-    intFmt,realFmt,strFmt:string;
-
-    CONSTRUCTOR create(CONST formatString:ansistring);
-    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal);
-    DESTRUCTOR destroy;
-  end;
 
 VAR
   subruleApplyOpCallback: T_subruleApplyOpCallback;
@@ -2754,89 +2739,6 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     end;
   end;
 
-CONSTRUCTOR T_format.create(CONST formatString: ansistring);
-  begin
-    if length(formatString)>0 then case formatString[length(formatString)] of
-      'd','D': begin
-        category:=fmtCat_decimal;
-        intFmt :=formatString;
-        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-      'e','E': begin
-        category:=fmtCat_scientific;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'f','F': begin
-        category:=fmtCat_fixedPoint;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'g','G': begin
-        category:=fmtCat_general;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'm','M': begin
-        category:=fmtCat_currency;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'n','N': begin
-        category:=fmtCat_number;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      's','S': begin
-        category:=fmtCat_string;
-        strFmt :=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-      'x','X': begin
-        category:=fmtCat_hex;
-        intFmt :=formatString;
-        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-      else begin
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-    end;
-  end;
-
-PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
-  begin
-    case category of
-      fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
-        lt_real: begin txt:=txt+sysutils.format(realFmt,[P_realLiteral(l)^.val]); exit; end;
-        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.val)]); exit; end;
-      end;
-      fmtCat_decimal, fmtCat_hex:
-      if l^.literalType=lt_int then begin
-        txt:=txt+sysutils.format(intFmt,[P_intLiteral(l)^.val]);
-        exit;
-      end;
-    end;
-    if l^.literalType in C_scalarTypes
-    then txt:=txt+sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
-    else txt:=txt+sysutils.format(strFmt,[l^.toString]);
-  end;
-
-DESTRUCTOR T_format.destroy;
-  begin
-    intFmt:='';
-    realFmt:='';
-    strFmt:='';
-  end;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
   VAR reusableLiterals:array of P_literal;
