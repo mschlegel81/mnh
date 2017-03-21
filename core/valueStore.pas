@@ -123,10 +123,10 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
         end;
       end;
       tt_cso_assignAppend: begin
-        if (oldValue^.literalType in C_compoundTypes) and (oldValue^.getReferenceCount=1) then begin
+        if (oldValue^.literalType in C_setTypes+C_listTypes) and (oldValue^.getReferenceCount=1) then begin
           if (RHS^.literalType in C_scalarTypes)
-          then P_listLiteral(oldValue)^.append(RHS, true)
-          else P_listLiteral(oldValue)^.appendAll(P_listLiteral(RHS));
+          then P_collectionLiteral(oldValue)^.append(RHS, true)
+          else P_collectionLiteral(oldValue)^.appendAll(P_compoundLiteral(RHS));
           exit(oldValue^.rereferenced);
         end else begin
           value:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location,adapters);
