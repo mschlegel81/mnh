@@ -925,12 +925,12 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   end;
 
 FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
-  FUNCTION rulesMeta:P_listLiteral;
+  FUNCTION rulesMeta:P_mapLiteral;
     VAR rule:P_rule;
     begin
-      result:=newListLiteral();
+      result:=newMapLiteral;
       for rule in packageRules.valueSet do if rule^.hasPublicSubrule then
-        result^.append(rule^.getDynamicUseMetaLiteral(context),false);
+        result^.put(rule^.getId,rule^.getDynamicUseMetaLiteral(context),false);
     end;
 
   FUNCTION subRulesMeta:P_listLiteral;
