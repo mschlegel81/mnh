@@ -144,16 +144,11 @@ FUNCTION getEnv_impl intFuncSignature;
     end;
   end;
 
-FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
-  begin new(result,create(at_unknown,C_collectAllOutputBehavior)); end;
-
 VAR collector: specialize G_lazyVar<P_collectingOutAdapter> ;
 FUNCTION collectOutput_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      if collector.isObtained
-      then collector.value^.clear
-      else context.adapters^.addOutAdapter(collector.value,true);
+      context.adapters^.addOutAdapter(collector.value,false);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -161,8 +156,11 @@ FUNCTION collectOutput_impl intFuncSignature;
 FUNCTION collectedOutput_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0)
-    then result:=messagesToLiteralForSandbox(collector.value^.storedMessages)
-    else result:=nil;
+    then begin
+      result:=messagesToLiteralForSandbox(collector.value^.storedMessages);
+      context.adapters^.removeOutAdapter(collector.value);
+      collector.value^.clear;
+    end else result:=nil;
   end;
 
 FUNCTION logTo_impl intFuncSignature;
@@ -229,8 +227,14 @@ FUNCTION changeDirectory_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
+  begin new(result,create(at_unknown,C_collectAllOutputBehavior)); end;
+
+PROCEDURE disposeAdapter(p:P_collectingOutAdapter);
+  begin dispose(p,destroy); end;
+
 INITIALIZATION
-  collector.create(@newCollectingOutAdapter,nil);
+  collector.create(@newCollectingOutAdapter,@disposeAdapter);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,false,ak_variadic  ,'resetRandom(seed:int);//Resets internal PRNG with the given seed');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,false,ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,false,ak_variadic_1,'intRandom(k);//Returns an integer random value in range [0,k-1]#random(k,n);//Returns a list of n integer random values in range [0,k-1]');
