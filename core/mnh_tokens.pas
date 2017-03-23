@@ -16,7 +16,24 @@ TYPE
 
   P_abstractRule=^T_abstractRule;
   T_abstractRule=object(T_objectWithIdAndLocation)
-    FUNCTION getRuleType:T_ruleType; virtual; abstract;
+    private
+      {$ifdef fullVersion}
+      idResolved:boolean;
+      {$endif}
+      id:T_idString;
+      declarationStart:T_tokenLocation;
+      ruleType:T_ruleType;
+    public
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION getLocation:T_tokenLocation; virtual;
+      PROPERTY getRuleType:T_ruleType read ruleType;
+      FUNCTION hasPublicSubrule:boolean; virtual; abstract;
+      {$ifdef fullVersion}
+      PROCEDURE setIdResolved;
+      FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
+      {$endif}
   end;
 
   P_token=^T_token;
@@ -182,6 +199,39 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:pointer; VAR recycler:T_t
     end;
   end;
 
+{ T_abstractRule }
+
+CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST ruleTyp: T_ruleType; CONST startAt: T_tokenLocation);
+  begin
+    {$ifdef fullVersion}
+    idResolved:=false;
+    {$endif}
+    id              :=ruleId;
+    declarationStart:=startAt;
+    ruleType        :=ruleTyp;
+  end;
+
+DESTRUCTOR T_abstractRule.destroy;                    begin id:='';                   end;
+FUNCTION T_abstractRule.getId: T_idString;            begin result:=id;               end;
+FUNCTION T_abstractRule.getLocation: T_tokenLocation; begin result:=declarationStart; end;
+{$ifdef fullVersion}
+PROCEDURE T_abstractRule.setIdResolved;
+  begin
+    idResolved:=true;
+  end;
+
+FUNCTION T_abstractRule.complainAboutUnused(VAR adapters:T_adapters):boolean;
+  CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
+  FUNCTION mitigate:string;
+    begin
+      if hasPublicSubrule then result:=PUBLIC_MITIGATION else result:='';
+    end;
+
+  begin
+    result:=(id<>MAIN_RULE_ID) and not(idResolved);
+    if result then adapters.raiseWarning('Unused rule '+id+mitigate,lineLocation(declarationStart));
+  end;
+{$endif}
 
 CONSTRUCTOR T_token.create;
   begin

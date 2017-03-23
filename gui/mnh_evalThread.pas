@@ -677,7 +677,7 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
+        info.location:=P_rule(tokenToExplain.data)^.getLocation;
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
     end;
