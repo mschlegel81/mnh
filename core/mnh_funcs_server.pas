@@ -8,6 +8,9 @@ USES sysutils,math,fphttpclient,lclintf,
      mnh_litVar,
      mnh_contexts,
      mnh_funcs;
+
+PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
+IMPLEMENTATION
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object
@@ -27,9 +30,6 @@ TYPE
   end;
 
   T_httpMethod=(hm_get,hm_put,hm_post,hm_delete);
-
-PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
-IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
 VAR registry:specialize G_instanceRegistry<P_microserver>;
@@ -152,7 +152,7 @@ PROCEDURE T_microserver.serve;
       sleepTime:longint=minSleepTime;
 
   begin
-    context^.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
+    context^.adapters^.raiseNote('http Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
     lastActivity:=now;
     repeat
@@ -181,7 +181,7 @@ PROCEDURE T_microserver.serve;
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
     until timedOut or hasKillRequest or not(context^.adapters^.noErrors);
-    context^.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
+    context^.adapters^.raiseNote('http Microserver stopped. '+socket.toString,feedbackLocation);
     up:=false;
   end;
 

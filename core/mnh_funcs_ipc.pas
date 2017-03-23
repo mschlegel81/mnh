@@ -7,44 +7,21 @@ USES sysutils, Classes, simpleipc, //RTL
      mnh_contexts,mnh_litVar,
      mnh_funcs;
 
-TYPE
-  T_ipcMessage=record
-    respondTo:string;
-    statusOk:boolean;
-    body:P_literal;
-  end;
-
-  T_myIpcComunicator=object
-    private
-      feedbackLocation:T_tokenLocation;
-      oneWayServer:TSimpleIPCServer;
-      oneWayClient:TSimpleIPCClient;
-      FUNCTION receive(CONST adapters:P_adapters):T_ipcMessage;
-      PROCEDURE send(CONST receiver: string; VAR message: T_ipcMessage; CONST adapters:P_adapters);
-    public
-      CONSTRUCTOR create(CONST location:T_tokenLocation);
-      DESTRUCTOR destroy;
-  end;
-
-  T_myIpcClient=object(T_myIpcComunicator)
-    CONSTRUCTOR create(CONST location:T_tokenLocation);
-    DESTRUCTOR destroy;
-    FUNCTION ipcGet(CONST receiver: string; CONST request:P_literal; CONST adapters:P_adapters):P_literal;
-  end;
-
-  P_myIpcServer=^T_myIpcServer;
-  T_myIpcServer=object(T_myIpcComunicator)
-    servingExpression:P_expressionLiteral;
-    servingContext:P_threadContext;
-    hasKillRequest:boolean;
-    CONSTRUCTOR create(CONST serverId:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext);
-    DESTRUCTOR destroy;
-    FUNCTION serve:boolean;
-  end;
-
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
 FUNCTION isServerRunning(CONST serverId:string):boolean;
 IMPLEMENTATION
+TYPE
+  P_myIpcServer=^T_myIpcServer;
+  T_myIpcServer=object
+    serverId:string;
+    feedbackLocation:T_tokenLocation;
+    servingExpression:P_expressionLiteral;
+    servingContext:P_threadContext;
+    hasKillRequest:boolean;
+    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext);
+    DESTRUCTOR destroy;
+  end;
+
 VAR checkingClient:TSimpleIPCClient=nil;
     registry:specialize G_instanceRegistry<P_myIpcServer>;
 
@@ -68,77 +45,7 @@ FUNCTION isServerRunning(CONST serverId:string):boolean;
     registry.leaveCs;
   end;
 
-FUNCTION ipcServerThread(p:pointer):ptrint;
-  VAR sleepTime:longint=0;
-  begin
-    with P_myIpcServer(p)^ do while not(hasKillRequest) and ((servingContext=nil) or (servingContext^.adapters^.noErrors)) do begin
-      if serve then sleepTime:=0
-               else begin
-                 if sleepTime<100 then inc(sleepTime);
-                 sleep(sleepTime);
-               end;
-    end;
-    dispose(P_myIpcServer(p),destroy);
-    result:=0;
-  end;
-
-CONSTRUCTOR T_myIpcServer.create(CONST serverId:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext);
-  begin
-    inherited create(location);
-    oneWayServer:=TSimpleIPCServer.create(nil);
-    oneWayServer.ServerID:=serverId;
-    oneWayServer.Global:=true;
-    oneWayServer.StartServer;
-    servingExpression:=expression;
-    servingContext:=context;
-    registry.onCreation(@self);
-    hasKillRequest:=false;
-  end;
-
-DESTRUCTOR T_myIpcServer.destroy;
-  begin
-    inherited destroy;
-    if servingContext<>nil then begin
-      servingContext^.doneEvaluating;
-      dispose(servingContext,destroy);
-    end;
-    if servingExpression<>nil then disposeLiteral(servingExpression);
-    registry.onDestruction(@self);
-  end;
-
-FUNCTION T_myIpcServer.serve:boolean;
-  VAR hasRequest:boolean;
-      message:T_ipcMessage;
-      responseBody:P_literal;
-  begin
-    //fetch:-------------------------------------------------
-    hasRequest:=oneWayServer.PeekMessage(1,true);
-    if not(hasRequest) or (servingExpression=nil) then exit(false);
-    //-------------------------------------------------:fetch
-    //decode:------------------------------------------------
-    message:=receive(servingContext^.adapters);
-    //------------------------------------------------:decode
-    //execute:-----------------------------------------------
-    if message.statusOk then begin
-      responseBody:=servingExpression^.evaluateToLiteral(feedbackLocation,servingContext,message.body);
-      if message.body<>nil then disposeLiteral(message.body);
-      message.body:=responseBody;
-      message.statusOk:=servingContext^.adapters^.noErrors;
-    end else begin
-      servingContext^.adapters^.raiseWarning('IPC server received request with error status - answering with error status',feedbackLocation);
-      if message.body<>nil then disposeLiteral(message.body);
-    end;
-    //------------------------------------------------:execute
-    //respond:------------------------------------------------
-    try
-      send(message.respondTo,message,nil);
-    finally
-    end;
-    //------------------------------------------------:respond
-    result:=true;
-  end;
-
-CONSTRUCTOR T_myIpcClient.create(CONST location: T_tokenLocation);
+FUNCTION newServer(CONST serverId:string=''):TSimpleIPCServer;
   FUNCTION getNewServerId:string;
     CONST millisecondsPerDay=24*60*60*1000;
     VAR intResult:int64;
@@ -155,112 +62,158 @@ CONSTRUCTOR T_myIpcClient.create(CONST location: T_tokenLocation);
 
   begin
     registry.enterCs;
-    inherited create(location);
-    oneWayServer:=TSimpleIPCServer.create(nil);
-    oneWayServer.ServerID:=getNewServerId;
-    oneWayServer.Global:=true;
-    oneWayServer.StartServer;
+    result:=TSimpleIPCServer.create(nil);
+    if serverId<>'' then result.ServerID:=serverId
+                    else result.ServerID:=getNewServerId;
+    result.Global:=true;
+    result.StartServer;
     registry.leaveCs;
   end;
 
-DESTRUCTOR T_myIpcClient.destroy;
-begin
-  inherited destroy;
-end;
-
-FUNCTION T_myIpcClient.ipcGet(CONST receiver: string; CONST request: P_literal; CONST adapters: P_adapters): P_literal;
-  VAR message:T_ipcMessage;
-      hasResponse:boolean=false;
-      aliveCheckCounter:longint=0;
+PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
   begin
-    //SEND:--------------------------------------------------
-    message.respondTo:=oneWayServer.ServerID;
-    message.statusOk:=(request<>nil) and (adapters^.noErrors);
-    if message.statusOk then message.body:=request
-                        else message.body:=nil;
-    send(receiver,message,adapters);
-    //--------------------------------------------------:SEND
-    //RECEIVE: wait/fetch:-----------------------------------
-    while (adapters^.noErrors) and not(hasResponse) do begin
-      hasResponse:=oneWayServer.PeekMessage(1,true);
-      if not(hasResponse) then begin
-        inc(aliveCheckCounter);
-        if (aliveCheckCounter>100) then begin
-          if not(oneWayClient.ServerRunning) then adapters^.raiseError('IPC server "'+receiver+'" died before answering.',feedbackLocation);
-        end else sleep(1);
-      end;
-    end;
-    if not(hasResponse) then exit(nil);
-    //--------------------------------------------:wait/fetch
-    //decode:------------------------------------------------
-    message:=receive(adapters);
-    if message.statusOk then result:=message.body
-    else begin
-      if message.body<>nil then disposeLiteral(message.body);
-      result:=nil;
-      adapters^.raiseError('IPC get returned with errorstatus.',feedbackLocation);
-    end;
-    //---------------------------------------:decode :RECEIVE
+    server.StopServer;
+    FreeAndNil(server);
   end;
 
-DESTRUCTOR T_myIpcComunicator.destroy;
-  begin
-    if Assigned(oneWayServer) then begin
-      if oneWayServer.Active then oneWayServer.StopServer;
-      oneWayServer.free;
-    end;
-    if Assigned(oneWayClient) then
-      oneWayClient.free;
-  end;
-
-PROCEDURE T_myIpcComunicator.send(CONST receiver: string; VAR message:T_ipcMessage; CONST adapters:P_adapters);
+PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
+                      CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR streamWrapper:T_outputStreamWrapper;
-      memoryStream:TStringStream;
+      memoryStream:TMemoryStream;
+      client:TSimpleIPCClient;
+      sendStatusOk:boolean;
+      serializationOk:boolean=true;
   begin
-    if not(Assigned(oneWayClient)) then oneWayClient:=TSimpleIPCClient.create(nil);
-    oneWayClient.ServerID:=receiver;
-    if not(oneWayClient.ServerRunning) then begin
-      if adapters<>nil then adapters^.raiseError('Cannot send IPC message to unreachable server: '+receiver,feedbackLocation);
+    client:=TSimpleIPCClient.create(nil);
+    client.ServerID:=receiverServerId;
+    if not(client.ServerRunning) then begin
+      if adapters<>nil then adapters^.raiseError('Cannot send IPC message to unreachable server: '+receiverServerId,location);
+      client.free;
       exit;
     end;
-    memoryStream:=TStringStream.create('');
+    memoryStream:=TMemoryStream.create;
     streamWrapper.create(memoryStream);
-    streamWrapper.writeAnsiString(message.respondTo);
-    message.statusOk:=message.statusOk and ((adapters=nil) or (adapters^.noErrors)) and (message.body<>nil);
-    streamWrapper.writeBoolean(message.statusOk);
+    streamWrapper.writeAnsiString(senderServerId);
+    sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.noErrors)) and (payload<>nil);
+    streamWrapper.writeBoolean(sendStatusOk);
     try
-      if message.statusOk then writeLiteralToStream(message.body,@streamWrapper,feedbackLocation,adapters);
+      if sendStatusOk then writeLiteralToStream(payload,@streamWrapper,location,adapters);
     except
-      message.statusOk:=false;
+      serializationOk:=false;
     end;
-    memoryStream.position:=0;
-    oneWayClient.Active:=true;
-    oneWayClient.SendStringMessage(memoryStream.DataString);
-    oneWayClient.Active:=false;
+    if serializationOk then begin
+      memoryStream.position:=0;
+      if not(client.ServerRunning) then begin
+        if adapters<>nil then adapters^.raiseError('Cannot send IPC message to unreachable server: '+receiverServerId,location);
+        client.free;
+        exit;
+      end;
+      client.Active:=true;
+      client.SendMessage(0,memoryStream);
+    end;
+    client.free;
     streamWrapper.destroy;
   end;
 
-
-FUNCTION T_myIpcComunicator.receive(CONST adapters: P_adapters): T_ipcMessage;
+FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
+                     OUT senderId:string;
+                     OUT statusOk:boolean;
+                     OUT payload:P_literal;
+                     CONST location:T_tokenLocation; CONST adapters:P_adapters):boolean;
   VAR streamWrapper:T_inputStreamWrapper;
-      memoryStream:TStringStream;
+      memoryStream:TMemoryStream;
   begin
-    initialize(result);
-    memoryStream:=TStringStream.create(oneWayServer.StringMessage);
+    if not(receiver.PeekMessage(1,true)) then exit(false);
+    memoryStream:=TMemoryStream.create;
+    receiver.GetMessageData(memoryStream);
     streamWrapper.create(memoryStream);
     memoryStream.position:=0;
-    result.respondTo:=streamWrapper.readAnsiString;
-    result.statusOk:=streamWrapper.readBoolean;
-    if result.statusOk then result.body:=newLiteralFromStream(@streamWrapper,feedbackLocation,adapters)
-                       else result.body:=nil;
+    senderId:=streamWrapper.readAnsiString;
+    statusOk:=streamWrapper.readBoolean;
+    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters)
+                else payload:=nil;
     streamWrapper.destroy;
+    result:=true;
   end;
 
-CONSTRUCTOR T_myIpcComunicator.create(CONST location: T_tokenLocation);
+FUNCTION ipcServerThread(p:pointer):ptrint;
+  VAR sleepTime:longint=0;
+      //Caution: Server must be started and stopped in the same thread!
+      server:TSimpleIPCServer;
+
+  FUNCTION serve:boolean;
+    VAR request,response:record
+          senderId:string;
+          statusOk:boolean;
+          payload:P_literal;
+        end;
+
+        adaptersOrNil:P_adapters;
+    begin with P_myIpcServer(p)^ do begin
+      if servingContext=nil then adaptersOrNil:=nil
+                            else adaptersOrNil:=servingContext^.adapters;
+      //Even unique-instance-marker-servers should fetch messages from time to time
+      if readMessage(server,request.senderId,request.statusOk,request.payload,feedbackLocation,adaptersOrNil) and
+         (servingContext<>nil) and
+         (servingExpression<>nil) then begin
+        //execute:-----------------------------------------------
+        response.senderId:=server.ServerID;
+        if request.statusOk then begin
+          response.payload:=servingExpression^.evaluateToLiteral(feedbackLocation,servingContext,request.payload);
+          response.statusOk:=servingContext^.adapters^.noErrors;
+        end else begin
+          if adaptersOrNil<>nil then adaptersOrNil^.raiseWarning('IPC server received request with error status - answering with error status',feedbackLocation);
+          response.payload :=nil;
+          response.statusOk:=false;
+        end;
+        if request.payload<>nil then disposeLiteral(request.payload);
+        //------------------------------------------------:execute
+        //respond:------------------------------------------------
+        try
+          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil);
+        finally
+        end;
+        //------------------------------------------------:respond
+        result:=true;
+      end else result:=false;
+    end; end;
+
   begin
+    with P_myIpcServer(p)^ do begin
+      if servingContext<>nil then servingContext^.adapters^.raiseNote('IPC server started. '+serverId,feedbackLocation);
+      server:=newServer(serverId);
+      while not(hasKillRequest) and ((servingContext=nil) or (servingContext^.adapters^.noErrors)) do begin
+        if serve then sleepTime:=0
+                 else begin
+                   if sleepTime<100 then inc(sleepTime);
+                   sleep(sleepTime);
+                 end;
+      end;
+      disposeServer(server);
+      if servingContext<>nil then servingContext^.adapters^.raiseNote('IPC server stopped. '+serverId,feedbackLocation);
+    end;
+    dispose(P_myIpcServer(p),destroy);
+    result:=0;
+  end;
+
+CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext);
+  begin
+    serverId:=serverId_;
     feedbackLocation:=location;
-    oneWayServer:=nil;
-    oneWayClient:=nil;
+    servingExpression:=expression;
+    servingContext:=context;
+    registry.onCreation(@self);
+    hasKillRequest:=false;
+  end;
+
+DESTRUCTOR T_myIpcServer.destroy;
+  begin
+    if servingContext<>nil then begin
+      servingContext^.doneEvaluating;
+      dispose(servingContext,destroy);
+    end;
+    if servingExpression<>nil then disposeLiteral(servingExpression);
+    registry.onDestruction(@self);
   end;
 
 {$i mnh_func_defines.inc}
@@ -306,14 +259,37 @@ FUNCTION startIpcServer_impl intFuncSignature;
   end;
 
 FUNCTION sendIpcRequest_impl intFuncSignature;
-  VAR ipcClient:T_myIpcClient;
+  VAR temporaryReceiver:TSimpleIPCServer;
+      fetchedResult:boolean;
+      aliveCheckCounter:longint=0;
+
+      response:record
+        senderId:string;
+        statusOk:boolean;
+        payload:P_literal;
+      end;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
        (arg0^.literalType=lt_string) then begin
-      ipcClient.create(tokenLocation);
-      result:=ipcClient.ipcGet(str0^.value,arg1,context.adapters);
-      ipcClient.destroy;
+      temporaryReceiver:=newServer();
+      sendMessage(temporaryReceiver.ServerID,str0^.value,true,arg1,tokenLocation,context.adapters);
+      repeat
+        sleep(1);
+        fetchedResult:=readMessage(temporaryReceiver,response.senderId,response.statusOk,response.payload,tokenLocation,context.adapters);
+        if not(fetchedResult) then begin
+          inc(aliveCheckCounter);
+          if (aliveCheckCounter>100) then begin
+            if not(isServerRunning(str0^.value)) then context.adapters^.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation);
+            aliveCheckCounter:=0;
+          end else sleep(1);
+        end;
+      until fetchedResult or not(context.adapters^.noErrors);
+      if fetchedResult and context.adapters^.noErrors then begin
+        if response.payload<>nil then result:=response.payload
+                                 else result:=newVoidLiteral;
+      end;
+      disposeServer(temporaryReceiver);
     end;
   end;
 
@@ -326,12 +302,11 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
 
 INITIALIZATION
   registry.create;
-  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,true,ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
-  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl,false,ak_binary,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
-  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl,false,ak_binary,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
-  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl,false,ak_unary,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise');
+  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,true ,ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
+  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,false,ak_binary ,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
+  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,false,ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
+  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,false,ak_unary  ,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise');
 FINALIZATION
   registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;
-
 end.

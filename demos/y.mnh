@@ -3,7 +3,7 @@ fakForY:={$n<=1 ? 1 : $n*$f($n-1,$f)};
 fibForY:={$n<=1 ? 1 :    $f($n-1,$f)+
                          $f($n-2,$f)};
 //*Solves the http://rosettacode.org/wiki/Y_combinator
-main->printf("%s %s %s",
+main->printf("%s\t%s\t%s",
              [0..20],
              [0..20].map(Y(fakForY)),
              [0..20].map(Y(fibForY)));

@@ -1,4 +1,5 @@
 {$ifdef include_implementation}
+VAR packageCs:TRTLCriticalSection;
 {$i mnh_func_defines.inc}
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
@@ -21,6 +22,7 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
       id      :string='';
       p       :P_package;
   begin
+    enterCriticalSection(packageCs);
     freshlyCreated:=false;
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
@@ -30,22 +32,33 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
       or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
       then begin
         if p^.codeChanged or (p^.readyForUsecase<>lu_forImport) then p^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+        leaveCriticalSection(packageCs);
         exit(p);
       end;
     if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
     if (fileName='') or not(fileExists(fileName)) then begin
       context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
+      leaveCriticalSection(packageCs);
       exit(nil);
     end;
     new(result,create(newFileCodeProvider(fileName),callerPackage^.mainPackage));
     result^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
     freshlyCreated:=true;
     if registerAsSecondaryPackage then begin
-      setLength(callerPackage^.mainPackage^.secondaryPackages,
-         length(callerPackage^.mainPackage^.secondaryPackages)+1);
-                callerPackage^.mainPackage^.secondaryPackages[
-         length(callerPackage^.mainPackage^.secondaryPackages)-1]:=result;
+      with callerPackage^.mainPackage^ do begin
+        setLength(secondaryPackages,
+           length(secondaryPackages)+1);
+                  secondaryPackages[
+           length(secondaryPackages)-1]:=result;
+      end;
+      with callerPackage^ do begin
+        setLength(dynamicallyUsed,
+           length(dynamicallyUsed)+1);
+                  dynamicallyUsed[
+           length(dynamicallyUsed)-1]:=result;
+      end;
     end;
+    leaveCriticalSection(packageCs);
   end;
 
 FUNCTION inspect_imp intFuncSignature;
@@ -173,5 +186,10 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches'   ,@clearAllCaches_imp   ,false,ak_nullary   ,'clearAllCaches;//Clears all memoized rule caches and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,false,ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,false,ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
+  initialize(packageCs);
+  initCriticalSection(packageCs);
+{$endif}
+{$ifdef include_finalization}
+  doneCriticalSection(packageCs);
 {$endif}
 

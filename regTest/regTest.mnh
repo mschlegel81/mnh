@@ -1,115 +1,59 @@
-USE testLog,mnhInfo,
-    '../demos/24.mnh',
-    '../demos/diff.mnh',
-    '../demos/grep.mnh',
-    '../demos/emptyFolders.mnh',
-    '../demos/100doors.mnh',
-    '../demos/12_statements.mnh',
-    '../demos/99bottles.mnh',
-    '../demos/ackermann.mnh',
-    '../demos/aks.mnh',
-    '../demos/aliquotSequence.mnh',
-    '../demos/anagram.mnh',
-    '../demos/asciiCalendar.mnh',
-    '../demos/babbage.mnh',
-    '../demos/balancedBrackets.mnh',
-    '../demos/benford.mnh',
-    '../demos/bestShuffle.mnh',
-    '../demos/boxTheCompass.mnh',
-    '../demos/cauchy.mnh',
-    '../demos/clock.mnh',
-    '../demos/commaQuibble.mnh',
-    '../demos/concatInts.mnh',
-    '../demos/conventions.mnh',
-    '../demos/countTheCoins.mnh',
-    '../demos/dice7fromDice5.mnh',
-    '../demos/digitSquareSum.mnh',
-    '../demos/ethiopian.mnh',
-    '../demos/fibonacci.mnh',
-    '../demos/fibonacciWord.mnh',
-    '../demos/fractran.mnh',
-    '../demos/fourRings.mnh',
-    '../demos/gcd.mnh',
-    '../demos/gol.mnh',
-    '../demos/hailstone.mnh',
-    '../demos/hamming.mnh',
-    '../demos/harshad.mnh',
-    '../demos/hash.mnh',
-    '../demos/hashJoin.mnh',
-    '../demos/helloWorld.mnh',
-    '../demos/hereDoc.mnh',
-    '../demos/hofstadterConway.mnh',
-    '../demos/hofstadter_sequences.mnh',
-    '../demos/huffmann.mnh',
-    '../demos/integerPartitionFunction.mnh',
-    '../demos/josephus.mnh',
-    '../demos/jaro.mnh',
-    '../demos/json.mnh',
-    '../demos/kaprekar.mnh',
-    '../demos/lastSundays.mnh',
-    '../demos/levenshtein.mnh',
-    '../demos/lindenmayer.mnh',
-    '../demos/longestCommonSubsequence.mnh',
-    '../demos/ludic.mnh',
-    '../demos/magicSquare.mnh',
-    '../demos/maze.mnh',
-    '../demos/memoization.mnh',
-    '../demos/monteCarloPi.mnh',
-    '../demos/numDiff.mnh',
-    '../demos/opTest.mnh',
-    '../demos/pascal.mnh',
-    '../demos/pernicousNumbers.mnh',
-    '../demos/pythagoras.mnh',
-    '../demos/queens.mnh',
-    '../demos/quine.mnh',
-    '../demos/quine2.mnh',
-    '../demos/range_extract_expand.mnh',
-    '../demos/randomWords.mnh',
-    '../demos/rationalPi.mnh',
-    '../demos/roman.mnh',
-    '../demos/selfRefSeq.mnh',
-    '../demos/semiprime.mnh',
-    '../demos/semordnilap.mnh',
-    '../demos/setConsolidation.mnh',
-    '../demos/sequenceOfNonSquares.mnh',
-    '../demos/shannonEntropy.mnh',
-    '../demos/sierpinskiCarpet.mnh',
-    '../demos/sierpinskiTriangle.mnh',
-    '../demos/stringFib.mnh',
-    '../demos/subGen.mnh',
-    '../demos/sudoku.mnh',
-    '../demos/treePrint.mnh',
-    '../demos/ulam.mnh',
-    '../demos/unbiasedRandom.mnh',
-    '../demos/vampire.mnh',
-    '../demos/variadic.mnh',
-    '../demos/weasel.mnh',
-    '../demos/wordCount.mnh',
-    '../demos/y.mnh',
-    //The following tests are flavor dependent
-    '../demos/zeckendorf.mnh',
-    '../demos/continuedFractions.mnh',
-    '../demos/piPlots.mnh',
-    '../demos/rk4.mnh',
-    '../demos/root.mnh',
-    //The last 8 imports are plotting
-    '../demos/barnsleyFern.mnh',
-    '../demos/fractalPlant.mnh',
-    '../demos/kochCurve.mnh',
-    '../demos/rotatingCube.mnh',
-    '../demos/sierpinskiCurve.mnh',
-    '../demos/travellingSalesmanProblem.mnh',
-    '../demos/turtleGfx.mnh',
-    '../demos/heart.mnh';
-private plotDemoCount:=8;
+USE '../demos/inputs/inputs.mnh',
+    testLog;
 
-private testPlotting(import:string,doLog:boolean,file:string)->begin
-  local filePath:=(myPath.extractFileDirectory)&'/'&file;
-  deleteFile(filePath);
-  resetOptions;
-  executeMainCall(import,doLog);
-  printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
-end;
+private demosRoot:=myPath.extractFileDirectory&'/../demos/';
+private memoized allDemos:=files(demosRoot&'*.mnh');
+datastore runTimes;
+
+plotters:=demosRoot&[
+'barnsleyFern.mnh',
+'fractalPlant.mnh',
+'kochCurve.mnh',
+'rotatingCube.mnh',
+'sierpinskiCurve.mnh',
+'travellingSalesmanProblem.mnh',
+'turtleGfx.mnh',
+'heart.mnh'];
+
+private testParameters((demosRoot&'24.mnh'            ))->['demo'];
+private testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
+private testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
+private testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
+private testParameters(scriptFileName:string)->[];
+
+private skipFile((demosRoot&'3body.mnh'              ))->true;
+private skipFile((demosRoot&'htmlFunctionPlotter.mnh'))->true;
+private skipFile((demosRoot&'simpleServer.mnh'       ))->true;
+private skipFile((demosRoot&'timer.mnh'              ))->true;
+private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
+private skipFile(scriptFileName:string)->false;
+
+private isSmokeTest((demosRoot&'task.mnh'          ))->true;
+private isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
+private isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
+private isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
+private isSmokeTest(scriptFileName:string)->false;
+
+private checkAfterTest(file in plotters)->printf('png hash: %x',file.changeFileExt('.png').fileStats[3]);
+private checkAfterTest(file)->void;
+
+testFile(scriptFileName:string,doLog:boolean)->
+scriptFileName.skipFile
+? note('Not testing ',scriptFileName)
+: begin
+    resetRandom;
+    doCollect(not(scriptFileName.isSmokeTest));
+    local logName:=extractFileNameOnly(scriptFileName);
+    print('***** ',logName,' *****');
+    local scriptMain:=import(scriptFileName)['rules','main','rule'];
+    isVoid(scriptMain) ? fail(scriptFileName,' does not have a main rule') : void;
+    local startTime:=time;
+    scriptMain@testParameters(scriptFileName);
+    local scriptTime:=time-startTime;
+    checkAfterTest(scriptFileName);
+    doLog ? runTimes|=[[logName,mnhInfo['flavour'],scriptTime]] : void;
+    note('Time for ',logName,': ',scriptTime);
+  end;
 
 private printExecute([])->void;
 private printExecute(code:stringList)->begin
@@ -119,101 +63,41 @@ private printExecute(code:stringList)->begin
      .print;
 end;
 
-private executeExamples(examplesFile:string)->begin
+private executeExamples->begin
   resetRandom;
+  doCollect(true);
   print('***** examples from file *****');
   local codeToExecute:=[];
-  local inputLines:=fileLines(examplesFile);
+  local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
   print('Examples file has ',inputLines.size,' lines');
-
-  inputLines:=inputLines.head(indexOf(inputLines.matches('==END REG TEST=='))[0] orElse inputLines.size);
-
   inputLines.each(line,
-    line=='' ? begin
-      printExecute(codeToExecute);
-      codeToExecute:=[];
-    end : codeToExecute|=line);
+    line==''
+    ? begin
+        printExecute(codeToExecute);
+        codeToExecute:=[];
+      end
+    : line.matches('==END REG TEST==')
+      ? doCollect(false)
+      : codeToExecute|=line);
   printExecute(codeToExecute);
 end;
 
-datastore runTimes;
+testAll(logging:boolean)->
+  begin
+   allDemos.map({testFile($0,logging)});
+   executeExamples;
+   validateCollectedOutput(logging);
+  end;
+
+main->testAlreadyPassed
+      ? print('Tests skipped. They have already been passed.')
+      : testAll(true) orElse ;
+
+//*Test again, even if all tests have been passed
+main('retest')->testAll(true);
+
+//*Test again, without logging passed tests
+main('noLog')->testAll(false);
 
 //*Export datastore
 main('export',filename:string)->writeFile(filename,runTimes.serialize);
-
-//*Export datastore
-main('export_txt',filename:string)->writeFile(filename,runTimes.toString);
-
-//*Export datastore
-main('import_txt',filename:string)->runTimes:=filename.fileContents.toExpression()();
-
-//*Limit number of samples to count per flavour/testcase retaining the newest samples
-main('limit',count:string)->begin
-  local limit:=count.softCast;
-  limit.isInt AND limit>1
-  ? begin
-      print('Samples @pre : ',runTimes.size);
-      print('Filtering samples to be retained (per flavour and testcase)');
-      local indexLists:=runTimes.pEach(sample,sample.leading|index).group(runTimes.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}).getInner(2).each(i,i.isList ? i : [i]);
-      indexLists.each(list,list.size>limit,OR) //update only if at least one list is too long
-      ? begin
-          local indexesToRetain:=indexLists.each(l,l.trailing(limit)).flatten;
-          printf('Dropping %{$1-$0}s of %{$1}s entries',indexesToRetain.size,runTimes.size);
-          runTimes:=runTimes.get(indexesToRetain);
-        end
-      : print('Nothing to be done. Longest sample row has ',indexLists.each(list,list.size,max),' elements');
-      print('Samples @post: ',runTimes.size);
-    end
-  : fail("count must be an integer >=1");
-end;
-
-//*Test without examples file
-main->main_impl('',false,true);
-//*Retest without examples file
-main('retest')->main_impl('',true,true);
-//*Display info on missing test cases
-main('info')->begin
-  local untested:=files('../demos/*.mnh').expandedFileName.minus(
-              inspect['uses'].getInner(1).expandedFileName);
-  untested==[]
-  ? print('All demos are covered by tests')
-  : begin
-      print('Untested demos: ');
-      printf('  %s',untested);
-    end;
-end;
-//*Test with examples file
-main(examplesFile:string)->main_impl(examplesFile,false,true);
-//*Retest with examples file
-main(examplesFile:string,'retest')->main_impl(examplesFile,true,true);
-//*Retest with examples file - supressing result times logging
-main(examplesFile:string,'noLog')->main_impl(examplesFile,true,false);
-
-private executeMainCall(import:string,doLog:boolean,...)->begin
-  print('***** ',import,' *****');
-  local t0:=time;
-  toId(import&'.main')@...;
-  local dt:=time-t0;
-  doLog ? runTimes|=[[import,flavour(executor),dt]] : void;
-  note('Time for ',import,': ',dt);
-  clearPackageCache(import);
-  void;
-end;
-
-main_impl(examplesFile:string,forceTest:boolean,doLog:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
-begin
-  resetRandom;
-  collectOutput;
-  executeMainCall('24',doLog,'demo');
-  executeMainCall('diff',doLog,'test');
-  executeMainCall('grep',doLog,'\Wrosettacode.org\W','-r','*.mnh');
-  executeMainCall('emptyFolders',doLog,'demos');
-  inspect['uses'].getInner(0).leading(plotDemoCount).tail(6).each(import,executeMainCall(import,doLog));
-  canPlot
-  ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting(import,doLog,'../demos/'&import&'.png'))
-  : void;
-  examplesFile==''
-  ? void
-  : executeExamples(examplesFile);
-  validateCollectedOutput(doLog);
-end;

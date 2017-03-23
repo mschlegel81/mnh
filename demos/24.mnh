@@ -20,7 +20,7 @@ end;
 
 private errPrint(...)->print@(...) orElse false;
 
-private isCorrectSolution(set,text)->begin
+private isCorrectSolution(set,text)->text.trim=="" ? false : begin
   local result:=true;
   local valids:=((set&"") | OPLIST | ['','(',')']).toSet;
   local invalids:=text.tokenSplit.trim.each(tok,tok in valids ? void : tok);

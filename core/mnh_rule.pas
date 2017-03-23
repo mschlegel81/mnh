@@ -462,8 +462,8 @@ FUNCTION T_rule.getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenT
       end;
       tempToken            :=context.recycler.newToken(location,id,ruleTokenType,@self);
       tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
-      new(P_subrule(result),createFromInline(tempToken,context));
     end;
+    new(P_subrule(result),createFromInline(tempToken,context));
   end;
 
 FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral;
@@ -479,7 +479,6 @@ FUNCTION T_rule.getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiter
     end;
 
     result:=newMapLiteral^
-              .put('id'        ,id)^
               .put('rule'      ,getFunctionPointer(context,tt_importedUserRule,declarationStart),false)^
               .put('attributes',attributes,false);
   end;

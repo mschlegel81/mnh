@@ -1,145 +1,3 @@
-***** 24 *****
-This is a demo - start without argument to play.
- ?> Find an expression to calculate 24 from the numbers [1,1,6,4].
- !> ((1-1)+6)*4
-The solution is valid.
- ?> Another round?
- !> no
-***** diff *****
---- original
-+++ modified
-@@ -0,3 +1,3 @@
-+ //*Modified file contents follow:
-  USE guiScripts;
-  //*Shows the diff of two files
-@@ -5,4 +6,4 @@
-  main(file1:string,file2:string,extraLines)->printf("%s",unifiedDiff(file1,file2,file1.fileLines,file2.fileLines,toInt(extraLines)));
-  
-- //*For regression test
-+ //*For regression test //comment added
-  main('test')->printf("%s",unifiedDiff('original','modified',myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=6 ? line&" //comment added" : line),2));
-***** grep *****
-./demos/100doors.mnh
-     1://*See http://rosettacode.org/wiki/100_doors
-./demos/12_statements.mnh
-    33://*See http://rosettacode.org/wiki/Twelve_statements
-./demos/99bottles.mnh
-     5://*Prints out the song "99 bottles of beer", see http://rosettacode.org/wiki/99_Bottles_of_Beer or http://www.99-bottles-of-beer.net/
-./demos/ackermann.mnh
-     6://*Solves the "Ackermann" task from http://rosettacode.org/wiki/Ackermann_function
-     7:main->print('See http://rosettacode.org/wiki/Ackermann_function') and
-./demos/aks.mnh
-    17://*See http://rosettacode.org/wiki/AKS_test_for_primes
-./demos/aliquotSequence.mnh
-    21://*See http://rosettacode.org/wiki/Aliquot_sequence_classifications
-./demos/babbage.mnh
-     6://*See http://rosettacode.org/wiki/Babbage_problem
-./demos/balancedBrackets.mnh
-     4://*See http://rosettacode.org/wiki/Balanced_brackets
-./demos/benford.mnh
-     2://*See http://rosettacode.org/wiki/Benford%27s_law
-./demos/bestShuffle.mnh
-     4://*See http://rosettacode.org/wiki/Best_shuffle
-./demos/concatInts.mnh
-     2://*See http://rosettacode.org/wiki/Largest_int_from_concatenated_ints
-./demos/continuedFractions.mnh
-    15://*See http://rosettacode.org/wiki/Continued_fraction
-./demos/countTheCoins.mnh
-    11://*See  http://rosettacode.org/wiki/Count_the_coins
-./demos/digitSquareSum.mnh
-     7://*See http://rosettacode.org/wiki/Iterated_digits_squaring
-./demos/ethiopian.mnh
-    27://*See http://rosettacode.org/wiki/Ethiopian_multiplication
-./demos/fibonacci.mnh
-     5://*Solves the "Fibonacci n-step" task from http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences
-     6:main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and
-./demos/fibonacciWord.mnh
-    16://*Solves the task: http://rosettacode.org/wiki/Fibonacci_word (with cheating)
-./demos/fourRings.mnh
-     6://*See: http://rosettacode.org/wiki/4-rings_or_4-squares_puzzle
-./demos/fractran.mnh
-    50://*See http://rosettacode.org/wiki/Fractran
-./demos/hailstone.mnh
-    12://*Solves the "Hailstone" task from http://rosettacode.org/wiki/Hailstone_sequence
-    13:main->print('See http://rosettacode.org/wiki/Hailstone_sequence') and
-./demos/hamming.mnh
-     5://*See http://rosettacode.org/wiki/Hamming_numbers
-./demos/harshad.mnh
-     9://*See http://rosettacode.org/wiki/Harshad_or_Niven_series
-./demos/hashJoin.mnh
-    51://*See https://rosettacode.org/wiki/Hash_join
-./demos/hereDoc.mnh
-     1://*See http://rosettacode.org/wiki/Here_document
-./demos/hofstadterConway.mnh
-    24://*This solves the task: http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence
-./demos/huffmann.mnh
-    22://*Solves the "Huffman coding" task from http://rosettacode.org/wiki/Huffman_coding
-    23:main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
-./demos/integerPartitionFunction.mnh
-     8://*See http://rosettacode.org/wiki/9_billion_names_of_God_the_integer
-./demos/jaro.mnh
-    31://*See http://rosettacode.org/wiki/Jaro_distance
-./demos/josephus.mnh
-     7://*See http://rosettacode.org/wiki/Josephus_problem
-./demos/levenshtein.mnh
-     5://*This solves the Levenshtein distance task: http://rosettacode.org/wiki/Levenshtein_distance
-./demos/longestCommonSubsequence.mnh
-    11://*For regression test; see https://rosettacode.org/wiki/Longest_common_subsequence
-./demos/ludic.mnh
-    19://*See http://rosettacode.org/wiki/Ludic_numbers
-./demos/magicSquare.mnh
-    16://*Print out an n x n magic square; See http://rosettacode.org/wiki/Magic_squares_of_odd_order
-./demos/maze.mnh
-    41://*See http://rosettacode.org/wiki/Maze_generation
-./demos/monteCarloPi.mnh
-     8://*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
-     9:main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
-./demos/pascal.mnh
-     8://*See http://rosettacode.org/wiki/Pascal%27s_triangle
-./demos/pernicousNumbers.mnh
-     4://*See http://rosettacode.org/wiki/Pernicious_numbers
-./demos/pythagoras.mnh
-    11://*See http://rosettacode.org/wiki/Pythagorean_triples
-./demos/range_extract_expand.mnh
-    22://*See http://rosettacode.org/wiki/Range_expansion
-    23://*and http://rosettacode.org/wiki/Range_extraction
-    24:main->print("Canonical form (as given by rosettacode.org):")|
-./demos/rk4.mnh
-    48://*Solves the Runge-Kutta task from http://rosettacode.org/wiki/Runge-Kutta_method
-./demos/root.mnh
-    31://*Solves the "Roots of a function" task from http://rosettacode.org/wiki/Roots_of_a_function
-    32:main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and
-./demos/rotatingCube.mnh
-    20://*This solves the "rotating cube" task: http://rosettacode.org/wiki/Draw_a_rotating_cube
-./demos/selfRefSeq.mnh
-    19://*See http://rosettacode.org/wiki/Self-referential_sequence
-./demos/semiprime.mnh
-     3://*See http://rosettacode.org/wiki/Semiprime
-./demos/semordnilap.mnh
-    12://*See http://rosettacode.org/wiki/Semordnilap
-./demos/setConsolidation.mnh
-    21://*See http://rosettacode.org/wiki/Set_consolidation
-./demos/shannonEntropy.mnh
-     8://*See http://rosettacode.org/wiki/Entropy
-./demos/sierpinskiCarpet.mnh
-     7://*See http://rosettacode.org/wiki/Sierpinski_carpet
-./demos/sierpinskiTriangle.mnh
-     1://*Solves the "Sierpinski-Triangle" task from http://rosettacode.org/wiki/Sierpinski_triangle
-./demos/subGen.mnh
-    12://See: http://rosettacode.org/wiki/Subtractive_generator
-./demos/unbiasedRandom.mnh
-    12://*See http://rosettacode.org/wiki/Unbias_a_random_generator
-./demos/vampire.mnh
-    39://*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number
-    41:  print('See http://rosettacode.org/wiki/Vampire_number');
-./demos/variadic.mnh
-     1://*See http://rosettacode.org/wiki/Variadic_function
-./demos/weasel.mnh
-    31://*See http://rosettacode.org/wiki/Evolutionary_algorithm
-./demos/y.mnh
-     5://*Solves the http://rosettacode.org/wiki/Y_combinator
-***** emptyFolders *****
-
 ***** 100doors *****
 1,4,9,16,25,36,49,64,81,100
 ***** 12_statements *****
@@ -155,6 +13,13 @@ The solution is valid.
 10. "The next two statements are both true."                         is false
 11. "Exactly 1 of statements 7, 8 and 9 are true."                   is true
 12. "Exactly 4 of the preceding statements are true."                is false
+***** 24 *****
+This is a demo - start without argument to play.
+ ?> Find an expression to calculate 24 from the numbers [1,1,6,4].
+ !> ((1-1)+6)*4
+The solution is valid.
+ ?> Another round?
+ !> no
 ***** 99bottles *****
 99 bottles of beer on the wall
 99 bottles of beer.
@@ -746,13 +611,15 @@ evil, levi, live, veil, vile
 25264
 ***** balancedBrackets *****
 []               o.k.
-]][[             NOT o.k.
-]][][[           NOT o.k.
-]][[[]][         NOT o.k.
-[[[]]]][[]       NOT o.k.
-[[]]]][[][][     NOT o.k.
-][][[][]][]][[   NOT o.k.
-[]]]]]]][[[[[[][ NOT o.k.
+[[]]             o.k.
+][[][]           NOT o.k.
+]]][[][[         NOT o.k.
+[]]][[[]][       NOT o.k.
+[[]]]][[[]][     NOT o.k.
+[[[]]][]]][[][   NOT o.k.
+[]]]]][][[][[[][ NOT o.k.
+***** barnsleyFern *****
+png hash: FC3D820C
 ***** benford *****
 actual expected
    300   301.03
@@ -765,8 +632,8 @@ actual expected
     53    51.15
     45    45.76
 ***** bestShuffle *****
-abracadabra, acabadbraar, (1)
-seesaw     , aswese     , (0)
+abracadabra, baadbraraac, (0)
+seesaw     , ewaess     , (0)
 elk        , lke        , (0)
 grrrrrr    , rgrrrrr    , (5)
 up         , pu         , (0)
@@ -854,6 +721,11 @@ Call with any string parameter for continuous run.
 ***** concatInts *****
 998764543431
 6054854654
+***** continuedFractions *****
+1+1/(1+1/(1+1/(1+1/(1+1/(1+...)))))    = 1.61803398874989
+1+1/(2+1/(2+1/(2+1/(2+1/(2+...)))))    = 1.4142135623731
+2+1/(1+1/(2+2/(3+3/(4+4/(5+...)))))    = 2.71828182845905
+3+1/(6+9/(6+25/(6+49/(6+81/(6+...))))) = 3.14159241097198
 ***** conventions *****
 --------------------------------------------------------------------------------
  in> f->{$y^3};
@@ -927,13 +799,37 @@ There are 293 ways to make a dollar from coins
   and 4563 ways to make a euro from coins.
 ***** dice7fromDice5 *****
 Distribution of seven sided dice (100000 samples): 
-0.14373
-0.14321
-0.14311
-0.14255
-0.14225
-0.14269
-0.14246
+0.14248
+0.14309
+0.14316
+0.14374
+0.1423
+0.14266
+0.14257
+***** diff *****
+--- regTest/../demos/inputs/unixdict.txt
++++ regTest/../demos/inputs/unixdict2.txt
+@@ -20,13 +20,4 @@
+  aba
+  ababa
+- aback
+- abacus
+- abalone
+- abandon
+- abase
+- abash
+- abate
+- abater
+- abbas
+  abbe
+  abbey
+@@ -101,5 +92,5 @@
+  absent
+  absentee
+- absenteeism
++ insertion
+  absentia
+  absentminded
 ***** digitSquareSum *****
 85623
 ***** ethiopian *****
@@ -1009,6 +905,31 @@ N Length Entropy Word
 35   9227465 0.9594187282227
 36  14930352 0.9594187282227
 37  24157817 0.9594187282227
+***** fourRings *****
+Four rings:
+     ___   ___   ___   ___
+    /   \ /   \ /   \ /   \
+   /     X     X     X     \
+  (   A (B) C (D) E (F) G   )
+   \     X     X     X     /
+    \___/ \___/ \___/ \___/
+The solutions for 1..7 (unique) are: 
+  [5,6,2,3,1,7,4]
+  [4,7,1,3,2,6,5]
+  [6,4,5,1,2,7,3]
+  [7,3,2,5,1,4,6]
+  [4,5,3,1,6,2,7]
+  [6,4,1,5,2,3,7]
+  [3,7,2,1,5,4,6]
+  [7,2,6,1,3,5,4]
+The solutions for 3..9 (unique) are: 
+  [8,7,3,5,4,6,9]
+  [9,6,5,4,3,8,7]
+  [7,8,3,4,5,6,9]
+  [9,6,4,5,3,7,8]
+The number of solutions for 0..9 (nonunique) is: 2860
+***** fractalPlant *****
+png hash: D2104128
 ***** fractran *****
 0: 2^1 = 2
 1: 3^1*5^1 = 15
@@ -1041,442 +962,426 @@ N Length Entropy Word
 28: 5^3*7^1*17^1 = 14875
 29: 2^1*3^1*5^2*7^1*13^1 = 13650
 30: 2^1*3^1*5^2*17^1 = 2550
-***** fourRings *****
-Four rings:
-     ___   ___   ___   ___
-    /   \ /   \ /   \ /   \
-   /     X     X     X     \
-  (   A (B) C (D) E (F) G   )
-   \     X     X     X     /
-    \___/ \___/ \___/ \___/
-The solutions for 1..7 (unique) are: 
-  [5,6,2,3,1,7,4]
-  [4,7,1,3,2,6,5]
-  [6,4,5,1,2,7,3]
-  [7,3,2,5,1,4,6]
-  [4,5,3,1,6,2,7]
-  [6,4,1,5,2,3,7]
-  [3,7,2,1,5,4,6]
-  [7,2,6,1,3,5,4]
-The solutions for 3..9 (unique) are: 
-  [8,7,3,5,4,6,9]
-  [9,6,5,4,3,8,7]
-  [7,8,3,4,5,6,9]
-  [9,6,4,5,3,7,8]
-The number of solutions for 0..9 (nonunique) is: 2860
 ***** gcd *****
 The greatest common denominator of 1238124 and 1236 is 12
 ***** gol *****
 
-# ## # ## ###    # # ### ## #  ###  # # 
-###### #  ###### #### #  #####  ##  ##  
-#  ####     ##      ### ##  #   # ### ##
- # # #  ## #  #  ##    ### ###    # #   
-# # # #     #   ##  ####  #  #####   #  
-# ### # ## #   ####   #    #   #### #  #
-## ###      ### # # #####  #   ### #####
-#####    #  # ####  ## #    ## # # ## # 
-### ###   ### ##   # ## # #   ##  ##  # 
-#  # ##    ##  #####    #  # #   #  #   
-#### # # ## # ##    ###  #####  #    ## 
-## #   #  ## # ##  ## ##  ##### ###    #
-# # ### ##    ##  #   # #        # # ###
-# #  # ##  ## # #  ### ## # #      #### 
-#  #    ##    # #  ## #      #  ## ## ##
- #  ##### #   ## # # ##  ### #  #   # # 
-        # ## #   ## ##  # #   # # # #   
- #####  # #   ##  # #  # ## # #  ### #  
-# ### #    ##   ## #  ### ####     #  ##
-#    # # #   #   #        ## ###  #    #
-##   ### ####   #    #### ##    #### ###
-#   ## ### ###  ###  #####  #  ### ##   
-#  ## #     #  # #  ###  ###   # #  # # 
-     #  #   #### ##   ##### ##   #  # # 
- #   #####  #  ###  # ## #        # # # 
-#  #   #####  # #  #  # ## ## #  # ## # 
- # ## # # ## ## #   #  ###   ###  ##   #
-## #  #####   ##    # # ##  # # ## #  ##
- #  # ###   #  # #####   ##    ##   ### 
-  # #  #  ######  #   #   #   ### # #   
-  ### ## ## #  ## ##  ##   ##   # # ## #
- # ###   ## ## #      # #     # # # ### 
-#   ### #  # ## # ### ##  ##     ###   #
-## # # ###   #  # # # #   ### ###  ##  #
-  #  #     #### #    #      #####    #  
-###  #####  # ##  ###    # #### #    #  
-#  #  ##   #### ###  ## ##  #####  #####
- ### # #  # ##  #   # ###  # ## ## # #  
-  #  #  ###        #   # #  ###  #### ##
- ###   #  # ###      #### ### ## ## ##  
+ #####     # ##### #  ##  ### ###  #  ##
+  #### # ##   ##  ####### #   # ###   # 
+ ## ##### ###  #    ## # #      # ##  ##
+  ## #### #  #### ###   ##   ### ### ###
+##  # ###  #  ###  #    ### # ### # ### 
+  ##### ### #   # #######   #    ## # ##
+    #######  # #      #     #  ##  #  # 
+####### ##  ###      ## ### # #  ## #   
+#  ####  ##  #######      ## ### #### ##
+#   ##   #      ## ## ###  # #    # #   
+## # #      ## ####  ##  ##  #  ##  ### 
+ ## # #   ## ##   #  ##   # #######  #  
+   # #     # ##    ### ##   #      #### 
+  # ## # #  ## ## # #   ####       ##   
+#  ## ##  #  ## #    ##   # ##  ##  ## #
+ ##   #  # ## #  # # ### ## # ## ### ###
+ #  #    # ### #   ##  ## ## #     #####
+### ###   #####    ##  ### # ####   ####
+ #  ###   ##  ##   #####  ##  # ## ## # 
+ #######  #### #   #  ##  #### # ##### #
+  #   ###    # ##   ##    #   #   ##  ##
+      #### ##   ## ####  # ##    ##   ##
+        ## ## #  #   # #  # ###  # # ## 
+         # # ###  ##       ######  ##  #
+    ## # # #  ## ### #  # #### ##   #  #
+#       ###   ## # ##  #   ####  #  #   
+## #  #  # # ## ##### #    ##   # ##  # 
+## ## #    ### #### ##  ##  ### #  # # #
+#######  ###  # # # ####  # # #  #### # 
+## # #    ## # # ### ####### ## #  #    
+### ###### ##       # #  # #####   ##   
+# #  #### # # #####  #   ##### ## # ##  
+   ### ###     # # # #   ## ### ## # ###
+#### # ##     ######## #  ###  #  ###   
+#  #   #  ### ## #   ####    ####    ###
+ ## # #   #     # ##  # # ###    # # #  
+   ## ### ## #   #### ##   # ### # #    
+##   ### ### #  ### ## #    #   #  #####
+#         #  ###### ## ###   ### ## ## #
+ # #  ## #### #  #####  #  #    ###  ## 
 
-#    # ##      ### #                  ##
-       ####   # ##           #          
-       ###     ##   # #         # #   ##
- #     #   #    ####       #      # # # 
-#     #    ##      # #   ##  #      ## #
-      ##   #  #   #     # ###           
-        #####     # #   #  #            
-      #   #      ##      # ###   #      
-      #   #        # ## ## #   # #      
-       # #       ###    #    # ###### # 
-   # # ###            # ##     ## #  ## 
-       #   ###  #  ##   #     ### # #   
-  # ##   #       ##     # #     ## #    
-  #  #    #   # ###     ##      ##      
-# ##      ##  # ##      #    #  ###     
-#   ###   ## ### #    ## ###### # # # # 
- #      # ## #   #     ##   # # # # #   
-##   # #  #  ###    #       # ## #   ###
-      ############ #  ###      # # ## # 
-  ##   # #   #   ##  #       ####   ##  
- #              # #  #       #       ## 
-   #     #   # #  #         #  #        
-   #  #  #     #   ##        ### #  #   
-        ## ##     ###       #   ### # # 
-    ##      #      #             ## # # 
-## #          #    ## #     # ## #  # # 
- # ####     ##  #  ## #    #         #  
- # #      # #    ##   #          # #    
- #  #       #    ## # ### ## #    # # # 
- ## #     #           ## ##   #         
- #    ##        #### ##    # ## # #     
- #                  #   # # #  ##       
-           #    # # # #  ## ###         
- ###   #####    # # # ##  #        ## ##
-   # #    ##    # #  #           #   ###
-# ####  # #       ### # ####     #      
-   #     ##     # #   #  #        ##   #
- # # # #  #   ### ###     ##            
-#      ## #   #     #    #            # 
-#      #    ##    #  #                  
+##     #                  # ###    #   #
+       # #       ##       #  ##      #  
+##          #    #        #  #      #   
+          #  #   ##  # #     #          
+##         ##         #   ###           
+###         ##  ####### #   # #   # #   
+#              #   #        #  ##   # # 
+###        ##    ##  ### ## #       # # 
+       #  # #      #           ##   #   
+  #      ## #       # ###  # # #        
+#  #  #   #### #        ###         # ##
+##    #   ##    # #     # # # ##  #    #
+ #         #     ##    ##   # ####    # 
+  #    ## ##    ##      # #  #    #    #
+#   #  # ##     # ##        ######     #
+ ## # ####      # ##          ## #      
+    # #  #     #                 #      
+  #   #  #        #          #  ###     
+         #     #  #                     
+ #      ###  #     #   # #  ## #       #
+ ## #        # # ##    # #    # #       
+      #    #  #  ###     #  # #  #  #   
+              #  #   #    #      # # #  
+         # #       #  #  #       ###   #
+#          ##    #        #      #  ## #
+##  ####   ##         ##      #  ## ##  
+   ### ### #          ### #     # ## ## 
+      ## #              ###   # #    #  
+      #  #                      ##   ## 
+             ######             ##   #  
+                    #            ##  # #
+# #       # #### ### ## #         #     
+             #       #  #             ##
+ #   #    ## #     #   #  #       ##    
+     # ##### ##         #    #####   ###
+### # # #    ####       ####     #   # #
+   ##   #               # #  ### # #   #
+ #  ##       #              #           
+  #  #                 # #  ####        
+ # # ##  #                 #            
 
-#            ###                       #
-#         #   #   #                     
-      #            #             # # ###
-      ##  ###  ##### #    #      #  #   
-#     #   ###      ##    #         #####
-      ####   #    # #   #   #           
-      # ##  #     #     #    #          
-       #         ## ## # # #    #       
-      ## ##        ##  ### # # #   #    
-       # ##       #####   #        ## # 
-       # ## #    #  #   ##            # 
-   # # # ## #    ###    #     #   # ##  
-   ####   #### #       ##          #    
-  #  #   ###           ##      #        
-  ##  #  #  #              # ##   ##   #
-# ####       # # ##   #  ###  # # #  # #
- #  #  #              #####     # # #   
-##               ##   #       #  #    ##
-###        #     # #####         ###    
-  #   ## # # #     ### #     # ##  #    
-   #    #     # # ##        ##  #   ### 
-  #           ##### #       #  ##    #  
-         #  # #     #       #### ### #  
-    ##  #####     #          ###    #   
-    #      ###       #       # #    # # 
-## #  #     #     #             ##### ##
- # # #     ###   #  # ##        # # ##  
-## #        #   #   # #   ###     ####  
-##  #            ###    # ##      ##    
-#### #          #   #    #    ## # #    
-##               ###### #  #### ##      
-                #   # ##  #     ##      
-##      ## #        # # # # ####        
-# ###   ##  #  ## # # ## ### #      #  #
-     ###          #     #  #      # ##  
-# #  #            # # #####      #      
-##   ## # ##    #      ##         #     
-# # # ##  ##  # # # ##   ##            #
-##     ### #  #  ## ##    #            #
-##       #   ########                 # 
+###    #                  # # #         
+        #        ##      ##         #  #
+                #           ##          
+             #   ##   #   #  #          
+# #        #    #          ##           
+  #        ###  ########    #  #   # #  
+           # #          ##  #  #    #   
+##         ##     ### #    #       ##   
+  #      ## ##    ###    #### ###    #  
+         #             ## #   ###    # #
+  #          #            # ## #      # 
+ ##             # #       #   #  #   #  
+ ##    # #  #     #    ##   #   ###   # 
+ #     ##  #    #  #   ### #      #   ##
+# #  #     #   ##  #        #    ##    #
+##  # #        ## ##             ##     
+ ##   #  ##      ###          ##        
+     #  ###                     ###     
+                  ##        ### ##      
+###     ###     ## #         ###        
+###      ## ##  ##       ## # # #       
+             ###   #    ###  # #### #   
+          #      # ##    ##     ## #    
+#         ###     #      ##     ## # # #
+ #   ##               ##        #    # #
+## #   #              # ##      #       
+   #     # ##         #   #     # ##  # 
+    #    #              # #     # #     
+      ###     ####       #          ### 
+              ####                  ##  
+            #       ##          # #   # 
+#           ###   ## ###         ##     
+##        #        # #  ##        ##   #
+#     # #  # #         ###    #####  #  
+  # ## ##  #           ##  #  ####  ## #
+ ## # #   # ## #       ## ###    #  ##  
+       #     # #        # # ### # #   ##
+  #  #                  ## ##   #       
+ ###                       ####         
+ #  ###                   ##   #        
 
-                                        
-#            ###                        
-      ##  #    ##  ##             # ####
-#    ###  # #   ##                      
-     #       #  #    #   #         #####
-     ##      #    # #   ##          ####
-      #  #        # ## ###  #           
-          #      ## #### #    #         
-      ## ##      #     # # ##      ##   
-       #          #   #   #        ###  
-       #         #     ###            # 
-   # # #        ####               ###  
-  ##    #    #    #      #         ##   
-  #      #   #         ##     #   ##    
-#     #  # ##          ### ####  ###  ##
-#    ##               #    ####   # # ##
-    ##          #    ## #  #    # ## #  
-                 ####    #      #      #
-  #       # #    #     #      ## # #    
-  ##   ## # #    #     #    #####  # #  
-  ##   ##    ## #    #      ##   #  ### 
-              # # # #      #      ##    
-        ##  # # # #         #    ### #  
-    ##  ##                        # #   
-#  ##    #   #               # # ## # # 
-## # #               ##        ## #   ##
-   #       # #   # #  ##   #    #       
-   #       ###  #   # #  ## #        #  
-    #           ######      #    #     #
-   ##           #      ###    ## # #   #
-#               ###   # #######         
-                 ##     # #      #      
-####    ###    ###  #   #   #####      #
-# #####  ##      #    #      #     ### #
-# #  ####         #        ##      ### #
-#   #            # #  #   #      ###    
-  ###    ###   #    #                   
-  #         #   # # ### ###             
-  #   ## # ##            ##           # 
-         ## #       ##                # 
+###  ###                                
+##               #       ## #           
+                #        #####          
+                ##           #          
+ #         # #  #   #  #   ###          
+ #        ## #  #########   ##      #   
+ #        #  #          #  ##        #  
+ #                # ##  #    ## #  ###  
+##       ## ##    # ## ###  ### #    ## 
+         ## ##     #    #            #  
+ ##                       #  #       ## 
+   #             #       #  # ## ##  ## 
+       #          ##   #  ##    # #  ###
+      ### ###  #####   # # ##   #  #  # 
+  #  ###           ##   #          #  # 
+   #  #   #    #    #           ###    #
+###   ### #     ## #           #        
+        # #      #                #     
+ #               ###        #     #     
+# #     # ##    #  #       #     #      
+# #     # ####   #      # ###           
+ #       ####### # ##   #    ##   ##    
+          # ###    ##      #       #    
+#         ##      ##    ###    #       #
+ ##   #    #          ##  #    ##   #  #
+##  # #              ## ##     ##     ##
+  ###   # #             # #    ## ##    
+       # ##    ##         #       # # # 
+       ##     #  #       #         ## # 
+       #     ##  #                 ##   
+            #   ######            ## #  
+##         ###    ##   ##               
+ #         #  #   ## #   #     #   #   #
+     ## #####         #   #   #      #  
+# # #   #### ##       #    ####    #    
+### # # #  ###            #       ###  #
+ ### ##     ##                 ##    ## 
+ ###                    ##       #      
+ # #  #                  #   ###        
+    ###                   #    #        
 
-             ##                         
-              ###                    ###
-#    # #   # #   #                   ###
-#    # #   #     #  #                   
-#   #  #    ##  #       ##         #    
-     ##          #  # ##  #        #   #
-     ##           #       #          ## 
-      ### #      ## #    # ###          
-      #####      # #   # # #       # #  
-       #         ##   #   ##       # #  
-       ##       #  #   ###            # 
-  ### ###       #  #     #         # #  
-  ###   #         ##    #            #  
- ###    ###  #         #  # # #  #     #
-##   ##   # #         #  ###   # #  ### 
-#   # #              ##  #    ##    #   
-#   ###          #######  ## # #  ####  
-                #########       #  ##   
-  ##     #      ## #    #        ## #   
- #     ##   #   ##    #     #    # # ## 
-  ##   ###   ## #          #   ###   ## 
-       # #    # #  #       # #        # 
-        ##   #     #             #      
-   ###    #  #                  #   #   
-####    ##                    ##  #   # 
-## #        #        ###      ##  ## ## 
-#  #       # #      #  #  ##   ###    ##
-   ##      # #  #     ##  # #           
-    #       #  ## ######  ## #  # #   # 
-#  ##          #    ####      ### #    #
-                # #        ###### #     
-  #      #     #   #    # #     #      #
-     #  # #            # #  #####   # ##
-          #      ##        #   #   # #  
-  #    ###       ##        ##        #  
-# # # #####       ##       #      ##   #
- ## #     ##    ### # ##  #       #     
- ##     ##  #      ###  # #             
-        ##  ##     #  # # #             
-        ### #                           
+# # #  #                 ###            
+# #   #                  #  ##          
+                #        #   #          
+               ###            #         
+          ##   #    #  ##  #  #         
+###       ## ## ####### #               
+###       ###           ## #  #    # #  
+ ##      #####      ###    #  #         
+##       ## ##    #  ### #  # #       # 
+# #      ## ##     ##  ##   # #     #  #
+  #                      #   ##     #   
+  #               #      #  ####### #   
+      ###  #       #     #   #  # ###  #
+     #  #  #    ##     # # ##    ####   
+     #  ###    # #  #   #       #  #  ##
+#  #    ##      # # #           ###    #
+###   # # ##    ###             # #     
+# #     #          #                    
+ #        ##    ## #             ##     
+# #       #     #  #      #             
+# #     #      # # ##    #####    #     
+ #             ##  ##    ##  #    ##    
+#              #        # #   #   ##    
+##        #  #    ###  #####   ##      #
+  #  #    ##         ##   #   #         
+    #  #             ## # #   #    #  ##
+###### ## #            ## #    ## ## ## 
+   #   #  #    ##         #      ## #   
+      ## #   ##  #                #     
+       ##    ###   ##                   
+           #  # #   #             ##    
+##         # #       ## #         ###   
+ #       #        ### ####              
+##   # ##     #      ##   ### ##    #   
+# # # #       #           #####   ##   #
+    # # #                  #####  ######
+     ###   # #           #      ########
+#    ##                 ##              
+ # #  #                 ###   ###       
+#  ##                          #        
 
-         #   ##                       # 
-#           #  ##                    #  
-#           # ## #                   #  
-##  ## ##  # #  ##                    # 
-#   #  #    #   ##   # ###             #
-    #  #         #     ## #         # ##
-                  #  #   ## #         # 
-          #      #      ## ##       ### 
-          #     #  #    ##              
-                ## #  #    #         ## 
-   #            #  #   ###           ## 
-  # ###  #       # ##  # #          ### 
-     #            ##    ##          # # 
-     # ## ##           ## #     #   #  #
-   #####  ##         ##### # # #    ### 
-#   #  #          ##    ##  #  #  #   # 
-    # #         #        ##    ## #  #  
-   ###                  ##      #       
-  #     #      #   #    #       ##      
- #     #     #    #                #  # 
-  #   #  #   ## #          #    ### #  #
-       #  #   #             #    #   ## 
-    #   ###  ##                         
- # ##     #                    ###      
-#        #            #       # ### # # 
-   ##       #        ###          ## #  
-## #       # #          # ##  #####  ## 
-   ##      # #####      ##  #  #      # 
-     #      # #### #    # ##### #      #
-   ##          #  #    #  #       ##   #
-#  #           ##  #####   ###         #
-         #              ###           ##
-          #       #     ####### #   ####
-       #  #      ##       ##   ##    #  
- # #  #                   ###     ##  # 
-# #  ##    #    #         ###     ##    
-     #     #     #    ## ###      ##    
- ###    #   ##   #      # ##            
-       #    ##     # # #                
-        # ### #                         
+# # ##                   ####          #
+   #                    ## ###          
+               ###          ###         
+               # #      #    ##         
+ #        ###       # ###               
+# #      #   ##########   #             
+   #          #  ##     ###             
+                    #    # ## ##       #
+        #     #            ## ##        
+# #      ## ##     ### # #  # ##     # #
+  ##               #     #      ##  ##  
+       #                ### #   # # ##  
+      ###        ##      # #         #  
+     #     #    ###      ## #   #    ###
+#   #  #  #    #  ##    #       #   # ##
+  #        #   #  #            ## ##  # 
+  ##    # #     # #             # #     
+# #    #           #              #     
+# #      ###    ## ##                   
+# #      ###   #   #     ## #    ##     
+# #            # #          ##    ##    
+##            ##  ###   #    ##  #      
+              ### #    #      ## ###   #
+##        ##       ######  #  ##       #
+ #        ##       #          #       # 
+#      #####         #  # ##  #   ######
+###  # ###            ### ##   ##    ## 
+ # # #    #   ###        #      #   ##  
+      #  #   #                   ###    
+      ###   #   #  ##             ##    
+                   ##             # #   
+##        # #         # ##        # #   
+  #     #          ##   ####        #   
+  #  ####          #### #     ##   #   #
+   ## # #                         #     
+   ##                          ##       
+#   #                   ### ######      
+#   #                             ######
+####  #                 # #   ###       
+#   ##                  #  #  ###       
 
-         ##   #                         
-            #   #                    ###
-#          ## #  #                   ## 
- #  #####  # ##   #     #             # 
- # ##  #    #     #   ## #           #  
-#               ###    #  ##         ## 
-                 ##    #    #       #   
-                 ##        ##        ## 
-                #      ### ##       #   
-               ### ##     #          ## 
-   ###          #  #  ## ##            #
-   ####          #  #  #  #         #  #
-       ####       ###     #        ## ##
-       #####              #        ##  #
-   #     ###          #    ## ###  ## # 
-       #              #    ##  # # ## ##
-      #                   #    ##       
-   ###                  # #             
-  ###                   ##      ##      
- ##    ##    # #                   #    
-      ###    ###                #####  #
-       #  #                     ###  ## 
-   ##   # ## ##                  #      
-   ##   # #                    #  #     
-  #                  ###            ##  
-#####       #        ###      #         
-           # # ##     # # ##  ##########
-# ###      #     ##    ##            ## 
-     #      #          ## # ####      ##
-   ##             #  # ####   #       ##
-#  ##          ##  #####   ##           
-                   ####       #         
-         ##      ##     #   ### #   #  #
-                 ##           #### #   #
- ##  ###         #       #       ####   
- ## ###                          #  #   
-   ####    #    ##     ##         ##    
-  #        # #    #     #  #            
-  #    ###    #                         
-        ####  #                         
+##   #                        ##       #
+   ##           #       ##    #         
+               # #      ## #            
+           #   # #      #   # #         
+ #        ####      # # ##              
+ ##       #######   # #   #             
+             ##         #               
+                        ##  # ##        
+#        #   #     # #  #       #     ##
+ ###     #   #     ##   # ### #     ### 
+ ###               #       # #  ## #    
+      ###         #     #  #    #  #  # 
+      ###       # #         #    #      
+#    #  #       #       ####        #   
+#         ##   #   #     #      #  ##   
+ ##      ###   ## #            ## ## ## 
+  ##             ###           ## #     
+  #     #  #    #  ##            #      
+# ##    ## #    #  ##            ##    #
+# ##     # #   # # ##      ###   ###   #
+# #       #    #    #    # ## #    #   #
+##                ##        #  ###     #
+              # ###              ##    #
+ #        ##   #  #######    #  # #   ##
+ #      #   #      #    #### ##    ##   
+  #   ##   #          # # ##  #    ##   
+  # #  #   #   #      ###  #   ###      
+##  ## #  #   ##       ####    ## ##### 
+     ## ##   ## #                #      
+      ###          ##               #   
+       #   #       ###           ## #   
+ #                   # ##           ##  
+# #   # ##         #  #   #         #   
+  # ### ##         # # ## #        #    
+  #   # #           ##        # #       
+                         #   #          
+#   ##                   #   ##  ###### 
+  # ##                  # ##      ##### 
+  ##                     #    # ## #### 
+      #                 #   ### #       
 
-        #    # #                      # 
-          # #  #                     # #
-#    ###   #  ## #                      
-#########  #  #  ##    ##             ##
-#####  ##   ##    ##  ## ##          # #
-                #  #   #  ##        ### 
-                   #      # #       #  #
-                # #    #  #  #      ##  
-               #   #    ##  #       #   
-    #          # #### #              ## 
-   #  #        #   # #######         # #
-#  #  ####       #  ##### ##       ### #
-#   ##     #      ###    ###          ##
-       #           #      #    #  #    #
-       #   #              # #####     # 
-          #               # ##   #### ##
-    ###                  ##    ##       
-  #  #                  # #    # #      
- #   #                  ##              
- ##   # #    # #                   ##   
-      #  #   # #                #   ### 
-      #   ###  #                    ### 
-   ##  ## ##                            
-  # #     ##          #                 
-                     # #                
-####        #           #     # ###    #
-           #    ##   #  ##    #######   
-#  ##      #    ##    #   # #    ###    
-# #  #           ##       ## ###        
-#  # #             # #    #   ##      # 
-   ##             #      ### #         #
-                ##         #  ##        
-                 #  ##          ##      
-#     #         #             #         
-#####  #         ##            #    #   
- #              ##      #        #  #   
- #    #     #    #     ##         ##    
-  # ##### # #    #     ##               
-       #   ####                         
-       #   # ###                        
+#   ##                  ##              
+#   #           #       ###   ##        
+               # #     #  #  #          
+          ##  #           #             
+ ##                     ##              
+ ##       #    #        #               
+           #           ##               
+             ##        ###     #       #
+###                #   ## # # #       ##
+   #              ##     ##### ###  ### 
+ # #   ##         ###    #   # #####  # 
+  #   # #        ###       #    #       
+     #   #              #   #           
+      # ##     ###      ####       ##   
+#          #   # #      ##     ####    #
+ ###     # #   ##                 #  #  
+   #     # #   #    #          #  ##    
+        ###     #                       
+#       ## ##  ###   #      #   #  #   #
+        ## #   #  #  #    ## #   # #  # 
+  ##      #     #   #     #   ##   #  # 
+ #             ## ##       ### ###    # 
+ #             ##    ###       #  #     
+           #   ##   ##### # ###   #   ##
+###    #  # #     ##       # ###  # ##  
+ ###  ###  ##         #      ## # ###   
+  # #  ## ##  ##      #    #  #  #      
+ # ##  # ##  #  #     #  ##    #  ####  
+    #    #   ##         ##      ###     
+     #   #         # #           ###    
+      ###          # ##             #   
+ #     ##          # # #            ##  
+  ##  # ##           #             ###  
+  #   #            # # # #              
+   #  # ##          ### ##              
+     #                       # # #####  
+   ###                  ##  ###  #    ##
+ ##  #                  # #  ####       
+  ####                  ##### # ##    # 
+###                             ##  ####
 
-           # # ##                     # 
-      ##   ### #                      ##
-  ##    # ###### ##                     
-           #  #### #  ####            # 
-        #   ##     #  #  ###        #   
- ###               ## ###           #   
-                 ###     ## #      #    
-                  ##    # # ##     ###  
-               #    #  ###          # # 
-              ##      #    #        ### 
-#  #### #        #         #           #
-   #  ###                   #       ##  
-    ##            #   ###          ###  
-#     #           ###       ## ##       
-                         ## #  ##    ## 
-     ##                   # #    ### ###
-    ###                   #   ##   #    
-                        # #    #        
- #   ##                 ##              
- ##  ###                           ##   
-     ##  ### # ##                     # 
-     ## #   # #                     # # 
-   ### #                             #  
-    #    ###          #                 
-#          #          ##         #      
-###                   ####    #         
-    #      ##   ##     ###   ##     #  #
- # ##                     # #       #   
-# #  #          ###      ## ## ## #     
-#### #           # #           #        
-   ##            ##      # ###         #
-                ###        ## ###       
-                 #            # #       
-# ##            # #            ##       
-# ##              #                     
-   #            #      ##         # #   
- ##   #    #     ##      #        ##    
-     #  #              ##               
-     #    #    #                        
-       ##  #   #                        
+   ###                  # #    ##    ## 
+    ##          #      #  #   #         
+               ##       # ##  #         
+                        # #             
+ ##       ##            ##              
+ ##                                     
+              #                         
+ #                    #               ##
+###               ##   #    # #         
+   #                               ##   
+   #   ##           #    #   #    ### # 
+  #   # ##       #  #       #  ## #     
+     ##  #              #   #           
+        ###    # #     #  ##    ####    
+###     ##    #  #      #       ### #   
+####       ## ##               #        
+   #       #   #                  ##    
+            #    #                ##    
+       #   ##  # #         ##     #    #
+        #  ##  #    ##    #######  ## # 
+  #      ##     # # #     #    # #   ###
+ #                 ####    ###   ##     
+#             #    #    #      #  #   ##
+  #        #   ### ##   #  ##    ##  ###
+#  #  ### # #      ##      #      # ####
+#     #     ##                  # # ##  
+    ##       ###     ###  #  ## ##   #  
+  # ## #   ###         ####    #   ##   
+   ###   #   ##         ###     #       
+     ### #           ##         #  #    
+      #  #        ## #            # ##  
+  #                  #                  
+ ###  # ##           #  #          # #  
+  #  ##                # #          #   
+     ###            ######        ###   
+   # ##              # #    ##  ####### 
+  ## ##                 ##  #    # #### 
+ #    #                #              ##
+    ##                  # ### #       # 
+# #                        #   ###   ## 
 
-      # # ## # ##                     ##
-       #         #                    ##
-       #  #      ##    ##             ##
-         ##      # #  ####              
-  #         #####  #      #          #  
-  #                 #####          ##   
-  #              #        # ##     # #  
-                 #  #  #  # ##     # #  
-              ##   #   ######         # 
-    ##        ###      ## #         # # 
-   #### #                  ##          #
-   #    #              #           # ## 
-    ##            #    #    ##     # #  
-     #            ##   ### ######     # 
-     ##            #     ## # ##  # ##  
-    # #                   #  ##  ### # #
-    # #                   #   ###  ## # 
-    #                   # #   ##        
- ##  # #                ##              
- ## #  #  #                             
-    #   ########                   ##   
-        ########                      # 
-   #   #####                         #  
-   ###    ##          ##                
-#          #         #                  
-##         ##            #   ##        #
-    #                 #   #  ##         
-######            #       # #  #   #    
-#    #          ###      ## #####       
-#    #             #     #     ##      #
-## ##              #      ## #  #       
-                #         ##  # #       
-                             ##  #      
-  ##              #            ##       
-    #                                   
-   #              #     #         #     
-  #              #       #        ##    
-     ##                 #               
-      ####                              
-          ###  #                        
+   # #                   ###  #  #   ###
+   # #         ##      ## #   #         
+               ##      ## ##            
+                       ## ##            
+ ##                     ##              
+ ##                                     
+###                                     
+ ##                                    #
+###                                    #
+ # #               #         #    # ##  
+  ##   ###                       ## ##  
+     ##  #                  ##   ##     
+     ##         #           #  #   #    
+ #     #  #     #      ### #    #  #    
+#  #    #  # ##                #        
+#  #      #######               #       
+ # #       # ####                 ##    
+            #                    #      
+             #            #   ## ## #   
+        ##  #  # # ###    #  ########   
+         ###          #   #    # # #####
+ #                #  #     ## #  ##  #  
+##             ##      #     #  #  # #  
+ #     #   #   ##          ##    ## #   
+##    ##    ##  # ###      ##     #     
+#   # #    ##       ###        ## #     
+   ##      #          ##  #   # ###  #  
+               #           #  ## #  #   
+   #   #  #  ##       #   #    ##  ##   
+       # ##         ###  #       # ##   
+     ####            #             ##   
+ ###   ###           ##            # #  
+ # # ###              # #           #   
+ ####   #           #    #        #  #  
+       #            ##   #              
+  ##                ##      ##  #     # 
+  ##   #              ###   ##  ##      
+  ##  #                #  # ##      #  #
+##   #                    ###  ##       
+                            # #  #      
+***** grep *****
+Usage: \demos\grep.mnh pattern [options] [filePattern1,[filePattern2,...]]
+if no file pattern is given, * is assumed
+Options: -i  case insensitive matching (by converting input to lowercase)
+         -n# show # additional lines before and after
+         -l  only list files
+         -r  recurse subdirectories
 ***** hailstone *****
 See http://rosettacode.org/wiki/Hailstone_sequence
 Series starting @27 has 112 elements
@@ -1553,8 +1458,11 @@ A.Age | A.Name | B.Character | B.Nemesis
 28    | Alan   | Alan        | Ghosts
 28    | Alan   | Alan        | Zombies
       |        | Me          | Things
+***** heart *****
+png hash: 9B4CB332
 ***** helloWorld *****
 Hello world
+***** helloWorldHttp *****
 ***** hereDoc *****
   This is a simple text...
        with a \ which would have to be escaped otherwise.
@@ -1655,10 +1563,6 @@ See http://rosettacode.org/wiki/Huffman_coding
 1255    1  11   44    94   141   163   164   146   123    97   76  56  42  30  22  15  11   7 5 3 2 1 1
 1575  1  12  48   108   164   199   201   186   157   128   99   77  56  42  30  22  15  11  7 5 3 2 1 1
 1958 1 12  52  120   192   235   248   230   201   164   131  100  77  56  42  30  22  15  11 7 5 3 2 1 1
-***** josephus *****
-Prisoners: 41
-Step size: 3
-Survivors: [30]
 ***** jaro *****
 The Jaro distance of 'MARTHA'
                  and 'MARHTA' is 0.944444444444445
@@ -1666,12 +1570,18 @@ The Jaro distance of 'DIXON'
                  and 'DICKSONX' is 0.766666666666667
 The Jaro distance of 'JELLYFISH'
                  and 'SMELLYFISH' is 0.896296296296296
+***** josephus *****
+Prisoners: 41
+Step size: 3
+Survivors: [30]
 ***** json *****
 ['Reiten','Golfen','Lesen']
 2000000.0
 {"Herausgeber":"Xema","Nummer":"1234-5678-9012-3456","Deckung":2000000.0}
 ***** kaprekar *****
 The Kaprekar numbers up to 10000 are [1,9,45,55,99,297,703,999,2223,2728,4879,4950,5050,5292,7272,7777,9999]
+***** kochCurve *****
+png hash: 8F633531
 ***** lastSundays *****
 25.01.2015
 22.02.2015
@@ -1725,45 +1635,45 @@ Ludic Numbers
 The magic number is 4641
 ***** maze *****
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-|       |           |               |       |                                   |
-+---+   +   +---+   +   +---+---+   +   +   +   +---+---+---+---+---+---+---+---+
-|       |   |       |       |       |   |   |   |   |           |       |       |
-+---+---+   +---+---+---+---+   +---+   +   +   +---+   +---+   +   +---+   +   +
-|       |                   |   |   |   |   |           |       |       |   |   |
-+   +   +---+---+---+---+   +   +---+   +---+---+---+---+   +---+---+---+   +---+
-|   |       |       |   |       |       |               |   |           |   |   |
-+   +---+---+   +   +   +---+---+---+---+   +---+---+   +   +   +---+   +   +   +
-|   |       |   |       |       |       |           |   |   |       |   |       |
-+   +   +   +---+---+---+   +   +---+---+---+---+   +   +   +---+   +---+---+---+
-|   |   |                   |   |               |   |   |   |   |       |       |
-+   +---+---+---+---+---+---+   +   +---+---+   +   +   +   +---+---+---+   +   +
-|   |       |       |           |   |       |   |   |       |               |   |
-+   +   +---+---+---+---+---+---+   +   +   +   +   +---+---+   +---+---+---+   +
-|   |   |   |           |   |   |       |   |       |           |   |       |   |
-+---+   +   +   +---+   +   +   +---+---+---+---+---+   +---+---+   +---+   +   +
-|       |   |   |       |       |           |           |       |   |       |   |
-+   +---+---+   +   +---+---+---+---+---+---+---+---+---+   +---+   +   +---+   +
-|   |           |           |   |               |   |       |   |       |   |   |
-+   +   +---+---+---+---+   +   +   +---+---+   +   +   +---+   +---+---+---+   +
-|   |   |       |       |   |       |       |   |   |   |   |               |   |
-+   +---+   +   +   +   +---+---+---+   +   +   +---+   +---+---+---+---+   +   +
-|           |   |   |       |       |   |       |       |       |   |       |   |
-+---+---+---+   +   +---+   +---+---+   +---+---+---+---+   +   +---+   +---+   +
-|       |   |   |       |           |   |               |   |           |       |
-+---+   +---+   +---+   +---+---+   +   +   +---+---+   +   +---+---+---+   +---+
-|       |       |       |       |       |           |   |       |       |       |
-+   +---+   +---+   +---+   +   +---+---+---+---+---+   +---+   +   +   +---+   +
-|       |       |           |   |   |               |       |       |   |       |
-+---+   +---+   +---+---+---+   +   +   +---+---+   +---+---+---+---+   +   +---+
-|       |   |   |           |       |           |       |           |   |       |
-+   +---+---+   +   +---+---+---+---+---+---+   +---+   +   +---+---+   +---+---+
-|       |       |   |   |       |           |   |   |   |   |       |   |       |
-+---+   +   +---+   +---+   +   +   +---+---+   +---+   +---+   +   +   +   +   +
-|       |   |       |       |       |       |       |   |       |   |   |   |   |
-+   +---+   +   +---+   +---+---+---+   +---+---+   +   +   +---+   +   +   +   +
-|   |       |   |       |           |   |       |   |       |       |       |   |
-+   +   +---+   +   +---+---+---+   +   +---+   +   +---+---+   +---+---+---+   +
-|       |       |           |       |           |           |                   |
+|           |       |       |           |               |           |       |   |
++---+---+---+   +   +   +   +   +---+   +   +---+---+---+   +---+   +   +   +   +
+|           |   |   |   |   |   |       |               |   |       |   |       |
++   +---+   +   +   +   +   +---+---+---+---+---+---+   +   +   +---+   +---+---+
+|   |   |       |       |               |   |   |       |   |       |       |   |
++   +   +---+---+---+---+---+---+---+   +---+   +   +---+   +---+   +---+   +   +
+|   |   |       |   |           |       |       |   |       |   |   |   |   |   |
++   +---+   +   +---+   +---+   +   +---+   +---+   +   +---+   +   +---+   +---+
+|   |       |       |   |       |   |   |       |   |       |   |       |   |   |
++   +   +---+---+   +   +---+---+   +---+---+   +   +---+   +   +---+   +   +   +
+|       |   |       |   |       |   |   |       |           |   |       |   |   |
++---+---+---+   +---+---+   +   +   +   +---+---+---+---+---+---+   +---+   +   +
+|   |           |           |   |   |       |   |       |   |   |       |       |
++   +   +---+---+   +---+---+   +   +---+   +---+   +   +---+   +---+   +---+---+
+|   |   |       |   |           |       |   |       |       |   |   |   |       |
++   +   +---+---+   +   +---+---+---+   +   +   +---+---+   +   +---+   +   +   +
+|   |               |           |   |       |   |       |   |   |       |   |   |
++---+---+---+---+---+---+---+   +---+---+---+---+   +   +---+   +---+---+---+   +
+|   |               |       |       |           |   |   |       |           |   |
++---+---+---+---+---+   +---+---+   +   +---+   +   +   +   +---+---+---+   +   +
+|   |   |               |       |   |   |       |   |       |       |       |   |
++   +---+   +---+---+---+   +---+   +   +   +---+---+---+---+   +   +---+---+---+
+|   |       |   |       |   |       |   |   |       |       |   |   |           |
++---+---+---+---+---+---+   +   +---+---+   +   +   +   +   +   +   +   +---+   +
+|               |       |       |   |       |   |       |   |   |   |   |       |
++   +---+---+   +   +   +---+---+---+   +---+---+---+---+   +---+   +   +---+---+
+|   |       |   |   |   |   |           |       |       |           |           |
++   +   +---+   +---+   +---+---+---+---+   +---+---+---+---+---+---+---+---+   +
+|   |       |       |       |           |       |       |               |   |   |
++   +---+   +---+   +---+   +   +---+   +---+   +   +   +---+---+---+   +   +   +
+|   |       |       |       |       |   |       |   |   |       |   |       |   |
++---+---+---+   +---+   +---+---+   +   +---+---+   +   +   +---+   +---+---+   +
+|       |       |   |   |   |       |       |       |       |   |       |       |
++---+   +   +---+---+   +   +   +---+---+   +---+---+---+---+---+---+---+   +---+
+|   |   |           |   |   |   |       |       |       |       |       |       |
++   +   +---+---+   +   +---+   +---+   +---+   +   +   +   +   +   +   +---+   +
+|   |   |           |   |   |           |   |       |       |       |       |   |
++   +   +   +---+---+   +---+---+---+---+---+---+---+---+---+---+---+---+   +   +
+|       |               |                           |                   |       |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 ***** memoization *****
 The memoized function retuns 196418 and has been called     27 times
@@ -1771,11 +1681,11 @@ The normal function retuns   196418 and has been called 392835 times
 ***** monteCarloPi *****
 See http://rosettacode.org/wiki/Monte_Carlo_methods
 n=     10 pi approximated as 3.2      
-n=    100 pi approximated as 3.16     
-n=   1000 pi approximated as 3.144    
-n=  10000 pi approximated as 3.1796   
-n= 100000 pi approximated as 3.14668  
-n=1000000 pi approximated as 3.139552 
+n=    100 pi approximated as 3.28     
+n=   1000 pi approximated as 3.092    
+n=  10000 pi approximated as 3.1516   
+n= 100000 pi approximated as 3.14416  
+n=1000000 pi approximated as 3.138824 
 ***** numDiff *****
 The approximate taylor expansion of {$t^(1+sin($t))} around 1 is 
   {($x-1)^0*1.0+($x-1)^1*1.841552734375+($x-1)^2*1.31510925292969+($x-1)^3*0.26312255859375+($x-1)^4*-0.395398457845052+($x-1)^5*-0.309002653757731}
@@ -1849,6 +1759,46 @@ true xor false = true
 ***** pernicousNumbers *****
 [3,5,6,7,9,10,11,12,13,14,17,18,19,20,21,22,24,25,26,28,31,33,34,35,36]
 [888888877,888888878,888888880,888888883,888888885,888888886]
+***** piPlots *****
+0.118731496730782 0.047935169935885
+0.081268503269218 0.014601836602552
+0.061588639587924 0.005078027078742
+0.049522471523187 0.001903423904139
+0.041386619385904 0.000749022749738
+0.035536457537173 0.000305022305737
+0.031130209129494 0.000127422128137
+0.027693320282271 0.000054292643243
+0.024938258665097 0.000023501281183
+0.022680788953950 0.000010304983156
+0.020797471915615 0.000004567462276
+0.019202528084385 0.000002042953088
+0.017834508952652 0.000000920949005
+0.016648249668038 0.000000417981657
+0.015609814848091 0.000000190835113
+0.014693215454939 0.000000087586684
+0.013878213116490 0.000000040387402
+0.013148813910537 0.000000018701245
+0.012492211730488 0.000000008692250
+0.011898032171951 0.000000004053935
+0.011357781781538 0.000000001896579
+0.010864440440685 0.000000000889813
+0.010412155303996 0.000000000418561
+0.009996007961310 0.000000000197361
+0.009611835175945 0.000000000093267
+0.009256089352357 0.000000000044166
+0.008925728829461 0.000000000020955
+0.008618130819661 0.000000000009959
+0.008331021722711 0.000000000004742
+0.008062420900239 0.000000000002261
+0.007810594972776 0.000000000001080
+0.007574020411839 0.000000000000516
+0.007351352722490 0.000000000000247
+0.007141400900699 0.000000000000119
+0.006943106141555 0.000000000000057
+0.006755523995432 0.000000000000028
+0.006577809337902 0.000000000000013
+0.006409203649111 0.000000000000006
+0.006249024198990 0.000000000000003
 ***** pythagoras *****
 In perimeter <=     10 there are      0 pythagorean triplets,     0 of which are primitive
 In perimeter <=    100 there are     17 pythagorean triplets,     7 of which are primitive
@@ -1872,6 +1822,23 @@ The 8-queens puzzle has 92 solutions
 ***** quine2 *****
 //*Quine via inspection
 main->print(inspect['source']);
+***** randomWords *****
+ttendr
+ssshomolcki
+ifimantra
+hesho
+afifasyl
+bumister
+icllysi
+ciocotwane
+tocutrb
+sitexemisit
+clereb
+afspri
+inc
+rnblete
+restreran
+ongisedis
 ***** range_extract_expand *****
 Canonical form (as given by rosettacode.org):
   The list              [0,1,2,4,6,7,8,11,12,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,35,36,37,38,39]
@@ -1886,23 +1853,6 @@ MNH form:
   The list              [0,1,2,4,6,7,8,11,12,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,35,36,37,38,39]
   can be represented as [0..2,4,6..8,11..12,14..25,27..33,35..39]
   and be re-expanded to [0,1,2,4,6,7,8,11,12,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,35,36,37,38,39]
-***** randomWords *****
-gisurd
-bentiondul
-mbauragn
-ticaters
-tacric
-pponde
-onent
-ssca
-tocheran
-ctuispad
-pso
-derag
-veli
-raliallusm
-lebop
-mlenadom
 ***** rationalPi *****
 4/1                                   = 4.0
 8/3                                   = 2.6666
@@ -1926,6 +1876,109 @@ mlenadom
 516197940314096/166966608033225       = 3.0916
 21831981985010836/6845630929362225    = 3.1891
 911392701638017048/294362129962575675 = 3.0961
+***** rk4 *****
+time approximation                      error error with step size control
+ 0.0   1                0.00000000000000E+000 0.00000000000000E+000
+ 0.1   1.0050062486963  1.30370114703737E-009 1.60773616642018E-011
+ 0.2   1.02009999478463 5.21536680508916E-009 6.43267661359914E-011
+ 0.3   1.04550623825543 1.17445710934305E-008 1.44905198951051E-010
+ 0.4   1.08159997906715 2.09328454570112E-008 2.58409516007418E-010
+ 0.5   1.12890621711398 3.28860159104494E-008 4.06285893816971E-010
+ 0.6   1.18809995219263 4.78073673981783E-008 5.91252380388596E-010
+ 0.7   1.26000618397649 6.60235062177605E-008 8.17622858306777E-010
+ 0.8   1.34559991200274 8.79972568146314E-008 1.09146647275793E-009
+ 0.9   1.44600613567466 1.14325342304156E-007 1.42057521301808E-009
+ 1.0   1.56249985427811 1.45721892108597E-007 1.81424431033861E-009
+ 1.1   1.69650606700879 1.82991214847661E-007 2.01493755014326E-009
+ 1.2   1.84959977300557 2.26994426366645E-007 2.24797314096747E-009
+ 1.3   2.02350597138547 2.78614532334132E-007 2.51698617503848E-009
+ 1.4   2.22009966127622 3.38723776582839E-007 2.82555667752149E-009
+ 1.5   2.44140584184411 4.08155888642625E-007 3.17709725194959E-009
+ 1.6   2.68959951231537 4.87684627348273E-007 3.57476448442640E-009
+ 1.7   2.96700567199104 5.78008963358911E-007 4.02140054589495E-009
+ 1.8   3.27609932025552 6.79744480702738E-007 4.34633706802856E-009
+ 1.9   3.61950545657988 7.93420126488087E-007 4.70016514597660E-009
+ 2.0   3.9999990805208  9.19479203442819E-007 5.08361042150796E-009
+ 2.1   4.42050519171651 1.05828348839765E-006 5.49726042464727E-009
+ 2.2   4.88409878988055 1.21011945619642E-006 5.94157700817277E-009
+ 2.3   5.39400487479427 1.37520573506578E-006 6.41689901215159E-009
+ 2.4   5.95359844629887 1.55370113752440E-006 6.82944101271232E-009
+ 2.5   6.56640450428731 1.74571269706547E-006 7.26429227881908E-009
+ 2.6   7.23609804869656 1.95130344859962E-006 7.72150254846338E-009
+ 2.7   7.96650407950041 2.17049960227200E-006 8.20107803889414E-009
+ 2.8   8.76159759670292 2.40329709022546E-006 8.70300809197033E-009
+ 2.9   9.62550360033265 2.64966736374106E-006 9.22725540419833E-009
+ 3.0  10.5624970904376  2.90956246118412E-006 9.72422142808682E-009
+ 3.1  11.5770030670807  3.18291935030857E-006 1.02400221635435E-008
+ 3.2  12.6735965303364  3.46966364617174E-006 1.07746309652157E-008
+ 3.3  13.8570024802873  3.76971270021897E-006 1.13280052005393E-008
+ 3.4  15.1320959170218  4.08297817955372E-006 1.19000969078797E-008
+ 3.5  16.5039018406318  4.40936819146032E-006 1.24648060761956E-008
+ 3.6  17.9775952512111  4.74878897804842E-006 1.30467618930652E-008
+ 3.7  19.5585011488537  5.10114630358771E-006 1.36459412658496E-008
+ 3.8  21.2520945336535  5.46634657894174E-006 1.42623370891215E-008
+ 3.9  23.0640004057024  5.84429762540140E-006 1.48959067303167E-008
+ 4.0  24.9999937650906  6.23490938878035E-006 1.55323149897413E-008
+ 4.1  27.0659996119056  6.63809441547869E-006 1.61852398150586E-008
+ 4.2  29.2680929462319  7.05376817222714E-006 1.68546705481276E-008
+ 4.3  31.6124987681507  7.48184931609330E-006 1.75406000835210E-008
+ 4.4  34.1055920777402  7.92225981172123E-006 1.82430142103840E-008
+ 4.5  36.753897875075   8.37492502370196E-006 1.89618987178619E-008
+ 4.6  39.5640911602262  8.83977374854794E-006 1.96890681536388E-008
+ 4.7  42.5429969332618  9.31673817916590E-006 2.04324095420816E-008
+ 4.8  45.6975901942461  9.80575384801341E-006 2.11919015669082E-008
+ 4.9  49.0349959432404  1.03067595844664E-005 2.19675797552554E-008
+ 5.0  52.5624891803026  1.08196973442887E-005 2.27594014745591E-008
+ 5.1  56.2874949054878  1.13445121598943E-005 2.35625137179341E-008
+ 5.2  60.2175881188479  1.18811520124495E-005 2.43816273837183E-008
+ 5.3  64.3604938204322  1.24295676897646E-005 2.52167637881939E-008
+ 5.4  68.7240870102873  1.29897126015521E-005 2.60678376662327E-008
+ 5.5  73.316392688457   1.35615427865332E-005 2.69349129666807E-008
+ 5.6  78.1455858549831  1.41450167205903E-005 2.78150338317573E-008
+ 5.7  83.2199915099047  1.47400950964993E-005 2.87110424324055E-008
+ 5.8  88.5480846532589  1.53467407955077E-005 2.96229245577706E-008
+ 5.9  94.1384902850809  1.59649188304911E-005 3.05507086295620E-008
+ 6.0  99.9999834054036  1.65945960901581E-005 3.14944372803438E-008
+ 6.1 106.141489014258   1.72357412822066E-005 3.24540110341331E-008
+ 6.2 112.572082111675   1.78883249049022E-005 3.34276251123811E-008
+ 6.3 119.300987697681   1.85523190197046E-005 3.44170558719270E-008
+ 6.4 126.337580772302   1.92276972796890E-005 3.54223743670445E-008
+ 6.5 133.691386335565   1.99144346879621E-005 3.64435095434601E-008
+ 6.6 141.372079387492   2.06125077681918E-005 3.74805040337378E-008
+ 6.7 149.389484928105   2.13218941382820E-005 3.85321357043722E-008
+ 6.8 157.753577957427   2.20425727661677E-005 3.95995982671593E-008
+ 6.9 166.474483475476   2.27745236998089E-005 4.06828633003897E-008
+ 7.0 175.562476482271   2.35177280387688E-005 4.17820160691917E-008
+ 7.1 185.027981977831   2.42721678205271E-005 4.28969713084371E-008
+ 7.2 194.881574962173   2.50378262194317E-005 4.40269332102616E-008
+ 7.3 205.133980435312   2.58146871772169E-005 4.51727260042389E-008
+ 7.4 215.796073397263   2.66027354030030E-005 4.63342928469501E-008
+ 7.5 226.878878848042   2.74019565438266E-005 4.75117190035235E-008
+ 7.6 238.393571787662   2.82123368151588E-005 4.87048623654118E-008
+ 7.7 250.351477216135   2.90338633135434E-005 4.99132113418455E-008
+ 7.8 262.764070133475   2.98665237323803E-005 5.11374764755601E-008
+ 7.9 275.642975539692   3.07103063619252E-005 5.23775725014275E-008
+ 8.0 288.999968434798   3.15652000040245E-005 5.36334141543193E-008
+ 8.1 302.846973818804   3.24311941426458E-005 5.49049445908167E-008
+ 8.2 317.196066691719   3.33082788870342E-005 5.61925048714329E-008
+ 8.3 332.059472053553   3.41964444601217E-005 5.74953560317226E-008
+ 8.4 347.449564904316   3.50956818238046E-005 5.88140665058745E-008
+ 8.5 363.378870244015   3.60059824515702E-005 6.01485226070508E-008
+ 8.6 379.86006307266    3.69273380442792E-005 6.14987243352516E-008
+ 8.7 396.905968390257   3.78597405870096E-005 6.28646716904768E-008
+ 8.8 414.529561196814   3.88031828038038E-005 6.42462509858888E-008
+ 8.9 432.74396649234    3.97576576460779E-005 6.56435759083251E-008
+ 9.0 451.562459276839   4.07231581220913E-005 6.70567033012048E-008
+ 9.1 470.998464550319   4.16996778085377E-005 6.84854057908524E-008
+ 9.2 491.065557312786   4.26872104526410E-005 6.99300244377810E-008
+ 9.3 511.777462564246   4.36857503700594E-005 7.13901613380585E-008
+ 9.4 533.148055304704   4.46952917627641E-005 7.28663280824549E-008
+ 9.5 555.191360534167   4.57158292874738E-005 7.43577857065247E-008
+ 9.6 577.921553252638   4.67473578282807E-005 7.58651594878756E-008
+ 9.7 601.352958460123   4.77898724966508E-005 7.73883357396699E-008
+ 9.8 625.500051156627   4.88433684040501E-005 7.89273144619074E-008
+ 9.9 650.377456342154   4.99078411166920E-005 8.04817545940750E-008
+10.0 675.999949016708   5.09832866555371E-005 8.20522245703614E-008
 ***** roman *****
 MMXV       (roman)  =       2015 (arabic)
 MCMXC      (roman)  =       1990 (arabic)
@@ -1935,17 +1988,29 @@ MDCLXVI    (roman)  =       1666 (arabic)
       1989 (arabic) = MCMLXXXIX  (roman)
         23 (arabic) = XXIII      (roman)
       1666 (arabic) = MDCLXVI    (roman)
+***** root *****
+See http://rosettacode.org/wiki/Roots_of_a_function
+Analyzing $x^3-3*$x^2+2*$x
+Root found at   7.14145152166649E-153
+Root found at   1.0
+Root found at   2.0
+***** rotatingCube *****
+png hash: C8606BFC
 ***** selfRefSeq *****
 0099, 2029, 102219, 10212219, 10313219, 1031122319, 1041222319, 103132131419, 105112331419, 10511223141519, 10612213142519, 1051321314151619, 1071122314251619, 106132131415161719, 108112231415261719, 10713213141516171819, 10911223141516271819, 10813213141516171829, 10812223141516172819, 10714213141516172819, 10812213241516271819
 ***** semiprime *****
 [4,6,9,10,14,15,21,22,25,26,33,34,35,38,39,46,51,55,57,58,62,65,69,74,77,82,85,86,87,91,93,94,95,98]
 ***** semordnilap *****
 Found 166 Semordnilaps
-Examples: bag , gab
-          paz , zap
-          part, trap
-          dr  , rd
-          nip , pin
+Examples: abut, tuba
+          brag, garb
+          and , dna
+          gel , leg
+          bird, drib
+***** sequenceOfNonSquares *****
+OEIS: A000037 starts with 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, ...
+  The series contains no squares
+  The series contains all non-square integers
 ***** setConsolidation *****
 Consolidation of [{A,B} {C,D}]
               is [{C,D},{A,B}]
@@ -1955,10 +2020,6 @@ Consolidation of [{A,B} {C,D} {D,B}]
               is [{A,B,C,D}]
 Consolidation of [{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]
               is [{f,g,h,i,k},{a,b,c,d}]
-***** sequenceOfNonSquares *****
-OEIS: A000037 starts with 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, ...
-  The series contains no squares
-  The series contains all non-square integers
 ***** shannonEntropy *****
 1.84643934467102
 ***** sierpinskiCarpet *****
@@ -2043,6 +2104,8 @@ OEIS: A000037 starts with 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 []  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  []
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+***** sierpinskiCurve *****
+png hash: 5012C611
 ***** sierpinskiTriangle *****
                                A                                                               
                               A A                                                             
@@ -3082,18 +3145,22 @@ A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
 221 : 512932792
 222 : 539453717
 ***** sudoku *****
-Generated a riddle with difficulty: 56
-         |       2 |         
- 8       |    4  7 |       2 
-       2 |         | 1     4 
+Generated a riddle with difficulty: 54
+         |         |       4 
+         | 5       | 9  2    
+ 3       | 1       |    7    
 ---------+---------+---------
-         | 6       |    9  1 
-         |    3    | 6     5 
- 6       | 8       | 4       
+ 1     9 | 7       |    4  6 
+ 6       | 2  1    |    8    
+    2    |    9  4 |    3    
 ---------+---------+---------
- 3  1    |         |       6 
-         |    5    |       8 
-    2    |    7    |       3 
+       7 |    2    |    6  8 
+         |    7  3 |         
+    8    |         |         
+***** travellingSalesmanProblem *****
+Path length after construction is 33.42
+Path length after polishing is    32.045
+png hash: B73C1124
 ***** treePrint *****
 \
 +--1
@@ -3109,6 +3176,8 @@ Generated a riddle with difficulty: 56
    +--a
    +--b
    \--c
+***** turtleGfx *****
+png hash: A15D00B8
 ***** ulam *****
           XX                                        XX          XX                      XX          XX                  
                    XX                XX          XX    XX          XX                                        XX         
@@ -3152,10 +3221,10 @@ Generated a riddle with difficulty: 56
  XX          XX    XX          XX                XX                                  XX                                 
 ***** unbiasedRandom *****
 I biased unbiased
-3 33.23% 51.15%
-4 25.85% 49.74%
-5 20.55% 50.04%
-6 16.41% 49.73%
+3 33.68% 50.67%
+4 24.70% 49.87%
+5 19.76% 49.72%
+6 16.60% 50.35%
 ***** vampire *****
 1260 is a vampire. It's fangs are: [60,21]
 1395 is a vampire. It's fangs are: [93,15]
@@ -3188,22 +3257,24 @@ A
 B
 C
 ***** weasel *****
-  20 HDSGMFMUDIR QT UTGD C MDAVEW (123)
-  40 ODVGMNMUDIU KT KHGD C SDAQEN ( 72)
-  60 ODVGINKU IT KY KIMD B SEAQEQ ( 32)
-  80 MDVGINKU IU KS KIMD B UEAQEQ ( 23)
- 100 MEUHINKS IU KS KIMD B UEAQEO ( 16)
- 120 MEUHINKS IU KS KIJE B UEAQEK ( 12)
- 140 METHINKS IU KS KIKE B WEATEK (  7)
- 160 METHINKS IU KS KIKE B WEATEK (  7)
- 180 METHINKS IU KS KIKE B WEASEL (  5)
- 200 METHINKS IU IS KIKE B WEASEL (  3)
- 220 METHINKS IU IS KIKE B WEASEL (  3)
- 240 METHINKS IU IS LIKE B WEASEL (  2)
- 260 METHINKS IU IS LIKE B WEASEL (  2)
- 280 METHINKS IT IS LIKE B WEASEL (  1)
- 300 METHINKS IT IS LIKE B WEASEL (  1)
- 305 METHINKS IT IS LIKE A WEASEL
+  20 HDUIGQIQ EPJSL QGKJ A EDFUGM (125)
+  40 LDUFGQIR JQBGP QJKE A WDFUGM ( 73)
+  60 LDTFHPIR IQBIS IGKE A WDATCM ( 57)
+  80 LDTFHPIR IR IS LJKE A WEATCM ( 17)
+ 100 LDTFHPIS IU IS LJKE A WEATFM ( 14)
+ 120 LDTHHMIS IU IS LIKE A WEATEK (  9)
+ 140 LETHHMKS IU IS LIKE A WEATEK (  6)
+ 160 LETHHMKS IU IS LIKE A WEASEK (  5)
+ 180 LETHIMKS IU IS LIKE A WEASEK (  4)
+ 200 LETHIMKS IT IS LIKE A WEASEK (  3)
+ 220 LETHIMKS IT IS LIKE A WEASEK (  3)
+ 240 LETHIMKS IT IS LIKE A WEASEK (  3)
+ 260 METHIMKS IT IS LIKE A WEASEK (  2)
+ 280 METHIMKS IT IS LIKE A WEASEK (  2)
+ 300 METHINKS IT IS LIKE A WEASEK (  1)
+ 320 METHINKS IT IS LIKE A WEASEK (  1)
+ 340 METHINKS IT IS LIKE A WEASEK (  1)
+ 346 METHINKS IT IS LIKE A WEASEL
 ***** wordCount *****
 Words total:    794914
 Distinct words: 12892
@@ -3260,26 +3331,26 @@ by      2644 0.33
 israel  2575 0.32
 king    2548 0.32
 ***** y *****
-0 1 1
-1 1 1
-2 2 2
-3 6 3
-4 24 5
-5 120 8
-6 720 13
-7 5040 21
-8 40320 34
-9 362880 55
-10 3628800 89
-11 39916800 144
-12 479001600 233
-13 6227020800 377
-14 87178291200 610
-15 1307674368000 987
-16 20922789888000 1597
-17 355687428096000 2584
-18 6402373705728000 4181
-19 121645100408832000 6765
+ 0                   1     1
+ 1                   1     1
+ 2                   2     2
+ 3                   6     3
+ 4                  24     5
+ 5                 120     8
+ 6                 720    13
+ 7                5040    21
+ 8               40320    34
+ 9              362880    55
+10             3628800    89
+11            39916800   144
+12           479001600   233
+13          6227020800   377
+14         87178291200   610
+15       1307674368000   987
+16      20922789888000  1597
+17     355687428096000  2584
+18    6402373705728000  4181
+19  121645100408832000  6765
 20 2432902008176640000 10946
 ***** zeckendorf *****
  decimal   binary   Zeckendorf
@@ -3305,178 +3376,6 @@ king    2548 0.32
 10 13.88        1.3881
 11 15.44        1.4037
 12 16.74        1.3949
-***** continuedFractions *****
-1+1/(1+1/(1+1/(1+1/(1+1/(1+...)))))    = 1.61803398874989
-1+1/(2+1/(2+1/(2+1/(2+1/(2+...)))))    = 1.4142135623731
-2+1/(1+1/(2+2/(3+3/(4+4/(5+...)))))    = 2.71828182845905
-3+1/(6+9/(6+25/(6+49/(6+81/(6+...))))) = 3.14159241097198
-***** piPlots *****
-0.118731496730782 0.047935169935885
-0.081268503269218 0.014601836602552
-0.061588639587924 0.005078027078742
-0.049522471523187 0.001903423904139
-0.041386619385904 0.000749022749738
-0.035536457537173 0.000305022305737
-0.031130209129494 0.000127422128137
-0.027693320282271 0.000054292643243
-0.024938258665097 0.000023501281183
-0.022680788953950 0.000010304983156
-0.020797471915615 0.000004567462276
-0.019202528084385 0.000002042953088
-0.017834508952652 0.000000920949005
-0.016648249668038 0.000000417981657
-0.015609814848091 0.000000190835113
-0.014693215454939 0.000000087586684
-0.013878213116490 0.000000040387402
-0.013148813910537 0.000000018701245
-0.012492211730488 0.000000008692250
-0.011898032171951 0.000000004053935
-0.011357781781538 0.000000001896579
-0.010864440440685 0.000000000889813
-0.010412155303996 0.000000000418561
-0.009996007961310 0.000000000197361
-0.009611835175945 0.000000000093267
-0.009256089352357 0.000000000044166
-0.008925728829461 0.000000000020955
-0.008618130819661 0.000000000009959
-0.008331021722711 0.000000000004742
-0.008062420900239 0.000000000002261
-0.007810594972776 0.000000000001080
-0.007574020411839 0.000000000000516
-0.007351352722490 0.000000000000247
-0.007141400900699 0.000000000000119
-0.006943106141555 0.000000000000057
-0.006755523995432 0.000000000000028
-0.006577809337902 0.000000000000013
-0.006409203649111 0.000000000000006
-0.006249024198990 0.000000000000003
-***** rk4 *****
-time approximation                      error error with step size control
- 0.0   1                0.00000000000000E+000 0.00000000000000E+000
- 0.1   1.0050062486963  1.30370114703737E-009 1.60773616642018E-011
- 0.2   1.02009999478463 5.21536680508916E-009 6.43267661359914E-011
- 0.3   1.04550623825543 1.17445710934305E-008 1.44905198951051E-010
- 0.4   1.08159997906715 2.09328454570112E-008 2.58409516007418E-010
- 0.5   1.12890621711398 3.28860159104494E-008 4.06285893816971E-010
- 0.6   1.18809995219263 4.78073673981783E-008 5.91252380388596E-010
- 0.7   1.26000618397649 6.60235062177605E-008 8.17622858306777E-010
- 0.8   1.34559991200274 8.79972568146314E-008 1.09146647275793E-009
- 0.9   1.44600613567466 1.14325342304156E-007 1.42057521301808E-009
- 1.0   1.56249985427811 1.45721892108597E-007 1.81424431033861E-009
- 1.1   1.69650606700879 1.82991214847661E-007 2.01493755014326E-009
- 1.2   1.84959977300557 2.26994426366645E-007 2.24797314096747E-009
- 1.3   2.02350597138547 2.78614532334132E-007 2.51698617503848E-009
- 1.4   2.22009966127622 3.38723776582839E-007 2.82555667752149E-009
- 1.5   2.44140584184411 4.08155888642625E-007 3.17709725194959E-009
- 1.6   2.68959951231537 4.87684627348273E-007 3.57476448442640E-009
- 1.7   2.96700567199104 5.78008963358911E-007 4.02140054589495E-009
- 1.8   3.27609932025552 6.79744480702738E-007 4.34633706802856E-009
- 1.9   3.61950545657988 7.93420126488087E-007 4.70016514597660E-009
- 2.0   3.9999990805208  9.19479203442819E-007 5.08361042150796E-009
- 2.1   4.42050519171651 1.05828348839765E-006 5.49726042464727E-009
- 2.2   4.88409878988055 1.21011945619642E-006 5.94157700817277E-009
- 2.3   5.39400487479427 1.37520573506578E-006 6.41689901215159E-009
- 2.4   5.95359844629887 1.55370113752440E-006 6.82944101271232E-009
- 2.5   6.56640450428731 1.74571269706547E-006 7.26429227881908E-009
- 2.6   7.23609804869656 1.95130344859962E-006 7.72150254846338E-009
- 2.7   7.96650407950041 2.17049960227200E-006 8.20107803889414E-009
- 2.8   8.76159759670292 2.40329709022546E-006 8.70300809197033E-009
- 2.9   9.62550360033265 2.64966736374106E-006 9.22725540419833E-009
- 3.0  10.5624970904376  2.90956246118412E-006 9.72422142808682E-009
- 3.1  11.5770030670807  3.18291935030857E-006 1.02400221635435E-008
- 3.2  12.6735965303364  3.46966364617174E-006 1.07746309652157E-008
- 3.3  13.8570024802873  3.76971270021897E-006 1.13280052005393E-008
- 3.4  15.1320959170218  4.08297817955372E-006 1.19000969078797E-008
- 3.5  16.5039018406318  4.40936819146032E-006 1.24648060761956E-008
- 3.6  17.9775952512111  4.74878897804842E-006 1.30467618930652E-008
- 3.7  19.5585011488537  5.10114630358771E-006 1.36459412658496E-008
- 3.8  21.2520945336535  5.46634657894174E-006 1.42623370891215E-008
- 3.9  23.0640004057024  5.84429762540140E-006 1.48959067303167E-008
- 4.0  24.9999937650906  6.23490938878035E-006 1.55323149897413E-008
- 4.1  27.0659996119056  6.63809441547869E-006 1.61852398150586E-008
- 4.2  29.2680929462319  7.05376817222714E-006 1.68546705481276E-008
- 4.3  31.6124987681507  7.48184931609330E-006 1.75406000835210E-008
- 4.4  34.1055920777402  7.92225981172123E-006 1.82430142103840E-008
- 4.5  36.753897875075   8.37492502370196E-006 1.89618987178619E-008
- 4.6  39.5640911602262  8.83977374854794E-006 1.96890681536388E-008
- 4.7  42.5429969332618  9.31673817916590E-006 2.04324095420816E-008
- 4.8  45.6975901942461  9.80575384801341E-006 2.11919015669082E-008
- 4.9  49.0349959432404  1.03067595844664E-005 2.19675797552554E-008
- 5.0  52.5624891803026  1.08196973442887E-005 2.27594014745591E-008
- 5.1  56.2874949054878  1.13445121598943E-005 2.35625137179341E-008
- 5.2  60.2175881188479  1.18811520124495E-005 2.43816273837183E-008
- 5.3  64.3604938204322  1.24295676897646E-005 2.52167637881939E-008
- 5.4  68.7240870102873  1.29897126015521E-005 2.60678376662327E-008
- 5.5  73.316392688457   1.35615427865332E-005 2.69349129666807E-008
- 5.6  78.1455858549831  1.41450167205903E-005 2.78150338317573E-008
- 5.7  83.2199915099047  1.47400950964993E-005 2.87110424324055E-008
- 5.8  88.5480846532589  1.53467407955077E-005 2.96229245577706E-008
- 5.9  94.1384902850809  1.59649188304911E-005 3.05507086295620E-008
- 6.0  99.9999834054036  1.65945960901581E-005 3.14944372803438E-008
- 6.1 106.141489014258   1.72357412822066E-005 3.24540110341331E-008
- 6.2 112.572082111675   1.78883249049022E-005 3.34276251123811E-008
- 6.3 119.300987697681   1.85523190197046E-005 3.44170558719270E-008
- 6.4 126.337580772302   1.92276972796890E-005 3.54223743670445E-008
- 6.5 133.691386335565   1.99144346879621E-005 3.64435095434601E-008
- 6.6 141.372079387492   2.06125077681918E-005 3.74805040337378E-008
- 6.7 149.389484928105   2.13218941382820E-005 3.85321357043722E-008
- 6.8 157.753577957427   2.20425727661677E-005 3.95995982671593E-008
- 6.9 166.474483475476   2.27745236998089E-005 4.06828633003897E-008
- 7.0 175.562476482271   2.35177280387688E-005 4.17820160691917E-008
- 7.1 185.027981977831   2.42721678205271E-005 4.28969713084371E-008
- 7.2 194.881574962173   2.50378262194317E-005 4.40269332102616E-008
- 7.3 205.133980435312   2.58146871772169E-005 4.51727260042389E-008
- 7.4 215.796073397263   2.66027354030030E-005 4.63342928469501E-008
- 7.5 226.878878848042   2.74019565438266E-005 4.75117190035235E-008
- 7.6 238.393571787662   2.82123368151588E-005 4.87048623654118E-008
- 7.7 250.351477216135   2.90338633135434E-005 4.99132113418455E-008
- 7.8 262.764070133475   2.98665237323803E-005 5.11374764755601E-008
- 7.9 275.642975539692   3.07103063619252E-005 5.23775725014275E-008
- 8.0 288.999968434798   3.15652000040245E-005 5.36334141543193E-008
- 8.1 302.846973818804   3.24311941426458E-005 5.49049445908167E-008
- 8.2 317.196066691719   3.33082788870342E-005 5.61925048714329E-008
- 8.3 332.059472053553   3.41964444601217E-005 5.74953560317226E-008
- 8.4 347.449564904316   3.50956818238046E-005 5.88140665058745E-008
- 8.5 363.378870244015   3.60059824515702E-005 6.01485226070508E-008
- 8.6 379.86006307266    3.69273380442792E-005 6.14987243352516E-008
- 8.7 396.905968390257   3.78597405870096E-005 6.28646716904768E-008
- 8.8 414.529561196814   3.88031828038038E-005 6.42462509858888E-008
- 8.9 432.74396649234    3.97576576460779E-005 6.56435759083251E-008
- 9.0 451.562459276839   4.07231581220913E-005 6.70567033012048E-008
- 9.1 470.998464550319   4.16996778085377E-005 6.84854057908524E-008
- 9.2 491.065557312786   4.26872104526410E-005 6.99300244377810E-008
- 9.3 511.777462564246   4.36857503700594E-005 7.13901613380585E-008
- 9.4 533.148055304704   4.46952917627641E-005 7.28663280824549E-008
- 9.5 555.191360534167   4.57158292874738E-005 7.43577857065247E-008
- 9.6 577.921553252638   4.67473578282807E-005 7.58651594878756E-008
- 9.7 601.352958460123   4.77898724966508E-005 7.73883357396699E-008
- 9.8 625.500051156627   4.88433684040501E-005 7.89273144619074E-008
- 9.9 650.377456342154   4.99078411166920E-005 8.04817545940750E-008
-10.0 675.999949016708   5.09832866555371E-005 8.20522245703614E-008
-***** root *****
-See http://rosettacode.org/wiki/Roots_of_a_function
-Analyzing $x^3-3*$x^2+2*$x
-Root found at   1.81662201177176E-182
-Root found at   1.0
-Root found at   2.0
-***** barnsleyFern *****
-Hash of regTest/../demos/barnsleyFern.png is 580419D0
-***** fractalPlant *****
-Hash of regTest/../demos/fractalPlant.png is D2104128
-***** kochCurve *****
-Hash of regTest/../demos/kochCurve.png is 5B38376D
-***** rotatingCube *****
-Hash of regTest/../demos/rotatingCube.png is C8606BFC
-***** sierpinskiCurve *****
-Hash of regTest/../demos/sierpinskiCurve.png is D0FA89AC
-***** travellingSalesmanProblem *****
-Path length after construction is 33.42
-Path length after polishing is    32.045
-Hash of regTest/../demos/travellingSalesmanProblem.png is 137DAFE9
-***** turtleGfx *****
-Hash of regTest/../demos/turtleGfx.png is 427DABDB
-***** heart *****
-Hash of regTest/../demos/heart.png is 9B4CB332
 ***** examples from file *****
 Examples file has 765 lines
  in> arity({3});

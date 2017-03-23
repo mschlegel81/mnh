@@ -99,7 +99,7 @@ testExe(B:BuildConfig,...)->
   : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuilt(B)
     ? void
     : tprint('Testing ',B[2]) orElse
-      B[2].execPipeless(['-quiet','regTest/regTest.mnh','resources/examples.txt'.expandedFileName]|...)=0
+      B[2].execPipeless(['-quiet','regTest/regTest.mnh']|...)=0
       ? tprint('Test passed')
       : fail('Test failed');
 

@@ -25,9 +25,6 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_literal;
     begin
       if not Assigned(node) then exit;
       for i:=0 to node.ChildNodes.count-1 do begin
-        {$ifdef debugMode}
-        writeln(stdErr,'Reading XML Node: ',node.ChildNodes[i].NodeName);
-        {$endif}
         subTree:=newListLiteral(3)^.appendString(UTF16ToUTF8(node.ChildNodes[i].NodeName))
                                   ^.append(newListLiteral(),false)
                                   ^.append(newListLiteral(),false);
