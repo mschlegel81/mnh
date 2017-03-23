@@ -2,7 +2,7 @@ USE '../demos/inputs/inputs.mnh',
     testLog;
 
 private demosRoot:=myPath.extractFileDirectory&'/../demos/';
-private memoized allDemos:=files(demosRoot&'*.mnh');
+private memoized allDemos:=files(demosRoot&'*.mnh').sort;
 datastore runTimes;
 
 plotters:=demosRoot&[
