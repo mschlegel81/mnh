@@ -3,6 +3,3 @@ USE guiScripts;
 main(file1:string,file2:string)->printf("%s",unifiedDiff(file1,file2,file1.fileLines,file2.fileLines,2));
 //*Shows the diff of two files with customizable extra lines
 main(file1:string,file2:string,extraLines)->printf("%s",unifiedDiff(file1,file2,file1.fileLines,file2.fileLines,toInt(extraLines)));
-
-//*For regression test
-main('test')->printf("%s",unifiedDiff('original','modified',myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=6 ? line&" //comment added" : line),2));

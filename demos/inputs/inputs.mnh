@@ -6,8 +6,16 @@ end;
 
 kjv ->ensureFile(extractFileDirectory(myPath)&"/kjv.txt"     ,'http://www.gutenberg.org/cache/epub/10/pg10.txt');
 dict->ensureFile(extractFileDirectory(myPath)&"/unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');
+editedDict->begin
+  local path:=dict.changeFileExt('2.txt');
+  fileExists(path)
+  ? void
+  : path.writeFileLines(dict.fileLines.each(line,20<index<30 ? void : index=102 ? 'insertion' : line));
+  path;
+end;
 
 main->begin
   kjv;
   dict;
+  editedDict;
 end;
