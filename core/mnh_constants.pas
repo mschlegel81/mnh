@@ -510,23 +510,17 @@ CONST
 TYPE
   T_ruleType=(rt_normal,
               rt_memoized,
-              rt_mutable_public,
-              rt_mutable_private,
-              rt_datastore_public,
-              rt_datastore_private,
+              rt_mutable,
+              rt_datastore,
               rt_synchronized,
               rt_customTypeCheck);
-CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_datastore_public,rt_datastore_private];
-      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_datastore_public,rt_datastore_private,rt_customTypeCheck];
-      C_csProtectedRuleTypes:       set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
-      C_publicRuleTypes:            set of T_ruleType=[rt_mutable_public,rt_datastore_public,rt_customTypeCheck];
+CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
+      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable,rt_datastore,rt_customTypeCheck];
       C_ruleTypeText:array[T_ruleType] of string=(
       '',
       'memoized ',
       'mutable ',
-      'private mutable ',
       'datastore ',
-      'private datastore ',
       'synchronized ',
       'type ');
       C_validModifierCombinations:array[0..12] of record
@@ -536,10 +530,10 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_muta
            (modifiers:[                         tt_modifier_private]; ruleType:rt_normal),
            (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
            (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
-           (modifiers:[tt_modifier_mutable];                          ruleType:rt_mutable_public),
-           (modifiers:[tt_modifier_mutable     ,tt_modifier_private]; ruleType:rt_mutable_private),
-           (modifiers:[tt_modifier_datastore];                        ruleType:rt_datastore_public),
-           (modifiers:[tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore_private),
+           (modifiers:[tt_modifier_mutable];                          ruleType:rt_mutable),
+           (modifiers:[tt_modifier_mutable     ,tt_modifier_private]; ruleType:rt_mutable),
+           (modifiers:[tt_modifier_datastore];                        ruleType:rt_datastore),
+           (modifiers:[tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore),
            (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
            (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
            (modifiers:[tt_modifier_synchronized];                     ruleType:rt_synchronized),

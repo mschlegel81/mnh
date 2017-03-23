@@ -1613,7 +1613,6 @@ A.Age | A.Name | B.Character | B.Nemesis
 png hash: 88B30F70
 ***** helloWorld *****
 Hello world
-***** helloWorldHttp *****
 ***** hereDoc *****
   This is a simple text...
        with a \ which would have to be escaped otherwise.

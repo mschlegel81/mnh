@@ -13,10 +13,20 @@ USES sysutils,math,
 TYPE
   P_abstractPackage=^T_abstractPackage;
   T_abstractPackage=object(T_objectWithPath)
-    protected
+    private
       codeProvider:P_codeProvider;
+      readyForCodeState:T_hashInt;
+    protected
+      PROCEDURE logReady;
     public
+      CONSTRUCTOR create(CONST provider:P_codeProvider);
+      DESTRUCTOR destroy; virtual;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual; abstract;
+      PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
+      FUNCTION codeChanged:boolean;
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION getPath:ansistring; virtual;
+      PROPERTY getCodeProvider:P_codeProvider read codeProvider;
   end;
 
   T_tokenArray=object
@@ -47,6 +57,30 @@ TYPE
   end;
 
 IMPLEMENTATION
+CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);
+  begin
+    codeProvider:=provider;
+    readyForCodeState:=0;
+  end;
+
+DESTRUCTOR T_abstractPackage.destroy;
+begin
+  if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+  codeProvider:=nil;
+end;
+
+PROCEDURE T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider);
+  begin
+    if (codeProvider<>nil) and (codeProvider^.disposeOnPackageDestruction) then dispose(codeProvider,destroy);
+    codeProvider:=newProvider;
+    readyForCodeState:=0;
+  end;
+
+FUNCTION T_abstractPackage.codeChanged: boolean;  begin result:=readyForCodeState<>codeProvider^.stateHash; end;
+PROCEDURE T_abstractPackage.logReady;             begin         readyForCodeState:=codeProvider^.stateHash; end;
+FUNCTION T_abstractPackage.getId: T_idString;     begin result:=codeProvider^.id;                           end;
+FUNCTION T_abstractPackage.getPath: ansistring;   begin result:=codeProvider^.getPath;                      end;
+
 CONSTRUCTOR T_tokenArray.create;
   begin
     setLength(token,100);

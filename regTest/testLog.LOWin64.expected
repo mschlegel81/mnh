@@ -1456,7 +1456,6 @@ A.Age | A.Name | B.Character | B.Nemesis
       |        | Me          | Things
 ***** helloWorld *****
 Hello world
-***** helloWorldHttp *****
 ***** hereDoc *****
   This is a simple text...
        with a \ which would have to be escaped otherwise.

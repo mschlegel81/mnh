@@ -24,6 +24,7 @@ private testParameters(scriptFileName:string)->[];
 private skipFile((demosRoot&'3body.mnh'              ))->true;
 private skipFile((demosRoot&'htmlFunctionPlotter.mnh'))->true;
 private skipFile((demosRoot&'simpleServer.mnh'       ))->true;
+private skipFile((demosRoot&'helloWorldHttp.mnh'     ))->true;
 private skipFile((demosRoot&'timer.mnh'              ))->true;
 private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
 private skipFile(scriptFileName:string)->false;

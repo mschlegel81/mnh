@@ -288,7 +288,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         end;
         {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
-        newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
+        newLiteral:=P_memoizedRule(first^.data)^.doPutCache(parameterListLiteral);
         firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
@@ -404,7 +404,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     VAR newValue:P_literal;
     begin
       newValue:=first^.next^.data;
-      P_rule(first^.data)^.setMutableValue(newValue,false);
+      P_mutableRule(first^.data)^.setMutableValue(newValue,false);
       first:=context.recycler.disposeToken(first);
     end;
 
@@ -429,7 +429,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
             first^.data:=newValue;
           end;
         end else begin
-          newValue:=P_rule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
+          newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);

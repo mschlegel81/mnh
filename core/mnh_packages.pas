@@ -47,7 +47,6 @@ TYPE
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
-      readyForCodeState:T_hashInt;
       pseudoCallees:T_packageProfilingCalls;
 
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
@@ -60,11 +59,9 @@ TYPE
       FUNCTION getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
-      PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
-      FUNCTION codeChanged:boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
-      DESTRUCTOR destroy;
+      DESTRUCTOR destroy; virtual;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
@@ -72,12 +69,9 @@ TYPE
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       FUNCTION isMain:boolean;
-      FUNCTION getId:T_idString; virtual;
-      FUNCTION getPath:ansistring; virtual;
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
-      FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
     end;
 
@@ -177,7 +171,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
   begin
     with containingPackage^.mainPackage^ do begin
       for i:=0 to length(secondaryPackages)-1 do
-        if secondaryPackages[i]^.codeProvider^.id = id then begin
+        if secondaryPackages[i]^.getCodeProvider^.id = id then begin
           if  (secondaryPackages[i]^.readyForUsecase<>lu_NONE) and
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
@@ -282,7 +276,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             begin
               j:=length(packageUses);
               setLength(packageUses,j+1);
-              packageUses[j].create(codeProvider^.getPath,first^.txt,first^.location,context.adapters);
+              packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
             end;
           end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
             newId:=P_stringLiteral(first^.data)^.value;
@@ -390,12 +384,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
               if (usecase<>lu_forCodeAssistance)
               then begin
                      inlineValue:=subRule^.getInlineValue;
-                     ruleGroup^.setMutableValue(inlineValue,true);
+                     P_mutableRule(ruleGroup)^.setMutableValue(inlineValue,true);
                      inlineValue^.unreference;
                    end
-              else ruleGroup^.setMutableValue(newVoidLiteral,true);
+              else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
               dispose(subRule,destroy);
-            end else ruleGroup^.addOrReplaceSubRule(subRule,context);
+            end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
             first:=nil;
           end else begin
             context.recycler.cascadeDisposeToken(first);
@@ -411,7 +405,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       VAR ruleModifiers:T_modifierSet=[];
           loc:T_tokenLocation;
       begin
-        if (codeProvider^.isPseudoFile) then begin
+        if (getCodeProvider^.isPseudoFile) then begin
           context.adapters^.raiseError('data stores require the package to be saved to a file.',first^.location);
           context.recycler.cascadeDisposeToken(first);
           exit;
@@ -627,7 +621,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     processTokens(fileTokens);
     if context.adapters^.noErrors then begin
       readyForUsecase:=usecase;
-      readyForCodeState:=codeProvider^.stateHash;
+      logReady;
       case usecase of
         lu_forCodeAssistance: resolveRuleIds(context.adapters);
         lu_forCallingMain:    executeMain;
@@ -651,27 +645,15 @@ PROCEDURE disposeRule(VAR rule:P_rule);
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider;
   CONST mainPackage_: P_package);
   begin
+    inherited create(provider);
     mainPackage:=mainPackage_;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
     setLength(packageUses,0);
     setLength(dynamicallyUsed,0);
-    codeProvider:=provider;
     packageRules.create(@disposeRule);
     importedRules.create;
     pseudoCallees:=blankProfilingCalls;
-  end;
-
-PROCEDURE T_package.replaceCodeProvider(CONST newProvider: P_codeProvider);
-  begin
-    if (codeProvider<>nil) and (codeProvider^.disposeOnPackageDestruction) then dispose(codeProvider,destroy);
-    codeProvider:=newProvider;
-    readyForCodeState:=0;
-  end;
-
-FUNCTION T_package.codeChanged:boolean;
-  begin
-    result:=codeProvider^.stateHash<>readyForCodeState;
   end;
 
 PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
@@ -693,8 +675,8 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boole
       i:longint;
   begin
     for rule in packageRules.valueSet do
-      if rule^.getRuleType in [rt_datastore_private,rt_datastore_public]
-      then rule^.writeBack(adapters);
+      if rule^.getRuleType=rt_datastore
+      then P_datastoreRule(rule)^.writeBack(adapters);
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(adapters,recurse);
   end;
 
@@ -708,7 +690,7 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
-      ruleList[i]^.writeBack(adapters);
+      if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(adapters);
       ruleList[i]^.clearCache;
     end;
     setLength(ruleList,0);
@@ -719,9 +701,8 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
 DESTRUCTOR T_package.destroy;
   VAR c:T_profileCategory;
   begin
+    inherited destroy;
     clear(true);
-    if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
-    codeProvider:=nil;
     packageRules.destroy;
     importedRules.destroy;
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
@@ -757,7 +738,13 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
         adapters.raiseWarning('Type rules should begin with an uppercase letter',ruleDeclarationStart);
       if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
         adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
-      new(result,create(ruleId,ruleType,ruleDeclarationStart));
+      case ruleType of
+        rt_memoized     : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
+        rt_mutable      : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers));
+        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers));
+        rt_synchronized : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
+        else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
+      end;
       packageRules.put(ruleId,result);
       if ruleType=rt_customTypeCheck
       then adapters.raiseNote('Creating new rules: '+ruleId+' and is'+ruleId,ruleDeclarationStart)
@@ -784,7 +771,7 @@ PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
 FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
   VAR i:longint;
   begin
-    for i:=0 to length(secondaryPackages)-1 do if secondaryPackages[i]^.codeProvider^.id=id then exit(secondaryPackages[i]^.getPath);
+    for i:=0 to length(secondaryPackages)-1 do if secondaryPackages[i]^.getId=id then exit(secondaryPackages[i]^.getPath);
     result:='';
   end;
 
@@ -826,7 +813,7 @@ PROCEDURE T_package.complainAboutUnused(CONST inMainPackage:boolean; VAR adapter
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if not(ruleList[i]^.complainAboutUnused(adapters)) then anyCalled:=true;
-    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused import '+codeProvider^.id+' ('+codeProvider^.getPath+')',packageTokenLocation(@self));
+    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused import '+getId+' ('+getPath+')',packageTokenLocation(@self));
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
         packageUses[i].pack^.complainAboutUnused(false,adapters);
@@ -862,8 +849,6 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=false;
   end;
 
-FUNCTION T_package.getId:T_idString; begin result:=codeProvider^.id; end;
-FUNCTION T_package.getPath: ansistring; begin result:=codeProvider^.getPath; end;
 FUNCTION T_package.isMain: boolean; begin result:=(@self=mainPackage); end;
 {$ifdef fullVersion}
 PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
@@ -879,11 +864,6 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
     setLength(r,0);
   end;
 {$endif}
-
-FUNCTION T_package.getCodeProvider:P_codeProvider;
-  begin
-    result:=codeProvider;
-  end;
 
 FUNCTION T_package.inspect:P_mapLiteral;
   FUNCTION usesList:P_listLiteral;
@@ -903,9 +883,9 @@ FUNCTION T_package.inspect:P_mapLiteral;
     end;
 
   begin
-    result:=newMapLiteral^.put('id'      ,codeProvider^.id)^
+    result:=newMapLiteral^.put('id'      ,getId)^
                           .put('path'    ,getPath)^
-                          .put('source'  ,join(codeProvider^.getLines,C_lineBreakChar))^
+                          .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
                           .put('uses'    ,usesList,false)^
                           .put('declares',rulesList,false);
   end;
@@ -917,8 +897,8 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
       key:string;
   begin
     setLength(result,0);
-    for rule in packageRules.valueSet do
-    for subRule in rule^.getSubrules do begin
+    for rule in packageRules.valueSet do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck]) then
+    for subRule in P_ruleWithSubrules(rule)^.getSubrules do begin
       matchesAll:=true;
       for key in attributeKeys do matchesAll:=matchesAll and subRule^.hasAttribute(key,caseSensitive);
       if matchesAll then begin
@@ -942,7 +922,8 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
         subRule:P_subrule;
     begin
       result:=newListLiteral();
-      for rule in packageRules.valueSet do for subRule in rule^.getSubrules do if subRule^.getType=srt_normal_public then
+      for rule in packageRules.valueSet do if rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck] then
+      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.getType=srt_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
           .put('subrule'   ,subRule^.rereferenced,false)^
@@ -966,7 +947,7 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_localUserRule;
       token.data:=userRule;
-      userRule^.setIdResolved;
+      {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
       exit;
     end;
     if P_package(package)^.importedRules.containsKey(ruleId,userRule) then begin
@@ -974,7 +955,7 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_importedUserRule;
       token.data:=userRule;
-      userRule^.setIdResolved;
+      {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -987,13 +968,13 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       if P_package(package)^.packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
-        userRule^.setIdResolved;
+        {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
         exit;
       end;
       if P_package(package)^.importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
-        userRule^.setIdResolved;
+        {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
         exit;
       end;
     end;
