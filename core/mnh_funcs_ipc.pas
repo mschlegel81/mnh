@@ -40,7 +40,7 @@ FUNCTION isServerRunning(CONST serverId:string):boolean;
   begin
     registry.enterCs;
     if not(Assigned(checkingClient)) then checkingClient:=TSimpleIPCClient.create(nil);
-    checkingClient.ServerID:=serverId;
+    checkingClient.serverId:=serverId;
     result:=checkingClient.ServerRunning;
     registry.leaveCs;
   end;
@@ -63,8 +63,8 @@ FUNCTION newServer(CONST serverId:string=''):TSimpleIPCServer;
   begin
     registry.enterCs;
     result:=TSimpleIPCServer.create(nil);
-    if serverId<>'' then result.ServerID:=serverId
-                    else result.ServerID:=getNewServerId;
+    if serverId<>'' then result.serverId:=serverId
+                    else result.serverId:=getNewServerId;
     result.Global:=true;
     result.StartServer;
     registry.leaveCs;
@@ -85,7 +85,7 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
       serializationOk:boolean=true;
   begin
     client:=TSimpleIPCClient.create(nil);
-    client.ServerID:=receiverServerId;
+    client.serverId:=receiverServerId;
     if not(client.ServerRunning) then begin
       if adapters<>nil then adapters^.raiseError('Cannot send IPC message to unreachable server: '+receiverServerId,location);
       client.free;
@@ -109,7 +109,7 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
         exit;
       end;
       client.Active:=true;
-      client.SendMessage(0,memoryStream);
+      client.sendMessage(0,memoryStream);
     end;
     client.free;
     streamWrapper.destroy;
@@ -157,7 +157,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
          (servingContext<>nil) and
          (servingExpression<>nil) then begin
         //execute:-----------------------------------------------
-        response.senderId:=server.ServerID;
+        response.senderId:=server.serverId;
         if request.statusOk then begin
           response.payload:=servingExpression^.evaluateToLiteral(feedbackLocation,servingContext,request.payload);
           response.statusOk:=servingContext^.adapters^.noErrors;
@@ -273,7 +273,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
     if (params<>nil) and (params^.size=2) and
        (arg0^.literalType=lt_string) then begin
       temporaryReceiver:=newServer();
-      sendMessage(temporaryReceiver.ServerID,str0^.value,true,arg1,tokenLocation,context.adapters);
+      sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.adapters);
       repeat
         sleep(1);
         fetchedResult:=readMessage(temporaryReceiver,response.senderId,response.statusOk,response.payload,tokenLocation,context.adapters);

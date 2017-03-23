@@ -2743,9 +2743,6 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
   VAR reusableLiterals:array of P_literal;
       encodingMethod:byte=0;
-      {$ifdef debugMode}
-      start:double;
-      {$endif}
   PROCEDURE errorOrException(CONST message:string);
     begin
       if adapters<>nil then adapters^.raiseError(message,location)
@@ -2849,8 +2846,6 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
     end;
 
   begin
-    {$ifdef debugMode}start:=now;{$endif}
-
     setLength(reusableLiterals,0);
     encodingMethod:=stream^.readByte;
     case encodingMethod of
@@ -2866,9 +2861,6 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
   VAR reusableMap:specialize G_literalKeyMap<longint>;
-      {$ifdef debugMode}
-      start:double;
-      {$endif}
       previousMapValueDummy:longint;
       mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
 
@@ -2927,7 +2919,6 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     end;
 
   begin
-    {$ifdef debugMode}start:=now;{$endif}
     reusableMap.create();
     stream^.writeByte(255);
     writeLiteral(L);
