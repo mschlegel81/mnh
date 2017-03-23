@@ -3,7 +3,7 @@ INTERFACE
 USES //basic classes
      sysutils,
      //my utilities
-     myGenerics,
+     myGenerics, myStringUtil,
      //MNH:
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
@@ -24,16 +24,23 @@ TYPE
       declarationStart:T_tokenLocation;
       ruleType:T_ruleType;
     public
-      CONSTRUCTOR create(CONST ruleId: T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType);
       DESTRUCTOR destroy; virtual;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
       PROPERTY getRuleType:T_ruleType read ruleType;
+
       FUNCTION hasPublicSubrule:boolean; virtual; abstract;
+
+      FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
       {$ifdef fullVersion}
       PROCEDURE setIdResolved;
       FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
       {$endif}
+      PROCEDURE clearCache; virtual;
+      PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;
+      FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
+      FUNCTION inspect:P_mapLiteral; virtual; abstract;
   end;
 
   P_token=^T_token;
@@ -201,7 +208,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:pointer; VAR recycler:T_t
 
 { T_abstractRule }
 
-CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST ruleTyp: T_ruleType; CONST startAt: T_tokenLocation);
+CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
     {$ifdef fullVersion}
     idResolved:=false;
@@ -214,13 +221,19 @@ CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST ruleTyp: T_rul
 DESTRUCTOR T_abstractRule.destroy;                    begin id:='';                   end;
 FUNCTION T_abstractRule.getId: T_idString;            begin result:=id;               end;
 FUNCTION T_abstractRule.getLocation: T_tokenLocation; begin result:=declarationStart; end;
+
+FUNCTION T_abstractRule.getCmdLineHelpText: T_arrayOfString;
+  begin
+    result:=(C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+'in '+getLocation.package^.getPath);
+  end;
+
 {$ifdef fullVersion}
 PROCEDURE T_abstractRule.setIdResolved;
   begin
     idResolved:=true;
   end;
 
-FUNCTION T_abstractRule.complainAboutUnused(VAR adapters:T_adapters):boolean;
+FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
   CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
   FUNCTION mitigate:string;
     begin
@@ -232,6 +245,9 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters:T_adapters):boolean;
     if result then adapters.raiseWarning('Unused rule '+id+mitigate,lineLocation(declarationStart));
   end;
 {$endif}
+
+PROCEDURE T_abstractRule.clearCache; begin end;
+PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_adapters); begin end;
 
 CONSTRUCTOR T_token.create;
   begin

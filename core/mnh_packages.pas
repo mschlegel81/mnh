@@ -384,12 +384,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
               if (usecase<>lu_forCodeAssistance)
               then begin
                      inlineValue:=subRule^.getInlineValue;
-                     ruleGroup^.setMutableValue(inlineValue,true);
+                     P_mutableRule(ruleGroup)^.setMutableValue(inlineValue,true);
                      inlineValue^.unreference;
                    end
-              else ruleGroup^.setMutableValue(newVoidLiteral,true);
+              else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
               dispose(subRule,destroy);
-            end else ruleGroup^.addOrReplaceSubRule(subRule,context);
+            end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
             first:=nil;
           end else begin
             context.recycler.cascadeDisposeToken(first);
@@ -675,8 +675,8 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boole
       i:longint;
   begin
     for rule in packageRules.valueSet do
-      if rule^.getRuleType in [rt_datastore_private,rt_datastore_public]
-      then rule^.writeBack(adapters);
+      if rule^.getRuleType=rt_datastore
+      then P_datastoreRule(rule)^.writeBack(adapters);
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(adapters,recurse);
   end;
 
@@ -690,7 +690,7 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
-      ruleList[i]^.writeBack(adapters);
+      if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(adapters);
       ruleList[i]^.clearCache;
     end;
     setLength(ruleList,0);
@@ -738,7 +738,13 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
         adapters.raiseWarning('Type rules should begin with an uppercase letter',ruleDeclarationStart);
       if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
         adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
-      new(result,create(ruleId,ruleType,ruleDeclarationStart));
+      case ruleType of
+        rt_memoized     : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
+        rt_mutable      : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers));
+        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers));
+        rt_synchronized : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
+        else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
+      end;
       packageRules.put(ruleId,result);
       if ruleType=rt_customTypeCheck
       then adapters.raiseNote('Creating new rules: '+ruleId+' and is'+ruleId,ruleDeclarationStart)
@@ -891,8 +897,8 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
       key:string;
   begin
     setLength(result,0);
-    for rule in packageRules.valueSet do
-    for subRule in rule^.getSubrules do begin
+    for rule in packageRules.valueSet do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck]) then
+    for subRule in P_ruleWithSubrules(rule)^.getSubrules do begin
       matchesAll:=true;
       for key in attributeKeys do matchesAll:=matchesAll and subRule^.hasAttribute(key,caseSensitive);
       if matchesAll then begin
@@ -916,7 +922,8 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
         subRule:P_subrule;
     begin
       result:=newListLiteral();
-      for rule in packageRules.valueSet do for subRule in rule^.getSubrules do if subRule^.getType=srt_normal_public then
+      for rule in packageRules.valueSet do if rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck] then
+      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.getType=srt_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
           .put('subrule'   ,subRule^.rereferenced,false)^
