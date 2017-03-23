@@ -940,7 +940,7 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_localUserRule;
       token.data:=userRule;
-      userRule^.setIdResolved;
+      {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
       exit;
     end;
     if P_package(package)^.importedRules.containsKey(ruleId,userRule) then begin
@@ -948,7 +948,7 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_importedUserRule;
       token.data:=userRule;
-      userRule^.setIdResolved;
+      {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -961,13 +961,13 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       if P_package(package)^.packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
-        userRule^.setIdResolved;
+        {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
         exit;
       end;
       if P_package(package)^.importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
-        userRule^.setIdResolved;
+        {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
         exit;
       end;
     end;

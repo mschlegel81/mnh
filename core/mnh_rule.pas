@@ -15,24 +15,26 @@ TYPE
 
   T_rule=object(T_abstractRule)
     private
-      idResolved,
-      called,valueChangedAfterDeclaration:boolean;
-      dataStoreMeta:P_datastoreMeta;
-      declarationStart:T_tokenLocation;
-      namedValue:T_namedVariable;
-      ruleType:T_ruleType;
-      cache:P_cache;
-      rule_cs:system.TRTLCriticalSection;
-
-      id:T_idString;
-      subrules:T_subruleArray;
+      {$ifdef fullVersion}                   //Nrm Mem Snc Typ Mut Dat
+      idResolved:boolean;                    // x   x   x   x   x   x
+      {$endif}                               //
+      id:T_idString;                         // x   x   x   x   x   x
+      declarationStart:T_tokenLocation;      // x   x   x   x   x   x
+      ruleType:T_ruleType;                   // x   x   x   x   x   x
+      called,                                //                 x   x
+      valueChangedAfterDeclaration:boolean;  //                 x   x
+      namedValue:T_namedVariable;            //                 x   x
+      dataStoreMeta:P_datastoreMeta;         //                     x
+      cache:P_cache;                         //     x
+      rule_cs:system.TRTLCriticalSection;    //     x   x       x   x
+      subrules:T_subruleArray;               // x   x   x   x
       PROCEDURE readDataStore(CONST adapters:P_adapters);
     public
       FUNCTION getId:T_idString; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION getRuleType:T_ruleType; virtual;
       PROPERTY getSubrules:T_subruleArray read subrules;
-      PROCEDURE setIdResolved;
+
 
       CONSTRUCTOR create(CONST ruleId:T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
@@ -46,6 +48,7 @@ TYPE
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
       {$ifdef fullVersion}
+      PROCEDURE setIdResolved;
       FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
       {$endif}
       FUNCTION getCmdLineHelpText:T_arrayOfString;
@@ -123,15 +126,12 @@ FUNCTION T_rule.getRuleType:T_ruleType;
     result:=ruleType;
   end;
 
-PROCEDURE T_rule.setIdResolved;
-  begin
-    idResolved:=true;
-  end;
-
 CONSTRUCTOR T_rule.create(CONST ruleId: T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
     called:=false;
+    {$ifdef fullVersion}
     idResolved:=false;
+    {$endif}
     valueChangedAfterDeclaration:=false;
     declarationStart:=startAt;
     ruleType:=ruleTyp;
@@ -346,6 +346,11 @@ FUNCTION T_rule.getInlineValue:P_literal;
   end;
 
 {$ifdef fullVersion}
+PROCEDURE T_rule.setIdResolved;
+  begin
+    idResolved:=true;
+  end;
+
 FUNCTION T_rule.complainAboutUnused(VAR adapters:T_adapters):boolean;
   CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
   FUNCTION mitigate:string;
