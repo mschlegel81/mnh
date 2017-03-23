@@ -28,7 +28,7 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
     then fileName:=expandFileName(filenameOrId)
     else id      :=filenameOrId;
     for p in callerPackage^.mainPackage^.secondaryPackages do
-      if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.codeProvider^.id    ))
+      if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.getCodeProvider^.id    ))
       or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
       then begin
         if p^.codeChanged or (p^.readyForUsecase<>lu_forImport) then p^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
