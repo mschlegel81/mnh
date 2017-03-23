@@ -42,11 +42,14 @@ TYPE
     private
       mainPackage:P_package;
       secondaryPackages:array of P_package;
+      dynamicallyUsed  :array of P_package;
+
       packageRules,importedRules:T_ruleMap;
-      packageUses,dynamicUses:array of T_packageReference;
+      packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
       readyForCodeState:T_hashInt;
       pseudoCallees:T_packageProfilingCalls;
+
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
       PROCEDURE clear(CONST includeSecondaries:boolean);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
@@ -652,7 +655,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
     setLength(packageUses,0);
-    setLength(dynamicUses,0);
+    setLength(dynamicallyUsed,0);
     codeProvider:=provider;
     packageRules.create(@disposeRule);
     importedRules.create;
@@ -679,7 +682,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
       setLength(secondaryPackages,0);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].destroy; setLength(packageUses,0);
-    for i:=0 to length(dynamicUses)-1 do dynamicUses[i].destroy; setLength(dynamicUses,0);
+    setLength(dynamicallyUsed,0);
     packageRules.clear;
     importedRules.clear;
     readyForUsecase:=lu_NONE;
@@ -706,10 +709,11 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
       ruleList[i]^.writeBack(adapters);
-      if ruleList[i]^.getRuleType=rt_memoized then ruleList[i]^.clearCache;
+      ruleList[i]^.clearCache;
     end;
     setLength(ruleList,0);
-    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
+    for i:=0 to length(packageUses    )-1 do packageUses[i].pack^.finalize(adapters);
+    for i:=0 to length(dynamicallyUsed)-1 do dynamicallyUsed[i] ^.finalize(adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
@@ -786,10 +790,10 @@ FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
 
 PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
   VAR ruleList:array of P_rule;
-      i:longint;
+      rule:P_rule;
   begin
     ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do ruleList[i]^.resolveIds(adapters);
+    for rule in ruleList do rule^.resolveIds(adapters);
     setLength(ruleList,0);
   end;
 
