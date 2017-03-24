@@ -295,23 +295,32 @@ FUNCTION encodeRequest_impl intFuncSignature;
 FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   CONST methodName:array[T_httpMethod] of string=('httpGet','httpPut','httpPost','httpDelete');
   VAR resultText:ansistring='';
+      requestText:ansistring='';
+      encodedRequest:P_literal;
+
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      try
-        case method of
-          hm_put:  resultText:=TFPCustomHTTPClient.SimplePut (str0^.value);
-          hm_post: resultText:=TFPCustomHTTPClient.SimplePost(str0^.value);
-          else     resultText:=TFPCustomHTTPClient.SimpleGet (str0^.value);
-        end;
-      except
-        on E : Exception do begin
-          resultText:='';
-          context.adapters^.raiseWarning(methodName[method]+' failed with:'+E.message,tokenLocation);
-        end;
-      end;
-      exit(newStringLiteral(resultText));
+      requestText:=str0^.value;
+    end else begin
+      encodedRequest:=encodeRequest_impl(params,tokenLocation,context);
+      if encodedRequest=nil then exit(nil)
+                            else requestText:=P_stringLiteral(encodedRequest)^.value;
     end;
+    try
+      case method of
+        hm_put:   resultText:=TFPCustomHTTPClient.SimplePut   (requestText);
+        hm_post:  resultText:=TFPCustomHTTPClient.SimplePost  (requestText);
+        hm_delete:resultText:=TFPCustomHTTPClient.SimpleDelete(requestText);
+        else      resultText:=TFPCustomHTTPClient.SimpleGet   (requestText);
+      end;
+    except
+      on E : Exception do begin
+        resultText:='';
+        context.adapters^.raiseWarning(methodName[method]+' failed with:'+E.message,tokenLocation);
+      end;
+    end;
+    result:=newStringLiteral(resultText);
   end;
 
 FUNCTION httpGet_imp    intFuncSignature; begin result:=httpGetPutPost(hm_get   ,params,tokenLocation,context); end;
@@ -350,10 +359,10 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,true ,ak_unary     ,'extractRawParameters(request:string);//Returns the parameter part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'extractPath'         ,@extractPath_impl         ,true ,ak_unary     ,'extractPath(request:string);//Returns the path part of an http request as a string');
   registerRule(HTTP_NAMESPACE,'encodeRequest'       ,@encodeRequest_impl       ,true ,ak_ternary   ,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);//Returns an http request from the given components');
-  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,false,ak_unary     ,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string');
-  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,false,ak_unary     ,'httpPut(URL:string);');
-  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,false,ak_unary     ,'httpPost(URL:string);');
-  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,false,ak_unary     ,'httpDelete(URL:string);');
+  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,false,ak_unary     ,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string#httpGet(address:string,path:string,parameters:string);#httpGet(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,false,ak_unary     ,'httpPut(URL:string);#httpPut(address:string,path:string,parameters:string);#httpPut(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,false,ak_unary     ,'httpPost(URL:string);#httpPost(address:string,path:string,parameters:string);#httpPost(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,false,ak_unary     ,'httpDelete(URL:string);#httpDelete(address:string,path:string,parameters:string);#httpDelete(address:string,path:string,parameters:keyValueList);');
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,false,ak_unary     ,'openUrl(URL:string);//Opens the URL in the default browser');
   registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,false,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
