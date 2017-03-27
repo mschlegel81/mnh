@@ -12,7 +12,7 @@ TYPE
   T_guiOutAdapter=object(T_collectingOutAdapter)
     flushing:boolean;
     parentForm:T_abstractMnhForm;
-    CONSTRUCTOR create(CONST owner:T_abstractMnhForm);
+    CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
     DESTRUCTOR destroy; virtual;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
     PROCEDURE flushClear;
@@ -21,26 +21,27 @@ TYPE
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
 
-PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm);
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
   begin
     if unitIsInitialized then exit;
-    guiOutAdapter.create(parent);
+    guiOutAdapter.create(parent,displayLogo);
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
   end;
 
-CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm);
+CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
   VAR i:longint;
       m:T_storedMessage;
   begin
     inherited create(at_gui,C_collectAllOutputBehavior);
     parentForm:=owner;
     flushing:=false;
+    if not(displayLogo) then exit;
     with m do begin
       messageType:=mt_printline;
       location:=C_nilTokenLocation;
