@@ -149,31 +149,12 @@ PROCEDURE T_tokenArray.append(CONST newTok: T_token);
   end;
 
 PROCEDURE T_tokenArray.step(CONST package: P_abstractPackage; VAR comments,attributes:T_arrayOfString; VAR adapters: T_adapters);
-  VAR fullText:ansistring;
-      line:longint;
   begin
     repeat
       inc(stepIndex);
       if (stepIndex<tokenFill) then case token[stepIndex].tokType of
         tt_docComment: myGenerics.append(comments,token[stepIndex].txt);
         tt_attributeComment: if (token[stepIndex].txt<>'') then myGenerics.append(attributes,token[stepIndex].txt);
-        tt_literal: if (P_literal(token[stepIndex].data)^.literalType=lt_string) and (stepIndex<tokenFill-1)
-                   and (token[stepIndex+1].tokType=tt_literal) and (P_literal(token[stepIndex+1].data)^.literalType=lt_string)
-                   and (token[stepIndex].location.line=token[stepIndex+1].location.line)
-        then begin
-          line:=token[stepIndex].location.line;
-          fullText:=P_stringLiteral(token[stepIndex].data)^.value;
-          disposeLiteral(token[stepIndex].data);
-          token[stepIndex].tokType:=tt_EOL;
-          while (stepIndex<tokenFill-1) and (token[stepIndex+1].tokType=tt_literal) and (P_literal(token[stepIndex+1].data)^.literalType=lt_string) and (token[stepIndex+1].location.line=line) do begin
-            inc(stepIndex);
-            fullText:=fullText+P_stringLiteral(token[stepIndex].data)^.value;
-            disposeLiteral(token[stepIndex].data);
-            token[stepIndex].tokType:=tt_EOL;
-          end;
-          token[stepIndex].data:=newStringLiteral(fullText);
-          token[stepIndex].tokType:=tt_literal;
-        end;
         tt_identifier: if (stepIndex<tokenFill-2) and (token[stepIndex+1].tokType=tt_ponFlipper) and (token[stepIndex+2].tokType=tt_identifier) and (package<>nil) and package^.isImportedOrBuiltinPackage(token[stepIndex].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" if applicable
           inc(stepIndex,2);
@@ -285,22 +266,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       result:=copy(line,lineLocation.column,parsedLength);
     end;
 
-  FUNCTION parseCharCode:ansistring;
-    VAR i:longint;
-        charCode:longint;
-    begin
-      i:=lineLocation.column+1;
-      while (i<length(line)) and (line[i+1] in ['0'..'9']) do inc(i);
-      result:=copy(line,lineLocation.column+1,i-lineLocation.column);
-      charCode:=strToIntDef(result,256);
-      if (charCode<0) or (charCode>255)
-      then fail('Invalid char code #'+result)
-      else begin
-        result:=chr(charCode);
-        parsedLength:=i-lineLocation.column+1;
-      end;
-    end;
-
   FUNCTION startsWith(CONST c:char):boolean; inline;
     begin result:=line[lineLocation.column]=c; end;
   FUNCTION startsWith(CONST prefix:string):boolean;  inline;
@@ -373,7 +338,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         if parsedLength<=0 then fail('Cannot parse numeric literal '+line)
                            else result.tokType:=tt_literal;
       end;
-      '"','''': begin
+      '"','''','#': begin
         stringValue:=unescapeString(line,lineLocation.column,parsedLength);
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
@@ -381,10 +346,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           result.data:=newStringLiteral(stringValue);
         end;
         stringValue:='';
-      end;
-      '#': begin
-        result.tokType:=tt_literal;
-        result.data:=newStringLiteral(parseCharCode);
       end;
       '$': begin
         result.txt:=leadingId;
