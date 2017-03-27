@@ -517,7 +517,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         if profile then context.timeBaseComponent(pc_interpretation);
         context.reduceExpression(t);
         if profile then context.timeBaseComponent(pc_interpretation);
-        context.callStackPop();
+        if context.adapters^.noErrors then context.callStackPop();
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror

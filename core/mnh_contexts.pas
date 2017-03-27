@@ -459,13 +459,13 @@ PROCEDURE T_threadContext.leaveTryStatementReassumingPreviousAdapters(CONST prev
 
 PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
   begin
-    callStack.push(wallclockTime,callerLocation,callee,callParameters,expressionLiteral);
+    callStack.push(wallclockTime,callerLocation,callee);
   end;
 
 PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
   begin
     if calls[category]=nil then new(calls[category],create(package,category));
-    callStack.push(wallclockTime,calls[category]^.getLocation,calls[category],nil,nil);
+    callStack.push(wallclockTime,calls[category]^.getLocation,calls[category]);
   end;
 
 PROCEDURE T_threadContext.callStackPop;

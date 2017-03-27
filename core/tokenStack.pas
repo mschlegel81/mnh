@@ -22,10 +22,9 @@ TYPE
   end;
 
   T_callStackEntry=record
-    callerLocation:T_tokenLocation;
-    callee:P_objectWithIdAndLocation;
-    callParameters:P_listLiteral;
-    calleeLiteral:P_expressionLiteral;
+    callLocation:T_tokenLocation;
+    calleeId:ansistring;
+    calleeLocation:T_tokenLocation;
     {$ifdef fullVersion}
     timeForProfiling_inclusive,
     timeForProfiling_exclusive:double;
@@ -45,9 +44,7 @@ TYPE
       PROCEDURE clear;
       PROCEDURE push(CONST wallclockTime:double;
                      CONST callerLocation: T_tokenLocation;
-                     CONST callee: P_objectWithIdAndLocation;
-                     CONST callParameters: P_listLiteral;
-                     CONST expressionLiteral:P_expressionLiteral);
+                     CONST callee: P_objectWithIdAndLocation);
       PROCEDURE pop({$ifdef fullVersion}CONST wallclockTime:double;CONST profiler:P_profiler{$endif});
       PROCEDURE print(VAR adapters:T_adapters);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
@@ -88,17 +85,12 @@ PROCEDURE T_callStack.clear;
 
 PROCEDURE T_callStack.push(CONST wallclockTime: double;
   CONST callerLocation: T_tokenLocation;
-  CONST callee: P_objectWithIdAndLocation;
-  CONST callParameters: P_listLiteral;
-  CONST expressionLiteral: P_expressionLiteral);
+  CONST callee: P_objectWithIdAndLocation);
   begin
     if length(dat)<=fill then setLength(dat,length(dat)+16);
-    dat[fill].callerLocation:=callerLocation;
-    dat[fill].callee        :=callee;
-    dat[fill].callParameters:=callParameters;
-    dat[fill].calleeLiteral :=expressionLiteral;
-    if callParameters   <>nil then callParameters   ^.rereference;
-    if expressionLiteral<>nil then expressionLiteral^.rereference;
+    dat[fill].callLocation:=callerLocation;
+    dat[fill].calleeId:=callee^.getId;
+    dat[fill].callLocation:=callee^.getLocation;
     {$ifdef fullVersion}
     if fill>0 then with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     dat[fill].timeForProfiling_exclusive:=wallclockTime;
@@ -115,15 +107,11 @@ PROCEDURE T_callStack.pop({$ifdef fullVersion}CONST wallclockTime: double;CONST 
       with dat[fill-1] do begin
         timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
         timeForProfiling_inclusive:=wallclockTime-timeForProfiling_inclusive;
-        profiler^.add(callee^.getId,callee^.getLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
+        profiler^.add(calleeId,calleeLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
       end;
       if fill>1 then with dat[fill-2] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     end;
     {$endif}
-    with dat[fill-1] do begin
-      if callParameters<>nil then disposeLiteral(callParameters);
-      if calleeLiteral <>nil then disposeLiteral(calleeLiteral);
-    end;
     dec(fill);
   end;
 
@@ -131,7 +119,7 @@ PROCEDURE T_callStack.print(VAR adapters:T_adapters);
   VAR i:longint;
   begin
     for i:=fill-1 downto 0 do with dat[i] do
-    adapters.logCallStackInfo(callee^.getId+' '+toParameterListString(callParameters,true,50),callerLocation);
+    adapters.logCallStackInfo(calleeId,callLocation);
   end;
 
 FUNCTION T_callStack.getEntry(CONST index:longint):T_callStackEntry;
