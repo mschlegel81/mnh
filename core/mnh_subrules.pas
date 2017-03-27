@@ -1131,8 +1131,7 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
   begin
     commentDummy  :=C_EMPTY_STRING_ARRAY;
     attributeDummy:=C_EMPTY_STRING_ARRAY;
-    exTokens.create;
-    exTokens.tokenizeAll(s,location,package,context.adapters^,false);
+    exTokens.create(s,location,package,context.adapters^,false);
     exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
     if exTokens.atEnd then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);

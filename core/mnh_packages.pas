@@ -612,8 +612,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     readyForUsecase:=lu_beingLoaded;
 
     if profile then context.timeBaseComponent(pc_tokenizing);
-    fileTokens.create;
-    fileTokens.tokenizeAll(@self,context.adapters^);
+    fileTokens.create(@self,context.adapters^);
     commentLines  :=C_EMPTY_STRING_ARRAY;
     attributeLines:=C_EMPTY_STRING_ARRAY;
     fileTokens.step(@self,commentLines,attributeLines,context.adapters^);

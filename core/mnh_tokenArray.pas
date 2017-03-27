@@ -42,14 +42,13 @@ TYPE
     FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_objectWithPath; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
     PROCEDURE append(CONST newTok:T_token);
   public
-    CONSTRUCTOR create;
+    CONSTRUCTOR create(CONST inPackage:P_abstractPackage; VAR adapters:T_adapters);
+    CONSTRUCTOR create(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage; VAR adapters:T_adapters; CONST retainBlanks:boolean);
     DESTRUCTOR destroy;
     PROCEDURE step(CONST package:P_abstractPackage; VAR comments,attributes:T_arrayOfString; VAR adapters:T_adapters);
     FUNCTION current:T_token;
     PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
     FUNCTION atEnd:boolean;
-    PROCEDURE tokenizeAll(CONST inPackage:P_abstractPackage; VAR adapters:T_adapters);
-    PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage; VAR adapters:T_adapters; CONST retainBlanks:boolean);
     {$ifdef fullVersion}
     FUNCTION lastToken:T_token;
     FUNCTION getRawTokensUndefining:T_rawTokenArray;
@@ -81,11 +80,58 @@ PROCEDURE T_abstractPackage.logReady;             begin         readyForCodeStat
 FUNCTION T_abstractPackage.getId: T_idString;     begin result:=codeProvider^.id;                           end;
 FUNCTION T_abstractPackage.getPath: ansistring;   begin result:=codeProvider^.getPath;                      end;
 
-CONSTRUCTOR T_tokenArray.create;
+CONSTRUCTOR T_tokenArray.create(CONST inPackage:P_abstractPackage; VAR adapters:T_adapters);
+  VAR location:T_tokenLocation;
+      lineIndex:longint;
+      next:T_token;
+      lines:T_arrayOfString;
   begin
     setLength(token,100);
     tokenFill:=0;
     stepIndex:=-1;
+
+    lines:=inPackage^.codeProvider^.getLines;
+    location.package:=inPackage;
+    for lineIndex:=0 to length(lines)-1 do begin
+      location.line:=lineIndex+1;
+      location.column:=1;
+      while (location.column<=length(lines[lineIndex])) and (adapters.noErrors) do begin
+        next:=getToken(lines[lineIndex],location,inPackage,adapters);
+        if (next.tokType<>tt_EOL) or (next.txt<>'')
+        then append(next);
+      end;
+    end;
+    //Handle unfinished blobs
+    if blob.text<>'' then begin
+      next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
+      append(next);
+      blob.text:='';
+    end;
+    setLength(token,tokenFill);
+  end;
+
+CONSTRUCTOR T_tokenArray.create(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage; VAR adapters:T_adapters; CONST retainBlanks:boolean);
+  VAR next:T_token;
+      workLocation:T_tokenLocation;
+  begin
+    setLength(token,100);
+    tokenFill:=0;
+    stepIndex:=-1;
+
+    workLocation:=location;
+    workLocation.column:=1;
+    while (workLocation.column<=length(inputString)) and (adapters.noErrors) do begin
+      next:=getToken(inputString,workLocation,inPackage,adapters,retainBlanks);
+      if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
+        if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
+          if retainBlanks then append(next);
+        end else begin
+          next.location:=workLocation;
+          append(next);
+        end;
+      end;
+    end;
+    setLength(token,tokenFill);
   end;
 
 DESTRUCTOR T_tokenArray.destroy;
@@ -442,25 +488,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
     if parsedLength>0 then inc(lineLocation.column,parsedLength);
   end;
 
-PROCEDURE T_tokenArray.tokenizeAll(CONST inputString: ansistring; CONST location: T_tokenLocation; CONST inPackage: P_abstractPackage; VAR adapters: T_adapters; CONST retainBlanks: boolean);
-  VAR next:T_token;
-      workLocation:T_tokenLocation;
-  begin
-    workLocation:=location;
-    workLocation.column:=1;
-    while (workLocation.column<=length(inputString)) and (adapters.noErrors) do begin
-      next:=getToken(inputString,workLocation,inPackage,adapters,retainBlanks);
-      if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
-        if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
-          if retainBlanks then append(next);
-        end else begin
-          next.location:=workLocation;
-          append(next);
-        end;
-      end;
-    end;
-    setLength(token,tokenFill);
-  end;
 
 {$ifdef fullVersion}
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
@@ -471,41 +498,13 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     location.package:=nil;
     location.line:=0;
     location.column:=1;
-    tokenArray.create;
     adapters.create;
-    tokenArray.tokenizeAll(inputString,location,nil,adapters,true);
+    tokenArray.create(inputString,location,nil,adapters,true);
     adapters.destroy;
     result:=tokenArray.getRawTokensUndefining;
     tokenArray.destroy;
   end;
 {$endif}
-
-PROCEDURE T_tokenArray.tokenizeAll(CONST inPackage: P_abstractPackage; VAR adapters: T_adapters);
-  VAR location:T_tokenLocation;
-      lineIndex:longint;
-      next:T_token;
-      lines:T_arrayOfString;
-
-  begin
-    lines:=inPackage^.codeProvider^.getLines;
-    location.package:=inPackage;
-    for lineIndex:=0 to length(lines)-1 do begin
-      location.line:=lineIndex+1;
-      location.column:=1;
-      while (location.column<=length(lines[lineIndex])) and (adapters.noErrors) do begin
-        next:=getToken(lines[lineIndex],location,inPackage,adapters);
-        if (next.tokType<>tt_EOL) or (next.txt<>'') then append(next) else next.destroy;
-      end;
-    end;
-    //Handle unfinished blobs
-    if blob.text<>'' then begin
-      next.create;
-      next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
-      append(next);
-      blob.text:='';
-    end;
-    setLength(token,tokenFill);
-  end;
 
 INITIALIZATION
   {$ifdef fullVersion}

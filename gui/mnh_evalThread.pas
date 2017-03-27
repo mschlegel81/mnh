@@ -636,12 +636,11 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       system.enterCriticalSection(cs);
     end;
 
-    tokens.create;
     loc.line:=1;
     loc.column:=1;
     loc.package:=@package;
     adapter^.clearAll;
-    tokens.tokenizeAll(fullLine,loc,@package,adapter^,false);
+    tokens.create(fullLine,loc,@package,adapter^,false);
     comments  :=C_EMPTY_STRING_ARRAY;
     attributes:=C_EMPTY_STRING_ARRAY;
     tokens.step(@package,comments,attributes,adapter^);
