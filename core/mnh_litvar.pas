@@ -333,7 +333,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLite
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
@@ -2925,7 +2925,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     reusableMap.destroy;
   end;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):T_arrayOfString;
   FUNCTION representReal(CONST realValue:T_myFloat):ansistring;
     CONST p52:int64=1 shl 52;
     VAR r:double;
@@ -2954,29 +2954,71 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
       {$WARN 5057 ON}
     end;
 
-  VAR i:longint;
-  begin
-    case L^.literalType of
-      lt_int, lt_boolean, lt_string, lt_expression: result:=L^.toString;
-      lt_real: result:=representReal(P_realLiteral(L)^.val);
-      lt_list..lt_emptyMap: begin
-        result:='[';
-        if (P_compoundLiteral(L)^.size>0)      then result:=result+    serialize(P_compoundLiteral(L)^.value[0],location,adapters);
-        for i:=1 to P_compoundLiteral(L)^.size-1 do result:=result+','+serialize(P_compoundLiteral(L)^.value[i],location,adapters);
-        result:=result+']';
-      end;
-      else begin
-        adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
-        exit('');
+  CONST maxLineLength=128;
+  VAR indent:longint=0;
+      prevLines:T_arrayOfString;
+      nextLine:ansistring;
+
+  PROCEDURE appendSeparator;
+    begin
+      nextLine:=nextLine+',';
+      if length(nextLine)>=maxLineLength then begin
+        append(prevLines,nextLine);
+        nextLine:=StringOfChar(' ',indent);
       end;
     end;
+
+  PROCEDURE appendPart(CONST part:string);
+    begin
+      nextLine:=nextLine+part;
+    end;
+
+  PROCEDURE ser(CONST L:P_literal; CONST outerIndex:longint);
+    VAR iter:T_arrayOfLiteral;
+        k:longint;
+    begin
+      case L^.literalType of
+        lt_boolean,lt_int,lt_string: appendPart(L^.toString());
+        lt_real: appendPart(representReal(P_realLiteral(L)^.val));
+        lt_list..lt_emptyList,
+        lt_set ..lt_emptySet,
+        lt_map ..lt_emptyMap:
+        begin
+          if outerIndex>0 then begin
+            append(prevLines,nextLine);
+            nextLine:=StringOfChar(' ',indent);
+          end;
+          appendPart('[');
+          inc(indent);
+          iter:=P_compoundLiteral(L)^.iteratableList;
+          for k:=0 to length(iter)-1 do if adapters^.noErrors then begin
+            ser(iter[k],k);
+            if k<length(iter)-1 then appendSeparator;
+          end;
+          disposeLiteral(iter);
+          dec(indent);
+          case L^.literalType of
+            lt_list..lt_emptyList: appendPart(']');
+            lt_set ..lt_emptySet : appendPart('].toSet');
+            lt_map ..lt_emptyMap : appendPart('].toMap');
+          end;
+        end;
+        else adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
+      end;
+    end;
+
+  begin
+    setLength(prevLines,0);
+    nextLine:='';
+    ser(L,0);
+    if length(nextLine)>0 then append(prevLines,nextLine);
+    result:=prevLines;
   end;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression:boolean):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
   VAR wrapper:T_outputStreamWrapper;
       stream:TStringStream;
   begin
-    if asExpression then exit(serialize(L,location,adapters));
     stream:= TStringStream.create('');
     wrapper.create(stream);
     writeLiteralToStream(L,@wrapper,location,adapters);
@@ -3000,6 +3042,7 @@ VAR i: longint;
 
 INITIALIZATION
   errLit.init(lt_error);
+  initialize(boolLit);
   boolLit[false].create(false);
   boolLit[true ].create(true);
   voidLit.create();
