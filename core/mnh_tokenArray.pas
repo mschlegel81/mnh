@@ -36,8 +36,6 @@ TYPE
     firstToken:P_token;
   end;
 
-  { T_lexer }
-
   T_lexer=object
     private
       blob:record
@@ -50,8 +48,6 @@ TYPE
       inputLocation:T_tokenLocation;
       inputColumnOffset:longint;
       associatedPackage:P_abstractPackage;
-
-
       nextStatement:T_enhancedStatement;
       beforeLastTokenized,
       lastTokenized:P_token;

@@ -682,7 +682,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
       case ruleType of
         rt_memoized     : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
         rt_mutable      : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers));
-        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers));
+        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,tt_modifier_private in modifiers,tt_modifier_plain in modifiers));
         rt_synchronized : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
         else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;

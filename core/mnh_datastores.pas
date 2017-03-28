@@ -19,7 +19,7 @@ TYPE
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
-      FUNCTION readValue(CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+      FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST adapters: P_adapters; CONST writePlainText:boolean);
   end;
 
@@ -53,11 +53,13 @@ PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
       if ((wrapper.readAnsiString=ruleId) and wrapper.allOkay) then begin
         fileName:=allStores[i];
         fileHasBinaryFormat:=true;
-      end else if (firstLineEquals(allStores[i],ruleId+':=')) then begin
+      end;
+      wrapper.destroy;
+      if (fileName='') and firstLineEquals(allStores[i],ruleId+':=') then begin
         fileName:=allStores[i];
         fileHasBinaryFormat:=false;
       end;
-      wrapper.destroy;
+
     end;
     if (fileName='') and createIfMissing then begin
       i:=0;
@@ -90,11 +92,12 @@ FUNCTION T_datastoreMeta.fileChangedSinceRead: boolean;
     result:=currentAge<>fileReadAt;
   end;
 
-FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapters:P_adapters): P_literal;
+FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T_threadContext): P_literal;
   VAR wrapper:T_bufferedInputStreamWrapper;
-      //tokens:T_tokenArray;
-      //fileLines:T_arrayOfString;
-      //accessed:boolean;
+      lexer:T_lexer;
+      fileLines:T_arrayOfString;
+      accessed:boolean;
+      stmt:T_enhancedStatement;
   begin
     tryObtainName(false);
     if fileName='' then exit(newVoidLiteral);
@@ -102,7 +105,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapter
       wrapper.createToReadFromFile(fileName);
       wrapper.readAnsiString;
       result:=nil;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,adapters);
+      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.adapters);
       if not(wrapper.allOkay) then begin
         if result<>nil then disposeLiteral(result);
         result:=nil;
@@ -110,11 +113,14 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST adapter
       wrapper.destroy;
     end else begin
       result:=newVoidLiteral;
-      adapters^.raiseError('Invalid State. Reading plain text datastores is not implemented yet!',location);
-      //fileLines:=mnh_fileWrappers.fileLines(fileName,accessed);
-      //if not(accessed) then exit(newVoidLiteral);
-      //dropFirst(fileLines,1);
-      //tokens.create(join(fileLines,''),location,location.package,adapters,false);
+      fileLines:=mnh_fileWrappers.fileLines(fileName,accessed);
+      if not(accessed) then exit(newVoidLiteral);
+      dropFirst(fileLines,1);
+      lexer.create(fileLines,location,P_abstractPackage(location.package));
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      lexer.destroy;
+      context.reduceExpression(stmt.firstToken);
+      result:=context.cascadeDisposeToLiteral(stmt.firstToken);
     end;
     fileAge(fileName,fileReadAt);
   end;
@@ -127,7 +133,7 @@ PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenL
     if writePlainText then begin
       plainText:=ruleId+':=';
       append(plainText,serializeToStringList(L,location,adapters));
-      writeFileLines(fileName,plainText,'',false);
+      writeFileLines(fileName,plainText,C_lineBreakChar,false);
     end else begin
       wrapper.createToWriteToFile(fileName);
       wrapper.writeAnsiString(ruleId);
