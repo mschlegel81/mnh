@@ -3,7 +3,10 @@ UNIT mnh_litVar;
 {$Q-}
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
-USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes,LazUTF8;
+USES sysutils, math, typinfo,
+     myGenerics,myStringUtil, serializationUtil,
+     Classes,LazUTF8,
+     mnh_constants, mnh_basicTypes, mnh_out_adapters;
 
 TYPE
   PP_literal = ^P_literal;
@@ -332,6 +335,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLite
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):T_arrayOfString;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;

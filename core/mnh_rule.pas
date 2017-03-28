@@ -77,7 +77,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate:boolean; CONST ruleType:T_ruleType=rt_mutable);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
-      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
+      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean); virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral; virtual;
@@ -379,7 +379,7 @@ FUNCTION T_datastoreRule.replaces(CONST param: P_listLiteral; CONST location: T_
     result:=(includePrivateRules or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
       system.enterCriticalSection(rule_cs);
-      if not(valueChangedAfterDeclaration) then readDataStore(context.adapters);
+      readDataStore(context.adapters);
       firstRep:=context.recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
       system.leaveCriticalSection(rule_cs);
       lastRep:=firstRep;
@@ -504,7 +504,6 @@ PROCEDURE T_mutableRule.setMutableValue(CONST value: P_literal; CONST onDeclarat
     system.leaveCriticalSection(rule_cs);
   end;
 
-
 FUNCTION T_mutableRule.isReportable(OUT value: P_literal): boolean;
   begin
     value:=namedValue.getValue;
@@ -512,9 +511,6 @@ FUNCTION T_mutableRule.isReportable(OUT value: P_literal): boolean;
     value^.unreference;
     result:=true;
   end;
-
-
-
 
 PROCEDURE T_datastoreRule.readDataStore(CONST adapters: P_adapters);
   VAR lit:P_literal;
@@ -550,7 +546,7 @@ PROCEDURE T_datastoreRule.writeBack(VAR adapters: T_adapters);
   begin
     if (adapters.noErrors) and valueChangedAfterDeclaration then begin
       L:=namedValue.getValue;
-      dataStoreMeta.writeValue(L,getLocation,@adapters);
+      dataStoreMeta.writeValue(L,getLocation,@adapters,false);
       disposeLiteral(L);
     end;
   end;
