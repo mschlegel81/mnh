@@ -1,9 +1,11 @@
-//Demonstrates use of prinf with expressions.
+//Demonstrates use of printf with expressions and "here doc" strings
 private B(0)->"no more bottles";
 private B(1)->"1 bottle";
 private B(n)->n&" bottles";
 //*Prints out the song "99 bottles of beer", see http://rosettacode.org/wiki/99_Bottles_of_Beer or http://www.99-bottles-of-beer.net/
-main(...)->printf("%{B($n)}s of beer on the wall\n"&
-                  "%{B($n)}s of beer.\n"&
-                  "Take one down, pass it around\n"&
-                  "%{B($n-1)}s of beer on the wall.\n",[99..1]) orElse print('Go to the store, buy some more.');
+main(...)->printf(//!~
+%{B($n)}s of beer on the wall
+%{B($n)}s of beer.
+Take one down, pass it around
+%{B($n-1)}s of beer on the wall.
+~,[99..1]) orElse print('Go to the store, buy some more.');

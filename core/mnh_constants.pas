@@ -155,6 +155,7 @@ TYPE
     tt_modifier_memoized,
     tt_modifier_mutable,
     tt_modifier_datastore,
+    tt_modifier_plain,
     tt_modifier_synchronized,
     tt_modifier_local,
     tt_modifier_customType,
@@ -277,6 +278,7 @@ CONST
     tt_modifier_memoized,
     tt_modifier_mutable,
     tt_modifier_datastore,
+    tt_modifier_plain,
     tt_modifier_synchronized,
     tt_modifier_customType,
     //special: [E]nd [O]f [L]ine
@@ -480,6 +482,7 @@ CONST
 {tt_modifier_memoized}          (defaultId:'memoized';      defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
 {tt_modifier_mutable}           (defaultId:'mutable';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
 {tt_modifier_datastore}         (defaultId:'datastore';     defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
+{tt_modifier_plain}             (defaultId:'plain';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier plain#Modifies a datastore to use plain text instead of default binary format'),
 {tt_modifier_synchronized}      (defaultId:'synchronized';  defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
 {tt_modifier_local}             (defaultId:'local';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier local#Used for declaring block-local variables'),
 {tt_modifier_customType}        (defaultId:'type';          defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier type#Used for declaring custom type checks'),
@@ -523,7 +526,7 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
       'datastore ',
       'synchronized ',
       'type ');
-      C_validModifierCombinations:array[0..12] of record
+      C_validModifierCombinations:array[0..14] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
       end=((modifiers:[];                                             ruleType:rt_normal),
@@ -534,6 +537,8 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
            (modifiers:[tt_modifier_mutable     ,tt_modifier_private]; ruleType:rt_mutable),
            (modifiers:[tt_modifier_datastore];                        ruleType:rt_datastore),
            (modifiers:[tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore),
+           (modifiers:[tt_modifier_plain,tt_modifier_datastore];                        ruleType:rt_datastore),
+           (modifiers:[tt_modifier_plain,tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore),
            (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
            (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
            (modifiers:[tt_modifier_synchronized];                     ruleType:rt_synchronized),

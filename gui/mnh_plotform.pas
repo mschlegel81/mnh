@@ -5,10 +5,15 @@ UNIT mnh_plotForm;
 INTERFACE
 {$WARN 5024 OFF}
 USES
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls,
   mnhFormHandler,
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Menus, ComCtrls, mnh_plotData, mnh_constants, mnh_out_adapters, mnh_evalThread,
-  mnh_cmdLineInterpretation, mnh_basicTypes, mnh_settings, mnh_litVar, mnh_funcs, mnh_contexts;
+  mnh_constants, mnh_basicTypes,
+  mnh_plotData,
+  mnh_settings,
+  mnh_out_adapters,
+  mnh_litVar, mnh_funcs,
+  mnh_contexts,
+  mnh_evalThread;
 
 TYPE
 

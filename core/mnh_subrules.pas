@@ -1124,33 +1124,19 @@ FUNCTION tokenSplit_impl intFuncSignature;
   end;
 
 FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_threadContext):P_token;
-  VAR exTokens:T_tokenArray;
-      commentDummy,
-      attributeDummy:T_arrayOfString;
-      last:P_token;
+  VAR lexer:T_lexer;
+      statement:T_enhancedStatement;
   begin
-    commentDummy  :=C_EMPTY_STRING_ARRAY;
-    attributeDummy:=C_EMPTY_STRING_ARRAY;
-    exTokens.create;
-    exTokens.tokenizeAll(s,location,package,context.adapters^,false);
-    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
-    if exTokens.atEnd then begin
+    lexer.create(s,location,package);
+    statement:=lexer.getNextStatement(context.recycler,context.adapters^);
+    lexer.destroy;
+    if statement.firstToken=nil then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);
-      exTokens.destroy;
       exit(nil);
     end else if not(context.adapters^.noErrors) then begin
-      exTokens.destroy;
       exit(nil); //Parsing error ocurred
     end;
-    result:=context.recycler.newToken(exTokens.current); exTokens.current.undefine;
-    last:=result;
-    exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
-    while not(exTokens.atEnd) do begin
-      last^.next:=context.recycler.newToken(exTokens.current);  exTokens.current.undefine;
-      last:=last^.next;
-      exTokens.step(package,commentDummy,attributeDummy,context.adapters^);
-    end;
-    exTokens.destroy;
+    result:=statement.firstToken;
   end;
 
 FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CONST package:P_abstractPackage; VAR context:T_threadContext):P_token;

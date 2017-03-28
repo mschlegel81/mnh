@@ -194,7 +194,7 @@ FUNCTION mnhParameters_imp intFuncSignature;
 FUNCTION serialize_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters,false))
+    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters))
     else result:=nil;
   end;
 

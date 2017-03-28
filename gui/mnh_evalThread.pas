@@ -621,11 +621,10 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
 
-  VAR tokens:T_tokenArray;
-      tokenToExplain:T_token;
+  VAR lexer:T_lexer;
+      tokenToExplain:P_token;
       loc:T_tokenLocation;
       i:longint;
-      comments,attributes:T_arrayOfString;
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     system.enterCriticalSection(cs);
@@ -636,51 +635,37 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
       system.enterCriticalSection(cs);
     end;
 
-    tokens.create;
-    loc.line:=1;
+    loc.line:=CaretY;
     loc.column:=1;
     loc.package:=@package;
-    adapter^.clearAll;
-    tokens.tokenizeAll(fullLine,loc,@package,adapter^,false);
-    comments  :=C_EMPTY_STRING_ARRAY;
-    attributes:=C_EMPTY_STRING_ARRAY;
-    tokens.step(@package,comments,attributes,adapter^);
+    lexer.create(fullLine,loc,@package);
+    tokenToExplain:=lexer.getTokenAtColumnOrNil(CaretX,i);
+    if tokenToExplain<>nil then begin
+      info.startLoc:=tokenToExplain^.location;
+      info.location:=tokenToExplain^.location;
+      info.endLoc  :=info.startLoc;
+      info.endLoc.column:=i;
+      info.tokenText:=safeTokenToString(tokenToExplain);
+      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
+      for i:=0 to length(C_specialWordInfo)-1 do
+        if C_specialWordInfo[i].txt=info.tokenText then
+        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
 
-    while not(tokens.atEnd) and (tokens.current.location.column<CaretX) do tokens.step(@package,comments,attributes,adapter^);
-    if tokens.atEnd then begin
-      tokenToExplain:=tokens.lastToken;
-      info.startLoc:=tokenToExplain.location;
-      info.endLoc:=info.startLoc;
-      info.endLoc.column:=maxLongint;
-    end else begin
-      tokenToExplain:=tokens.current;
-      info.startLoc:=tokenToExplain.location;
-      info.endLoc:=loc;
-    end;
-    info.location:=info.startLoc;
-    info.tokenText:=safeTokenToString(@tokenToExplain);
-    tokens.getRawTokensUndefining;
-    tokens.destroy;
-
-    if tokenToExplain.tokType=tt_identifier then tokenToExplain.resolveRuleId(@package,nil);
-
-    info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain.tokType].helpText,'#',C_lineBreakChar);
-    for i:=0 to length(C_specialWordInfo)-1 do
-      if C_specialWordInfo[i].txt=info.tokenText then
-      info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
-
-    case tokenToExplain.tokType of
-      tt_intrinsicRule: begin
-        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        appendBuiltinRuleInfo;
+      case tokenToExplain^.tokType of
+        tt_intrinsicRule: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          appendBuiltinRuleInfo;
+        end;
+        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
+          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
+          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
+        end;
       end;
-      tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
-        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocation;
-        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
-      end;
+
     end;
+    lexer.destroy;
     system.leaveCriticalSection(cs);
   end;
 

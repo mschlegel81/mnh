@@ -473,7 +473,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
-    initGuiOutAdapters(MnhForm);
+    initGuiOutAdapters(MnhForm,true);
     guiTaskQueue.create;
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
     registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,false,ak_nullary,'editors(...);//Lists all editors');

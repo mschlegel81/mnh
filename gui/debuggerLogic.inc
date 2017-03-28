@@ -125,12 +125,9 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
     variablesTreeView.items.clear;
 
     if (stackIdx>=0) and (stackIdx<snapshot.callStack^.size) then begin
-      callStackInfoStringGrid.Cells[1,0]:=ansistring(snapshot.callStack^[stackIdx].callerLocation);
-      if snapshot.callStack^[stackIdx].calleeLiteral=nil
-      then callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack^[stackIdx].callee^.getId
-      else callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack^[stackIdx].calleeLiteral^.toString(200);
-      callStackInfoStringGrid.Cells[1,2]:=ansistring(snapshot.callStack^[stackIdx].callee^.getLocation);
-      addVariable('$params',snapshot.callStack^[stackIdx].callParameters);
+      callStackInfoStringGrid.Cells[1,0]:=ansistring(snapshot.callStack^[stackIdx].calleeLocation);
+      callStackInfoStringGrid.Cells[1,1]:=snapshot.callStack^[stackIdx].calleeId;
+      callStackInfoStringGrid.Cells[1,2]:=ansistring(snapshot.callStack^[stackIdx].calleeLocation);
     end;
 
     if (callStackList.ItemIndex<=0) then begin
@@ -179,7 +176,7 @@ PROCEDURE TMnhForm.handleBreak;
 
     callStackList.items.clear;
     for i:=snapshot.callStack^.size-1 downto 0 do
-    callStackList.items.add(snapshot.callStack^[i].callee^.getId);
+    callStackList.items.add(snapshot.callStack^[i].calleeId);
     callStackList.ItemIndex:=0;
     updateExpressionMemo;
 

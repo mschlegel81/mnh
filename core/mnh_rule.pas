@@ -77,7 +77,7 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate:boolean; CONST ruleType:T_ruleType=rt_mutable);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
-      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
+      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean); virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral; virtual;
@@ -91,9 +91,10 @@ TYPE
   T_datastoreRule=object(T_mutableRule)
     private
       dataStoreMeta:T_datastoreMeta;
-      PROCEDURE readDataStore(CONST adapters:P_adapters);
+      encodeAsText:boolean;
+      PROCEDURE readDataStore(VAR context:T_threadContext);
     public
-      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate:boolean);
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate,usePlainTextEncoding:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       PROCEDURE writeBack(VAR adapters:T_adapters);
@@ -163,9 +164,10 @@ CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_toke
     initCriticalSection(rule_cs);
   end;
 
-CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate: boolean);
+CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate,usePlainTextEncoding: boolean);
   begin
     inherited create(ruleId,startAt,isPrivate,rt_datastore);
+    encodeAsText:=usePlainTextEncoding;
     dataStoreMeta.create(startAt.package^.getPath,ruleId);
   end;
 
@@ -379,7 +381,7 @@ FUNCTION T_datastoreRule.replaces(CONST param: P_listLiteral; CONST location: T_
     result:=(includePrivateRules or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
       system.enterCriticalSection(rule_cs);
-      if not(valueChangedAfterDeclaration) then readDataStore(context.adapters);
+      readDataStore(context);
       firstRep:=context.recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
       system.leaveCriticalSection(rule_cs);
       lastRep:=firstRep;
@@ -504,7 +506,6 @@ PROCEDURE T_mutableRule.setMutableValue(CONST value: P_literal; CONST onDeclarat
     system.leaveCriticalSection(rule_cs);
   end;
 
-
 FUNCTION T_mutableRule.isReportable(OUT value: P_literal): boolean;
   begin
     value:=namedValue.getValue;
@@ -513,14 +514,11 @@ FUNCTION T_mutableRule.isReportable(OUT value: P_literal): boolean;
     result:=true;
   end;
 
-
-
-
-PROCEDURE T_datastoreRule.readDataStore(CONST adapters: P_adapters);
+PROCEDURE T_datastoreRule.readDataStore(VAR context:T_threadContext);
   VAR lit:P_literal;
   begin
     if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta.fileChangedSinceRead) then begin
-      lit:=dataStoreMeta.readValue(getLocation,adapters);
+      lit:=dataStoreMeta.readValue(getLocation,context);
       if lit<>nil then begin
         namedValue.setValue(lit);
         lit^.unreference;
@@ -540,7 +538,7 @@ FUNCTION T_mutableRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_li
 FUNCTION T_datastoreRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    if not(called) then readDataStore(context.adapters);
+    if not(called) then readDataStore(context);
     result:=inherited mutateInline(mutation,RHS,location,context);
     system.leaveCriticalSection(rule_cs);
   end;
@@ -550,7 +548,7 @@ PROCEDURE T_datastoreRule.writeBack(VAR adapters: T_adapters);
   begin
     if (adapters.noErrors) and valueChangedAfterDeclaration then begin
       L:=namedValue.getValue;
-      dataStoreMeta.writeValue(L,getLocation,@adapters);
+      dataStoreMeta.writeValue(L,getLocation,@adapters,encodeAsText);
       disposeLiteral(L);
     end;
   end;
