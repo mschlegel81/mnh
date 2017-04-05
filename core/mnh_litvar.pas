@@ -2980,34 +2980,6 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
   end;
 
 FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):T_arrayOfString;
-  FUNCTION representReal(CONST realValue:T_myFloat):ansistring;
-    CONST p52:int64=1 shl 52;
-    VAR r:double;
-        bits:bitpacked array[0..sizeOf(double)*8-1] of boolean;
-        isNegative:boolean;
-        significand,exponent:int64;
-    begin
-      //ensure representation as IEEE745 double
-      result:=myFloatToStr(realValue);
-      if (isNan(realValue) or isInfinite(realValue) or (realValue=strToFloatDef(result,Nan))) then exit(result);
-
-      r:=realValue;
-      {$WARN 5057 OFF}
-      move(r,bits,sizeOf(double));
-      isNegative:=bits[length(bits)-1];
-      bits[length(bits)-1]:=false;
-      move(bits,significand,min(sizeOf(double),sizeOf(int64)));
-      exponent:=significand;
-      significand:=p52+(significand and (p52-1));
-      exponent:=(exponent shr 52)-1023-52;
-
-      if isNegative then result:='-' else result:='';
-      result:=result+intToStr(significand);
-      if exponent<0 then result:=result+'*2^'  +intToStr(exponent)
-                    else result:=result+'*2.0^'+intToStr(exponent);
-      {$WARN 5057 ON}
-    end;
-
   CONST maxLineLength=128;
   VAR indent:longint=0;
       prevLines:T_arrayOfString;
@@ -3032,8 +3004,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
         k:longint;
     begin
       case L^.literalType of
-        lt_boolean,lt_int,lt_string: appendPart(L^.toString());
-        lt_real: appendPart(representReal(P_realLiteral(L)^.val));
+        lt_boolean,lt_int,lt_string,lt_real: appendPart(L^.toString());
         lt_list..lt_emptyList,
         lt_set ..lt_emptySet,
         lt_map ..lt_emptyMap:
