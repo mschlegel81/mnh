@@ -434,12 +434,62 @@ FUNCTION newErrorLiteral                            : P_literal;           begin
 FUNCTION newBoolLiteral(CONST value: boolean)       : P_boolLiteral;       begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
+  FUNCTION exponentRepresentation:shortString;
+    VAR ePos:longint;
+        exponentPart:shortString;
+    begin
+      str(x,result);
+      result:=trim(result);
+      ePos:=pos('E',result);
+      if ePos<=0 then exit(result);
+      //Split:
+      exponentPart:=copy(result,ePos,length(result)+1-ePos);
+      result      :=copy(result,1,ePos);
+      //shorten exponentPart:
+      ePos:=1;
+      if exponentPart[2]='+' then begin
+        move(exponentPart[3],exponentPart[2],6);
+        dec(exponentPart[0]);
+      end;
+      while not(exponentPart[ePos] in ['0'..'9']) do inc(ePos);
+      while exponentPart[ePos]='0' do begin
+        move(exponentPart[ePos+1],exponentPart[ePos],5);
+        dec(exponentPart[0]);
+      end;
+      //shorten significand part:
+      while (strToFloatDef(copy(result,1,ord(result[0])-1)+exponentPart,Nan)=x) do dec(result[0]);
+      //compose:
+      result:=result+exponentPart;
+    end;
+
+  FUNCTION simpleRepresentation:shortString;
+    begin
+      str(x:50:50,result);
+      result:=trim(result);
+      while (result[ord(result[0])]<>'.')
+        and ((strToFloatDef(copy(result,1,ord(result[0])-1),Nan)=x)) do dec(result[0]);
+    end;
+
+  VAR altRes:shortString;
   begin
+    //Special representation for special values:
+    if isNan(x) then exit(LITERAL_NAN_TEXT);
+    if isInfinite(x) then begin
+      if x>0 then exit(    LITERAL_INF_TEXT)
+             else exit('-'+LITERAL_INF_TEXT);
+    end;
+    //Default representation (preferred if accurate)
     result:=floatToStr(x);
-    if (pos('E', uppercase(result))<=0) and //occurs in exponents
-       (pos('N', uppercase(result))<=0) and //occurs in "Nan or Inf"
-       (pos('.', result)<=0) then
-       result:=result+'.0';
+    if strToFloatDef(result,Nan)=x then begin
+      if (pos('.', result)<=0) then result:=result+'.0';
+      exit(result);
+    end;
+    //alternative representations
+    if (abs(x)>1E15) then exit(exponentRepresentation);
+    if (abs(x)<1E9) and (abs(x)>1E-9) then exit(simpleRepresentation);
+    result:=simpleRepresentation;
+    altRes:=exponentRepresentation;
+    if length(altRes)<length(result) then exit(altRes);
   end;
 
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
@@ -2523,7 +2573,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           {$Q+}
           result:=newIntLiteral(temp);
         end else begin
-          rx:=1/x;
+          rx:=x;
           tx:=1;
           y:=-y;
           while y>0 do begin
@@ -2531,7 +2581,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             rx:=rx*rx;
             y:=y shr 1;
           end;
-          result:=newRealLiteral(tx);
+          result:=newRealLiteral(1/tx);
         end;
       end;
 
