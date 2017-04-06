@@ -496,7 +496,10 @@ FUNCTION T_lexer.getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endCo
     while (inputLocation.column<=startColumnIndex) and (fetchNext(recycler,adapters,false)) do begin end;
     result:=nextStatement.firstToken;
     while (result<>nil) and (result^.location.column<startColumnIndex) do result:=result^.next;
-    if result=nil then result:=lastTokenized;
+    if result=nil then begin
+      result:=lastTokenized;
+      if result=nil then exit;
+    end;
     if result^.next=nil then endColumnIndex:=inputLocation.column
                         else endColumnIndex:=result^.next^.location.column;
     recycler.destroy;
