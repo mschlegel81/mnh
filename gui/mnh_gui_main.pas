@@ -583,6 +583,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
       mainForm.width :=width;
       mainForm.height:=height;
       mainForm.isFullscreen:=(WindowState=wsMaximized);
+      processSettings;
     end;
     if helpPopupMemo.visible then positionHelpNotifier;
   end;

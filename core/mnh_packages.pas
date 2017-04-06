@@ -480,7 +480,20 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             context.reduceExpression(statement.firstToken);
             if profile then context.timeBaseComponent(pc_interpretation);
             context.callStackPop();
-            if (statement.firstToken<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.echoOutput(tokensToString(statement.firstToken));
+            if (statement.firstToken<>nil) and context.adapters^.doShowExpressionOut then begin
+              {$ifdef fullVersion}
+              if (statement.firstToken<>nil) and
+                 (statement.firstToken^.next=nil) and
+                 (statement.firstToken^.tokType=tt_literal) and
+                 (context.adapters^.preferredEchoLineLength>10) then begin
+                context.adapters^.echoOutput(
+                  serializeToStringList(P_literal(statement.firstToken^.data),
+                                        statement.firstToken^.location,
+                                        nil,
+                                        context.adapters^.preferredEchoLineLength));
+              end else {$endif}
+                context.adapters^.echoOutput(tokensToString(statement.firstToken));
+            end;
           end;
           lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.adapters^) then begin
             predigest(statement.firstToken,@self,context.recycler,context.adapters);
