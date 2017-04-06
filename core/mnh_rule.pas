@@ -212,6 +212,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subrule; VAR cont
   VAR i,j:longint;
   begin
     if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
+    if (getRuleType=rt_customTypeCheck) and not(rule^.hasValidValidCustomTypeCheckPattern) then context.adapters^.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one parameter.',rule^.getLocation);
     i:=0;
     while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);
     if i>=length(subrules) then begin
