@@ -26,7 +26,7 @@ TYPE
     tkTimingNote,
     tkHighlightedItem);
   T_tokenSubKind =(skNormal,skWarn,skError);
-  T_mnhSynFlavour=(msf_input,msf_output);
+  T_mnhSynFlavour=(msf_input,msf_output,msf_help);
 
 CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
 {mc_echo   }tkDefault,
@@ -225,7 +225,7 @@ PROCEDURE TSynMnhSyn.next;
       fTokenId:=tkNull;
       exit;
     end;
-    if (run = 0) and (flavour in [msf_output]) then begin
+    if (run = 0) and (flavour in [msf_output,msf_help]) then begin
       specialLineCase:=mc_print;
       i:=-1;
       for lc in T_messageClass do if (C_messageClassMeta[lc].guiMarker<>'') and startsWith(C_messageClassMeta[lc].guiMarker) then begin
@@ -233,9 +233,11 @@ PROCEDURE TSynMnhSyn.next;
       end;
       if i>=0 then run:=i+1;
       fTokenId:=tokenKindForClass[specialLineCase];
-      if specialLineCase=mc_echo then begin
-        while (run<RUN_LIMIT) and not(fLine[run] in [#0,'>']) do inc(run);
-        if fLine[run]='>' then inc(run);
+      if (specialLineCase=mc_echo) then begin
+        if (flavour=msf_output) then begin
+          while (run<RUN_LIMIT) and not(fLine[run] in [#0,'>']) do inc(run);
+          if fLine[run]='>' then inc(run);
+        end else inc(run,3);
       end else while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;

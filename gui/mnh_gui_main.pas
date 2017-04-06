@@ -364,7 +364,7 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
     end;
     if miHelp.Checked or forJump then with editorMeta[inputPageControl.activePageIndex]^.editor do assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
     if miHelp.Checked then begin
-      helpPopupMemo.text:=underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
+      helpPopupMemo.text:=ECHO_MARKER+underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
     end;
   end;
@@ -511,7 +511,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.highlighter:=outputHighlighter;
     assistanceSynEdit.highlighter:=outputHighlighter;
 
-    helpHighlighter:=TSynMnhSyn.create(nil,msf_output);
+    helpHighlighter:=TSynMnhSyn.create(nil,msf_help);
     helpPopupMemo.highlighter:=helpHighlighter;
 
     debugHighlighter:=TSynMnhSyn.create(nil,msf_input);
