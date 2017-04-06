@@ -341,14 +341,6 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
           lastTokenized:=beforeLastTokenized;
         end;
       end;
-
-{        tt_operatorMinus,tt_operatorPlus: if (stepIndex<tokenFill-1) and
-         ((stepIndex=0) or (token[stepIndex-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
-         (token[stepIndex+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
-          if token[stepIndex].tokType=tt_operatorMinus
-          then token[stepIndex].tokType:=tt_unaryOpMinus //unary - is special token
-          else inc(stepIndex);                       //unary + is skipped
-        end;}
       tt_identifier: if (associatedPackage<>nil) then begin
         if (associatedPackage^.isImportedOrBuiltinPackage(nextToken^.txt)) then begin
           n[1]:=fetch;
