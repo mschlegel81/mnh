@@ -6,6 +6,7 @@ USES myGenerics,
      mnh_out_adapters,
      mnh_litVar,
      mnh_contexts,
+     listProcessing,
      mnh_funcs;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL:P_intFuncCallback;
 {$i mnh_func_defines.inc}
@@ -464,6 +465,17 @@ FUNCTION map_imp intFuncSignature;
     end;
   end;
 
+FUNCTION pmap_imp intFuncSignature;
+  VAR iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      iter:=compound0^.iteratableList;
+      result:=processMapParallel(iter,P_expressionLiteral(arg1),tokenLocation,context);
+      disposeLiteral(iter);
+    end;
+  end;
+
 INITIALIZATION
   //Functions on lists:
   BUILTIN_HEAD:=
@@ -497,7 +509,8 @@ INITIALIZATION
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,true,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,true,ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal L with all elements x for which acceptor(x) returns true');
-  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,true,ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L');
+  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,true,ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L (serial equivalent to pMap)');
+  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,true,ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L (parallel equivalent to map)');
 
 FINALIZATION
   builtinLocation_sort.destroy;

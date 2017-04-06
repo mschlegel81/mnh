@@ -588,12 +588,14 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWo
     try
       if context.adapters^.noErrors then with payload do begin
         if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
-        context.valueStore.scopePush(false);
-        idxLit:=newIntLiteral(eachIndex);
-        context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
-        idxLit^.unreference;
+        if (eachIndex>=0) then begin
+          context.valueStore.scopePush(false);
+          idxLit:=newIntLiteral(eachIndex);
+          context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
+          idxLit^.unreference;
+        end;
         evaluationResult:=eachRule^.evaluateToLiteral(eachLocation,@context,eachParameter);
-        context.valueStore.scopePop;
+        if (eachIndex>=0) then context.valueStore.scopePop;
         if calledFromWorkerThread then context.detachWorkerContext;
       end;
     finally
