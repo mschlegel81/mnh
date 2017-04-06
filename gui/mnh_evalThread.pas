@@ -681,8 +681,16 @@ FUNCTION T_runEvaluator.getRunnerStateInfo:T_runnerStateInfo;
     system.enterCriticalSection(cs);
     result.state:=state;
     if (context.isPaused) then result.state:=es_debugHalted;
+    if (debuggingRequested) and (result.state=es_running) then result.state:=es_debugRunning;
     result.request:=request;
-    result.message:=endOfEvaluationText;
+    case result.state of
+      es_running     : result.message:='Evaluating... '+myTimeToStr(now-startOfEvaluation);
+      es_debugRunning: result.message:='Debugging'+StringOfChar('.',round((now-startOfEvaluation)*24*60*60) mod 4);
+      es_debugHalted : result.message:='Debugging [HALTED]';
+      es_editEnsuring,
+      es_editRunning : result.message:='Edit script... '+myTimeToStr(now-startOfEvaluation);
+      else             result.message:=endOfEvaluationText;
+    end;
     result.hasPendingEditResult:=(currentEdit<>nil) and (currentEdit^.done);
     system.leaveCriticalSection(cs);
   end;

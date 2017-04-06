@@ -793,14 +793,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if inputPageControl.activePageIndex>=0
     then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex]^.editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex]^.editor.CaretX)
     else aid:='';
-    case currentRunnerInfo.state of
-      es_running     : StatusBar.SimpleText:='Evaluating...'+aid;
-      es_debugRunning: StatusBar.SimpleText:='Debugging...'+aid;
-      es_debugHalted : StatusBar.SimpleText:='Debugging [HALTED]'+aid;
-      es_editEnsuring,
-      es_editRunning : StatusBar.SimpleText:='Edit script...'+aid;
-      else StatusBar.SimpleText:=currentRunnerInfo.message+aid;
-    end;
+    StatusBar.SimpleText:=currentRunnerInfo.message+aid;
     //------------------------------------------------------------:progress time
 
     if currentRunnerInfo<>lastReportedRunnerInfo then begin
