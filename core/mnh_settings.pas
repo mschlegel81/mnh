@@ -77,9 +77,6 @@ T_workspace=object(T_serializable)
 end;
 
 P_Settings=^T_settings;
-
-{ T_settings }
-
 T_settings=object(T_serializable)
   private
     //Nonpersistent:
@@ -100,6 +97,8 @@ T_settings=object(T_serializable)
   outputLinesLimit:longint;
   doResetPlotOnEvaluation: boolean;
 
+  htmlDocGeneratedForCodeHash:string;
+  doShowSplashScreen:boolean;
   //Workspace:
   workspace:T_workspace;
   FUNCTION currentWorkspaceFilename:string;
@@ -276,7 +275,7 @@ FUNCTION workerThreadCount:longint;
     settings.value^.cpuCount:=result+1;
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235075; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235076; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -300,6 +299,8 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     memoryLimit:=stream.readInt64;
     outputLinesLimit:=stream.readLongint;
     workspaceFileName:=stream.readAnsiString;
+    htmlDocGeneratedForCodeHash:=stream.readAnsiString;
+    doShowSplashScreen:=stream.readBoolean or (CODE_HASH<>htmlDocGeneratedForCodeHash);
     if not(stream.allOkay) then cleanExit else result:=true;
     if result then begin
       if not(fileExists(currentWorkspaceFilename)) then workspaceFileName:='';
@@ -324,6 +325,8 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeInt64(memoryLimit);
     stream.writeLongint(outputLinesLimit);
     stream.writeAnsiString(workspaceFileName);
+    stream.writeAnsiString(htmlDocGeneratedForCodeHash);
+    stream.writeBoolean(doShowSplashScreen);
     workspace.saveToFile(currentWorkspaceFilename);
     savedAt:=now;
   end;
@@ -358,6 +361,8 @@ PROCEDURE T_settings.initDefaults;
                  1000000000;
                  {$endif}
     outputLinesLimit:=maxLongint;
+    doShowSplashScreen:=true;
+    htmlDocGeneratedForCodeHash:='';
   end;
 
 FUNCTION T_settings.savingRequested: boolean;

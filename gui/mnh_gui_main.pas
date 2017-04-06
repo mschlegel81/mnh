@@ -27,6 +27,7 @@ USES
   openDemoDialog,
   mnh_workspaces,
   mnh_plotForm,
+  mnh_splash,
   //MNH:
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
@@ -84,6 +85,7 @@ TYPE
     editScriptRoot,
     MenuItem1,
     MenuItem4,
+    miAbout,
     miCallMain,
     miClear,
     miClose,
@@ -233,6 +235,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE miFullscreenClick(Sender: TObject);
+    PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miLangMnhClick(Sender: TObject);
@@ -475,6 +478,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
+    splashOnStartup;
     uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
     uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
     uniqueEditorInstanceIpcServer.Global:=true;
@@ -651,6 +655,12 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
                              inputEditReposition(editorMeta[inputPageControl.activePageIndex]^.editor.CaretXY,false,false);
                            end;
   end;
+
+PROCEDURE TMnhForm.miAboutClick(Sender: TObject);
+  begin
+    splashForm.ShowModal;
+  end;
+
 
 PROCEDURE makeAndShowDoc();
   begin

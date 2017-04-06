@@ -45,8 +45,8 @@ CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayL
     with m do begin
       messageType:=mt_printline;
       location:=C_nilTokenLocation;
-      setLength(messageText,length(LOGO));
-      for i:=0 to length(LOGO)-1 do messageText[i]:=LOGO[i];
+      setLength(messageText,8);
+      for i:=0 to 7 do messageText[i]:=LOGO[i];
       data:='';
     end;
     append(m);

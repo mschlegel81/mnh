@@ -2608,6 +2608,10 @@ object MnhForm: TMnhForm
         Caption = 'Open demo'
         OnClick = miOpenDemoClick
       end
+      object miAbout: TMenuItem
+        Caption = 'About'
+        OnClick = miAboutClick
+      end
     end
     object subMenuCode: TMenuItem
       Caption = 'S&cripts'
