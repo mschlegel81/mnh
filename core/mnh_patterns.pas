@@ -17,9 +17,6 @@ TYPE
       typeWhitelist    :T_literalTypeSet;
       restrictionId    :T_idString;
       customTypeCheck  :P_expressionLiteral;
-    public
-      CONSTRUCTOR createAnonymous;
-      CONSTRUCTOR create(CONST parameterId:T_idString);
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION acceptType(CONST literalType:T_literalType):boolean;
       FUNCTION toString:ansistring;
@@ -28,38 +25,48 @@ TYPE
       PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_threadContext);
       PROCEDURE thinOutWhitelist;
       FUNCTION hides(CONST e:T_patternElement):boolean;
-      DESTRUCTOR destroy;
       PROPERTY getId:T_idString read id;
+    public
+      CONSTRUCTOR createAnonymous;
+      CONSTRUCTOR create(CONST parameterId:T_idString);
+      DESTRUCTOR destroy;
   end;
 
   P_pattern=^T_pattern;
   T_pattern=object
-    sig:array of T_patternElement;
-    hasOptionals:boolean;
-
-    CONSTRUCTOR create;
-    CONSTRUCTOR clone(original:T_pattern);
-    CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
-    PROCEDURE clear;
-    DESTRUCTOR destroy;
-    FUNCTION appendFreeId(CONST parId:T_idString):longint;
-    PROCEDURE append(CONST el:T_patternElement);
-    PROCEDURE appendOptional;
-    FUNCTION indexOfId(CONST id:T_idString):longint;
-    FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
-    FUNCTION idForIndexInline(CONST index:longint):T_idString;
-    PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
-    FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
-    FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
-    FUNCTION matchesNilPattern:boolean;
-    FUNCTION toString:ansistring;
-    FUNCTION toCmdLineHelpStringString:ansistring;
-    FUNCTION isEquivalent(CONST p:T_pattern):boolean;
-    FUNCTION hides(CONST p:T_pattern):boolean;
-    FUNCTION isValidMainPattern:boolean;
-    PROCEDURE toParameterIds(CONST tok:P_token);
-    FUNCTION getParameterNames:P_listLiteral;
-    PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);
+    private
+      sig:array of T_patternElement;
+      hasOptionals:boolean;
+      PROCEDURE append(CONST el:T_patternElement);
+      PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_threadContext);
+    public
+      CONSTRUCTOR create;
+      CONSTRUCTOR clone(original:T_pattern);
+      CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      FUNCTION appendFreeId(CONST parId:T_idString):longint;
+      FUNCTION indexOfId(CONST id:T_idString):longint;
+      FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
+      PROCEDURE appendOptional;
+      FUNCTION arity:longint;
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean;
+      PROPERTY isVariadic:boolean read hasOptionals;
+      FUNCTION isValidMainPattern:boolean;
+      FUNCTION isValidCustomTypeCheckPattern:boolean;
+      FUNCTION isValidMutablePattern:boolean;
+      FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
+      FUNCTION isEquivalent(CONST p:T_pattern):boolean;
+      FUNCTION hides(CONST p:T_pattern):boolean;
+      FUNCTION getParameterNames:P_listLiteral;
+      FUNCTION matchesNilPattern:boolean;
+      FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+      FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+      FUNCTION idForIndexInline(CONST index:longint):T_idString;
+      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);
+      FUNCTION toString:ansistring;
+      FUNCTION toCmdLineHelpStringString:ansistring;
+      PROCEDURE toParameterIds(CONST tok:P_token);
   end;
 
   T_customTypeCheckToExpressionCallback=FUNCTION(CONST rule:pointer):P_expressionLiteral;
@@ -318,6 +325,16 @@ PROCEDURE T_pattern.appendOptional;
     hasOptionals:=true;
   end;
 
+FUNCTION T_pattern.arity:longint;
+  begin
+    result:=length(sig);
+  end;
+
+FUNCTION T_pattern.canApplyToNumberOfParameters(CONST parCount:longint):boolean;
+  begin
+    result:=(length(sig)<=parCount) and hasOptionals or (length(sig)=parCount);
+  end;
+
 FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
   VAR i:longint;
   begin
@@ -452,6 +469,9 @@ FUNCTION T_pattern.isValidMainPattern:boolean;
     for i:=0 to length(sig)-1 do result:=result and (lt_string in sig[i].typeWhitelist);
   end;
 
+FUNCTION T_pattern.isValidCustomTypeCheckPattern:boolean; begin result:=(length(sig)=1) and not(hasOptionals); end;
+FUNCTION T_pattern.isValidMutablePattern        :boolean; begin result:=(length(sig)=0) and not(hasOptionals); end;
+FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;
 PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   VAR t:P_token;
   begin

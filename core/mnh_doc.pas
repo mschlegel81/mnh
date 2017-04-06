@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html, serializationUtil;
+USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html, mnh_settings, serializationUtil;
 TYPE
   T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
@@ -388,9 +388,12 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
       if startsWith(tCmd,FILE_SWITCH_PREFIX) then begin
         with outFile do begin
           if isOpen then close(handle);
-          assign(handle,htmlRoot+DirectorySeparator+cmdParam);
-          rewrite(handle);
-          isOpen:=true;
+          cmdParam:=htmlRoot+DirectorySeparator+cmdParam;
+          if not(fileExists(cmdParam)) or (CODE_HASH<>settings.value^.htmlDocGeneratedForCodeHash) then begin
+            assign(handle,cmdParam);
+            rewrite(handle);
+            isOpen:=true;
+          end else isOpen:=false;
         end;
         exit(true);
       end;
@@ -434,12 +437,14 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         end;
       end;
       close(templateFileHandle);
+      settings.value^.htmlDocGeneratedForCodeHash:='';
     end else for templateLine in html_template_txt do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
         beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));
         definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
       end;
+      settings.value^.htmlDocGeneratedForCodeHash:=CODE_HASH;
     end;
     with outFile do if isOpen then close(handle);
   end;

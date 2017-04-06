@@ -68,6 +68,7 @@ TYPE
       FUNCTION isVariadic:boolean;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION hasValidMainPattern:boolean;
+      FUNCTION hasValidValidCustomTypeCheckPattern:boolean;
       FUNCTION hasEquivalentPattern(CONST s:P_subrule):boolean;
       FUNCTION hidesSubrule(CONST s:P_subrule):boolean;
       FUNCTION getParameterNames:P_listLiteral;
@@ -236,7 +237,7 @@ PROCEDURE T_subrule.updatePatternForInline;
       parIdx:=pattern.indexOfIdForInline(token.txt);
     end else if token.tokType=tt_optionalParameters then begin
       parIdx:=REMAINING_PARAMETERS_IDX;
-      pattern.hasOptionals:=true;
+      pattern.appendOptional;
     end;
   end;
 
@@ -336,30 +337,12 @@ DESTRUCTOR T_subrule.destroy;
     doneCriticalSection(firstCallCs);
   end;
 
-FUNCTION T_subrule.canApplyToNumberOfParameters(CONST parCount:longint):boolean;
-  begin
-    result:=(arity<=parCount) and pattern.hasOptionals or (arity=parCount);
-  end;
-
-FUNCTION T_subrule.isVariadic:boolean;
-  begin
-    result:=pattern.hasOptionals;
-  end;
-
-FUNCTION T_subrule.hasValidMainPattern:boolean;
-  begin
-    result:=pattern.isValidMainPattern;
-  end;
-
-FUNCTION T_subrule.hasEquivalentPattern(CONST s:P_subrule):boolean;
-  begin
-    result:=pattern.isEquivalent(s^.pattern);
-  end;
-
-FUNCTION T_subrule.hidesSubrule(CONST s:P_subrule):boolean;
-  begin
-    result:=pattern.hides(s^.pattern);
-  end;
+FUNCTION T_subrule.canApplyToNumberOfParameters(CONST parCount:longint):boolean; begin result:=pattern.canApplyToNumberOfParameters(parCount); end;
+FUNCTION T_subrule.isVariadic                                          :boolean; begin result:=pattern.isVariadic;                             end;
+FUNCTION T_subrule.hasValidMainPattern                                 :boolean; begin result:=pattern.isValidMainPattern;                     end;
+FUNCTION T_subrule.hasValidValidCustomTypeCheckPattern                 :boolean; begin result:=pattern.isValidCustomTypeCheckPattern;          end;
+FUNCTION T_subrule.hasEquivalentPattern(CONST s:P_subrule)             :boolean; begin result:=pattern.isEquivalent(s^.pattern);               end;
+FUNCTION T_subrule.hidesSubrule(CONST s:P_subrule)                     :boolean; begin result:=pattern.hides(s^.pattern);                      end;
 
 FUNCTION T_subrule.getParameterNames:P_listLiteral;
   begin
@@ -438,7 +421,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
             if remaining=nil then begin
               if param=nil
               then remaining:=newListLiteral
-              else remaining:=param^.tail(length(pattern.sig));
+              else remaining:=param^.tail(pattern.arity);
               remaining^.unreference;
             end;
             L:=remaining;
@@ -470,19 +453,19 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
       result:=true;
       context.callStackPush(callLocation,@self,param,@self);
       tempInnerParam:=newListLiteral;
-      for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^[i],true);
+      for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^[i],true);
       lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_parList,tempInnerParam);
       lastRep:=lastRep^.next;
     end else begin
       result:=false;
       if useUncurryingFallback then case typ of
         srt_inline_for_each: begin
-          if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(pattern.arity),declaredAt)
+                       else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),declaredAt);
         end;
         srt_inline_for_literal: begin
-          if param=nil then context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(pattern.arity),declaredAt)
+                       else context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),declaredAt);
         end;
       end;
     end;
@@ -719,7 +702,7 @@ FUNCTION T_subrule.getLocation:T_tokenLocation;
 
 FUNCTION T_subrule.arity:longint;
   begin
-    result:=length(pattern.sig);
+    result:=pattern.arity;
   end;
 
 FUNCTION T_subrule.inspect:P_mapLiteral;
@@ -807,7 +790,7 @@ PROCEDURE T_subrule.setAttributes(CONST attributeLines:T_arrayOfString; VAR adap
 
 FUNCTION T_subrule.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
   begin
-    result:=(length(pattern.sig)=1) and (pattern.sig[0].acceptType(literalTypeToAccept));
+    result:=pattern.acceptsSingleLiteral(literalTypeToAccept);
   end;
 
 FUNCTION T_subrule.getAttributesLiteral:P_mapLiteral;

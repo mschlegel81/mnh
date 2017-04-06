@@ -8,7 +8,7 @@ USES
   //my utilities:
   mySys, mnhFormHandler, myStringUtil, myGenerics,
   //GUI: LCL components
-  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls, simpleipc,
   //GUI: SynEdit
   SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
@@ -27,6 +27,7 @@ USES
   openDemoDialog,
   mnh_workspaces,
   mnh_plotForm,
+  mnh_splash,
   //MNH:
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
@@ -38,6 +39,7 @@ USES
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
+CONST UNIQUE_EDITOR_IPC_ID='MNH5-editingGuiInstance';
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -83,6 +85,7 @@ TYPE
     editScriptRoot,
     MenuItem1,
     MenuItem4,
+    miAbout,
     miCallMain,
     miClear,
     miClose,
@@ -232,6 +235,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE miFullscreenClick(Sender: TObject);
+    PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miLangMnhClick(Sender: TObject);
@@ -247,6 +251,7 @@ TYPE
 
     PROCEDURE onEndOfEvaluation; override;
   private
+    uniqueEditorInstanceIpcServer: TSimpleIPCServer;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
     settingsReady:boolean;
@@ -473,6 +478,12 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
+    splashOnStartup;
+    uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
+    uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
+    uniqueEditorInstanceIpcServer.Global:=true;
+    uniqueEditorInstanceIpcServer.StartServer;
+
     initGuiOutAdapters(MnhForm,true);
     guiTaskQueue.create;
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
@@ -645,6 +656,12 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
                            end;
   end;
 
+PROCEDURE TMnhForm.miAboutClick(Sender: TObject);
+  begin
+    splashForm.ShowModal;
+  end;
+
+
 PROCEDURE makeAndShowDoc();
   begin
     makeHtmlFromTemplate();
@@ -793,14 +810,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if inputPageControl.activePageIndex>=0
     then aid:=C_tabChar+intToStr(editorMeta[inputPageControl.activePageIndex]^.editor.CaretY)+','+intToStr(editorMeta[inputPageControl.activePageIndex]^.editor.CaretX)
     else aid:='';
-    case currentRunnerInfo.state of
-      es_running     : StatusBar.SimpleText:='Evaluating...'+aid;
-      es_debugRunning: StatusBar.SimpleText:='Debugging...'+aid;
-      es_debugHalted : StatusBar.SimpleText:='Debugging [HALTED]'+aid;
-      es_editEnsuring,
-      es_editRunning : StatusBar.SimpleText:='Edit script...'+aid;
-      else StatusBar.SimpleText:=currentRunnerInfo.message+aid;
-    end;
+    StatusBar.SimpleText:=currentRunnerInfo.message+aid;
     //------------------------------------------------------------:progress time
 
     if currentRunnerInfo<>lastReportedRunnerInfo then begin
@@ -859,6 +869,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end;
       //-----------------------------------------------------------.:File checks
     end;
+
+    if uniqueEditorInstanceIpcServer.PeekMessage(1,true)
+    then FormDropFiles(self,split(uniqueEditorInstanceIpcServer.StringMessage,C_lineBreakChar));
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
     if flushPerformed and (outputPageControl.activePage<>outputTabSheet) then outputPageControl.activePage:=outputTabSheet;

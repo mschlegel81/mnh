@@ -42,14 +42,16 @@ PROCEDURE TMnhForm.processSettings;
       maxLevel:longint=5;
   begin
     if not(settingsReady) then begin
-      formPosition:=settings.value^.mainForm;
-      top   :=formPosition.top;
-      Left  :=formPosition.Left;
-      width :=formPosition.width;
-      height:=formPosition.height;
-      if formPosition.isFullscreen then WindowState:=wsMaximized;
-      outputPageControl.height:=round(ClientHeight*formPosition.relativeSplitterPosition);
-      StatusBar.top:=outputPageControl.top+outputPageControl.height;
+      if settings.value^.loaded then begin
+        formPosition:=settings.value^.mainForm;
+        top   :=formPosition.top;
+        Left  :=formPosition.Left;
+        width :=formPosition.width;
+        height:=formPosition.height;
+        if formPosition.isFullscreen then WindowState:=wsMaximized;
+        outputPageControl.height:=round(ClientHeight*formPosition.relativeSplitterPosition);
+        StatusBar.top:=outputPageControl.top+outputPageControl.height;
+      end else settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
 
       miDeclarationEcho .Checked:=mt_echo_declaration in settings.value^.outputBehaviour;
       miExpressionEcho  .Checked:=mt_echo_input       in settings.value^.outputBehaviour;

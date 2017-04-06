@@ -231,18 +231,12 @@ PROCEDURE TSynMnhSyn.next;
       for lc in T_messageClass do if (C_messageClassMeta[lc].guiMarker<>'') and startsWith(C_messageClassMeta[lc].guiMarker) then begin
         specialLineCase:=lc;
       end;
-      //if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
-      //  i:=0;
-      //  if startsWith(' in>') or startsWith('out>') then specialLineCase:=mt_echo_input;
-      //  while (fLine[i]<>#0) and (specialLineCase=mt_clearConsole) do begin
-      //    if (fLine[i]=';') or ((fLine[i]='/') and (fLine[i+1]='/')) then specialLineCase:=mt_echo_input;
-      //    inc(i);
-      //  end;
-      //  i:=-1;
-      //end;
       if i>=0 then run:=i+1;
       fTokenId:=tokenKindForClass[specialLineCase];
-      if specialLineCase<>mc_echo then while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
+      if specialLineCase=mc_echo then begin
+        while (run<RUN_LIMIT) and not(fLine[run] in [#0,'>']) do inc(run);
+        if fLine[run]='>' then inc(run);
+      end else while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
     if blobEnder<>#0 then begin
