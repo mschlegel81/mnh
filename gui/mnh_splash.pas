@@ -20,6 +20,7 @@ TYPE
     CheckBox1: TCheckBox;
     Image1: TImage;
     Label1: TLabel;
+    Label2: TLabel;
     Panel1: TPanel;
     PROCEDURE CheckBox1Change(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
@@ -65,6 +66,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
+    Label2.caption:='built '+intToStr(BUILT_NUMBER)+' ['+CODE_HASH+']';
     beginThread(@prepareDoc);
   end;
 
