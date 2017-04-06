@@ -8,7 +8,7 @@ USES
   //my utilities:
   mySys, mnhFormHandler, myStringUtil, myGenerics,
   //GUI: LCL components
-  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls, simpleipc,
   //GUI: SynEdit
   SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
@@ -38,6 +38,7 @@ USES
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
+CONST UNIQUE_EDITOR_IPC_ID='MNH5-editingGuiInstance';
 
 CONST LANG_MNH   = 0;
       LANG_CPP   = 1;
@@ -247,6 +248,7 @@ TYPE
 
     PROCEDURE onEndOfEvaluation; override;
   private
+    uniqueEditorInstanceIpcServer: TSimpleIPCServer;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
     settingsReady:boolean;
@@ -473,6 +475,11 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
+    uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
+    uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
+    uniqueEditorInstanceIpcServer.Global:=true;
+    uniqueEditorInstanceIpcServer.StartServer;
+
     initGuiOutAdapters(MnhForm,true);
     guiTaskQueue.create;
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
@@ -852,6 +859,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end;
       //-----------------------------------------------------------.:File checks
     end;
+
+    if uniqueEditorInstanceIpcServer.PeekMessage(1,true)
+    then FormDropFiles(self,split(uniqueEditorInstanceIpcServer.StringMessage,C_lineBreakChar));
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
     if flushPerformed and (outputPageControl.activePage<>outputTabSheet) then outputPageControl.activePage:=outputTabSheet;
