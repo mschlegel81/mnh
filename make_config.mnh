@@ -27,13 +27,13 @@ canBuild(B:BuildConfig)->B[0]=isLinux;
 VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
 binName(B:BuildConfig)->B[2];
 
-packSets(linuxBuiltsReady:boolean)->
+packSets(linuxBuiltsReady:boolean,builtNo)->
   [                  [[      'mnh.exe',      'mnh_light.exe'],'win64'],
                      [['bin32/mnh.exe','bin32/mnh_light.exe'],'win32'],
                      [[      'mnh.exe',      'mnh_light.exe','..\3rd_party_unversioned\openssl-1.0.2k-x64_86-win64.zip'],'win64_openSsl'],
                      [['bin32/mnh.exe','bin32/mnh_light.exe','..\3rd_party_unversioned\openssl-1.0.2k-i386-win32.zip'  ],'win32_openSsl'],
   linuxBuiltsReady ? [[      'mnh'    ,      'mnh_light'    ],'linux'        ] : void]
-  .each(s,[expandedFileName(s[0]),s[1]]);
+  .each(s,[expandedFileName(s[0]),builtNo,s[1]]);
 
 private memoized sevenZipExe->
   ["c:/Program Files/7-Zip/7z.exe",
