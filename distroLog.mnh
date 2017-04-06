@@ -1,0 +1,21 @@
+plain datastore log;
+
+private max([])->0;
+private max(...)->math.max@...;
+
+memoized getBuiltNumber(codeHash:string)->begin
+  isVoid(log)
+  ? begin
+      log:=[].toMap;
+    end
+  : void;
+
+  log[codeHash] orElse begin
+    local nextNo:=log.getInner(1).max+1;
+    log<<[codeHash,nextNo];
+    nextNo;
+  end;
+end;
+
+main->isVoid(log) ? print('No build version logged')
+                  : log.sort(1).trailing(10).map({$x.join("\t")&($x[0]==mnhInfo['codeVersion'] ? "\t*" : "")}).join("\n").print;

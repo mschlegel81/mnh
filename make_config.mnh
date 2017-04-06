@@ -45,7 +45,7 @@ private memoized sevenZipExe->
   .each(file,file.fileExists ? file : void,head)
   orElse fail('7-Zip could not be located!');
 
-call7z(fileList,suffix)->sevenZipExe.execPipeless(['a','-mx=9','-bd',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix)]|fileList);
+call7z(fileList,builtNo,suffix)->sevenZipExe.execPipeless(['a','-mx=9','-bd',format('versions/mnh5_%s_%s.7z',builtNo,suffix)]|fileList);
 
 hashFiles:=['../3rd_party/diff/diff.pas',
             '../3rd_party/epikTimer/epiktimer.pas',

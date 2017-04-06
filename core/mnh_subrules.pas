@@ -62,7 +62,7 @@ TYPE
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral; virtual;
-
+      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
       //Pattern related:
       FUNCTION arity:longint; virtual;
       FUNCTION isVariadic:boolean;
@@ -552,6 +552,12 @@ FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RH
 FUNCTION T_subrule.applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
   begin
     new(P_subrule(result),createFromInlineWithOp(@self,intrinsicRuleId,funcLocation));
+  end;
+
+PROCEDURE T_subrule.validateSerializability(CONST adapters:P_adapters);
+  begin
+    if adapters=nil then exit;
+    if typ<>srt_inline_for_literal then adapters^.raiseError('Expression literal '+toString(20)+' is not serializable',declaredAt);
   end;
 
 CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);

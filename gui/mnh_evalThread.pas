@@ -663,7 +663,13 @@ PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CO
           if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
         end;
       end;
-
+    end else begin
+      info.tokenExplanation:='';
+      info.tokenText:='';
+      info.startLoc.column:=CaretX;
+      info.startLoc.line:=CaretY;
+      info.location:=info.startLoc;
+      info.endLoc:=info.startLoc;
     end;
     lexer.destroy;
     system.leaveCriticalSection(cs);

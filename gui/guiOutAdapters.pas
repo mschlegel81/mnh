@@ -67,29 +67,37 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       wroteToSyn:boolean=false;
       s:string;
 
-  PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
+  PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
     VAR txt:string;
         tokens:T_arrayOfString;
         k:longint=0;
         first:boolean=true;
         firstInLine:boolean=true;
+        message:string;
     begin
-      if settings.value^.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
-        tokens:=tokenSplit(message);
-        while k<length(tokens) do begin
-          txt:='';
-          firstInLine:=true;
-          while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=syn.charsInWindow-5)) do begin
-            txt:=txt+tokens[k];
-            inc(k);
-            firstInLine:=false;
+      for message in messageList do begin
+        if settings.value^.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
+          tokens:=tokenSplit(message);
+          while k<length(tokens) do begin
+            txt:='';
+            firstInLine:=true;
+            while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=syn.charsInWindow-5)) do begin
+              txt:=txt+tokens[k];
+              inc(k);
+              firstInLine:=false;
+            end;
+            if first
+            then syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+txt)
+            else syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
+            first:=false;
           end;
+        end else begin
           if first
-          then syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+txt)
-          else syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
+          then syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+message)
+          else syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
           first:=false;
         end;
-      end else syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+message);
+      end;
       wroteToSyn:=true;
     end;
 
@@ -133,7 +141,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_endOfEvaluation: parentForm.onEndOfEvaluation;
         mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output: writeWrapped(messageType,join(messageText,' '));
+        mt_echo_output: writeWrapped(messageType,messageText);
         else begin
           wroteToSyn:=true;
           for s in defaultFormatting(storedMessages[i],true) do syn.lines.append(s);

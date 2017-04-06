@@ -11,7 +11,6 @@ core/res_*.inc
 demos/inputs/*.txt
 core/code_hash.inc
 *.7z
-*.datastore*
 *.last
 *.lps
 mnh
@@ -21,3 +20,6 @@ mnh_light_debug
 *.png
 mnhi
 mnhi_debug
+core/built_number.inc
+demos/*.datastore*
+regTest/*.datastore*

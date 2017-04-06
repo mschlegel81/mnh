@@ -96,6 +96,9 @@ PROCEDURE TMnhForm.processSettings;
     then OutputEdit.Font.quality:=fqCleartypeNatural
     else OutputEdit.Font.quality:=fqNonAntialiased;
     for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.Font:=OutputEdit.Font;
+    if settings.value^.wordWrapEcho
+    then guiAdapters.preferredEchoLineLength:=OutputEdit.charsInWindow-6
+    else guiAdapters.preferredEchoLineLength:=-1;
 
     currentExpressionMemo.Font:=OutputEdit.Font;
     assistanceSynEdit.Font:=OutputEdit.Font;
@@ -159,6 +162,7 @@ PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
   begin
     settings.value^.wordWrapEcho:=not(settings.value^.wordWrapEcho);
     miWrapEcho.Checked:=settings.value^.wordWrapEcho;
+    processSettings;
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);

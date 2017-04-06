@@ -105,6 +105,7 @@ TYPE
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
     public
       {$ifdef fullVersion}
+      preferredEchoLineLength:longint;
       hasNeedGUIerror:boolean;
       {$endif}
       {$ifdef imig}
@@ -123,7 +124,7 @@ TYPE
 
       PROCEDURE echoDeclaration(CONST m:string);
       PROCEDURE echoInput      (CONST m:string);
-      PROCEDURE echoOutput     (CONST m:string);
+      PROCEDURE echoOutput     (CONST m:T_arrayOfString);
 
       PROCEDURE raiseStoredMessages(VAR stored:T_storedMessages);
       {$ifdef fullVersion}
@@ -457,6 +458,7 @@ CONSTRUCTOR T_adapters.create;
   begin
     {$ifdef fullVersion}
     privatePlot:=nil;
+    preferredEchoLineLength:=-1;
     {$endif}
     {$ifdef imig}
     picture.create(nil);
@@ -534,7 +536,7 @@ PROCEDURE T_adapters.printOut         (CONST s: T_arrayOfString);               
 PROCEDURE T_adapters.clearPrint;                                                                                        begin raiseCustomMessage(message(mt_clearConsole    ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.echoDeclaration(CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_declaration,m                   ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.echoInput      (CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_input      ,m                   ,C_nilTokenLocation)); end;
-PROCEDURE T_adapters.echoOutput     (CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_output     ,m                   ,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.echoOutput     (CONST m:T_arrayOfString);                                                          begin raiseCustomMessage(message(mt_echo_output     ,m                   ,C_nilTokenLocation)); end;
 
 PROCEDURE T_adapters.logMissingMain;
   begin

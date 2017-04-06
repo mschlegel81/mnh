@@ -1,4 +1,4 @@
-USE testLog,mnhInfo,formattingUtils,make_config;
+USE testLog,mnhInfo,formattingUtils,make_config,distroLog;
 
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
@@ -43,6 +43,9 @@ currentCodeHash:=begin
   executor.execPipeless(['../checkstyle.mnh','fix']);
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
+  fileExists('core/built_number.inc')
+  ? void
+  : writeFile('core/built_number.inc',"BUILT_NUMBER=-1;");
   templateToInc('resources/examples.txt'                   ,'core/res_examples.inc');
   templateToInc('resources/html_template.txt'              ,'core/res_html_template.inc');
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
@@ -52,15 +55,26 @@ currentCodeHash:=begin
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
   local result:=format('%8.8x',fileStats(hashFiles).getInner(3).agg(+)).copy(0,8);
-  fileContents('core/code_hash.inc')=="CODE_HASH='"&result&"';"
+  local expectedContents:=format("CODE_HASH='%s';",result);
+  fileContents('core/code_hash.inc')==expectedContents
   ? void
   : begin
-      writeFile('core/code_hash.inc',"CODE_HASH='"&result&"';");
+      writeFile('core/code_hash.inc',expectedContents);
       tprint('core/code_hash.inc updated with current hash ',result);
     end;
   result;
 end;
 private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
+
+private ensureBuiltNumber->begin
+  local expectedContents:=format("BUILT_NUMBER=%s;",getBuiltNumber(ensureCodeHash));
+  fileContents('core/built_number.inc')==expectedContents
+  ? void
+  : begin
+      writeFile('core/built_number.inc',expectedContents);
+      tprint('core/built_number.inc updated with current hash ',getBuiltNumber(ensureCodeHash));
+    end;
+end;
 
 private myMove(source,dest:string)->fileExists(source) ? begin
   local tries:=3;
@@ -78,6 +92,7 @@ private buildExe(B:BuildConfig)->
   B.needBuilt
   ? begin
       ensureCodeHash;
+      ensureBuiltNumber;
       tprint('Building ',B[2]);
       local compilerOutput:=B[3].exec(B[4]).head;
       local sepLine:=repeat('-',compilerOutput.each(line,line.length,max));

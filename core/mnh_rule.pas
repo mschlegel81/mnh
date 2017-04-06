@@ -310,7 +310,10 @@ FUNCTION T_protectedRuleWithSubrules.replaces(CONST param: P_listLiteral; CONST 
       system.enterCriticalSection(rule_cs);
       result:=true;
       context.reduceExpression(firstRep);
-      lastRep:=firstRep^.last;
+      if firstRep<>nil then lastRep:=firstRep^.last else begin
+        lastRep:=nil;
+        result:=false;
+      end;
       system.leaveCriticalSection(rule_cs);
     end;
   end;

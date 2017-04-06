@@ -45,7 +45,7 @@ main('files')->
 .each(file,existing(file) orElse
            existing('gui/'&file) orElse
            existing('consoles/'&file))
-.union(allFiles('','*.inc').minus(['core/code_hash.inc']))
+.union(allFiles('','*.inc').minus(['core/code_hash.inc','core/built_number.inc']))
 .escape
 .join(",\n\v")
 .{print("hashFiles:=[\v",$s,'];')};
