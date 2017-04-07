@@ -1011,7 +1011,15 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
-        tt_pseudoFuncPointer: if cTokType[1] in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule] then resolvePseudoFuncPointer;
+        tt_pseudoFuncPointer: case cTokType[1] of
+          tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
+          tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat..tt_operatorConcat: begin
+            first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
+            first^.tokType:=tt_literal;
+            first^.next:=context.recycler.disposeToken(first^.next);
+            didSubstitution:=true;
+          end;
+        end;
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifndef DEBUGMODE}
