@@ -828,7 +828,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
-          resolveRuleId(nil,adapters);
+          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters);
       end;
       t:=t^.next;
     end;
@@ -859,7 +859,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          token.resolveRuleId(nil,adapters);
+          P_abstractPackage(token.location.package)^.resolveId(token,adapters);
           functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
         end;
       end;

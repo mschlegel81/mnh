@@ -125,7 +125,7 @@ FUNCTION clearRuleCache_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       ruleIdToken.create;
       ruleIdToken.define(tokenLocation,P_stringLiteral(arg0)^.value,tt_identifier);
-      ruleIdToken.resolveRuleId(tokenLocation.package,context.adapters);
+      P_abstractPackage(tokenLocation.package)^.resolveId(ruleIdToken,context.adapters);
       if ruleIdToken.tokType in [tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule] then P_rule(ruleIdToken.data)^.clearCache;
       ruleIdToken.destroy;
       result:=newVoidLiteral;

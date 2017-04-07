@@ -67,6 +67,7 @@ TYPE
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -798,7 +799,7 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
   VAR ns:T_namespace;
       i:longint;
   begin
-    for ns:=low(T_namespace) to high(T_namespace) do if C_namespaceString[ns]=id then exit(true);
+    for ns in T_namespace do if C_namespaceString[ns]=id then exit(true);
     for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(true);
     result:=false;
   end;
@@ -890,13 +891,13 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
               .put('subrules',subRulesMeta,false);
   end;
 
-PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNil:P_adapters);
+PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
   begin
     ruleId   :=token.txt;
-    if P_package(package)^.packageRules.containsKey(ruleId,userRule) then begin
+    if packageRules.containsKey(ruleId,userRule) then begin
       if userRule^.getRuleType=rt_customTypeCheck
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_localUserRule;
@@ -904,7 +905,7 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
       {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
       exit;
     end;
-    if P_package(package)^.importedRules.containsKey(ruleId,userRule) then begin
+    if importedRules.containsKey(ruleId,userRule) then begin
       if userRule^.getRuleType=rt_customTypeCheck
       then token.tokType:=tt_customTypeRule
       else token.tokType:=tt_importedUserRule;
@@ -919,13 +920,13 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
     end;
     ruleId:=isTypeToType(ruleId);
     if ruleId<>'' then begin
-      if P_package(package)^.packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
+      if packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
         {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
         exit;
       end;
-      if P_package(package)^.importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
+      if importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
         token.tokType:=tt_customTypeRule;
         token.data:=userRule;
         {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
@@ -938,7 +939,6 @@ PROCEDURE resolveId(VAR token:T_token; CONST package:pointer; CONST adaptersOrNi
 {$undef include_implementation}
 INITIALIZATION
 {$define include_initialization}
-  resolveIDsCallback:=@resolveId;
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
