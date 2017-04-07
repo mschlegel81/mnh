@@ -145,7 +145,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
     for i:=0 to length(messages)-1 do with messages[i] do begin
       case messageType of
         mt_printline:  for tmp in messageText do append(htmlOut,escapeHtml(tmp));
-        mt_echo_input: begin end;
+        mt_echo_input, mt_echo_declaration, mt_el1_note: begin end;
         mt_echo_output: for tmp in messageText do append(htmlOut,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(escapeHtml(tmp)));
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
