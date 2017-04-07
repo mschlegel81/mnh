@@ -701,16 +701,19 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
         else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
       packageRules.put(ruleId,result);
+      {$ifdef DEBUGMODE}
       if ruleType=rt_customTypeCheck
       then adapters.raiseNote('Creating new rules: '+ruleId+' and is'+ruleId,ruleDeclarationStart)
       else adapters.raiseNote('Creating new rule: '+ruleId,ruleDeclarationStart);
+      {$endif}
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
       else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
       then adapters.raiseError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
-      else adapters.raiseNote('Extending rule: '+ruleId,ruleDeclarationStart);
+      {$ifdef DEBUGMODE}
+      else adapters.raiseNote('Extending rule: '+ruleId,ruleDeclarationStart){$endif};
     end;
   end;
 
