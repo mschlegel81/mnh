@@ -243,6 +243,14 @@ PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: b
 FUNCTION TMnhForm._doSaveAs_(CONST index: longint): boolean;
   begin
     if index<0 then exit(false);
+    if editorMeta[index]^.language=LANG_MNH
+    then begin
+      SaveDialog.FilterIndex:=1;
+      SaveDialog.options:=SaveDialog.options+[ofExtensionDifferent];
+    end else begin
+      SaveDialog.FilterIndex:=2;
+      SaveDialog.options:=SaveDialog.options-[ofExtensionDifferent];
+    end;
     if SaveDialog.execute then with editorMeta[index]^ do begin
       caption:=saveFile(SaveDialog.fileName);
       result:=true;
