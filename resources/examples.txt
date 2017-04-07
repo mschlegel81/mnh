@@ -710,6 +710,14 @@ toList([2,3,6].toSet);
 //#lists.getAll
 [1,3,5].getAll([0,2])==[1,3,5].get([0,2]);
 
+[1..20].filter({$x mod 2<>0<>$x mod 3});
+
+//#lists.map
+['a'..'f'].map(::upper);
+
+//#lists.pMap
+['a'..'f'].pMap(::upper);
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');
