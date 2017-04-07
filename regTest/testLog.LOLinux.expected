@@ -3598,7 +3598,6 @@ out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
  in> t :=[0..1000]*2*pi/1000;
-Note  Creating new rule: t
  in> plot(t, sin(t));
 Error  Cannot resolve ID "plot"
 Stack trace  :evaluation
@@ -3828,9 +3827,7 @@ out> [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]].toSet
  in> bits(123).ord.join;
 out> '1101111000000000000000000000000000000000000000000000000000000000'
  in> input :=[[1..10], random,'test', random(9)];
-Note  Creating new rule: input
  in> serialized :=input.serialize;
-Note  Creating new rule: serialized
  in> print(input.toString.byteLength,' > ', serialized.byteLength);
 261 > 174
 out> void
@@ -3847,7 +3844,6 @@ out> 'numericList(6)'
  in> typeOf({$x^2+$y});
 out> 'expression(2)'
  in> x :=transpose([1,[1, 2, 3],[1, 2]], 0);
-Note  Creating new rule: x
  in> x;
 out> [[1,1,1],[0,2,2],[0,3,0]]
  in> x.transpose(0);
