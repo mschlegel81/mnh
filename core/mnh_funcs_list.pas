@@ -1,7 +1,8 @@
 UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
-USES myGenerics,
+USES sysutils,
+     myGenerics,
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
      mnh_litVar,
@@ -355,13 +356,20 @@ FUNCTION group_imp intFuncSignature;
   PROCEDURE makeKeysByIndex(CONST index:longint);
     VAR i:longint;
         dummy:P_literal;
+        hasError:boolean=false;
     begin
       dummy:=newErrorLiteral;
       setLength(keyList,listToGroup^.size);
       for i:=0 to length(keyList)-1 do begin
         if (listToGroup^[i]^.literalType in C_listTypes) and (P_listLiteral(listToGroup^[i])^.size>index)
         then keyList[i]:=P_listLiteral(listToGroup^[i])^[index]^.rereferenced
-        else keyList[i]:=dummy;
+        else begin
+          keyList[i]:=dummy^.rereferenced;
+          if not(hasError) then
+          context.adapters^.raiseError('Grouping by sublist-index is not possible for this list. Problematic entry: '+
+                                       listToGroup^[i]^.toString(50)+' at index '+intToStr(i),tokenLocation);
+          hasError:=true;
+        end;
       end;
       disposeLiteral(dummy);
     end;
@@ -466,11 +474,17 @@ FUNCTION map_imp intFuncSignature;
 
 FUNCTION pmap_imp intFuncSignature;
   VAR iter:T_arrayOfLiteral;
+      x:P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       iter:=compound0^.iteratableList;
-      result:=processMapParallel(iter,P_expressionLiteral(arg1),tokenLocation,context);
+      if tco_spawnWorker in context.threadOptions
+      then result:=processMapParallel(iter,P_expressionLiteral(arg1),tokenLocation,context)
+      else begin
+        result:=newListLiteral(compound0^.size);
+        for x in iter do listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
+      end;
       disposeLiteral(iter);
     end;
   end;
