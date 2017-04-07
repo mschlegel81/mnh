@@ -691,6 +691,7 @@ For built-in rules:<code>
 <li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
 <li><h5><a href="#mutableMod">mutable</a></h5></li>
 <li><h5><a href="#datastoreMod">datastore</a></h5></li>
+<li><h5><a href="#plainMod">plain</a></h5></li>
 <li><h5><a href="#localMod">local</a></h5></li>
 <li><h5><a href="#typeMod">type</a></h5></li></ul></li>
 </ul>
@@ -929,9 +930,13 @@ The following restrictions apply:<ul>
 </ul>
 Functions modifying the value of a datastore value should be <a href="#synchronizedMod">synchronized</a>.
 
+<h4><br><a name="plainMod">plain</a></h4>
+The <i>plain modifier</i> is only allowed in combination with the datastore modifier.<br>
+It changes the representation of the persisted file to "plain text".
+
 <h4><br><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.
-It is only allowed in this context. Local variables always are mutable.
+It is only allowed in this context. Local variables are always mutable.
 
 <h4><br><a name="typeMod">type</a></h4>
 The <i>type modifier</i> allowes for the declaration of custom typechecks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
