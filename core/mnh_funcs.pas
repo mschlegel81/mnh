@@ -267,7 +267,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,false,ak_nullary ,'mnhParameters;//Returns the command line parameters/switches passed on program startup');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,true ,ak_unary   ,'serialize(x);//Returns a string representing x.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,true ,ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,true ,ak_unary   ,'bits(i:int);#Returns the bits of i');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,true ,ak_unary   ,'bits(i:int);//Returns the bits of i');
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);

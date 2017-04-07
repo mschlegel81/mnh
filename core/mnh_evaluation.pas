@@ -5,6 +5,7 @@ USES sysutils,
      mnh_constants,mnh_basicTypes,
      mnh_litVar,
      mnh_tokens,
+     mnh_tokenArray,
      tokenStack,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
@@ -957,7 +958,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end;
         tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
         tt_identifier: begin
-          first^.resolveRuleId(nil,context.adapters);
+          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
           didSubstitution:=true;
         end;
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
@@ -989,7 +990,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
-              first^.resolveRuleId(nil,context.adapters);
+              P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
               first^.next:=context.recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
@@ -1011,7 +1012,15 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
-        tt_pseudoFuncPointer: if cTokType[1] in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule] then resolvePseudoFuncPointer;
+        tt_pseudoFuncPointer: case cTokType[1] of
+          tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
+          tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat..tt_operatorConcat: begin
+            first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
+            first^.tokType:=tt_literal;
+            first^.next:=context.recycler.disposeToken(first^.next);
+            didSubstitution:=true;
+          end;
+        end;
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifndef DEBUGMODE}

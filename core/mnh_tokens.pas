@@ -67,7 +67,6 @@ TYPE
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
     {$endif}
-    PROCEDURE resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
   end;
 
   P_tokenRecycler=^T_tokenRecycler;
@@ -87,13 +86,10 @@ TYPE
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
-  T_resolveIDsCallback=PROCEDURE(VAR token:T_token; CONST package:pointer; CONST adaptersOrNil:P_adapters);
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:pointer; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
 FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
-VAR resolveIDsCallback:T_resolveIDsCallback;
 IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
@@ -160,53 +156,6 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:pointer; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
-  VAR t:P_token;
-      rule:P_abstractRule;
-  begin
-    t:=first;
-    while t<>nil do begin
-      case t^.tokType of
-        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
-          if t^.data=nil then t^.data:=inPackage;
-          if t^.tokType=tt_identifier then t^.resolveRuleId(inPackage,nil);
-          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
-            if t^.tokType<>tt_identifier then begin
-              if t^.tokType=tt_localUserRule then begin
-                rule:=t^.data;
-                if rule^.getRuleType in C_mutableRuleTypes then begin
-                  t^.data:=rule;
-                  t^.tokType:=t^.next^.tokType;
-                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
-                  t^.txt:=t^.txt;
-                  t^.next:=recycler.disposeToken(t^.next);
-                end else adapters^.raiseError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
-              end else adapters^.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
-            end else adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
-          end;
-        end;
-        tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
-          t^.tokType:=tt_assignNewBlockLocal;
-          t^.data:=nil;
-          t^.txt:=t^.next^.txt;
-          t^.next:=recycler.disposeToken(t^.next);
-          t^.next:=recycler.disposeToken(t^.next);
-        end;
-        tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
-          t^.tokType:=tt_assignExistingBlockLocal;
-          t^.data:=nil;
-          t^.next:=recycler.disposeToken(t^.next);
-        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
-          t^.tokType:=t^.next^.tokType;
-          t^.data:=nil;
-          t^.next:=recycler.disposeToken(t^.next);
-        end;
-        end;
-      t:=t^.next;
-    end;
-  end;
-
-{ T_abstractRule }
 
 CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
@@ -269,7 +218,7 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
     data:=ptr;
     {$ifdef debugMode}
     if (ptr=nil) and (tokenType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
-    if (tokenType=tt_identifier) and (tokenLocation.package=nil) then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
+    if (tokenLocation.package=nil) then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
@@ -287,7 +236,7 @@ PROCEDURE T_token.define(CONST original: T_token);
     end;
     {$ifdef debugMode}
     if (data=nil) and (tokType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
-    if (tokType=tt_identifier) and (location.package=nil)then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
+    if (location.package=nil)then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
@@ -486,14 +435,6 @@ FUNCTION T_token.getRawToken: T_rawToken;
     result.txt:=singleTokenToString;
   end;
 {$endif}
-
-PROCEDURE T_token.resolveRuleId(CONST packageOrNil:pointer; CONST adaptersOrNil:P_adapters);
-  VAR package:pointer;
-  begin
-    if packageOrNil<>nil then package:=packageOrNil
-                         else package:=location.package;
-    resolveIDsCallback(self,package,adaptersOrNil);
-  end;
 
 CONSTRUCTOR T_tokenRecycler.create;
   VAR i:longint;

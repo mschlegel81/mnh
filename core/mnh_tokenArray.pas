@@ -22,7 +22,8 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
-      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual; abstract;
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
       PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
       FUNCTION codeChanged:boolean;
       FUNCTION getId:T_idString; virtual;
@@ -62,7 +63,54 @@ TYPE
       FUNCTION getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint):P_token;
   end;
 
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
+VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
 IMPLEMENTATION
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
+  VAR t:P_token;
+      rule:P_abstractRule;
+  begin
+    t:=first;
+    while t<>nil do begin
+      case t^.tokType of
+        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
+          if t^.data=nil then t^.data:=inPackage;
+          if t^.tokType=tt_identifier then inPackage^.resolveId(t^,nil);
+          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+            if t^.tokType<>tt_identifier then begin
+              if t^.tokType=tt_localUserRule then begin
+                rule:=t^.data;
+                if rule^.getRuleType in C_mutableRuleTypes then begin
+                  t^.data:=rule;
+                  t^.tokType:=t^.next^.tokType;
+                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
+                  t^.txt:=t^.txt;
+                  t^.next:=recycler.disposeToken(t^.next);
+                end else adapters^.raiseError('You can only mutate mutable rules! Rule '+rule^.getId+' is not mutable',t^.next^.location);
+              end else adapters^.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+            end else adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
+          end;
+        end;
+        tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignNewBlockLocal;
+          t^.data:=nil;
+          t^.txt:=t^.next^.txt;
+          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
+        tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignExistingBlockLocal;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+          t^.tokType:=t^.next^.tokType;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
+        end;
+      t:=t^.next;
+    end;
+  end;
 
 FUNCTION T_lexer.getToken(CONST line: ansistring;
   VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
@@ -331,7 +379,7 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
   begin
     nextToken:=fetch;
     if nextToken=nil then exit(false);
-    if not(retainBlanks) then case nextToken^.tokType of
+    case nextToken^.tokType of
       tt_literal: if (beforeLastTokenized<>nil) and (beforeLastTokenized^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])
                        and (lastTokenized<>nil) and (lastTokenized^.tokType in [tt_operatorMinus,tt_operatorPlus]) then begin
         if lastTokenized^.tokType=tt_operatorMinus
@@ -348,23 +396,23 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
             n[2]:=fetch;
             if (n[2]<>nil) and (n[2]^.tokType=tt_identifier) then begin
               nextToken^.txt:=nextToken^.txt+ID_QUALIFY_CHARACTER+n[2]^.txt;
-              nextToken^.resolveRuleId(associatedPackage,nil);
+              associatedPackage^.resolveId(nextToken^,nil);
               recycler.disposeToken(n[1]);
               recycler.disposeToken(n[2]);
             end else begin
-              nextToken^.resolveRuleId(associatedPackage,nil);
+              associatedPackage^.resolveId(nextToken^,nil);
               appendToken(nextToken);
               appendToken(n[1]);
               nextToken:=n[2];
             end;
           end else begin
-            nextToken^.resolveRuleId(associatedPackage,nil);
+            associatedPackage^.resolveId(nextToken^,nil);
             appendToken(nextToken);
             nextToken:=n[1];
           end;
-        end else nextToken^.resolveRuleId(associatedPackage,nil);
+        end else associatedPackage^.resolveId(nextToken^,nil);
       end;
-      tt_each,tt_parallelEach: begin
+      tt_each,tt_parallelEach: if not(retainBlanks) then begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) and
            (n[2]<>nil) and (n[2]^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
@@ -376,7 +424,7 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
         recycler.disposeToken(n[2]);
         recycler.disposeToken(n[3]);
       end;
-      tt_agg: begin
+      tt_agg: if not(retainBlanks) then begin
         n[1]:=fetch;
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) then begin
           nextToken^.tokType:=tt_each;
@@ -512,6 +560,26 @@ begin
   codeProvider:=nil;
 end;
 
+FUNCTION T_abstractPackage.isImportedOrBuiltinPackage(CONST id: string): boolean;
+  VAR ns:T_namespace;
+  begin
+    for ns in T_namespace do if C_namespaceString[ns]=id then exit(true);
+    result:=false;
+  end;
+
+PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_adapters);
+  VAR intrinsicFuncPtr:P_intFuncCallback;
+      ruleId:T_idString;
+  begin
+    ruleId   :=token.txt;
+    if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
+      token.tokType:=tt_intrinsicRule;
+      token.data:=intrinsicFuncPtr;
+      exit;
+    end;
+    if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
+  end;
+
 PROCEDURE T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider);
   begin
     if (codeProvider<>nil) and (codeProvider^.disposeOnPackageDestruction) then dispose(codeProvider,destroy);
@@ -532,10 +600,10 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
       recycler:T_tokenRecycler;
       t:P_token;
   begin
-    location.package:=nil;
+    location.package:=@BLANK_ABSTRACT_PACKAGE;
     location.line:=0;
     location.column:=1;
-    lexer.create(inputString,location,nil);
+    lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
     adapters.create;
     recycler.create;
     repeat until not(lexer.fetchNext(recycler,adapters,true));
@@ -546,6 +614,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     setLength(result,0);
     while t<>nil do begin
       setLength(result,length(result)+1);
+      BLANK_ABSTRACT_PACKAGE.resolveId(t^,nil);
       result[length(result)-1]:=t^.getRawToken;
       t:=recycler.disposeToken(t);
     end;
@@ -554,8 +623,12 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
 {$endif}
 
 INITIALIZATION
+  BLANK_ABSTRACT_PACKAGE.create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
   {$ifdef fullVersion}
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
+
+FINALIZATION
+  BLANK_ABSTRACT_PACKAGE.destroy;
 
 end.
