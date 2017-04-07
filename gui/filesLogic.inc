@@ -6,6 +6,7 @@ PROCEDURE miCloseClick(Sender: TObject);
 PROCEDURE miCloseAllButCurrentClick(Sender: TObject);
 PROCEDURE miCloseAllUnmodifiedClick(Sender: TObject);
 PROCEDURE openFromHistory(CONST historyIdx:byte);
+PROCEDURE miReloadClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
 PROCEDURE miFileHistory1Click(Sender: TObject);
 PROCEDURE miFileHistory2Click(Sender: TObject);
@@ -142,6 +143,12 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
       else if polishHistory then processFileHistory;
     end;
+  end;
+
+PROCEDURE TMnhForm.miReloadClick(Sender: TObject);
+  begin
+    if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then
+    with editorMeta[inputPageControl.activePageIndex]^ do if sheet.visible then reloadFile(getPath);
   end;
 
 PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject); begin openFromHistory(0); end;

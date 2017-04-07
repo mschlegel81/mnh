@@ -2256,6 +2256,10 @@ object MnhForm: TMnhForm
         ShortCut = 16463
         OnClick = miOpenClick
       end
+      object miReload: TMenuItem
+        Caption = 'Reload from filesystem'
+        OnClick = miReloadClick
+      end
       object miClose: TMenuItem
         Caption = 'Close'
         ShortCut = 16471

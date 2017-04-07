@@ -1,13 +1,18 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html, mnh_settings, serializationUtil;
+USES sysutils,
+     myStringUtil, myGenerics, serializationUtil,
+     mnh_settings,
+     mnh_basicTypes, mnh_constants,
+     mnh_litVar, mnh_html;
 TYPE
   T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
 TYPE
   P_intrinsicFunctionDocumentation = ^T_intrinsicFunctionDocumentation;
   T_intrinsicFunctionDocumentation = object
-    id, unqualifiedId, description: ansistring;
+    id, unqualifiedId: T_idString;
+    description: ansistring;
     unqualifiedAccess:boolean;
     txtExample,htmlExample: T_arrayOfString;
     CONSTRUCTOR create(CONST funcName: ansistring);
@@ -195,7 +200,7 @@ PROCEDURE ensureBuiltinDocExamples;
     functionDocExamplesReady:=true;
   end;
 
-FUNCTION shortName(CONST id:ansistring):ansistring;
+FUNCTION shortName(CONST id:T_idString):T_idString;
   begin
     if isQualified(id) then result:=split(id,'.')[1] else result:=id;
   end;

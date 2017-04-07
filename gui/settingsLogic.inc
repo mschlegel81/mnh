@@ -87,7 +87,10 @@ PROCEDURE TMnhForm.processSettings;
       {$endif}
 
       settingsReady:=true;
-      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
+      if (inputPageControl.activePageIndex>=0) and
+         (inputPageControl.activePageIndex<length(editorMeta)) and
+         (editorMeta[inputPageControl.activePageIndex]^.language=LANG_MNH)
+      then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;

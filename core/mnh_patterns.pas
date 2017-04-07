@@ -517,7 +517,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       closingBracket:=first^.next;
     end else begin
       parts:=getBodyParts(first,0,context.recycler,context.adapters,closingBracket);
-      if closingBracket^.next<>nil then begin
+      if (closingBracket^.next<>nil) and not(closingBracket^.next^.tokType in [tt_assign,tt_declare]) then begin
         context.adapters^.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
         context.recycler.cascadeDisposeToken(closingBracket^.next);
       end;

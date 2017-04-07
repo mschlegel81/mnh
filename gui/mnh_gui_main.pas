@@ -151,6 +151,7 @@ TYPE
     miOpenDemo,
     miOpenDocumentation,
     miProfile,
+    miReload,
     miReplace,
     miSave,
     miSaveAs,
@@ -358,11 +359,13 @@ PROCEDURE TMnhForm.positionHelpNotifier;
 PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker,forJump: boolean);
   VAR i:longint;
   begin
+    if editorMeta[inputPageControl.activePageIndex]^.language<>LANG_MNH then exit;
     if updateMarker then begin
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to length(editorMeta)-1 do editorMeta[i]^.setMarkedWord(wordText);
     end;
-    if miHelp.Checked or forJump then with editorMeta[inputPageControl.activePageIndex]^.editor do assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
+    if miHelp.Checked or forJump then with editorMeta[inputPageControl.activePageIndex]^.editor do
+      assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
     if miHelp.Checked then begin
       helpPopupMemo.text:=ECHO_MARKER+underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
@@ -603,8 +606,8 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (inputPageControl.activePageIndex<0) or
        (inputPageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[inputPageControl.activePageIndex]^.sheet.tabVisible)) then exit;
-
-    assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
+    if editorMeta[inputPageControl.activePageIndex]^.language=LANG_MNH
+    then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
     caption:=editorMeta[inputPageControl.activePageIndex]^.updateSheetCaption;
   end;
 
