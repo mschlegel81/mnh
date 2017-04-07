@@ -300,14 +300,14 @@ INITIALIZATION
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,false,ak_unary  ,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,false,ak_nullary,'myPath;#returns the path to the current package');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,false,ak_nullary,'executor;#returns the path to the currently executing instance of MNH');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,true ,ak_unary  ,'hash(x);#Returns the builtin hash for the given literal');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,false,ak_nullary,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,false,ak_nullary,'listKeywords;#Returns a list of all keywords by category');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,true ,ak_unary  ,'ord(x);#Returns the ordinal value of x');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,false,ak_nullary,'mnhInfo;#Returns a key-value list with info on the currently executing instance of MNH');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,false,ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,false,ak_nullary,'myPath;//returns the path to the current package');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,false,ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,true ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,false,ak_nullary,'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,false,ak_nullary,'listKeywords;//Returns a list of all keywords by category');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,true ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,false,ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
   intFuncForOperator[tt_comparatorEq     ]:=@funcFor_comparatorEq     ;
   intFuncForOperator[tt_comparatorNeq    ]:=@funcFor_comparatorNeq    ;
   intFuncForOperator[tt_comparatorLeq    ]:=@funcFor_comparatorLeq    ;
