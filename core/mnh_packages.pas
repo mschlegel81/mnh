@@ -199,7 +199,8 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
     if adapters<>nil then begin
       if (path='')
       then adapters^.raiseError('Cannot locate package for id "'+id+'"',tokenLocation)
-      else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
+      {$ifdef debugMode}
+      else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation){$endif};
     end;
     pack:=nil;
   end;
@@ -211,7 +212,8 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     if not(fileExists(path)) and fileExists(path_) then path:=path_;
     if not(fileExists(path))
     then adapters^.raiseError('Cannot locate package "'+path+'"',tokenLocation)
-    else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
+    {$ifdef debugMode}
+    else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation){$endif};
     pack:=nil;
   end;
 
