@@ -103,7 +103,8 @@ FUNCTION listKeywords_imp intFuncSignature;
 
 FUNCTION ord_imp intFuncSignature;
   FUNCTION recurse(CONST x:P_literal):P_literal;
-    VAR i:longint;
+    VAR iter:T_arrayOfLiteral;
+        sub:P_literal;
     begin
       case x^.literalType of
         lt_boolean: if P_boolLiteral(x)^.value
@@ -120,8 +121,10 @@ FUNCTION ord_imp intFuncSignature;
           if x^.literalType in C_listTypes
           then result:=newListLiteral(P_compoundLiteral(x)^.size)
           else result:=newSetLiteral;
-          for i:=0 to P_compoundLiteral(x)^.size-1 do if context.adapters^.noErrors then
-            collResult^.append(recurse(P_compoundLiteral(x)^[i]),false);
+          iter:=P_compoundLiteral(x)^.iteratableList;
+          for sub in iter do if context.adapters^.noErrors then
+            collResult^.append(recurse(sub),false);
+          disposeLiteral(iter);
         end;
       end;
     end;

@@ -287,14 +287,17 @@ FUNCTION join_impl intFuncSignature;
   VAR resTxt:ansistring='';
       joiner:ansistring='';
       i:longint;
+      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
       if params^.size=2 then joiner:=str1^.value;
       if (arg0^.literalType in C_listTypes+C_setTypes) then begin
         if collection0^.size=0 then exit(newStringLiteral(''));
-        resTxt:=stringOfLit(collection0^[0]);
-        for i:=1 to collection0^.size-1 do resTxt:=resTxt+joiner+stringOfLit(collection0^[i]);
+        iter:=collection0^.iteratableList;
+        resTxt:=stringOfLit(iter[0]);
+        for i:=1 to length(iter)-1 do resTxt:=resTxt+joiner+stringOfLit(iter[i]);
+        disposeLiteral(iter);
         result:=newStringLiteral(resTxt);
       end else if (arg0^.literalType in C_scalarTypes) then
         result:=newStringLiteral(stringOfLit(arg0));
@@ -354,6 +357,8 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
   PROCEDURE initArrays;
     VAR L:P_literal;
         i:longint;
+        iter:T_arrayOfLiteral;
+
     PROCEDURE elongate(VAR list:T_arrayOfString);
       begin
         if length(list)=0 then begin
@@ -371,18 +376,20 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
         setLength(lookFor,1);
         lookFor[0]:=P_stringLiteral(L)^.value;
       end else begin
-        setLength(lookFor,P_compoundLiteral(L)^.size);
-        for i:=0 to length(lookFor)-1 do
-          lookFor[i]:=P_stringLiteral(P_compoundLiteral(L)^[i])^.value;
+        iter:=P_compoundLiteral(L)^.iteratableList;
+        setLength(lookFor,length(iter));
+        for i:=0 to length(lookFor)-1 do lookFor[i]:=P_stringLiteral(iter[i])^.value;
+        disposeLiteral(iter);
       end;
       L:=arg2;
       if L^.literalType=lt_string then begin
         setLength(replaceBy,1);
         replaceBy[0]:=P_stringLiteral(L)^.value;
       end else begin
-        setLength(replaceBy,P_compoundLiteral(L)^.size);
-        for i:=0 to length(replaceBy)-1 do
-          replaceBy[i]:=P_stringLiteral(P_compoundLiteral(L)^[i])^.value;
+        iter:=P_compoundLiteral(L)^.iteratableList;
+        setLength(replaceBy,length(iter));
+        for i:=0 to length(replaceBy)-1 do replaceBy[i]:=P_stringLiteral(iter[i])^.value;
+        disposeLiteral(iter);
       end;
       while length(replaceBy)<length(lookFor) do elongate(replaceBy);
       while length(lookFor)<length(replaceBy) do elongate(lookFor);

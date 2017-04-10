@@ -54,7 +54,7 @@ TYPE
     end;
   public
     { public declarations }
-    PROCEDURE initWithLiteral(CONST L:P_compoundLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
+    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
     PROCEDURE conditionalDoShow;
     PROCEDURE fillTable;
   end;
@@ -121,7 +121,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
     end else result:=nil;
   end;
 
-PROCEDURE showProfilingTable(CONST data: P_compoundLiteral);
+PROCEDURE showProfilingTable(CONST data: P_listLiteral);
   begin
     enterCriticalSection(tableFormCs);
     newTableForm.initWithLiteral(data,'Profiling info',true);
@@ -251,7 +251,7 @@ PROCEDURE TtableForm.stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShi
     FormKeyUp(Sender,key,Shift);
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_compoundLiteral; CONST newCaption: string; CONST firstIsHeader_:boolean);
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST firstIsHeader_:boolean);
   VAR i:longint;
       headerLiteral:P_listLiteral;
   begin
@@ -293,6 +293,7 @@ PROCEDURE TtableForm.fillTable;
       i,j:longint;
       rowLit:P_literal;
       cellLit:P_literal;
+      iter:T_arrayOfLiteral;
 
   FUNCTION getHeaderCell(CONST i:longint):string;
     begin
@@ -315,9 +316,10 @@ PROCEDURE TtableForm.fillTable;
       for i:=0 to literal^.size-1 do begin
         rowLit:=literal^[i];
         if rowLit^.literalType in C_compoundTypes then begin
-          setLength(cellContents[i],P_compoundLiteral(rowLit)^.size);
-          for j:=0 to P_compoundLiteral(rowLit)^.size-1 do begin
-            cellLit:=P_compoundLiteral(rowLit)^[j];
+          iter:=P_compoundLiteral(rowLit)^.iteratableList;
+          setLength(cellContents[i],length(iter));
+          for j:=0 to length(iter)-1 do begin
+            cellLit:=iter[j];
             case cellLit^.literalType of
               lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
               lt_real,lt_realList,lt_numList:if mi_comma.Checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
@@ -326,6 +328,7 @@ PROCEDURE TtableForm.fillTable;
               else cellContents[i,j]:=cellLit^.toString;
             end;
           end;
+          disposeLiteral(iter);
         end else begin
           setLength(cellContents[i],1);
           cellLit:=rowLit; j:=0;

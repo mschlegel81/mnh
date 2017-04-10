@@ -86,13 +86,12 @@ FUNCTION treeLit_toString(L:P_literal):string;
 
 PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
   PROCEDURE addChildren(node2:TTreeNode);
-    VAR k:longint;
-        L:P_literal;
+    VAR L:P_literal;
+        iter:T_arrayOfLiteral;
     begin
-      for k:=0 to P_compoundLiteral(node2.data)^.size-1 do begin
-        L:=P_compoundLiteral(node2.data)^[k];
-        variablesTreeView.items.AddChild(node2,treeLit_toString(L)).data:=L;
-      end;
+      iter:=P_compoundLiteral(node2.data)^.iteratableList;
+      for L in iter do variablesTreeView.items.AddChild(node2,treeLit_toString(L)).data:=L;
+      disposeLiteral(iter);
     end;
 
   VAR i:longint;

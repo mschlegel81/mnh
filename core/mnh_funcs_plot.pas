@@ -177,21 +177,20 @@ FUNCTION setOptions intFuncSignature;
       end else fail;
     end;
 
-  VAR pair:P_listLiteral;
-      i:longint;
+  VAR pair:P_literal;
+      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     opt:=context.adapters^.plot^.options;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
-      for i:=0 to compound0^.size-1 do begin
-        pair:=P_listLiteral(compound0^.value[i]);
-        if pair^[0]^.literalType<>lt_string
-        then exit(nil);
+      iter:=compound0^.iteratableList;
+      for pair in iter do if P_listLiteral(pair)^[0]^.literalType<>lt_string then begin
+        disposeLiteral(iter);
+        exit(nil);
       end;
-      for i:=0 to compound0^.size-1 do begin
-        pair:=P_listLiteral(compound0^.value[i]);
-        matchKey(P_stringLiteral(pair^[0])^.value,pair^[1]);
-      end;
+      for pair in iter do
+        matchKey(P_stringLiteral(P_listLiteral(pair)^[0])^.value,P_listLiteral(pair)^[1]);
+      disposeLiteral(iter);
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_int,lt_boolean]) then begin
       matchKey(str0^.value,arg1);

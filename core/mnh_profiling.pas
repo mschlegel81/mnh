@@ -46,7 +46,7 @@ TYPE
   end;
 
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
-VAR showProfilingTableCallback:PROCEDURE(CONST L:P_compoundLiteral)=nil;
+VAR showProfilingTableCallback:PROCEDURE(CONST L:P_listLiteral)=nil;
 IMPLEMENTATION
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   VAR p:T_profileCategory;
@@ -102,7 +102,7 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_adapters);
     end;
 
   VAR profilingData:T_profilingMap.VALUE_TYPE_ARRAY;
-      {$ifdef fullVersion} data:P_collectionLiteral;{$endif}
+      {$ifdef fullVersion} data:P_listLiteral;{$endif}
       swapTemp:T_profilingEntry;
       lines:T_arrayOfString;
       i,j:longint;
@@ -131,12 +131,13 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_adapters);
     lines:=formatTabs(lines);
     {$ifdef fullVersion}
     if Assigned(showProfilingTableCallback) then begin
-      data:=newListLiteral(length(profilingData)+1)^.append(newListLiteral(5)^
-            .appendString('Location')^
-            .appendString('id')^
-            .appendString('count')^
-            .appendString('inclusive (ms)')^
-            .appendString('exclusive (ms)'),false);
+      data:=newListLiteral(length(profilingData)+1);
+      data^.append(newListLiteral(5)^
+           .appendString('Location')^
+           .appendString('id')^
+           .appendString('count')^
+           .appendString('inclusive (ms)')^
+           .appendString('exclusive (ms)'),false);
       for i:=0 to length(profilingData)-1 do with profilingData[i] do
         data^.append(newListLiteral(5)^
                     .appendString(location)^
