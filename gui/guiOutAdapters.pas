@@ -63,6 +63,37 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       wroteToSyn:boolean=false;
       s:string;
 
+      linesToWrite:T_arrayOfString;
+      bufferOffset:longint=0;
+
+  PROCEDURE appendInternal(CONST s:string);
+    begin
+      if length(linesToWrite)>=outputLinesLimit then begin
+        linesToWrite[bufferOffset]:=s;
+        inc(bufferOffset);
+        if bufferOffset>=outputLinesLimit then bufferOffset:=0;
+      end else myGenerics.append(linesToWrite,s);
+      wroteToSyn:=true;
+    end;
+
+  PROCEDURE flushBuffer;
+    VAR i:longint;
+    begin
+      if length(linesToWrite)>=outputLinesLimit then syn.lines.clear
+      else while syn.lines.count+length(linesToWrite)>outputLinesLimit do syn.lines.delete(0);
+      for i:=bufferOffset to length(linesToWrite)-1+bufferOffset do syn.lines.append(linesToWrite[i mod outputLinesLimit]);
+      linesToWrite:=C_EMPTY_STRING_ARRAY;
+      bufferOffset:=0;
+    end;
+
+  PROCEDURE clearSynAndBuffer;
+    begin
+      linesToWrite:=C_EMPTY_STRING_ARRAY;
+      bufferOffset:=0;
+      syn.lines.clear;
+      wroteToSyn:=true;
+    end;
+
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
     VAR txt:string;
         tokens:T_arrayOfString;
@@ -83,18 +114,17 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               firstInLine:=false;
             end;
             if first
-            then syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+txt)
-            else syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
+            then appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+txt)
+            else appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
             first:=false;
           end;
         end else begin
           if first
-          then syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+message)
-          else syn.lines.append(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
+          then appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+message)
+          else appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
           first:=false;
         end;
       end;
-      wroteToSyn:=true;
     end;
 
   begin
@@ -107,43 +137,34 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     flushing:=true;
     result:=length(storedMessages)>0;
     if result then outputLinesLimit:=settings.value^.outputLinesLimit;
+    linesToWrite:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       {$ifdef debugMode}
       writeln(stdErr,'guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
       {$endif}
       case messageType of
-        mt_clearConsole: syn.lines.clear;
+        mt_clearConsole: clearSynAndBuffer;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
         mt_plotCreatedWithInstantDisplay: plotForm.doPlot();
         mt_displayTable: conditionalShowTables;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
-            wroteToSyn:=true;
             if (length(messageText)>0) and (messageText[0]=C_formFeedChar) then begin
-              syn.lines.clear;
-              for j:=1 to length(messageText)-1 do begin
-                syn.lines.append(messageText[j]);
-                if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
-              end;
-            end else for j:=0 to length(messageText)-1 do begin
-              syn.lines.append(messageText[j]);
-              if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
-            end;
+              clearSynAndBuffer;
+              for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
+            end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
           end;
         mt_endOfEvaluation: parentForm.onEndOfEvaluation;
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,messageText);
-        else begin
-          wroteToSyn:=true;
-          for s in defaultFormatting(storedMessages[i],true) do syn.lines.append(s);
-        end;
+        else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
       end;
-      while syn.lines.count>outputLinesLimit do syn.lines.delete(0);
     end;
     if result then clear;
     if wroteToSyn then begin
+      flushBuffer;
       if not(parentForm.showing) or not(parentForm.visible) then begin
         parentForm.Show;
         parentForm.visible:=true;
