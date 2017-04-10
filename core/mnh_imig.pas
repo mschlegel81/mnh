@@ -121,8 +121,14 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         unlock;
       end;
       if isValid then begin
-        if source<>'' then workflow.executeForTarget(source,sizeLimit,dest)
-                      else workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
+        if source<>'' then begin
+                             context.adapters^.raiseNote('Executing workflow with input="'+source+'", output="'+dest+'"',tokenLocation);
+                             workflow.executeForTarget(source,sizeLimit,dest);
+                           end
+                      else begin
+                             context.adapters^.raiseNote('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',tokenLocation);
+                             workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
+                           end;
         while progressQueue.calculating and (context.adapters^.noErrors) do begin
           progressLog:=progressQueue.log;
           for i:=logLinesDisplayed to length(progressLog)-1 do begin
@@ -132,6 +138,12 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           ThreadSwitch;
           sleep(1000);
         end;
+        progressLog:=progressQueue.log;
+        for i:=logLinesDisplayed to length(progressLog)-1 do begin
+          context.adapters^.raiseNote(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message,tokenLocation);
+          logLinesDisplayed:=i+1;
+        end;
+        if not(context.adapters^.noErrors) then context.adapters^.raiseWarning('Image calculation incomplete',tokenLocation);
         progressQueue.cancelCalculation(true);
       end;
       workflow.destroy;
