@@ -14,11 +14,13 @@ TYPE
 
   TDisplayImageForm = class(TForm)
     displayImage: TImage;
+    PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
   private
     { private declarations }
+    tryingToDisplayImage:boolean;
   public
     { public declarations }
     PROCEDURE displayCurrentImage;
@@ -33,6 +35,7 @@ VAR myDisplayImageForm:TDisplayImageForm=nil;
 FUNCTION DisplayImageForm: TDisplayImageForm;
   begin
     if myDisplayImageForm=nil then begin
+      writeln('Creating new instance of TDisplayImageForm');
       myDisplayImageForm:=TDisplayImageForm.create(nil);
       registerForm(myDisplayImageForm,false,true);
     end;
@@ -46,6 +49,11 @@ FUNCTION DisplayImageForm: TDisplayImageForm;
 PROCEDURE TDisplayImageForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
+  end;
+
+PROCEDURE TDisplayImageForm.FormCreate(Sender: TObject);
+  begin
+    tryingToDisplayImage:=false;
   end;
 
 PROCEDURE TDisplayImageForm.FormResize(Sender: TObject);
@@ -63,9 +71,13 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
   VAR resizedPic:T_rawImage;
   begin
     with guiAdapters^.picture do begin
+      if tryingToDisplayImage then exit;
+      tryingToDisplayImage:=true;
       lock;
       if value=nil then begin
         unlock;
+        tryingToDisplayImage:=false;
+        guiAdapters^.raiseSystemError('There is no image loaded to display');
         exit;
       end;
       if not(showing) then Show;
@@ -78,6 +90,7 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
         resizedPic.destroy;
       end;
       unlock;
+      tryingToDisplayImage:=false;
     end;
   end;
 

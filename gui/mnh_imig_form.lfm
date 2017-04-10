@@ -6,6 +6,7 @@ object DisplayImageForm: TDisplayImageForm
   Caption = 'MNH Image'
   ClientHeight = 240
   ClientWidth = 320
+  OnCreate = FormCreate
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
