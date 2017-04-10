@@ -102,3 +102,6 @@ main('noLog')->testAll(false);
 
 //*Export datastore
 main('export',filename:string)->writeFile(filename,runTimes.serialize);
+
+//*Display info on test cases
+main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKIP' : ''].join("\t")}).join("\n").print;

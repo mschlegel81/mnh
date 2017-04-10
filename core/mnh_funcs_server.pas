@@ -273,6 +273,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
       path:string='';
       parameters:string='';
       i:longint;
+      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) and (arg2^.literalType in [lt_emptyList,lt_map,lt_string,lt_emptyMap]) then begin
@@ -281,10 +282,14 @@ FUNCTION encodeRequest_impl intFuncSignature;
       if not(startsWith(path,'/')) then path:='/'+path;
       case arg2^.literalType of
         lt_string: parameters:=percentEncode(str2^.value);
-        lt_map: for i:=0 to map2^.size-1 do begin
-          if i>0 then parameters:=parameters+'&';
-          parameters:=parameters+percentEncode(getString(P_compoundLiteral(compound2^[i])^[0]))
-                            +'='+percentEncode(getString(P_compoundLiteral(compound2^[i])^[1]));
+        lt_map: begin
+          iter:=map2^.iteratableList;
+          for i:=0 to length(iter)-1 do begin
+            if i>0 then parameters:=parameters+'&';
+            parameters:=parameters+percentEncode(getString(P_listLiteral(iter[i])^[0]))
+                              +'='+percentEncode(getString(P_listLiteral(iter[i])^[1]));
+          end;
+          disposeLiteral(iter);
         end;
       end;
       if parameters<>'' then parameters:='?'+parameters;

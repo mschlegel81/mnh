@@ -434,6 +434,7 @@ FUNCTION argMin_imp intFuncSignature;
 {$define nan_or_inf_impl:=
   VAR i:longint;
       x:P_literal;
+      iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
@@ -451,10 +452,9 @@ FUNCTION argMin_imp intFuncSignature;
         lt_intSet: exit(newSetLiteral^.appendBool(false));
         else begin
           result:=collection0^.newOfSameType;
-          for i:=0 to collection0^.size-1 do begin
-            x:=collection0^[i];
-            collResult^.appendBool((x^.literalType=lt_real) and PREDICATE(P_realLiteral(x)^.value));
-          end;
+          iter:=collection0^.iteratableList;
+          for x in iter do collResult^.appendBool((x^.literalType=lt_real) and PREDICATE(P_realLiteral(x)^.value));
+          disposeLiteral(iter);
         end;
       end;
     end;
@@ -514,7 +514,7 @@ FUNCTION subSets_impl intFuncSignature;
   end;
 
 FUNCTION permutations_impl intFuncSignature;
-  VAR mustContain,mightContain:T_arrayOfLiteral;
+  VAR mustContain,mightContain,iter:T_arrayOfLiteral;
       i:longint;
   PROCEDURE recurseBuildPermutations(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
@@ -546,10 +546,12 @@ FUNCTION permutations_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes)) then begin
       setLength(mustContain,0);
-      setLength(mightContain,list0^.size);
-      for i:=0 to length(mightContain)-1 do mightContain[i]:=compound0^.value[i];
+      iter:=compound0^.iteratableList;
+      setLength(mightContain,length(iter));
+      for i:=0 to length(mightContain)-1 do mightContain[i]:=iter[i];
       result:=newSetLiteral;
       recurseBuildPermutations(mustContain,mightContain);
+      disposeLiteral(iter);
     end;
   end;
 

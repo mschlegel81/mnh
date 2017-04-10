@@ -52,18 +52,18 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   begin
     if xLit<>nil then begin
       if xLit^.literalType=lt_string
-      then result.x:=P_stringLiteral(                    xLit         )^.value
-      else result.x:=P_stringLiteral(P_collectionLiteral(xLit)^[index])^.value;
+      then result.x:=P_stringLiteral(              xLit         )^.value
+      else result.x:=P_stringLiteral(P_listLiteral(xLit)^[index])^.value;
     end;
     if yLit<>nil then begin
       if yLit^.literalType=lt_string
-      then result.y:=P_stringLiteral(                    yLit         )^.value
-      else result.y:=P_stringLiteral(P_collectionLiteral(yLit)^[index])^.value;
+      then result.y:=P_stringLiteral(              yLit         )^.value
+      else result.y:=P_stringLiteral(P_listLiteral(yLit)^[index])^.value;
     end;
     if zLit<>nil then begin
       if zLit^.literalType=lt_string
-      then result.z:=P_stringLiteral(                    zLit         )^.value
-      else result.z:=P_stringLiteral(P_collectionLiteral(zLit)^[index])^.value;
+      then result.z:=P_stringLiteral(              zLit         )^.value
+      else result.z:=P_stringLiteral(P_listLiteral(zLit)^[index])^.value;
     end;
   end;
 

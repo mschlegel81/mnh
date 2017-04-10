@@ -54,30 +54,25 @@ FUNCTION sort_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_compoundTypes) then begin
-      if arg0^.literalType in C_listTypes then begin
-        cloneOrCopyList0;
-        P_listLiteral(result)^.sort;
-      end else
-      if arg0^.literalType in C_setTypes
-      then result:=set0^.getManifestation^.rereferenced
-      else result:=map0^.getManifestation^.rereferenced;
+      if arg0^.literalType in C_listTypes
+      then cloneOrCopyList0
+      else result:=compound0^.toList;
+      P_listLiteral(result)^.sort;
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_compoundTypes)
             and (arg1^.literalType=lt_expression) then begin
-      if arg0^.literalType in C_listTypes then cloneOrCopyList0
-      else if arg0^.literalType in C_setTypes
-      then result:=set0^.getManifestation^.clone
-      else result:=map0^.getManifestation^.clone;
+      if arg0^.literalType in C_listTypes
+      then cloneOrCopyList0
+      else result:=compound0^.toList;
       context.callStackPush(tokenLocation,@builtinLocation_sort,params,nil);
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.adapters^);
       context.callStackPop;
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_compoundTypes)
             and (arg1^.literalType=lt_int) then begin
-      if arg0^.literalType in C_listTypes then cloneOrCopyList0
-      else if arg0^.literalType in C_setTypes
-      then result:=set0^.getManifestation^.clone
-      else result:=map0^.getManifestation^.clone;
+      if arg0^.literalType in C_listTypes
+      then cloneOrCopyList0
+      else result:=compound0^.toList;
       P_listLiteral(result)^.sortBySubIndex(int1^.value,tokenLocation,context.adapters^);
     end
   end;
@@ -121,12 +116,14 @@ FUNCTION getElementFreqency intFuncSignature;
       freqList:T_freqMap.KEY_VALUE_LIST;
       i:longint;
       list:P_listLiteral;
-
+      iter:T_arrayOfLiteral;
+      x:P_literal;
   begin
     if (params=nil) or (params^.size<>1) then exit(nil);
     if (arg0^.literalType in C_setTypes) or (arg0^.literalType in C_mapTypes) then begin
       result:=newMapLiteral;
-      for i:=0 to set0^.size-1 do P_mapLiteral(result)^.put(set0^.value[i]^.rereferenced,newIntLiteral(1),false);
+      iter:=compound0^.iteratableList;
+      for x in iter do P_mapLiteral(result)^.put(x,newIntLiteral(1),false);
       exit(result);
     end;
     if not(arg0^.literalType in C_listTypes) then exit(nil);
@@ -147,12 +144,14 @@ FUNCTION getElementFreqency intFuncSignature;
 
 FUNCTION flatten_imp intFuncSignature;
   PROCEDURE recurse_flatten(CONST L:P_compoundLiteral);
-    VAR i:longint;
+    VAR iter:T_arrayOfLiteral;
+        x:P_literal;
     begin
-      for i:=0 to L^.size-1 do
-      if L^[i]^.literalType in C_compoundTypes
-      then recurse_flatten(P_compoundLiteral(L^[i]))
-      else listResult^.append(L^.value[i],true);
+      iter:=L^.iteratableList;
+      for x in iter do if x^.literalType in C_compoundTypes
+      then recurse_flatten(P_compoundLiteral(x))
+      else listResult^.append(x,true);
+      disposeLiteral(iter);
     end;
 
   begin
@@ -174,15 +173,23 @@ FUNCTION size_imp intFuncSignature;
 
 FUNCTION trueCount_impl intFuncSignature;
   VAR i,c:longint;
+      trueLit:P_boolLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
         lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-        lt_booleanList,lt_booleanSet: begin
+        lt_booleanList: begin
           c:=0;
-          for i:=0 to compound0^.size-1 do if P_boolLiteral(compound0^[i])^.value then inc(c);
+          for i:=0 to list0^.size-1 do if P_boolLiteral(list0^[i])^.value then inc(c);
           exit(newIntLiteral(c));
+        end;
+        lt_booleanSet: begin
+          trueLit:=newBoolLiteral(true);
+          if set0^.contains(trueLit)
+          then result:=newIntLiteral(1)
+          else result:=newIntLiteral(0);
+          disposeLiteral(trueLit);
         end;
         lt_emptyList,lt_emptySet: exit(newIntLiteral(0));
       end;

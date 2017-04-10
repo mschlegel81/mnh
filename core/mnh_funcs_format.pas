@@ -309,6 +309,8 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
   end;
 
 FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
+  VAR iter:array of T_arrayOfLiteral;
+
   FUNCTION getFormattedString(CONST index:longint):ansistring;
     FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
       VAR i,k:longint;
@@ -334,8 +336,8 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       fpar:=newListLiteral;
       for k:=1 to params^.size-1 do
       if params^[k]^.literalType in C_compoundTypes
-      then fpar^.append(P_compoundLiteral(params^[k])^[index],true)
-      else fpar^.append(                  params^[k]         ,true);
+      then fpar^.append(iter[k][index],true)
+      else fpar^.append(iter[k][    0],true);
 
       if formatSubrule<>nil then begin
         temp:=P_subrule(formatSubrule)^.evaluate(tokenLocation,@context,fpar);
@@ -362,6 +364,10 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       end;
     end;
     if listSize=-1 then listSize:=1;
+    setLength(iter,params^.size);
+    for i:=1 to params^.size-1 do if params^[i]^.literalType in C_compoundTypes
+    then iter[i]:=P_compoundLiteral(params^[i])^.iteratableList
+    else begin setLength(iter[i],1); iter[i][0]:=params^[i]^.rereferenced; end;
 
     if formatSubrule=nil
     then i:=length(parts) shr 1
@@ -373,11 +379,13 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         disposeLiteral(formatSubrule);
         formatSubrule:=nil;
       end;
+      for i:=1 to length(iter)-1 do disposeLiteral(iter[i]);
       exit(C_EMPTY_STRING_ARRAY);
     end;
     setLength(result,listSize);
     for i:=0 to listSize-1 do if (context.adapters^.noErrors) then result[i]:=getFormattedString(i);
     if not(context.adapters^.noErrors) then setLength(result,0);
+    for i:=1 to length(iter)-1 do disposeLiteral(iter[i]);
   end;
 
 FUNCTION format_imp intFuncSignature;

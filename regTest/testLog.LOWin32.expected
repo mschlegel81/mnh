@@ -3132,18 +3132,18 @@ A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
 221 : 512932792
 222 : 539453717
 ***** sudoku *****
-Generated a riddle with difficulty: 54
-         |         |       4 
-         | 5       | 9  2    
- 3       | 1       |    7    
+Generated a riddle with difficulty: 55
+         |       3 | 9  5    
+       3 |    9    | 2       
+         |         |    4    
 ---------+---------+---------
- 1     9 | 7       |    4  6 
- 6       | 2  1    |    8    
-    2    |    9  4 |    3    
+       2 |    6    |         
+       1 | 5     7 | 4  8    
+    7    | 8     4 |         
 ---------+---------+---------
-       7 |    2    |    6  8 
-         |    7  3 |         
-    8    |         |         
+    4    |         |    7    
+ 1     7 |       8 |    2    
+         | 1     9 | 5       
 ***** treePrint *****
 \
 +--1
@@ -3269,8 +3269,8 @@ that   12927 1.63
 in     12725 1.6
 he     10422 1.31
 shall   9840 1.24
-unto    8997 1.13
 for     8997 1.13
+unto    8997 1.13
 i       8854 1.11
 his     8473 1.07
 a       8235 1.04
@@ -3648,7 +3648,7 @@ out> '(3]'
  in> unbrace('"3"');
 out> '"3"'
  in> chars('Testtext').elementFrequency;
-out> [['T',1],['e',2],['s',1],['t',3],['x',1]].toMap
+out> [['e',2],['s',1],['T',1],['t',3],['x',1]].toMap
  in> flatten([1,[2,[3, 4],[5]], 6]);
 out> [1,2,3,4,5,6]
  in> head(['A'..'Z']);
@@ -3678,9 +3678,9 @@ out> [5,7,3,8,1,2,9,0,4,6]
  in> sortPerm(['a'..'c'..'a']);
 out> [0,4,1,3,2]
  in> intersect([0..1000]^2,[0..1000]^3);
-out> [0,1,64,729,4096,15625,46656,117649,262144,531441,1000000].toSet
+out> [0,4096,262144,64,46656,1000000,1,729,15625,117649,531441].toSet
  in> union(1/[1..5], 2/[2..6]);
-out> [0.2,0.25,0.33333333333333333334,0.4,0.5,0.66666666666666666668,1.0].toSet
+out> [0.33333333333333333334,0.2,0.66666666666666666668,0.4,1.0,0.5,0.25].toSet
  in> deleteFile('plotDemo1.png');
 out> false
  in> get(['a'..'f'], 3);
@@ -3731,7 +3731,7 @@ out> [2,3,5,7,11,13,17,19]
  in> subSets([1, 2, 1]);
 out> [[],[1],[1,1],[2],[1,2],[1,1,2]]
  in> diff('encode','decode');
-out> [['adds',1],['deletes',1],['edit',[['+',-1,0],[' ',0,1],['-',1,1],[' ',2,2],[' ',3,3],[' ',4,4],[' ',5,5]]],['matches',5],['modifies',0]].toMap
+out> [['adds',1],['matches',5],['modifies',0],['edit',[['+',-1,0],[' ',0,1],['-',1,1],[' ',2,2],[' ',3,3],[' ',4,4],[' ',5,5]]],['deletes',1]].toMap
  in> diffStats('encode','decode');
 out> [['adds',1],['deletes',1],['matches',5],['modifies',0]].toMap
  in> format('%s is a string, %3.3d is a number','X', 7);
@@ -3975,7 +3975,7 @@ out> [['x',0],['y','3*x']].toMap
  in> extractRawParameters('/index.html?x=0&y=3%2Ax');
 out> 'x=0&y=3%2Ax'
  in> encodeRequest('127.0.0.1:3126','rest',[['user','anonymous'],['request','3*&7']].toMap);
-out> '127.0.0.1:3126/rest?request=3%2A%267&user=anonymous'
+out> '127.0.0.1:3126/rest?user=anonymous&request=3%2A%267'
  in> cross(['1'..'3'],['A'..'C']);
 out> [['1','A'],['1','B'],['1','C'],['2','A'],['2','B'],['2','C'],['3','A'],['3','B'],['3','C']]
  in> [1, 2, 1].toSet;
