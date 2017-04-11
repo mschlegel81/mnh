@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES FileUtil,sysutils,Classes,LazUTF8,
+USES sysutils,Classes,
      myGenerics,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_fileWrappers,
      mnh_out_adapters,

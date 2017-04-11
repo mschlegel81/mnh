@@ -6,7 +6,7 @@ USES
   //basic classes
   Classes, sysutils, FileUtil, LazUTF8, LCLType, lclintf, types,
   //my utilities:
-  mySys, mnhFormHandler, myStringUtil, myGenerics,
+  mnhFormHandler, myStringUtil, myGenerics,
   //GUI: LCL components
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls, simpleipc,
   //GUI: SynEdit
@@ -32,10 +32,10 @@ USES
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
-  mnh_funcs, mnh_plotData, valueStore,
+  mnh_funcs, valueStore,
   mnh_debugging,
   mnh_contexts,
-  mnh_packages, mnh_doc,
+  mnh_doc,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
