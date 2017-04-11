@@ -71,10 +71,23 @@ FUNCTION executeWorkflow_imp intFuncSignature;
 
       progressLog:T_progressLog;
       logLinesDisplayed:longint=0;
+      outputMethod:P_expressionLiteral=nil;
 
   FUNCTION newFromWorkflowImage:P_rawImage;
     begin
       new(result,create(workflowImage));
+    end;
+
+  PROCEDURE doOutput(CONST s:string);
+    VAR sLit:P_stringLiteral;
+        outputLit:P_literal;
+    begin
+      if outputMethod<>nil then begin
+        sLit:=newStringLiteral(s);
+        outputLit:=outputMethod^.evaluateToLiteral(tokenLocation,@context,sLit);
+        disposeLiteral(sLit);
+        if outputLit<>nil then disposeLiteral(outputLit);
+      end else context.adapters^.raiseNote(s,tokenLocation);
     end;
 
   begin
@@ -93,6 +106,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
             else if dest='' then dest:=P_stringLiteral(params^[i])^.value
             else exit(nil);
           end;
+          lt_expression: if outputMethod=nil then outputMethod:=P_expressionLiteral(params^[i]) else exit(nil);
           else exit(nil);
         end;
       end;
@@ -116,23 +130,23 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           isValid:=false;
         end else begin
           workflowImage.copyFromImage(value^);
-          context.adapters^.raiseNote('Input for workflow copied from current image',tokenLocation);
+          doOutput('Input for workflow copied from current image');
         end;
         unlock;
       end;
       if isValid then begin
         if source<>'' then begin
-                             context.adapters^.raiseNote('Executing workflow with input="'+source+'", output="'+dest+'"',tokenLocation);
+                             doOutput('Executing workflow with input="'+source+'", output="'+dest+'"');
                              workflow.executeForTarget(source,sizeLimit,dest);
                            end
                       else begin
-                             context.adapters^.raiseNote('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"',tokenLocation);
+                             doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"');
                              workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
                            end;
         while progressQueue.calculating and (context.adapters^.noErrors) do begin
           progressLog:=progressQueue.log;
           for i:=logLinesDisplayed to length(progressLog)-1 do begin
-            context.adapters^.raiseNote(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message,tokenLocation);
+            doOutput(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message);
             logLinesDisplayed:=i+1;
           end;
           ThreadSwitch;
@@ -140,7 +154,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         progressLog:=progressQueue.log;
         for i:=logLinesDisplayed to length(progressLog)-1 do begin
-          context.adapters^.raiseNote(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message,tokenLocation);
+          doOutput(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message);
           logLinesDisplayed:=i+1;
         end;
         if not(context.adapters^.noErrors) then context.adapters^.raiseWarning('Image calculation incomplete',tokenLocation);
@@ -152,7 +166,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         if value=nil then value:=newFromWorkflowImage
                      else value^.copyFromImage(workflowImage);
         unlock;
-        context.adapters^.raiseNote('Output of workflow copied to current image',tokenLocation);
+        doOutput('Output of workflow copied to current image');
       end;
       workflowImage.clear;
 
@@ -339,7 +353,8 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,false,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
-                                                                     'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#Executes the workflow with the given options. Use "-" as source or target to read/write the current image.');
+                                                                     'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
+                                                                     '#//Give an additional expression(1) parameter for progress output');
   registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,false,ak_unary,'loadImage(filename:string);//Loads image from the given file');
   registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,false,ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
   registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,false,ak_nullary,'closeImage;//Closes the current image, freeing associated memory');

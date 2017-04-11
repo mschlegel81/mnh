@@ -5,12 +5,13 @@ UNIT mnh_imig_form;
 INTERFACE
 
 USES
+  sysutils,
+  Classes, Forms, Controls, ExtCtrls,
+  mypics,
   mnhFormHandler,
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls, mnh_out_adapters, mypics, mnh_imig;
+  mnh_out_adapters, mnh_imig;
 
 TYPE
-
-  { TDisplayImageForm }
 
   TDisplayImageForm = class(TForm)
     displayImage: TImage;
