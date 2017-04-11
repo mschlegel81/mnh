@@ -178,7 +178,7 @@ VAR unitIsInitialized:boolean=false;
 
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
   begin
-    result:=(x.state=y.state) and (x.request=y.request) and (x.message=y.message);
+    result:=(x.state=y.state) and (x.request=y.request);
   end;
 
 FUNCTION utilityScriptFileName:string;

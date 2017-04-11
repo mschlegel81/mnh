@@ -884,7 +884,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       askForm.Show;
       flushPerformed:=true;
     end;
-    if flushPerformed then UpdateTimeTimer.interval:=MIN_INTERVALL else begin
+    if flushPerformed or (currentRunnerInfo.state in [es_debugHalted,es_debugRunning]) then UpdateTimeTimer.interval:=MIN_INTERVALL else begin
       UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end;
