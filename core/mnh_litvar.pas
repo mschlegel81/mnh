@@ -9,7 +9,6 @@ USES sysutils, math, typinfo,
      mnh_constants, mnh_basicTypes, mnh_out_adapters;
 
 TYPE
-  PP_literal = ^P_literal;
   P_literal = ^T_literal;
   T_arrayOfLiteral=array of P_literal;
   T_literal = object(T_objectWithIdAndLocation)

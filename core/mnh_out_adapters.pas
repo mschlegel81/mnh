@@ -1,6 +1,11 @@
 UNIT mnh_out_adapters;
 INTERFACE
-USES mnh_constants, mnh_basicTypes, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif}{$ifdef imig},mypics{$endif};
+USES sysutils,
+     myGenerics,mySys,
+     myStringUtil,
+     mnh_constants, mnh_basicTypes
+     {$ifdef fullVersion},mnh_plotData{$endif}
+     {$ifdef imig},mypics{$endif};
 TYPE
   T_storedMessage = record
     messageType: T_messageType;

@@ -99,6 +99,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     end;
 
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
+    {$MACRO ON}
+    {$define marker:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker}
     VAR txt:string;
         tokens:T_arrayOfString;
         k:longint=0;
@@ -106,9 +108,17 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         firstInLine:boolean=true;
         message:string;
     begin
-      for message in messageList do begin
+      if length(message)<>1 then for message in messageList do begin
+        if first
+        then appendInternal(marker+C_messageTypeMeta[messageType]      .prefix+' '+message)
+        else appendInternal(marker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
+        first:=false;
+      end else begin
+        message:=messageList[0];
         if settings.value^.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
-          tokens:=tokenSplit(message);
+          if length(messageList)=1
+          then tokens:=tokenSplit(message)
+          else tokens:=message;
           while k<length(tokens) do begin
             txt:='';
             firstInLine:=true;
@@ -118,14 +128,14 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               firstInLine:=false;
             end;
             if first
-            then appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+txt)
-            else appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
+            then appendInternal(marker+C_messageTypeMeta[messageType]      .prefix+' '+txt)
+            else appendInternal(marker+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
             first:=false;
           end;
         end else begin
           if first
-          then appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType]      .prefix+' '+message)
-          else appendInternal(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
+          then appendInternal(marker+C_messageTypeMeta[messageType]      .prefix+' '+message)
+          else appendInternal(marker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
           first:=false;
         end;
       end;

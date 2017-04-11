@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES FileUtil,sysutils,Classes,LazUTF8,
+USES sysutils,Classes,
      myGenerics,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_fileWrappers,
      mnh_out_adapters,
@@ -178,7 +178,7 @@ VAR unitIsInitialized:boolean=false;
 
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
   begin
-    result:=(x.state=y.state) and (x.request=y.request) and (x.message=y.message);
+    result:=(x.state=y.state) and (x.request=y.request);
   end;
 
 FUNCTION utilityScriptFileName:string;
