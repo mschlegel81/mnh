@@ -1,6 +1,9 @@
 UNIT mnh_html;
 INTERFACE
-USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_basicTypes,FileUtil,mnh_tokens;
+USES sysutils,
+     myGenerics,myStringUtil,
+     mnh_constants,mnh_basicTypes,
+     mnh_litVar,mnh_out_adapters,FileUtil,mnh_tokens;
 TYPE
   T_rawTokenizeCallback=FUNCTION(CONST inputString:ansistring):T_rawTokenArray;
 
@@ -31,19 +34,13 @@ FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
     result:='';
     for i:=0 to length(raw)-1 do with raw[i] do begin
       case tokType of
-        tt_literal, tt_aggregatorExpressionLiteral: result:=result+span('literal',txt);
-        tt_intrinsicRule,
-        tt_aggregatorConstructor, tt_each, tt_parallelEach, tt_while, tt_beginBlock,  tt_endBlock: result:=result+span('builtin',txt);
-        tt_identifier, tt_parameterIdentifier, tt_localUserRule,
-        tt_importedUserRule, tt_rulePutCacheValue,
-        tt_blockLocalVariable: result:=result+span('identifier',txt);
-        tt_typeCheckScalar..tt_typeCheckExpression: result:=result+span('builtin',txt);
-        tt_modifier_private..tt_modifier_local: result:=result+span('modifier',txt);
-        tt_comparatorEq..tt_cso_assignAppend: result:=result+span('operator',txt);
-        tt_blank: begin
-                    if startsWith(trim(txt),COMMENT_PREFIX) then result:=result+span('comment',txt) else result:=result+txt;
-                  end;
-        else result:=result+txt;
+        tt_blank: if startsWith(trim(txt),COMMENT_PREFIX)
+                  then result:=result+span('comment',txt)
+                  else result:=result+txt;
+        tt_literal: if (length(txt)>0) and (txt[1] in ['''','"','#'])
+                    then result:=result+span('stringLiteral',txt)
+                    else result:=result+span('literal'      ,txt);
+        else result:=result+span(C_tokenInfo[tokType].defaultHtmlSpan,escapeHtml(txt));
       end;
     end;
     result:=replaceOne(

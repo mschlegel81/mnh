@@ -394,7 +394,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         with outFile do begin
           if isOpen then close(handle);
           cmdParam:=htmlRoot+DirectorySeparator+cmdParam;
-          if not(fileExists(cmdParam)) or (CODE_HASH<>settings.value^.htmlDocGeneratedForCodeHash) then begin
+          if (templateFileName<>'') or not(fileExists(cmdParam)) or (CODE_HASH<>settings.value^.htmlDocGeneratedForCodeHash) then begin
             assign(handle,cmdParam);
             rewrite(handle);
             isOpen:=true;
