@@ -12,12 +12,12 @@ USES
   //GUI: SynEdit
   SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
-  SynHighlighterMnh,
-  SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
+  SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
   SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
+  SynExportHTML,
   //Other Forms:
   newCentralPackageDialog,
   mnh_gui_settings,
@@ -171,6 +171,7 @@ TYPE
     miUtilityScriptRoot,
     miLangTxt,
     submenuEditorAppearance:   TMenuItem;
+    miHtmlExport: TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -191,6 +192,7 @@ TYPE
     SynDiffSyn1:               TSynDiffSyn;
     OutputEdit:                TSynEdit;
     assistanceSynEdit:         TSynEdit;
+    SynExporterHTML:           TSynExporterHTML;
     SynFreePascalSyn1:         TSynFreePascalSyn;
     SynGutterMarks0:           TSynGutterMarks;
     SynHTMLSyn1:               TSynHTMLSyn;

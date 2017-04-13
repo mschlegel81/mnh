@@ -2283,6 +2283,10 @@ object MnhForm: TMnhForm
         ShortCut = 49235
         OnClick = miSaveAsClick
       end
+      object miHtmlExport: TMenuItem
+        Caption = 'Export to Html'
+        OnClick = miHtmlExportClick
+      end
       object miFileHistory0: TMenuItem
         Caption = 'New Item30'
         OnClick = miFileHistory0Click
@@ -2651,7 +2655,7 @@ object MnhForm: TMnhForm
   end
   object SaveDialog: TSaveDialog
     Title = 'Save as'
-    Filter = 'MNH Package|*.mnh|Any File|*.*'
+    Filter = 'MNH Package|*.mnh|Any File|*.*|html|*.html'
     Options = [ofExtensionDifferent, ofEnableSizing, ofViewDetail]
     left = 272
     top = 136
@@ -4188,5 +4192,17 @@ object MnhForm: TMnhForm
     Enabled = False
     left = 16
     top = 304
+  end
+  object SynExporterHTML: TSynExporterHTML
+    Color = clWindow
+    DefaultFilter = 'HTML-Dokumente (*.htm,*.html)|*.htm;*.html'
+    Font.Color = clBlack
+    Font.Height = -13
+    Font.Name = 'Courier New'
+    HTMLFontSize = fs03
+    Title = 'Unbenannt'
+    UseBackground = False
+    left = 496
+    top = 32
   end
 end
