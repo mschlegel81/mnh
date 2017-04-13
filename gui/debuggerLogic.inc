@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+PROCEDURE miHtmlExportClick(Sender: TObject);
 PROCEDURE miUtilityScriptRootClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepInClick(Sender: TObject);
@@ -31,6 +32,17 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
 PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
   begin
     updateScriptMenus;
+  end;
+
+PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject);
+  begin
+    SaveDialog.FilterIndex:=2;
+    if SaveDialog.execute then begin
+      SynExporterHTML.title:=editorMeta[inputPageControl.activePageIndex]^.pseudoName();
+      SynExporterHTML.highlighter:=editorMeta[inputPageControl.activePageIndex]^.editor.highlighter;
+      SynExporterHTML.ExportAll(editorMeta[inputPageControl.activePageIndex]^.editor.lines);
+      SynExporterHTML.saveToFile(SaveDialog.fileName);
+    end;
   end;
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);

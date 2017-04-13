@@ -65,6 +65,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
   VAR i:longint;
   begin
     for i:=0 to length(FileNames)-1 do inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(FileNames[i]);
+    BringToFront;
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
