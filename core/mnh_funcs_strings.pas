@@ -454,7 +454,7 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
     VAR i,byteIndex,charIndex:longint;
         c:char;
         cUtf8:string[6];
-        last:(white,black,grey)=grey;
+        last:(WHITE,BLACK,GREY)=GREY;
         thisWhite:boolean;
     begin
       if isAsciiEncoded(input) then begin
@@ -470,10 +470,10 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
             thisWhite:= c in asciiWhitelist;
             if thisWhite then begin
               result:=result+c;
-              last:=white;
+              last:=WHITE;
             end else begin
-              if (last<>black) or keepCharCount then result:=result+instead;
-              last:=black;
+              if (last<>BLACK) or keepCharCount then result:=result+instead;
+              last:=BLACK;
             end;
           end;
         end;
@@ -491,10 +491,10 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
           else thisWhite:=utf8WhiteList.contains(cUtf8);
           if thisWhite then begin
             result:=result+cUtf8;
-            last:=white;
+            last:=WHITE;
           end else begin
-            if (last<>black) or keepCharCount then result:=result+instead;
-            last:=black;
+            if (last<>BLACK) or keepCharCount then result:=result+instead;
+            last:=BLACK;
           end;
         end;
       end;
