@@ -31,20 +31,21 @@ FUNCTION regexForExpression(CONST cache:P_regexMap; CONST expression:ansistring)
     end;
   end;
 
+CONST IS_SCALAR=-1;
 FUNCTION listSize(CONST xLit,yLit,zLit:P_literal):longint;
   begin
-    if      xLit^.literalType=lt_string     then result:=0
-    else if xLit^.literalType=lt_stringList then result:=P_listLiteral(xLit)^.size
-    else exit(-1);
-    if      yLit^.literalType=lt_stringList then begin
-      if result=0 then result:=   P_listLiteral(yLit)^.size
-                  else if result<>P_listLiteral(yLit)^.size then exit(-1);
-    end else if yLit^.literalType<>lt_string then exit(-1);
+    if      xLit^.literalType=lt_string     then result:=IS_SCALAR
+    else if xLit^.literalType in [lt_stringList,lt_emptyList] then result:=P_listLiteral(xLit)^.size
+    else exit(-2);
+    if      yLit^.literalType in [lt_stringList,lt_emptyList] then begin
+      if result=IS_SCALAR then result:=   P_listLiteral(yLit)^.size
+                          else if result<>P_listLiteral(yLit)^.size then exit(-2);
+    end else if yLit^.literalType<>lt_string then exit(-2);
     if zLit=nil then exit(result);
-    if      zLit^.literalType=lt_stringList then begin
-      if result=0 then result :=P_listLiteral(zLit)^.size
-                  else if result<>P_listLiteral(zLit)^.size then exit(-1);
-    end else if zLit^.literalType<>lt_string then exit(-1);
+    if      zLit^.literalType in [lt_stringList,lt_emptyList] then begin
+      if result=IS_SCALAR then result :=P_listLiteral(zLit)^.size
+                          else if result<>P_listLiteral(zLit)^.size then exit(-2);
+    end else if zLit^.literalType<>lt_string then exit(-2);
   end;
 
 {$WARN 5093 OFF}
@@ -87,11 +88,9 @@ FUNCTION regexMatch_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       regexCache:=assertRegexCache(context);
-
-
       i1:=listSize(arg0,arg1,nil);
-      if i1<0 then exit(nil)
-      else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
+      if i1<IS_SCALAR then exit(nil)
+      else if i1=IS_SCALAR then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
@@ -131,8 +130,8 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) then begin
       regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
-      if i1<0 then exit(nil)
-      else if i1=0 then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
+      if i1<IS_SCALAR then exit(nil)
+      else if i1=IS_SCALAR then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
@@ -167,8 +166,8 @@ FUNCTION regexSplit_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) then begin
       regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
-      if i1<0 then exit(nil)
-      else if i1=0 then result:=regexSplit(triplet(arg1,arg0,nil,0))
+      if i1<IS_SCALAR then exit(nil)
+      else if i1=IS_SCALAR then result:=regexSplit(triplet(arg1,arg0,nil,0))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
@@ -197,8 +196,8 @@ FUNCTION regexReplace_imp intFuncSignature;
     if (params<>nil) and (params^.size=3) then begin
       regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,arg2);
-      if i1<0 then exit(nil)
-      else if i1=0 then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
+      if i1<IS_SCALAR then exit(nil)
+      else if i1=IS_SCALAR then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do listResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));

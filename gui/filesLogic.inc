@@ -99,7 +99,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
 PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject);
   VAR mr,pageIdx:longint;
   begin
-    if (inputPageControl.activePageIndex<0) or (inputPageControl.activePageIndex>=length(editorMeta)) then exit;
+    if not(hasEditor) then exit;
     for pageIdx:=0 to length(editorMeta)-1 do if (pageIdx<>inputPageControl.activePageIndex) and (editorMeta[pageIdx]^.sheet.tabVisible) then
     with editorMeta[pageIdx]^ do begin
       if changed then begin
@@ -119,7 +119,7 @@ PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject);
   VAR i,pageIdx:longint;
       activePageClosed:boolean=false;
   begin
-    if (inputPageControl.activePageIndex<0) or (inputPageControl.activePageIndex>=length(editorMeta)) then exit;
+    if not(hasEditor) then exit;
     for pageIdx:=0 to length(editorMeta)-1 do if (pageIdx<>inputPageControl.activePageIndex) and (editorMeta[pageIdx]^.sheet.tabVisible) and not(editorMeta[pageIdx]^.changed) then
     with editorMeta[pageIdx]^ do begin
       if isFile then begin
@@ -148,8 +148,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.miReloadClick(Sender: TObject);
   begin
-    if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then
-    with editorMeta[inputPageControl.activePageIndex]^ do if sheet.visible then reloadFile(getPath);
+    if hasEditor then with getEditor^ do if sheet.visible then reloadFile(getPath);
   end;
 
 PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject); begin openFromHistory(0); end;

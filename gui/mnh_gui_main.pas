@@ -280,6 +280,8 @@ TYPE
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
+    FUNCTION hasEditor:boolean;
+    FUNCTION getEditor:P_editorMeta;
   public
     editorMeta:array of P_editorMeta;
     PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
@@ -372,6 +374,16 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
       helpPopupMemo.text:=ECHO_MARKER+underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
     end;
+  end;
+
+FUNCTION TMnhForm.hasEditor: boolean;
+  begin
+    result:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta));
+  end;
+
+FUNCTION TMnhForm.getEditor: P_editorMeta;
+  begin
+    result:=editorMeta[inputPageControl.activePageIndex];
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
@@ -482,22 +494,29 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       SynVBSyn1             .StringAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkString);
     end;
 
-  begin
-    splashOnStartup;
-    uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
-    uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
-    uniqueEditorInstanceIpcServer.Global:=true;
-    uniqueEditorInstanceIpcServer.StartServer;
+  PROCEDURE initIpcServer;
+    begin
+      uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
+      uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
+      uniqueEditorInstanceIpcServer.Global:=true;
+      uniqueEditorInstanceIpcServer.StartServer;
+    end;
 
+  PROCEDURE updateRules;
+    begin
+      reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
+      registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,false,ak_nullary,'editors(...);//Lists all editors');
+      registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,false,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+      registerRule(GUI_NAMESPACE,'openInEditor'  ,@openInEditor_impl ,false,ak_unary,'openInEditor(filename:string);//opens an editor tab for the given file');
+    end;
+
+  begin
+    updateRules;
+    splashOnStartup;
+    initIpcServer;
     initGuiOutAdapters(MnhForm,true);
     guiTaskQueue.create;
-    reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
-    registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,false,ak_nullary,'editors(...);//Lists all editors');
-    registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,false,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
-    registerRule(GUI_NAMESPACE,'openInEditor'  ,@openInEditor_impl ,false,ak_unary,'openInEditor(filename:string);//opens an editor tab for the given file');
-
     SynHighlighterMnh.initLists;
-
     mnh_evalThread.initUnit(@guiAdapters,true);
     setupCallbacks;
 
