@@ -2649,14 +2649,14 @@ object MnhForm: TMnhForm
   object OpenDialog: TOpenDialog
     Title = 'Open file...'
     Filter = 'MNH Package|*.mnh|All Files|*.*'
-    Options = [ofPathMustExist, ofFileMustExist, ofEnableSizing]
+    Options = [ofOverwritePrompt, ofPathMustExist, ofFileMustExist, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofNoDereferenceLinks, ofEnableSizing]
     left = 400
     top = 136
   end
   object SaveDialog: TSaveDialog
     Title = 'Save as'
     Filter = 'MNH Package|*.mnh|Any File|*.*|html|*.html'
-    Options = [ofExtensionDifferent, ofEnableSizing, ofViewDetail]
+    Options = [ofOverwritePrompt, ofExtensionDifferent, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofNoDereferenceLinks, ofEnableSizing]
     left = 272
     top = 136
   end
