@@ -129,7 +129,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           context.adapters^.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
           isValid:=false;
         end else begin
-          workflowImage.copyFromImage(value^);
+          workflowImage.copyFromPixMap(value^);
           doOutput('Input for workflow copied from current image');
         end;
         unlock;
@@ -164,7 +164,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       if (context.adapters^.noErrors) and (dest=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then value:=newFromWorkflowImage
-                     else value^.copyFromImage(workflowImage);
+                     else value^.copyFromPixMap(workflowImage);
         unlock;
         doOutput('Output of workflow copied to current image');
       end;
@@ -259,7 +259,7 @@ FUNCTION imageSize_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then with context.adapters^.picture do begin
       lock;
-      if value<>nil then result:=newListLiteral(2)^.appendInt(value^.width)^.appendInt(value^.height)
+      if value<>nil then result:=newListLiteral(2)^.appendInt(value^.dimensions.width)^.appendInt(value^.dimensions.height)
                     else result:=newListLiteral();
       unlock;
     end;

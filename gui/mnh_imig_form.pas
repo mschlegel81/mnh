@@ -82,7 +82,7 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
         exit;
       end;
       if not(showing) then Show;
-      if (value^.width<displayImage.width) and (value^.height<displayImage.height)
+      if (value^.dimensions.width<displayImage.width) and (value^.dimensions.height<displayImage.height)
       then value^.copyToImage(displayImage)
       else begin
         resizedPic.create(value^);
