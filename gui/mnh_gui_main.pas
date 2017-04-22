@@ -97,26 +97,6 @@ TYPE
     miEvaluateNow,
     miExpressionEcho,
     miExpressionResult,
-    miFileHistory0,
-    miFileHistory1,
-    miFileHistory10,
-    miFileHistory11,
-    miFileHistory12,
-    miFileHistory13,
-    miFileHistory14,
-    miFileHistory15,
-    miFileHistory16,
-    miFileHistory17,
-    miFileHistory18,
-    miFileHistory19,
-    miFileHistory2,
-    miFileHistory3,
-    miFileHistory4,
-    miFileHistory5,
-    miFileHistory6,
-    miFileHistory7,
-    miFileHistory8,
-    miFileHistory9,
     miFind,
     miFindNext,
     miFindPrevious,
@@ -171,6 +151,7 @@ TYPE
     miUtilityScriptRoot,
     miLangTxt,
     submenuEditorAppearance:   TMenuItem;
+    miFileHistoryRoot: TMenuItem;
     miHtmlExport: TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
@@ -263,25 +244,6 @@ TYPE
     PROCEDURE openFromHistory(CONST historyIdx:byte);
     PROCEDURE miReloadClick(Sender: TObject);
     PROCEDURE miFileHistory0Click(Sender: TObject);
-    PROCEDURE miFileHistory1Click(Sender: TObject);
-    PROCEDURE miFileHistory2Click(Sender: TObject);
-    PROCEDURE miFileHistory3Click(Sender: TObject);
-    PROCEDURE miFileHistory4Click(Sender: TObject);
-    PROCEDURE miFileHistory5Click(Sender: TObject);
-    PROCEDURE miFileHistory6Click(Sender: TObject);
-    PROCEDURE miFileHistory7Click(Sender: TObject);
-    PROCEDURE miFileHistory8Click(Sender: TObject);
-    PROCEDURE miFileHistory9Click(Sender: TObject);
-    PROCEDURE miFileHistory10Click(Sender: TObject);
-    PROCEDURE miFileHistory11Click(Sender: TObject);
-    PROCEDURE miFileHistory12Click(Sender: TObject);
-    PROCEDURE miFileHistory13Click(Sender: TObject);
-    PROCEDURE miFileHistory14Click(Sender: TObject);
-    PROCEDURE miFileHistory15Click(Sender: TObject);
-    PROCEDURE miFileHistory16Click(Sender: TObject);
-    PROCEDURE miFileHistory17Click(Sender: TObject);
-    PROCEDURE miFileHistory18Click(Sender: TObject);
-    PROCEDURE miFileHistory19Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
@@ -294,7 +256,7 @@ TYPE
     FUNCTION addEditorMetaForNewFile(CONST newFileName: ansistring=''):longint;
     FUNCTION addOrGetEditorMetaForFile(CONST fileName: ansistring):longint;
     FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
-    PROCEDURE processFileHistory;
+
     PROCEDURE pmiOpenFile(CONST idOrName:string);
     PROCEDURE pmiOpenFile1Click(Sender: TObject);
     PROCEDURE pmiOpenFile2Click(Sender: TObject);
@@ -375,15 +337,17 @@ TYPE
     lastWordsCaret:longint;
     wordsInEditor:T_setOfString;
     lastReportedRunnerInfo:T_runnerStateInfo;
+
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
+    historyMenuItems:array of TMenuItem;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
     FUNCTION hasEditor:boolean;
     FUNCTION getEditor:P_editorMeta;
+
   public
     editorMeta:array of P_editorMeta;
-    PROCEDURE enableMenuForLanguage(CONST languageIndex:byte);
-    PROCEDURE updateScriptMenus;
+    PROCEDURE updateMainMenuItems(CONST includeHistory,includeScriptMenu:boolean);
   end;
 
 VAR MnhForm: TMnhForm;
@@ -411,7 +375,7 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
   begin
-    updateScriptMenus;
+    updateMainMenuItems(false,true);
   end;
 
 PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject);
@@ -761,7 +725,6 @@ PROCEDURE TMnhForm.processSettings;
 
       setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
 
-      processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
 
       setLength(editorMeta,length(settings.value^.workspace.editorState));
@@ -897,7 +860,6 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
       end;
       if isFile then begin
         settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
-        processFileHistory;
       end;
       closeEditor;
     end;
@@ -921,7 +883,6 @@ PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject);
       end;
       if isFile then begin
         settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
-        processFileHistory;
       end;
       closeEditor;
     end;
@@ -936,7 +897,6 @@ PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject);
     with editorMeta[pageIdx]^ do begin
       if isFile then begin
         settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
-        processFileHistory;
       end;
       closeEditor;
       activePageClosed:=activePageClosed or (pageIdx=inputPageControl.activePageIndex);
@@ -954,7 +914,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     with settings.value^.workspace.fileHistory do begin
       if fileExists(historyItem(historyIdx))
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
-      else if polishHistory then processFileHistory;
+      else if polishHistory then updateMainMenuItems(true,false);
     end;
   end;
 
@@ -963,26 +923,7 @@ PROCEDURE TMnhForm.miReloadClick(Sender: TObject);
     if hasEditor then with getEditor^ do if sheet.visible then reloadFile(getPath);
   end;
 
-PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject); begin openFromHistory(0); end;
-PROCEDURE TMnhForm.miFileHistory1Click(Sender: TObject); begin openFromHistory(1); end;
-PROCEDURE TMnhForm.miFileHistory2Click(Sender: TObject); begin openFromHistory(2); end;
-PROCEDURE TMnhForm.miFileHistory3Click(Sender: TObject); begin openFromHistory(3); end;
-PROCEDURE TMnhForm.miFileHistory4Click(Sender: TObject); begin openFromHistory(4); end;
-PROCEDURE TMnhForm.miFileHistory5Click(Sender: TObject); begin openFromHistory(5); end;
-PROCEDURE TMnhForm.miFileHistory6Click(Sender: TObject); begin openFromHistory(6); end;
-PROCEDURE TMnhForm.miFileHistory7Click(Sender: TObject); begin openFromHistory(7); end;
-PROCEDURE TMnhForm.miFileHistory8Click(Sender: TObject); begin openFromHistory(8); end;
-PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9); end;
-PROCEDURE TMnhForm.miFileHistory10Click(Sender: TObject); begin openFromHistory(10); end;
-PROCEDURE TMnhForm.miFileHistory11Click(Sender: TObject); begin openFromHistory(11); end;
-PROCEDURE TMnhForm.miFileHistory12Click(Sender: TObject); begin openFromHistory(12); end;
-PROCEDURE TMnhForm.miFileHistory13Click(Sender: TObject); begin openFromHistory(13); end;
-PROCEDURE TMnhForm.miFileHistory14Click(Sender: TObject); begin openFromHistory(14); end;
-PROCEDURE TMnhForm.miFileHistory15Click(Sender: TObject); begin openFromHistory(15); end;
-PROCEDURE TMnhForm.miFileHistory16Click(Sender: TObject); begin openFromHistory(16); end;
-PROCEDURE TMnhForm.miFileHistory17Click(Sender: TObject); begin openFromHistory(17); end;
-PROCEDURE TMnhForm.miFileHistory18Click(Sender: TObject); begin openFromHistory(18); end;
-PROCEDURE TMnhForm.miFileHistory19Click(Sender: TObject); begin openFromHistory(19); end;
+PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject); begin openFromHistory(TMenuItem(Sender).Tag); end;
 
 PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
   VAR wordUnderCursor:string;
@@ -1121,7 +1062,7 @@ FUNCTION TMnhForm.addOrGetEditorMetaForFile(CONST fileName: ansistring): longint
       result:=addEditorMetaForNewFile();
       editorMeta[result]^.setFile(filePath);
       editorMeta[result]^.editor.Font:=OutputEdit.Font;
-      enableMenuForLanguage(editorMeta[result]^.language);
+      updateMainMenuItems(true,false);
     end;
   end;
 
@@ -1152,45 +1093,6 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
     _doSave_(inputPageControl.activePageIndex);
   end;
 
-PROCEDURE TMnhForm.processFileHistory;
-  FUNCTION historyMenuItem(index:byte):TMenuItem;
-    begin
-      case index of
-        0: result:=miFileHistory0;
-        1: result:=miFileHistory1;
-        2: result:=miFileHistory2;
-        3: result:=miFileHistory3;
-        4: result:=miFileHistory4;
-        5: result:=miFileHistory5;
-        6: result:=miFileHistory6;
-        7: result:=miFileHistory7;
-        8: result:=miFileHistory8;
-        9: result:=miFileHistory9;
-        10: result:=miFileHistory10;
-        11: result:=miFileHistory11;
-        12: result:=miFileHistory12;
-        13: result:=miFileHistory13;
-        14: result:=miFileHistory14;
-        15: result:=miFileHistory15;
-        16: result:=miFileHistory16;
-        17: result:=miFileHistory17;
-        18: result:=miFileHistory18;
-        19: result:=miFileHistory19;
-      else result:=nil;
-      end;
-    end;
-  VAR i:longint;
-  begin
-    for i:=0 to 19 do if settings.value^.workspace.fileHistory.historyItem(i)='' then begin
-      historyMenuItem(i).enabled:=false;
-      historyMenuItem(i).visible:=false;
-    end else begin
-      historyMenuItem(i).enabled:=true;
-      historyMenuItem(i).visible:=true;
-      historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.workspace.fileHistory.historyItem(i);
-    end;
-  end;
-
 PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
   VAR fileName:string;
   begin
@@ -1200,7 +1102,6 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
         inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
         exit;
       end;
-      if workspace.fileHistory.polishHistory then processFileHistory;
       fileName:=assistancEvaluator.resolveImport(idOrName);
       if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
@@ -1639,6 +1540,11 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
+    setLength(scriptMenuItems[st_edit],0);
+    setLength(scriptMenuItems[st_insert],0);
+    setLength(scriptMenuItems[st_util],0);
+    setLength(historyMenuItems,0);
+
     updateRules;
     splashOnStartup;
     initIpcServer;
@@ -1676,9 +1582,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
     mnh_out_adapters.gui_started:=true;
-    setLength(scriptMenuItems[st_edit],0);
-    setLength(scriptMenuItems[st_insert],0);
-    setLength(scriptMenuItems[st_util],0);
     runEvaluator.ensureEditScripts;
     updateDebugParts;
   end;
@@ -1746,6 +1649,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       processSettings;
       KeyPreview:=true;
       UpdateTimeTimer.enabled:=true;
+      updateMainMenuItems(true,true);
     end;
   end;
 
@@ -1837,53 +1741,78 @@ PROCEDURE TMnhForm.miLangMnhClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.enableMenuForLanguage(CONST languageIndex:byte);
-  VAR i:longint;
-  begin
-    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=languageIndex then fileTypeMeta[i].menuItem.Checked:=true;
-  end;
+PROCEDURE TMnhForm.updateMainMenuItems(CONST includeHistory,includeScriptMenu:boolean);
+  PROCEDURE updateScriptMenus;
+    VAR i,k:longint;
+        scriptList:T_scriptMetaArray;
+        script:P_scriptMeta;
+        scriptType:T_scriptType;
+        root:TMenuItem;
+    begin
+      for scriptType in T_scriptType do begin
+        case scriptType of
+          st_edit: root:=editScriptRoot;
+          st_util: root:=miUtilityScriptRoot;
+          else     root:=miInserScriptRoot;
+        end;
+        for i:=0 to length(scriptMenuItems[scriptType])-1 do begin
+          root.remove(scriptMenuItems[scriptType][i]);
+          FreeAndNil(scriptMenuItems[scriptType][i]);
+        end;
+        setLength(scriptMenuItems[scriptType],0);
+      end;
+      scriptList:=runEvaluator.getScripts;
+      for i:=0 to length(scriptList)-1 do begin
+        script:=scriptList[i];
+        scriptType:=script^.getScriptType;
+        case scriptType of
+          st_edit: root:=editScriptRoot;
+          st_util: root:=miUtilityScriptRoot;
+          else     root:=miInserScriptRoot;
+        end;
+        k:=length(scriptMenuItems[scriptType]);
+        setLength(scriptMenuItems[scriptType],k+1);
+        scriptMenuItems[scriptType][k]:=TMenuItem.create(MainMenu1);
+        scriptMenuItems[scriptType][k].caption:=script^.getName;
+        scriptMenuItems[scriptType][k].Tag:=i;
+        scriptMenuItems[scriptType][k].OnClick:=@miRunCustomUtilScript;
+        root.add(scriptMenuItems[scriptType][k]);
+      end;
+    end;
 
-PROCEDURE TMnhForm.updateScriptMenus;
-  VAR i,k:longint;
-      scriptList:T_scriptMetaArray;
-      script:P_scriptMeta;
-      scriptType:T_scriptType;
-      root:TMenuItem;
+  PROCEDURE updateFileHistory;
+    VAR i:longint;
+        histItems:T_arrayOfString;
+    begin
+      for i:=0 to length(historyMenuItems)-1 do begin
+        miFileHistoryRoot.Remove(historyMenuItems[i]);
+        FreeAndNil(historyMenuItems[i]);
+      end;
+      histItems:=settings.value^.workspace.fileHistory.items;
+      setLength(historyMenuItems,length(histItems));
+      for i:=0 to length(histItems)-1 do begin
+        historyMenuItems[i]:=TMenuItem.Create(MainMenu1);
+        historyMenuItems[i].Caption:=intToStr(i)+': '+histItems[i];
+        historyMenuItems[i].Tag:=i;
+        historyMenuItems[i].OnClick:=@miFileHistory0Click;
+        miFileHistoryRoot.Add(historyMenuItems[i]);
+      end;
+    end;
+
+  VAR evaluating:boolean;
+      i:longint;
   begin
-    {$ifdef debugMode}writeln(stdErr,'updateScriptMenus start');{$endif}
-    for scriptType in T_scriptType do begin
-      case scriptType of
-        st_edit: root:=editScriptRoot;
-        st_util: root:=miUtilityScriptRoot;
-        else     root:=miInserScriptRoot;
-      end;
-      for i:=0 to length(scriptMenuItems[scriptType])-1 do begin
-        root.remove(scriptMenuItems[scriptType][i]);
-        FreeAndNil(scriptMenuItems[scriptType][i]);
-      end;
-      setLength(scriptMenuItems[scriptType],0);
-    end;
-    {$ifdef debugMode}writeln(stdErr,'fetching scripts');{$endif}
-    scriptList:=runEvaluator.getScripts;
-    {$ifdef debugMode}writeln(stdErr,'updating menu from ',length(scriptList),' scripts');{$endif}
-    for i:=0 to length(scriptList)-1 do begin
-      script:=scriptList[i];
-      scriptType:=script^.getScriptType;
-      case scriptType of
-        st_edit: root:=editScriptRoot;
-        st_util: root:=miUtilityScriptRoot;
-        else     root:=miInserScriptRoot;
-      end;
-      k:=length(scriptMenuItems[scriptType]);
-      setLength(scriptMenuItems[scriptType],k+1);
-      {$ifdef debugMode}writeln(stdErr,'creating entry ',scriptType,',',k,' ',script^.getName);{$endif}
-      scriptMenuItems[scriptType][k]:=TMenuItem.create(MainMenu1);
-      scriptMenuItems[scriptType][k].caption:=script^.getName;
-      scriptMenuItems[scriptType][k].Tag:=i;
-      scriptMenuItems[scriptType][k].OnClick:=@miRunCustomUtilScript;
-      root.add(scriptMenuItems[scriptType][k]);
-    end;
-    {$ifdef debugMode}writeln(stdErr,'updateScriptMenus end');{$endif}
+    miReload.Enabled:=hasEditor and not(getEditor^.isPseudoFile);
+
+    evaluating:=runEvaluator.evaluationRunning;
+    miHaltEvalutaion.Enabled:=evaluating;
+    miEvaluateNow.Enabled:=not(evaluating) and hasEditor and (getEditor^.language=LANG_MNH);
+    miCallMain   .Enabled:=not(evaluating) and hasEditor and (getEditor^.language=LANG_MNH);
+
+    for i:=0 to length(fileTypeMeta)-1 do if hasEditor and (fileTypeMeta[i].language=getEditor^.language) then fileTypeMeta[i].menuItem.Checked:=true;
+
+    if includeHistory then updateFileHistory;
+    if includeScriptMenu then updateScriptMenus;
   end;
 
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
@@ -1918,7 +1847,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
       SynCompletion.editor:=editorMeta[inputPageControl.activePageIndex]^.editor;
       settings.value^.workspace.activePage:=inputPageControl.activePageIndex;
       with editorMeta[inputPageControl.activePageIndex]^ do if language=LANG_MNH then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
-      enableMenuForLanguage(editorMeta[inputPageControl.activePageIndex]^.language);
+      updateMainMenuItems(false,false);
     end;
   end;
 

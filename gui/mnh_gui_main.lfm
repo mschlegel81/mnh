@@ -2287,85 +2287,8 @@ object MnhForm: TMnhForm
         Caption = 'Export to Html'
         OnClick = miHtmlExportClick
       end
-      object miFileHistory0: TMenuItem
-        Caption = 'New Item30'
-        OnClick = miFileHistory0Click
-      end
-      object miFileHistory1: TMenuItem
-        Caption = 'New Item31'
-        OnClick = miFileHistory1Click
-      end
-      object miFileHistory2: TMenuItem
-        Caption = 'New Item32'
-        OnClick = miFileHistory2Click
-      end
-      object miFileHistory3: TMenuItem
-        Caption = 'New Item33'
-        OnClick = miFileHistory3Click
-      end
-      object miFileHistory4: TMenuItem
-        Caption = 'New Item34'
-        OnClick = miFileHistory4Click
-      end
-      object miFileHistory5: TMenuItem
-        Caption = 'New Item35'
-        OnClick = miFileHistory5Click
-      end
-      object miFileHistory6: TMenuItem
-        Caption = 'New Item36'
-        OnClick = miFileHistory6Click
-      end
-      object miFileHistory7: TMenuItem
-        Caption = 'New Item37'
-        OnClick = miFileHistory7Click
-      end
-      object miFileHistory8: TMenuItem
-        Caption = 'New Item38'
-        OnClick = miFileHistory8Click
-      end
-      object miFileHistory9: TMenuItem
-        Caption = 'New Item39'
-        OnClick = miFileHistory9Click
-      end
-      object miFileHistory10: TMenuItem
-        Caption = 'New Item54'
-        OnClick = miFileHistory10Click
-      end
-      object miFileHistory11: TMenuItem
-        Caption = 'New Item55'
-        OnClick = miFileHistory11Click
-      end
-      object miFileHistory12: TMenuItem
-        Caption = 'New Item56'
-        OnClick = miFileHistory12Click
-      end
-      object miFileHistory13: TMenuItem
-        Caption = 'New Item57'
-        OnClick = miFileHistory13Click
-      end
-      object miFileHistory14: TMenuItem
-        Caption = 'New Item58'
-        OnClick = miFileHistory14Click
-      end
-      object miFileHistory15: TMenuItem
-        Caption = 'New Item59'
-        OnClick = miFileHistory15Click
-      end
-      object miFileHistory16: TMenuItem
-        Caption = 'New Item60'
-        OnClick = miFileHistory16Click
-      end
-      object miFileHistory17: TMenuItem
-        Caption = 'New Item61'
-        OnClick = miFileHistory17Click
-      end
-      object miFileHistory18: TMenuItem
-        Caption = 'New Item62'
-        OnClick = miFileHistory18Click
-      end
-      object miFileHistory19: TMenuItem
-        Caption = 'New Item63'
-        OnClick = miFileHistory19Click
+      object miFileHistoryRoot: TMenuItem
+        Caption = '&History...'
       end
     end
     object subMenuSearch: TMenuItem
