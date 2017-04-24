@@ -2242,10 +2242,6 @@ object MnhForm: TMnhForm
         Caption = 'Manage central &utility packages'
         OnClick = miNewCentralPackageClick
       end
-      object miWorkspaces: TMenuItem
-        Caption = '&Working sets'
-        OnClick = miWorkspacesClick
-      end
       object miClear: TMenuItem
         Caption = 'New'
         ShortCut = 16462
