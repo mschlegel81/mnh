@@ -25,7 +25,6 @@ USES
   askDialog,
   mnh_tables,
   openDemoDialog,
-  mnh_workspaces,
   mnh_plotForm,
   mnh_splash,
   //MNH:
@@ -246,7 +245,7 @@ TYPE
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
-    
+
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE assistanceEditReposition(CONST caret:TPoint; CONST doJump:boolean);
@@ -259,15 +258,15 @@ TYPE
     PROCEDURE pmiOpenFile(CONST idOrName:string);
     PROCEDURE pmiOpenFile1Click(Sender: TObject);
     PROCEDURE pmiOpenFile2Click(Sender: TObject);
-    
+
     PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-    
+
     PROCEDURE InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-    
+
     PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 
@@ -1783,29 +1782,29 @@ PROCEDURE TMnhForm.updateMainMenuItems(CONST includeHistory,includeScriptMenu:bo
         histItems:T_arrayOfString;
     begin
       for i:=0 to length(historyMenuItems)-1 do begin
-        miFileHistoryRoot.Remove(historyMenuItems[i]);
+        miFileHistoryRoot.remove(historyMenuItems[i]);
         FreeAndNil(historyMenuItems[i]);
       end;
       histItems:=settings.value^.workspace.fileHistory.items;
       setLength(historyMenuItems,length(histItems));
       for i:=0 to length(histItems)-1 do begin
-        historyMenuItems[i]:=TMenuItem.Create(MainMenu1);
-        historyMenuItems[i].Caption:=intToStr(i)+': '+histItems[i];
+        historyMenuItems[i]:=TMenuItem.create(MainMenu1);
+        historyMenuItems[i].caption:=intToStr(i)+': '+histItems[i];
         historyMenuItems[i].Tag:=i;
         historyMenuItems[i].OnClick:=@miFileHistory0Click;
-        miFileHistoryRoot.Add(historyMenuItems[i]);
+        miFileHistoryRoot.add(historyMenuItems[i]);
       end;
     end;
 
   VAR evaluating:boolean;
       i:longint;
   begin
-    miReload.Enabled:=hasEditor and not(getEditor^.isPseudoFile);
+    miReload.enabled:=hasEditor and not(getEditor^.isPseudoFile);
 
     evaluating:=runEvaluator.evaluationRunning;
-    miHaltEvalutaion.Enabled:=evaluating;
-    miEvaluateNow.Enabled:=not(evaluating) and hasEditor and (getEditor^.language=LANG_MNH);
-    miCallMain   .Enabled:=not(evaluating) and hasEditor and (getEditor^.language=LANG_MNH);
+    miHaltEvalutaion.enabled:=evaluating;
+    miEvaluateNow.enabled:=not(evaluating) and hasEditor and (getEditor^.language=LANG_MNH);
+    miCallMain   .enabled:=not(evaluating) and hasEditor and (getEditor^.language=LANG_MNH);
 
     for i:=0 to length(fileTypeMeta)-1 do if hasEditor and (fileTypeMeta[i].language=getEditor^.language) then fileTypeMeta[i].menuItem.Checked:=true;
 
