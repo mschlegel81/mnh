@@ -200,19 +200,12 @@ TYPE
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
     {$i mnh_gui_main_events.pas}
-    PROCEDURE tbStepInClick(Sender: TObject);
-    PROCEDURE tbStepClick(Sender: TObject);
-    PROCEDURE tbStepOutClick(Sender: TObject);
-    PROCEDURE tbStopClick(Sender: TObject);
-    PROCEDURE tbMicroStepClick(Sender: TObject);
     PROCEDURE variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
     PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
     PROCEDURE handleBreak;
     PROCEDURE updateDebugParts;
     PROCEDURE updateExpressionMemo;
-    PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miRunCustomUtilScript(Sender: TObject);
-    PROCEDURE doConditionalPlotReset;
     PROCEDURE processSettings;
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
@@ -346,49 +339,10 @@ VAR closeGuiFlag:boolean=false;
 {$define includeImplementation}
 {$include guiEditorInterface.inc}
 {$include editorMeta.inc}
-
 {$i runnerLogic.inc}
 {$i mnh_gui_main_events.pas}
 
 
-PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
-  begin
-    runEvaluator.context.stepper^.doStepInto;
-    updateDebugParts;
-    breakPointHandlingPending:=true;
-    lastReportedRunnerInfo.state:=es_dead;
-  end;
-
-PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
-  begin
-    runEvaluator.context.stepper^.doStep;
-    updateDebugParts;
-    breakPointHandlingPending:=true;
-    lastReportedRunnerInfo.state:=es_dead;
-  end;
-
-PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
-  begin
-    runEvaluator.context.stepper^.doStepOut;
-    updateDebugParts;
-    breakPointHandlingPending:=true;
-    lastReportedRunnerInfo.state:=es_dead;
-  end;
-
-PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
-  begin
-    runEvaluator.haltEvaluation;
-    breakPointHandlingPending:=true;
-    lastReportedRunnerInfo.state:=es_dead;
-  end;
-
-PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
-  begin
-    runEvaluator.context.stepper^.doMicrostep;
-    updateDebugParts;
-    breakPointHandlingPending:=true;
-    lastReportedRunnerInfo.state:=es_dead;
-  end;
 
 FUNCTION treeLit_canExpand(L:P_literal):boolean;
   begin
@@ -570,11 +524,6 @@ PROCEDURE TMnhForm.updateDebugParts;
     end;
   end;
 
-PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
-  begin
-    miDebug.Checked:=not(miDebug.Checked);
-    updateDebugParts;
-  end;
 
 
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
@@ -584,14 +533,6 @@ PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
     if (k<0) or (k>=length(editorMeta)) then exit;
     for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.readonly:=true;
     with editorMeta[k]^ do runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editor.lines,languageName,pseudoName());
-  end;
-
-PROCEDURE TMnhForm.doConditionalPlotReset;
-  begin
-    if settings.value^.doResetPlotOnEvaluation then begin
-      guiAdapters.plot^.setDefaults;
-      if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
-    end;
   end;
 
 PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
