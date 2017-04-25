@@ -199,9 +199,7 @@ TYPE
     tbStepOut,
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
-    PROCEDURE miHtmlExportClick(Sender: TObject);
-    PROCEDURE miUtilityScriptRootClick(Sender: TObject);
-    PROCEDURE tbRunClick(Sender: TObject);
+    {$i mnh_gui_main_events.pas}
     PROCEDURE tbStepInClick(Sender: TObject);
     PROCEDURE tbStepClick(Sender: TObject);
     PROCEDURE tbStepOutClick(Sender: TObject);
@@ -213,10 +211,6 @@ TYPE
     PROCEDURE updateDebugParts;
     PROCEDURE updateExpressionMemo;
     PROCEDURE miDebugClick(Sender: TObject);
-    PROCEDURE miHaltEvalutaionClick(Sender: TObject);
-    PROCEDURE MenuItem4Click(Sender: TObject);
-    PROCEDURE doStartEvaluation;
-    PROCEDURE miEvaluateNowClick(Sender: TObject);
     PROCEDURE miRunCustomUtilScript(Sender: TObject);
     PROCEDURE doConditionalPlotReset;
     PROCEDURE processSettings;
@@ -315,10 +309,6 @@ TYPE
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
     settingsReady:boolean;
-    lastStart:record
-      mainCall:boolean;
-      parameters:string;
-    end;
     popupFile:array[1..2] of string;
 
     outputFocusedOnFind:boolean;
@@ -356,35 +346,10 @@ VAR closeGuiFlag:boolean=false;
 {$define includeImplementation}
 {$include guiEditorInterface.inc}
 {$include editorMeta.inc}
-PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
-  begin
-    if not(runEvaluator.evaluationRunning) then begin
-      doStartEvaluation;
-      if lastStart.mainCall
-      then runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,miProfile.Checked,true)
-      else runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),miProfile.Checked,true);
-    end else if runEvaluator.context.isPaused then runEvaluator.context.stepper^.doContinue
-                                              else runEvaluator.context.stepper^.doMicrostep;
-    updateDebugParts;
-    breakPointHandlingPending:=true;
-    lastReportedRunnerInfo.state:=es_dead;
-  end;
 
-PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
-  begin
-    updateMainMenuItems(false,true);
-  end;
+{$i runnerLogic.inc}
+{$i mnh_gui_main_events.pas}
 
-PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject);
-  begin
-    SaveDialog.FilterIndex:=2;
-    if SaveDialog.execute then begin
-      SynExporterHTML.title:=getEditor^.pseudoName();
-      SynExporterHTML.highlighter:=getEditor^.editor.highlighter;
-      SynExporterHTML.ExportAll(getEditor^.editor.lines);
-      SynExporterHTML.saveToFile(SaveDialog.fileName);
-    end;
-  end;
 
 PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
   begin
@@ -611,48 +576,6 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     updateDebugParts;
   end;
 
-PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
-  begin
-    runEvaluator.haltEvaluation;
-  end;
-
-PROCEDURE TMnhForm.doStartEvaluation;
-  VAR i:longint;
-  begin
-    guiOutAdapter.flushClear;
-    UpdateTimeTimerTimer(self);
-    doConditionalPlotReset;
-    resetTableForms;
-    getEditor^.setWorkingDir;
-    underCursor.tokenText:='';
-    if miDebug.Checked then begin
-      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.startDebugging;
-      updateDebugParts;
-    end;
-    breakPointHandlingPending:=true;
-    UpdateTimeTimer.interval:=1;
-  end;
-
-PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
-  begin
-    if inputPageControl.activePageIndex<0 then exit;
-    askForm.initWithQuestion('Please give command line parameters');
-    if askForm.ShowModal=mrOk then begin
-      doStartEvaluation;
-      lastStart.mainCall:=true;
-      lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      runEvaluator.callMain((editorMeta[inputPageControl.activePageIndex]),lastStart.parameters,miProfile.Checked,miDebug.Checked);
-    end else askForm.getLastAnswerReleasing(nil);
-  end;
-
-PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
-  begin
-    if not(runEvaluator.evaluationRunningOrPending) then begin
-      doStartEvaluation;
-      lastStart.mainCall:=false;
-      runEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]),miProfile.Checked,miDebug.Checked);
-    end;
-  end;
 
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
   VAR i,k:longint;

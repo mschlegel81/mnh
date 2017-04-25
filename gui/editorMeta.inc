@@ -53,6 +53,7 @@ T_editorMeta=object(T_codeProvider)
   FUNCTION fileIsModifiedOnFileSystem:boolean;
   FUNCTION languageName:string;
   PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
+  PROCEDURE exportToHtml(CONST fileName:string);
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -520,8 +521,7 @@ FUNCTION T_editorMeta.languageName:string;
     result:='';
   end;
 
-PROCEDURE T_editorMeta.updateContentAfterEditScript(
-  CONST stringListLiteral: P_listLiteral);
+PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_listLiteral);
   VAR concatenatedText:ansistring='';
       i:longint;
   begin
@@ -534,6 +534,16 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(
     editor.SelectAll;
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
+  end;
+
+PROCEDURE T_editorMeta.exportToHtml(CONST fileName:string);
+  begin
+    with MnhForm do begin
+      SynExporterHTML.title:=pseudoName();
+      SynExporterHTML.highlighter:=editor.highlighter;
+      SynExporterHTML.ExportAll(editor.lines);
+      SynExporterHTML.saveToFile(fileName);
+    end;
   end;
 
 {$endif}
