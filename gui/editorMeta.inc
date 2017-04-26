@@ -1,5 +1,8 @@
 {$ifdef includeInterface}
 P_editorMeta=^T_editorMeta;
+
+{ T_editorMeta }
+
 T_editorMeta=object(T_codeProvider)
   index:longint;
   paintedWithState:longint;
@@ -17,24 +20,38 @@ T_editorMeta=object(T_codeProvider)
   CONSTRUCTOR create(CONST idx:longint);
   CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
   PROCEDURE initWithState(VAR state:T_editorState);
-  DESTRUCTOR destroy; virtual;
 
+  DESTRUCTOR destroy; virtual;
+  PROCEDURE closeEditor;
+  //T_codeProvider:
   FUNCTION getLines: T_arrayOfString; virtual;
   FUNCTION getPath: ansistring;                                    virtual;
   FUNCTION stateHash:T_hashInt;                                    virtual;
   FUNCTION disposeOnPackageDestruction:boolean;                    virtual;
   FUNCTION isPseudoFile:boolean;                                   virtual;
+  //Events handling:
+  PROCEDURE InputEditChange(Sender: TObject);
+  PROCEDURE guiStatusChange(Sender: TObject);
 
-  PROCEDURE startDebugging;
-  PROCEDURE doneDebugging;
-  PROCEDURE closeEditor;
+  //Advanced:
+  FUNCTION saveAsWithDialog:boolean;
+  FUNCTION saveWithDialog:boolean;
+
   PROCEDURE setLanguage(CONST languageIndex:byte);
   PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:byte);
   PROCEDURE guessLanguage(CONST fallback:byte);
+  FUNCTION languageName:string;
+
+  //Presentation helper:
+  FUNCTION caretInMainFormCoordinates:TPoint;
+  PROCEDURE setCaret(CONST location: T_searchTokenLocation);
+
+  FUNCTION isFile:boolean;
+
+
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
   PROCEDURE reloadFile(CONST fileName:string);
-  FUNCTION caretInMainFormCoordinates:TPoint;
   PROCEDURE setMarkedWord(CONST wordText:string);
   PROCEDURE setWorkingDir;
   PROCEDURE writeToEditorState(CONST settings:P_Settings);
@@ -42,7 +59,6 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE insertText(CONST s:string);
   PROCEDURE toggleBreakpoint;
   FUNCTION pseudoName(CONST short:boolean=false):ansistring;
-  FUNCTION isFile:boolean;
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
@@ -51,7 +67,6 @@ T_editorMeta=object(T_codeProvider)
   FUNCTION saveFile(CONST fileName:string=''):string;
   FUNCTION fileIsDeleted:boolean;
   FUNCTION fileIsModifiedOnFileSystem:boolean;
-  FUNCTION languageName:string;
   PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
   PROCEDURE exportToHtml(CONST fileName:string);
 end;
@@ -86,7 +101,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     plugin.Keystrokes.clear;
     style:=editor.BracketMatchColor;
     style.background:=clLime;
-    editor.OnChange:=@MnhForm.InputEditChange;
+    registerOnGuiStatusChange(@guiStatusChange);
+    editor.OnChange:=@InputEditChange;
     editor.OnKeyUp:=@MnhForm.InputEditKeyDown;
     editor.OnMouseDown:=@MnhForm.InputEditMouseDown;
     editor.OnProcessCommand:=@MnhForm.InputEditProcessUserCommand;
@@ -177,7 +193,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
     initWithState(state);
   end;
 
-PROCEDURE T_editorMeta.initWithState(VAR state:T_editorState);
+PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
   VAR i:longint;
   begin
     sheet.tabVisible:=true;
@@ -210,7 +226,7 @@ FUNCTION T_editorMeta.getPath: ansistring;
     result:=pseudoName(false);
   end;
 
-FUNCTION T_editorMeta.stateHash:T_hashInt;
+FUNCTION T_editorMeta.stateHash: T_hashInt;
   VAR s:ansistring;
   begin
     {$Q-}{$R-}
@@ -230,15 +246,44 @@ FUNCTION T_editorMeta.isPseudoFile: boolean;
     result:=fileInfo.filePath='';
   end;
 
-PROCEDURE T_editorMeta.startDebugging;
+PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
-    editor.readonly:=true;
+    if not(getStatus.active) or not(sheet.tabVisible) then exit;
+    if language=LANG_MNH then assistancEvaluator.evaluate(@self);
+    MnhForm.caption:=updateSheetCaption;
   end;
 
-PROCEDURE T_editorMeta.doneDebugging;
+PROCEDURE T_editorMeta.guiStatusChange(Sender: TObject);
   begin
-    highlighter.setMarkedToken(-1,-1);
-    editor.readonly:=false;
+    editor.Gutter.MarksPart.visible:=(language=LANG_MNH) and (getStatus.debugMode);
+    editor.readonly:=(getStatus.debugMode and getStatus.running) or (getStatus.scriptEditing);
+  end;
+
+FUNCTION T_editorMeta.saveAsWithDialog: boolean;
+begin
+  with MnhForm do begin
+    if language=LANG_MNH
+    then begin
+      SaveDialog.FilterIndex:=1;
+      SaveDialog.options:=SaveDialog.options+[ofExtensionDifferent];
+    end else begin
+      SaveDialog.FilterIndex:=2;
+      SaveDialog.options:=SaveDialog.options-[ofExtensionDifferent];
+    end;
+    if SaveDialog.execute then begin
+      MnhForm.caption:=saveFile(SaveDialog.fileName);
+      result:=true;
+    end else result:=false;
+  end;
+
+end;
+
+FUNCTION T_editorMeta.saveWithDialog: boolean;
+  begin
+    if isFile then begin
+      MnhForm.caption:=saveFile();
+      result:=true;
+    end else result:=saveAsWithDialog;
   end;
 
 PROCEDURE T_editorMeta.closeEditor;
@@ -252,7 +297,7 @@ PROCEDURE T_editorMeta.closeEditor;
     editor.modified:=false;
   end;
 
-PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
+PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: byte);
   VAR metaIdx:longint;
   begin
     language:=languageIndex;
@@ -265,7 +310,8 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex:byte);
     end;
   end;
 
-PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string; CONST fallback:byte);
+PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string;
+  CONST fallback: byte);
   VAR metaIdx:longint;
       ext:string;
   begin
@@ -280,7 +326,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot:string; CONST fallb
     setLanguage(fallback);
   end;
 
-PROCEDURE T_editorMeta.guessLanguage(CONST fallback:byte);
+PROCEDURE T_editorMeta.guessLanguage(CONST fallback: byte);
   begin
     setLanguage(copy(extractFileExt(fileInfo.filePath),2,10),fallback);
   end;
@@ -333,6 +379,14 @@ FUNCTION T_editorMeta.caretInMainFormCoordinates: TPoint;
     result.x:=editor.CaretXPix;
     result.y:=editor.CaretYPix+editor.LineHeight;
     result:=editor.ClientToParent(result,MnhForm);
+  end;
+
+PROCEDURE T_editorMeta.setCaret(CONST location: T_searchTokenLocation);
+  VAR newCaret:TPoint;
+  begin
+    newCaret.x:=location.column;
+    newCaret.y:=location.line;
+    editor.CaretXY:=newCaret;
   end;
 
 PROCEDURE T_editorMeta.setMarkedWord(CONST wordText: string);
@@ -422,8 +476,10 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
   begin
     for i:=0 to editor.Marks.count-1 do if editor.Marks[i].line=editor.CaretY then begin
       editor.Marks.remove(editor.Marks[i]);
+      runEvaluator.context.stepper^.removeBreakpoint(pseudoName,editor.CaretY);
       exit;
     end;
+    runEvaluator.context.stepper^.addBreakpoint(pseudoName,editor.CaretY);
     _add_breakpoint_(editor.CaretY);
   end;
 
@@ -483,7 +539,7 @@ FUNCTION T_editorMeta.changed: boolean;
     result:=fileInfo.isChanged or editor.modified;
   end;
 
-FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
+FUNCTION T_editorMeta.saveFile(CONST fileName: string): string;
   VAR arr:T_arrayOfString;
       i:longint;
   begin
@@ -501,12 +557,12 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string):string;
     result:=updateSheetCaption;
   end;
 
-FUNCTION T_editorMeta.fileIsDeleted:boolean;
+FUNCTION T_editorMeta.fileIsDeleted: boolean;
   begin
     result:=sheet.tabVisible and isFile and not(fileExists(fileInfo.filePath));
   end;
 
-FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
+FUNCTION T_editorMeta.fileIsModifiedOnFileSystem: boolean;
   VAR currentFileAge:double;
   begin
     if not(sheet.tabVisible and isFile) or changed then exit(false);
@@ -514,14 +570,15 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem:boolean;
     result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
 
-FUNCTION T_editorMeta.languageName:string;
+FUNCTION T_editorMeta.languageName: string;
   VAR i:longint;
   begin
     for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language then exit(lowercase(fileTypeMeta[i].extensionWithoutDot));
     result:='';
   end;
 
-PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_listLiteral);
+PROCEDURE T_editorMeta.updateContentAfterEditScript(
+  CONST stringListLiteral: P_listLiteral);
   VAR concatenatedText:ansistring='';
       i:longint;
   begin
@@ -536,7 +593,7 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(CONST stringListLiteral: P_l
     editor.EndUndoBlock;
   end;
 
-PROCEDURE T_editorMeta.exportToHtml(CONST fileName:string);
+PROCEDURE T_editorMeta.exportToHtml(CONST fileName: string);
   begin
     with MnhForm do begin
       SynExporterHTML.title:=pseudoName();
@@ -544,6 +601,85 @@ PROCEDURE T_editorMeta.exportToHtml(CONST fileName:string);
       SynExporterHTML.ExportAll(editor.lines);
       SynExporterHTML.saveToFile(fileName);
     end;
+  end;
+
+//==================================================================
+VAR editorMetaData:array of P_editorMeta;
+FUNCTION hasEditor:boolean;
+  VAR i:longint;
+  begin
+    i:=MnhForm.inputPageControl.activePageIndex;
+    result:=(i>=0) and (i<length(editorMetaData));
+  end;
+
+FUNCTION getEditor:P_editorMeta;
+  VAR i:longint;
+  begin
+    i:=MnhForm.inputPageControl.activePageIndex;
+    if (i>=0) and (i<length(editorMetaData))
+    then result:=editorMetaData[i]
+    else result:=nil;
+  end;
+
+FUNCTION addEditorMetaForNewFile:longint;
+  VAR i:longint;
+  begin
+    i:=length(editorMetaData)-1;
+    //decrease i until a visible meta is encountered
+    while (i>=0) and not(editorMetaData[i]^.sheet.tabVisible) do dec(i);
+    inc(i);
+    //i now is the index of the last visible editor meta +1
+    if (i>=0) and (i<length(editorMetaData)) then begin
+      editorMetaData[i]^.initForNewFile;
+      exit(i);
+    end;
+
+    i:=length(editorMetaData);
+    setLength(editorMetaData,i+1);
+    new(editorMetaData[i],create(i));
+    editorMetaData[i]^.editor.Font:=MnhForm.OutputEdit.Font;
+
+    result:=i;
+    if MnhForm.miDebug.Checked then editorMetaData[i]^.editor.Gutter.MarksPart.visible:=true;
+  end;
+
+FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;
+
+  PROCEDURE openSingleFile(CONST fileName:ansistring);
+    FUNCTION isPseudoName:boolean;
+      begin
+        result:=(length(fileName)>1)
+            and (fileName[1]='<')
+            and (fileName[length(fileName)]='>');
+      end;
+
+    VAR filePath:ansistring;
+        i:longint;
+    begin
+      if isPseudoName then begin
+        for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.sheet.tabVisible) and (editorMetaData[i]^.pseudoName=fileName) then begin
+          result:=i;
+          exit;
+        end;
+      end else begin
+        filePath:=expandFileName(fileName);
+        for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.sheet.tabVisible) and (editorMetaData[i]^.fileInfo.filePath=filePath) then begin
+          result:=i;
+          exit;
+        end;
+        result:=addEditorMetaForNewFile();
+        editorMetaData[result]^.setFile(filePath);
+        editorMetaData[result]^.editor.Font:=MnhForm.OutputEdit.Font;
+      end;
+    end;
+
+
+  VAR f:string;
+  begin
+    if useCurrentPageAsFallback then result:=MnhForm.inputPageControl.activePageIndex
+                                else result:=-1;
+    for f in FileNames do openSingleFile(f);
+    MnhForm.updateMainMenuItems(true,false);
   end;
 
 {$endif}

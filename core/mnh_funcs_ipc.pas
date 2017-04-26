@@ -108,7 +108,7 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
         client.free;
         exit;
       end;
-      client.Active:=true;
+      client.active:=true;
       client.sendMessage(0,memoryStream);
     end;
     client.free;

@@ -11,6 +11,19 @@ PROCEDURE tbStepOutClick(Sender: TObject);
 PROCEDURE tbStopClick(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
+PROCEDURE miMinErrorlevel1Click(Sender: TObject);
+PROCEDURE miMinErrorlevel2Click(Sender: TObject);
+PROCEDURE miMinErrorlevel3Click(Sender: TObject);
+PROCEDURE miMinErrorlevel4Click(Sender: TObject);
+PROCEDURE miDeclarationEchoClick(Sender: TObject);
+PROCEDURE miExpressionEchoClick(Sender: TObject);
+PROCEDURE miExpressionResultClick(Sender: TObject);
+PROCEDURE miTimingInfoClick(Sender: TObject);
+PROCEDURE miWrapEchoClick(Sender: TObject);
+PROCEDURE miDecFontSizeClick(Sender: TObject);
+PROCEDURE miIncFontSizeClick(Sender: TObject);
+PROCEDURE miAboutClick(Sender: TObject);
+PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject);
@@ -84,4 +97,31 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     miDebug.Checked:=not(miDebug.Checked);
     updateDebugParts;
   end;
+
+PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin setVerbosity(1); end;
+PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject); begin setVerbosity(2); end;
+PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin setVerbosity(3); end;
+PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin setVerbosity(4); end;
+
+PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .Checked,mt_echo_declaration); end;
+PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .Checked,mt_echo_input);       end;
+PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.Checked,mt_echo_output);      end;
+PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .Checked,mt_timing_info);      end;
+PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
+  begin
+    settings.value^.wordWrapEcho:=miWrapEcho.Checked;
+    updateWordWrap;
+  end;
+
+PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize-1; processFontSettings; end;
+PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize+1; processFontSettings; end;
+PROCEDURE TMnhForm.miAboutClick(Sender: TObject);       begin splashForm.ShowModal; end;
+PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
+  VAR fileName:string;
+  begin
+    for fileName in FileNames do inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(FileNames,true);
+    BringToFront;
+  end;
+
+
 {$endif}

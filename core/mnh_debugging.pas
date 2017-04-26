@@ -39,6 +39,7 @@ TYPE
       PROCEDURE haltEvaluation;
       PROCEDURE clearBreakpoints;
       PROCEDURE addBreakpoint(CONST fileName:string; CONST line:longint);
+      PROCEDURE removeBreakpoint(CONST fileName:string; CONST line:longint);
       PROCEDURE setState(CONST newState: T_debuggerState);
       FUNCTION paused:boolean;
       FUNCTION getDebuggingSnapshot:T_debuggingSnapshot;
@@ -148,6 +149,19 @@ PROCEDURE T_debuggingStepper.addBreakpoint(CONST fileName: string; CONST line: l
     setLength(breakpoints,i+1);
     breakpoints[i].fileName:=fileName;
     breakpoints[i].line    :=line;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_debuggingStepper.removeBreakpoint(CONST fileName:string; CONST line:longint);
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    i:=0;
+    while (i<length(breakpoints)) and not((breakpoints[i].fileName=fileName) and (breakpoints[i].line=line)) do inc(i);
+    if i<length(breakpoints) then begin
+      breakpoints[i]:=breakpoints[length(breakpoints)-1];
+      setLength(breakpoints,length(breakpoints)-1);
+    end;
     system.leaveCriticalSection(cs);
   end;
 

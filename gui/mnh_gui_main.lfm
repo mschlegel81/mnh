@@ -2345,23 +2345,28 @@ object MnhForm: TMnhForm
     object submenuEditorAppearance: TMenuItem
       Caption = '&Appearance'
       object miExpressionEcho: TMenuItem
+        AutoCheck = True
         Caption = 'Expression echo'
         OnClick = miExpressionEchoClick
       end
       object miExpressionResult: TMenuItem
+        AutoCheck = True
         Caption = 'Expression result'
         OnClick = miExpressionResultClick
       end
       object miDeclarationEcho: TMenuItem
+        AutoCheck = True
         Caption = 'Declaration echo'
         Checked = True
         OnClick = miDeclarationEchoClick
       end
       object miWrapEcho: TMenuItem
+        AutoCheck = True
         Caption = 'Wrap echo'
         OnClick = miWrapEchoClick
       end
       object miTimingInfo: TMenuItem
+        AutoCheck = True
         Caption = 'Show timing info'
         OnClick = miTimingInfoClick
       end

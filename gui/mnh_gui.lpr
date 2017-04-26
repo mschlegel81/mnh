@@ -24,7 +24,7 @@ FUNCTION sendParametersToOtherInstance:boolean;
     if client.ServerRunning then begin
       result:=true;
       if length(filesToOpenInEditor)>0 then begin
-        client.Active:=true;
+        client.active:=true;
         for i:=0 to length(filesToOpenInEditor)-1 do filesToOpenInEditor[i]:=expandFileName(filesToOpenInEditor[i]);
         client.SendStringMessage(join(filesToOpenInEditor,C_lineBreakChar));
       end;

@@ -5,7 +5,7 @@ VAR lastStart:record
 
 FUNCTION canRun:boolean;
   begin
-    result:=not(runEvaluator.evaluationRunningOrPending) and MnhForm.hasEditor and (MnhForm.getEditor^.language=LANG_MNH);
+    result:=not(runEvaluator.evaluationRunningOrPending) and hasEditor and (getEditor^.language=LANG_MNH);
   end;
 
 PROCEDURE customRun(CONST mainCall,debugging,profiling:boolean; CONST mainParameters:string='');
@@ -19,16 +19,16 @@ PROCEDURE customRun(CONST mainCall,debugging,profiling:boolean; CONST mainParame
       if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
     end;
     resetTableForms;
-    MnhForm.getEditor^.setWorkingDir;
+    getEditor^.setWorkingDir;
     MnhForm.underCursor.tokenText:='';
     if debugging then begin
-      for e in MnhForm.editorMeta do e^.startDebugging;
+      for e in editorMetaData do e^.editor.readonly:=true;
       MnhForm.updateDebugParts;
       MnhForm.breakPointHandlingPending:=true;
     end;
     MnhForm.UpdateTimeTimer.interval:=1;
-    if mainCall then runEvaluator.callMain(MnhForm.getEditor,lastStart.parameters,profiling,debugging)
-                else runEvaluator.evaluate(MnhForm.getEditor,                     profiling,debugging);
+    if mainCall then runEvaluator.callMain(getEditor,lastStart.parameters,profiling,debugging)
+                else runEvaluator.evaluate(getEditor,                     profiling,debugging);
 
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;

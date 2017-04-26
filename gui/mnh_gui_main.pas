@@ -27,6 +27,7 @@ USES
   openDemoDialog,
   mnh_plotForm,
   mnh_splash,
+  guiStatus,
   //MNH:
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
@@ -207,21 +208,8 @@ TYPE
     PROCEDURE updateExpressionMemo;
     PROCEDURE miRunCustomUtilScript(Sender: TObject);
     PROCEDURE processSettings;
-    PROCEDURE miDecFontSizeClick(Sender: TObject);
-    PROCEDURE miIncFontSizeClick(Sender: TObject);
-    PROCEDURE miDeclarationEchoClick(Sender: TObject);
-    PROCEDURE miExpressionEchoClick(Sender: TObject);
-    PROCEDURE miExpressionResultClick(Sender: TObject);
-    PROCEDURE _setErrorlevel_(CONST i: byte);
-    PROCEDURE miMinErrorlevel1Click(Sender: TObject);
-    PROCEDURE miMinErrorlevel2Click(Sender: TObject);
-    PROCEDURE miMinErrorlevel3Click(Sender: TObject);
-    PROCEDURE miMinErrorlevel4Click(Sender: TObject);
-    PROCEDURE miTimingInfoClick(Sender: TObject);
-    PROCEDURE miWrapEchoClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE miEditGuiScriptsClick(Sender: TObject);
-    PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miCloseAllButCurrentClick(Sender: TObject);
@@ -236,10 +224,7 @@ TYPE
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE assistanceEditReposition(CONST caret:TPoint; CONST doJump:boolean);
-    FUNCTION _doSaveAs_(CONST index:longint):boolean;
-    FUNCTION _doSave_(CONST index:longint):boolean;
-    FUNCTION addEditorMetaForNewFile(CONST newFileName: ansistring=''):longint;
-    FUNCTION addOrGetEditorMetaForFile(CONST fileName: ansistring):longint;
+
     FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
 
     PROCEDURE pmiOpenFile(CONST idOrName:string);
@@ -281,9 +266,7 @@ TYPE
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
-    PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE miFullscreenClick(Sender: TObject);
-    PROCEDURE miAboutClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miLangMnhClick(Sender: TObject);
@@ -301,7 +284,6 @@ TYPE
     uniqueEditorInstanceIpcServer: TSimpleIPCServer;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
-    settingsReady:boolean;
     popupFile:array[1..2] of string;
 
     outputFocusedOnFind:boolean;
@@ -322,11 +304,8 @@ TYPE
     historyMenuItems:array of TMenuItem;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
-    FUNCTION hasEditor:boolean;
-    FUNCTION getEditor:P_editorMeta;
 
   public
-    editorMeta:array of P_editorMeta;
     PROCEDURE updateMainMenuItems(CONST includeHistory,includeScriptMenu:boolean);
   end;
 
@@ -334,12 +313,13 @@ VAR MnhForm: TMnhForm;
 
 {$undef includeInterface}
 IMPLEMENTATION
-VAR closeGuiFlag:boolean=false;
+
 {$R *.lfm}
 {$define includeImplementation}
 {$include guiEditorInterface.inc}
 {$include editorMeta.inc}
 {$i runnerLogic.inc}
+{$i settingsLogic.inc}
 {$i mnh_gui_main_events.pas}
 
 
@@ -416,19 +396,16 @@ PROCEDURE TMnhForm.handleBreak;
 
   PROCEDURE jumpToFile;
     VAR pageIdx:longint;
-        newCaret:TPoint;
     begin
       debugLine.line:=-1;
       if (snapshot.location.package=nil) then exit;
-      pageIdx:=addOrGetEditorMetaForFile(snapshot.location.package^.getPath);
+      pageIdx:=addOrGetEditorMetaForFiles(snapshot.location.package^.getPath,false);
       if pageIdx>=0 then begin
         inputPageControl.activePageIndex:=pageIdx;
-        newCaret.x:=snapshot.location.column;
-        newCaret.y:=snapshot.location.line;
-        editorMeta[pageIdx]^.editor.CaretXY:=newCaret;
-        debugLine.editor:=editorMeta[pageIdx]^.editor;
-        debugLine.line:=newCaret.y;
-        editorMeta[pageIdx]^.editor.Repaint;
+        getEditor^.setCaret(snapshot.location);
+        debugLine.editor:=getEditor^.editor;
+        debugLine.line:=snapshot.location.line;
+        getEditor^.editor.Repaint;
       end;
     end;
 
@@ -494,196 +471,77 @@ PROCEDURE TMnhForm.updateDebugParts;
       if enabled then button.ImageIndex:=enabledImageIndex
                  else button.ImageIndex:=enabledImageIndex+1;
     end;
-
-  VAR i:longint;
-      isPaused:boolean;
-      isRunning:boolean;
   begin
-    if miDebug.Checked then begin
-      debugTabSheet.visible:=true;
-      debugTabSheet.tabVisible:=true;
-      for i:=0 to length(editorMeta)-1 do with editorMeta[i]^ do if language=LANG_MNH then editor.Gutter.MarksPart.visible:=true;
-      DebugToolbar.visible:=true;
-      DebugToolbar.enabled:=true;
-      DebugToolbar.top:=0;
-      isPaused:=runEvaluator.context.isPaused;
-      isRunning:=runEvaluator.evaluationRunning;
-      handleButton(tbStop     ,    isRunning             ,2);
-      handleButton(tbRun      ,not(isRunning) or isPaused,0,true);
-      handleButton(tbStep     ,    isRunning and isPaused,4);
-      handleButton(tbStepIn   ,    isRunning and isPaused,6);
-      handleButton(tbStepOut  ,    isRunning and isPaused,8);
-      handleButton(tbMicroStep,    isRunning and isPaused,10);
-    end else begin
-      debugTabSheet.visible:=false;
-      debugTabSheet.tabVisible:=false;
-      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.Gutter.MarksPart.visible:=false;
-      outputPageControl.activePage:=outputTabSheet;
-      DebugToolbar.visible:=false;
-      DebugToolbar.enabled:=false;
-    end;
+    debugTabSheet.visible   :=getStatus.debugMode;
+    debugTabSheet.tabVisible:=getStatus.debugMode;
+    DebugToolbar .visible   :=getStatus.debugMode;
+    DebugToolbar .enabled   :=getStatus.debugMode;
+    if DebugToolbar.visible then DebugToolbar .top:=0
+                            else if outputPageControl.activePage =debugTabSheet then
+                                    outputPageControl.activePage:=outputTabSheet;
+    handleButton(tbStop     ,getStatus.debugHalted or getStatus.running, 2);
+    handleButton(tbRun      ,not(getStatus.running), 0,true);
+    handleButton(tbStep     ,getStatus.debugHalted , 4);
+    handleButton(tbStepIn   ,getStatus.debugHalted , 6);
+    handleButton(tbStepOut  ,getStatus.debugHalted , 8);
+    handleButton(tbMicroStep,getStatus.debugHalted ,10);
   end;
 
 
 
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
-  VAR i,k:longint;
+  VAR k:longint;
+      m:P_editorMeta;
   begin
+    if not(hasEditor) then exit;
     k:=inputPageControl.activePageIndex;
-    if (k<0) or (k>=length(editorMeta)) then exit;
-    for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.readonly:=true;
-    with editorMeta[k]^ do runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editor.lines,languageName,pseudoName());
+    for m in editorMetaData do m^.editor.readonly:=true;
+    with getEditor^ do runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editor.lines,languageName,pseudoName());
   end;
 
-PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
-  VAR j:longint;
-  begin
-    if settingsReady then begin
-      case i of
-        1: miMinErrorlevel1.Checked:=true;
-        2: miMinErrorlevel2.Checked:=true;
-        3: miMinErrorlevel3.Checked:=true;
-        4: miMinErrorlevel4.Checked:=true;
-      end;
-      for j:=1 to 4 do guiOutAdapter.enableMessageType(j>=i,C_errorMessageTypes[j]);
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin _setErrorlevel_(1); end;
-PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject); begin _setErrorlevel_(2); end;
-PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin _setErrorlevel_(3); end;
-PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin _setErrorlevel_(4); end;
 
 PROCEDURE TMnhForm.processSettings;
   VAR formPosition:T_formPosition;
-      i,j:longint;
-      maxLevel:longint=5;
+      i:longint;
   begin
-    if not(settingsReady) then begin
+
+    if not(getStatus.active) then begin
       if settings.value^.loaded then begin
         formPosition:=settings.value^.mainForm;
-        top   :=formPosition.top;
-        Left  :=formPosition.Left;
-        width :=formPosition.width;
-        height:=formPosition.height;
+        top         :=formPosition.top;
+        Left        :=formPosition.Left;
+        width       :=formPosition.width;
+        height      :=formPosition.height;
         if formPosition.isFullscreen then WindowState:=wsMaximized;
         outputPageControl.height:=round(ClientHeight*formPosition.relativeSplitterPosition);
         StatusBar.top:=outputPageControl.top+outputPageControl.height;
       end else settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
 
-      miDeclarationEcho .Checked:=mt_echo_declaration in settings.value^.outputBehaviour;
-      miExpressionEcho  .Checked:=mt_echo_input       in settings.value^.outputBehaviour;
-      miExpressionResult.Checked:=mt_echo_output      in settings.value^.outputBehaviour;
-      miTimingInfo      .Checked:=mt_timing_info      in settings.value^.outputBehaviour;;
-      miWrapEcho.Checked:=settings.value^.wordWrapEcho;
-      for j:=4 downto 1 do if (C_errorMessageTypes[j] * settings.value^.outputBehaviour <> []) then maxLevel:=j;
-      miMinErrorlevel1.Checked:=maxLevel=1;
-      miMinErrorlevel2.Checked:=maxLevel=2;
-      miMinErrorlevel3.Checked:=maxLevel=3;
-      miMinErrorlevel4.Checked:=maxLevel>=4;
-      guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour;
 
-      setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
+      initializeOutputSettings;
 
       SettingsForm.ensureFont(OutputEdit.Font);
 
-      setLength(editorMeta,length(settings.value^.workspace.editorState));
+
+      setLength(editorMetaData,length(settings.value^.workspace.editorState));
       runEvaluator.context.stepper^.clearBreakpoints;
-      for i:=0 to length(editorMeta)-1 do begin
-        new(editorMeta[i],create(i,settings.value^.workspace.editorState[i]));
-        editorMeta[i]^.setStepperBreakpoints;
+      for i:=0 to length(editorMetaData)-1 do begin
+        new(editorMetaData[i],create(i,settings.value^.workspace.editorState[i]));
+        editorMetaData[i]^.setStepperBreakpoints;
       end;
       i:=settings.value^.workspace.activePage;
       inputPageControl.activePageIndex:=i;
 
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
-      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) then SynCompletion.editor:=getEditor^.editor;
+      if hasEditor then SynCompletion.editor:=getEditor^.editor;
       {$ifdef UNIX}
       miIncFontSize.ShortCut:=16605;
       {$endif}
-
-      settingsReady:=true;
-      if (inputPageControl.activePageIndex>=0) and
-         (inputPageControl.activePageIndex<length(editorMeta)) and
-         (getEditor^.language=LANG_MNH)
-      then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
+      status_activate;
+      if canRun then assistancEvaluator.evaluate(getEditor);
     end;
-
-    OutputEdit.Font.name:=settings.value^.editorFontname;
-    OutputEdit.Font.size:=SettingsForm.fontSize;
-    if SettingsForm.AntialiasCheckbox.Checked
-    then OutputEdit.Font.quality:=fqCleartypeNatural
-    else OutputEdit.Font.quality:=fqNonAntialiased;
-    for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.Font:=OutputEdit.Font;
-    if settings.value^.wordWrapEcho
-    then guiAdapters.preferredEchoLineLength:=OutputEdit.charsInWindow-6
-    else guiAdapters.preferredEchoLineLength:=-1;
-
-    currentExpressionMemo.Font:=OutputEdit.Font;
-    assistanceSynEdit.Font:=OutputEdit.Font;
-    helpPopupMemo.Font:=OutputEdit.Font;
-    helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
-  end;
-
-PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
-  begin
-    if settingsReady then begin
-      SettingsForm.fontSize:=SettingsForm.fontSize-1;
-      processSettings;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
-  begin
-    if settingsReady then begin
-      SettingsForm.fontSize:=SettingsForm.fontSize+1;
-      processSettings;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
-  begin
-    if settingsReady then begin
-      miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
-      guiOutAdapter.enableMessageType(miDeclarationEcho.Checked,[mt_echo_declaration]);
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
-  begin
-    if settingsReady then begin
-      miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
-      guiOutAdapter.enableMessageType(miExpressionEcho.Checked,[mt_echo_input]);
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
-  begin
-    if settingsReady then begin
-      miExpressionResult.Checked:=not(miExpressionResult.Checked);
-      guiOutAdapter.enableMessageType(miExpressionResult.Checked,[mt_echo_output]);
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
-  begin
-    if settingsReady then begin
-      miTimingInfo.Checked:=not(miTimingInfo.Checked);
-      guiOutAdapter.enableMessageType(miTimingInfo.Checked,[mt_timing_info]);
-      settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
-  begin
-    settings.value^.wordWrapEcho:=not(settings.value^.wordWrapEcho);
-    miWrapEcho.Checked:=settings.value^.wordWrapEcho;
-    processSettings;
+    processFontSettings;
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
@@ -697,12 +555,6 @@ PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
     FormDropFiles(Sender,utilityScriptFileName);
   end;
 
-PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
-  VAR i:longint;
-  begin
-    for i:=0 to length(FileNames)-1 do inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(FileNames[i]);
-    BringToFront;
-  end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   begin
@@ -712,11 +564,11 @@ PROCEDURE TMnhForm.miClearClick(Sender: TObject);
 PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
   VAR i,mr:longint;
   begin
-    if (inputPageControl.activePageIndex<0) or (inputPageControl.activePageIndex>=length(editorMeta)) then exit;
+    if not(hasEditor) then exit;
     with getEditor^ do begin
       if changed then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOk then if not(_doSave_(inputPageControl.activePageIndex)) then exit;
+        if mr=mrOk then if not(saveWithDialog) then exit;
         if mr=mrCancel then exit;
       end;
       if isFile then begin
@@ -726,7 +578,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
     end;
 
     mr:=-1;
-    for i:=0 to length(editorMeta)-1 do if editorMeta[i]^.sheet.tabVisible then mr:=i;
+    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.sheet.tabVisible then mr:=i;
     if mr=-1 then inputPageControl.activePageIndex:=addEditorMetaForNewFile()
              else inputPageControl.activePageIndex:=mr;
   end;
@@ -735,11 +587,11 @@ PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject);
   VAR mr,pageIdx:longint;
   begin
     if not(hasEditor) then exit;
-    for pageIdx:=0 to length(editorMeta)-1 do if (pageIdx<>inputPageControl.activePageIndex) and (editorMeta[pageIdx]^.sheet.tabVisible) then
-    with editorMeta[pageIdx]^ do begin
+    for pageIdx:=0 to length(editorMetaData)-1 do if (pageIdx<>inputPageControl.activePageIndex) and (editorMetaData[pageIdx]^.sheet.tabVisible) then
+    with editorMetaData[pageIdx]^ do begin
       if changed then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOk then if not(_doSave_(pageIdx)) then exit;
+        if mr=mrOk then if not(saveWithDialog) then exit;
         if mr=mrCancel then exit;
       end;
       if isFile then begin
@@ -754,8 +606,8 @@ PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject);
       activePageClosed:boolean=false;
   begin
     if not(hasEditor) then exit;
-    for pageIdx:=0 to length(editorMeta)-1 do if (pageIdx<>inputPageControl.activePageIndex) and (editorMeta[pageIdx]^.sheet.tabVisible) and not(editorMeta[pageIdx]^.changed) then
-    with editorMeta[pageIdx]^ do begin
+    for pageIdx:=0 to length(editorMetaData)-1 do if (pageIdx<>inputPageControl.activePageIndex) and (editorMetaData[pageIdx]^.sheet.tabVisible) and not(editorMetaData[pageIdx]^.changed) then
+    with editorMetaData[pageIdx]^ do begin
       if isFile then begin
         settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
       end;
@@ -764,7 +616,7 @@ PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject);
     end;
     if activePageClosed then begin
       pageIdx:=-1;
-      for i:=0 to length(editorMeta)-1 do if editorMeta[i]^.sheet.tabVisible then pageIdx:=i;
+      for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.sheet.tabVisible then pageIdx:=i;
       if pageIdx=-1 then inputPageControl.activePageIndex:=addEditorMetaForNewFile()
                     else inputPageControl.activePageIndex:=pageIdx;
     end;
@@ -774,7 +626,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   begin
     with settings.value^.workspace.fileHistory do begin
       if fileExists(historyItem(historyIdx))
-      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(historyItem(historyIdx))
+      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
       else if polishHistory then updateMainMenuItems(true,false);
     end;
   end;
@@ -788,7 +640,6 @@ PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject); begin openFromHistory(T
 
 PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
   VAR wordUnderCursor:string;
-      newCaret:TPoint;
       pageIdx:longint;
   begin
     with getEditor^ do begin
@@ -798,19 +649,16 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateM
       if (underCursor.tokenText<>wordUnderCursor) or
          (underCursor.location.column<=0) then exit;
       if (underCursor.location.fileName='') or (underCursor.location.fileName='?') then exit;
-      pageIdx:=addOrGetEditorMetaForFile(underCursor.location.fileName);
+      pageIdx:=addOrGetEditorMetaForFiles(underCursor.location.fileName,false);
       if pageIdx>=0 then begin
         inputPageControl.activePageIndex:=pageIdx;
-        newCaret.x:=underCursor.location.column;
-        newCaret.y:=underCursor.location.line;
-        editorMeta[pageIdx]^.editor.CaretXY:=newCaret;
+        getEditor^.setCaret(underCursor.location);
       end;
     end;
   end;
 
 PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boolean);
   VAR loc:T_searchTokenLocation;
-      newCaret:TPoint;
       pageIdx:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
@@ -818,22 +666,19 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boole
     loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
     if not(doJump) then exit;
     if (loc.fileName='') or (loc.fileName='?') then exit;
-    pageIdx:=addOrGetEditorMetaForFile(loc.fileName);
+    pageIdx:=addOrGetEditorMetaForFiles(loc.fileName,false);
     if pageIdx<0 then exit;
     inputPageControl.activePageIndex:=pageIdx;
-    with editorMeta[pageIdx]^ do begin
+    with editorMetaData[pageIdx]^ do begin
       editor.SetFocus;
       highlighter.setMarkedToken(loc.line-1,loc.column-1);
-      newCaret.x:=loc.column;
-      newCaret.y:=loc.line;
-      editor.CaretXY:=newCaret;
+      setCaret(loc);
       forceInputEditFocusOnOutputEditMouseUp:=true;
     end;
   end;
 
 PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: boolean);
   VAR loc:T_searchTokenLocation;
-      newCaret:TPoint;
       pageIdx:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
@@ -841,98 +686,22 @@ PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: b
     loc:=guessLocationFromString(assistanceSynEdit.lines[caret.y-1],false);
     if not(doJump) then exit;
     if (loc.fileName='') or (loc.fileName='?') then exit;
-    pageIdx:=addOrGetEditorMetaForFile(loc.fileName);
+    pageIdx:=addOrGetEditorMetaForFiles(loc.fileName,false);
     if pageIdx<0 then exit;
     inputPageControl.activePageIndex:=pageIdx;
-    with editorMeta[pageIdx]^ do begin
+    with editorMetaData[pageIdx]^ do begin
       editor.SetFocus;
       highlighter.setMarkedToken(loc.line-1,loc.column-1);
-      newCaret.x:=loc.column;
-      newCaret.y:=loc.line;
-      editor.CaretXY:=newCaret;
+      setCaret(loc);
       forceInputEditFocusOnOutputEditMouseUp:=true;
-    end;
-  end;
-
-FUNCTION TMnhForm._doSaveAs_(CONST index: longint): boolean;
-  begin
-    if index<0 then exit(false);
-    if editorMeta[index]^.language=LANG_MNH
-    then begin
-      SaveDialog.FilterIndex:=1;
-      SaveDialog.options:=SaveDialog.options+[ofExtensionDifferent];
-    end else begin
-      SaveDialog.FilterIndex:=2;
-      SaveDialog.options:=SaveDialog.options-[ofExtensionDifferent];
-    end;
-    if SaveDialog.execute then with editorMeta[index]^ do begin
-      caption:=saveFile(SaveDialog.fileName);
-      result:=true;
-    end else result:=false;
-  end;
-
-FUNCTION TMnhForm._doSave_(CONST index: longint): boolean;
-  begin
-    if index<0 then exit(false);
-    with editorMeta[index]^ do if not(isFile) then result:=_doSaveAs_(index)
-    else begin
-      caption:=saveFile();
-      result:=true;
-    end;
-  end;
-
-FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring): longint;
-  VAR i:longint;
-  begin
-    i:=length(editorMeta)-1;
-    //decrease i until a visible meta is encountered
-    while (i>=0) and not(editorMeta[i]^.sheet.tabVisible) do dec(i);
-    inc(i);
-    //i now is the index of the last visible editor meta +1
-    if (i>=0) and (i<length(editorMeta)) then begin
-      editorMeta[i]^.initForNewFile;
-      exit(i);
-    end;
-
-    i:=length(editorMeta);
-    setLength(editorMeta,i+1);
-    new(editorMeta[i],create(i));
-    editorMeta[i]^.editor.Font:=OutputEdit.Font;
-    if newFileName<>'' then _doSave_(i);
-    result:=i;
-    if miDebug.Checked then editorMeta[i]^.editor.Gutter.MarksPart.visible:=true;
-  end;
-
-FUNCTION TMnhForm.addOrGetEditorMetaForFile(CONST fileName: ansistring): longint;
-  FUNCTION isPseudoName:boolean;
-    begin
-      result:=(length(fileName)>1)
-          and (fileName[1]='<')
-          and (fileName[length(fileName)]='>');
-    end;
-
-  VAR filePath:ansistring;
-      i:longint;
-  begin
-    if isPseudoName then begin
-      for i:=0 to length(editorMeta)-1 do if (editorMeta[i]^.sheet.tabVisible) and (editorMeta[i]^.pseudoName=fileName) then exit(i);
-      result:=-1;
-    end else begin
-      filePath:=expandFileName(fileName);
-      for i:=0 to length(editorMeta)-1 do if (editorMeta[i]^.sheet.tabVisible) and (editorMeta[i]^.fileInfo.filePath=filePath) then exit(i);
-      result:=addEditorMetaForNewFile();
-      editorMeta[result]^.setFile(filePath);
-      editorMeta[result]^.editor.Font:=OutputEdit.Font;
-      updateMainMenuItems(true,false);
     end;
   end;
 
 FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
   begin
     if outputFocusedOnFind and not(replacing) then exit(OutputEdit);
-    if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
-    then result:=getEditor^.editor
-    else exit(OutputEdit); //not nice, but a valid fallback
+    if hasEditor then result:=getEditor^.editor
+                 else exit(OutputEdit); //not nice, but a valid fallback
   end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
@@ -941,17 +710,17 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
     OpenDialog.title:='Open file';
     if OpenDialog.execute and fileExists(OpenDialog.fileName)
-    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(OpenDialog.fileName);
+    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(OpenDialog.fileName,true);
   end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
-    _doSaveAs_(inputPageControl.activePageIndex);
+    getEditor^.saveAsWithDialog;
   end;
 
 PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
-    _doSave_(inputPageControl.activePageIndex);
+    getEditor^.saveWithDialog;
   end;
 
 PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
@@ -960,11 +729,11 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
     with settings.value^ do begin
       if fileExists(idOrName)
       then begin
-        inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
+        inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(idOrName,true);
         exit;
       end;
       fileName:=assistancEvaluator.resolveImport(idOrName);
-      if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
+      if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(fileName,true);
     end;
   end;
 
@@ -1131,9 +900,8 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
 PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
   VAR i:longint;
   begin
-    i:=inputPageControl.activePageIndex;
-    if (i<0) or (i>=length(editorMeta)) then exit;
-    with editorMeta[i]^ do begin
+    if not(hasEditor) then exit;
+    with getEditor^ do begin
       askForm.initWithQuestion('Go to line');
       askForm.ShowModal;
       i:=strToIntDef(askForm.getLastAnswerReleasing(nil),-1);
@@ -1199,7 +967,7 @@ FUNCTION editors_impl intFuncSignature;
   VAR meta:P_editorMeta;
   begin
     result:=newListLiteral();
-    for meta in MnhForm.editorMeta do if meta^.sheet.tabVisible then listResult^.appendString(meta^.pseudoName());
+    for meta in editorMetaData do if meta^.sheet.tabVisible then listResult^.appendString(meta^.pseudoName());
   end;
 
 FUNCTION editorContent_impl intFuncSignature;
@@ -1208,7 +976,7 @@ FUNCTION editorContent_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      for meta in MnhForm.editorMeta do if meta^.sheet.tabVisible and (meta^.pseudoName()=str0^.value) then begin
+      for meta in editorMetaData do if meta^.sheet.tabVisible and (meta^.pseudoName()=str0^.value) then begin
         result:=newListLiteral(meta^.editor.lines.count);
         for i:=0 to meta^.editor.lines.count-1 do listResult^.appendString(meta^.editor.lines[i]);
         exit(result);
@@ -1251,12 +1019,12 @@ PROCEDURE TMnhForm.positionHelpNotifier;
   end;
 
 PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker,forJump: boolean);
-  VAR i:longint;
+  VAR m:P_editorMeta;
   begin
     if getEditor^.language<>LANG_MNH then exit;
     if updateMarker then begin
       outputHighlighter.setMarkedWord(wordText);
-      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.setMarkedWord(wordText);
+      for m in editorMetaData do m^.setMarkedWord(wordText);
     end;
     if miHelp.Checked or forJump then with getEditor^.editor do
       assistancEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
@@ -1264,16 +1032,6 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
       helpPopupMemo.text:=ECHO_MARKER+underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
     end;
-  end;
-
-FUNCTION TMnhForm.hasEditor: boolean;
-  begin
-    result:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta));
-  end;
-
-FUNCTION TMnhForm.getEditor: P_editorMeta;
-  begin
-    result:=editorMeta[inputPageControl.activePageIndex];
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
@@ -1401,28 +1159,30 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
+    registerForm(self,true,true);
+
+    splashOnStartup;
+
     setLength(scriptMenuItems[st_edit],0);
     setLength(scriptMenuItems[st_insert],0);
     setLength(scriptMenuItems[st_util],0);
     setLength(historyMenuItems,0);
 
     updateRules;
-    splashOnStartup;
+    SynHighlighterMnh.initLists;
+
     initIpcServer;
     initGuiOutAdapters(MnhForm,true);
-    guiTaskQueue.create;
-    SynHighlighterMnh.initLists;
     mnh_evalThread.initUnit(@guiAdapters,true);
+    guiTaskQueue.create;
+
     setupCallbacks;
 
-    setLength(editorMeta,0);
     initFileTypes;
-    registerForm(self,true,true);
+
     lastWordsCaret:=maxLongint;
     wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
-    settingsReady:=false;
-    lastStart.mainCall:=false;
     doNotMarkWordBefore:=now;
     doNotCheckFileBefore:=now+ONE_SECOND;
 
@@ -1448,11 +1208,11 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
-  VAR i:integer;
+  VAR e:P_editorMeta;
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
     if assistancEvaluator.evaluationRunning then assistancEvaluator.haltEvaluation;
-    for i:=0 to length(editorMeta)-1 do editorMeta[i]^.writeToEditorState(settings.value);
+    for e in editorMetaData do e^.writeToEditorState(settings.value);
   end;
 
 PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
@@ -1482,8 +1242,8 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     helpHighlighter.destroy;
     wordsInEditor.destroy;
     guiTaskQueue.destroy;
-    for i:=0 to length(editorMeta)-1 do dispose(editorMeta[i],destroy);
-    setLength(editorMeta,0);
+    for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
+    setLength(editorMetaData,0);
   end;
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -1493,36 +1253,26 @@ PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState)
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
-    if settingsReady then with settings.value^ do begin
+    if getStatus.active then with settings.value^ do begin
       mainForm.top   :=top;
       mainForm.Left  :=Left;
       mainForm.width :=width;
       mainForm.height:=height;
       mainForm.isFullscreen:=(WindowState=wsMaximized);
-      processSettings;
+      outputPageControl.height:=round(ClientHeight*settings.value^.mainForm.relativeSplitterPosition);
+      updateWordWrap;
     end;
     if helpPopupMemo.visible then positionHelpNotifier;
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
-    if not(settingsReady) then begin
+    if not(getStatus.active) then begin
       processSettings;
       KeyPreview:=true;
       UpdateTimeTimer.enabled:=true;
       updateMainMenuItems(true,true);
     end;
-  end;
-
-PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
-  begin
-    if not(settingsReady) or
-       (inputPageControl.activePageIndex<0) or
-       (inputPageControl.activePageIndex>=length(editorMeta)) or
-       (not(getEditor^.sheet.tabVisible)) then exit;
-    if getEditor^.language=LANG_MNH
-    then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
-    caption:=getEditor^.updateSheetCaption;
   end;
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
@@ -1531,15 +1281,15 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
   begin
     if command=ecUserDefinedFirst then getEditor^.toggleComment;
     if command=ecUserDefinedFirst+1 then begin
-      for i:=1 to length(editorMeta)-1 do if editorMeta[(i+inputPageControl.activePageIndex) mod length(editorMeta)]^.sheet.tabVisible then begin
-        inputPageControl.activePageIndex:=(i+inputPageControl.activePageIndex) mod length(editorMeta);
+      for i:=1 to length(editorMetaData)-1 do if editorMetaData[(i+inputPageControl.activePageIndex) mod length(editorMetaData)]^.sheet.tabVisible then begin
+        inputPageControl.activePageIndex:=(i+inputPageControl.activePageIndex) mod length(editorMetaData);
         getEditor^.editor.SetFocus;
         exit;
       end;
     end;
     if command=ecUserDefinedFirst+2 then begin
-      for i:=length(editorMeta)-1 downto 1 do if editorMeta[(i+inputPageControl.activePageIndex) mod length(editorMeta)]^.sheet.tabVisible then begin
-        inputPageControl.activePageIndex:=(i+inputPageControl.activePageIndex) mod length(editorMeta);
+      for i:=length(editorMetaData)-1 downto 1 do if editorMetaData[(i+inputPageControl.activePageIndex) mod length(editorMetaData)]^.sheet.tabVisible then begin
+        inputPageControl.activePageIndex:=(i+inputPageControl.activePageIndex) mod length(editorMetaData);
         getEditor^.editor.SetFocus;
         exit;
       end;
@@ -1547,7 +1297,7 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
     if (command=ecUserDefinedFirst+3) then begin
       getEditor^.toggleBreakpoint;
       runEvaluator.context.stepper^.clearBreakpoints;
-      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.setStepperBreakpoints;
+      for i:=0 to length(editorMetaData)-1 do editorMetaData[i]^.setStepperBreakpoints;
       miDebug.Checked:=true;
       updateDebugParts;
     end;
@@ -1574,10 +1324,6 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
                            end;
   end;
 
-PROCEDURE TMnhForm.miAboutClick(Sender: TObject);
-  begin
-    splashForm.ShowModal;
-  end;
 
 
 PROCEDURE makeAndShowDoc();
@@ -1595,9 +1341,9 @@ PROCEDURE TMnhForm.miLangMnhClick(Sender: TObject);
   VAR i,editorIdx:longint;
   begin
     editorIdx:=inputPageControl.PageIndex;
-    if (editorIdx<0) or (editorIdx>=length(editorMeta)) then exit;
+    if (editorIdx<0) or (editorIdx>=length(editorMetaData)) then exit;
     for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].menuItem.Checked then begin
-      editorMeta[editorIdx]^.setLanguage(fileTypeMeta[i].language);
+      editorMetaData[editorIdx]^.setLanguage(fileTypeMeta[i].language);
       exit;
     end;
   end;
@@ -1687,7 +1433,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
     if (inputPageControl.activePageIndex>=0) then begin
       SynCompletion.editor:=getEditor^.editor;
       settings.value^.workspace.activePage:=inputPageControl.activePageIndex;
-      with getEditor^ do if language=LANG_MNH then assistancEvaluator.evaluate((editorMeta[inputPageControl.activePageIndex]));
+      with getEditor^ do if language=LANG_MNH then assistancEvaluator.evaluate((editorMetaData[inputPageControl.activePageIndex]));
       updateMainMenuItems(false,false);
     end;
   end;
@@ -1695,7 +1441,7 @@ PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
-    if settingsReady then settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
+    if getStatus.active then settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
   end;
 
 PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
@@ -1714,12 +1460,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if (task^.wantOutput) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
         if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
                                else outIdx:=task^.inputIdx;
-        editorMeta[outIdx]^.setLanguage(task^.getOutputLanguage,LANG_TXT);
-        editorMeta[outIdx]^.updateContentAfterEditScript(P_listLiteral(task^.getOutput));
+        editorMetaData[outIdx]^.setLanguage(task^.getOutputLanguage,LANG_TXT);
+        editorMetaData[outIdx]^.updateContentAfterEditScript(P_listLiteral(task^.getOutput));
         inputPageControl.activePageIndex:=outIdx;
       end else if (task^.wantInsert) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_string) then
-        editorMeta[task^.inputIdx]^.insertText(P_stringLiteral(task^.getOutput)^.value);
-      for i:=0 to length(editorMeta)-1 do editorMeta[i]^.editor.readonly:=currentlyDebugging;
+        editorMetaData[task^.inputIdx]^.insertText(P_stringLiteral(task^.getOutput)^.value);
+      for i:=0 to length(editorMetaData)-1 do editorMetaData[i]^.editor.readonly:=currentlyDebugging;
     end;
 
   VAR aid:ansistring;
@@ -1744,7 +1490,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       //--------------------------------------------------:Halt/Run enabled states
       lastReportedRunnerInfo:=currentRunnerInfo;
     end;
-    canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta)) and (getEditor^.language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
+    canRun:=(inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMetaData)) and (getEditor^.language=LANG_MNH) and not(currentRunnerInfo.state in C_runningStates);
     if canRun<>miEvaluateNow.enabled then begin
       miEvaluateNow.enabled:=canRun;
       miCallMain.enabled:=canRun;
@@ -1759,7 +1505,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if showing then begin
       while guiTaskQueue.executeTask do;
       //Form caption:-------------------------------------------------------------
-      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMeta))
+      if (inputPageControl.activePageIndex>=0) and (inputPageControl.activePageIndex<length(editorMetaData))
       then begin
         aid:=getEditor^.updateSheetCaption;
         getEditor^.repaintWithStateCounter(assistancEvaluator.getStateCounter,assistancEvaluator.getErrorHints);
@@ -1770,23 +1516,23 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       //File checks:------------------------------------------------------------
       if (now>doNotCheckFileBefore) then begin
         doNotCheckFileBefore:=now+1;
-        for i:=0 to length(editorMeta)-1 do with editorMeta[i]^ do
+        for i:=0 to length(editorMetaData)-1 do with editorMetaData[i]^ do
         if fileIsDeleted then begin
           modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
           if modalRes=mrOk then closeEditor;
-          if modalRes=mrClose then begin if not(_doSave_(i)) then fileInfo.isChanged:=true; end else
+          if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else
           fileInfo.isChanged:=true;
           continue;
         end else if fileIsModifiedOnFileSystem then begin
           modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
           if modalRes=mrOk then reloadFile(fileInfo.filePath);
-          if modalRes=mrClose then begin if not(_doSave_(i)) then fileInfo.isChanged:=true; end else
+          if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else
           fileInfo.isChanged:=true;
         end;
         doNotCheckFileBefore:=now+ONE_SECOND;
 
         if settings.value^.savingRequested then begin
-          for i:=0 to length(editorMeta)-1 do editorMeta[i]^.writeToEditorState(settings.value);
+          for i:=0 to length(editorMetaData)-1 do editorMetaData[i]^.writeToEditorState(settings.value);
           saveSettings;
         end;
       end;
@@ -1807,19 +1553,18 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end;
-    if closeGuiFlag then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
   begin
     if openDemoDialogForm.ShowModal=mrOk then
-       inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(openDemoDialogForm.selectedFile);
+       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openDemoDialogForm.selectedFile,true);
   end;
 
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
   begin
     if newCentralPackageForm.ShowModal=mrOk then
-      inputPageControl.activePageIndex:=addOrGetEditorMetaForFile(newCentralPackageForm.fileNameEdit.text);
+      inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(newCentralPackageForm.fileNameEdit.text,true);
   end;
 
 PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
@@ -1828,9 +1573,9 @@ PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VA
   end;
 
 PROCEDURE TMnhForm.onEndOfEvaluation;
-  VAR j:longint;
+  VAR e:P_editorMeta;
   begin
-    for j:=0 to length(editorMeta)-1 do editorMeta[j]^.doneDebugging;
+    for e in editorMetaData do e^.editor.readonly:=false;
     updateDebugParts;
   end;
 
