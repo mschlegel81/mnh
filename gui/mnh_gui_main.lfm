@@ -25,20 +25,20 @@ object MnhForm: TMnhForm
     Top = 241
     Width = 717
     TabStop = False
-    ActivePage = debugTabSheet
+    ActivePage = outputTabSheet
     Align = alBottom
     Font.Color = clBlack
     ParentFont = False
-    TabIndex = 2
+    TabIndex = 1
     TabOrder = 5
     Options = [nboKeyboardTabSwitch]
     object assistanceTabSheet: TTabSheet
       Caption = 'Errors/Warnings'
-      ClientHeight = 397
+      ClientHeight = 309
       ClientWidth = 709
       inline assistanceSynEdit: TSynEdit
         Left = 0
-        Height = 397
+        Height = 309
         Top = 0
         Width = 709
         Align = alClient
@@ -1101,7 +1101,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              521
+              504
             )
             Cells = (
               3
@@ -4020,102 +4020,6 @@ object MnhForm: TMnhForm
       Caption = 'New Item2'
       OnClick = pmiOpenFile2Click
     end
-  end
-  object SynFreePascalSyn1: TSynFreePascalSyn
-    Enabled = False
-    CompilerMode = pcmObjFPC
-    NestedComments = True
-    left = 16
-    top = 32
-  end
-  object SynCppSyn1: TSynCppSyn
-    DefaultFilter = 'C++-Quelltexte (*.c,*.cpp,*.h,*.hpp,*.hh)|*.c;*.cpp;*.h;*.hpp;*.hh'
-    Enabled = False
-    left = 16
-    top = 80
-  end
-  object SynJavaSyn1: TSynJavaSyn
-    DefaultFilter = 'Java-Quelltexte (*.java)|*.java'
-    Enabled = False
-    left = 16
-    top = 136
-  end
-  object SynJScriptSyn1: TSynJScriptSyn
-    Enabled = False
-    left = 64
-    top = 32
-  end
-  object SynPerlSyn1: TSynPerlSyn
-    DefaultFilter = 'Perl-Dateien (*.pl,*.pm,*.cgi)|*.pl;*.pm;*.cgi'
-    Enabled = False
-    left = 120
-    top = 32
-  end
-  object SynHTMLSyn1: TSynHTMLSyn
-    DefaultFilter = 'HTML-Dokumente (*.htm,*.html)|*.htm;*.html'
-    Enabled = False
-    left = 64
-    top = 136
-  end
-  object SynXMLSyn1: TSynXMLSyn
-    DefaultFilter = 'XML-Dokumente (*.xml,*.xsd,*.xsl,*.xslt,*.dtd)|*.xml;*.xsd;*.xsl;*.xslt;*.dtd'
-    Enabled = False
-    WantBracesParsed = False
-    left = 64
-    top = 80
-  end
-  object SynDiffSyn1: TSynDiffSyn
-    Enabled = False
-    left = 120
-    top = 80
-  end
-  object SynUNIXShellScriptSyn1: TSynUNIXShellScriptSyn
-    DefaultFilter = 'Unix-Shellskripte (*.sh)|*.sh'
-    Enabled = False
-    left = 120
-    top = 136
-  end
-  object SynCssSyn1: TSynCssSyn
-    DefaultFilter = 'Cascading Stylesheets (*.css)|*.css'
-    Enabled = False
-    left = 16
-    top = 192
-  end
-  object SynPHPSyn1: TSynPHPSyn
-    DefaultFilter = 'PHP-Dateien (*.php,*.php3,*.phtml,*.inc)|*.php;*.php3;*.phtml;*.inc'
-    Enabled = False
-    left = 64
-    top = 192
-  end
-  object SynSQLSyn1: TSynSQLSyn
-    DefaultFilter = 'SQL-Dateien (*.sql)|*.sql'
-    Enabled = False
-    SQLDialect = sqlSybase
-    left = 120
-    top = 192
-  end
-  object SynPythonSyn1: TSynPythonSyn
-    DefaultFilter = 'Python-Dateien (*.py)|*.py'
-    Enabled = False
-    left = 16
-    top = 248
-  end
-  object SynVBSyn1: TSynVBSyn
-    Enabled = False
-    left = 64
-    top = 248
-  end
-  object SynBatSyn1: TSynBatSyn
-    DefaultFilter = 'MS-DOS-/Windows-Batchdateien (*.bat;*.cmd)|*.bat;*.cmd'
-    Enabled = False
-    left = 120
-    top = 248
-  end
-  object SynIniSyn1: TSynIniSyn
-    DefaultFilter = 'INI-Dateien (*.ini)|*.ini'
-    Enabled = False
-    left = 16
-    top = 304
   end
   object SynExporterHTML: TSynExporterHTML
     Color = clWindow

@@ -515,7 +515,7 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST provider:P_codeProvider);
       exit;
     end;
     request:=er_evaluate;
-    package.replaceCodeProvider(provider);
+    if package.getCodeProvider<>provider then package.replaceCodeProvider(provider);
     system.leaveCriticalSection(cs);
   end;
 

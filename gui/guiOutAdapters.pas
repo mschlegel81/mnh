@@ -5,8 +5,31 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
      mnh_plotForm, mnh_tables;
 TYPE
+  T_guiState=record
+    debugMode,
+    running,
+    halted,
+    editScriptRunning:boolean;
+    //calculated:
+    editorsLocked:boolean;
+  end;
+
+  { T_abstractMnhForm }
+
   T_abstractMnhForm=class(TForm)
-    PROCEDURE onEndOfEvaluation; virtual; abstract;
+    private
+      state:T_guiState;
+      PROCEDURE setDebugMode        (CONST value:boolean);
+      PROCEDURE setEvaluationRunning(CONST value:boolean);
+      PROCEDURE setEvaluationHalted (CONST value:boolean);
+      PROCEDURE setEditScriptRunning(CONST value:boolean);
+    public
+      PROPERTY debugMode        :boolean read state.debugMode         write setDebugMode        ;
+      PROPERTY evaluationRunning:boolean read state.running           write setEvaluationRunning;
+      PROPERTY evaluationHalted :boolean read state.halted            write setEvaluationHalted ;
+      PROPERTY editScriptRunning:boolean read state.editScriptRunning write setEditScriptRunning;
+      PROPERTY editorsLocked    :boolean read state.editorsLocked;
+      PROCEDURE onStatusChange(CONST previousState:T_guiState); virtual; abstract;
   end;
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
@@ -32,6 +55,46 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     mnh_plotForm.guiAdapters:=@guiAdapters;
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
+    mnh_out_adapters.gui_started:=true;
+  end;
+
+PROCEDURE T_abstractMnhForm.setDebugMode(CONST value: boolean);
+  VAR previousState:T_guiState;
+  begin
+    if state.debugMode=value then exit;
+    previousState:=state;
+    state.debugMode:=value;
+    state.editorsLocked:=(state.debugMode and state.running) or (state.editScriptRunning);
+    onStatusChange(previousState);
+  end;
+
+PROCEDURE T_abstractMnhForm.setEvaluationRunning(CONST value: boolean);
+  VAR previousState:T_guiState;
+  begin
+    if state.running=value then exit;
+    previousState:=state;
+    state.running:=value;
+    state.editorsLocked:=(state.debugMode and state.running) or (state.editScriptRunning);
+    onStatusChange(previousState);
+  end;
+
+PROCEDURE T_abstractMnhForm.setEvaluationHalted(CONST value: boolean);
+  VAR previousState:T_guiState;
+  begin
+    if state.halted=value then exit;
+    previousState:=state;
+    state.halted:=value;
+    onStatusChange(previousState);
+  end;
+
+PROCEDURE T_abstractMnhForm.setEditScriptRunning(CONST value: boolean);
+  VAR previousState:T_guiState;
+  begin
+    if state.editScriptRunning=value then exit;
+    previousState:=state;
+    state.editScriptRunning:=value;
+    state.editorsLocked:=(state.debugMode and state.running) or (state.editScriptRunning);
+    onStatusChange(previousState);
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
@@ -165,7 +228,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
             end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
           end;
-        mt_endOfEvaluation: parentForm.onEndOfEvaluation;
+        mt_endOfEvaluation: parentForm.evaluationRunning:=false;
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,messageText);

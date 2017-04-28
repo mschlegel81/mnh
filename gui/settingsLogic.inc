@@ -45,7 +45,6 @@ PROCEDURE updateWordWrap;
   end;
 
 PROCEDURE processFontSettings;
-  VAR e:P_editorMeta;
   begin
     with MnhForm do begin
       OutputEdit.Font.name:=settings.value^.editorFontname;
@@ -53,11 +52,46 @@ PROCEDURE processFontSettings;
       if SettingsForm.AntialiasCheckbox.Checked
       then OutputEdit.Font.quality:=fqCleartypeNatural
       else OutputEdit.Font.quality:=fqNonAntialiased;
-      for e in editorMetaData do e^.editor.Font:=OutputEdit.Font;
       currentExpressionMemo.Font:=OutputEdit.Font;
       assistanceSynEdit.Font:=OutputEdit.Font;
       helpPopupMemo.Font:=OutputEdit.Font;
       helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
+      editorMeta.updateFonts;
+      updateWordWrap;
+    end;
+  end;
+
+PROCEDURE initializeSettings;
+  VAR formPosition:T_formPosition;
+  begin
+    {$ifdef UNIX}
+    miIncFontSize.ShortCut:=16605;
+    {$endif}
+
+    if settings.value^.loaded then begin
+      formPosition:=settings.value^.mainForm;
+      MnhForm.top   :=formPosition.top;
+      MnhForm.Left  :=formPosition.Left;
+      MnhForm.width :=formPosition.width;
+      MnhForm.height:=formPosition.height;
+      if formPosition.isFullscreen then MnhForm.WindowState:=wsMaximized;
+      MnhForm.outputPageControl.height:=round(MnhForm.ClientHeight*formPosition.relativeSplitterPosition);
+      MnhForm.StatusBar.top:=MnhForm.outputPageControl.top+MnhForm.outputPageControl.height;
+    end else settings.value^.mainForm.relativeSplitterPosition:=MnhForm.outputPageControl.height/MnhForm.ClientHeight;
+    SettingsForm.ensureFont(MnhForm.OutputEdit.Font);
+    initializeOutputSettings;
+    processFontSettings;
+  end;
+
+PROCEDURE updateFormPositionInSettings;
+  begin
+    with settings.value^ do begin
+      mainForm.top   :=MnhForm.top;
+      mainForm.Left  :=MnhForm.Left;
+      mainForm.width :=MnhForm.width;
+      mainForm.height:=MnhForm.height;
+      mainForm.isFullscreen:=(MnhForm.WindowState=wsMaximized);
+      MnhForm.outputPageControl.height:=round(MnhForm.ClientHeight*settings.value^.mainForm.relativeSplitterPosition);
       updateWordWrap;
     end;
   end;
