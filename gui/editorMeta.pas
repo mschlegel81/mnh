@@ -69,8 +69,6 @@ T_editorMeta=object(T_codeProvider)
       isChanged:boolean;
     end;
     language_:byte;
-
-
     sheet       : TTabSheet;
     editor_     : TSynEdit;
     plugin      : TSynPluginMultiCaret;
@@ -182,7 +180,6 @@ VAR fileTypeMeta:array of record
       highlighter:TSynCustomHighlighter;
     end;
 VAR editorMetaData:array of P_editorMeta;
-    dummyEditor:T_editorMeta;
     underCursor:T_tokenInfo;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
@@ -1070,8 +1067,7 @@ PROCEDURE finalizeEditorMeta;
 
 INITIALIZATION
   setLength(editorMetaData,0);
-  dummyEditor.create(-1);
+
 FINALIZATION
   finalizeEditorMeta;
-  dummyEditor.destroy;
 end.

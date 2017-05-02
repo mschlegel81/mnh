@@ -28,6 +28,7 @@ USES
   editorMeta,
   runnerModel,
   editPopupModel,
+  searchModel,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,

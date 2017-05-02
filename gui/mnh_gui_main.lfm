@@ -3960,14 +3960,11 @@ object MnhForm: TMnhForm
     }
   end
   object FindDialog: TFindDialog
-    OnFind = FindDialogFind
     left = 272
     top = 192
   end
   object ReplaceDialog: TReplaceDialog
     Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
-    OnFind = ReplaceDialogFind
-    OnReplace = ReplaceDialogReplace
     left = 400
     top = 192
   end

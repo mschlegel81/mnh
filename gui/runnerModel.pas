@@ -5,7 +5,7 @@ VAR debugMode:boolean;
 FUNCTION areEditorsLocked:boolean;
 
 IMPLEMENTATION
-function areEditorsLocked: boolean;
+FUNCTION areEditorsLocked: boolean;
   begin
     result:=(debugMode and runEvaluator.evaluationRunning) or (runEvaluator.getRunnerStateInfo.state=es_editRunning);
   end;

@@ -1,6 +1,5 @@
 {$ifdef includeInterface}
 PROCEDURE EditorPopupMenuPopup(Sender: TObject);
-PROCEDURE FindDialogFind(Sender: TObject);
 PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE FormCreate(Sender: TObject);
 PROCEDURE FormDestroy(Sender: TObject);
@@ -16,8 +15,6 @@ PROCEDURE MenuItem4Click(Sender: TObject);
 PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE ReplaceDialogFind(Sender: TObject);
-PROCEDURE ReplaceDialogReplace(Sender: TObject);
 PROCEDURE Splitter1Moved(Sender: TObject);
 PROCEDURE Splitter3Moved(Sender: TObject);
 PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
@@ -43,6 +40,7 @@ PROCEDURE miExpressionEchoClick(Sender: TObject);
 PROCEDURE miExpressionResultClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
 PROCEDURE miFindClick(Sender: TObject);
+PROCEDURE miReplaceClick(Sender: TObject);
 PROCEDURE miFindNextClick(Sender: TObject);
 PROCEDURE miFindPreviousClick(Sender: TObject);
 PROCEDURE miFullscreenClick(Sender: TObject);
@@ -62,7 +60,6 @@ PROCEDURE miOpenClick(Sender: TObject);
 PROCEDURE miOpenDemoClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miReloadClick(Sender: TObject);
-PROCEDURE miReplaceClick(Sender: TObject);
 PROCEDURE miRunCustomUtilScript(Sender: TObject);
 PROCEDURE miSaveAsClick(Sender: TObject);
 PROCEDURE miSaveClick(Sender: TObject);
@@ -84,24 +81,6 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
   begin
     popupModel.setFiles(focusedEditor.GetWordAtRowCol(focusedEditor.CaretXY),
                         focusedEditor.TextBetweenPoints[focusedEditor.BlockBegin,focusedEditor.BlockEnd]);
-  end;
-
-FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearchOptions;
-  begin
-    result:=[];
-    if frMatchCase       in FindOptions then include(result,ssoMatchCase);
-    if frWholeWord       in FindOptions then include(result,ssoWholeWord);
-    if frReplace         in FindOptions then include(result,ssoReplace);
-    if frReplaceAll      in FindOptions then include(result,ssoReplaceAll);
-    if frHideEntireScope in FindOptions then include(result,ssoEntireScope);
-    if frPromptOnReplace in FindOptions then include(result,ssoPrompt);
-    if frFindNext        in FindOptions then include(result,ssoFindContinue);
-    if not(frDown in FindOptions) then include(result,ssoBackwards);
-  end;
-
-PROCEDURE TMnhForm.FindDialogFind(Sender: TObject);
-  begin
-    //editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -148,6 +127,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     assistanceSynEdit.clearAll;
     //Initialize state:
     popupModel.create(pmiOpenFile1,pmiOpenFile2,@pmiOpenFile);
+    searchReplaceModel.create(FindDialog,ReplaceDialog);
     //lastWordsCaret:=maxLongint;
     //wordsInEditor.create;
     //forceInputEditFocusOnOutputEditMouseUp:=false;
@@ -176,6 +156,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     popupModel.destroy;
+    searchReplaceModel.destroy;
     //wordsInEditor.destroy;
     guiTaskQueue.destroy;
   end;
@@ -246,7 +227,6 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
   end;
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
-  VAR i:longint;
   begin
     if command=ecUserDefinedFirst   then getEditor^.toggleComment;
     if command=ecUserDefinedFirst+1 then cycleEditors(true);
@@ -272,10 +252,6 @@ PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton;
   begin end;
 PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
-  begin end;
-PROCEDURE TMnhForm.ReplaceDialogFind(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.ReplaceDialogReplace(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin end;
@@ -333,12 +309,12 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.miFindClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miFindNextClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
-  begin end;
+
+PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
+PROCEDURE TMnhForm.miReplaceClick     (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,false); end;
+PROCEDURE TMnhForm.miFindNextClick    (Sender: TObject); begin searchReplaceModel.doFindNext        (focusedEditor);       end;
+PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceModel.doFindPrevious    (focusedEditor);       end;
+
 PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
@@ -372,8 +348,6 @@ PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miReloadClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miReplaceClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
   begin end;
