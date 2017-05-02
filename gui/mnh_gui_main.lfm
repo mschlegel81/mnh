@@ -2331,7 +2331,7 @@ object MnhForm: TMnhForm
       object miCallMain: TMenuItem
         Caption = 'Call main'
         ShortCut = 120
-        OnClick = MenuItem4Click
+        OnClick = miCallMainClick
       end
       object miDebug: TMenuItem
         Caption = 'Debug'

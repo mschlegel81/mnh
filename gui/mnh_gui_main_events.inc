@@ -1,5 +1,6 @@
 {$ifdef includeInterface}
 PROCEDURE EditorPopupMenuPopup(Sender: TObject);
+
 PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE FormCreate(Sender: TObject);
 PROCEDURE FormDestroy(Sender: TObject);
@@ -7,23 +8,30 @@ PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
 PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE FormResize(Sender: TObject);
 PROCEDURE FormShow(Sender: TObject);
+//Jump to declaration:
 PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
-PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
-PROCEDURE MenuItem4Click(Sender: TObject);
 PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+
+PROCEDURE InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+//Search/Replace
+PROCEDURE miFindClick(Sender: TObject);
+PROCEDURE miReplaceClick(Sender: TObject);
+PROCEDURE miFindNextClick(Sender: TObject);
+PROCEDURE miFindPreviousClick(Sender: TObject);
+
+PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE Splitter1Moved(Sender: TObject);
 PROCEDURE Splitter3Moved(Sender: TObject);
 PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
 PROCEDURE SynCompletionExecute(Sender: TObject);
 PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
 PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
-PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
-PROCEDURE assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 PROCEDURE inputPageControlChange(Sender: TObject);
 PROCEDURE miAboutClick(Sender: TObject);
@@ -39,10 +47,6 @@ PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miExpressionEchoClick(Sender: TObject);
 PROCEDURE miExpressionResultClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
-PROCEDURE miFindClick(Sender: TObject);
-PROCEDURE miReplaceClick(Sender: TObject);
-PROCEDURE miFindNextClick(Sender: TObject);
-PROCEDURE miFindPreviousClick(Sender: TObject);
 PROCEDURE miFullscreenClick(Sender: TObject);
 PROCEDURE miGotoClick(Sender: TObject);
 PROCEDURE miHaltEvalutaionClick(Sender: TObject);
@@ -91,8 +95,6 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
-
-
   PROCEDURE updateRules;
     begin
       reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
@@ -122,6 +124,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     //Initialize state:
     popupModel.create(pmiOpenFile1,pmiOpenFile2,@pmiOpenFile);
     searchReplaceModel.create(FindDialog,ReplaceDialog);
+    runnerModel.create;
+    focusEditorOnEditMouseUp:=false;
+
     //lastWordsCaret:=maxLongint;
     //wordsInEditor.create;
     //forceInputEditFocusOnOutputEditMouseUp:=false;
@@ -151,6 +156,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     popupModel.destroy;
     searchReplaceModel.destroy;
+    runnerModel.destroy;
     //wordsInEditor.destroy;
     guiTaskQueue.destroy;
   end;
@@ -169,9 +175,8 @@ VAR firstShow:boolean=true;
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if not(firstShow) then updateFormPositionInSettings;
-    //if helpPopupMemo.visible then positionHelpNotifier;
+    if helpPopupMemo.visible then positionHelpNotifier;
   end;
-
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
@@ -187,8 +192,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            outputHighlighter,
                            @InputEditKeyDown,
                            @InputEditMouseDown,
-                           @InputEditProcessUserCommand,
-                           @InputEditSpecialLineMarkup);
+                           @InputEditProcessUserCommand);
       if hasEditor then getEditor^.activate;
       firstShow:=false;
     end;
@@ -220,6 +224,50 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     if help then positionHelpNotifier;
   end;
 
+PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(OutputEdit.lines[OutputEdit.CaretY-1],false));
+  end;
+
+PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  VAR point:TPoint;
+  begin
+    if (ssCtrl) in Shift then begin
+      point.x:=x;
+      point.y:=y;
+      point:=OutputEdit.PixelsToRowColumn(point);
+      focusEditorOnEditMouseUp:=openLocation(guessLocationFromString(OutputEdit.lines[point.y-1],false));
+    end;
+  end;
+
+PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if focusEditorOnEditMouseUp then ActiveControl:=getEditor^.editor;
+    focusEditorOnEditMouseUp :=false;
+  end;
+
+PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(assistanceSynEdit.lines[assistanceSynEdit.CaretY-1],false));
+  end;
+
+PROCEDURE TMnhForm.assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  VAR point:TPoint;
+  begin
+    if (ssCtrl) in Shift then begin
+      point.x:=x;
+      point.y:=y;
+      point:=assistanceSynEdit.PixelsToRowColumn(point);
+      focusEditorOnEditMouseUp:=openLocation(guessLocationFromString(assistanceSynEdit.lines[point.y-1],false));
+    end;
+  end;
+
+PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if focusEditorOnEditMouseUp then ActiveControl:=getEditor^.editor;
+    focusEditorOnEditMouseUp :=false;
+  end;
+
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
     if command=ecUserDefinedFirst   then getEditor^.toggleComment;
@@ -227,33 +275,31 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
     if command=ecUserDefinedFirst+2 then cycleEditors(false);
     if command=ecUserDefinedFirst+3 then begin
       getEditor^.toggleBreakpoint;
-      debugMode:=true;
+      runnerModel.debugMode:=true;
     end;
   end;
 
-PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin
-//    Special:=runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    if not(runnerModel.canRun) then exit;
+    askForm.initWithQuestion('Please give command line parameters');
+    if askForm.ShowModal=mrOk
+    then runnerModel.customRun(true,miProfile.Checked,askForm.getLastAnswerReleasing(nil))
+    else                                              askForm.getLastAnswerReleasing(nil);
   end;
 
-PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
-  begin end;
-PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
-  begin end;
-PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
-  begin end;
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
-  begin end;
+  begin
+    if helpPopupMemo.visible then positionHelpNotifier;
+    if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
+  end;
+
 PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
-  sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
-  Shift: TShiftState);
+  begin
+    updateExpressionMemo;
+  end;
+
+PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
   begin end;
 PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
   begin end;
@@ -261,22 +307,12 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   begin end;
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
-  begin end;
-PROCEDURE TMnhForm.assistanceSynEditMouseDown(Sender: TObject;
-  button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  begin end;
-PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject;
-  button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  begin end;
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
   begin end;
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
   begin
     if hasEditor then getEditor^.activate;
   end;
-
 PROCEDURE TMnhForm.miAboutClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);

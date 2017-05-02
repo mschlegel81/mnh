@@ -26,7 +26,6 @@ USES  //basic classes
   mnh_plotForm,
   mnh_splash,
   //MNH:
-  runnerModel,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
@@ -99,6 +98,8 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE setCaret(CONST location: T_searchTokenLocation);
     PROCEDURE toggleComment;
     PROCEDURE toggleBreakpoint;
+    PROCEDURE setWorkingDir;
+
   private
     PROCEDURE initWithState(VAR state:T_editorState);
   PROCEDURE closeEditor;
@@ -120,7 +121,6 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE initForNewFile;
   PROCEDURE reloadFile(CONST fileName:string);
   PROCEDURE setMarkedWord(CONST wordText:string);
-  PROCEDURE setWorkingDir;
   PROCEDURE writeToEditorState(CONST settings:P_Settings);
   PROCEDURE insertText(CONST s:string);
   FUNCTION pseudoName(CONST short:boolean=false):ansistring;
@@ -136,6 +136,30 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE exportToHtml;
 end;
 
+{ T_runnerModel }
+
+T_runnerModel=object
+  private
+    lastStart:record
+      mainCall:boolean;
+      parameters:string;
+    end;
+    debugLine:record
+      editor:TSynEdit;
+      line:longint;
+    end;
+    debugMode_:boolean;
+    PROCEDURE setDebugMode(CONST value:boolean);
+  public
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION areEditorsLocked:boolean;
+    PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
+    FUNCTION canRun:boolean;
+    PROCEDURE customRun(CONST mainCall,profiling:boolean; CONST mainParameters:string='');
+    PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+end;
+
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_EditorPopupMenu       :TPopupMenu;
@@ -146,8 +170,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
-                    CONST p_EditProcessUserCommand:TProcessCommandEvent;
-                    CONST p_EditSpecialLineMarkup :TSpecialLineMarkupEvent);
+                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
 
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
@@ -161,6 +184,7 @@ FUNCTION getHelpPopupText:string;
 FUNCTION getHelpLocation:T_searchTokenLocation;
 PROCEDURE cycleEditors(CONST cycleForward:boolean);
 PROCEDURE updateEditorsByGuiStatus;
+VAR runnerModel:T_runnerModel;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
@@ -170,7 +194,6 @@ VAR mainForm              :T_abstractMnhForm;
     EditKeyUp             :TKeyEvent;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
-    EditSpecialLineMarkup :TSpecialLineMarkupEvent;
     assistanceSynEdit     :TSynEdit;
     SynCompletion1        :TSynCompletion;
 
@@ -192,8 +215,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
-                    CONST p_EditProcessUserCommand:TProcessCommandEvent;
-                    CONST p_EditSpecialLineMarkup :TSpecialLineMarkupEvent);
+                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
 
   VAR SynBatSyn1            : TSynBatSyn            ;
       SynCppSyn1            : TSynCppSyn            ;
@@ -357,7 +379,6 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditKeyUp             :=P_EditKeyUp             ;
     EditMouseDown         :=P_EditMouseDown         ;
     EditProcessUserCommand:=P_EditProcessUserCommand;
-    EditSpecialLineMarkup :=P_EditSpecialLineMarkup ;
     assistanceSynEdit     :=P_assistanceSynEdit     ;
     SynCompletion1        :=p_SynCompletion         ;
     initHighlighters;
@@ -398,7 +419,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor_.OnMouseDown         :=EditMouseDown;
     editor_.OnProcessCommand    :=EditProcessUserCommand;
     editor_.OnProcessUserCommand:=EditProcessUserCommand;
-    editor_.OnSpecialLineMarkup :=EditSpecialLineMarkup;
+    editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
     editor_.Gutter.width:=34;
     editor_.RightEdge:=-1;
     editor_.Keystrokes.clear;
@@ -599,8 +620,8 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: byte);
       if fileTypeMeta[metaIdx].language=LANG_MNH
       then editor.highlighter:=highlighter
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
-      editor.Gutter.MarksPart.visible:=(debugMode) and (language_=LANG_MNH);
-      editor.readonly                :=areEditorsLocked;
+      editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
+      editor.readonly                :=runnerModel.areEditorsLocked;
       {$ifdef debugMode}writeln('Set language ',fileTypeMeta[metaIdx].language,' - ',fileTypeMeta[metaIdx].extensionWithoutDot);{$endif}
       exit;
     end;
@@ -955,8 +976,8 @@ FUNCTION addEditorMetaForNewFile:longint;
     editorMetaData[i]^.editor.Font:=assistanceSynEdit.Font;
 
     result:=i;
-    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=(debugMode) and (editorMetaData[i]^.language=LANG_MNH);
-    editorMetaData[i]^.editor.readonly                :=areEditorsLocked;
+    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (editorMetaData[i]^.language=LANG_MNH);
+    editorMetaData[i]^.editor.readonly                :=runnerModel.areEditorsLocked;
   end;
 
 FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;
@@ -1054,8 +1075,8 @@ PROCEDURE updateEditorsByGuiStatus;
   VAR m:P_editorMeta;
   begin
     for m in editorMetaData do begin
-      m^.editor.Gutter.MarksPart.visible:=(debugMode) and (m^.language=LANG_MNH);
-      m^.editor.readonly                :=areEditorsLocked;
+      m^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (m^.language=LANG_MNH);
+      m^.editor.readonly                :=runnerModel.areEditorsLocked;
     end;
   end;
 
@@ -1063,6 +1084,56 @@ PROCEDURE finalizeEditorMeta;
   VAR i:longint;
   begin
     for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
+  end;
+
+PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
+  begin
+    if value=debugMode_ then exit;
+    if (value and runEvaluator.evaluationRunning) and not(runEvaluator.getRunnerStateInfo.state=es_editRunning) then runEvaluator.haltEvaluation;
+  end;
+
+CONSTRUCTOR T_runnerModel.create;
+  begin
+    debugMode_:=false;
+    with lastStart do begin mainCall:=false; parameters:=''; end;
+  end;
+
+DESTRUCTOR T_runnerModel.destroy;
+  begin
+
+  end;
+
+FUNCTION T_runnerModel.areEditorsLocked: boolean;
+  begin
+    result:=(debugMode_ and runEvaluator.evaluationRunning) or (runEvaluator.getRunnerStateInfo.state=es_editRunning);
+  end;
+
+FUNCTION T_runnerModel.canRun: boolean;
+  begin
+    result:=not(runEvaluator.evaluationRunningOrPending) and hasEditor and (getEditor^.language=LANG_MNH);
+  end;
+
+PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean;
+  CONST mainParameters: string);
+  begin
+    if not(canRun) then exit;
+    guiOutAdapter.flushClear;
+    if settings.value^.doResetPlotOnEvaluation then begin
+      guiAdapters.plot^.setDefaults;
+      if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
+    end;
+    resetTableForms;
+    getEditor^.setWorkingDir;
+    if debugMode then updateEditorsByGuiStatus;
+    if mainCall then runEvaluator.callMain(getEditor,lastStart.parameters,profiling,debugMode_)
+                else runEvaluator.evaluate(getEditor,                     profiling,debugMode_);
+    lastStart.mainCall:=mainCall;
+    lastStart.parameters:=mainParameters;
+  end;
+
+PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+  begin
+    Special:=runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 INITIALIZATION

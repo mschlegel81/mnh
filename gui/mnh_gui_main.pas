@@ -26,7 +26,6 @@ USES
   mnh_splash,
   //MNH:
   editorMeta,
-  runnerModel,
   editPopupModel,
   searchModel,
   ipcModel,
@@ -163,7 +162,7 @@ TYPE
     PROCEDURE onEndOfEvaluation; override;
     //FUNCTION editForSearch(CONST replacing: boolean): TSynEdit;
     PROCEDURE positionHelpNotifier;
-    PROCEDURE openLocation(CONST location:T_searchTokenLocation);
+    FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
   private
     //uniqueEditorInstanceIpcServer: TSimpleIPCServer;
     ////underCursor:T_tokenInfo;
@@ -182,6 +181,7 @@ TYPE
     //wordsInEditor:T_setOfString;
     ////lastReportedRunnerInfo:T_runnerStateInfo;
 
+    focusEditorOnEditMouseUp:boolean;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
@@ -197,7 +197,6 @@ IMPLEMENTATION
 {$R *.lfm}
 {$define includeImplementation}
 {$include guiEditorInterface.inc}
-{$i runnerLogic.inc}
 {$i settingsLogic.inc}
 
 FUNCTION TMnhForm.focusedEditor: TSynEdit;
@@ -277,13 +276,14 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
-PROCEDURE TMnhForm.openLocation(CONST location:T_searchTokenLocation);
+FUNCTION TMnhForm.openLocation(CONST location:T_searchTokenLocation):boolean;
   VAR newIdx:longint;
   begin
     newIdx:=addOrGetEditorMetaForFiles(location.fileName,false);
-    if newIdx<0 then exit;
+    if newIdx<0 then exit(false);
     inputPageControl.activePageIndex:=newIdx;
     getEditor^.setCaret(location);
+    result:=true;
   end;
 
 {$i mnh_gui_main_events.inc}

@@ -8,8 +8,6 @@ USES {$ifdef UNIX} cthreads, {$else}
   sysutils,
   Interfaces, // this includes the LCL widgetset
   Forms,
-  simpleipc,
-  myStringUtil,
   mySys,
   mnh_cmdLineInterpretation,
   ipcModel,
