@@ -71,8 +71,6 @@ PROCEDURE miUtilityScriptRootClick(Sender: TObject);
 PROCEDURE miWrapEchoClick(Sender: TObject);
 PROCEDURE mi_settingsClick(Sender: TObject);
 PROCEDURE pmiOpenFile(CONST idOrName:string);
-PROCEDURE pmiOpenFile1Click(Sender: TObject);
-PROCEDURE pmiOpenFile2Click(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
@@ -84,10 +82,8 @@ PROCEDURE variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR Allow
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
   begin
-    popupFile[1]:=focusedEditor.GetWordAtRowCol(OutputEdit.CaretXY);
-    popupFile[2]:=focusedEditor.TextBetweenPoints[OutputEdit.BlockBegin,OutputEdit.BlockEnd];
-    pmiOpenFile1.caption:='Open: "'+popupFile[1]+'"';
-    pmiOpenFile2.caption:='Open: "'+popupFile[2]+'"';
+    popupModel.setFiles(focusedEditor.GetWordAtRowCol(focusedEditor.CaretXY),
+                        focusedEditor.TextBetweenPoints[focusedEditor.BlockBegin,focusedEditor.BlockEnd]);
   end;
 
 FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearchOptions;
@@ -105,7 +101,7 @@ FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearc
 
 PROCEDURE TMnhForm.FindDialogFind(Sender: TObject);
   begin
-    editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+    //editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -116,13 +112,13 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
-  PROCEDURE initIpcServer;
-    begin
-      uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
-      uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
-      uniqueEditorInstanceIpcServer.Global:=true;
-      uniqueEditorInstanceIpcServer.StartServer;
-    end;
+  //PROCEDURE initIpcServer;
+  //  begin
+  //    uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
+  //    uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
+  //    uniqueEditorInstanceIpcServer.Global:=true;
+  //    uniqueEditorInstanceIpcServer.StartServer;
+  //  end;
 
   PROCEDURE updateRules;
     begin
@@ -151,11 +147,12 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit       .clearAll;
     assistanceSynEdit.clearAll;
     //Initialize state:
-    lastWordsCaret:=maxLongint;
-    wordsInEditor.create;
-    forceInputEditFocusOnOutputEditMouseUp:=false;
-    doNotCheckFileBefore:=now+ONE_SECOND;
-    initIpcServer;
+    popupModel.create(pmiOpenFile1,pmiOpenFile2,@pmiOpenFile);
+    //lastWordsCaret:=maxLongint;
+    //wordsInEditor.create;
+    //forceInputEditFocusOnOutputEditMouseUp:=false;
+    //doNotCheckFileBefore:=now+ONE_SECOND;
+    //initIpcServer;
     //Initialize other units
     setupCallbacks;
 
@@ -178,7 +175,8 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     mnh_evalThread.earlyFinalization;
     saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
-    wordsInEditor.destroy;
+    popupModel.destroy;
+    //wordsInEditor.destroy;
     guiTaskQueue.destroy;
   end;
 
@@ -196,7 +194,7 @@ VAR firstShow:boolean=true;
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if not(firstShow) then updateFormPositionInSettings;
-    if helpPopupMemo.visible then positionHelpNotifier;
+    //if helpPopupMemo.visible then positionHelpNotifier;
   end;
 
 
@@ -392,11 +390,17 @@ PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
-  begin end;
-PROCEDURE TMnhForm.pmiOpenFile1Click(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.pmiOpenFile2Click(Sender: TObject);
-  begin end;
+  VAR fileName:string;
+  begin
+    if fileExists(idOrName)
+    then begin
+      inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(idOrName,true);
+      exit;
+    end;
+    fileName:=assistancEvaluator.resolveImport(idOrName);
+    if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(fileName,true);
+  end;
+
 PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);

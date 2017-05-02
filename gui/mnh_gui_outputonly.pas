@@ -20,7 +20,7 @@ TYPE
     PROCEDURE OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE Timer1Timer(Sender: TObject);
 
-    PROCEDURE onStatusChange(CONST previousState:T_guiState); override;
+    PROCEDURE onEndOfEvaluation; override;
   private
     outputHighlighter:TSynMnhSyn;
   end;
@@ -55,10 +55,9 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
 
-PROCEDURE ToutputOnlyForm.onStatusChange(CONST previousState:T_guiState);
+PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin
-    if (previousState.running) and not(evaluationRunning)
-    then caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
+    caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
   end;
 
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);

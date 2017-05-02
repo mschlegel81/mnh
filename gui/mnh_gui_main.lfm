@@ -4014,11 +4014,9 @@ object MnhForm: TMnhForm
     top = 248
     object pmiOpenFile1: TMenuItem
       Caption = 'New Item1'
-      OnClick = pmiOpenFile1Click
     end
     object pmiOpenFile2: TMenuItem
       Caption = 'New Item2'
-      OnClick = pmiOpenFile2Click
     end
   end
   object SynExporterHTML: TSynExporterHTML

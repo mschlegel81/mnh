@@ -26,6 +26,7 @@ USES  //basic classes
   mnh_plotForm,
   mnh_splash,
   //MNH:
+  runnerModel,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
@@ -134,7 +135,7 @@ T_editorMeta=object(T_codeProvider)
   FUNCTION fileIsDeleted:boolean;
   FUNCTION fileIsModifiedOnFileSystem:boolean;
   PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
-  PROCEDURE exportToHtml(CONST fileName:string);
+  PROCEDURE exportToHtml;
 end;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
@@ -181,6 +182,7 @@ VAR fileTypeMeta:array of record
       highlighter:TSynCustomHighlighter;
     end;
 VAR editorMetaData:array of P_editorMeta;
+    dummyEditor:T_editorMeta;
     underCursor:T_tokenInfo;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
@@ -600,8 +602,8 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: byte);
       if fileTypeMeta[metaIdx].language=LANG_MNH
       then editor.highlighter:=highlighter
       else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
-      editor.Gutter.MarksPart.visible:=(mainForm.debugMode) and (language_=LANG_MNH);
-      editor.readonly                :=mainForm.editorsLocked;
+      editor.Gutter.MarksPart.visible:=(debugMode) and (language_=LANG_MNH);
+      editor.readonly                :=areEditorsLocked;
       {$ifdef debugMode}writeln('Set language ',fileTypeMeta[metaIdx].language,' - ',fileTypeMeta[metaIdx].extensionWithoutDot);{$endif}
       exit;
     end;
@@ -907,7 +909,7 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(
     editor.EndUndoBlock;
   end;
 
-PROCEDURE T_editorMeta.exportToHtml(CONST fileName: string);
+PROCEDURE T_editorMeta.exportToHtml;
   VAR SynExporterHTML: TSynExporterHTML;
   begin
     SaveDialog.FilterIndex:=2;
@@ -956,8 +958,8 @@ FUNCTION addEditorMetaForNewFile:longint;
     editorMetaData[i]^.editor.Font:=assistanceSynEdit.Font;
 
     result:=i;
-    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=(mainForm.debugMode) and (editorMetaData[i]^.language=LANG_MNH);
-    editorMetaData[i]^.editor.readonly                :=mainForm.editorsLocked;
+    editorMetaData[i]^.editor.Gutter.MarksPart.visible:=(debugMode) and (editorMetaData[i]^.language=LANG_MNH);
+    editorMetaData[i]^.editor.readonly                :=areEditorsLocked;
   end;
 
 FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;
@@ -1055,8 +1057,8 @@ PROCEDURE updateEditorsByGuiStatus;
   VAR m:P_editorMeta;
   begin
     for m in editorMetaData do begin
-      m^.editor.Gutter.MarksPart.visible:=(mainForm.debugMode) and (m^.language=LANG_MNH);
-      m^.editor.readonly                :=mainForm.editorsLocked;
+      m^.editor.Gutter.MarksPart.visible:=(debugMode) and (m^.language=LANG_MNH);
+      m^.editor.readonly                :=areEditorsLocked;
     end;
   end;
 
@@ -1068,7 +1070,8 @@ PROCEDURE finalizeEditorMeta;
 
 INITIALIZATION
   setLength(editorMetaData,0);
-
+  dummyEditor.create(-1);
 FINALIZATION
   finalizeEditorMeta;
+  dummyEditor.destroy;
 end.

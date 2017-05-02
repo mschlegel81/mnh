@@ -12,11 +12,8 @@ USES
   //GUI: SynEdit
   SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
-  SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
-  SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
-  SynHighlighterXML, SynHighlighterDiff, synhighlighterunixshellscript,
-  SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
-  SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
+  SynHighlighterMnh,
+  SynEditHighlighter,
   SynExportHTML,
   //Other Forms:
   newCentralPackageDialog,
@@ -29,6 +26,8 @@ USES
   mnh_splash,
   //MNH:
   editorMeta,
+  runnerModel,
+  editPopupModel,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
@@ -161,37 +160,31 @@ TYPE
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
     {$i mnh_gui_main_events.inc}
-    PROCEDURE onStatusChange(CONST previousState:T_guiState); override;
-    FUNCTION editForSearch(CONST replacing: boolean): TSynEdit;
+    PROCEDURE onEndOfEvaluation; override;
+    //FUNCTION editForSearch(CONST replacing: boolean): TSynEdit;
     PROCEDURE positionHelpNotifier;
     PROCEDURE openLocation(CONST location:T_searchTokenLocation);
   private
-    guiState:(gs_editing,gs_running,
-              gs_debugEditing,gs_debugRunning,gs_debugHalted,
-              gs_applyingUserScript);
+    //uniqueEditorInstanceIpcServer: TSimpleIPCServer;
+    ////underCursor:T_tokenInfo;
+    ////
+    //outputFocusedOnFind:boolean;
+    //forceInputEditFocusOnOutputEditMouseUp:boolean;
+    ////
+    ////doNotMarkWordBefore:double;
+    //doNotCheckFileBefore:double;
+    ////breakPointHandlingPending:boolean;
+    ////debugLine:record
+    ////  editor:TSynEdit;
+    ////  line:longint;
+    ////end;
+    //lastWordsCaret:longint;
+    //wordsInEditor:T_setOfString;
+    ////lastReportedRunnerInfo:T_runnerStateInfo;
 
-    uniqueEditorInstanceIpcServer: TSimpleIPCServer;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
-    //underCursor:T_tokenInfo;
-    //
-    outputFocusedOnFind:boolean;
-    forceInputEditFocusOnOutputEditMouseUp:boolean;
-    //
-    //doNotMarkWordBefore:double;
-    doNotCheckFileBefore:double;
-    //breakPointHandlingPending:boolean;
-    //debugLine:record
-    //  editor:TSynEdit;
-    //  line:longint;
-    //end;
-    lastWordsCaret:longint;
-    wordsInEditor:T_setOfString;
-    //lastReportedRunnerInfo:T_runnerStateInfo;
-
-
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
-    popupFile:array[1..2] of string;
     FUNCTION focusedEditor:TSynEdit;
 
   end;
@@ -250,23 +243,17 @@ FUNCTION openInEditor_impl intFuncSignature;
     end;
   end;
 
-PROCEDURE TMnhForm.onStatusChange(CONST previousState:T_guiState);
+PROCEDURE TMnhForm.onEndOfEvaluation;
   begin
     updateEditorsByGuiStatus;
-    if evaluationRunning and (previousState.debugMode<>debugMode) then runEvaluator.haltEvaluation;
-    miDebug.Checked         :=debugMode;
-    miHaltEvalutaion.enabled:=evaluationRunning;
-    miEvaluateNow   .enabled:=not(evaluationRunning);
-    miCallMain      .enabled:=not(evaluationRunning);
-
   end;
 
-FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
-  begin
-    if outputFocusedOnFind and not(replacing) then exit(OutputEdit);
-    if hasEditor then result:=getEditor^.editor
-                 else exit(OutputEdit); //not nice, but a valid fallback
-  end;
+//FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
+//  begin
+//    if outputFocusedOnFind and not(replacing) then exit(OutputEdit);
+//    if hasEditor then result:=getEditor^.editor
+//                 else exit(OutputEdit); //not nice, but a valid fallback
+//  end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   VAR maxLineLength:longint=0;
