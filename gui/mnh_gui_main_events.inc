@@ -91,13 +91,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
-  //PROCEDURE initIpcServer;
-  //  begin
-  //    uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(self);
-  //    uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
-  //    uniqueEditorInstanceIpcServer.Global:=true;
-  //    uniqueEditorInstanceIpcServer.StartServer;
-  //  end;
+
 
   PROCEDURE updateRules;
     begin
@@ -132,7 +126,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     //wordsInEditor.create;
     //forceInputEditFocusOnOutputEditMouseUp:=false;
     //doNotCheckFileBefore:=now+ONE_SECOND;
-    //initIpcServer;
+    initIpcServer(self);
     //Initialize other units
     setupCallbacks;
 

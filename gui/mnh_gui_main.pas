@@ -29,6 +29,7 @@ USES
   runnerModel,
   editPopupModel,
   searchModel,
+  ipcModel,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
@@ -39,8 +40,6 @@ USES
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
-CONST UNIQUE_EDITOR_IPC_ID='MNH5-editingGuiInstance';
-
 
 
 TYPE
