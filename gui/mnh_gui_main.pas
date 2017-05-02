@@ -159,28 +159,12 @@ TYPE
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
     {$i mnh_gui_main_events.inc}
+    PROCEDURE onDebuggerEvent; override;
     PROCEDURE onEndOfEvaluation; override;
-    //FUNCTION editForSearch(CONST replacing: boolean): TSynEdit;
     PROCEDURE positionHelpNotifier;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
+    PROCEDURE updateExpressionMemo;
   private
-    //uniqueEditorInstanceIpcServer: TSimpleIPCServer;
-    ////underCursor:T_tokenInfo;
-    ////
-    //outputFocusedOnFind:boolean;
-    //forceInputEditFocusOnOutputEditMouseUp:boolean;
-    ////
-    ////doNotMarkWordBefore:double;
-    //doNotCheckFileBefore:double;
-    ////breakPointHandlingPending:boolean;
-    ////debugLine:record
-    ////  editor:TSynEdit;
-    ////  line:longint;
-    ////end;
-    //lastWordsCaret:longint;
-    //wordsInEditor:T_setOfString;
-    ////lastReportedRunnerInfo:T_runnerStateInfo;
-
     focusEditorOnEditMouseUp:boolean;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
@@ -242,17 +226,46 @@ FUNCTION openInEditor_impl intFuncSignature;
     end;
   end;
 
+PROCEDURE TMnhForm.onDebuggerEvent;
+  VAR running:boolean;
+      debugging:boolean;
+      halted:boolean;
+
+  PROCEDURE handleButton(VAR button:TToolButton; CONST enabled:boolean; CONST enabledImageIndex:longint; CONST enableAlways:boolean=false);
+    begin
+      button.enabled:=enabled or enableAlways;
+      if enabled then button.ImageIndex:=enabledImageIndex
+                 else button.ImageIndex:=enabledImageIndex+1;
+    end;
+
+  begin
+    running  :=runEvaluator.evaluationRunning;
+    debugging:=runnerModel.debugMode;
+    halted   :=runEvaluator.getRunnerStateInfo.state=es_debugHalted;
+
+    miHaltEvalutaion.enabled:=running;
+    miEvaluateNow   .enabled:=runnerModel.canRun;
+    miCallMain      .enabled:=runnerModel.canRun;
+
+    debugTabSheet.tabVisible:=debugging;
+    DebugToolbar .visible   :=debugging;
+    DebugToolbar .enabled   :=debugging;
+    if DebugToolbar.visible then DebugToolbar .top:=0
+                            else if outputPageControl.activePage =debugTabSheet then
+                                    outputPageControl.activePage:=outputTabSheet;
+    handleButton(tbStop     ,halted or running, 2);
+    handleButton(tbRun      ,runnerModel.canRun, 0,true);
+    handleButton(tbStep     ,halted , 4);
+    handleButton(tbStepIn   ,halted , 6);
+    handleButton(tbStepOut  ,halted , 8);
+    handleButton(tbMicroStep,halted ,10);
+    updateEditorsByGuiStatus;
+  end;
+
 PROCEDURE TMnhForm.onEndOfEvaluation;
   begin
     updateEditorsByGuiStatus;
   end;
-
-//FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
-//  begin
-//    if outputFocusedOnFind and not(replacing) then exit(OutputEdit);
-//    if hasEditor then result:=getEditor^.editor
-//                 else exit(OutputEdit); //not nice, but a valid fallback
-//  end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   VAR maxLineLength:longint=0;
@@ -284,6 +297,39 @@ FUNCTION TMnhForm.openLocation(CONST location:T_searchTokenLocation):boolean;
     inputPageControl.activePageIndex:=newIdx;
     getEditor^.setCaret(location);
     result:=true;
+  end;
+
+PROCEDURE TMnhForm.updateExpressionMemo;
+  VAR lines,chars:longint;
+      snapshot:T_debuggingSnapshot;
+      tokens:T_arrayOfString;
+      txt:ansistring;
+      k:longint=0;
+      firstInLine:boolean;
+  begin
+    if not(runEvaluator.context.isPaused and runEvaluator.evaluationRunning) then exit;
+    snapshot:=runEvaluator.context.stepper^.getDebuggingSnapshot;
+    lines:=currentExpressionMemo.LinesInWindow;
+    chars:=currentExpressionMemo.charsInWindow;
+    if (lines*chars<50) then begin
+      lines:=1;
+      chars:=50;
+    end;
+
+    currentExpressionMemo.lines.clear;
+    tokens:=tokenSplit(snapshot.tokenStack^.toString(snapshot.first,round(lines*chars*0.9)));
+
+    while k<length(tokens) do begin
+      txt:='';
+      firstInLine:=true;
+      while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=chars)) do begin
+        txt:=txt+tokens[k];
+        inc(k);
+        firstInLine:=false;
+      end;
+      currentExpressionMemo.lines.append(txt);
+    end;
+    setLength(tokens,0);
   end;
 
 {$i mnh_gui_main_events.inc}

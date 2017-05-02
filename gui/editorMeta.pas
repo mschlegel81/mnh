@@ -157,8 +157,11 @@ T_runnerModel=object
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
     FUNCTION canRun:boolean;
     PROCEDURE customRun(CONST mainCall,profiling:boolean; CONST mainParameters:string='');
+    PROCEDURE rerun(CONST profiling:boolean);
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
-end;
+    PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
+    PROCEDURE haltEvaluation;
+  end;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
@@ -808,13 +811,13 @@ PROCEDURE T_editorMeta.insertText(CONST s: string);
 PROCEDURE T_editorMeta.toggleBreakpoint;
   VAR i:longint;
   begin
-    for i:=0 to editor.Marks.count-1 do if editor.Marks[i].line=editor.CaretY then begin
-      editor.Marks.remove(editor.Marks[i]);
-      runEvaluator.context.stepper^.removeBreakpoint(pseudoName,editor.CaretY);
+    for i:=0 to editor_.Marks.count-1 do if editor_.Marks[i].line=editor_.CaretY then begin
+      editor_.Marks.remove(editor.Marks[i]);
+      runEvaluator.context.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
       exit;
     end;
-    runEvaluator.context.stepper^.addBreakpoint(pseudoName,editor.CaretY);
-    _add_breakpoint_(editor.CaretY);
+    runEvaluator.context.stepper^.addBreakpoint(pseudoName,editor_.CaretY);
+    _add_breakpoint_(editor_.CaretY);
   end;
 
 FUNCTION T_editorMeta.isFile: boolean;
@@ -1089,6 +1092,7 @@ PROCEDURE finalizeEditorMeta;
 PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
   begin
     if value=debugMode_ then exit;
+    debugMode_:=value;
     if (value and runEvaluator.evaluationRunning) and not(runEvaluator.getRunnerStateInfo.state=es_editRunning) then runEvaluator.haltEvaluation;
   end;
 
@@ -1113,8 +1117,7 @@ FUNCTION T_runnerModel.canRun: boolean;
     result:=not(runEvaluator.evaluationRunningOrPending) and hasEditor and (getEditor^.language=LANG_MNH);
   end;
 
-PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean;
-  CONST mainParameters: string);
+PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST mainParameters: string);
   begin
     if not(canRun) then exit;
     guiOutAdapter.flushClear;
@@ -1131,9 +1134,30 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean;
     lastStart.parameters:=mainParameters;
   end;
 
+PROCEDURE T_runnerModel.rerun(CONST profiling:boolean);
+  begin
+    customRun(lastStart.mainCall,profiling,lastStart.parameters);
+  end;
+
 PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
     Special:=runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+  end;
+
+PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
+  begin
+    runEvaluator.context.stepper^.setState(newState);
+    mainForm.onDebuggerEvent;
+    if hasEditor then with getEditor^ do begin
+      editor.Gutter.MarksPart.visible:=debugMode_ and (language=LANG_MNH);
+      editor.readonly:=areEditorsLocked;
+    end;
+  end;
+
+PROCEDURE T_runnerModel.haltEvaluation;
+  begin
+    runEvaluator.haltEvaluation;
+    if debugMode_ then runEvaluator.context.stepper^.haltEvaluation;
   end;
 
 INITIALIZATION

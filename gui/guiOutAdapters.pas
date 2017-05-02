@@ -7,6 +7,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
 TYPE
   T_abstractMnhForm=class(TForm)
     public
+      PROCEDURE onDebuggerEvent; virtual; abstract;
       PROCEDURE onEndOfEvaluation; virtual; abstract;
   end;
 

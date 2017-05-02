@@ -25,7 +25,11 @@ PROCEDURE miReplaceClick(Sender: TObject);
 PROCEDURE miFindNextClick(Sender: TObject);
 PROCEDURE miFindPreviousClick(Sender: TObject);
 
+//Running
 PROCEDURE miCallMainClick(Sender: TObject);
+PROCEDURE miEvaluateNowClick(Sender: TObject);
+PROCEDURE miDebugClick(Sender: TObject);
+
 PROCEDURE Splitter1Moved(Sender: TObject);
 PROCEDURE Splitter3Moved(Sender: TObject);
 PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
@@ -39,11 +43,9 @@ PROCEDURE miClearClick(Sender: TObject);
 PROCEDURE miCloseAllButCurrentClick(Sender: TObject);
 PROCEDURE miCloseAllUnmodifiedClick(Sender: TObject);
 PROCEDURE miCloseClick(Sender: TObject);
-PROCEDURE miDebugClick(Sender: TObject);
 PROCEDURE miDecFontSizeClick(Sender: TObject);
 PROCEDURE miDeclarationEchoClick(Sender: TObject);
 PROCEDURE miEditGuiScriptsClick(Sender: TObject);
-PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miExpressionEchoClick(Sender: TObject);
 PROCEDURE miExpressionResultClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
@@ -108,9 +110,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
     //Dynamic GUI components:
-    setLength(scriptMenuItems[st_edit],0);
+    setLength(scriptMenuItems[st_edit  ],0);
     setLength(scriptMenuItems[st_insert],0);
-    setLength(scriptMenuItems[st_util],0);
+    setLength(scriptMenuItems[st_util ],0);
     setLength(historyMenuItems,0);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     helpHighlighter  :=TSynMnhSyn.create(self,msf_help  );
@@ -275,9 +277,16 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
     if command=ecUserDefinedFirst+2 then cycleEditors(false);
     if command=ecUserDefinedFirst+3 then begin
       getEditor^.toggleBreakpoint;
+      miDebug.Checked:=true;
       runnerModel.debugMode:=true;
+      onDebuggerEvent;
     end;
   end;
+
+PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
+PROCEDURE TMnhForm.miReplaceClick     (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,false); end;
+PROCEDURE TMnhForm.miFindNextClick    (Sender: TObject); begin searchReplaceModel.doFindNext        (focusedEditor);       end;
+PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceModel.doFindPrevious    (focusedEditor);       end;
 
 PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin
@@ -286,6 +295,34 @@ PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
     if askForm.ShowModal=mrOk
     then runnerModel.customRun(true,miProfile.Checked,askForm.getLastAnswerReleasing(nil))
     else                                              askForm.getLastAnswerReleasing(nil);
+  end;
+
+PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
+  begin
+    runnerModel.customRun(false,miProfile.Checked);
+  end;
+
+PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
+  begin
+    miDebug.Checked:=not(miDebug.Checked);
+    runnerModel.debugMode:=miDebug.Checked;
+    onDebuggerEvent;
+  end;
+
+PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
+  begin
+    if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
+    else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
+                                          else runnerModel.doDebuggerAction(breakSoonest);
+  end;
+
+PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject); begin if tbMicroStep.enabled then runnerModel.doDebuggerAction(breakSoonest     ); end;
+PROCEDURE TMnhForm.tbStepClick     (Sender: TObject); begin if tbStep     .enabled then runnerModel.doDebuggerAction(breakOnLineChange); end;
+PROCEDURE TMnhForm.tbStepInClick   (Sender: TObject); begin if tbStepIn   .enabled then runnerModel.doDebuggerAction(breakOnStepIn    ); end;
+PROCEDURE TMnhForm.tbStepOutClick  (Sender: TObject); begin if tbStepOut  .enabled then runnerModel.doDebuggerAction(breakOnStepOut   ); end;
+PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
+  begin
+    runnerModel.haltEvaluation;
   end;
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
@@ -323,15 +360,11 @@ PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
-  begin end;
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin end;
@@ -339,11 +372,6 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
   begin end;
-
-PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
-PROCEDURE TMnhForm.miReplaceClick     (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,false); end;
-PROCEDURE TMnhForm.miFindNextClick    (Sender: TObject); begin searchReplaceModel.doFindNext        (focusedEditor);       end;
-PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceModel.doFindPrevious    (focusedEditor);       end;
 
 PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
   begin end;
@@ -393,6 +421,7 @@ PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
   begin end;
+
 PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
   VAR fileName:string;
   begin
@@ -405,18 +434,6 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
     if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(fileName,true);
   end;
 
-PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.tbStepClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.tbStepInClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
-  begin end;
 PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode;
   VAR AllowExpansion: boolean);
   begin end;
