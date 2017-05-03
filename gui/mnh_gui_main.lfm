@@ -2585,17 +2585,14 @@ object MnhForm: TMnhForm
     top = 136
   end
   object SynCompletion: TSynCompletion
-    OnExecute = SynCompletionExecute
     Position = 0
     LinesInWindow = 6
-    OnSearchPosition = SynCompletionSearchPosition
     SelectedColor = clHighlight
     CaseSensitive = False
     Width = 262
     AutoUseSingleIdent = True
     ShortCut = 16416
     EndOfTokenChr = '()[],{}+-*/&^:?<>='
-    OnCodeCompletion = SynCompletionCodeCompletion
     ExecCommandID = ecSynCompletionExecute
     left = 400
     top = 80

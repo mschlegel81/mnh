@@ -32,9 +32,6 @@ PROCEDURE miDebugClick(Sender: TObject);
 
 PROCEDURE Splitter1Moved(Sender: TObject);
 PROCEDURE Splitter3Moved(Sender: TObject);
-PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
-PROCEDURE SynCompletionExecute(Sender: TObject);
-PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
 PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
 PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 PROCEDURE inputPageControlChange(Sender: TObject);
@@ -159,7 +156,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     popupModel.destroy;
     searchReplaceModel.destroy;
     runnerModel.destroy;
-    //wordsInEditor.destroy;
+    completionLogic.destroy;
     guiTaskQueue.destroy;
   end;
 
@@ -336,12 +333,6 @@ PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
     updateExpressionMemo;
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
-  begin end;
-PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
-  begin end;
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);

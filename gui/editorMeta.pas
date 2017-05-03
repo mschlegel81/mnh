@@ -136,8 +136,6 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE exportToHtml;
 end;
 
-{ T_runnerModel }
-
 T_runnerModel=object
   private
     lastStart:record
@@ -162,6 +160,21 @@ T_runnerModel=object
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
     PROCEDURE haltEvaluation;
   end;
+
+T_completionLogic=object
+  private
+    wordsInEditor:T_setOfString;
+    editorMeta:P_editorMeta;
+    lastWordsCaret:longint;
+    PROCEDURE ensureWordsInEditorForCompletion;
+  public
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE assignEditor(CONST meta:P_editorMeta);
+    PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
+    PROCEDURE SynCompletionExecute(Sender: TObject);
+    PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
+end;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
@@ -188,6 +201,7 @@ FUNCTION getHelpLocation:T_searchTokenLocation;
 PROCEDURE cycleEditors(CONST cycleForward:boolean);
 PROCEDURE updateEditorsByGuiStatus;
 VAR runnerModel:T_runnerModel;
+    completionLogic:T_completionLogic;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
@@ -386,6 +400,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     SynCompletion1        :=p_SynCompletion         ;
     initHighlighters;
     initFileTypes;
+    completionLogic.create;
     restoreEditors;
   end;
 
@@ -568,7 +583,7 @@ PROCEDURE T_editorMeta.activate;
     writeln('Activating editor "',pseudoName(),'"');
     {$endif}
     editor_.Font:=assistanceSynEdit.Font;
-    SynCompletion1.editor:=editor_;
+    completionLogic.assignEditor(@self);
     if language=LANG_MNH then assistancEvaluator.evaluate(@self);
     mainForm.caption:=updateSheetCaption;
   end;
@@ -1158,6 +1173,79 @@ PROCEDURE T_runnerModel.haltEvaluation;
   begin
     runEvaluator.haltEvaluation;
     if debugMode_ then runEvaluator.context.stepper^.haltEvaluation;
+  end;
+
+PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
+  VAR caret:TPoint;
+      i:longint;
+  begin
+    with editorMeta^ do begin
+      caret:=editor.CaretXY;
+      if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
+      lastWordsCaret:=caret.y;
+      wordsInEditor.clear;
+      with getEditor^ do begin
+        for i:=0 to editor.lines.count-1 do
+          if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
+                         else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+        if language=LANG_MNH then assistancEvaluator.extendCompletionList(wordsInEditor);
+      end;
+    end;
+  end;
+
+CONSTRUCTOR T_completionLogic.create;
+  begin
+    editorMeta:=nil;
+    lastWordsCaret:=maxLongint;
+    wordsInEditor.create;
+    SynCompletion1.OnCodeCompletion:=@SynCompletionCodeCompletion;
+    SynCompletion1.OnExecute       :=@SynCompletionExecute;
+    SynCompletion1.OnSearchPosition:=@SynCompletionSearchPosition;
+  end;
+
+DESTRUCTOR T_completionLogic.destroy;
+  begin
+    wordsInEditor.destroy;
+  end;
+
+PROCEDURE T_completionLogic.assignEditor(CONST meta: P_editorMeta);
+  begin
+    editorMeta:=meta;
+    wordsInEditor.clear;
+    SynCompletion1.editor:=editorMeta^.editor;
+  end;
+
+PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
+  begin
+    value:=copy(sourceValue,1,LastDelimiter('.',sourceValue)-1)+value;
+    wordsInEditor.clear;
+  end;
+
+PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
+  VAR s:string;
+      w:string;
+  begin
+    ensureWordsInEditorForCompletion;
+    SynCompletion1.ItemList.clear;
+    s:=SynCompletion1.CurrentString;
+    for w in wordsInEditor.values do if (s='') or (pos(s,w)=1) then SynCompletion1.ItemList.add(w);
+  end;
+
+PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
+  VAR i:longint;
+      s:string;
+      w:string;
+  begin
+    ensureWordsInEditorForCompletion;
+    SynCompletion1.ItemList.clear;
+    s:=SynCompletion1.CurrentString;
+    i:=LastDelimiter('.',s);
+    if i>1 then begin
+      s:=copy(s,i,length(s));
+      SynCompletion1.CurrentString:=s;
+    end;
+    for w in wordsInEditor.values do if pos(s,w)=1 then SynCompletion1.ItemList.add(w);
+    if SynCompletion1.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
 INITIALIZATION
