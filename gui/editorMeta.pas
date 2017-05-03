@@ -100,17 +100,18 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
     PROCEDURE repaintWithStateHash(CONST stateHashForHints:T_hashInt; CONST errorHints:T_arrayOfString);
+    PROCEDURE closeEditorWithDialogs;
 
+    FUNCTION saveAsWithDialog:boolean;
+    FUNCTION saveWithDialog:boolean;
+    PROCEDURE reloadFile(CONST fileName:string);
   private
     PROCEDURE initWithState(VAR state:T_editorState);
-  PROCEDURE closeEditor;
 
   //Events handling:
   PROCEDURE InputEditChange(Sender: TObject);
 
   //Advanced:
-  FUNCTION saveAsWithDialog:boolean;
-  FUNCTION saveWithDialog:boolean;
 
 
   //Presentation helper:
@@ -120,7 +121,6 @@ T_editorMeta=object(T_codeProvider)
 
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
-  PROCEDURE reloadFile(CONST fileName:string);
   PROCEDURE setMarkedWord(CONST wordText:string);
   PROCEDURE writeToEditorState(CONST settings:P_Settings);
   PROCEDURE insertText(CONST s:string);
@@ -190,8 +190,8 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
 
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
+FUNCTION addEditorMetaForNewFile:longint;
 FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;
-
 PROCEDURE updateFonts;
 FUNCTION allPseudoNames:T_arrayOfString;
 FUNCTION getMeta(CONST nameOrPseudoName:string):P_editorMeta;
@@ -200,6 +200,8 @@ FUNCTION getHelpPopupText:string;
 FUNCTION getHelpLocation:T_searchTokenLocation;
 PROCEDURE cycleEditors(CONST cycleForward:boolean);
 PROCEDURE updateEditorsByGuiStatus;
+PROCEDURE closeAllEditorsButCurrent;
+PROCEDURE closeAllUnmodifiedEditors;
 VAR runnerModel:T_runnerModel;
     completionLogic:T_completionLogic;
 IMPLEMENTATION
@@ -599,10 +601,10 @@ FUNCTION T_editorMeta.saveAsWithDialog: boolean;
   begin
     if language=LANG_MNH
     then begin
-      SaveDialog.FilterIndex:=1;
+      SaveDialog.FilterIndex:=0;
       SaveDialog.options:=SaveDialog.options+[ofExtensionDifferent];
     end else begin
-      SaveDialog.FilterIndex:=2;
+      SaveDialog.FilterIndex:=1;
       SaveDialog.options:=SaveDialog.options-[ofExtensionDifferent];
     end;
     if SaveDialog.execute then begin
@@ -619,8 +621,17 @@ FUNCTION T_editorMeta.saveWithDialog: boolean;
     end else result:=saveAsWithDialog;
   end;
 
-PROCEDURE T_editorMeta.closeEditor;
+PROCEDURE T_editorMeta.closeEditorWithDialogs;
+  VAR mr:longint;
   begin
+    if not(sheet.tabVisible) then exit;
+    if changed then begin
+      mr:=closeDialogForm.showOnClose(pseudoName(true));
+      if mr=mrOk then if not(saveWithDialog) then exit;
+      if mr=mrCancel then exit;
+    end;
+    if isFile then settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
+
     sheet.tabVisible:=false;
     editor.clearAll;
     with fileInfo do begin
@@ -1099,6 +1110,21 @@ PROCEDURE updateEditorsByGuiStatus;
       m^.editor.readonly                :=runnerModel.areEditorsLocked;
     end;
   end;
+
+PROCEDURE closeAllEditorsButCurrent;
+  VAR m:P_editorMeta;
+  begin
+    if not(hasEditor and getEditor^.sheet.tabVisible) then exit;
+    for m in editorMetaData do if (m^.index<>inputPageControl.activePageIndex) and (m^.sheet.tabVisible) then m^.closeEditorWithDialogs;
+  end;
+
+PROCEDURE closeAllUnmodifiedEditors;
+  VAR m:P_editorMeta;
+  begin
+    for m in editorMetaData do if not(m^.changed) then m^.closeEditorWithDialogs;
+    if not(hasEditor and getEditor^.sheet.tabVisible) then cycleEditors(true);
+  end;
+
 
 PROCEDURE finalizeEditorMeta;
   VAR i:longint;

@@ -1034,6 +1034,8 @@ object MnhForm: TMnhForm
       Caption = 'Debug'
       ClientHeight = 309
       ClientWidth = 709
+      Enabled = False
+      TabVisible = False
       object Splitter3: TSplitter
         Cursor = crVSplit
         Left = 0
@@ -1101,7 +1103,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              504
+              521
             )
             Cells = (
               3

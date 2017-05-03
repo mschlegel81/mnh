@@ -17,8 +17,9 @@ TYPE
     { private declarations }
   public
     { public declarations }
-    FUNCTION showOnLoad: integer;
-    FUNCTION showOnDeleted(CONST fileName:string): integer;
+    FUNCTION showOnLoad     (CONST fileName:string): integer;
+    FUNCTION showOnClose    (CONST fileName:string): integer;
+    FUNCTION showOnDeleted  (CONST fileName:string): integer;
     FUNCTION showOnOutOfSync(CONST fileName:string): integer;
   end;
 
@@ -41,10 +42,19 @@ PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
   begin
   end;
 
-FUNCTION TcloseDialogForm.showOnLoad: integer;
+FUNCTION TcloseDialogForm.showOnLoad(CONST fileName:string): integer;
   begin
-    caption:='The current file has been changed';
+    caption:=fileName+' has been changed';
     ButtonPanel1.OKButton.caption := 'Save and change file';
+    ButtonPanel1.CancelButton.caption := 'Cancel (stay here)';
+    ButtonPanel1.CloseButton.caption := 'Discard changes';
+    result := ShowModal;
+  end;
+
+FUNCTION TcloseDialogForm.showOnClose(CONST fileName:string): integer;
+  begin
+    caption:=fileName+' has been changed';
+    ButtonPanel1.OKButton.caption := 'Save and close file';
     ButtonPanel1.CancelButton.caption := 'Cancel (stay here)';
     ButtonPanel1.CloseButton.caption := 'Discard changes';
     result := ShowModal;

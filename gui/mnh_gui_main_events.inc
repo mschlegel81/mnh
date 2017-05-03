@@ -29,54 +29,60 @@ PROCEDURE miFindPreviousClick(Sender: TObject);
 PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
-
-PROCEDURE Splitter1Moved(Sender: TObject);
-PROCEDURE Splitter3Moved(Sender: TObject);
-PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
-PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
-PROCEDURE inputPageControlChange(Sender: TObject);
-PROCEDURE miAboutClick(Sender: TObject);
-PROCEDURE miClearClick(Sender: TObject);
-PROCEDURE miCloseAllButCurrentClick(Sender: TObject);
-PROCEDURE miCloseAllUnmodifiedClick(Sender: TObject);
-PROCEDURE miCloseClick(Sender: TObject);
-PROCEDURE miDecFontSizeClick(Sender: TObject);
-PROCEDURE miDeclarationEchoClick(Sender: TObject);
-PROCEDURE miEditGuiScriptsClick(Sender: TObject);
-PROCEDURE miExpressionEchoClick(Sender: TObject);
-PROCEDURE miExpressionResultClick(Sender: TObject);
-PROCEDURE miFileHistory0Click(Sender: TObject);
-PROCEDURE miFullscreenClick(Sender: TObject);
-PROCEDURE miGotoClick(Sender: TObject);
 PROCEDURE miHaltEvalutaionClick(Sender: TObject);
-PROCEDURE miHelpClick(Sender: TObject);
-PROCEDURE miHelpExternallyClick(Sender: TObject);
-PROCEDURE miHtmlExportClick(Sender: TObject);
-PROCEDURE miIncFontSizeClick(Sender: TObject);
-PROCEDURE miLangMnhClick(Sender: TObject);
-PROCEDURE miMinErrorlevel1Click(Sender: TObject);
-PROCEDURE miMinErrorlevel2Click(Sender: TObject);
-PROCEDURE miMinErrorlevel3Click(Sender: TObject);
-PROCEDURE miMinErrorlevel4Click(Sender: TObject);
-PROCEDURE miNewCentralPackageClick(Sender: TObject);
-PROCEDURE miOpenClick(Sender: TObject);
-PROCEDURE miOpenDemoClick(Sender: TObject);
-PROCEDURE miProfileClick(Sender: TObject);
-PROCEDURE miReloadClick(Sender: TObject);
-PROCEDURE miRunCustomUtilScript(Sender: TObject);
-PROCEDURE miSaveAsClick(Sender: TObject);
-PROCEDURE miSaveClick(Sender: TObject);
-PROCEDURE miTimingInfoClick(Sender: TObject);
-PROCEDURE miUtilityScriptRootClick(Sender: TObject);
-PROCEDURE miWrapEchoClick(Sender: TObject);
-PROCEDURE mi_settingsClick(Sender: TObject);
-PROCEDURE pmiOpenFile(CONST idOrName:string);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
 PROCEDURE tbStepInClick(Sender: TObject);
 PROCEDURE tbStepOutClick(Sender: TObject);
 PROCEDURE tbStopClick(Sender: TObject);
+
+PROCEDURE Splitter1Moved(Sender: TObject);
+PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
+PROCEDURE inputPageControlChange(Sender: TObject);
+PROCEDURE miAboutClick(Sender: TObject);
+
+//File handling
+PROCEDURE miClearClick(Sender: TObject);
+PROCEDURE miCloseAllButCurrentClick(Sender: TObject);
+PROCEDURE miCloseAllUnmodifiedClick(Sender: TObject);
+PROCEDURE miCloseClick(Sender: TObject);
+PROCEDURE miEditGuiScriptsClick(Sender: TObject);
+PROCEDURE miOpenClick(Sender: TObject);
+PROCEDURE miReloadClick(Sender: TObject);
+PROCEDURE miSaveAsClick(Sender: TObject);
+PROCEDURE miSaveClick(Sender: TObject);
+
+//Settings
+PROCEDURE miDecFontSizeClick(Sender: TObject);
+PROCEDURE miIncFontSizeClick(Sender: TObject);
+PROCEDURE miMinErrorlevel1Click(Sender: TObject);
+PROCEDURE miMinErrorlevel2Click(Sender: TObject);
+PROCEDURE miMinErrorlevel3Click(Sender: TObject);
+PROCEDURE miMinErrorlevel4Click(Sender: TObject);
+PROCEDURE miDeclarationEchoClick(Sender: TObject);
+PROCEDURE miExpressionEchoClick(Sender: TObject);
+PROCEDURE miExpressionResultClick(Sender: TObject);
+PROCEDURE miTimingInfoClick(Sender: TObject);
+PROCEDURE miWrapEchoClick(Sender: TObject);
+PROCEDURE miProfileClick(Sender: TObject);
+PROCEDURE miFullscreenClick(Sender: TObject);
+
+PROCEDURE miFileHistory0Click(Sender: TObject);
+PROCEDURE miGotoClick(Sender: TObject);
+PROCEDURE miHelpClick(Sender: TObject);
+PROCEDURE miHelpExternallyClick(Sender: TObject);
+PROCEDURE miHtmlExportClick(Sender: TObject);
+PROCEDURE miLangMnhClick(Sender: TObject);
+PROCEDURE miNewCentralPackageClick(Sender: TObject);
+PROCEDURE miOpenDemoClick(Sender: TObject);
+PROCEDURE miRunCustomUtilScript(Sender: TObject);
+PROCEDURE miUtilityScriptRootClick(Sender: TObject);
+PROCEDURE mi_settingsClick(Sender: TObject);
+PROCEDURE pmiOpenFile(CONST idOrName:string);
+
+PROCEDURE Splitter3Moved(Sender: TObject);
+PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 PROCEDURE variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
 {$endif}
 {$ifdef includeImplementation}
@@ -194,6 +200,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditProcessUserCommand);
       if hasEditor then getEditor^.activate;
       UpdateTimeTimer.enabled:=true;
+      enableDynamicItems;
       firstShow:=false;
     end;
   end;
@@ -307,6 +314,11 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     onDebuggerEvent;
   end;
 
+PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+  begin
+    runnerModel.haltEvaluation;
+  end;
+
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
     if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
@@ -329,89 +341,95 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
     if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
   end;
 
-PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
-  begin
-    updateExpressionMemo;
-  end;
-
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin
     if guiOutAdapter.flushToGui(OutputEdit) then exit;
   end;
-PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
-  begin end;
+
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
   begin
     if hasEditor then getEditor^.activate;
   end;
-PROCEDURE TMnhForm.miAboutClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miClearClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
-  begin end;
+
+PROCEDURE TMnhForm.miAboutClick(Sender: TObject); begin splashForm.ShowModal; end;
+
+PROCEDURE TMnhForm.miClearClick(Sender: TObject); begin inputPageControl.activePageIndex:=addEditorMetaForNewFile(); end;
+
+PROCEDURE TMnhForm.miCloseAllButCurrentClick(Sender: TObject); begin closeAllEditorsButCurrent; end;
+PROCEDURE TMnhForm.miCloseAllUnmodifiedClick(Sender: TObject); begin closeAllUnmodifiedEditors; end;
+PROCEDURE TMnhForm.miCloseClick(Sender: TObject);              begin if hasEditor then getEditor^.closeEditorWithDialogs; end;
 PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
-  begin end;
+  begin
+    inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(utilityScriptFileName,true);
+  end;
+
+PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
+  begin
+    OpenDialog.FilterIndex:=1;
+    OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
+    OpenDialog.title:='Open file';
+    if OpenDialog.execute and fileExists(OpenDialog.fileName)
+    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(OpenDialog.fileName,true);
+  end;
+
+PROCEDURE TMnhForm.miReloadClick(Sender: TObject); begin if hasEditor then getEditor^.reloadFile(getEditor^.getPath); end;
+PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject); begin if hasEditor then getEditor^.saveAsWithDialog;               end;
+PROCEDURE TMnhForm.miSaveClick(Sender: TObject);   begin if hasEditor then getEditor^.saveWithDialog;                 end;
+
+PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize-1; processFontSettings; end;
+PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize+1; processFontSettings; end;
+PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin setVerbosity(1); end;
+PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject); begin setVerbosity(2); end;
+PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin setVerbosity(3); end;
+PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin setVerbosity(4); end;
+PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .Checked,mt_echo_declaration); end;
+PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .Checked,mt_echo_input);       end;
+PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.Checked,mt_echo_output);      end;
+PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .Checked,mt_timing_info);      end;
+PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
+  begin
+    settings.value^.wordWrapEcho:=miWrapEcho.Checked;
+    updateWordWrap;
+  end;
+
+PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
+  begin
+    miProfile.Checked:=not(miProfile.Checked);
+    if miProfile.Checked and not(miTimingInfo.Checked) then miTimingInfoClick(Sender);
+  end;
+
+PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
+  begin
+    if BorderStyle=bsSizeable then begin
+      BorderStyle:=bsNone;
+      WindowState:=wsFullScreen;
+    end else begin
+      BorderStyle:=bsSizeable;
+      WindowState:=wsMaximized;
+    end;
+  end;
+
 PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
   begin end;
 
-PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
-  begin end;
 PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
-  begin end;
+
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
-  begin end;
 PROCEDURE TMnhForm.miLangMnhClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
-  begin end;
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miReloadClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
   begin end;
-PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
-  begin end;
 PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
   begin end;
@@ -428,7 +446,15 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
     if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(fileName,true);
   end;
 
-PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode;
-  VAR AllowExpansion: boolean);
+PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
+  begin
+    //updateExpressionMemo;
+  end;
+PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
+  begin
+  end;
+PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
   begin end;
+
+
 {$endif}
