@@ -10,7 +10,7 @@ TYPE
     messageType: T_messageType;
     location:    T_searchTokenLocation;
     messageText: T_arrayOfString;
-    data: ansistring;
+    data: pointer;
   end;
   T_storedMessages = array of T_storedMessage;
   T_adapterType=(at_unknown,
@@ -219,7 +219,7 @@ VAR globalLockCs:TRTLCriticalSection;
 FUNCTION message(CONST messageType: T_messageType;
                  CONST messageText: T_arrayOfString;
                  CONST location   : T_searchTokenLocation;
-                 CONST data       : ansistring=''):T_storedMessage;
+                 CONST data       : pointer=nil):T_storedMessage;
   begin
     result.messageType:=messageType;
     result.messageText:=messageText;
@@ -539,7 +539,7 @@ PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType
                                                                                                             raiseCustomMessage(message(mt_plotCreatedWithInstantDisplay ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
 PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
-PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location,fileName)); end;
+PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location          )); end;
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$endif}
 

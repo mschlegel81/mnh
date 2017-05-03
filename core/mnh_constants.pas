@@ -586,6 +586,10 @@ TYPE
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_displayTable,
+    mt_gui_assistantFinished,
+    mt_gui_editScriptSucceeded,
+    mt_gui_editScriptFailed,
+    mt_gui_breakpointEncountered,
     mt_guiPseudoPackageFound
     {$endif});
 
@@ -627,6 +631,10 @@ CONST
 {mt_plotCreatedWithInstantDisplay      } (level:-1; mClass:mc_note;    prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_plotSettingsChanged                } (level:-1; mClass:mc_note;    prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_displayTable                       } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_gui_assistantFinished              } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_gui_editScriptSucceeded            } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_gui_editScriptFailed               } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_gui_breakpointEncountered          } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_guiPseudoPackageFound              } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
 {$endif});
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(

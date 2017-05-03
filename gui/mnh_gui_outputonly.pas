@@ -20,6 +20,10 @@ TYPE
     PROCEDURE OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE Timer1Timer(Sender: TObject);
 
+    PROCEDURE onAssistantFinished;                                          override;
+    PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
+    PROCEDURE onBreakpoint  (CONST data);                                   override;
+    PROCEDURE onDebuggerEvent;                                              override;
     PROCEDURE onEndOfEvaluation; override;
   private
     outputHighlighter:TSynMnhSyn;
@@ -54,6 +58,22 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
     end;
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
+
+PROCEDURE ToutputOnlyForm.onAssistantFinished;
+begin
+end;
+
+PROCEDURE ToutputOnlyForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
+begin
+end;
+
+PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data);
+begin
+end;
+
+PROCEDURE ToutputOnlyForm.onDebuggerEvent;
+begin
+end;
 
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin

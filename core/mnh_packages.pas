@@ -150,8 +150,8 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
         mt_echo_output: for tmp in messageText do append(htmlOut,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(escapeHtml(tmp)));
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
-          tmp:=extractFileName(data);
-          CopyFile(data,getHtmlRoot+DirectorySeparator+tmp);
+          tmp:=extractFileName(messageText[0]);
+          CopyFile(messageText[0],getHtmlRoot+DirectorySeparator+tmp);
           append(htmlOut,'Image created: '+imageTag(tmp));
         end;
         {$endif}

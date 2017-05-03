@@ -7,8 +7,11 @@ USES SynEdit,SynEditKeyCmds,Forms,
 TYPE
   T_abstractMnhForm=class(TForm)
     public
-      PROCEDURE onDebuggerEvent; virtual; abstract;
-      PROCEDURE onEndOfEvaluation; virtual; abstract;
+      PROCEDURE onAssistantFinished;                                          virtual; abstract;
+      PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); virtual; abstract;
+      PROCEDURE onBreakpoint  (CONST data);                                   virtual; abstract;
+      PROCEDURE onDebuggerEvent;                                              virtual; abstract;
+      PROCEDURE onEndOfEvaluation;                                            virtual; abstract;
   end;
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
@@ -50,7 +53,7 @@ CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayL
       location:=C_nilTokenLocation;
       setLength(messageText,8);
       for i:=0 to 7 do messageText[i]:=LOGO[i];
-      data:='';
+      data:=nil;
     end;
     append(m);
   end;
@@ -169,6 +172,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
           end;
         mt_endOfEvaluation: parentForm.onEndOfEvaluation;
+        mt_gui_assistantFinished    : parentForm.onAssistantFinished;
+        mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
+        mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
+        mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,messageText);

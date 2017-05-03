@@ -159,8 +159,11 @@ TYPE
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
     {$i mnh_gui_main_events.inc}
-    PROCEDURE onDebuggerEvent; override;
-    PROCEDURE onEndOfEvaluation; override;
+    PROCEDURE onAssistantFinished;                                          override;
+    PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
+    PROCEDURE onBreakpoint  (CONST data);                                   override;
+    PROCEDURE onDebuggerEvent;                                              override;
+    PROCEDURE onEndOfEvaluation;                                            override;
     PROCEDURE positionHelpNotifier;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE updateExpressionMemo;
@@ -225,6 +228,21 @@ FUNCTION openInEditor_impl intFuncSignature;
       result:=newVoidLiteral;
     end;
   end;
+
+PROCEDURE TMnhForm.onAssistantFinished;
+begin
+
+end;
+
+PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
+begin
+
+end;
+
+PROCEDURE TMnhForm.onBreakpoint(CONST data);
+begin
+
+end;
 
 PROCEDURE TMnhForm.onDebuggerEvent;
   VAR running:boolean;
