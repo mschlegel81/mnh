@@ -36,24 +36,25 @@ USES  //basic classes
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
-CONST LANG_MNH   = 0;
-      LANG_CPP   = 1;
-      LANG_CSS   = 2;
-      LANG_DIFF  = 3;
-      LANG_HTML  = 4;
-      LANG_INI   = 5;
-      LANG_JAVA  = 6;
-      LANG_JS    = 7;
-      LANG_PAS   = 8;
-      LANG_PERL  = 9;
-      LANG_PHP   =10;
-      LANG_PYTHON=11;
-      LANG_SHELL =12;
-      LANG_SQL   =13;
-      LANG_VB    =14;
-      LANG_BAT   =15;
-      LANG_XML   =16;
-      LANG_TXT   =17;
+
+TYPE T_language=(LANG_MNH   = 0,
+                 LANG_CPP   = 1,
+                 LANG_CSS   = 2,
+                 LANG_DIFF  = 3,
+                 LANG_HTML  = 4,
+                 LANG_INI   = 5,
+                 LANG_JAVA  = 6,
+                 LANG_JS    = 7,
+                 LANG_PAS   = 8,
+                 LANG_PERL  = 9,
+                 LANG_PHP   =10,
+                 LANG_PYTHON=11,
+                 LANG_SHELL =12,
+                 LANG_SQL   =13,
+                 LANG_VB    =14,
+                 LANG_BAT   =15,
+                 LANG_XML   =16,
+                 LANG_TXT   =17);
 
 
 TYPE
@@ -67,15 +68,15 @@ T_editorMeta=object(T_codeProvider)
       fileAccessAge:double;
       isChanged:boolean;
     end;
-    language_:byte;
+    language_:T_language;
     sheet       : TTabSheet;
     editor_     : TSynEdit;
     plugin      : TSynPluginMultiCaret;
     highlighter : TSynMnhSyn;
-    PROCEDURE setLanguage(CONST languageIndex:byte);
-    PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:byte);
-    PROCEDURE guessLanguage(CONST fallback:byte);
-    FUNCTION languageName:string;
+    PROCEDURE setLanguage(CONST languageIndex:T_language);
+    PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:T_language);
+    PROCEDURE guessLanguage(CONST fallback:T_language);
+    //FUNCTION languageName:string;
 
   public
     CONSTRUCTOR create(CONST idx:longint);
@@ -89,7 +90,7 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION disposeOnPackageDestruction:boolean;                    virtual;
     FUNCTION isPseudoFile:boolean;                                   virtual;
 
-    PROPERTY language:byte read language_ write setLanguage;
+    PROPERTY language:T_language read language_ write setLanguage;
     PROPERTY editor:TSynEdit read editor_;
     PROCEDURE activate;
     FUNCTION caretInMainFormCoordinates:TPoint;
@@ -105,12 +106,14 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION saveAsWithDialog:boolean;
     FUNCTION saveWithDialog:boolean;
     PROCEDURE reloadFile(CONST fileName:string);
+    PROCEDURE exportToHtml;
+
   private
     PROCEDURE initWithState(VAR state:T_editorState);
 
   //Events handling:
   PROCEDURE InputEditChange(Sender: TObject);
-
+  PROCEDURE languageMenuItemClick(Sender: TObject);
   //Advanced:
 
 
@@ -133,7 +136,6 @@ T_editorMeta=object(T_codeProvider)
   FUNCTION fileIsDeleted:boolean;
   FUNCTION fileIsModifiedOnFileSystem:boolean;
   PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
-  PROCEDURE exportToHtml;
 end;
 
 T_runnerModel=object
@@ -184,6 +186,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_SynCompletion         :TSynCompletion;
                     CONST outputHighlighter       :TSynMnhSyn;
+                    CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent);
@@ -216,11 +219,12 @@ VAR mainForm              :T_abstractMnhForm;
     assistanceSynEdit     :TSynEdit;
     SynCompletion1        :TSynCompletion;
 
-VAR fileTypeMeta:array of record
-      extensionWithoutDot:string;
-      language:byte;
+VAR fileTypeMeta:array[T_language] of record
       highlighter:TSynCustomHighlighter;
+      extensions:T_arrayOfString;
+      menuItem:TMenuItem;
     end;
+
 VAR editorMetaData:array of P_editorMeta;
     underCursor:T_tokenInfo;
 
@@ -232,6 +236,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_SynCompletion         :TSynCompletion;
                     CONST outputHighlighter       :TSynMnhSyn;
+                    CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent);
@@ -342,37 +347,44 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     end;
 
   PROCEDURE initFileTypes;
-    PROCEDURE addFileType(CONST extension:string; CONST language:byte; CONST highlighter:TSynCustomHighlighter);
+    PROCEDURE addFileType(CONST language:T_language; CONST extension:string; CONST highlighter:TSynCustomHighlighter=nil; CONST menuCaption:string='');
+      VAR menuItem:TMenuItem;
       begin
-        setLength(fileTypeMeta,length(fileTypeMeta)+1);
-        fileTypeMeta[length(fileTypeMeta)-1].extensionWithoutDot:=uppercase(extension);
-        fileTypeMeta[length(fileTypeMeta)-1].language   :=language;
-        fileTypeMeta[length(fileTypeMeta)-1].highlighter:=highlighter;
+        if menuCaption<>'' then begin
+          menuItem:=TMenuItem.create(mainForm);
+          menuItem.caption:=menuCaption;
+          menuItem.Tag:=ord(language);
+          languageMenuRoot.add(menuItem);
+
+          fileTypeMeta[language].menuItem:=menuItem;
+          fileTypeMeta[language].highlighter:=highlighter;
+          fileTypeMeta[language].extensions:=extension;
+        end else append(fileTypeMeta[language].extensions,extension);
       end;
 
     begin
-      addFileType('mnh' ,LANG_MNH   ,nil                   );
-      addFileType('cpp' ,LANG_CPP   ,SynCppSyn1            );
-      addFileType('c'   ,LANG_CPP   ,SynCppSyn1            );
-      addFileType('h'   ,LANG_CPP   ,SynCppSyn1            );
-      addFileType('hh'  ,LANG_CPP   ,SynCppSyn1            );
-      addFileType('css' ,LANG_CSS   ,SynCssSyn1            );
-      addFileType('diff',LANG_DIFF  ,SynDiffSyn1           );
-      addFileType('html',LANG_HTML  ,SynHTMLSyn1           );
-      addFileType('ini' ,LANG_INI   ,SynIniSyn1            );
-      addFileType('java',LANG_JAVA  ,SynJavaSyn1           );
-      addFileType('js'  ,LANG_JS    ,SynJScriptSyn1        );
-      addFileType('json',LANG_JS    ,SynJScriptSyn1        );
-      addFileType('pas' ,LANG_PAS   ,SynFreePascalSyn1     );
-      addFileType('perl',LANG_PERL  ,SynPerlSyn1           );
-      addFileType('php' ,LANG_PHP   ,SynPHPSyn1            );
-      addFileType('py'  ,LANG_PYTHON,SynPythonSyn1         );
-      addFileType('sh'  ,LANG_SHELL ,SynUNIXShellScriptSyn1);
-      addFileType('sql' ,LANG_SQL   ,SynSQLSyn1            );
-      addFileType('vb'  ,LANG_VB    ,SynVBSyn1             );
-      addFileType('bat' ,LANG_BAT   ,SynBatSyn1            );
-      addFileType('xml' ,LANG_XML   ,SynXMLSyn1            );
-      addFileType('txt' ,LANG_TXT   ,nil                   );
+      addFileType(LANG_MNH   ,'mnh' ,nil                   ,'&MNH');
+      addFileType(LANG_CPP   ,'cpp' ,SynCppSyn1            ,'&C++');
+      addFileType(LANG_CPP   ,'c'   );
+      addFileType(LANG_CPP   ,'h'   );
+      addFileType(LANG_CPP   ,'hh'  );
+      addFileType(LANG_CSS   ,'css' ,SynCssSyn1            ,'CSS'        );
+      addFileType(LANG_DIFF  ,'diff',SynDiffSyn1           ,'&diff'      );
+      addFileType(LANG_HTML  ,'html',SynHTMLSyn1           ,'&HTML'      );
+      addFileType(LANG_INI   ,'ini' ,SynIniSyn1            ,'&ini'       );
+      addFileType(LANG_JAVA  ,'java',SynJavaSyn1           ,'&Java'      );
+      addFileType(LANG_JS    ,'js'  ,SynJScriptSyn1        ,'JavaScript' );
+      addFileType(LANG_JS    ,'json');
+      addFileType(LANG_PAS   ,'pas' ,SynFreePascalSyn1     ,'&Pascal'             );
+      addFileType(LANG_PERL  ,'perl',SynPerlSyn1           ,'Perl'                );
+      addFileType(LANG_PHP   ,'php' ,SynPHPSyn1            ,'PHP'                 );
+      addFileType(LANG_PYTHON,'py'  ,SynPythonSyn1         ,'Python'              );
+      addFileType(LANG_SHELL ,'sh'  ,SynUNIXShellScriptSyn1,'Shell script'        );
+      addFileType(LANG_SQL   ,'sql' ,SynSQLSyn1            ,'&SQL'                );
+      addFileType(LANG_VB    ,'vb'  ,SynVBSyn1             ,'&Visual Basic'       );
+      addFileType(LANG_BAT   ,'bat' ,SynBatSyn1            ,'Windows &Batch File' );
+      addFileType(LANG_XML   ,'xml' ,SynXMLSyn1            ,'&XML'                );
+      addFileType(LANG_TXT   ,'txt' ,nil                   ,'unknown (&Text)'     );
     end;
 
   PROCEDURE restoreEditors;
@@ -538,7 +550,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
     editor.CaretX:=state.caret['x'];
     editor.CaretY:=state.caret['y'];
-    setLanguage(state.language);
+    setLanguage(T_language(state.language));
     updateSheetCaption;
   end;
 
@@ -579,6 +591,7 @@ FUNCTION T_editorMeta.isPseudoFile: boolean;
   end;
 
 PROCEDURE T_editorMeta.activate;
+  VAR l:T_language;
   begin
     if not(sheet.tabVisible) then exit;
     {$ifdef debugMode}
@@ -588,6 +601,11 @@ PROCEDURE T_editorMeta.activate;
     completionLogic.assignEditor(@self);
     if language=LANG_MNH then assistancEvaluator.evaluate(@self);
     mainForm.caption:=updateSheetCaption;
+
+    for l in T_language do begin
+      fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
+      fileTypeMeta[l].menuItem.Checked:=(l=language);
+    end;
   end;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
@@ -595,6 +613,11 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
     if not(sheet.tabVisible) then exit;
     if language=LANG_MNH then assistancEvaluator.evaluate(@self);
     mainForm.caption:=updateSheetCaption;
+  end;
+
+PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
+  begin
+    setLanguage(T_language(TMenuItem(Sender).Tag));
   end;
 
 FUNCTION T_editorMeta.saveAsWithDialog: boolean;
@@ -641,34 +664,36 @@ PROCEDURE T_editorMeta.closeEditorWithDialogs;
     editor.modified:=false;
   end;
 
-PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: byte);
-  VAR metaIdx:longint;
+PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
   begin
+    if language_=languageIndex then exit;
+
     language_:=languageIndex;
-    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].language=languageIndex then begin
-      if fileTypeMeta[metaIdx].language=LANG_MNH
-      then editor.highlighter:=highlighter
-      else editor.highlighter:=fileTypeMeta[metaIdx].highlighter;
-      editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
-      editor.readonly                :=runnerModel.areEditorsLocked;
-      {$ifdef debugMode}writeln('Set language ',fileTypeMeta[metaIdx].language,' - ',fileTypeMeta[metaIdx].extensionWithoutDot);{$endif}
-      exit;
-    end;
+    if language_=LANG_MNH
+    then editor.highlighter:=highlighter
+    else editor.highlighter:=fileTypeMeta[language_].highlighter;
+    editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
+    editor.readonly                :=runnerModel.areEditorsLocked;
+    {$ifdef debugMode}writeln('        DEBUG: Set language ',language_);{$endif}
+    activate;
+    mainForm.onDebuggerEvent;
   end;
 
-PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: byte);
-  VAR metaIdx:longint;
+PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: T_language);
+  VAR l:T_language;
+      s:string;
       ext:string;
   begin
     ext:=uppercase(extensionWithoutDot);
-    for metaIdx:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[metaIdx].extensionWithoutDot=ext then begin
-      setLanguage(fileTypeMeta[metaIdx].language);
+    for l in T_language do
+    for s in fileTypeMeta[l].extensions do if ext=s then begin
+      setLanguage(l);
       exit;
     end;
     setLanguage(fallback);
   end;
 
-PROCEDURE T_editorMeta.guessLanguage(CONST fallback: byte);
+PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
   begin
     setLanguage(copy(extractFileExt(fileInfo.filePath),2,10),fallback);
   end;
@@ -702,7 +727,7 @@ PROCEDURE T_editorMeta.initForNewFile;
     end;
     editor.clearAll;
     editor.modified:=false;
-    setLanguage(0);
+    setLanguage(LANG_MNH);
     updateSheetCaption;
   end;
 
@@ -783,7 +808,7 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
     for i:=0 to length(settings^.workspace.editorState[index].lines)-1 do settings^.workspace.editorState[index].lines[i]:=editor.lines[i];
     settings^.workspace.editorState[index].caret['x']:=editor.CaretX;
     settings^.workspace.editorState[index].caret['y']:=editor.CaretY;
-    settings^.workspace.editorState[index].language:=language;
+    settings^.workspace.editorState[index].language:=ord(language);
   end;
 
 PROCEDURE T_editorMeta.toggleComment;
@@ -935,12 +960,12 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem: boolean;
     result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
 
-FUNCTION T_editorMeta.languageName: string;
-  VAR i:longint;
-  begin
-    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language_ then exit(lowercase(fileTypeMeta[i].extensionWithoutDot));
-    result:='';
-  end;
+//FUNCTION T_editorMeta.languageName: string;
+//  VAR i:longint;
+//  begin
+//    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language_ then exit(lowercase(fileTypeMeta[i].extensionWithoutDot));
+//    result:='';
+//  end;
 
 PROCEDURE T_editorMeta.updateContentAfterEditScript(
   CONST stringListLiteral: P_listLiteral);

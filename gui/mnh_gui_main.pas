@@ -56,7 +56,7 @@ TYPE
     callStackList:             TListBox;
     MainMenu1:                 TMainMenu;
     editScriptRoot,
-    MenuItem1,
+    miLanguageRoot,
     MenuItem4,
     miAbout,
     miCallMain,
@@ -78,23 +78,6 @@ TYPE
     miHaltEvalutaion,
     miHelp,
     miIncFontSize,
-    miLangBat,
-    miLangCpp,
-    miLangCss,
-    miLangDiff,
-    miLangHtml,
-    miLangIni,
-    miLangJS,
-    miLangJava,
-    miLangMnh,
-    miLangPascal,
-    miLangPerl,
-    miLangPhp,
-    miLangPython,
-    miLangShell,
-    miLangSql,
-    miLangVb,
-    miLangXml,
     miMinErrorlevel1,
     miMinErrorlevel2,
     miMinErrorlevel3,
@@ -121,7 +104,6 @@ TYPE
     miInserScriptRoot,
     miEditGuiScripts,
     miUtilityScriptRoot,
-    miLangTxt,
     submenuEditorAppearance:   TMenuItem;
     miFileHistoryRoot: TMenuItem;
     miHtmlExport: TMenuItem;
@@ -139,7 +121,6 @@ TYPE
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
     SynCompletion:             TSynCompletion;
-
     OutputEdit:                TSynEdit;
     assistanceSynEdit:         TSynEdit;
     SynExporterHTML:           TSynExporterHTML;
@@ -167,6 +148,8 @@ TYPE
     PROCEDURE positionHelpNotifier;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE enableDynamicItems;
+    PROCEDURE updateScriptMenus;
+    PROCEDURE updateFileHistory;
     //PROCEDURE updateExpressionMemo;
   private
     focusEditorOnEditMouseUp:boolean;
@@ -336,6 +319,64 @@ PROCEDURE TMnhForm.enableDynamicItems;
     miReplace          .enabled:=not(locked);
     miOpenDemo         .enabled:=not(locked);
   end;
+
+PROCEDURE TMnhForm.updateScriptMenus;
+  VAR i,k:longint;
+      scriptList:T_scriptMetaArray;
+      script:P_scriptMeta;
+      scriptType:T_scriptType;
+      root:TMenuItem;
+  begin
+    for scriptType in T_scriptType do begin
+      case scriptType of
+        st_edit: root:=editScriptRoot;
+        st_util: root:=miUtilityScriptRoot;
+        else     root:=miInserScriptRoot;
+      end;
+      for i:=0 to length(scriptMenuItems[scriptType])-1 do begin
+        root.remove(scriptMenuItems[scriptType][i]);
+        FreeAndNil(scriptMenuItems[scriptType][i]);
+      end;
+      setLength(scriptMenuItems[scriptType],0);
+    end;
+    scriptList:=runEvaluator.getScripts;
+    for i:=0 to length(scriptList)-1 do begin
+      script:=scriptList[i];
+      scriptType:=script^.getScriptType;
+      case scriptType of
+        st_edit: root:=editScriptRoot;
+        st_util: root:=miUtilityScriptRoot;
+        else     root:=miInserScriptRoot;
+      end;
+      k:=length(scriptMenuItems[scriptType]);
+      setLength(scriptMenuItems[scriptType],k+1);
+      scriptMenuItems[scriptType][k]:=TMenuItem.create(MainMenu1);
+      scriptMenuItems[scriptType][k].caption:=script^.getName;
+      scriptMenuItems[scriptType][k].Tag:=i;
+      scriptMenuItems[scriptType][k].OnClick:=@miRunCustomUtilScript;
+      root.add(scriptMenuItems[scriptType][k]);
+    end;
+  end;
+
+PROCEDURE TMnhForm.updateFileHistory;
+  VAR i:longint;
+      histItems:T_arrayOfString;
+  begin
+    for i:=0 to length(historyMenuItems)-1 do begin
+      miFileHistoryRoot.remove(historyMenuItems[i]);
+      FreeAndNil(historyMenuItems[i]);
+    end;
+    histItems:=settings.value^.workspace.fileHistory.items;
+    setLength(historyMenuItems,length(histItems));
+    for i:=0 to length(histItems)-1 do begin
+      historyMenuItems[i]:=TMenuItem.create(MainMenu1);
+      historyMenuItems[i].caption:=intToStr(i)+': '+histItems[i];
+      historyMenuItems[i].Tag:=i;
+      historyMenuItems[i].OnClick:=@miFileHistory0Click;
+      miFileHistoryRoot.add(historyMenuItems[i]);
+    end;
+  end;
+
 
 //PROCEDURE TMnhForm.updateExpressionMemo;
 //  VAR lines,chars:longint;

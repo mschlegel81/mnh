@@ -1103,7 +1103,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              521
+              504
             )
             Cells = (
               3
@@ -2235,6 +2235,7 @@ object MnhForm: TMnhForm
     top = 80
     object subMenuFile: TMenuItem
       Caption = '&File'
+      OnClick = subMenuFileClick
       object mi_settings: TMenuItem
         Caption = 'Settings'
         ShortCut = 16464
@@ -2413,117 +2414,8 @@ object MnhForm: TMnhForm
         ShortCut = 122
         OnClick = miFullscreenClick
       end
-      object MenuItem1: TMenuItem
+      object miLanguageRoot: TMenuItem
         Caption = 'Language'
-        object miLangMnh: TMenuItem
-          AutoCheck = True
-          Caption = 'MNH'
-          Checked = True
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangCpp: TMenuItem
-          AutoCheck = True
-          Caption = 'C++'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangCss: TMenuItem
-          AutoCheck = True
-          Caption = 'CSS'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangDiff: TMenuItem
-          AutoCheck = True
-          Caption = 'diff'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangHtml: TMenuItem
-          AutoCheck = True
-          Caption = 'HTML'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangIni: TMenuItem
-          AutoCheck = True
-          Caption = 'ini File'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangJava: TMenuItem
-          AutoCheck = True
-          Caption = 'Java'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangJS: TMenuItem
-          AutoCheck = True
-          Caption = 'Java Script'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPascal: TMenuItem
-          AutoCheck = True
-          Caption = 'Pascal'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPerl: TMenuItem
-          AutoCheck = True
-          Caption = 'Perl'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPhp: TMenuItem
-          AutoCheck = True
-          Caption = 'PHP'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangTxt: TMenuItem
-          AutoCheck = True
-          Caption = 'Plain text'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPython: TMenuItem
-          AutoCheck = True
-          Caption = 'Python'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangShell: TMenuItem
-          AutoCheck = True
-          Caption = 'Shell script'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangSql: TMenuItem
-          AutoCheck = True
-          Caption = 'SQL'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangVb: TMenuItem
-          AutoCheck = True
-          Caption = 'Visual Basic'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangBat: TMenuItem
-          AutoCheck = True
-          Caption = 'Windows Batch'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangXml: TMenuItem
-          AutoCheck = True
-          Caption = 'XML'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
       end
     end
     object subMenuHelp: TMenuItem

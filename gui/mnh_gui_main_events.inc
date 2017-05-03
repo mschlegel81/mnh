@@ -68,12 +68,12 @@ PROCEDURE miWrapEchoClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miFullscreenClick(Sender: TObject);
 
+PROCEDURE subMenuFileClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
 PROCEDURE miGotoClick(Sender: TObject);
 PROCEDURE miHelpClick(Sender: TObject);
 PROCEDURE miHelpExternallyClick(Sender: TObject);
 PROCEDURE miHtmlExportClick(Sender: TObject);
-PROCEDURE miLangMnhClick(Sender: TObject);
 PROCEDURE miNewCentralPackageClick(Sender: TObject);
 PROCEDURE miOpenDemoClick(Sender: TObject);
 PROCEDURE miRunCustomUtilScript(Sender: TObject);
@@ -195,6 +195,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            assistanceSynEdit,
                            SynCompletion,
                            outputHighlighter,
+                           miLanguageRoot,
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
@@ -374,7 +375,13 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miReloadClick(Sender: TObject); begin if hasEditor then getEditor^.reloadFile(getEditor^.getPath); end;
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject); begin if hasEditor then getEditor^.saveAsWithDialog;               end;
-PROCEDURE TMnhForm.miSaveClick(Sender: TObject);   begin if hasEditor then getEditor^.saveWithDialog;                 end;
+PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
+  begin
+    if hasEditor then begin
+      getEditor^.saveWithDialog;
+      if getEditor^.getPath=utilityScriptFileName then runEvaluator.ensureEditScripts;
+    end;
+  end;
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize-1; processFontSettings; end;
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize+1; processFontSettings; end;
@@ -409,20 +416,55 @@ PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
     end;
   end;
 
+PROCEDURE TMnhForm.subMenuFileClick(Sender: TObject);
+  begin
+    updateFileHistory;
+  end;
+
 PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
-  begin end;
+  VAR historyIdx:longint;
+  begin
+    historyIdx:=TMenuItem(Sender).Tag;
+    with settings.value^.workspace.fileHistory do begin
+      if fileExists(historyItem(historyIdx))
+      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
+      else if polishHistory then updateFileHistory;
+    end;
+  end;
 
 PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
-  begin end;
+  VAR i:longint;
+  begin
+    if not(hasEditor) then exit;
+    with getEditor^ do begin
+      askForm.initWithQuestion('Go to line');
+      askForm.ShowModal;
+      i:=strToIntDef(askForm.getLastAnswerReleasing(nil),-1);
+      if i>=1 then begin
+        editor.CaretX:=1;
+        editor.CaretY:=i;
+      end;
+    end;
+  end;
 
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
-  begin end;
+  begin
+    miHelp.Checked:=not(miHelp.Checked);
+    if not(miHelp.Checked) then helpPopupMemo.visible:=false
+                           else begin
+                             helpPopupMemo.visible:=true;
+                             getEditor^.setUnderCursor(false,false);
+                             positionHelpNotifier;
+                           end;
+  end;
+
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject);
-  begin end;
-PROCEDURE TMnhForm.miLangMnhClick(Sender: TObject);
-  begin end;
+  begin
+    makeHtmlFromTemplate();
+    OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
+  end;
+
+PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject); begin if hasEditor then getEditor^.exportToHtml; end;
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
   begin end;
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
