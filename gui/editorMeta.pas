@@ -61,7 +61,7 @@ P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_codeProvider)
   private
     index:longint;
-    paintedWithState:T_hashInt;
+    paintedWithStateHash:T_hashInt;
     fileInfo:record
       filePath:ansistring;
       fileAccessAge:double;
@@ -99,6 +99,7 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE toggleComment;
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
+    PROCEDURE repaintWithStateHash(CONST stateHashForHints:T_hashInt; CONST errorHints:T_arrayOfString);
 
   private
     PROCEDURE initWithState(VAR state:T_editorState);
@@ -127,7 +128,6 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
-  PROCEDURE repaintWithStateCounter(CONST stateCounter:longint; CONST errorHints:T_arrayOfString);
   FUNCTION changed:boolean;
   FUNCTION saveFile(CONST fileName:string=''):string;
   FUNCTION fileIsDeleted:boolean;
@@ -415,7 +415,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
 
   VAR style:TSynSelectedColor;
   begin
-    paintedWithState:=0;
+    paintedWithStateHash:=0;
     index:=idx;
     sheet:=TTabSheet.create(inputPageControl);
     sheet.PageControl:=inputPageControl;
@@ -873,12 +873,14 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter: longint;
-  CONST errorHints: T_arrayOfString);
+PROCEDURE T_editorMeta.repaintWithStateHash(CONST stateHashForHints:T_hashInt; CONST errorHints:T_arrayOfString);
   VAR i:longint;
   begin
-    if (stateCounter<>paintedWithState) then begin
-      paintedWithState:=stateCounter;
+    {$ifdef debugMode}
+    writeln('        DEBUG: Repainting ',pseudoName(true),' with state ',stateHashForHints,'[',stateHashForHints<>paintedWithStateHash,']',' (',length(errorHints),' hints/errors)');
+    {$endif}
+    if (stateHashForHints<>paintedWithStateHash) then begin
+      paintedWithStateHash:=stateHashForHints;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;

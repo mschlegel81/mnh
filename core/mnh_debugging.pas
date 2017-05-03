@@ -4,6 +4,7 @@ USES sysutils,
      //MNH:
      mnh_basicTypes,
      mnh_tokens,
+     mnh_out_adapters,
      tokenStack;
 TYPE
   T_debuggingSnapshot=record

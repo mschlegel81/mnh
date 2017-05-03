@@ -576,20 +576,27 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     end;
     lexer.destroy;
 
+    {$ifdef fullVersion}
+    if usecase=lu_forCodeAssistance then begin
+      readyForUsecase:=usecase;
+      logReady;
+      resolveRuleIds(context.adapters);
+      complainAboutUnused(true,context.adapters^);
+      exit;
+    end;
+    {$endif}
+
     if context.adapters^.noErrors then begin
       readyForUsecase:=usecase;
       logReady;
-      case usecase of
-        lu_forCodeAssistance: resolveRuleIds(context.adapters);
-        lu_forCallingMain:    executeMain;
-      end;
-      {$ifdef fullVersion}
-      if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forCodeAssistance]) and gui_started and context.adapters^.noErrors
-      then complainAboutUnused(true,context.adapters^);
-      {$endif}
+      if usecase=lu_forCallingMain then executeMain;
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then begin
+      {$ifdef fullVersion}
+      if gui_started and context.adapters^.noErrors
+      then complainAboutUnused(true,context.adapters^);
+      {$endif}
       finalize(context.adapters^);
     end;
   end;

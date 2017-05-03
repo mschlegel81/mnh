@@ -142,7 +142,7 @@ TYPE
   T_assistanceEvaluator=object(T_evaluator)
     private
       localErrors,externalErrors:T_storedMessages;
-      stateCounter:longint;
+      stateHash:T_hashInt;
       userRules,
       completionList:T_setOfString;
       PROCEDURE preEval; virtual;
@@ -155,7 +155,7 @@ TYPE
 
       FUNCTION isErrorLocation(CONST lineIndex,tokenStart,tokenEnd:longint):byte;
       FUNCTION getErrorHints:T_arrayOfString;
-      FUNCTION getStateCounter:longint;
+      FUNCTION getStateHash:T_hashInt;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_setOfString);
@@ -411,7 +411,7 @@ CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadF
 CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
   begin
     inherited create(adapters,threadFunc);
-    stateCounter:=0;
+    stateHash:=0;
     setLength(localErrors,0);
     setLength(externalErrors,0);
     userRules.create;
@@ -832,8 +832,8 @@ PROCEDURE T_assistanceEvaluator.postEval;
         externalErrors[length(externalErrors)-1]:=storedMessages[i];
       end;
     end;
-
-    inc(stateCounter);
+    stateHash:=package.getCodeState;
+    runEvaluator.adapter^.logEndOfCodeAssistance;
     system.leaveCriticalSection(cs);
   end;
 
@@ -844,10 +844,10 @@ FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_assistanceEvaluator.getStateCounter: longint;
+FUNCTION T_assistanceEvaluator.getStateHash: T_hashInt;
   begin
     system.enterCriticalSection(cs);
-    result:=stateCounter;
+    result:=stateHash;
     system.leaveCriticalSection(cs);
   end;
 

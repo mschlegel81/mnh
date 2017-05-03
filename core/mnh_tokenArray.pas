@@ -29,6 +29,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION getPath:ansistring; virtual;
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
+      PROPERTY getCodeState:T_hashInt read readyForCodeState;
   end;
 
   T_enhancedStatement=record

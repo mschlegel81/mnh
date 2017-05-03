@@ -193,6 +193,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
       if hasEditor then getEditor^.activate;
+      UpdateTimeTimer.enabled:=true;
       firstShow:=false;
     end;
   end;
@@ -334,7 +335,9 @@ PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
-  begin end;
+  begin
+    if guiOutAdapter.flushToGui(OutputEdit) then exit;
+  end;
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
   begin end;
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);

@@ -598,6 +598,7 @@ TYPE
 CONST
   {$ifdef fullVersion}
   C_plotMessages:T_messageTypeSet=[mt_plotFileCreated..mt_plotSettingsChanged];
+  C_guiOnlyMessages:T_messageTypeSet=[mt_plotFileCreated..mt_gui_breakpointEncountered];
   {$endif}
   C_messageTypeMeta:array[T_messageType] of record
     level:shortint;

@@ -230,9 +230,9 @@ FUNCTION openInEditor_impl intFuncSignature;
   end;
 
 PROCEDURE TMnhForm.onAssistantFinished;
-begin
-
-end;
+  begin
+    getEditor^.repaintWithStateHash(assistancEvaluator.getStateHash,assistancEvaluator.getErrorHints);
+  end;
 
 PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
 begin
