@@ -4,8 +4,10 @@ USES sysutils,
      //MNH:
      mnh_basicTypes,
      mnh_tokens,
+     mnh_out_adapters,
      tokenStack;
 TYPE
+  P_debuggingSnapshot=^T_debuggingSnapshot;
   T_debuggingSnapshot=record
     location:T_tokenLocation;
     tokenStack:P_tokenStack;
@@ -13,23 +15,26 @@ TYPE
     callStack:P_callStack;
   end;
 
+  T_debuggerState=(breakSoonest,
+                   breakOnLineChange,
+                   breakOnStepOut,
+                   breakOnStepIn,
+                   runUntilBreakpoint,
+                   dontBreakAtAll,
+                   waitingForGUI);
+
   P_debuggingStepper=^T_debuggingStepper;
   T_debuggingStepper=object
     private
       breakpoints:array of T_searchTokenLocation;
-      state:(breakSoonest,
-             breakOnLineChange,
-             breakOnStepOut,
-             breakOnStepIn,
-             runUntilBreakpoint,
-             dontBreakAtAll,
-             waitingForGUI);
+      state:T_debuggerState;
       lastBreakLine:T_tokenLocation;
       lastBreakLevel:longint;
       snapshot:T_debuggingSnapshot;
+      adapters:P_adapters;
       cs:TRTLCriticalSection;
     public
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST parentAdapters:P_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resetForDebugging(CONST inPackage:P_objectWithPath);
       PROCEDURE stepping(CONST first:P_token; CONST stack:P_tokenStack; CONST callStack:P_callStack);
@@ -37,20 +42,16 @@ TYPE
       PROCEDURE haltEvaluation;
       PROCEDURE clearBreakpoints;
       PROCEDURE addBreakpoint(CONST fileName:string; CONST line:longint);
-      PROCEDURE doContinue;
-      PROCEDURE doStepInto;
-      PROCEDURE doStepOut;
-      PROCEDURE doStep;
-      PROCEDURE doMicrostep;
+      PROCEDURE removeBreakpoint(CONST fileName:string; CONST line:longint);
+      PROCEDURE setState(CONST newState: T_debuggerState);
       FUNCTION paused:boolean;
-      FUNCTION getDebuggingSnapshot:T_debuggingSnapshot;
   end;
 
-
 IMPLEMENTATION
-CONSTRUCTOR T_debuggingStepper.create;
+CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_adapters);
   begin
     initCriticalSection(cs);
+    adapters:=parentAdapters;
     state:=dontBreakAtAll;
     setLength(breakpoints,0);
   end;
@@ -119,6 +120,7 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
       lastBreakLine:=first^.location;
       lastBreakLevel:=callStack^.size;
       prepareSnapshot;
+      adapters^.logBreakpointEncountered(@snapshot);
     end;
     while state=waitingForGUI do begin
       system.leaveCriticalSection(cs);
@@ -154,38 +156,23 @@ PROCEDURE T_debuggingStepper.addBreakpoint(CONST fileName: string; CONST line: l
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.doContinue;
+PROCEDURE T_debuggingStepper.removeBreakpoint(CONST fileName:string; CONST line:longint);
+  VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    state:=runUntilBreakpoint;
+    i:=0;
+    while (i<length(breakpoints)) and not((breakpoints[i].fileName=fileName) and (breakpoints[i].line=line)) do inc(i);
+    if i<length(breakpoints) then begin
+      breakpoints[i]:=breakpoints[length(breakpoints)-1];
+      setLength(breakpoints,length(breakpoints)-1);
+    end;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_debuggingStepper.doStepInto;
+PROCEDURE T_debuggingStepper.setState(CONST newState: T_debuggerState);
   begin
     system.enterCriticalSection(cs);
-    state:=breakOnStepIn;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_debuggingStepper.doStepOut;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakOnStepOut;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_debuggingStepper.doStep;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakOnLineChange;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_debuggingStepper.doMicrostep;
-  begin
-    system.enterCriticalSection(cs);
-    state:=breakSoonest;
+    if (state=waitingForGUI) then state:=newState;
     system.leaveCriticalSection(cs);
   end;
 
@@ -193,13 +180,6 @@ FUNCTION T_debuggingStepper.paused:boolean;
   begin
     system.enterCriticalSection(cs);
     result:=state=waitingForGUI;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_debuggingStepper.getDebuggingSnapshot:T_debuggingSnapshot;
-  begin
-    system.enterCriticalSection(cs);
-    result:=snapshot;
     system.leaveCriticalSection(cs);
   end;
 

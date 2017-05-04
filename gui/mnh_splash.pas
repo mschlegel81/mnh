@@ -55,6 +55,7 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
 FUNCTION prepareDoc(p:pointer):ptrint;
   begin
     makeHtmlFromTemplate();
+    result:=0;
   end;
 
 PROCEDURE TSplashForm.FormShow(Sender: TObject);
@@ -66,7 +67,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
-    Label2.caption:='built '+intToStr(BUILT_NUMBER)+' ['+CODE_HASH+']';
+    Label2.caption:='build '+intToStr(BUILT_NUMBER)+' ['+CODE_HASH+']';
     beginThread(@prepareDoc);
   end;
 

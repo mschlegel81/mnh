@@ -62,9 +62,9 @@ TYPE
       outputLanguage:string;
       done  :boolean;
       CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
-      DESTRUCTOR destroy;
       PROCEDURE execute(VAR context:T_threadContext);
     public
+      DESTRUCTOR destroy;
       FUNCTION getOutput:P_literal;
       FUNCTION getOutputLanguage:string;
       FUNCTION wantNewEditor:boolean;
@@ -142,7 +142,7 @@ TYPE
   T_assistanceEvaluator=object(T_evaluator)
     private
       localErrors,externalErrors:T_storedMessages;
-      stateCounter:longint;
+      stateHash:T_hashInt;
       userRules,
       completionList:T_setOfString;
       PROCEDURE preEval; virtual;
@@ -155,7 +155,7 @@ TYPE
 
       FUNCTION isErrorLocation(CONST lineIndex,tokenStart,tokenEnd:longint):byte;
       FUNCTION getErrorHints:T_arrayOfString;
-      FUNCTION getStateCounter:longint;
+      FUNCTION getStateHash:T_hashInt;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_setOfString);
@@ -201,15 +201,21 @@ FUNCTION main(p:pointer):ptrint;
 
   PROCEDURE doneEdit(VAR context:T_evaluationContext);
     VAR collector:P_collectingOutAdapter;
+        successful:boolean=true;
     begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
       context.afterEvaluation;
       if (context.adapters^.hasPrintOut) or
          (context.adapters^.hasNonSilentError) then begin
         collector:=P_collectingOutAdapter(context.adapters^.getAdapter(0));
         P_runEvaluator(p)^.adapter^.clearPrint;
         P_runEvaluator(p)^.adapter^.raiseStoredMessages(collector^.storedMessages);
+        successful:=false;
       end;
+      if P_runEvaluator(p)^.currentEdit<>nil then P_runEvaluator(p)^.adapter^.logEndOfEditScript(P_runEvaluator(p)^.currentEdit,successful)
+                                             else P_runEvaluator(p)^.adapter^.logEndOfEvaluation;
       context.destroy;
+      P_runEvaluator(p)^.currentEdit:=nil;
     end;
 
   PROCEDURE ensureEditScripts_impl();
@@ -221,17 +227,17 @@ FUNCTION main(p:pointer):ptrint;
     begin with P_runEvaluator(p)^ do begin
       setupEdit(editContext);
       if utilityScriptPackage=nil then begin
-        {$ifdef debugMode} writeln('Creating script package'); {$endif}
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: Creating script package'); {$endif}
         new(utilityScriptPackage,create(newFileCodeProvider(utilityScriptFileName),nil));
       end else if not(utilityScriptPackage^.codeChanged) then exit;
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
-      {$ifdef debugMode} writeln('Loading script package: ',utilityScriptPackage^.getPath); {$endif}
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
       utilityScriptPackage^.load(lu_forImport,editContext.threadContext^,C_EMPTY_STRING_ARRAY);
       if editContext.adapters^.noErrors then begin
         for scriptType in T_scriptType do
         for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
-          {$ifdef debugMode} writeln('Found script: ',subRule^.getId); {$endif}
+          {$ifdef debugMode} writeln(stdErr,'        DEBUG: Found script: ',subRule^.getId); {$endif}
           new(script,create(subRule,isValid,editAdapters^));
           if isValid then begin
             setLength(utilityScriptList,length(utilityScriptList)+1);
@@ -411,7 +417,7 @@ CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadF
 CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
   begin
     inherited create(adapters,threadFunc);
-    stateCounter:=0;
+    stateHash:=0;
     setLength(localErrors,0);
     setLength(externalErrors,0);
     userRules.create;
@@ -515,7 +521,7 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST provider:P_codeProvider);
       exit;
     end;
     request:=er_evaluate;
-    package.replaceCodeProvider(provider);
+    if package.getCodeProvider<>provider then package.replaceCodeProvider(provider);
     system.leaveCriticalSection(cs);
   end;
 
@@ -832,8 +838,8 @@ PROCEDURE T_assistanceEvaluator.postEval;
         externalErrors[length(externalErrors)-1]:=storedMessages[i];
       end;
     end;
-
-    inc(stateCounter);
+    stateHash:=package.getCodeState;
+    runEvaluator.adapter^.logEndOfCodeAssistance;
     system.leaveCriticalSection(cs);
   end;
 
@@ -844,10 +850,10 @@ FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_assistanceEvaluator.getStateCounter: longint;
+FUNCTION T_assistanceEvaluator.getStateHash: T_hashInt;
   begin
     system.enterCriticalSection(cs);
-    result:=stateCounter;
+    result:=stateHash;
     system.leaveCriticalSection(cs);
   end;
 

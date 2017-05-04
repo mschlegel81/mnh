@@ -8,29 +8,11 @@ USES {$ifdef UNIX} cthreads, {$else}
   sysutils,
   Interfaces, // this includes the LCL widgetset
   Forms,
-  simpleipc,
-  myStringUtil,
   mySys,
   mnh_cmdLineInterpretation,
+  ipcModel,
   mnh_gui_main,
   mnh_gui_outputOnly;
-
-FUNCTION sendParametersToOtherInstance:boolean;
-  VAR client:TSimpleIPCClient;
-      i:longint;
-  begin
-    client:=TSimpleIPCClient.create(nil);
-    client.serverId:=UNIQUE_EDITOR_IPC_ID;
-    if client.ServerRunning then begin
-      result:=true;
-      if length(filesToOpenInEditor)>0 then begin
-        client.Active:=true;
-        for i:=0 to length(filesToOpenInEditor)-1 do filesToOpenInEditor[i]:=expandFileName(filesToOpenInEditor[i]);
-        client.SendStringMessage(join(filesToOpenInEditor,C_lineBreakChar));
-      end;
-    end else result:=false;
-    client.free;
-  end;
 
 {$R *.res}
 
@@ -43,7 +25,7 @@ begin
     Application.initialize;
     if reEvaluationWithGUIrequired
     then Application.CreateForm(ToutputOnlyForm, outputOnlyForm)
-    else if sendParametersToOtherInstance then begin
+    else if sendParametersToOtherInstance(filesToOpenInEditor) then begin
       showConsole;
       halt;
     end else Application.CreateForm(TMnhForm, MnhForm);

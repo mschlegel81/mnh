@@ -7,7 +7,12 @@ USES SynEdit,SynEditKeyCmds,Forms,
 
 TYPE
   T_abstractMnhForm=class(TForm)
-    PROCEDURE onEndOfEvaluation; virtual; abstract;
+    public
+      PROCEDURE onAssistantFinished;                                          virtual; abstract;
+      PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); virtual; abstract;
+      PROCEDURE onBreakpoint  (CONST data:pointer);                           virtual; abstract;
+      PROCEDURE onDebuggerEvent;                                              virtual; abstract;
+      PROCEDURE onEndOfEvaluation;                                            virtual; abstract;
   end;
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
@@ -36,6 +41,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     {$endif}
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
+    mnh_out_adapters.gui_started:=true;
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
@@ -51,7 +57,7 @@ CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayL
       location:=C_nilTokenLocation;
       setLength(messageText,8);
       for i:=0 to 7 do messageText[i]:=LOGO[i];
-      data:='';
+      data:=nil;
     end;
     append(m);
   end;
@@ -144,7 +150,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
-      {$ifdef debugMode}writeln(stdErr,'Already flushing!');{$endif}
+      {$ifdef debugMode}writeln(stdErr,'        DEBUG: Already flushing!');{$endif}
       system.leaveCriticalSection(cs);
       exit(false);
     end;
@@ -154,7 +160,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     linesToWrite:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       {$ifdef debugMode}
-      writeln(stdErr,'guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
+      writeln(stdErr,'        DEBUG: guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
       {$endif}
       case messageType of
         mt_clearConsole: clearSynAndBuffer;
@@ -172,7 +178,14 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
             end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
           end;
-        mt_endOfEvaluation: parentForm.onEndOfEvaluation;
+        mt_endOfEvaluation: begin
+          if guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+          parentForm.onEndOfEvaluation;
+        end;
+        mt_gui_assistantFinished    : parentForm.onAssistantFinished;
+        mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
+        mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
+        mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,messageText);
@@ -186,7 +199,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         parentForm.Show;
         parentForm.visible:=true;
         {$ifdef debugMode}
-        writeln(stdErr,'mnh form show triggered');
+        writeln(stdErr,'        DEBUG: mnh form show triggered');
         {$endif}
       end;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);

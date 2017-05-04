@@ -1,9 +1,6 @@
 UNIT mnh_imig_form;
-
 {$mode objfpc}{$H+}
-
 INTERFACE
-
 USES
   sysutils,
   Classes, Forms, Controls, ExtCtrls,
@@ -12,7 +9,6 @@ USES
   mnh_out_adapters, mnh_imig;
 
 TYPE
-
   TDisplayImageForm = class(TForm)
     displayImage: TImage;
     PROCEDURE FormCreate(Sender: TObject);
@@ -20,10 +16,8 @@ TYPE
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
   private
-    { private declarations }
     tryingToDisplayImage:boolean;
   public
-    { public declarations }
     PROCEDURE displayCurrentImage;
   end;
 
@@ -36,7 +30,7 @@ VAR myDisplayImageForm:TDisplayImageForm=nil;
 FUNCTION DisplayImageForm: TDisplayImageForm;
   begin
     if myDisplayImageForm=nil then begin
-      writeln('Creating new instance of TDisplayImageForm');
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Creating new instance of TDisplayImageForm'); {$endif}
       myDisplayImageForm:=TDisplayImageForm.create(nil);
       registerForm(myDisplayImageForm,false,true);
     end;
@@ -44,8 +38,6 @@ FUNCTION DisplayImageForm: TDisplayImageForm;
   end;
 
 {$R *.lfm}
-
-{ TDisplayImageForm }
 
 PROCEDURE TDisplayImageForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
@@ -99,4 +91,3 @@ FINALIZATION
   if myDisplayImageForm<>nil then FreeAndNil(myDisplayImageForm);
 
 end.
-

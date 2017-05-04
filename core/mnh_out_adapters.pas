@@ -11,7 +11,7 @@ TYPE
     messageType: T_messageType;
     location:    T_searchTokenLocation;
     messageText: T_arrayOfString;
-    data: ansistring;
+    data: pointer;
   end;
   T_storedMessages = array of T_storedMessage;
   T_adapterType=(at_unknown,
@@ -28,11 +28,7 @@ CONST
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
-  {$ifdef fullVersion}
-  HTML_IMAGE_WIDTH        =1000;
-  HTML_IMAGE_HEIGHT       = 750;
-  HTML_IMAGE_SUPERSAMPLING=   2;
-  {$endif}
+
 TYPE
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
@@ -139,6 +135,9 @@ TYPE
       PROCEDURE logInstantPlot;
       PROCEDURE resetFlagsAfterPlotDone;
       PROCEDURE logPlotSettingsChanged;
+      PROCEDURE logEndOfCodeAssistance;
+      PROCEDURE logBreakpointEncountered(CONST data:pointer);
+      PROCEDURE logEndOfEditScript(CONST data:pointer; CONST success:boolean);
       PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
       PROCEDURE logDisplayTable;
       {$ifdef imig}
@@ -229,7 +228,7 @@ VAR globalLockCs:TRTLCriticalSection;
 FUNCTION message(CONST messageType: T_messageType;
                  CONST messageText: T_arrayOfString;
                  CONST location   : T_searchTokenLocation;
-                 CONST data       : ansistring=''):T_storedMessage;
+                 CONST data       : pointer=nil):T_storedMessage;
   begin
     result.messageType:=messageType;
     result.messageText:=messageText;
@@ -562,7 +561,14 @@ PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType
                                                                                                             raiseCustomMessage(message(mt_plotCreatedWithInstantDisplay ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
 PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
-PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location,fileName)); end;
+PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location          )); end;
+PROCEDURE T_adapters.logEndOfCodeAssistance;                                                          begin raiseCustomMessage(message(mt_gui_assistantFinished,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logBreakpointEncountered(CONST data: pointer);                                   begin raiseCustomMessage(message(mt_gui_breakpointEncountered,C_EMPTY_STRING_ARRAY,C_nilTokenLocation,data)); end;
+PROCEDURE T_adapters.logEndOfEditScript(CONST data: pointer; CONST success: boolean);
+  CONST mtOfSuccess:array[false..true] of T_messageType=(mt_gui_editScriptFailed,mt_gui_editScriptSucceeded);
+  begin
+    raiseCustomMessage(message(mtOfSuccess[success],C_EMPTY_STRING_ARRAY,C_nilTokenLocation,data));
+  end;
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$ifdef imig}
 PROCEDURE T_adapters.logDisplayImage;

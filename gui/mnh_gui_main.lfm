@@ -8,6 +8,7 @@ object MnhForm: TMnhForm
   ClientHeight = 601
   ClientWidth = 717
   Color = clWhite
+  KeyPreview = True
   Menu = MainMenu1
   OnChangeBounds = FormResize
   OnClose = FormClose
@@ -25,20 +26,20 @@ object MnhForm: TMnhForm
     Top = 241
     Width = 717
     TabStop = False
-    ActivePage = debugTabSheet
+    ActivePage = outputTabSheet
     Align = alBottom
     Font.Color = clBlack
     ParentFont = False
-    TabIndex = 2
+    TabIndex = 1
     TabOrder = 5
     Options = [nboKeyboardTabSwitch]
     object assistanceTabSheet: TTabSheet
       Caption = 'Errors/Warnings'
-      ClientHeight = 397
+      ClientHeight = 309
       ClientWidth = 709
       inline assistanceSynEdit: TSynEdit
         Left = 0
-        Height = 397
+        Height = 309
         Top = 0
         Width = 709
         Align = alClient
@@ -1034,6 +1035,8 @@ object MnhForm: TMnhForm
       Caption = 'Debug'
       ClientHeight = 309
       ClientWidth = 709
+      Enabled = False
+      TabVisible = False
       object Splitter3: TSplitter
         Cursor = crVSplit
         Left = 0
@@ -1101,7 +1104,7 @@ object MnhForm: TMnhForm
             TitleFont.Color = clBlack
             ColWidths = (
               64
-              521
+              504
             )
             Cells = (
               3
@@ -2181,7 +2184,7 @@ object MnhForm: TMnhForm
     Visible = False
     object tbRun: TToolButton
       Left = 1
-      Hint = 'Run/continue (F5)'
+      Hint = 'Run/continue'
       Top = 2
       Caption = 'tbRun'
       ImageIndex = 0
@@ -2233,6 +2236,7 @@ object MnhForm: TMnhForm
     top = 80
     object subMenuFile: TMenuItem
       Caption = '&File'
+      OnClick = subMenuFileClick
       object mi_settings: TMenuItem
         Caption = 'Settings'
         ShortCut = 16464
@@ -2241,10 +2245,6 @@ object MnhForm: TMnhForm
       object miNewCentralPackage: TMenuItem
         Caption = 'Manage central &utility packages'
         OnClick = miNewCentralPackageClick
-      end
-      object miWorkspaces: TMenuItem
-        Caption = '&Working sets'
-        OnClick = miWorkspacesClick
       end
       object miClear: TMenuItem
         Caption = 'New'
@@ -2287,85 +2287,8 @@ object MnhForm: TMnhForm
         Caption = 'Export to Html'
         OnClick = miHtmlExportClick
       end
-      object miFileHistory0: TMenuItem
-        Caption = 'New Item30'
-        OnClick = miFileHistory0Click
-      end
-      object miFileHistory1: TMenuItem
-        Caption = 'New Item31'
-        OnClick = miFileHistory1Click
-      end
-      object miFileHistory2: TMenuItem
-        Caption = 'New Item32'
-        OnClick = miFileHistory2Click
-      end
-      object miFileHistory3: TMenuItem
-        Caption = 'New Item33'
-        OnClick = miFileHistory3Click
-      end
-      object miFileHistory4: TMenuItem
-        Caption = 'New Item34'
-        OnClick = miFileHistory4Click
-      end
-      object miFileHistory5: TMenuItem
-        Caption = 'New Item35'
-        OnClick = miFileHistory5Click
-      end
-      object miFileHistory6: TMenuItem
-        Caption = 'New Item36'
-        OnClick = miFileHistory6Click
-      end
-      object miFileHistory7: TMenuItem
-        Caption = 'New Item37'
-        OnClick = miFileHistory7Click
-      end
-      object miFileHistory8: TMenuItem
-        Caption = 'New Item38'
-        OnClick = miFileHistory8Click
-      end
-      object miFileHistory9: TMenuItem
-        Caption = 'New Item39'
-        OnClick = miFileHistory9Click
-      end
-      object miFileHistory10: TMenuItem
-        Caption = 'New Item54'
-        OnClick = miFileHistory10Click
-      end
-      object miFileHistory11: TMenuItem
-        Caption = 'New Item55'
-        OnClick = miFileHistory11Click
-      end
-      object miFileHistory12: TMenuItem
-        Caption = 'New Item56'
-        OnClick = miFileHistory12Click
-      end
-      object miFileHistory13: TMenuItem
-        Caption = 'New Item57'
-        OnClick = miFileHistory13Click
-      end
-      object miFileHistory14: TMenuItem
-        Caption = 'New Item58'
-        OnClick = miFileHistory14Click
-      end
-      object miFileHistory15: TMenuItem
-        Caption = 'New Item59'
-        OnClick = miFileHistory15Click
-      end
-      object miFileHistory16: TMenuItem
-        Caption = 'New Item60'
-        OnClick = miFileHistory16Click
-      end
-      object miFileHistory17: TMenuItem
-        Caption = 'New Item61'
-        OnClick = miFileHistory17Click
-      end
-      object miFileHistory18: TMenuItem
-        Caption = 'New Item62'
-        OnClick = miFileHistory18Click
-      end
-      object miFileHistory19: TMenuItem
-        Caption = 'New Item63'
-        OnClick = miFileHistory19Click
+      object miFileHistoryRoot: TMenuItem
+        Caption = '&History...'
       end
     end
     object subMenuSearch: TMenuItem
@@ -2412,7 +2335,7 @@ object MnhForm: TMnhForm
       object miCallMain: TMenuItem
         Caption = 'Call main'
         ShortCut = 120
-        OnClick = MenuItem4Click
+        OnClick = miCallMainClick
       end
       object miDebug: TMenuItem
         Caption = 'Debug'
@@ -2426,23 +2349,28 @@ object MnhForm: TMnhForm
     object submenuEditorAppearance: TMenuItem
       Caption = '&Appearance'
       object miExpressionEcho: TMenuItem
+        AutoCheck = True
         Caption = 'Expression echo'
         OnClick = miExpressionEchoClick
       end
       object miExpressionResult: TMenuItem
+        AutoCheck = True
         Caption = 'Expression result'
         OnClick = miExpressionResultClick
       end
       object miDeclarationEcho: TMenuItem
+        AutoCheck = True
         Caption = 'Declaration echo'
         Checked = True
         OnClick = miDeclarationEchoClick
       end
       object miWrapEcho: TMenuItem
+        AutoCheck = True
         Caption = 'Wrap echo'
         OnClick = miWrapEchoClick
       end
       object miTimingInfo: TMenuItem
+        AutoCheck = True
         Caption = 'Show timing info'
         OnClick = miTimingInfoClick
       end
@@ -2487,117 +2415,8 @@ object MnhForm: TMnhForm
         ShortCut = 122
         OnClick = miFullscreenClick
       end
-      object MenuItem1: TMenuItem
+      object miLanguageRoot: TMenuItem
         Caption = 'Language'
-        object miLangMnh: TMenuItem
-          AutoCheck = True
-          Caption = 'MNH'
-          Checked = True
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangCpp: TMenuItem
-          AutoCheck = True
-          Caption = 'C++'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangCss: TMenuItem
-          AutoCheck = True
-          Caption = 'CSS'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangDiff: TMenuItem
-          AutoCheck = True
-          Caption = 'diff'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangHtml: TMenuItem
-          AutoCheck = True
-          Caption = 'HTML'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangIni: TMenuItem
-          AutoCheck = True
-          Caption = 'ini File'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangJava: TMenuItem
-          AutoCheck = True
-          Caption = 'Java'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangJS: TMenuItem
-          AutoCheck = True
-          Caption = 'Java Script'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPascal: TMenuItem
-          AutoCheck = True
-          Caption = 'Pascal'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPerl: TMenuItem
-          AutoCheck = True
-          Caption = 'Perl'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPhp: TMenuItem
-          AutoCheck = True
-          Caption = 'PHP'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangTxt: TMenuItem
-          AutoCheck = True
-          Caption = 'Plain text'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangPython: TMenuItem
-          AutoCheck = True
-          Caption = 'Python'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangShell: TMenuItem
-          AutoCheck = True
-          Caption = 'Shell script'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangSql: TMenuItem
-          AutoCheck = True
-          Caption = 'SQL'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangVb: TMenuItem
-          AutoCheck = True
-          Caption = 'Visual Basic'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangBat: TMenuItem
-          AutoCheck = True
-          Caption = 'Windows Batch'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
-        object miLangXml: TMenuItem
-          AutoCheck = True
-          Caption = 'XML'
-          RadioItem = True
-          OnClick = miLangMnhClick
-        end
       end
     end
     object subMenuHelp: TMenuItem
@@ -2661,17 +2480,14 @@ object MnhForm: TMnhForm
     top = 136
   end
   object SynCompletion: TSynCompletion
-    OnExecute = SynCompletionExecute
     Position = 0
     LinesInWindow = 6
-    OnSearchPosition = SynCompletionSearchPosition
     SelectedColor = clHighlight
     CaseSensitive = False
     Width = 262
     AutoUseSingleIdent = True
     ShortCut = 16416
     EndOfTokenChr = '()[],{}+-*/&^:?<>='
-    OnCodeCompletion = SynCompletionCodeCompletion
     ExecCommandID = ecSynCompletionExecute
     left = 400
     top = 80
@@ -4036,14 +3852,11 @@ object MnhForm: TMnhForm
     }
   end
   object FindDialog: TFindDialog
-    OnFind = FindDialogFind
     left = 272
     top = 192
   end
   object ReplaceDialog: TReplaceDialog
     Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
-    OnFind = ReplaceDialogFind
-    OnReplace = ReplaceDialogReplace
     left = 400
     top = 192
   end
@@ -4090,108 +3903,10 @@ object MnhForm: TMnhForm
     top = 248
     object pmiOpenFile1: TMenuItem
       Caption = 'New Item1'
-      OnClick = pmiOpenFile1Click
     end
     object pmiOpenFile2: TMenuItem
       Caption = 'New Item2'
-      OnClick = pmiOpenFile2Click
     end
-  end
-  object SynFreePascalSyn1: TSynFreePascalSyn
-    Enabled = False
-    CompilerMode = pcmObjFPC
-    NestedComments = True
-    left = 16
-    top = 32
-  end
-  object SynCppSyn1: TSynCppSyn
-    DefaultFilter = 'C++-Quelltexte (*.c,*.cpp,*.h,*.hpp,*.hh)|*.c;*.cpp;*.h;*.hpp;*.hh'
-    Enabled = False
-    left = 16
-    top = 80
-  end
-  object SynJavaSyn1: TSynJavaSyn
-    DefaultFilter = 'Java-Quelltexte (*.java)|*.java'
-    Enabled = False
-    left = 16
-    top = 136
-  end
-  object SynJScriptSyn1: TSynJScriptSyn
-    Enabled = False
-    left = 64
-    top = 32
-  end
-  object SynPerlSyn1: TSynPerlSyn
-    DefaultFilter = 'Perl-Dateien (*.pl,*.pm,*.cgi)|*.pl;*.pm;*.cgi'
-    Enabled = False
-    left = 120
-    top = 32
-  end
-  object SynHTMLSyn1: TSynHTMLSyn
-    DefaultFilter = 'HTML-Dokumente (*.htm,*.html)|*.htm;*.html'
-    Enabled = False
-    left = 64
-    top = 136
-  end
-  object SynXMLSyn1: TSynXMLSyn
-    DefaultFilter = 'XML-Dokumente (*.xml,*.xsd,*.xsl,*.xslt,*.dtd)|*.xml;*.xsd;*.xsl;*.xslt;*.dtd'
-    Enabled = False
-    WantBracesParsed = False
-    left = 64
-    top = 80
-  end
-  object SynDiffSyn1: TSynDiffSyn
-    Enabled = False
-    left = 120
-    top = 80
-  end
-  object SynUNIXShellScriptSyn1: TSynUNIXShellScriptSyn
-    DefaultFilter = 'Unix-Shellskripte (*.sh)|*.sh'
-    Enabled = False
-    left = 120
-    top = 136
-  end
-  object SynCssSyn1: TSynCssSyn
-    DefaultFilter = 'Cascading Stylesheets (*.css)|*.css'
-    Enabled = False
-    left = 16
-    top = 192
-  end
-  object SynPHPSyn1: TSynPHPSyn
-    DefaultFilter = 'PHP-Dateien (*.php,*.php3,*.phtml,*.inc)|*.php;*.php3;*.phtml;*.inc'
-    Enabled = False
-    left = 64
-    top = 192
-  end
-  object SynSQLSyn1: TSynSQLSyn
-    DefaultFilter = 'SQL-Dateien (*.sql)|*.sql'
-    Enabled = False
-    SQLDialect = sqlSybase
-    left = 120
-    top = 192
-  end
-  object SynPythonSyn1: TSynPythonSyn
-    DefaultFilter = 'Python-Dateien (*.py)|*.py'
-    Enabled = False
-    left = 16
-    top = 248
-  end
-  object SynVBSyn1: TSynVBSyn
-    Enabled = False
-    left = 64
-    top = 248
-  end
-  object SynBatSyn1: TSynBatSyn
-    DefaultFilter = 'MS-DOS-/Windows-Batchdateien (*.bat;*.cmd)|*.bat;*.cmd'
-    Enabled = False
-    left = 120
-    top = 248
-  end
-  object SynIniSyn1: TSynIniSyn
-    DefaultFilter = 'INI-Dateien (*.ini)|*.ini'
-    Enabled = False
-    left = 16
-    top = 304
   end
   object SynExporterHTML: TSynExporterHTML
     Color = clWindow
