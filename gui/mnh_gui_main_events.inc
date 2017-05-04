@@ -365,11 +365,23 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       saveSettings;
     end;
 
+  PROCEDURE displayProgress;
+    VAR aid:string;
+    begin
+      if hasEditor
+      then aid:=''
+      else aid:=C_tabChar+intToStr(getEditor^.editor.CaretY)+
+                      ','+intToStr(getEditor^.editor.CaretX);
+      StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
+    end;
+
   begin
+    if processIpcMessages then exit;
+    displayProgress;
+    enableDynamicItems;
     if askForm.displayPending then askForm.Show;
     if guiOutAdapter.flushToGui(OutputEdit) then exit;
     while guiTaskQueue.executeTask do;
-    if processIpcMessages then exit;
     autosaveSettings;
     checkForFileChanges;
   end;
