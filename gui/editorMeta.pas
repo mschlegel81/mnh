@@ -355,8 +355,8 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
 
           fileTypeMeta[language].menuItem:=menuItem;
           fileTypeMeta[language].highlighter:=highlighter;
-          fileTypeMeta[language].extensions:=extension;
-        end else append(fileTypeMeta[language].extensions,extension);
+          fileTypeMeta[language].extensions:=uppercase(extension);
+        end else append(fileTypeMeta[language].extensions,uppercase(extension));
       end;
 
     begin
