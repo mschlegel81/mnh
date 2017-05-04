@@ -171,7 +171,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
             end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
           end;
-        mt_endOfEvaluation: parentForm.onEndOfEvaluation;
+        mt_endOfEvaluation: begin
+          if guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+          parentForm.onEndOfEvaluation;
+        end;
         mt_gui_assistantFinished    : parentForm.onAssistantFinished;
         mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
         mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
