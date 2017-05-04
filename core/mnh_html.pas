@@ -1,7 +1,7 @@
 UNIT mnh_html;
 INTERFACE
 USES sysutils,
-     myGenerics,myStringUtil,
+     myStringUtil,
      mnh_constants,mnh_basicTypes,
      mnh_litVar,mnh_out_adapters,FileUtil,mnh_tokens;
 TYPE

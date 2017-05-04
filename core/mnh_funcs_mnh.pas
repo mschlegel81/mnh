@@ -147,7 +147,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('targetCpu'      , {$I %FPCTARGET%}                           )^
       .put('targetOs'       , {$I %FPCTargetOS%}                         )^
       .put('codeVersion'    , CODE_HASH                                  )^
-      .put('built'          , BUILT_NUMBER                               )^
+      .put('build'          , BUILT_NUMBER                               )^
       .put('flavour'        ,{$ifdef fullVersion}'F'{$else}'L'{$endif}+
                              {$ifdef debugMode}  'D'{$else}'O'{$endif}+
                              {$I %FPCTargetOS%}                          )
