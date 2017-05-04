@@ -14,7 +14,7 @@ PROCEDURE initializeOutputSettings;
       miMinErrorlevel3.Checked:=maxLevel= 3;
       miMinErrorlevel4.Checked:=maxLevel>=4;
     end;
-    guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour;
+    guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour+C_guiOnlyMessages;
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
   end;
 

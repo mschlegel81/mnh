@@ -219,9 +219,25 @@ PROCEDURE TMnhForm.onAssistantFinished;
   end;
 
 PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
-begin
-
-end;
+  VAR task:P_editScriptTask;
+      outIdx:longint;
+  begin
+    task:=data;
+    if successful then begin
+      if (task^.wantOutput) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
+        if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
+                               else outIdx:=task^.inputIdx;
+        inputPageControl.activePageIndex:=outIdx;
+        getEditor^.setLanguage(task^.getOutputLanguage,LANG_TXT);
+        getEditor^.updateContentAfterEditScript(P_listLiteral(task^.getOutput));
+      end else if (task^.wantInsert) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_string) then begin
+        inputPageControl.activePageIndex:=task^.inputIdx;
+        getEditor^.insertText(P_stringLiteral(task^.getOutput)^.value);
+      end;
+    end;
+    dispose(task,destroy);
+    updateEditorsByGuiStatus;
+  end;
 
 PROCEDURE TMnhForm.onBreakpoint(CONST data);
 begin

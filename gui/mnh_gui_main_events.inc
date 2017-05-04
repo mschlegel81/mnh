@@ -466,15 +466,37 @@ PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject); begin if hasEditor then getEditor^.exportToHtml; end;
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
-  begin end;
+  begin
+    if newCentralPackageForm.ShowModal=mrOk then
+        inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(newCentralPackageForm.fileNameEdit.text,true);
+  end;
+
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
-  begin end;
+  begin
+    if openDemoDialogForm.ShowModal=mrOk then
+       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openDemoDialogForm.selectedFile,true);
+  end;
+
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
-  begin end;
+  VAR k:longint;
+  begin
+    if not(hasEditor) then exit;
+    k:=inputPageControl.activePageIndex;
+    with getEditor^ do runEvaluator.runUtilScript(TMenuItem(Sender).Tag,k,editor.lines,defaultExtensionByLanguage,pseudoName());
+    updateEditorsByGuiStatus;
+  end;
+
 PROCEDURE TMnhForm.miUtilityScriptRootClick(Sender: TObject);
-  begin end;
+  begin
+    updateScriptMenus;
+  end;
+
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
-  begin end;
+  begin
+    SettingsForm.ShowModal;
+    initializeOutputSettings;
+    processFontSettings;
+  end;
 
 PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
   VAR fileName:string;

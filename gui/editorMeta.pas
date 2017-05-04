@@ -59,6 +59,9 @@ TYPE T_language=(LANG_MNH   = 0,
 
 TYPE
 P_editorMeta=^T_editorMeta;
+
+{ T_editorMeta }
+
 T_editorMeta=object(T_codeProvider)
   private
     index:longint;
@@ -74,7 +77,6 @@ T_editorMeta=object(T_codeProvider)
     plugin      : TSynPluginMultiCaret;
     highlighter : TSynMnhSyn;
     PROCEDURE setLanguage(CONST languageIndex:T_language);
-    PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:T_language);
     PROCEDURE guessLanguage(CONST fallback:T_language);
     //FUNCTION languageName:string;
 
@@ -89,6 +91,8 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION stateHash:T_hashInt;                                    virtual;
     FUNCTION disposeOnPackageDestruction:boolean;                    virtual;
     FUNCTION isPseudoFile:boolean;                                   virtual;
+
+    PROCEDURE setLanguage(CONST extensionWithoutDot:string; CONST fallback:T_language);
 
     PROPERTY language:T_language read language_ write setLanguage;
     PROPERTY editor:TSynEdit read editor_;
@@ -107,6 +111,10 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION saveWithDialog:boolean;
     PROCEDURE reloadFile(CONST fileName:string);
     PROCEDURE exportToHtml;
+    FUNCTION pseudoName(CONST short:boolean=false):ansistring;
+    FUNCTION defaultExtensionByLanguage:ansistring;
+    PROCEDURE insertText(CONST s:string);
+    PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
 
   private
     PROCEDURE initWithState(VAR state:T_editorState);
@@ -126,8 +134,6 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE initForNewFile;
   PROCEDURE setMarkedWord(CONST wordText:string);
   PROCEDURE writeToEditorState(CONST settings:P_Settings);
-  PROCEDURE insertText(CONST s:string);
-  FUNCTION pseudoName(CONST short:boolean=false):ansistring;
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
@@ -135,7 +141,6 @@ T_editorMeta=object(T_codeProvider)
   FUNCTION saveFile(CONST fileName:string=''):string;
   FUNCTION fileIsDeleted:boolean;
   FUNCTION fileIsModifiedOnFileSystem:boolean;
-  PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
 end;
 
 T_runnerModel=object
@@ -679,7 +684,8 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
     mainForm.onDebuggerEvent;
   end;
 
-PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: T_language);
+PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string;
+  CONST fallback: T_language);
   VAR l:T_language;
       s:string;
       ext:string;
@@ -748,7 +754,8 @@ FUNCTION T_editorMeta.caretInMainFormCoordinates: TPoint;
     result:=editor.ClientToParent(result,mainForm);
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
+  forHelpOrJump: boolean; CONST caret: TPoint);
   VAR m:P_editorMeta;
       wordUnderCursor:string;
   begin
@@ -763,7 +770,8 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean;
   end;
 
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
+  );
   begin
     setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
   end;
@@ -884,6 +892,11 @@ FUNCTION T_editorMeta.pseudoName(CONST short: boolean): ansistring;
     end else result:='<new '+intToStr(index)+'>';
   end;
 
+FUNCTION T_editorMeta.defaultExtensionByLanguage: ansistring;
+  begin
+    result:=fileTypeMeta[language_].extensions[0];
+  end;
+
 PROCEDURE T_editorMeta.setStepperBreakpoints;
   VAR i:longint;
   begin
@@ -909,7 +922,8 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateHash(CONST stateHashForHints:T_hashInt; CONST errorHints:T_arrayOfString);
+PROCEDURE T_editorMeta.repaintWithStateHash(CONST stateHashForHints: T_hashInt;
+  CONST errorHints: T_arrayOfString);
   VAR i:longint;
   begin
     {$ifdef debugMode}
