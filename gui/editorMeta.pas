@@ -396,11 +396,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     VAR i:longint;
     begin
       setLength(editorMetaData,length(settings.value^.workspace.editorState));
-      runEvaluator.context.stepper^.clearBreakpoints;
-      for i:=0 to length(editorMetaData)-1 do begin
-        new(editorMetaData[i],create(i,settings.value^.workspace.editorState[i]));
-        editorMetaData[i]^.setStepperBreakpoints;
-      end;
+      for i:=0 to length(editorMetaData)-1 do new(editorMetaData[i],create(i,settings.value^.workspace.editorState[i]));
       i:=settings.value^.workspace.activePage;
       inputPageControl.activePageIndex:=i;
       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
@@ -555,8 +551,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
     editor.CaretX:=state.caret['x'];
     editor.CaretY:=state.caret['y'];
-    setLanguage(T_language(state.language));
-    updateSheetCaption;
+    language_:=T_language(state.language);
   end;
 
 DESTRUCTOR T_editorMeta.destroy;
@@ -604,13 +599,20 @@ PROCEDURE T_editorMeta.activate;
     {$endif}
     editor_.Font:=assistanceSynEdit.Font;
     completionLogic.assignEditor(@self);
-    if language=LANG_MNH then assistancEvaluator.evaluate(@self);
+    if language_=LANG_MNH then assistancEvaluator.evaluate(@self);
     mainForm.caption:=updateSheetCaption;
 
     for l in T_language do begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.Checked:=(l=language);
     end;
+    if language_=LANG_MNH
+    then editor.highlighter:=highlighter
+    else editor.highlighter:=fileTypeMeta[language_].highlighter;
+    editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
+    editor.readonly                :=runnerModel.areEditorsLocked;
+
+    settings.value^.workspace.activePage:=index;
   end;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
@@ -674,11 +676,6 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
     if language_=languageIndex then exit;
 
     language_:=languageIndex;
-    if language_=LANG_MNH
-    then editor.highlighter:=highlighter
-    else editor.highlighter:=fileTypeMeta[language_].highlighter;
-    editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
-    editor.readonly                :=runnerModel.areEditorsLocked;
     {$ifdef debugMode}writeln('        DEBUG: Set language ',language_);{$endif}
     activate;
     mainForm.onDebuggerEvent;
