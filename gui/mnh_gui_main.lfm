@@ -8,6 +8,7 @@ object MnhForm: TMnhForm
   ClientHeight = 601
   ClientWidth = 717
   Color = clWhite
+  KeyPreview = True
   Menu = MainMenu1
   OnChangeBounds = FormResize
   OnClose = FormClose
@@ -2183,7 +2184,7 @@ object MnhForm: TMnhForm
     Visible = False
     object tbRun: TToolButton
       Left = 1
-      Hint = 'Run/continue (F5)'
+      Hint = 'Run/continue'
       Top = 2
       Caption = 'tbRun'
       ImageIndex = 0

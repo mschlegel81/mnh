@@ -263,7 +263,7 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath;
     end;
     //prepare or dispose stepper:
     if eco_debugging in options then begin
-      if debuggingStepper=nil then new(debuggingStepper,create);
+      if debuggingStepper=nil then new(debuggingStepper,create(adapters));
       debuggingStepper^.resetForDebugging(package);
     end else if debuggingStepper<>nil then begin
       dispose(debuggingStepper,destroy);
@@ -361,7 +361,7 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
 {$ifdef fullVersion}
 FUNCTION T_evaluationContext.stepper:P_debuggingStepper;
   begin
-    if debuggingStepper=nil then new(debuggingStepper,create);
+    if debuggingStepper=nil then new(debuggingStepper,create(adapters));
     result:=debuggingStepper;
   end;
 

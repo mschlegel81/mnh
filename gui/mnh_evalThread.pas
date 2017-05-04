@@ -203,7 +203,7 @@ FUNCTION main(p:pointer):ptrint;
     VAR collector:P_collectingOutAdapter;
         successful:boolean=true;
     begin
-      {$ifdef debugMode} writeln('        DEBUG: mnhEvalThread - doneEdit'); {$endif}
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
       context.afterEvaluation;
       if (context.adapters^.hasPrintOut) or
          (context.adapters^.hasNonSilentError) then begin
@@ -212,7 +212,8 @@ FUNCTION main(p:pointer):ptrint;
         P_runEvaluator(p)^.adapter^.raiseStoredMessages(collector^.storedMessages);
         successful:=false;
       end;
-      if P_runEvaluator(p)^.currentEdit<>nil then P_runEvaluator(p)^.adapter^.logEndOfEditScript(P_runEvaluator(p)^.currentEdit,successful);
+      if P_runEvaluator(p)^.currentEdit<>nil then P_runEvaluator(p)^.adapter^.logEndOfEditScript(P_runEvaluator(p)^.currentEdit,successful)
+                                             else P_runEvaluator(p)^.adapter^.logEndOfEvaluation;
       context.destroy;
       P_runEvaluator(p)^.currentEdit:=nil;
     end;
@@ -226,17 +227,17 @@ FUNCTION main(p:pointer):ptrint;
     begin with P_runEvaluator(p)^ do begin
       setupEdit(editContext);
       if utilityScriptPackage=nil then begin
-        {$ifdef debugMode} writeln('        DEBUG: Creating script package'); {$endif}
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: Creating script package'); {$endif}
         new(utilityScriptPackage,create(newFileCodeProvider(utilityScriptFileName),nil));
       end else if not(utilityScriptPackage^.codeChanged) then exit;
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
-      {$ifdef debugMode} writeln('        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
       utilityScriptPackage^.load(lu_forImport,editContext.threadContext^,C_EMPTY_STRING_ARRAY);
       if editContext.adapters^.noErrors then begin
         for scriptType in T_scriptType do
         for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
-          {$ifdef debugMode} writeln('        DEBUG: Found script: ',subRule^.getId); {$endif}
+          {$ifdef debugMode} writeln(stdErr,'        DEBUG: Found script: ',subRule^.getId); {$endif}
           new(script,create(subRule,isValid,editAdapters^));
           if isValid then begin
             setLength(utilityScriptList,length(utilityScriptList)+1);

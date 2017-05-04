@@ -22,7 +22,7 @@ TYPE
 
     PROCEDURE onAssistantFinished;                                          override;
     PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
-    PROCEDURE onBreakpoint  (CONST data);                                   override;
+    PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
     PROCEDURE onDebuggerEvent;                                              override;
     PROCEDURE onEndOfEvaluation; override;
   private
@@ -34,9 +34,6 @@ VAR
 
 IMPLEMENTATION
 {$R *.lfm}
-
-{ ToutputOnlyForm }
-
 PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
   CONST MIN_INTERVALL=1;
         MAX_INTERVALL=1000;
@@ -67,7 +64,7 @@ PROCEDURE ToutputOnlyForm.onEditFinished(CONST data: pointer; CONST successful: 
 begin
 end;
 
-PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data);
+PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data:pointer);
 begin
 end;
 

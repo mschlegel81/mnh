@@ -4,21 +4,19 @@ UNIT mnh_gui_main;
 INTERFACE
 USES
   //basic classes
-  Classes, sysutils, FileUtil, LazUTF8, LCLType, lclintf, types,
+  Classes, sysutils, LCLType, lclintf, types,
   //my utilities:
   mnhFormHandler, myStringUtil, myGenerics,
   //GUI: LCL components
-  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls, simpleipc,
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
+  SynEdit, SynCompletion, SynMemo, SynGutterMarks, SynEditKeyCmds,
   //GUI: highlighters
   SynHighlighterMnh,
-  SynEditHighlighter,
   SynExportHTML,
   //Other Forms:
   newCentralPackageDialog,
   mnh_gui_settings,
-  closeDialog,
   askDialog,
   mnh_tables,
   openDemoDialog,
@@ -29,8 +27,7 @@ USES
   editPopupModel,
   searchModel,
   ipcModel,
-  mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
-  mnh_out_adapters,
+  mnh_constants, mnh_basicTypes,mnh_settings,
   mnh_litVar,
   mnh_funcs, valueStore,
   mnh_debugging,
@@ -39,13 +36,10 @@ USES
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
-
-
 TYPE
   {$define includeInterface}
   {$include guiEditorInterface.inc}
   {$WARN 5024 OFF}
-  { TMnhForm }
 
   TMnhForm = class(T_abstractMnhForm)
     FindDialog:                TFindDialog;
@@ -142,7 +136,7 @@ TYPE
     {$i mnh_gui_main_events.inc}
     PROCEDURE onAssistantFinished;                                          override;
     PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
-    PROCEDURE onBreakpoint  (CONST data);                                   override;
+    PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
     PROCEDURE onDebuggerEvent;                                              override;
     PROCEDURE onEndOfEvaluation;                                            override;
     PROCEDURE positionHelpNotifier;
@@ -150,14 +144,13 @@ TYPE
     PROCEDURE enableDynamicItems;
     PROCEDURE updateScriptMenus;
     PROCEDURE updateFileHistory;
-    //PROCEDURE updateExpressionMemo;
   private
     focusEditorOnEditMouseUp:boolean;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
     FUNCTION focusedEditor:TSynEdit;
-
+    PROCEDURE updateExpressionMemo;
   end;
 
 VAR MnhForm: TMnhForm;
@@ -239,10 +232,43 @@ PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean
     updateEditorsByGuiStatus;
   end;
 
-PROCEDURE TMnhForm.onBreakpoint(CONST data);
-begin
+VAR currentSnapshot:P_debuggingSnapshot=nil;
 
-end;
+PROCEDURE TMnhForm.onBreakpoint(CONST data:pointer);
+  PROCEDURE jumpToFile;
+    begin
+      runnerModel.markDebugLine(OutputEdit,-1);
+      if currentSnapshot^.location.package=nil then exit;
+      if openLocation(currentSnapshot^.location) then begin
+        runnerModel.markDebugLine(getEditor^.editor,currentSnapshot^.location.line);
+        getEditor^.editor.Repaint;
+      end;
+    end;
+
+  PROCEDURE clearStackView;
+    VAR i:longint;
+    begin
+      variablesTreeView.items.clear;
+      for i:=0 to callStackInfoStringGrid.RowCount-1 do callStackInfoStringGrid.Cells[1,i]:='';
+
+      callStackList.items.clear;
+      for i:=currentSnapshot^.callStack^.size-1 downto 0 do
+      callStackList.items.add(currentSnapshot^.callStack^[i].calleeId);
+      callStackList.ItemIndex:=0;
+    end;
+
+  begin
+    if not(runnerModel.debugMode) then exit;
+    onDebuggerEvent;
+
+    currentSnapshot:=P_debuggingSnapshot(data);
+
+    jumpToFile;
+    clearStackView;
+    updateExpressionMemo;
+
+    outputPageControl.activePage:=debugTabSheet;
+  end;
 
 PROCEDURE TMnhForm.onDebuggerEvent;
    begin
@@ -252,7 +278,9 @@ PROCEDURE TMnhForm.onDebuggerEvent;
 
 PROCEDURE TMnhForm.onEndOfEvaluation;
   begin
+    enableDynamicItems;
     updateEditorsByGuiStatus;
+    outputPageControl.activePage:=outputTabSheet;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -318,7 +346,7 @@ PROCEDURE TMnhForm.enableDynamicItems;
                             else if outputPageControl.activePage =debugTabSheet then
                                     outputPageControl.activePage:=outputTabSheet;
     handleButton(tbStop     ,halted or running, 2);
-    handleButton(tbRun      ,runnerModel.canRun, 0,true);
+    handleButton(tbRun      ,halted or runnerModel.canRun, 0,true);
     handleButton(tbStep     ,halted , 4);
     handleButton(tbStepIn   ,halted , 6);
     handleButton(tbStepOut  ,halted , 8);
@@ -393,39 +421,37 @@ PROCEDURE TMnhForm.updateFileHistory;
     end;
   end;
 
+PROCEDURE TMnhForm.updateExpressionMemo;
+  VAR lines,chars:longint;
+      tokens:T_arrayOfString;
+      txt:ansistring;
+      k:longint=0;
+      firstInLine:boolean;
+  begin
+    currentExpressionMemo.lines.clear;
+    if currentSnapshot=nil then exit;
 
-//PROCEDURE TMnhForm.updateExpressionMemo;
-//  VAR lines,chars:longint;
-//      snapshot:T_debuggingSnapshot;
-//      tokens:T_arrayOfString;
-//      txt:ansistring;
-//      k:longint=0;
-//      firstInLine:boolean;
-//  begin
-//    if not(runEvaluator.context.isPaused and runEvaluator.evaluationRunning) then exit;
-//    snapshot:=runEvaluator.context.stepper^.getDebuggingSnapshot;
-//    lines:=currentExpressionMemo.LinesInWindow;
-//    chars:=currentExpressionMemo.charsInWindow;
-//    if (lines*chars<50) then begin
-//      lines:=1;
-//      chars:=50;
-//    end;
-//
-//    currentExpressionMemo.lines.clear;
-//    tokens:=tokenSplit(snapshot.tokenStack^.toString(snapshot.first,round(lines*chars*0.9)));
-//
-//    while k<length(tokens) do begin
-//      txt:='';
-//      firstInLine:=true;
-//      while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=chars)) do begin
-//        txt:=txt+tokens[k];
-//        inc(k);
-//        firstInLine:=false;
-//      end;
-//      currentExpressionMemo.lines.append(txt);
-//    end;
-//    setLength(tokens,0);
-//  end;
+    lines:=currentExpressionMemo.LinesInWindow;
+    chars:=currentExpressionMemo.charsInWindow;
+    if (lines*chars<50) then begin
+      lines:=1;
+      chars:=50;
+    end;
+
+    tokens:=tokenSplit(currentSnapshot^.tokenStack^.toString(currentSnapshot^.first,round(lines*chars*0.9)));
+
+    while k<length(tokens) do begin
+      txt:='';
+      firstInLine:=true;
+      while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=chars)) do begin
+        txt:=txt+tokens[k];
+        inc(k);
+        firstInLine:=false;
+      end;
+      currentExpressionMemo.lines.append(txt);
+    end;
+    setLength(tokens,0);
+  end;
 
 {$i mnh_gui_main_events.inc}
 

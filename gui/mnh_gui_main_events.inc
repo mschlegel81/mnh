@@ -132,10 +132,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     runnerModel.create;
     focusEditorOnEditMouseUp:=false;
 
-    //lastWordsCaret:=maxLongint;
-    //wordsInEditor.create;
-    //forceInputEditFocusOnOutputEditMouseUp:=false;
-    //doNotCheckFileBefore:=now+ONE_SECOND;
     initIpcServer(self);
     //Initialize other units
     setupCallbacks;
@@ -174,6 +170,13 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
+    if (key=116) and (ssShift in Shift) and tbRun      .enabled then tbRunClick(Sender);
+    if (key=117) and                        tbStepIn   .enabled then tbStepInClick(Sender);
+    if (key=118) then begin
+      if not(ssShift in Shift)          and tbStep     .enabled then tbStepClick(Sender);
+      if    (ssShift in Shift)          and tbMicroStep.enabled then tbMicroStepClick(Sender);
+    end;
+    if (key=119)                        and tbStepOut  .enabled then tbStepOutClick(Sender);
   end;
 
 VAR firstShow:boolean=true;
@@ -199,11 +202,11 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
-      if hasEditor then getEditor^.activate;
       UpdateTimeTimer.enabled:=true;
       enableDynamicItems;
       firstShow:=false;
     end;
+    if hasEditor then getEditor^.activate;
   end;
 
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -318,6 +321,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
     runnerModel.haltEvaluation;
+    currentSnapshot:=nil;
   end;
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
@@ -325,15 +329,17 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
     else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
                                           else runnerModel.doDebuggerAction(breakSoonest);
+    currentSnapshot:=nil;
   end;
 
-PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject); begin if tbMicroStep.enabled then runnerModel.doDebuggerAction(breakSoonest     ); end;
-PROCEDURE TMnhForm.tbStepClick     (Sender: TObject); begin if tbStep     .enabled then runnerModel.doDebuggerAction(breakOnLineChange); end;
-PROCEDURE TMnhForm.tbStepInClick   (Sender: TObject); begin if tbStepIn   .enabled then runnerModel.doDebuggerAction(breakOnStepIn    ); end;
-PROCEDURE TMnhForm.tbStepOutClick  (Sender: TObject); begin if tbStepOut  .enabled then runnerModel.doDebuggerAction(breakOnStepOut   ); end;
+PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject); begin if tbMicroStep.enabled then begin runnerModel.doDebuggerAction(breakSoonest     ); currentSnapshot:=nil; end; end;
+PROCEDURE TMnhForm.tbStepClick     (Sender: TObject); begin if tbStep     .enabled then begin runnerModel.doDebuggerAction(breakOnLineChange); currentSnapshot:=nil; end; end;
+PROCEDURE TMnhForm.tbStepInClick   (Sender: TObject); begin if tbStepIn   .enabled then begin runnerModel.doDebuggerAction(breakOnStepIn    ); currentSnapshot:=nil; end; end;
+PROCEDURE TMnhForm.tbStepOutClick  (Sender: TObject); begin if tbStepOut  .enabled then begin runnerModel.doDebuggerAction(breakOnStepOut   ); currentSnapshot:=nil; end; end;
 PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
   begin
     runnerModel.haltEvaluation;
+    currentSnapshot:=nil;
   end;
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
@@ -343,8 +349,29 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
+  FUNCTION processIpcMessages:boolean;
+    VAR filesToOpen:T_arrayOfString;
+    begin
+      filesToOpen:=ipcModel.getFilesToOpen;
+      if length(filesToOpen)=0 then exit(false);
+      inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpen,true);
+      result:=true;
+    end;
+
+  PROCEDURE autosaveSettings;
+    begin
+      if not(settings.value^.savingRequested) then exit;
+      storeEditorsToSettings;
+      saveSettings;
+    end;
+
   begin
+    if askForm.displayPending then askForm.Show;
     if guiOutAdapter.flushToGui(OutputEdit) then exit;
+    while guiTaskQueue.executeTask do;
+    if processIpcMessages then exit;
+    autosaveSettings;
+    checkForFileChanges;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
@@ -510,15 +537,72 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
     if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(fileName,true);
   end;
 
-PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject);
+PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject); begin updateExpressionMemo; end;
+
+FUNCTION treeLit_canExpand(L:P_literal):boolean;
   begin
-    //updateExpressionMemo;
+    result:=(L<>nil) and (L^.literalType in C_compoundTypes) and (length(L^.toString(100))>=100);
   end;
+
+FUNCTION treeLit_toString(L:P_literal):string;
+  begin
+    if L=nil then result:=' ' else
+    if treeLit_canExpand(L) then result:=L^.typeString
+                            else result:=L^.toString();
+  end;
+
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
+  VAR stackIdx:longint;
+      report:T_variableReport;
+      i:longint;
+  PROCEDURE addVariable(CONST id:string; CONST value:P_literal);
+    VAR newNode:TTreeNode;
+        i:longint;
+    begin
+      newNode:=variablesTreeView.items.add(nil,id+'='+treeLit_toString(value));
+      newNode.data:=value;
+      if treeLit_canExpand(value) then for i:=0 to P_listLiteral(value)^.size-1 do
+        variablesTreeView.items.AddChild(newNode,treeLit_toString(P_listLiteral(value)^[i])).data:=P_listLiteral(value)^[i];
+    end;
+
   begin
+    if currentSnapshot=nil then exit;
+    stackIdx:=currentSnapshot^.callStack^.size-1-callStackList.ItemIndex;
+    variablesTreeView.items.clear;
+
+    if (stackIdx>=0) and (stackIdx<currentSnapshot^.callStack^.size) then begin
+      callStackInfoStringGrid.Cells[1,0]:=ansistring(currentSnapshot^.callStack^[stackIdx].calleeLocation);
+      callStackInfoStringGrid.Cells[1,1]:=currentSnapshot^.callStack^[stackIdx].calleeId;
+      callStackInfoStringGrid.Cells[1,2]:=ansistring(currentSnapshot^.callStack^[stackIdx].calleeLocation);
+    end;
+
+    if (callStackList.ItemIndex<=0) then begin
+      report.create;
+      runEvaluator.reportVariables(report);
+      runEvaluator.context.threadContext^.reportVariables(report);
+      for i:=length(report.dat)-1 downto 0 do
+        addVariable(report.dat[i].id+' ['+report.dat[i].location+']',report.dat[i].value);
+      report.destroy;
+    end;
   end;
+
 PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
-  begin end;
+  PROCEDURE addChildren(node2:TTreeNode);
+    VAR L:P_literal;
+        iter:T_arrayOfLiteral;
+    begin
+      iter:=P_compoundLiteral(node2.data)^.iteratableList;
+      for L in iter do variablesTreeView.items.AddChild(node2,treeLit_toString(L)).data:=L;
+      disposeLiteral(iter);
+    end;
+
+  VAR i:longint;
+  begin
+    AllowExpansion:=treeLit_canExpand(node.data);
+    if not(AllowExpansion) then exit;
+    for i:=0 to node.count-1 do
+    if not(node.items[i].HasChildren) and (treeLit_canExpand(node.items[i].data)) then addChildren(node.items[i]);
+  end;
 
 
 {$endif}

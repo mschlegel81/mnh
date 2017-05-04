@@ -1,14 +1,13 @@
 UNIT editorMeta;
 INTERFACE
 USES  //basic classes
-  Classes, sysutils, FileUtil, LazUTF8, LCLType, lclintf, types,
+  Classes, sysutils, FileUtil, LazUTF8, LCLType, types,
   //my utilities:
-  mnhFormHandler, myStringUtil, myGenerics,
+  myStringUtil, myGenerics,
   //GUI: LCL components
-  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls, simpleipc,
+  Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynEditTypes, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynMemo, SynGutterMarks, SynEditMarks, SynEditKeyCmds,
-  SynEditMarkupSpecialLine,
+  SynEdit, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
   SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
@@ -16,23 +15,14 @@ USES  //basic classes
   SynHighlighterCss, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterPython,
   SynHighlighterVB, SynHighlighterBat, SynHighlighterIni, SynEditHighlighter,
   SynExportHTML,
-  //Other Forms:
-  newCentralPackageDialog,
-  mnh_gui_settings,
   closeDialog,
-  askDialog,
   mnh_tables,
-  openDemoDialog,
   mnh_plotForm,
-  mnh_splash,
   //MNH:
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
-  mnh_out_adapters,
   mnh_litVar,
-  mnh_funcs, valueStore,
+  mnh_funcs,
   mnh_debugging,
-  mnh_contexts,
-  mnh_doc,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   guiOutAdapters;
@@ -118,7 +108,7 @@ T_editorMeta=object(T_codeProvider)
 
   private
     PROCEDURE initWithState(VAR state:T_editorState);
-
+    PROCEDURE closeEditorQuietly;
   //Events handling:
   PROCEDURE InputEditChange(Sender: TObject);
   PROCEDURE languageMenuItemClick(Sender: TObject);
@@ -165,6 +155,7 @@ T_runnerModel=object
     PROCEDURE rerun(CONST profiling:boolean);
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
+    PROCEDURE markDebugLine(CONST editor:TSynEdit; CONST line:longint);
     PROCEDURE haltEvaluation;
   end;
 
@@ -210,6 +201,7 @@ PROCEDURE cycleEditors(CONST cycleForward:boolean);
 PROCEDURE updateEditorsByGuiStatus;
 PROCEDURE closeAllEditorsButCurrent;
 PROCEDURE closeAllUnmodifiedEditors;
+PROCEDURE checkForFileChanges;
 VAR runnerModel:T_runnerModel;
     completionLogic:T_completionLogic;
 IMPLEMENTATION
@@ -595,7 +587,7 @@ PROCEDURE T_editorMeta.activate;
   begin
     if not(sheet.tabVisible) then exit;
     {$ifdef debugMode}
-    writeln('Activating editor "',pseudoName(),'"');
+    writeln(stdErr,'        DEBUG: Activating editor "',pseudoName(),'"');
     {$endif}
     editor_.Font:=assistanceSynEdit.Font;
     completionLogic.assignEditor(@self);
@@ -613,6 +605,7 @@ PROCEDURE T_editorMeta.activate;
     editor.readonly                :=runnerModel.areEditorsLocked;
 
     settings.value^.workspace.activePage:=index;
+    mainForm.onDebuggerEvent;
   end;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
@@ -651,6 +644,18 @@ FUNCTION T_editorMeta.saveWithDialog: boolean;
     end else result:=saveAsWithDialog;
   end;
 
+PROCEDURE T_editorMeta.closeEditorQuietly;
+  begin
+    sheet.tabVisible:=false;
+    editor.clearAll;
+    with fileInfo do begin
+      filePath:='';
+      isChanged:=false;
+    end;
+    editor.modified:=false;
+
+  end;
+
 PROCEDURE T_editorMeta.closeEditorWithDialogs;
   VAR mr:longint;
   begin
@@ -661,14 +666,7 @@ PROCEDURE T_editorMeta.closeEditorWithDialogs;
       if mr=mrCancel then exit;
     end;
     if isFile then settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
-
-    sheet.tabVisible:=false;
-    editor.clearAll;
-    with fileInfo do begin
-      filePath:='';
-      isChanged:=false;
-    end;
-    editor.modified:=false;
+    closeEditorQuietly;
   end;
 
 PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
@@ -676,9 +674,8 @@ PROCEDURE T_editorMeta.setLanguage(CONST languageIndex: T_language);
     if language_=languageIndex then exit;
 
     language_:=languageIndex;
-    {$ifdef debugMode}writeln('        DEBUG: Set language ',language_);{$endif}
+    {$ifdef debugMode}writeln(stdErr,'        DEBUG: Set language ',language_);{$endif}
     activate;
-    mainForm.onDebuggerEvent;
   end;
 
 PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string;
@@ -924,7 +921,7 @@ PROCEDURE T_editorMeta.repaintWithStateHash(CONST stateHashForHints: T_hashInt;
   VAR i:longint;
   begin
     {$ifdef debugMode}
-    writeln('        DEBUG: Repainting ',pseudoName(true),' with state ',stateHashForHints,'[',stateHashForHints<>paintedWithStateHash,']',' (',length(errorHints),' hints/errors)');
+    writeln(stdErr,'        DEBUG: Repainting ',pseudoName(true),' with state ',stateHashForHints,'[',stateHashForHints<>paintedWithStateHash,']',' (',length(errorHints),' hints/errors)');
     {$endif}
     if (stateHashForHints<>paintedWithStateHash) then begin
       paintedWithStateHash:=stateHashForHints;
@@ -1161,6 +1158,28 @@ PROCEDURE closeAllUnmodifiedEditors;
     if not(hasEditor and getEditor^.sheet.tabVisible) then cycleEditors(true);
   end;
 
+VAR doNotCheckFileBefore:double;
+PROCEDURE checkForFileChanges;
+  VAR m:P_editorMeta;
+      modalRes:longint;
+  begin
+    if now<doNotCheckFileBefore then exit;
+    doNotCheckFileBefore:=now+1;
+    for m in editorMetaData do with m^ do
+    if fileIsDeleted then begin
+      modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
+      if modalRes=mrOk then closeEditorQuietly;
+      if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else
+      fileInfo.isChanged:=true;
+      continue;
+    end else if fileIsModifiedOnFileSystem then begin
+      modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
+      if modalRes=mrOk then reloadFile(fileInfo.filePath);
+      if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else
+      fileInfo.isChanged:=true;
+    end;
+    doNotCheckFileBefore:=now+ONE_SECOND;
+  end;
 
 PROCEDURE finalizeEditorMeta;
   VAR i:longint;
@@ -1197,6 +1216,7 @@ FUNCTION T_runnerModel.canRun: boolean;
   end;
 
 PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST mainParameters: string);
+  VAR m:P_editorMeta;
   begin
     if not(canRun) then exit;
     guiOutAdapter.flushClear;
@@ -1206,9 +1226,13 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
     end;
     resetTableForms;
     getEditor^.setWorkingDir;
-    if debugMode then updateEditorsByGuiStatus;
-    if mainCall then runEvaluator.callMain(getEditor,lastStart.parameters,profiling,debugMode_)
-                else runEvaluator.evaluate(getEditor,                     profiling,debugMode_);
+    if debugMode then begin
+      updateEditorsByGuiStatus;
+      runEvaluator.context.stepper^.clearBreakpoints;
+      for m in editorMetaData do m^.setStepperBreakpoints;
+    end;
+    if mainCall then runEvaluator.callMain(getEditor,mainParameters,profiling,debugMode_)
+                else runEvaluator.evaluate(getEditor,               profiling,debugMode_);
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;
   end;
@@ -1231,6 +1255,12 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
       editor.Gutter.MarksPart.visible:=debugMode_ and (language=LANG_MNH);
       editor.readonly:=areEditorsLocked;
     end;
+  end;
+
+PROCEDURE T_runnerModel.markDebugLine(CONST editor:TSynEdit; CONST line:longint);
+  begin
+    debugLine.editor:=editor;
+    debugLine.line  :=line;
   end;
 
 PROCEDURE T_runnerModel.haltEvaluation;
@@ -1314,7 +1344,7 @@ PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
 
 INITIALIZATION
   setLength(editorMetaData,0);
-
+  doNotCheckFileBefore:=now;
 FINALIZATION
   finalizeEditorMeta;
 end.

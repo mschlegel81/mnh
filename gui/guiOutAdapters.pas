@@ -9,7 +9,7 @@ TYPE
     public
       PROCEDURE onAssistantFinished;                                          virtual; abstract;
       PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); virtual; abstract;
-      PROCEDURE onBreakpoint  (CONST data);                                   virtual; abstract;
+      PROCEDURE onBreakpoint  (CONST data:pointer);                           virtual; abstract;
       PROCEDURE onDebuggerEvent;                                              virtual; abstract;
       PROCEDURE onEndOfEvaluation;                                            virtual; abstract;
   end;
@@ -146,7 +146,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
-      {$ifdef debugMode}writeln(stdErr,'Already flushing!');{$endif}
+      {$ifdef debugMode}writeln(stdErr,'        DEBUG: Already flushing!');{$endif}
       system.leaveCriticalSection(cs);
       exit(false);
     end;
@@ -156,7 +156,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     linesToWrite:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       {$ifdef debugMode}
-      writeln(stdErr,'guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
+      writeln(stdErr,'        DEBUG: guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
       {$endif}
       case messageType of
         mt_clearConsole: clearSynAndBuffer;
@@ -189,7 +189,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         parentForm.Show;
         parentForm.visible:=true;
         {$ifdef debugMode}
-        writeln(stdErr,'mnh form show triggered');
+        writeln(stdErr,'        DEBUG: mnh form show triggered');
         {$endif}
       end;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
