@@ -247,17 +247,17 @@ FUNCTION async_imp intFuncSignature;
   end;
 
 {$MACRO ON}
-{$define funcForOp:=intFuncSignature; begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^) else result:=nil; end}
-{$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      funcForOp;
-{$define OP:=tt_comparatorNeq    } FUNCTION funcFor_comparatorNeq     funcForOp;
-{$define OP:=tt_comparatorLeq    } FUNCTION funcFor_comparatorLeq     funcForOp;
-{$define OP:=tt_comparatorGeq    } FUNCTION funcFor_comparatorGeq     funcForOp;
-{$define OP:=tt_comparatorLss    } FUNCTION funcFor_comparatorLss     funcForOp;
-{$define OP:=tt_comparatorGrt    } FUNCTION funcFor_comparatorGrt     funcForOp;
-{$define OP:=tt_comparatorListEq } FUNCTION funcFor_comparatorListEq  funcForOp;
-{$define OP:=tt_operatorAnd      } FUNCTION funcFor_operatorAnd       funcForOp;
-{$define OP:=tt_operatorOr       } FUNCTION funcFor_operatorOr        funcForOp;
-{$define OP:=tt_operatorXor      } FUNCTION funcFor_operatorXor       funcForOp;
+{$define funcForOp:=begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^) else result:=nil; end}
+{$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      intFuncSignature; funcForOp;
+{$define OP:=tt_comparatorNeq    } FUNCTION funcFor_comparatorNeq     intFuncSignature; funcForOp;
+{$define OP:=tt_comparatorLeq    } FUNCTION funcFor_comparatorLeq     intFuncSignature; funcForOp;
+{$define OP:=tt_comparatorGeq    } FUNCTION funcFor_comparatorGeq     intFuncSignature; funcForOp;
+{$define OP:=tt_comparatorLss    } FUNCTION funcFor_comparatorLss     intFuncSignature; funcForOp;
+{$define OP:=tt_comparatorGrt    } FUNCTION funcFor_comparatorGrt     intFuncSignature; funcForOp;
+{$define OP:=tt_comparatorListEq } FUNCTION funcFor_comparatorListEq  intFuncSignature; funcForOp;
+{$define OP:=tt_operatorAnd      } FUNCTION funcFor_operatorAnd       intFuncSignature; funcForOp;
+{$define OP:=tt_operatorOr       } FUNCTION funcFor_operatorOr        intFuncSignature; funcForOp;
+{$define OP:=tt_operatorXor      } FUNCTION funcFor_operatorXor       intFuncSignature; funcForOp;
 FUNCTION funcFor_operatorLazyAnd intFuncSignature;
   begin
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_boolean) then begin
@@ -273,16 +273,16 @@ FUNCTION funcFor_operatorLazyOr  intFuncSignature;
       result^.rereference;
     end else result:=nil;
   end;
-{$define OP:=tt_operatorPlus     } FUNCTION funcFor_operatorPlus      funcForOp;
-{$define OP:=tt_operatorMinus    } FUNCTION funcFor_operatorMinus     funcForOp;
-{$define OP:=tt_operatorMult     } FUNCTION funcFor_operatorMult      funcForOp;
-{$define OP:=tt_operatorDivReal  } FUNCTION funcFor_operatorDivReal   funcForOp;
-{$define OP:=tt_operatorDivInt   } FUNCTION funcFor_operatorDivInt    funcForOp;
-{$define OP:=tt_operatorMod      } FUNCTION funcFor_operatorMod       funcForOp;
-{$define OP:=tt_operatorPot      } FUNCTION funcFor_operatorPot       funcForOp;
-{$define OP:=tt_unaryOpPlus      } FUNCTION funcFor_unaryOpPlus       funcForOp;
-{$define OP:=tt_unaryOpMinus     } FUNCTION funcFor_unaryOpMinus      funcForOp;
-{$define OP:=tt_operatorStrConcat} FUNCTION funcFor_operatorStrConcat funcForOp;
+{$define OP:=tt_operatorPlus     } FUNCTION funcFor_operatorPlus      intFuncSignature; funcForOp;
+{$define OP:=tt_operatorMinus    } FUNCTION funcFor_operatorMinus     intFuncSignature; funcForOp;
+{$define OP:=tt_operatorMult     } FUNCTION funcFor_operatorMult      intFuncSignature; funcForOp;
+{$define OP:=tt_operatorDivReal  } FUNCTION funcFor_operatorDivReal   intFuncSignature; funcForOp;
+{$define OP:=tt_operatorDivInt   } FUNCTION funcFor_operatorDivInt    intFuncSignature; funcForOp;
+{$define OP:=tt_operatorMod      } FUNCTION funcFor_operatorMod       intFuncSignature; funcForOp;
+{$define OP:=tt_operatorPot      } FUNCTION funcFor_operatorPot       intFuncSignature; funcForOp;
+{$define OP:=tt_unaryOpPlus      } FUNCTION funcFor_unaryOpPlus       intFuncSignature; funcForOp;
+{$define OP:=tt_unaryOpMinus     } FUNCTION funcFor_unaryOpMinus      intFuncSignature; funcForOp;
+{$define OP:=tt_operatorStrConcat} FUNCTION funcFor_operatorStrConcat intFuncSignature; funcForOp;
 FUNCTION funcFor_operatorOrElse intFuncSignature;
   begin
     if (params<>nil) and ((params^.size=1) or (params^.size=2)) then begin
@@ -290,27 +290,27 @@ FUNCTION funcFor_operatorOrElse intFuncSignature;
       result^.rereference;
     end else result:=nil;
   end;
-{$define OP:=tt_operatorConcat   } FUNCTION funcFor_operatorConcat    funcForOp;
-{$define OP:=tt_operatorIn       } FUNCTION funcFor_operatorIn        funcForOp;
+{$define OP:=tt_operatorConcat   } FUNCTION funcFor_operatorConcat intFuncSignature; funcForOp;
+{$define OP:=tt_operatorIn       } FUNCTION funcFor_operatorIn     intFuncSignature; funcForOp;
 {$undef OP}
 {$undef funcForOp}
 INITIALIZATION
   builtinLocation_try.create(SYSTEM_BUILTIN_NAMESPACE,'try');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,false,ak_variadic,
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,[],ak_variadic,
                'try(E:expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
                'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
                'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,false,ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal],ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,false,ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,false,ak_nullary,'myPath;//returns the path to the current package');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,false,ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,true ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,false,ak_nullary,'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,false,ak_nullary,'listKeywords;//Returns a list of all keywords by category');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,true ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,false,ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_readingInternal],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,[se_scriptDependent],ak_nullary,'myPath;//returns the path to the current package');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,[se_executableDependent],ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,[] ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,[se_versionDependent],ak_nullary,'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,[se_versionDependent],ak_nullary,'listKeywords;//Returns a list of all keywords by category');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,[] ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,[se_versionDependent],ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
   intFuncForOperator[tt_comparatorEq     ]:=@funcFor_comparatorEq     ;
   intFuncForOperator[tt_comparatorNeq    ]:=@funcFor_comparatorNeq    ;
   intFuncForOperator[tt_comparatorLeq    ]:=@funcFor_comparatorLeq    ;

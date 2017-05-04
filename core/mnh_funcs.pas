@@ -12,6 +12,19 @@ TYPE
                ak_variadic_1,
                ak_variadic_2,
                ak_variadic_3);
+  T_sideEffect=(se_inputViaAsk,
+                se_outputViaAdapter,
+                se_sound,
+                se_readingInternal,
+                se_writingInternal,
+                se_readingExternal,
+                se_writingExternal,
+                se_executingExternal,
+                se_scriptDependent,
+                se_executableDependent,
+                se_versionDependent);
+  T_sideEffects=set of T_sideEffect;
+
 CONST
   C_arityKind:array[T_arityKind] of record fixedParameters:longint; variadic:boolean end=
                           {ak_nullary   }((fixedParameters:0;       variadic:false),
@@ -24,11 +37,6 @@ CONST
                           {ak_variadic_3} (fixedParameters:3;       variadic:true ));
 
 TYPE
-  T_intFuncMeta=record
-    arityKind:T_arityKind;
-    pure:boolean;
-  end;
-
   P_intFuncCallback=FUNCTION intFuncSignature;
 
   P_identifiedInternalFunction=^T_identifiedInternalFunction;
@@ -51,8 +59,8 @@ TYPE
 
   P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
   T_builtinFunctionMetaData=record
-    pure     :boolean;
-    arityKind:T_arityKind;
+    sideEffects:T_sideEffects;
+    arityKind  :T_arityKind;
   end;
 
 VAR
@@ -60,25 +68,23 @@ VAR
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;
 
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST sideEffects:T_sideEffects; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
-PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
 
-VAR mnhParameters:P_listLiteral=nil;
-    mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
+VAR mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
-FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST isPure:boolean; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST sideEffects:T_sideEffects; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=ptr;
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
-    meta.pure:=isPure;
+    meta.sideEffects:=sideEffects;
     meta.arityKind:=aritiyKind;
     builtinMetaMap.put(ptr,meta);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
@@ -117,14 +123,6 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to parameters of type '+x^.typeString+' and '+y^.typeString+messageTail;
     adapters.raiseError(complaintText,tokenLocation);
-  end;
-
-PROCEDURE setMnhParameters(CONST p: T_arrayOfString);
-  VAR i:longint;
-  begin
-    if mnhParameters<>nil then disposeLiteral(mnhParameters);
-    mnhParameters:=newListLiteral;
-    for i:=0 to length(p)-1 do mnhParameters^.appendString(p[i]);
   end;
 
 {$undef INNER_FORMATTING}
@@ -180,15 +178,6 @@ FUNCTION fail_impl intFuncSignature;
       result:=newVoidLiteral;
     end;
     result:=nil;
-  end;
-
-FUNCTION mnhParameters_imp intFuncSignature;
-  begin
-    if (params=nil) or (params^.size=0) then begin
-      if mnhParameters=nil then mnhParameters:=newListLiteral;
-      result:=mnhParameters;
-      mnhParameters^.rereference;
-    end else result:=nil;
   end;
 
 FUNCTION serialize_impl intFuncSignature;
@@ -259,18 +248,16 @@ INITIALIZATION
   builtinMetaMap.create;
   new(mnhSystemPseudoPackage,create);
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,false,ak_nullary ,'clearPrint;//Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,false,ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,false,ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,false,ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,false,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,false,ak_nullary ,'mnhParameters;//Returns the command line parameters/switches passed on program startup');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,true ,ak_unary   ,'serialize(x);//Returns a string representing x.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,true ,ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,true ,ak_unary   ,'bits(i:int);//Returns the bits of i');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,[se_outputViaAdapter],ak_nullary ,'clearPrint;//Clears the output and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,[se_outputViaAdapter],ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,[se_outputViaAdapter],ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,[se_outputViaAdapter],ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,[se_outputViaAdapter,se_writingInternal],ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,[],ak_unary   ,'serialize(x);//Returns a string representing x.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,[],ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,[],ak_unary   ,'bits(i:int);//Returns the bits of i');
   system.initCriticalSection(print_cs);
 FINALIZATION
-  if mnhParameters<>nil then disposeLiteral(mnhParameters);
   builtinMetaMap.destroy;
   intrinsicRuleMap.destroy;
   dispose(mnhSystemPseudoPackage,destroy);

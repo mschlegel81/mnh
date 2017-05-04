@@ -1224,10 +1224,10 @@ INITIALIZATION
   {$endif}
   subruleApplyOpCallback    :=@subruleApplyOpImpl;
   subruleReplacesCallback   :=@subruleReplaces;
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
-  registerRule(STRINGS_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl   ,true,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,false,ak_unary,'toExpression(S);//Returns an expression parsed from S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,[],ak_unary,'arity(e:expression);//Returns the arity of expression e');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,[],ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
+  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,[],ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,[],ak_unary,'toExpression(S);//Returns an expression parsed from S');
 
 FINALIZATION
   {$ifdef fullVersion}

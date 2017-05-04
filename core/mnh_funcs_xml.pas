@@ -93,7 +93,7 @@ FUNCTION readXml_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(FILES_BUILTIN_NAMESPACE,'readXmlFile',@readXmlFile_impl,false,ak_unary,'readXmlFile(filename:string);//Reads contents of an XML file and returns the contents as a list');
-  registerRule(FILES_BUILTIN_NAMESPACE,'readXml'    ,@readXml_impl    ,true ,ak_unary,'readXml(input:string);//Parses input as XML and returns the contents as a list');
+  registerRule(FILES_BUILTIN_NAMESPACE,'readXmlFile',@readXmlFile_impl,[],ak_unary,'readXmlFile(filename:string);//Reads contents of an XML file and returns the contents as a list');
+  registerRule(FILES_BUILTIN_NAMESPACE,'readXml'    ,@readXml_impl    ,[se_readingExternal],ak_unary,'readXml(input:string);//Parses input as XML and returns the contents as a list');
 
 end.
