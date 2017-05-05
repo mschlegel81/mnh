@@ -14,15 +14,47 @@ USES //FPC/LCL libraries
      tokenStack,valueStore,
      mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
-  T_evaluationContextOption =(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
-  T_threadContextOption     =(tco_ask,tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_notifyParentOfAsyncTaskEnd);
+  T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
+  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_notifyParentOfAsyncTaskEnd);
   T_evaluationContextOptions=set of T_evaluationContextOption;
   T_threadContextOptions    =set of T_threadContextOption;
   T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging{$endif},ect_silentlyRunAlone);
+  T_sideEffect=(se_inputViaAsk,
+                se_outputViaAdapter,
+                se_sound,
+                se_sleep,
+                se_detaching,
+                se_server,
+                se_readingInternal,
+                se_writingInternal,
+                se_readingExternal,
+                se_writingExternal,
+                se_executingExternal,
+                se_scriptDependent,
+                se_executableDependent,
+                se_versionDependent);
+  T_sideEffects=set of T_sideEffect;
 
 CONST
-  C_defaultOptions:T_evaluationContextOptions=[eco_ask,eco_spawnWorker,eco_createDetachedTask];
-  C_equivalentOption:array[tco_ask..tco_createDetachedTask] of T_evaluationContextOption=(eco_ask,eco_spawnWorker,eco_profiling,eco_createDetachedTask);
+  C_sideEffectName:array[T_sideEffect] of string=(
+                'input',
+                'output',
+                'sound',
+                'sleep',
+                'detaching',
+                'server',
+                'readingInternal',
+                'writingInternal',
+                'readingExternal',
+                'writingExternal',
+                'executingExternal',
+                'scriptDependent',
+                'executableDependent',
+                'versionDependent');
+
+  C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
+  C_equivalentOption:array[tco_spawnWorker..tco_createDetachedTask] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask);
+  C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
 
 TYPE
   T_regexMap=specialize G_stringKeyMap<TRegExpr>;
@@ -38,7 +70,7 @@ TYPE
       parent:P_evaluationContext;
       callingContext:P_threadContext;
       callStack :T_callStack;
-
+      allowedSideEffects:T_sideEffects;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
       CONSTRUCTOR createWorkerContext;
     public
@@ -61,7 +93,7 @@ TYPE
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
 
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop();
       PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
@@ -78,6 +110,7 @@ TYPE
       PROCEDURE reduceExpression(VAR first:P_token); inline;
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
+      PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
   end;
 
   T_evaluationContext=object
@@ -97,10 +130,11 @@ TYPE
       options :T_evaluationContextOptions;
       primaryThreadContext:P_threadContext;
       taskQueue:P_taskQueue;
+      allowedSideEffects:T_sideEffects;
       PROCEDURE setupThreadContext(CONST context:P_threadContext);
     public
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
-      CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath);
+      CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
       PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean);
       PROCEDURE afterEvaluation;
@@ -182,6 +216,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     adapters      :=outAdapters;
     callingContext:=nil;
     regexCache    :=nil;
+    allowedSideEffects:=C_allSideEffects;
     callDepth:=0;
     if adapters=nil then adapters:=parent^.adapters;
   end;
@@ -191,6 +226,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext;
     recycler  .create;
     valueStore.create;
     callStack .create;
+    allowedSideEffects:=C_allSideEffects;
     regexCache    :=nil;
     parent        :=nil;
     adapters      :=nil;
@@ -218,16 +254,18 @@ CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
     contextAdapters:=outAdapters;
     disposeAdaptersOnDestruction:=false;
     detachedAsyncChildCount:=0;
+    allowedSideEffects:=C_allSideEffects;
     new(primaryThreadContext,createThreadContext(@self,adapters));
   end;
 
-CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_objectWithPath);
+CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
   VAR tempAdapters:P_adapters;
   begin
     new(tempAdapters,create);
     create(tempAdapters);
     taskQueue:=nil;
     disposeAdaptersOnDestruction:=true;
+    allowedSideEffects:=customSideEffecWhitelist;
     resetForEvaluation(package,false,false,true);
   end;
 
@@ -247,11 +285,12 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath;
   VAR pc:T_profileCategory;
   begin
     //set options
-    options:=[eco_ask,eco_spawnWorker,eco_createDetachedTask,eco_beepOnError];
+    options:=[eco_spawnWorker,eco_createDetachedTask,eco_beepOnError];
     if adapters^.doShowTimingInfo then options:=options+[eco_timing];
     if doProfiling then options:=options+[eco_profiling];
     if doDebugging then options:=options+[eco_debugging]-[eco_createDetachedTask,eco_spawnWorker];
-    if silentMode  then options:=options-[eco_ask,eco_beepOnError,eco_debugging,eco_timing,eco_profiling];
+    if silentMode  then options:=options-[eco_beepOnError,eco_debugging,eco_timing,eco_profiling];
+    if silentMode  then allowedSideEffects:=allowedSideEffects-[se_inputViaAsk];
     {$ifdef fullVersion}
     //prepare or dispose profiler:
     if eco_profiling in options then begin
@@ -356,6 +395,7 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
     context^.valueStore.clear;
     context^.adapters:=adapters;
     context^.callDepth:=0;
+    context^.allowedSideEffects:=allowedSideEffects;
   end;
 
 {$ifdef fullVersion}
@@ -427,6 +467,7 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CON
     parent        :=callingContext^.parent;
     adapters      :=callingContext^.adapters;
     options       :=callingContext^.options;
+    allowedSideEffects:=callingContext^.allowedSideEffects;
     valueStore.clear;
     valueStore.parentStore:=valueScope;
     callStack.clear;
@@ -457,7 +498,7 @@ PROCEDURE T_threadContext.leaveTryStatementReassumingPreviousAdapters(CONST prev
     adapters:=previousAdapters;
   end;
 
-PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_listLiteral; CONST expressionLiteral:P_expressionLiteral);
+PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation);
   begin
     callStack.push(wallclockTime,callerLocation,callee);
   end;

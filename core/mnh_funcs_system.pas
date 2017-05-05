@@ -205,7 +205,7 @@ FUNCTION time_imp intFuncSignature;
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.wallclockTime(true)))
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
-      context.callStackPush(tokenLocation,@builtinLocation_time,params,nil);
+      context.callStackPush(tokenLocation,@builtinLocation_time);
       if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
                         else res:=evaluate(P_expressionLiteral(arg0));
       context.callStackPop();

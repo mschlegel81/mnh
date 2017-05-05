@@ -12,19 +12,6 @@ TYPE
                ak_variadic_1,
                ak_variadic_2,
                ak_variadic_3);
-  T_sideEffect=(se_inputViaAsk,
-                se_outputViaAdapter,
-                se_sound,
-                se_readingInternal,
-                se_writingInternal,
-                se_readingExternal,
-                se_writingExternal,
-                se_executingExternal,
-                se_scriptDependent,
-                se_executableDependent,
-                se_versionDependent);
-  T_sideEffects=set of T_sideEffect;
-
 CONST
   C_arityKind:array[T_arityKind] of record fixedParameters:longint; variadic:boolean end=
                           {ak_nullary   }((fixedParameters:0;       variadic:false),
@@ -73,6 +60,7 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
+FUNCTION violatingSideEffects(CONST funcPtr:pointer; CONST allowedSideEffects:T_sideEffects):T_sideEffects;
 IMPLEMENTATION
 
 VAR mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
@@ -123,6 +111,12 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to parameters of type '+x^.typeString+' and '+y^.typeString+messageTail;
     adapters.raiseError(complaintText,tokenLocation);
+  end;
+
+FUNCTION violatingSideEffects(CONST funcPtr:pointer; CONST allowedSideEffects:T_sideEffects):T_sideEffects;
+  begin
+    if allowedSideEffects=C_allSideEffects then exit([]);
+    result:=getMeta(funcPtr).sideEffects-allowedSideEffects;
   end;
 
 {$undef INNER_FORMATTING}

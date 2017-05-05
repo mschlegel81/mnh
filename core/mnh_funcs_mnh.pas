@@ -172,7 +172,7 @@ FUNCTION try_imp intFuncSignature;
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
       ((params^.size=1) or (params^.size=2)) then begin
-      context.callStackPush(tokenLocation,@builtinLocation_try,params,nil);
+      context.callStackPush(tokenLocation,@builtinLocation_try);
       oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
       result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context);
       if context.adapters^.noErrors
@@ -301,9 +301,9 @@ INITIALIZATION
                'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
                'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal],ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal,se_detaching],ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_readingInternal],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_sleep],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,[se_scriptDependent],ak_nullary,'myPath;//returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,[se_executableDependent],ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,[] ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');

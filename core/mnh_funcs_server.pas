@@ -357,7 +357,7 @@ FUNCTION stopAllHttpServers_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   registry.create;
-  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,[se_writingInternal],ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
+  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,[se_writingInternal,se_server,se_detaching],ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
   registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,[],ak_variadic_1,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
   registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,[],ak_variadic  ,'httpError;//Returns http-representation of error 404.#httpError(code:int);//Returns http-representation of given error code.');
   registerRule(HTTP_NAMESPACE,'extractParameters'   ,@extractParameters_impl   ,[],ak_unary     ,'extractParameters(request:string);//Returns the parameters of an http request as a keyValueList');
@@ -369,7 +369,7 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,[se_readingExternal,se_writingExternal],ak_unary     ,'httpPost(URL:string);#httpPost(address:string,path:string,parameters:string);#httpPost(address:string,path:string,parameters:keyValueList);');
   registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,[se_readingExternal,se_writingExternal],ak_unary     ,'httpDelete(URL:string);#httpDelete(address:string,path:string,parameters:string);#httpDelete(address:string,path:string,parameters:keyValueList);');
   registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,[se_executingExternal],ak_unary     ,'openUrl(URL:string);//Opens the URL in the default browser');
-  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,[se_writingInternal],ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
+  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,[se_writingInternal,se_server],ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
 FINALIZATION
   registry.destroy;
