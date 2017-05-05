@@ -491,7 +491,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
     {$endif}
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
-    if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_displayTable{$endif}]) then exit;
+    if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_displayTable]+C_guiOnlyMessages{$else}]{$endif}) then exit;
     hasMessageOfType[message.messageType]:=true;
     if (message.messageType=mt_el3_stackTrace) then begin
       inc(stackTraceCount);

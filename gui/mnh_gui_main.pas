@@ -215,7 +215,7 @@ PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean
   VAR task:P_editScriptTask;
       outIdx:longint;
   begin
-    {$ifdef DEBUGMODE} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',successful); {$endif}
+    {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',successful); {$endif}
     task:=data;
     if successful then begin
       if (task^.wantOutput) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
