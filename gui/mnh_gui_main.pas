@@ -215,6 +215,7 @@ PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean
   VAR task:P_editScriptTask;
       outIdx:longint;
   begin
+    {$ifdef DEBUGMODE} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',successful); {$endif}
     task:=data;
     if successful then begin
       if (task^.wantOutput) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
@@ -312,6 +313,7 @@ FUNCTION TMnhForm.openLocation(CONST location:T_searchTokenLocation):boolean;
     if newIdx<0 then exit(false);
     inputPageControl.activePageIndex:=newIdx;
     getEditor^.setCaret(location);
+    ActiveControl:=getEditor^.editor;
     result:=true;
   end;
 
