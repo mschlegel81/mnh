@@ -65,7 +65,7 @@ PROCEDURE initializeSettings;
   VAR formPosition:T_formPosition;
   begin
     {$ifdef UNIX}
-    miIncFontSize.ShortCut:=16605;
+    MnhForm.miIncFontSize.ShortCut:=16605;
     {$endif}
 
     if settings.value^.loaded then begin
