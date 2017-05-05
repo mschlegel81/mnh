@@ -1056,6 +1056,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     end else begin
       disposeLiteral(TList);
       context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
+      collector.removeDuplicateStoredMessages;
       context.adapters^.raiseStoredMessages(collector.storedMessages);
       setLength(dataRow,0);
     end;
