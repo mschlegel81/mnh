@@ -302,10 +302,10 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
 
 INITIALIZATION
   registry.create;
-  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,true ,ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
-  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,false,ak_binary ,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
-  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,false,ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
-  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,false,ak_unary  ,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise');
+  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,[se_writingInternal,se_server,se_detaching],ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
+  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,[se_writingInternal,se_server],ak_binary ,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
+  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,[se_readingExternal,se_writingExternal],ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
+  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,[se_readingExternal],ak_unary  ,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise');
 FINALIZATION
   registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;

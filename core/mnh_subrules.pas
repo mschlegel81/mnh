@@ -447,11 +447,11 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
        (param<>nil) and pattern.matches(param^,callLocation,context) then begin
       prepareResult;
       result:=true;
-      context.callStackPush(callLocation,@self,param,@self);
+      context.callStackPush(callLocation,@self);
     end else if fallbackFeasible then begin
       prepareResult;
       result:=true;
-      context.callStackPush(callLocation,@self,param,@self);
+      context.callStackPush(callLocation,@self);
       tempInnerParam:=newListLiteral;
       for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^[i],true);
       lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_parList,tempInnerParam);
@@ -883,9 +883,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       resultLiteral:P_listLiteral;
 
       tempcontext:T_evaluationContext;
+      collector  :T_collectingOutAdapter;
 
       dataReadyVectorized:boolean=false;
       dataReadyScalar    :boolean=false;
+
 
   FUNCTION evaluateOk:boolean;
     begin
@@ -1035,7 +1037,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   begin
     subRule:=P_subrule(f);
-    tempcontext.createAndResetSilentContext(nil);
+    tempcontext.createAndResetSilentContext(nil,[]);
+    collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
+    tempcontext.adapters^.addOutAdapter(@collector,false);
     constructInitialTList;
 
     dataReadyVectorized:=evaluateVectorExpressionOk;
@@ -1050,10 +1054,14 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       disposeLiteral(TList);
       refineDataRow;
     end else begin
+      disposeLiteral(TList);
       context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
+      collector.removeDuplicateStoredMessages;
+      context.adapters^.raiseStoredMessages(collector.storedMessages);
       setLength(dataRow,0);
     end;
     tempcontext.destroy;
+    collector.destroy;
     result:=dataRow;
   end;
 
@@ -1224,10 +1232,10 @@ INITIALIZATION
   {$endif}
   subruleApplyOpCallback    :=@subruleApplyOpImpl;
   subruleReplacesCallback   :=@subruleReplaces;
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,true,ak_unary,'arity(e:expression);//Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,true,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
-  registerRule(STRINGS_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl   ,true,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,false,ak_unary,'toExpression(S);//Returns an expression parsed from S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,[],ak_unary,'arity(e:expression);//Returns the arity of expression e');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,[],ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
+  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,[],ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,[],ak_unary,'toExpression(S);//Returns an expression parsed from S');
 
 FINALIZATION
   {$ifdef fullVersion}

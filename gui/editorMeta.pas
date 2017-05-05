@@ -49,9 +49,6 @@ TYPE T_language=(LANG_MNH   = 0,
 
 TYPE
 P_editorMeta=^T_editorMeta;
-
-{ T_editorMeta }
-
 T_editorMeta=object(T_codeProvider)
   private
     index:longint;
@@ -610,8 +607,9 @@ PROCEDURE T_editorMeta.activate;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
     if not(sheet.tabVisible) then exit;
-    if language=LANG_MNH then assistancEvaluator.evaluate(@self);
+    if language_=LANG_MNH then assistancEvaluator.evaluate(@self);
     mainForm.caption:=updateSheetCaption;
   end;
 

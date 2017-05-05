@@ -266,6 +266,20 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
         inlineRule:P_subrule;
+        violations:T_sideEffects;
+
+    PROCEDURE raiseSideEffectError(CONST id:string);
+      VAR messageText:string='';
+          eff:T_sideEffect;
+      begin
+        for eff in violations do begin
+          if messageText<>'' then messageText:=messageText+', ';
+          messageText:=messageText+C_sideEffectName[eff];
+        end;
+        messageText:='Cannot apply function '+id+' because of side effect(s): ['+messageText+']';
+        context.adapters^.raiseError(messageText,first^.location);
+      end;
+
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
@@ -310,7 +324,12 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         {$ifndef DEBUGMODE}
         try
         {$endif}
-          newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+        violations:=violatingSideEffects(first^.data,context.sideEffectWhitelist);
+        if violations=[] then newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context)
+        else begin
+          raiseSideEffectError(first^.txt);
+          exit;
+        end;
         {$ifndef DEBUGMODE}
         except
           on e:Exception do begin

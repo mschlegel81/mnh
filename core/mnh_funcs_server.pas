@@ -357,19 +357,19 @@ FUNCTION stopAllHttpServers_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   registry.create;
-  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,false,ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
-  registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,true ,ak_variadic_1,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
-  registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,true ,ak_variadic  ,'httpError;//Returns http-representation of error 404.#httpError(code:int);//Returns http-representation of given error code.');
-  registerRule(HTTP_NAMESPACE,'extractParameters'   ,@extractParameters_impl   ,true ,ak_unary     ,'extractParameters(request:string);//Returns the parameters of an http request as a keyValueList');
-  registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,true ,ak_unary     ,'extractRawParameters(request:string);//Returns the parameter part of an http request as a string');
-  registerRule(HTTP_NAMESPACE,'extractPath'         ,@extractPath_impl         ,true ,ak_unary     ,'extractPath(request:string);//Returns the path part of an http request as a string');
-  registerRule(HTTP_NAMESPACE,'encodeRequest'       ,@encodeRequest_impl       ,true ,ak_ternary   ,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);//Returns an http request from the given components');
-  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,false,ak_unary     ,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string#httpGet(address:string,path:string,parameters:string);#httpGet(address:string,path:string,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,false,ak_unary     ,'httpPut(URL:string);#httpPut(address:string,path:string,parameters:string);#httpPut(address:string,path:string,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,false,ak_unary     ,'httpPost(URL:string);#httpPost(address:string,path:string,parameters:string);#httpPost(address:string,path:string,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,false,ak_unary     ,'httpDelete(URL:string);#httpDelete(address:string,path:string,parameters:string);#httpDelete(address:string,path:string,parameters:keyValueList);');
-  registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,false,ak_unary     ,'openUrl(URL:string);//Opens the URL in the default browser');
-  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,false,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
+  registerRule(HTTP_NAMESPACE,'startHttpServer'     ,@startServer_impl         ,[se_writingInternal,se_server,se_detaching],ak_ternary   ,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(3),timeoutInSeconds:numeric);//Starts a new microserver-instance');
+  registerRule(HTTP_NAMESPACE,'wrapTextInHttp'      ,@wrapTextInHttp_impl      ,[],ak_variadic_1,'wrapTextInHttp(s:string);//Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);//Wraps s in an http-response of given type.');
+  registerRule(HTTP_NAMESPACE,'httpError'           ,@httpError_impl           ,[],ak_variadic  ,'httpError;//Returns http-representation of error 404.#httpError(code:int);//Returns http-representation of given error code.');
+  registerRule(HTTP_NAMESPACE,'extractParameters'   ,@extractParameters_impl   ,[],ak_unary     ,'extractParameters(request:string);//Returns the parameters of an http request as a keyValueList');
+  registerRule(HTTP_NAMESPACE,'extractRawParameters',@extractRawParameters_impl,[],ak_unary     ,'extractRawParameters(request:string);//Returns the parameter part of an http request as a string');
+  registerRule(HTTP_NAMESPACE,'extractPath'         ,@extractPath_impl         ,[],ak_unary     ,'extractPath(request:string);//Returns the path part of an http request as a string');
+  registerRule(HTTP_NAMESPACE,'encodeRequest'       ,@encodeRequest_impl       ,[],ak_ternary   ,'encodeRequest(address:string,path:string,parameters:string);#encodeRequest(address:string,path:string,parameters:keyValueList);//Returns an http request from the given components');
+  registerRule(HTTP_NAMESPACE,'httpGet'             ,@httpGet_imp              ,[se_readingExternal,se_writingExternal],ak_unary     ,'httpGet(URL:string);//Retrieves the contents of the given URL and returns them as a string#httpGet(address:string,path:string,parameters:string);#httpGet(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpPut'             ,@httpPut_imp              ,[se_readingExternal,se_writingExternal],ak_unary     ,'httpPut(URL:string);#httpPut(address:string,path:string,parameters:string);#httpPut(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpPost'            ,@httpPost_imp             ,[se_readingExternal,se_writingExternal],ak_unary     ,'httpPost(URL:string);#httpPost(address:string,path:string,parameters:string);#httpPost(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'httpDelete'          ,@httpDelete_imp           ,[se_readingExternal,se_writingExternal],ak_unary     ,'httpDelete(URL:string);#httpDelete(address:string,path:string,parameters:string);#httpDelete(address:string,path:string,parameters:keyValueList);');
+  registerRule(HTTP_NAMESPACE,'openUrl'             ,@openUrl_imp              ,[se_executingExternal],ak_unary     ,'openUrl(URL:string);//Opens the URL in the default browser');
+  registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,[se_writingInternal,se_server],ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
 FINALIZATION
   registry.destroy;

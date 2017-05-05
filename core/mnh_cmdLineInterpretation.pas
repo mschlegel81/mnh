@@ -242,7 +242,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       end else addParameter(mainParameters,i);
       inc(i);
     end;
-    setMnhParameters(mnhParameters);
 
     if fileOrCommandToInterpret=''
     then defaultOutputBehavior:=C_defaultOutputBehavior_interactive

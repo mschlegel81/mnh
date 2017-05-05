@@ -516,6 +516,7 @@ PROCEDURE T_assistanceEvaluator.evaluate(CONST provider:P_codeProvider);
   begin
     system.enterCriticalSection(cs);
     ensureThread;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_assistanceEvaluator.evaluate - ',state); {$endif}
     if (state in C_runningStates) then begin
       system.leaveCriticalSection(cs);
       exit;

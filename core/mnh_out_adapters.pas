@@ -62,6 +62,7 @@ TYPE
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
+    PROCEDURE removeDuplicateStoredMessages;
     PROCEDURE clear; virtual;
   end;
 
@@ -374,6 +375,30 @@ FUNCTION T_collectingOutAdapter.append(CONST message: T_storedMessage):boolean;
     end;
   end;
 
+PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
+  FUNCTION equals(CONST m1,m2:T_storedMessage):boolean; inline;
+    begin
+      result:=(m1.messageType=m2.messageType) and
+              (string(m1.location)=string(m2.location)) and
+              (arrEquals(m1.messageText,m2.messageText)) and
+              (m2.data=nil);
+    end;
+
+  VAR i,j,k:longint;
+      isDuplicate:boolean=false;
+  begin
+    k:=1;
+    for j:=1 to length(storedMessages)-1 do begin
+      isDuplicate:=false;
+      for i:=0 to k-1 do isDuplicate:=isDuplicate or equals(storedMessages[i],storedMessages[k]);
+      if not(isDuplicate) then begin
+        storedMessages[k]:=storedMessages[j];
+        inc(k);
+      end;
+    end;
+    setLength(storedMessages,k);
+  end;
+
 PROCEDURE T_collectingOutAdapter.clear;
   begin
     system.enterCriticalSection(cs);
@@ -514,7 +539,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
     {$endif}
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
-    if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_displayTable{$endif}]) then exit;
+    if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_displayTable]+C_guiOnlyMessages{$else}]{$endif}) then exit;
     hasMessageOfType[message.messageType]:=true;
     if (message.messageType=mt_el3_stackTrace) then begin
       inc(stackTraceCount);

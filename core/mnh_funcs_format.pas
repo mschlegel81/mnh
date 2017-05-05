@@ -395,7 +395,7 @@ FUNCTION format_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      context.callStackPush(tokenLocation,@builtinLocation_format,params,nil);
+      context.callStackPush(tokenLocation,@builtinLocation_format);
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       context.callStackPop();
       if not(context.adapters^.noErrors) then exit(nil);
@@ -413,7 +413,7 @@ FUNCTION printf_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      context.callStackPush(tokenLocation,@builtinLocation_printf,params,nil);
+      context.callStackPush(tokenLocation,@builtinLocation_printf);
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.adapters^.noErrors) then begin
         context.callStackPop();
@@ -524,11 +524,11 @@ INITIALIZATION
   initialize(cachedFormatCS);
   system.initCriticalSection(cachedFormatCS);
   builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,true,ak_variadic_1,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,[se_outputViaAdapter],ak_variadic_1,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
   builtinLocation_format.create(STRINGS_NAMESPACE,'format');
-  registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,true ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,true ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,false,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,[],ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,[],ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,[se_readingInternal],ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
 
 FINALIZATION
   clearCachedFormats;

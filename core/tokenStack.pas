@@ -90,7 +90,7 @@ PROCEDURE T_callStack.push(CONST wallclockTime: double;
     if length(dat)<=fill then setLength(dat,length(dat)+16);
     dat[fill].callLocation:=callerLocation;
     dat[fill].calleeId:=callee^.getId;
-    dat[fill].callLocation:=callee^.getLocation;
+    dat[fill].calleeLocation:=callee^.getLocation;
     {$ifdef fullVersion}
     if fill>0 then with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     dat[fill].timeForProfiling_exclusive:=wallclockTime;

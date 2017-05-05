@@ -2460,7 +2460,7 @@ object MnhForm: TMnhForm
   end
   object UpdateTimeTimer: TTimer
     Enabled = False
-    Interval = 10
+    Interval = 50
     OnTimer = UpdateTimeTimerTimer
     left = 272
     top = 32
