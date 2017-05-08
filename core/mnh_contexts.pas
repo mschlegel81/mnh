@@ -54,6 +54,7 @@ CONST
 
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
   C_equivalentOption:array[tco_spawnWorker..tco_createDetachedTask] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask);
+
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
 
 TYPE
@@ -111,6 +112,7 @@ TYPE
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
+      FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
   end;
 
   T_evaluationContext=object
@@ -532,6 +534,12 @@ FUNCTION T_threadContext.cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       result:=nil;
       recycler.cascadeDisposeToken(p);
     end;
+  end;
+
+FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
+  begin
+    result:=allowedSideEffects;
+    allowedSideEffects:=se;
   end;
 
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
