@@ -331,6 +331,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     VAR fpar:P_listLiteral;
         temp:P_literal;
         k:longint;
+        oldSideEffectWhitelist:T_sideEffects;
     begin
       //prepare parameters
       fpar:=newListLiteral;
@@ -340,7 +341,15 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       else fpar^.append(iter[k][    0],true);
 
       if formatSubrule<>nil then begin
+        oldSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious([
+          se_outputViaAdapter,
+          se_readingInternal,
+          se_readingExternal,
+          se_scriptDependent,
+          se_executableDependent,
+          se_versionDependent]*context.sideEffectWhitelist);
         temp:=P_subrule(formatSubrule)^.evaluate(tokenLocation,@context,fpar);
+        context.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
         disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_listTypes)
         then fpar:=P_listLiteral(temp)
