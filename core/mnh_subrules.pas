@@ -888,7 +888,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       dataReadyVectorized:boolean=false;
       dataReadyScalar    :boolean=false;
 
-
   FUNCTION evaluateOk:boolean;
     begin
       tempcontext.threadContext^.reduceExpression(firstRep);
@@ -1223,7 +1222,6 @@ FUNCTION toExpression_imp intFuncSignature;
       else result:=stringOrListToExpression(arg0,tokenLocation,context);
     end;
   end;
-
 
 INITIALIZATION
   {$ifdef fullVersion}

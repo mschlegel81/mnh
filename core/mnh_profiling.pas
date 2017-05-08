@@ -155,7 +155,6 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_adapters);
     leaveCriticalSection(cs);
   end;
 
-
 CONSTRUCTOR T_packageProfilingCall.create(CONST package_: P_objectWithPath; CONST category_: T_profileCategory);
   begin
     package:=package_;

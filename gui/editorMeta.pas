@@ -46,7 +46,6 @@ TYPE T_language=(LANG_MNH   = 0,
                  LANG_XML   =16,
                  LANG_TXT   =17);
 
-
 TYPE
 P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_codeProvider)
@@ -111,11 +110,9 @@ T_editorMeta=object(T_codeProvider)
   PROCEDURE languageMenuItemClick(Sender: TObject);
   //Advanced:
 
-
   //Presentation helper:
 
   FUNCTION isFile:boolean;
-
 
   PROCEDURE setFile(CONST fileName:string);
   PROCEDURE initForNewFile;
@@ -761,7 +758,6 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
       assistancEvaluator.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
   end;
 
-
 PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
   );
   begin
@@ -1071,7 +1067,6 @@ FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useC
         editorMetaData[result]^.editor.Font:=assistanceSynEdit.Font;
       end;
     end;
-
 
   VAR f:string;
   begin

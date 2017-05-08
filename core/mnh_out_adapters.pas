@@ -549,7 +549,6 @@ PROCEDURE T_adapters.logMissingMain;
     hasMessageOfType[mt_el3_noMatchingMain]:=true;
   end;
 
-
 PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
   VAR m:T_storedMessage;
   begin for m in stored do raiseCustomMessage(m); end;
@@ -597,8 +596,6 @@ PROCEDURE T_adapters.stopEvaluation;
     hasMessageOfType[mt_el4_haltMessageQuiet]:=true;
     maxErrorLevel:=5;
   end;
-
-
 
 FUNCTION T_adapters.noErrors: boolean;
   begin

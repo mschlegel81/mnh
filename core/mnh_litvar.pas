@@ -298,7 +298,6 @@ TYPE
 
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): P_expressionLiteral;
 
-
 VAR
   subruleApplyOpCallback: T_subruleApplyOpCallback;
 
@@ -1098,7 +1097,6 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
          or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-
 FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType;
   CONST other: P_literal): boolean;
   begin
@@ -1814,7 +1812,6 @@ FUNCTION T_mapLiteral.put(CONST key:P_literal; CONST newValue:int64; CONST incRe
     result:=put(key,
                 newIntLiteral(newValue),false);
   end;
-
 
 FUNCTION T_mapLiteral.putAll(CONST map:P_mapLiteral):P_mapLiteral;
   VAR prevValue:P_literal;

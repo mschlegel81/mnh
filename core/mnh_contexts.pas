@@ -742,7 +742,6 @@ PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
     if task<>nil then task^.evaluate(context,false);
   end;
 
-
 INITIALIZATION
   initCriticalSection(globalLock);
 FINALIZATION

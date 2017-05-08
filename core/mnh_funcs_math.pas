@@ -347,7 +347,6 @@ FUNCTION sign_imp intFuncSignature;
     then result:=sign_rec(arg0);
   end;
 
-
 FUNCTION pi_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then result:=newRealLiteral(pi) else result:=nil;

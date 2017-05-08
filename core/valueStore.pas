@@ -354,7 +354,6 @@ FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_
     system.leaveCriticalSection(cs);
   end;
 
-
 {$ifdef fullVersion}
 PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i :longint;

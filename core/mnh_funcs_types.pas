@@ -138,7 +138,6 @@ FUNCTION toMap_imp intFuncSignature;
     end;
   end;
 
-
 {$MACRO ON}
 {$define GENERIC_TYPE_CHECK:=FUNCTION FUNC_ID intFuncSignature;
   begin

@@ -156,7 +156,6 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
   end;
 
-
 CONSTRUCTOR T_abstractRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
     {$ifdef fullVersion}
@@ -502,6 +501,5 @@ FUNCTION T_tokenRecycler.newToken(CONST original: P_token): P_token;
     result^.define(original^);
     result^.next:=nil;
   end;
-
 
 end.

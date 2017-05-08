@@ -616,5 +616,4 @@ PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; 
     if not(node.items[i].HasChildren) and (treeLit_canExpand(node.items[i].data)) then addChildren(node.items[i]);
   end;
 
-
 {$endif}
