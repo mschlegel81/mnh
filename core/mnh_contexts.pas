@@ -15,7 +15,7 @@ USES //FPC/LCL libraries
      mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
 TYPE
   T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
-  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_notifyParentOfAsyncTaskEnd);
+  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_notifyParentOfAsyncTaskEnd);
   T_evaluationContextOptions=set of T_evaluationContextOption;
   T_threadContextOptions    =set of T_threadContextOption;
   T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging{$endif},ect_silentlyRunAlone);
@@ -53,7 +53,7 @@ CONST
                 'versionDependent');
 
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
-  C_equivalentOption:array[tco_spawnWorker..tco_createDetachedTask] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask);
+  C_equivalentOption:array[tco_spawnWorker..tco_debugging] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging);
 
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
 
@@ -70,7 +70,9 @@ TYPE
       //call stack
       parent:P_evaluationContext;
       callingContext:P_threadContext;
+      {$ifdef fullVersion}
       callStack :T_callStack;
+      {$endif}
       allowedSideEffects:T_sideEffects;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
       CONSTRUCTOR createWorkerContext;
@@ -94,15 +96,14 @@ TYPE
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
 
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
+
+      {$ifdef fullVersion}
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop();
       PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
       PROCEDURE callStackClear();
-
-      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
-
-      {$ifdef fullVersion}
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableReport);
       {$endif}
@@ -213,7 +214,9 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
   begin
     recycler  .create;
     valueStore.create;
+    {$ifdef fullVersion}
     callStack .create;
+    {$endif}
     parent        :=parent_;
     adapters      :=outAdapters;
     callingContext:=nil;
@@ -227,7 +230,9 @@ CONSTRUCTOR T_threadContext.createWorkerContext;
   begin
     recycler  .create;
     valueStore.create;
+    {$ifdef fullVersion}
     callStack .create;
+    {$endif}
     allowedSideEffects:=C_allSideEffects;
     regexCache    :=nil;
     parent        :=nil;
@@ -237,9 +242,9 @@ CONSTRUCTOR T_threadContext.createWorkerContext;
 
 DESTRUCTOR T_threadContext.destroy;
   begin
-    {$ifdef debugMode}
+    {$ifdef debugMode}{$ifdef fullVersion}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
-    {$endif}
+    {$endif}{$endif}
     valueStore.destroy;
     recycler  .destroy;
     if regexCache<>nil then dispose(regexCache,destroy);
@@ -393,7 +398,9 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
     for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in options then include(threadOptions,threadOption);
     context^.options:=threadOptions;
     context^.parent:=@self;
+    {$ifdef fullVersion}
     context^.callStack.clear;
+    {$endif}
     context^.valueStore.clear;
     context^.adapters:=adapters;
     context^.callDepth:=0;
@@ -447,10 +454,12 @@ PROCEDURE T_threadContext.timeBaseComponent(CONST component: T_profileCategory);
 PROCEDURE T_threadContext.doneEvaluating;
   begin
     if tco_notifyParentOfAsyncTaskEnd in options then interlockedDecrement(parent^.detachedAsyncChildCount);
+    {$ifdef fullVersion}
     {$ifdef debugMode}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
     {$endif}
     callStack.clear;
+    {$endif}
     valueStore.clear;
   end;
 
@@ -472,7 +481,9 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CON
     allowedSideEffects:=callingContext^.allowedSideEffects;
     valueStore.clear;
     valueStore.parentStore:=valueScope;
+    {$ifdef fullVersion}
     callStack.clear;
+    {$endif}
     callDepth:=0;
   end;
 
@@ -485,7 +496,9 @@ PROCEDURE T_threadContext.detachWorkerContext;
     callingContext:=nil;
     valueStore.clear;
     valueStore.parentStore:=nil;
+    {$ifdef fullVersion}
     callStack.clear;
+    {$endif}
   end;
 
 FUNCTION T_threadContext.enterTryStatementReturningPreviousAdapters: P_adapters;
@@ -500,21 +513,26 @@ PROCEDURE T_threadContext.leaveTryStatementReassumingPreviousAdapters(CONST prev
     adapters:=previousAdapters;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation);
   begin
+    if options*[tco_debugging,tco_profiling]=[] then exit;
     callStack.push(wallclockTime,callerLocation,callee);
   end;
 
 PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
   begin
+    if options*[tco_debugging,tco_profiling]=[] then exit;
     if calls[category]=nil then new(calls[category],create(package,category));
     callStack.push(wallclockTime,calls[category]^.getLocation,calls[category]);
   end;
 
 PROCEDURE T_threadContext.callStackPop;
   begin
-    callStack.pop({$ifdef fullVersion}wallclockTime,parent^.profiler{$endif});
+    if options*[tco_debugging,tco_profiling]=[] then exit;
+    callStack.pop(wallclockTime,parent^.profiler);
   end;
+{$endif}
 {$ifdef fullVersion}
 PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
   begin
@@ -542,10 +560,12 @@ FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se:T_sideE
     allowedSideEffects:=se;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
   VAR p:P_threadContext;
       a:P_adapters;
   begin
+    if options*[tco_debugging,tco_profiling]=[] then exit;
     a:=targetAdapters;
     if a=nil then a:=adapters;
     if a=nil then exit;
@@ -558,6 +578,7 @@ PROCEDURE T_threadContext.callStackClear;
   begin
     callStack.clear;
   end;
+{$endif}
 
 PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
   VAR totalMessage:T_arrayOfString;

@@ -454,10 +454,9 @@ PROCEDURE TMnhForm.updateExpressionMemo;
 
 PROCEDURE TMnhForm.onAssistantFinished;
   begin
-    {$ifdef DEBUGMODE} writeln(stderr,'        DEBUG: TMnhForm.onAssistantFinished - begin'); {$endif}
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.onAssistantFinished - begin'); {$endif}
     if hasEditor then getEditor^.repaintWithStateHash(assistancEvaluator.getStateHash,assistancEvaluator.getErrorHints);
-    {$ifdef DEBUGMODE} writeln(stderr,'        DEBUG: TMnhForm.onAssistantFinished - end'); {$endif}
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.onAssistantFinished - end'); {$endif}
   end;
-
 
 end.

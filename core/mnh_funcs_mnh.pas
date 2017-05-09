@@ -172,7 +172,9 @@ FUNCTION try_imp intFuncSignature;
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
       ((params^.size=1) or (params^.size=2)) then begin
+      {$ifdef fullVersion}
       context.callStackPush(tokenLocation,@builtinLocation_try);
+      {$endif}
       oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
       result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context);
       if context.adapters^.noErrors
@@ -196,7 +198,9 @@ FUNCTION try_imp intFuncSignature;
         end else result:=newVoidLiteral;
         disposeLiteral(messages);
       end;
+      {$ifdef fullVersion}
       context.callStackPop();
+      {$endif}
     end;
   end;
 
