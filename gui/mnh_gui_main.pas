@@ -206,11 +206,6 @@ FUNCTION openInEditor_impl intFuncSignature;
     end;
   end;
 
-PROCEDURE TMnhForm.onAssistantFinished;
-  begin
-    getEditor^.repaintWithStateHash(assistancEvaluator.getStateHash,assistancEvaluator.getErrorHints);
-  end;
-
 PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
   VAR task:P_editScriptTask;
       outIdx:longint;
@@ -456,5 +451,13 @@ PROCEDURE TMnhForm.updateExpressionMemo;
   end;
 
 {$i mnh_gui_main_events.inc}
+
+PROCEDURE TMnhForm.onAssistantFinished;
+  begin
+    {$ifdef DEBUGMODE} writeln(stderr,'        DEBUG: TMnhForm.onAssistantFinished - begin'); {$endif}
+    if hasEditor then getEditor^.repaintWithStateHash(assistancEvaluator.getStateHash,assistancEvaluator.getErrorHints);
+    {$ifdef DEBUGMODE} writeln(stderr,'        DEBUG: TMnhForm.onAssistantFinished - end'); {$endif}
+  end;
+
 
 end.

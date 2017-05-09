@@ -202,9 +202,9 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
-      UpdateTimeTimer.enabled:=true;
       enableDynamicItems;
       firstShow:=false;
+      UpdateTimeTimer.enabled:=true;
     end;
     if hasEditor then getEditor^.activate;
   end;
@@ -615,6 +615,5 @@ PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; 
     for i:=0 to node.count-1 do
     if not(node.items[i].HasChildren) and (treeLit_canExpand(node.items[i].data)) then addChildren(node.items[i]);
   end;
-
 
 {$endif}

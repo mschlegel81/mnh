@@ -41,4 +41,3 @@ FUNCTION sendParametersToOtherInstance(CONST parameters:T_arrayOfString):boolean
 
 end.
 
-

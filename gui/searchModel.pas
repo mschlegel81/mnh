@@ -94,5 +94,4 @@ PROCEDURE T_searchReplaceModel.doFindPrevious(CONST focusedEditor: TSynEdit);
     focusedEditor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options)+[ssoBackwards]);
   end;
 
-
 end.

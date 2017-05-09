@@ -290,7 +290,6 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
     result:=ExtractFileNameOnly(filenameOrPath);
   end;
 
-
 CONSTRUCTOR T_virtualFileCodeProvider.create(CONST path: ansistring; CONST lineData: T_arrayOfString);
   begin
     inherited create(path);

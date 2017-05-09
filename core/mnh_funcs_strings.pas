@@ -822,7 +822,6 @@ FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     LENGTH_MACRO;
 {$undef LENGTH_FUNC}
 {$undef LENGTH_MACRO}
 
-
 INITIALIZATION
   //Functions on Strings:
   registerRule(STRINGS_NAMESPACE,'length'        ,@length_imp        ,[],ak_unary     ,'length(S:string);//Returns the number of characters in string S');

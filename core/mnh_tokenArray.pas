@@ -467,7 +467,6 @@ CONSTRUCTOR T_lexer.create(CONST package: P_abstractPackage);
     resetTemp;
   end;
 
-
 PROCEDURE T_lexer.resetTemp;
   begin
     nextStatement.attributes:=C_EMPTY_STRING_ARRAY;

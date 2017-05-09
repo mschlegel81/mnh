@@ -408,7 +408,6 @@ FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
       .put('subrules',subrulesList,false);
   end;
 
-
 FUNCTION T_mutableRule.inspect: P_mapLiteral;
   FUNCTION privateOrPublic:string;
     begin
@@ -436,7 +435,6 @@ FUNCTION T_mutableRule.inspect: P_mapLiteral;
       .put('location',getLocation        )^
       .put('subrules',subrulesList,false      );
   end;
-
 
 FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
   VAR minPatternLength:longint=maxLongint;

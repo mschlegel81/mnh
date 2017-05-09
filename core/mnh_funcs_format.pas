@@ -24,7 +24,6 @@ TYPE
     DESTRUCTOR destroy;
   end;
 
-
   P_preparedFormatStatement=^T_preparedFormatStatement;
   T_preparedFormatStatement=object
     inPackage:P_objectWithPath;
@@ -153,7 +152,6 @@ DESTRUCTOR T_format.destroy;
     realFmt:='';
     strFmt:='';
   end;
-
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
   begin;
@@ -526,7 +524,6 @@ FUNCTION parseTime_imp intFuncSignature;
       end;
     end;
   end;
-
 
 INITIALIZATION
   cachedFormats.create;
