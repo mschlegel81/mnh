@@ -482,7 +482,7 @@ FUNCTION map_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       result:=newListLiteral(compound0^.size);
       iter:=compound0^.iteratableList;
-      for x in iter do listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
+      for x in iter do if context.adapters^.noErrors then listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
       disposeLiteral(iter);
     end;
   end;
@@ -498,7 +498,7 @@ FUNCTION pmap_imp intFuncSignature;
       then result:=processMapParallel(iter,P_expressionLiteral(arg1),tokenLocation,context)
       else begin
         result:=newListLiteral(compound0^.size);
-        for x in iter do listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
+        for x in iter do if context.adapters^.noErrors then listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
       end;
       disposeLiteral(iter);
     end;
