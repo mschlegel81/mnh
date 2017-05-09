@@ -202,9 +202,9 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
-      UpdateTimeTimer.enabled:=true;
       enableDynamicItems;
       firstShow:=false;
+      UpdateTimeTimer.enabled:=true;
     end;
     if hasEditor then getEditor^.activate;
   end;

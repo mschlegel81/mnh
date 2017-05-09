@@ -1184,7 +1184,7 @@ PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
   begin
     if value=debugMode_ then exit;
     debugMode_:=value;
-    if (value and runEvaluator.evaluationRunning) and not(runEvaluator.getRunnerStateInfo.state=es_editRunning) then runEvaluator.haltEvaluation;
+    if (runEvaluator.evaluationRunning) and not(runEvaluator.getRunnerStateInfo.state=es_editRunning) then runEvaluator.haltEvaluation;
   end;
 
 CONSTRUCTOR T_runnerModel.create;
