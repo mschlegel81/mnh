@@ -1108,6 +1108,7 @@ FUNCTION getHelpPopupText:string;
 
 FUNCTION getHelpLocation:T_searchTokenLocation;
   begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: getHelpLocation filename="',underCursor.location.fileName,'"; line=',underCursor.location.line,'; column=',underCursor.location.column); {$endif}
     result:=underCursor.location;
   end;
 

@@ -402,9 +402,13 @@ FUNCTION format_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
+      {$ifdef fullVersion}
       context.callStackPush(tokenLocation,@builtinLocation_format);
+      {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
+      {$ifdef fullVersion}
       context.callStackPop();
+      {$endif}
       if not(context.adapters^.noErrors) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
@@ -420,17 +424,19 @@ FUNCTION printf_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
+      {$ifdef fullVersion}
       context.callStackPush(tokenLocation,@builtinLocation_printf);
+      {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.adapters^.noErrors) then begin
-        context.callStackPop();
+        {$ifdef fullVersion}context.callStackPop();{$endif}
         exit(nil);
       end;
       system.enterCriticalSection(print_cs);
       context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
-      context.callStackPop();
+      {$ifdef fullVersion}context.callStackPop();{$endif}
     end;
   end;
 

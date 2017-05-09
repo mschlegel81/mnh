@@ -687,7 +687,9 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
             while (stack.topIndex>=0) and not(stack.dat[stack.topIndex]^.tokType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
             stack.popDestroy(context.recycler);
             if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.dat[stack.topIndex]^.tokType]) then begin
+              {$ifdef fullVersion}
               if (stack.dat[stack.topIndex]^.tokType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
+              {$endif}
               stack.popDestroy(context.recycler);
               context.valueStore.scopePop;
             end else clean:=false;
@@ -731,7 +733,9 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
+    {$ifdef fullVersion}
     if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
+    {$endif}
     stack.popDestroy(context.recycler);
     first^.next:=context.recycler.disposeToken(first^.next);
     first^.next:=context.recycler.disposeToken(first^.next);
@@ -884,7 +888,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
+              {$ifdef fullVersion}
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
+              {$endif}
               stack.popDestroy(context.recycler);
               first^.next:=context.recycler.disposeToken(first^.next);
               first^.next:=context.recycler.disposeToken(first^.next);
@@ -905,7 +911,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.recycler.disposeToken(first);
+              {$ifdef fullVersion}
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
+              {$endif}
               first^.next:=context.recycler.disposeToken(first^.next);
               first^.next:=context.recycler.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1055,17 +1063,23 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         context.adapters^.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
+        {$ifdef fullVersion}
         if not(context.adapters^.hasStackTrace) then context.callStackPrint;
+        {$endif}
         cleanupStackAndExpression;
       end;
     end else if (context.adapters^.hasFatalError) then begin
+      {$ifdef fullVersion}
       if not(context.adapters^.hasHaltMessage) and
          not(context.adapters^.hasStackTrace) then context.callStackPrint;
       context.callStackClear;
+      {$endif}
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
       if (context.callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
+      {$ifdef fullVersion}
       if not(context.adapters^.hasStackTrace) then context.callStackPrint;
+      {$endif}
       cleanupStackAndExpression;
     end;
     stack.destroy;

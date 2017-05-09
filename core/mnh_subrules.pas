@@ -447,11 +447,15 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
        (param<>nil) and pattern.matches(param^,callLocation,context) then begin
       prepareResult;
       result:=true;
+      {$ifdef fullVersion}
       context.callStackPush(callLocation,@self);
+      {$endif}
     end else if fallbackFeasible then begin
       prepareResult;
       result:=true;
+      {$ifdef fullVersion}
       context.callStackPush(callLocation,@self);
+      {$endif}
       tempInnerParam:=newListLiteral;
       for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^[i],true);
       lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_parList,tempInnerParam);
