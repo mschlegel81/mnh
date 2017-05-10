@@ -405,7 +405,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
   PROCEDURE prepareResult;
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
-    VAR i:longint;
+    VAR i,iSkip:longint;
         blocking:boolean;
         L:P_literal;
         remaining:P_listLiteral=nil;
@@ -414,7 +414,13 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
       blocking:=typ in [srt_normal_private,srt_normal_public];
       firstRep:=context.recycler.newToken(declaredAt,'',beginToken[blocking]);
       lastRep:=firstRep;
-      for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
+
+      if (preparedBody[                     0].token.tokType=tt_beginBlock) and
+         (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
+         (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
+      then iSkip:=1 else iSkip:=0;
+
+      for i:=iSkip to length(preparedBody)-1-2*iSkip do with preparedBody[i] do begin
         if parIdx>=0 then begin
           if parIdx=ALL_PARAMETERS_PAR_IDX then L:=param
           else if parIdx=REMAINING_PARAMETERS_IDX then begin
