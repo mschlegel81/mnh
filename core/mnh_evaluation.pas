@@ -261,24 +261,24 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       didSubstitution:=true;
     end;
 
+  PROCEDURE raiseSideEffectError(CONST id:string; CONST violations:T_sideEffects);
+    VAR messageText:string='';
+        eff:T_sideEffect;
+    begin
+      for eff in violations do begin
+        if messageText<>'' then messageText:=messageText+', ';
+        messageText:=messageText+C_sideEffectName[eff];
+      end;
+      messageText:='Cannot apply '+id+' because of side effect(s): ['+messageText+']';
+      context.adapters^.raiseError(messageText,first^.location);
+    end;
+
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
         inlineRule:P_subrule;
         violations:T_sideEffects;
-
-    PROCEDURE raiseSideEffectError(CONST id:string);
-      VAR messageText:string='';
-          eff:T_sideEffect;
-      begin
-        for eff in violations do begin
-          if messageText<>'' then messageText:=messageText+', ';
-          messageText:=messageText+C_sideEffectName[eff];
-        end;
-        messageText:='Cannot apply function '+id+' because of side effect(s): ['+messageText+']';
-        context.adapters^.raiseError(messageText,first^.location);
-      end;
 
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
@@ -327,7 +327,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         violations:=violatingSideEffects(first^.data,context.sideEffectWhitelist);
         if violations=[] then newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context)
         else begin
-          raiseSideEffectError(first^.txt);
+          raiseSideEffectError('function '+first^.txt,violations);
           exit;
         end;
         {$ifndef DEBUGMODE}
@@ -423,9 +423,14 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   PROCEDURE applyMutation;
     VAR newValue:P_literal;
     begin
+      if not(se_writingInternal in context.sideEffectWhitelist) then begin
+        raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,[se_writingInternal]);
+        exit;
+      end;
       newValue:=first^.next^.data;
       P_mutableRule(first^.data)^.setMutableValue(newValue,false);
       first:=context.recycler.disposeToken(first);
+      didSubstitution:=true;
     end;
 
   PROCEDURE applyLocalAssignment(CONST kind:T_tokenType);
@@ -449,6 +454,10 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
             first^.data:=newValue;
           end;
         end else begin
+          if not(se_writingInternal in context.sideEffectWhitelist) then begin
+            raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,[se_writingInternal]);
+            exit;
+          end;
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
@@ -457,6 +466,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           end;
         end;
       end;
+      didSubstitution:=true;
     end;
 
   PROCEDURE pon_flip;
@@ -899,12 +909,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             end else begin
               stack.popLink(first);
               applyMutation;
-              didSubstitution:=true;
             end;
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
               stack.popLink(first);
               applyMutation;
-              didSubstitution:=true;
             end;
             COMMON_CASES;
           end;
@@ -921,12 +929,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             end else begin
               stack.popLink(first);
               applyLocalAssignment(cTokType[-1]);
-              didSubstitution:=true;
             end;
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
               stack.popLink(first);
               applyLocalAssignment(cTokType[-1]);
-              didSubstitution:=true;
             end;
             COMMON_CASES;
           end;
