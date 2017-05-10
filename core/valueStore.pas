@@ -37,19 +37,17 @@ TYPE
   end;
   {$endif}
 
-  T_valueStoreMarker=(vsm_none,vsm_nonBlockingVoid,vsm_blockingVoid,vsm_nonBlockingFirst,vsm_blockingFirst);
-CONST
-  C_voidOfBlocking:array[false..true] of T_valueStoreMarker=(vsm_nonBlockingVoid,vsm_blockingVoid);
-  C_firstOfVoid   :array[vsm_nonBlockingVoid..vsm_blockingVoid] of T_valueStoreMarker=(vsm_nonBlockingFirst,vsm_blockingFirst);
 TYPE
+  T_scope=record
+    blockingScope:boolean;
+    v:array of P_namedVariable;
+  end;
+
   P_valueStore=^T_valueStore;
   T_valueStore=object
     private
       cs:TRTLCriticalSection;
-      data:array of record
-        marker:T_valueStoreMarker;
-        v:P_namedVariable;
-      end;
+      scopeStack:array of T_scope;
       PROCEDURE copyDataAsReadOnly(VAR original:T_valueStore);
       FUNCTION getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
     public
@@ -71,7 +69,6 @@ TYPE
       {$ifdef fullVersion}
       //For debugging:
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
-      PROCEDURE writeStore;
       {$endif}
   end;
 
@@ -197,25 +194,28 @@ CONSTRUCTOR T_valueStore.create;
   begin
     parentStore:=nil;
     system.initCriticalSection(cs);
-    setLength(data,0);
+    setLength(scopeStack,0);
   end;
 
 PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
   VAR i,i0:longint;
+  PROCEDURE copyScope(CONST source:T_scope; OUT dest:T_scope);
+    VAR k:longint;
+    begin
+      dest.blockingScope:=source.blockingScope;
+      setLength(dest.v,length(source.v));
+      for k:=0 to length(dest.v)-1 do dest.v[k]:=source.v[k]^.readOnlyClone;
+    end;
+
   begin
     clear;
     //find first entry to be copied
-    i0:=length(original.data)-1;
+    i0:=length(original.scopeStack)-1;
     if i0<0 then i0:=0;
-    while (i0>0) and (original.data[i0].marker in [vsm_none,vsm_nonBlockingVoid,vsm_nonBlockingFirst]) do dec(i0);
+    while (i0>0) and not(original.scopeStack[i0].blockingScope) do dec(i0);
     //copy entries
-    setLength(data,length(original.data)-i0);
-    for i:=i0 to length(original.data)-1 do with data[i-i0] do begin
-      marker:=original.data[i].marker;
-      if original.data[i].v=nil
-      then v:=nil
-      else v:=original.data[i].v^.readOnlyClone;
-    end;
+    setLength(scopeStack,length(original.scopeStack)-i0);
+    for i:=i0 to length(original.scopeStack)-1 do copyScope(original.scopeStack[i],scopeStack[i-i0]);
   end;
 
 FUNCTION T_valueStore.readOnlyClone:P_valueStore;
@@ -230,19 +230,28 @@ DESTRUCTOR T_valueStore.destroy;
     system.doneCriticalSection(cs);
   end;
 
+PROCEDURE clearScope(VAR s:T_scope);
+  VAR k:longint;
+  begin
+    with s do begin
+      for k:=0 to length(v)-1 do dispose(v[k],destroy);
+      setLength(v,0);
+    end;
+  end;
+
 PROCEDURE T_valueStore.clear;
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(data)-1 do if data[i].v<>nil then dispose(data[i].v,destroy);
-    setLength(data,0);
+    for i:=0 to length(scopeStack)-1 do clearScope(scopeStack[i]);
+    setLength(scopeStack,0);
     system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_valueStore.isEmpty:boolean;
   begin
     system.enterCriticalSection(cs);
-    result:=length(data)=0;
+    result:=length(scopeStack)=0;
     system.leaveCriticalSection(cs);
   end;
 
@@ -250,62 +259,55 @@ PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    i:=length(data);
-    setLength(data,i+1);
-    with data[i] do begin
-      v:=nil;
-      marker:=C_voidOfBlocking[blocking];
-    end;
+    i:=length(scopeStack);
+    setLength(scopeStack,i+1);
+    scopeStack[i].blockingScope:=blocking;
+    setLength(scopeStack[i].v,0);
     system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.scopePop;
   VAR i:longint;
+      {$ifdef debugMode}
+      named:P_namedVariable;
+      {$endif}
   begin
     system.enterCriticalSection(cs);
-    i:=length(data);
-    repeat
-      dec(i);
-      with data[i] do if v<>nil then begin
-        dispose(v,destroy);
-        v:=nil;
-      end;
-    until data[i].marker<>vsm_none;
-    setLength(data,i);
+    i:=length(scopeStack)-1;
+    {$ifdef debugMode}
+    if gui_started then begin
+      writeln(stdErr,'        DEBUG: T_valueStore.scopePop (blocking=',scopeStack[i].blockingScope,')');
+      for named in scopeStack[i].v do writeln(stdErr,'        DEBUG: ',named^.toString(100));
+    end;
+    {$endif}
+    clearScope(scopeStack[i]);
+    setLength(scopeStack,i);
     system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_valueStore.getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
-  VAR i:longint;
+  VAR i,k:longint;
   begin
     blockEncountered:=false;
     result:=nil;
-    for i:=length(data)-1 downto 0 do with data[i] do
-    if (v<>nil) and (v^.getId=id) then begin
-      result:=v;
-      exit(result);
-    end else if marker in [vsm_blockingFirst,vsm_blockingVoid] then begin
-      blockEncountered:=true;
-      exit(nil);
+    for i:=length(scopeStack)-1 downto 0 do with scopeStack[i] do begin
+      for k:=length(v)-1 downto 0 do if v[k]^.getId=id then exit(v[k]);
+      if blockingScope then begin
+        blockEncountered:=true;
+        exit(nil);
+      end;
     end;
     if parentStore<>nil then result:=parentStore^.getVariable(id,blockEncountered);
   end;
 
 PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
-  VAR i:longint;
+  VAR k:longint;
   begin
     system.enterCriticalSection(cs);
-    i:=length(data);
-    with data[i-1] do if marker in [vsm_blockingVoid,vsm_nonBlockingVoid] then begin
-      marker:=C_firstOfVoid[marker];
-      new(v,create(id,value,readonly));
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    setLength(data,i+1);
-    with data[i] do begin
-      marker:=vsm_none;
-      new(v,create(id,value,readonly));
+    with scopeStack[length(scopeStack)-1] do begin
+      k:=length(v);
+      setLength(v,k+1);
+      new(v[k],create(id,value,readonly));
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -359,38 +361,23 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i :longint;
       i0:longint=0;
       up:longint=0;
+      named:P_namedVariable;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(data)-1 do case data[i].marker of
-      vsm_nonBlockingVoid,vsm_nonBlockingFirst: inc(up);
-      vsm_blockingVoid,vsm_blockingFirst: begin up:=1; i0:=i; end;
-    end;
+    for i:=0 to length(scopeStack)-1 do
+    if scopeStack[i].blockingScope then begin up:=1; i0:=i; end
+                                   else   inc(up);
+
     if (i0>0) and (parentStore<>nil) then parentStore^.reportVariables(variableReport);
-    for i:=i0 to length(data)-1 do begin
-      if data[i].marker<>vsm_none then dec(up);
-      with data[i] do if v<>nil then begin
-        if up=0 then variableReport.addVariable(v,'local')
-                else variableReport.addVariable(v,'local (+'+intToStr(up)+')');
+    for i:=i0 to length(scopeStack)-1 do with scopeStack[i] do begin
+      dec(up);
+      for named in v do begin
+        if up=0 then variableReport.addVariable(named,'local')
+                else variableReport.addVariable(named,'local (+'+intToStr(up)+')');
       end;
     end;
     system.leaveCriticalSection(cs);
   end;
-
-PROCEDURE T_valueStore.writeStore;
-  FUNCTION vts(CONST v:P_namedVariable):string;
-    begin
-      if v=nil then result:='<nil>'
-               else result:=v^.toString(100);
-    end;
-
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    if parentStore<>nil then parentStore^.writeStore;
-    for i:=0 to length(data)-1 do writeln(data[i].marker,' ',vts(data[i].v));
-    system.leaveCriticalSection(cs);
-  end;
-
 {$endif}
 
 {$ifdef fullVersion}
