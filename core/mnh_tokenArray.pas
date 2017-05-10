@@ -99,6 +99,13 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
           t^.next:=recycler.disposeToken(t^.next);
           t^.next:=recycler.disposeToken(t^.next);
         end;
+        tt_modifier_save: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalSaveVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignNewBlockLocalSave;
+          t^.data:=nil;
+          t^.txt:=t^.next^.txt;
+          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
         tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignExistingBlockLocal;
           t^.data:=nil;
@@ -108,7 +115,16 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
           t^.data:=nil;
           t^.next:=recycler.disposeToken(t^.next);
         end;
+        tt_blockLocalSaveVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignExistingBlockLocalSave;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+          t^.tokType:=t^.next^.tokType;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
         end;
+      end;
       t:=t^.next;
     end;
   end;
@@ -485,29 +501,33 @@ DESTRUCTOR T_lexer.destroy;
     end;
   end;
 
-FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler;
-  VAR adapters: T_adapters): T_enhancedStatement;
+FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters): T_enhancedStatement;
+  CONST localOfSave:array[false..true] of T_tokenType=(tt_blockLocalVariable,tt_blockLocalSaveVariable);
   VAR localIdStack:T_idStack;
-      lastWasLocalModifier:boolean=false;
+      lastWasLocalOrSaveModifier:boolean=false;
+      lastWasSaveModifier       :boolean=false;
+      isSave:boolean;
   begin
     localIdStack.create;
     while fetchNext(recycler,adapters) and (lastTokenized<>nil) do case lastTokenized^.tokType of
       tt_beginBlock: begin
         localIdStack.clear;
         localIdStack.scopePush;
-        lastWasLocalModifier:=false;
+        lastWasLocalOrSaveModifier:=false;
+        lastWasSaveModifier       :=false;
         while fetchNext(recycler,adapters) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
           case lastTokenized^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
             tt_endBlock      : localIdStack.scopePop;
             tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
-              if lastWasLocalModifier then begin
-                lastTokenized^.tokType:=tt_blockLocalVariable;
-                localIdStack.addId(lastTokenized^.txt);
-              end else if (localIdStack.hasId(lastTokenized^.txt)) then
-                lastTokenized^.tokType:=tt_blockLocalVariable;
+              if lastWasLocalOrSaveModifier then begin
+                lastTokenized^.tokType:=localOfSave  [lastWasSaveModifier];
+                localIdStack.addId(lastTokenized^.txt,lastWasSaveModifier);
+              end else if (localIdStack.hasId(lastTokenized^.txt,isSave)) then
+                lastTokenized^.tokType:=localOfSave[isSave];
           end;
-          lastWasLocalModifier:=lastTokenized^.tokType=tt_modifier_local;
+          lastWasLocalOrSaveModifier:=lastTokenized^.tokType in [tt_modifier_local,tt_modifier_save];
+          lastWasSaveModifier       :=lastTokenized^.tokType =                     tt_modifier_save;
         end;
       end;
       tt_semicolon: begin

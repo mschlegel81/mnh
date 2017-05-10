@@ -438,11 +438,11 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     begin
       newValue:=first^.next^.data;
       case kind of
-        tt_assignNewBlockLocal: begin
+        tt_assignNewBlockLocal,tt_assignNewBlockLocalSave: begin
           context.valueStore.createVariable(first^.txt,newValue,false);
           first:=context.recycler.disposeToken(first);
         end;
-        tt_assignExistingBlockLocal: begin
+        tt_assignExistingBlockLocal,tt_assignExistingBlockLocalSave: begin
           context.valueStore.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
           first:=context.recycler.disposeToken(first);
         end;
@@ -494,8 +494,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       end;
 
       with newFunctionToken^ do begin
-        ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
-        if tokType=tt_blockLocalVariable then begin
+        ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable,tt_blockLocalSaveVariable]);
+        if tokType in [tt_blockLocalVariable,tt_blockLocalSaveVariable] then begin
           expression:=context.valueStore.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
             if expression^.literalType<>lt_expression then expression^.unreference
@@ -916,7 +916,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: case cTokType[1] of
+          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
+          tt_assignNewBlockLocalSave, tt_assignExistingBlockLocalSave, tt_cso_assignPlus..tt_cso_mapDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.recycler.disposeToken(first);
               {$ifdef fullVersion}
@@ -949,11 +950,12 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: begin
+        tt_assignNewBlockLocal, tt_assignNewBlockLocalSave,
+        tt_assignExistingBlockLocal,tt_assignExistingBlockLocalSave, tt_cso_assignPlus..tt_cso_mapDrop: begin
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_blockLocalVariable: begin
+        tt_blockLocalVariable, tt_blockLocalSaveVariable: begin
           first^.data:=context.valueStore.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;

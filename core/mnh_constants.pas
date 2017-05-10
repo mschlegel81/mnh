@@ -104,6 +104,7 @@ TYPE
     tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue,
     tt_customTypeRule,
     tt_blockLocalVariable,
+    tt_blockLocalSaveVariable,
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
@@ -133,7 +134,7 @@ TYPE
     tt_iifCheck, tt_iifElse,
     tt_listToParameterList,
     //assignment operators:
-    tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
+    tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignNewBlockLocalSave, tt_assignExistingBlockLocal, tt_assignExistingBlockLocalSave,
     tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend, //+= -= *= /= &= |=
     tt_cso_mapPut,tt_cso_mapDrop, //<< >>
     //type checks:
@@ -156,6 +157,7 @@ TYPE
     tt_modifier_plain,
     tt_modifier_synchronized,
     tt_modifier_local,
+    tt_modifier_save,
     tt_modifier_customType,
     //special: [E]nd [O]f [L]ine
     tt_EOL,
@@ -380,6 +382,7 @@ CONST
 {tt_rulePutCacheValue}          (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'A put-cache-value call'),
 {tt_customTypeRule}             (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:''),
 {tt_blockLocalVariable}         (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A block-local variable'),
+{tt_blockLocalSaveVariable}     (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A block-local variable'),
 {tt_ponFlipper}                 (defaultId:'.';             defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'A pseudo-object-notation flipper'),
 {tt_aggregatorConstructor}      (defaultId:'aggregator';    defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
 {tt_each}                       (defaultId:'.each';         defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: each#Used for (serial) list operations.#Syntax: <list>.each(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
@@ -438,7 +441,9 @@ CONST
 {tt_assign}                     (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assignment operator'),
 {tt_mutate}                     (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Mutate-assign operator'),
 {tt_assignNewBlockLocal}        (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assign new block local operator'),
+{tt_assignNewBlockLocalSave}    (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assign new save block local operator'),
 {tt_assignExistingBlockLocal}   (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assign existing block local operator'),
+{tt_assignExistingBlockLocalSave}(defaultId:':=';           defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assign existing save block local operator'),
 {tt_cso_assignPlus}             (defaultId:'+=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-increment operator'),
 {tt_cso_assignMinus}            (defaultId:'-=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-decrement operator'),
 {tt_cso_assignMult}             (defaultId:'*=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-multiply operator'),
@@ -483,6 +488,7 @@ CONST
 {tt_modifier_plain}             (defaultId:'plain';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier plain#Modifies a datastore to use plain text instead of default binary format'),
 {tt_modifier_synchronized}      (defaultId:'synchronized';  defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
 {tt_modifier_local}             (defaultId:'local';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier local#Used for declaring block-local variables'),
+{tt_modifier_save}              (defaultId:'save';          defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier save#Used for declaring save block-local variables'),
 {tt_modifier_customType}        (defaultId:'type';          defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier type#Used for declaring custom type checks'),
 {tt_EOL}                        (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'),
 {tt_docComment}                 (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'),

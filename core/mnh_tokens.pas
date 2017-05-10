@@ -274,10 +274,11 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_parList_constructor: result:=toParameterListString(P_listLiteral(data),false,limit);
       tt_parList            : result:=toParameterListString(P_listLiteral(data),true ,limit);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
-      tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
+      tt_assignNewBlockLocal    : result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
+      tt_assignNewBlockLocalSave: result:=C_tokenInfo[tt_modifier_save ].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
       tt_endRule  ,tt_endExpression  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
-      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
+      tt_mutate, tt_assignExistingBlockLocal, tt_assignExistingBlockLocalSave, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
       tt_identifier,
       tt_localUserRule,
       tt_importedUserRule,
@@ -286,6 +287,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_customTypeRule,
       tt_parameterIdentifier,
       tt_blockLocalVariable,
+      tt_blockLocalSaveVariable,
       tt_blank: result:=txt;
       else result:=C_tokenInfo[tokType].defaultId;
     end;
@@ -302,9 +304,9 @@ FUNCTION T_token.hash:T_hashInt;
   begin
     result:=T_hashInt(tokType);
     if tokType in [tt_intrinsicRule,tt_localUserRule,tt_importedUserRule,tt_rulePutCacheValue,tt_customTypeRule] then result:=result*31+T_hashInt(data);
-    if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,
-                    tt_mutate,tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend,
-                    tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blank])
+    if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,tt_assignNewBlockLocalSave,
+                    tt_mutate,tt_assignExistingBlockLocal,tt_assignExistingBlockLocalSave, tt_cso_assignPlus..tt_cso_assignAppend,
+                    tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blockLocalSaveVariable,tt_blank])
     then result:=result*37+hashOfAnsiString(txt);
     if (tokType in [tt_each, tt_parallelEach,tt_aggregatorExpressionLiteral,tt_literal,
                     tt_parList_constructor,tt_parList,tt_list_constructor])
@@ -324,9 +326,9 @@ FUNCTION T_token.equals(CONST other:T_token):boolean;
   begin
     if tokType<>other.tokType then exit(false);
     if tokType in [tt_intrinsicRule,tt_localUserRule,tt_importedUserRule,tt_rulePutCacheValue,tt_customTypeRule] then exit(data=other.data);
-    if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,
-                    tt_mutate,tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend,
-                    tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blank])
+    if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,tt_assignNewBlockLocalSave,
+                    tt_mutate,tt_assignExistingBlockLocal,tt_assignExistingBlockLocalSave,tt_cso_assignPlus..tt_cso_assignAppend,
+                    tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blockLocalSaveVariable,tt_blank])
        and (txt<>other.txt) then exit(false);
     if (tokType in [tt_each, tt_parallelEach,tt_aggregatorExpressionLiteral,tt_literal,
                     tt_parList_constructor,tt_parList,tt_list_constructor])
