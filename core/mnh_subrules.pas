@@ -12,6 +12,7 @@ USES //basic classes
      tokenStack,
      mnh_contexts,
      mnh_tokenArray,
+     valueStore,
      {$ifdef fullVersion}
      mnh_plotData,mnh_funcs_plot,
      {$endif}
@@ -38,14 +39,20 @@ TYPE
   T_subrule=object(T_expressionLiteral)
     private
       attributes:array of T_subruleAttribute;
-      firstCallCs:TRTLCriticalSection;
+      subruleCallCs:TRTLCriticalSection;
       functionIdsReady:boolean;
       comment:ansistring;
       parent:P_objectWithIdAndLocation;
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
+
       preparedBody:array of T_preparedToken;
+
+      //save related:
+      indexOfSave:longint;
+      saveValueStore:P_valueStore;
+      currentlyEvaluating:boolean;
 
       PROCEDURE updatePatternForInline;
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
@@ -151,10 +158,12 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
   VAR t:P_token;
       i:longint;
+      scopeLevel:longint=0;
   begin
     setLength(preparedBody,0);
     t:=rep;
     i:=0;
+    indexOfSave:=-1;
     while t<>nil do begin
       if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
       with preparedBody[i] do begin
@@ -162,6 +171,14 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadC
         t^.tokType:=tt_EOL; t:=context.recycler.disposeToken(t);
         token.next:=nil;
         case token.tokType of
+          tt_beginBlock: begin inc(scopeLevel); parIdx:=-1; end;
+          tt_endBlock:   begin dec(scopeLevel); parIdx:=-1; end;
+          tt_save: begin
+            if indexOfSave>=0 then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+            if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+IntToStr(scopeLevel)+')',token.location);
+            parIdx:=-1;
+            indexOfSave:=i;
+          end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
           tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
             parIdx:=pattern.indexOfId(token.txt);
@@ -183,7 +200,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadC
 CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_objectWithIdAndLocation=nil);
   begin
     inherited init(lt_expression);
-    initCriticalSection(firstCallCs);
+    initCriticalSection(subruleCallCs);
     setLength(attributes,0);
     functionIdsReady:=false;
     comment:='';
@@ -191,6 +208,9 @@ CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocati
     typ:=srt;
     declaredAt:=location;
     setLength(preparedBody,0);
+    indexOfSave:=-1;
+    saveValueStore:=nil;
+    currentlyEvaluating:=false;
   end;
 
 CONSTRUCTOR T_subrule.create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_threadContext);
@@ -334,7 +354,8 @@ DESTRUCTOR T_subrule.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
     setLength(attributes,0);
-    doneCriticalSection(firstCallCs);
+    if (saveValueStore<>nil) then dispose(saveValueStore,destroy);
+    doneCriticalSection(subruleCallCs);
   end;
 
 FUNCTION T_subrule.canApplyToNumberOfParameters(CONST parCount:longint):boolean; begin result:=pattern.canApplyToNumberOfParameters(parCount); end;
@@ -392,6 +413,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
   FUNCTION fallbackFeasible:boolean;
     begin
       result:=useUncurryingFallback and
+             (indexOfSave<0) and
               //The given parameters must match
              (param<>nil) and pattern.matchesForFallback(param^,callLocation,context) and
               //The function result must (likely) be an expression
@@ -405,11 +427,23 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
   PROCEDURE prepareResult;
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
-    VAR i,iSkip:longint;
+    VAR i:longint;
+        firstRelevantToken,lastRelevantToken:longint;
         blocking:boolean;
         L:P_literal;
         remaining:P_listLiteral=nil;
+        previousValueStore:P_valueStore;
     begin
+      EnterCriticalsection(subruleCallCs);
+      if (indexOfSave>=0) and currentlyEvaluating then begin
+        firstRep:=nil;
+        lastRep:=nil;
+        LeaveCriticalsection(subruleCallCs);
+        context.adapters^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
+        exit;
+      end;
+      currentlyEvaluating:=true;
+
       if not(functionIdsReady) then resolveIds(context.adapters);
       blocking:=typ in [srt_normal_private,srt_normal_public];
       firstRep:=context.recycler.newToken(declaredAt,'',beginToken[blocking]);
@@ -418,9 +452,16 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
       if (preparedBody[                     0].token.tokType=tt_beginBlock) and
          (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
          (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
-      then iSkip:=1 else iSkip:=0;
+      then begin
+        firstRelevantToken:=1;
+        lastRelevantToken:=length(preparedBody)-3;
+        if (indexOfSave>=0) and (saveValueStore<>nil) then firstRelevantToken:=indexOfSave+2;
+      end else begin
+        firstRelevantToken:=0;
+        lastRelevantToken:=length(preparedBody)-1;
+      end;
 
-      for i:=iSkip to length(preparedBody)-1-2*iSkip do with preparedBody[i] do begin
+      for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
         if parIdx>=0 then begin
           if parIdx=ALL_PARAMETERS_PAR_IDX then L:=param
           else if parIdx=REMAINING_PARAMETERS_IDX then begin
@@ -433,17 +474,42 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
             L:=remaining;
           end else L:=param^[parIdx];
           {$ifdef debugMode}
-          if L=nil then raise Exception.create('Whoops! Unressolved parameter pointer.');
+          if L=nil then raise Exception.create('Whoops! Unresolved parameter pointer. [prepareResult in T_subrule.replaces]');
           {$endif}
           lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L);
           L^.rereference;
         end else lastRep^.next:=context.recycler.newToken(token);
         lastRep:=lastRep^.next;
       end;
-      lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_semicolon);
-      lastRep:=lastRep^.next;
-      lastRep^.next:=context.recycler.newToken(declaredAt,'',endToken[blocking]);
-      lastRep:=lastRep^.next;
+
+      {$ifdef fullVersion}
+      context.callStackPush(callLocation,@self);
+      {$endif}
+      if indexOfSave>=0 then begin
+        if saveValueStore=nil then begin
+          new(saveValueStore,create);
+          saveValueStore^.scopePush(blocking);
+        end;
+        previousValueStore:=context.valueStore;
+        context.valueStore:=saveValueStore;
+        context.valueStore^.parentStore:=previousValueStore;
+
+        firstRep:=context.recycler.disposeToken(firstRep);
+
+        context.reduceExpression(firstRep);
+        if firstRep=nil
+        then lastRep:=nil
+        else lastRep:=firstRep^.last;
+        {$ifdef DEBUGMODE} writeln(stderr,'        DEBUG: evaluation in T_subrule.replaces finished'); {$endif}
+        context.valueStore:=previousValueStore;
+      end else begin
+        lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_semicolon);
+        lastRep:=lastRep^.next;
+        lastRep^.next:=context.recycler.newToken(declaredAt,'',endToken[blocking]);
+        lastRep:=lastRep^.next;
+      end;
+      currentlyEvaluating:=false;
+      LeaveCriticalsection(subruleCallCs);
     end;
 
   VAR tempInnerParam:P_listLiteral;
@@ -452,16 +518,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,callLocation,context) then begin
       prepareResult;
-      result:=true;
-      {$ifdef fullVersion}
-      context.callStackPush(callLocation,@self);
-      {$endif}
+      result:=lastRep<>nil;
     end else if fallbackFeasible then begin
       prepareResult;
-      result:=true;
-      {$ifdef fullVersion}
-      context.callStackPush(callLocation,@self);
-      {$endif}
+      result:=lastRep<>nil;
       tempInnerParam:=newListLiteral;
       for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^[i],true);
       lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_parList,tempInnerParam);
@@ -859,7 +919,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     end;
 
   begin
-    enterCriticalSection(firstCallCs);
+    enterCriticalSection(subruleCallCs);
     if not(functionIdsReady) then begin
       bracketStack.create;
       functionIdsReady:=true;
@@ -875,7 +935,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
       end;
       bracketStack.destroy;
     end;
-    leaveCriticalSection(firstCallCs);
+    leaveCriticalSection(subruleCallCs);
   end;
 
 {$ifdef fullVersion}

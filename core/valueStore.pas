@@ -65,7 +65,6 @@ TYPE
       FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
       PROCEDURE scopePush(CONST blocking:boolean);
       PROCEDURE scopePop;
-
       {$ifdef fullVersion}
       //For debugging:
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
