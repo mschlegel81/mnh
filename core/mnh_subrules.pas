@@ -175,7 +175,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadC
           tt_endBlock:   begin dec(scopeLevel); parIdx:=-1; end;
           tt_save: begin
             if indexOfSave>=0 then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-            if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+IntToStr(scopeLevel)+')',token.location);
+            if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
             parIdx:=-1;
             indexOfSave:=i;
           end;
@@ -434,11 +434,11 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         remaining:P_listLiteral=nil;
         previousValueStore:P_valueStore;
     begin
-      EnterCriticalsection(subruleCallCs);
+      enterCriticalSection(subruleCallCs);
       if (indexOfSave>=0) and currentlyEvaluating then begin
         firstRep:=nil;
         lastRep:=nil;
-        LeaveCriticalsection(subruleCallCs);
+        leaveCriticalSection(subruleCallCs);
         context.adapters^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
         exit;
       end;
@@ -500,7 +500,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         if firstRep=nil
         then lastRep:=nil
         else lastRep:=firstRep^.last;
-        {$ifdef DEBUGMODE} writeln(stderr,'        DEBUG: evaluation in T_subrule.replaces finished'); {$endif}
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: evaluation in T_subrule.replaces finished'); {$endif}
         context.valueStore:=previousValueStore;
       end else begin
         lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_semicolon);
@@ -509,7 +509,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         lastRep:=lastRep^.next;
       end;
       currentlyEvaluating:=false;
-      LeaveCriticalsection(subruleCallCs);
+      leaveCriticalSection(subruleCallCs);
     end;
 
   VAR tempInnerParam:P_listLiteral;

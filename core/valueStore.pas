@@ -267,18 +267,18 @@ PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
 
 PROCEDURE T_valueStore.scopePop;
   VAR i:longint;
-      {$ifdef debugMode}
+      {$ifdef debugMode}{$ifdef fullVersion}
       named:P_namedVariable;
-      {$endif}
+      {$endif}{$endif}
   begin
     system.enterCriticalSection(cs);
     i:=length(scopeStack)-1;
-    {$ifdef debugMode}
+    {$ifdef debugMode} {$ifdef fullVersion}
     if gui_started then begin
       writeln(stdErr,'        DEBUG: T_valueStore.scopePop (blocking=',scopeStack[i].blockingScope,')');
       for named in scopeStack[i].v do writeln(stdErr,'        DEBUG: ',named^.toString(100));
     end;
-    {$endif}
+    {$endif} {$endif}
     clearScope(scopeStack[i]);
     setLength(scopeStack,i);
     system.leaveCriticalSection(cs);
