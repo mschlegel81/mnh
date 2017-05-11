@@ -261,24 +261,24 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       didSubstitution:=true;
     end;
 
+  PROCEDURE raiseSideEffectError(CONST id:string; CONST violations:T_sideEffects);
+    VAR messageText:string='';
+        eff:T_sideEffect;
+    begin
+      for eff in violations do begin
+        if messageText<>'' then messageText:=messageText+', ';
+        messageText:=messageText+C_sideEffectName[eff];
+      end;
+      messageText:='Cannot apply '+id+' because of side effect(s): ['+messageText+']';
+      context.adapters^.raiseError(messageText,first^.location);
+    end;
+
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
         inlineRule:P_subrule;
         violations:T_sideEffects;
-
-    PROCEDURE raiseSideEffectError(CONST id:string);
-      VAR messageText:string='';
-          eff:T_sideEffect;
-      begin
-        for eff in violations do begin
-          if messageText<>'' then messageText:=messageText+', ';
-          messageText:=messageText+C_sideEffectName[eff];
-        end;
-        messageText:='Cannot apply function '+id+' because of side effect(s): ['+messageText+']';
-        context.adapters^.raiseError(messageText,first^.location);
-      end;
 
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
@@ -327,7 +327,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         violations:=violatingSideEffects(first^.data,context.sideEffectWhitelist);
         if violations=[] then newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context)
         else begin
-          raiseSideEffectError(first^.txt);
+          raiseSideEffectError('function '+first^.txt,violations);
           exit;
         end;
         {$ifndef DEBUGMODE}
@@ -423,9 +423,14 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   PROCEDURE applyMutation;
     VAR newValue:P_literal;
     begin
+      if not(se_writingInternal in context.sideEffectWhitelist) then begin
+        raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,[se_writingInternal]);
+        exit;
+      end;
       newValue:=first^.next^.data;
       P_mutableRule(first^.data)^.setMutableValue(newValue,false);
       first:=context.recycler.disposeToken(first);
+      didSubstitution:=true;
     end;
 
   PROCEDURE applyLocalAssignment(CONST kind:T_tokenType);
@@ -434,21 +439,25 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.valueStore.createVariable(first^.txt,newValue,false);
+          context.valueStore^.createVariable(first^.txt,newValue,false);
           first:=context.recycler.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.valueStore.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
+          context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
           first:=context.recycler.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_mapDrop: if first^.data=nil then begin
-          newValue:=context.valueStore.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters);
+          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end else begin
+          if not(se_writingInternal in context.sideEffectWhitelist) then begin
+            raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,[se_writingInternal]);
+            exit;
+          end;
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
@@ -457,6 +466,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           end;
         end;
       end;
+      didSubstitution:=true;
     end;
 
   PROCEDURE pon_flip;
@@ -486,7 +496,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
         if tokType=tt_blockLocalVariable then begin
-          expression:=context.valueStore.getVariableValue(newFunctionToken^.txt);
+          expression:=context.valueStore^.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
             if expression^.literalType<>lt_expression then expression^.unreference
             else begin
@@ -682,7 +692,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     begin
       while (first<>nil) and clean do begin
         case first^.tokType of
-          tt_beginBlock,tt_beginExpression,tt_beginRule: context.valueStore.scopePush( first^.tokType=tt_beginRule);
+          tt_beginBlock,tt_beginExpression,tt_beginRule: context.valueStore^.scopePush( first^.tokType=tt_beginRule);
           tt_endBlock,tt_endExpression,tt_endRule: begin
             while (stack.topIndex>=0) and not(stack.dat[stack.topIndex]^.tokType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
             stack.popDestroy(context.recycler);
@@ -691,7 +701,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
               if (stack.dat[stack.topIndex]^.tokType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
               {$endif}
               stack.popDestroy(context.recycler);
-              context.valueStore.scopePop;
+              context.valueStore^.scopePop;
             end else clean:=false;
           end;
         end;
@@ -739,14 +749,18 @@ tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression
     stack.popDestroy(context.recycler);
     first^.next:=context.recycler.disposeToken(first^.next);
     first^.next:=context.recycler.disposeToken(first^.next);
-    context.valueStore.scopePop;
+    context.valueStore^.scopePop;
     didSubstitution:=true;
   end else begin
     first:=context.recycler.disposeToken(first);
     first:=context.recycler.disposeToken(first);
     didSubstitution:=true;
   end;
-end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
+end else begin
+  first:=context.recycler.disposeToken(first);
+  first:=context.recycler.disposeToken(first);
+  didSubstitution:=true;
+end}
 
   {$ifdef fullVersion}
   VAR debugRun:boolean=true;
@@ -894,17 +908,15 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               stack.popDestroy(context.recycler);
               first^.next:=context.recycler.disposeToken(first^.next);
               first^.next:=context.recycler.disposeToken(first^.next);
-              context.valueStore.scopePop;
+              context.valueStore^.scopePop;
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
               applyMutation;
-              didSubstitution:=true;
             end;
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
               stack.popLink(first);
               applyMutation;
-              didSubstitution:=true;
             end;
             COMMON_CASES;
           end;
@@ -916,17 +928,15 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               {$endif}
               first^.next:=context.recycler.disposeToken(first^.next);
               first^.next:=context.recycler.disposeToken(first^.next);
-              context.valueStore.scopePop;
+              context.valueStore^.scopePop;
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
               applyLocalAssignment(cTokType[-1]);
-              didSubstitution:=true;
             end;
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
               stack.popLink(first);
               applyLocalAssignment(cTokType[-1]);
-              didSubstitution:=true;
             end;
             COMMON_CASES;
           end;
@@ -939,7 +949,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
         end;
         tt_beginBlock,tt_beginRule,tt_beginExpression: begin
-          context.valueStore.scopePush(cTokType[0]=tt_beginRule);
+          context.valueStore^.scopePush(cTokType[0]=tt_beginRule);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -948,7 +958,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           didSubstitution:=true;
         end;
         tt_blockLocalVariable: begin
-          first^.data:=context.valueStore.getVariableValue(first^.txt);
+          first^.data:=context.valueStore^.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
@@ -1047,6 +1057,11 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             first^.next:=context.recycler.disposeToken(first^.next);
             didSubstitution:=true;
           end;
+        end;
+        tt_save: if cTokType[1]=tt_semicolon then begin
+          first:=context.recycler.disposeToken(first);
+          first:=context.recycler.disposeToken(first);
+          didSubstitution:=true;
         end;
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);

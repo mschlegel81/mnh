@@ -23,15 +23,15 @@ PROCEDURE processListSerial(CONST inputList: T_arrayOfLiteral;
       eachIndex:longint;
   begin
     for eachIndex:=0 to length(inputList)-1 do if context.adapters^.noErrors then begin
-      context.valueStore.scopePush(false);
-      context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
+      context.valueStore^.scopePush(false);
+      context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
       for rule in rulesList do if not(aggregator^.earlyAbort) then
         aggregator^.addToAggregation(
           rule^.evaluateToLiteral(eachLocation,@context,inputList[eachIndex]),
           true,
           eachLocation,
           context.adapters);
-      context.valueStore.scopePop;
+      context.valueStore^.scopePop;
     end;
   end;
 
@@ -92,7 +92,7 @@ PROCEDURE processListParallel(CONST inputList: T_arrayOfLiteral;
   begin
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
-    values:=context.valueStore.readOnlyClone;
+    values:=context.valueStore^.readOnlyClone;
     aimEnqueueCount:=workerThreadCount*2+1;
     for eachIndex:=0 to length(inputList)-1 do if context.adapters^.noErrors then
     for rule in rulesList do if not(aggregator^.earlyAbort) then begin
@@ -169,7 +169,7 @@ FUNCTION processMapParallel(CONST inputList:T_arrayOfLiteral; CONST expr:P_expre
     resultLiteral:=newListLiteral(length(inputList));
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
-    values:=context.valueStore.readOnlyClone;
+    values:=context.valueStore^.readOnlyClone;
     aimEnqueueCount:=workerThreadCount*2+1;
     for x in inputList do if context.adapters^.noErrors then begin
       enqueueForAggregation(createTask(x));

@@ -79,7 +79,7 @@ TYPE
     public
       regexCache:P_regexMap;
       recycler  :T_tokenRecycler;
-      valueStore:T_valueStore;
+      valueStore:P_valueStore;
       adapters  :P_adapters;
       callDepth:longint;
       DESTRUCTOR destroy;
@@ -213,7 +213,7 @@ FUNCTION workerThreadCount:longint;
 CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
   begin
     recycler  .create;
-    valueStore.create;
+    new(valueStore,create);
     {$ifdef fullVersion}
     callStack .create;
     {$endif}
@@ -229,7 +229,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
 CONSTRUCTOR T_threadContext.createWorkerContext;
   begin
     recycler  .create;
-    valueStore.create;
+    new(valueStore,create);
     {$ifdef fullVersion}
     callStack .create;
     {$endif}
@@ -245,7 +245,7 @@ DESTRUCTOR T_threadContext.destroy;
     {$ifdef debugMode}{$ifdef fullVersion}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
     {$endif}{$endif}
-    valueStore.destroy;
+    dispose(valueStore,destroy);
     recycler  .destroy;
     if regexCache<>nil then dispose(regexCache,destroy);
   end;
@@ -401,7 +401,7 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
     {$ifdef fullVersion}
     context^.callStack.clear;
     {$endif}
-    context^.valueStore.clear;
+    context^.valueStore^.clear;
     context^.adapters:=adapters;
     context^.callDepth:=0;
     context^.allowedSideEffects:=allowedSideEffects;
@@ -460,7 +460,7 @@ PROCEDURE T_threadContext.doneEvaluating;
     {$endif}
     callStack.clear;
     {$endif}
-    valueStore.clear;
+    valueStore^.clear;
   end;
 
 FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
@@ -479,8 +479,8 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CON
     adapters      :=callingContext^.adapters;
     options       :=callingContext^.options;
     allowedSideEffects:=callingContext^.allowedSideEffects;
-    valueStore.clear;
-    valueStore.parentStore:=valueScope;
+    valueStore^.clear;
+    valueStore^.parentStore:=valueScope;
     {$ifdef fullVersion}
     callStack.clear;
     {$endif}
@@ -490,12 +490,12 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CON
 PROCEDURE T_threadContext.detachWorkerContext;
   begin
     {$ifdef debugMode}
-    if not(valueStore.isEmpty) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
+    if not(valueStore^.isEmpty) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
     {$endif}
     parent:=nil;
     callingContext:=nil;
-    valueStore.clear;
-    valueStore.parentStore:=nil;
+    valueStore^.clear;
+    valueStore^.parentStore:=nil;
     {$ifdef fullVersion}
     callStack.clear;
     {$endif}
@@ -537,7 +537,7 @@ PROCEDURE T_threadContext.callStackPop;
 PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
   begin
     if callingContext<>nil then callingContext^.reportVariables(variableReport);
-    valueStore.reportVariables(variableReport);
+    valueStore^.reportVariables(variableReport);
   end;
 {$endif}
 
@@ -659,13 +659,13 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWo
       if context.adapters^.noErrors then with payload do begin
         if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
         if (eachIndex>=0) then begin
-          context.valueStore.scopePush(false);
+          context.valueStore^.scopePush(false);
           idxLit:=newIntLiteral(eachIndex);
-          context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
+          context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
           idxLit^.unreference;
         end;
         evaluationResult:=eachRule^.evaluateToLiteral(eachLocation,@context,eachParameter);
-        if (eachIndex>=0) then context.valueStore.scopePop;
+        if (eachIndex>=0) then context.valueStore^.scopePop;
         if calledFromWorkerThread then context.detachWorkerContext;
       end;
     finally
