@@ -51,7 +51,7 @@ TYPE
   end;
 
   T_idStack=object
-    ids:array of array of record save:boolean; id: ansistring; end;
+    ids:array of array of ansistring;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clear;
@@ -59,8 +59,8 @@ TYPE
     PROCEDURE scopePop;
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
-    PROCEDURE addId(CONST id:ansistring; CONST save:boolean);
-    FUNCTION hasId(CONST id:ansistring; OUT save:boolean):boolean;
+    PROCEDURE addId(CONST id:ansistring);
+    FUNCTION hasId(CONST id:ansistring):boolean;
   end;
 
 IMPLEMENTATION
@@ -225,26 +225,20 @@ FUNCTION T_idStack.scopeBottom:boolean;
     result:=length(ids)=0;
   end;
 
-PROCEDURE T_idStack.addId(CONST id:ansistring; CONST save:boolean);
+PROCEDURE T_idStack.addId(CONST id:ansistring);
   VAR i,j:longint;
   begin
     i:=length(ids)-1;
     j:=length(ids[i]);
     setLength(ids[i],j+1);
-    ids[i,j].id  :=id;
-    ids[i,j].save:=save;
+    ids[i,j]:=id;
   end;
 
-FUNCTION T_idStack.hasId(CONST id:ansistring; OUT save:boolean):boolean;
+FUNCTION T_idStack.hasId(CONST id:ansistring):boolean;
   VAR i,j:longint;
   begin
     result:=false;
-    for i:=length(ids)-1 downto 0 do
-    for j:=0 to length(ids[i])-1 do
-    if ids[i,j].id=id then begin
-      save:=ids[i,j].save;
-      exit(true);
-    end;
+    for i:=length(ids)-1 downto 0 do for j:=0 to length(ids[i])-1 do if ids[i,j]=id then exit(true);
   end;
 
 end.
