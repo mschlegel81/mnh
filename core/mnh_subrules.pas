@@ -98,6 +98,7 @@ TYPE
       //Inspection/documentation calls
       PROCEDURE setComment(CONST commentText:ansistring);
       PROPERTY getType:T_subruleType read typ;
+      FUNCTION isStateful:boolean; virtual;
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
@@ -671,6 +672,11 @@ FUNCTION T_subrule.toString(CONST lengthLimit:longint=maxLongint): ansistring;
 PROCEDURE T_subrule.setComment(CONST commentText:ansistring);
   begin
     comment:=commentText;
+  end;
+
+FUNCTION T_subrule.isStateful:boolean;
+  begin
+    result:=(indexOfSave>=0);
   end;
 
 FUNCTION T_subrule.toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;

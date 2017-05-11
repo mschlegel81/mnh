@@ -137,7 +137,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         //---------------------------------------------process other body parts (if any)
       end;
 
-    VAR itList:T_arrayOfLiteral;
+    VAR iterator:P_iterator;
         i:longint;
         eachLocation:T_tokenLocation;
 
@@ -170,29 +170,22 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         exit;
       end;
       if not(parseBodyOk) then exit;
-      if (P_literal(first^.data)^.literalType in C_compoundTypes)
-      then itList:=P_compoundLiteral(first^.data)^.iteratableList
-      else begin
-        setLength(itList,1);
-        itList[0]:=P_literal(first^.data)^.rereferenced;
-      end;
-      if (eachType=tt_parallelEach) and (length(itList)*length(bodyRule)<=1) then eachType:=tt_each;
+      iterator:=newIterator(P_literal(first^.data));
       disposeLiteral(first^.data);
       first^.next:=context.recycler.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
-      if (aggregatorPresent) and (length(itList)=0) then begin
-      end else if length(bodyRule)>0 then begin
+      if length(bodyRule)>0 then begin
         if eachType = tt_parallelEach
-        then processListParallel(itList,bodyRule,aggregator,eachLocation,context)
-        else processListSerial  (itList,bodyRule,aggregator,eachLocation,context);
+        then processListParallel(iterator,bodyRule,aggregator,eachLocation,context)
+        else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context);
       end else begin
         if eachType = tt_parallelEach then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
-        for i:=0 to length(itList)-1 do aggregator^.addToAggregation(itList[i],false,eachLocation,context.adapters);
+        aggregate(iterator,aggregator,eachLocation,context);
       end;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
-      disposeLiteral(itList);
+      dispose(iterator,destroy);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
@@ -310,13 +303,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
            (parameterListLiteral^[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^[0])^.canApplyToNumberOfParameters(2))
         then begin
-          if parameterListLiteral^[0]^.getReferenceCount=1 then begin
             newLiteral:=parameterListLiteral^[0]^.rereferenced;
             inlineRule:=P_subrule(newLiteral);
-          end else begin
-            new(inlineRule,clone(P_subrule(parameterListLiteral^[0])));
-            newLiteral:=inlineRule;
-          end;
           firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);

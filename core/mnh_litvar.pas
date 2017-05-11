@@ -141,6 +141,7 @@ TYPE
     FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION arity:longint; virtual; abstract;
     FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
+    FUNCTION isStateful:boolean; virtual; abstract;
     FUNCTION getParentId:T_idString; virtual; abstract;
     PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
   end;
