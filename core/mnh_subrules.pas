@@ -425,6 +425,18 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
           and (preparedBody[length(preparedBody)-1].token.tokType=tt_expBraceClose));
     end;
 
+  PROCEDURE updateBody;
+    VAR i:longint;
+        level:longint=1;
+    begin
+      for i:=indexOfSave+2 to length(preparedBody)-1 do with preparedBody[i] do
+      case token.tokType of
+        tt_assignNewBlockLocal: if level=1 then token.tokType:=tt_assignExistingBlockLocal;
+        tt_beginBlock: inc(level);
+        tt_endBlock:   dec(level);
+      end;
+    end;
+
   PROCEDURE prepareResult;
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
@@ -434,6 +446,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         L:P_literal;
         remaining:P_listLiteral=nil;
         previousValueStore:P_valueStore;
+        firstCallOfResumable:boolean=false;
     begin
       enterCriticalSection(subruleCallCs);
       if (indexOfSave>=0) and currentlyEvaluating then begin
@@ -490,6 +503,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         if saveValueStore=nil then begin
           new(saveValueStore,create);
           saveValueStore^.scopePush(blocking);
+          firstCallOfResumable:=true;
         end;
         previousValueStore:=context.valueStore;
         context.valueStore:=saveValueStore;
@@ -503,6 +517,8 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         else lastRep:=firstRep^.last;
         {$ifdef debugMode} writeln(stdErr,'        DEBUG: evaluation in T_subrule.replaces finished'); {$endif}
         context.valueStore:=previousValueStore;
+
+        if firstCallOfResumable then updateBody;
       end else begin
         lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_semicolon);
         lastRep:=lastRep^.next;

@@ -304,6 +304,9 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal
   begin
     system.enterCriticalSection(cs);
     with scopeStack[length(scopeStack)-1] do begin
+      {$ifdef debugMode}
+      for k:=0 to length(v)-1 do if v[k]^.id=id then raise Exception.create('Re-Creating variable with ID "'+id+'"');
+      {$endif}
       k:=length(v);
       setLength(v,k+1);
       new(v[k],create(id,value,readonly));
