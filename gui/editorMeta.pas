@@ -105,26 +105,20 @@ T_editorMeta=object(T_codeProvider)
   private
     PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
-  //Events handling:
-  PROCEDURE InputEditChange(Sender: TObject);
-  PROCEDURE languageMenuItemClick(Sender: TObject);
-  //Advanced:
-
-  //Presentation helper:
-
-  FUNCTION isFile:boolean;
-
-  PROCEDURE setFile(CONST fileName:string);
-  PROCEDURE initForNewFile;
-  PROCEDURE setMarkedWord(CONST wordText:string);
-  PROCEDURE writeToEditorState(CONST settings:P_Settings);
-  PROCEDURE setStepperBreakpoints;
-  PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
-  FUNCTION updateSheetCaption:ansistring;
-  FUNCTION changed:boolean;
-  FUNCTION saveFile(CONST fileName:string=''):string;
-  FUNCTION fileIsDeleted:boolean;
-  FUNCTION fileIsModifiedOnFileSystem:boolean;
+    PROCEDURE InputEditChange(Sender: TObject);
+    PROCEDURE languageMenuItemClick(Sender: TObject);
+    FUNCTION isFile:boolean;
+    PROCEDURE setFile(CONST fileName:string);
+    PROCEDURE initForNewFile;
+    PROCEDURE setMarkedWord(CONST wordText:string);
+    PROCEDURE writeToEditorState(CONST settings:P_Settings);
+    PROCEDURE setStepperBreakpoints;
+    PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
+    FUNCTION updateSheetCaption:ansistring;
+    FUNCTION changed:boolean;
+    FUNCTION saveFile(CONST fileName:string=''):string;
+    FUNCTION fileIsDeleted:boolean;
+    FUNCTION fileIsModifiedOnFileSystem:boolean;
 end;
 
 T_runnerModel=object
@@ -538,6 +532,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
     editor.CaretX:=state.caret['x'];
     editor.CaretY:=state.caret['y'];
     language_:=T_language(state.language);
+    updateSheetCaption;
   end;
 
 DESTRUCTOR T_editorMeta.destroy;
