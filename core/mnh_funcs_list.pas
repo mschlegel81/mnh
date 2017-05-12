@@ -476,32 +476,26 @@ FUNCTION filter_imp intFuncSignature;
   end;
 
 FUNCTION map_imp intFuncSignature;
-  VAR iter:T_arrayOfLiteral;
-      x:P_literal;
+  VAR iterator:P_iterator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
-      result:=newListLiteral(compound0^.size);
-      iter:=compound0^.iteratableList;
-      for x in iter do if context.adapters^.noErrors then listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
-      disposeLiteral(iter);
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      iterator:=newIterator(arg0);
+      result:=processMapSerial(iterator,P_expressionLiteral(arg1),context);
+      dispose(iterator,destroy);
     end;
   end;
 
 FUNCTION pmap_imp intFuncSignature;
-  VAR iter:T_arrayOfLiteral;
-      x:P_literal;
+  VAR iterator:P_iterator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
-      iter:=compound0^.iteratableList;
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      iterator:=newIterator(arg0);
       if tco_spawnWorker in context.threadOptions
-      then result:=processMapParallel(iter,P_expressionLiteral(arg1),tokenLocation,context)
-      else begin
-        result:=newListLiteral(compound0^.size);
-        for x in iter do if context.adapters^.noErrors then listResult^.append(P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,x),false);
-      end;
-      disposeLiteral(iter);
+      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),context)
+      else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),context);
+      dispose(iterator,destroy);
     end;
   end;
 
@@ -538,8 +532,8 @@ INITIALIZATION
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,[],ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal L with all elements x for which acceptor(x) returns true');
-  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,[],ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L (serial equivalent to pMap)');
-  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,[],ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L (parallel equivalent to map)');
+  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,[],ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator');
+  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,[],ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator');
 
 FINALIZATION
   builtinLocation_sort.destroy;

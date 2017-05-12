@@ -4,38 +4,150 @@ USES mnh_constants, mnh_basicTypes,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_litVar,valueStore,
      mnh_aggregators,mnh_contexts;
+TYPE
+  P_iterator=^T_iterator;
+  T_iterator=object
+    FUNCTION next(CONST context:P_threadContext):P_literal; virtual; abstract;
+    DESTRUCTOR destroy; virtual; abstract;
+  end;
 
-PROCEDURE processListSerial(CONST inputList:T_arrayOfLiteral; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
+PROCEDURE processListSerial(CONST inputIterator:P_iterator; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                             CONST eachLocation:T_tokenLocation;
                             VAR context:T_threadContext);
-PROCEDURE processListParallel(CONST inputList:T_arrayOfLiteral; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
+PROCEDURE processListParallel(CONST inputIterator:P_iterator; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                               CONST eachLocation:T_tokenLocation;
                               VAR context:T_threadContext);
-FUNCTION processMapParallel(CONST inputList:T_arrayOfLiteral; CONST expr:P_expressionLiteral;
-                            CONST mapLocation:T_tokenLocation;
+FUNCTION processMapSerial(CONST inputIterator:P_iterator; CONST expr:P_expressionLiteral;
+                          VAR context:T_threadContext):P_listLiteral;
+FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_expressionLiteral;
                             VAR context:T_threadContext):P_listLiteral;
+FUNCTION aggregate(CONST inputIterator:P_iterator; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 
+FUNCTION newIterator(CONST input:P_literal):P_iterator;
 IMPLEMENTATION
-PROCEDURE processListSerial(CONST inputList: T_arrayOfLiteral;
+TYPE
+  P_listIterator=^T_listIterator;
+  T_listIterator=object(T_iterator)
+    index:longint;
+    values:T_arrayOfLiteral;
+    CONSTRUCTOR create(CONST v:P_compoundLiteral);
+    FUNCTION next(CONST context:P_threadContext):P_literal; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+  P_generator=^T_generator;
+  T_generator=object(T_iterator)
+    generator:P_expressionLiteral;
+    CONSTRUCTOR create(CONST g:P_expressionLiteral);
+    FUNCTION next(CONST context:P_threadContext):P_literal; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+  P_singleValueIterator=^T_singleValueIterator;
+  T_singleValueIterator=object(T_iterator)
+    didDeliver:boolean;
+    value:P_literal;
+    CONSTRUCTOR create(CONST v:P_literal);
+    FUNCTION next(CONST context:P_threadContext):P_literal; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
+  begin
+    index:=0;
+    values:=v^.iteratableList;
+  end;
+
+FUNCTION T_listIterator.next(CONST context:P_threadContext): P_literal;
+  begin
+    if index>=length(values)
+    then result:=nil
+    else result:=values[index]^.rereferenced;
+    inc(index);
+  end;
+
+DESTRUCTOR T_listIterator.destroy;
+  begin
+    disposeLiteral(values);
+  end;
+
+CONSTRUCTOR T_generator.create(CONST g: P_expressionLiteral);
+  begin
+    generator:=g;
+    generator^.rereference;
+  end;
+
+FUNCTION T_generator.next(CONST context:P_threadContext): P_literal;
+  begin
+    result:=generator^.evaluateToLiteral(generator^.getLocation,context);
+  end;
+
+DESTRUCTOR T_generator.destroy;
+  begin
+    disposeLiteral(generator);
+  end;
+
+CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal);
+  begin
+    didDeliver:=false;
+    value:=v^.rereferenced;
+  end;
+
+FUNCTION T_singleValueIterator.next(CONST context: P_threadContext): P_literal;
+  begin
+    if didDeliver then exit(nil);
+    result:=value^.rereferenced;
+    didDeliver:=true;
+  end;
+
+DESTRUCTOR T_singleValueIterator.destroy;
+  begin
+    disposeLiteral(value);
+  end;
+
+FUNCTION newIterator(CONST input:P_literal):P_iterator;
+  begin
+    if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input)))
+    else if (input^.literalType=lt_expression) and
+            (P_expressionLiteral(input)^.canApplyToNumberOfParameters(0)) and
+            (P_expressionLiteral(input)^.isStateful) then new(P_generator(result),create(P_expressionLiteral(input)))
+    else new(P_singleValueIterator(result),create(input));
+  end;
+
+FUNCTION newGeneratorIterator(CONST g:P_expressionLiteral):P_iterator;
+  VAR it:P_generator;
+  begin
+    new(it,create(g));
+    result:=it;
+  end;
+
+PROCEDURE processListSerial(CONST inputIterator:P_iterator;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
   CONST eachLocation: T_tokenLocation; VAR context: T_threadContext);
   VAR rule:P_expressionLiteral;
-      eachIndex:longint;
+      eachIndex:longint=0;
+      x:P_literal;
   begin
-    for eachIndex:=0 to length(inputList)-1 do if context.adapters^.noErrors then begin
+    x:=inputIterator^.next(@context);
+    while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors do begin
       context.valueStore^.scopePush(false);
       context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
       for rule in rulesList do if not(aggregator^.earlyAbort) then
         aggregator^.addToAggregation(
-          rule^.evaluateToLiteral(eachLocation,@context,inputList[eachIndex]),
+          rule^.evaluateToLiteral(eachLocation,@context,x),
           true,
           eachLocation,
           context.adapters);
       context.valueStore^.scopePop;
+
+      inc(eachIndex);
+      disposeLiteral(x);
+      x:=inputIterator^.next(@context);
     end;
+    if x<>nil then disposeLiteral(x);
   end;
 
-PROCEDURE processListParallel(CONST inputList: T_arrayOfLiteral;
+PROCEDURE processListParallel(CONST inputIterator:P_iterator;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
   CONST eachLocation: T_tokenLocation; VAR context: T_threadContext);
 
@@ -87,22 +199,32 @@ PROCEDURE processListParallel(CONST inputList: T_arrayOfLiteral;
     end;
 
   VAR rule:P_expressionLiteral;
-      eachIndex:longint;
+      eachIndex:longint=0;
       aimEnqueueCount:longint;
+      x:P_literal;
   begin
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
     values:=context.valueStore^.readOnlyClone;
     aimEnqueueCount:=workerThreadCount*2+1;
-    for eachIndex:=0 to length(inputList)-1 do if context.adapters^.noErrors then
-    for rule in rulesList do if not(aggregator^.earlyAbort) then begin
-      enqueueForAggregation(createTask(rule,eachIndex,inputList[eachIndex]));
-      if taskQueue^.getQueuedCount>aimEnqueueCount then begin
-        if not(canAggregate) then taskQueue^.activeDeqeue(context);
-        //if there is not enough pending after dequeuing, increase aimEnqueueCount
-        if taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
+    x:=inputIterator^.next(@context);
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
+
+      for rule in rulesList do if not(aggregator^.earlyAbort) then begin
+        enqueueForAggregation(createTask(rule,eachIndex,x));
+        if taskQueue^.getQueuedCount>aimEnqueueCount then begin
+          if not(canAggregate) then taskQueue^.activeDeqeue(context);
+          //if there is not enough pending after dequeuing, increase aimEnqueueCount
+          if taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
+        end;
       end;
+
+      inc(eachIndex);
+      disposeLiteral(x);
+      x:=inputIterator^.next(@context);
     end;
+    if x<>nil then disposeLiteral(x);
+
     while firstToAggregate<>nil do if not(canAggregate) then taskQueue^.activeDeqeue(context);
     dispose(values,destroy);
     with recycling do while fill>0 do begin
@@ -111,8 +233,21 @@ PROCEDURE processListParallel(CONST inputList: T_arrayOfLiteral;
     end;
   end;
 
-FUNCTION processMapParallel(CONST inputList:T_arrayOfLiteral; CONST expr:P_expressionLiteral;
-                            CONST mapLocation:T_tokenLocation;
+FUNCTION processMapSerial(CONST inputIterator:P_iterator; CONST expr:P_expressionLiteral;
+                          VAR context:T_threadContext):P_listLiteral;
+  VAR x:P_literal;
+  begin
+    result:=newListLiteral();
+    x:=inputIterator^.next(@context);
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
+      result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,x),false);
+      disposeLiteral(x);
+      x:=inputIterator^.next(@context);
+    end;
+    if x<>nil then disposeLiteral(x);
+  end;
+
+FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_expressionLiteral;
                             VAR context:T_threadContext):P_listLiteral;
 
   VAR firstToAggregate:P_futureTask=nil;
@@ -166,19 +301,24 @@ FUNCTION processMapParallel(CONST inputList:T_arrayOfLiteral; CONST expr:P_expre
   VAR x:P_literal;
       aimEnqueueCount:longint;
   begin
-    resultLiteral:=newListLiteral(length(inputList));
+    resultLiteral:=newListLiteral();
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
     values:=context.valueStore^.readOnlyClone;
     aimEnqueueCount:=workerThreadCount*2+1;
-    for x in inputList do if context.adapters^.noErrors then begin
+    x:=inputIterator^.next(@context);
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
       enqueueForAggregation(createTask(x));
       if taskQueue^.getQueuedCount>aimEnqueueCount then begin
         if not(canAggregate) then taskQueue^.activeDeqeue(context);
         //if there is not enough pending after dequeuing, increase aimEnqueueCount
         if taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
       end;
+      disposeLiteral(x);
+      x:=inputIterator^.next(@context);
     end;
+    if x<>nil then disposeLiteral(x);
+
     while firstToAggregate<>nil do if not(canAggregate) then taskQueue^.activeDeqeue(context);
     dispose(values,destroy);
     with recycling do while fill>0 do begin
@@ -186,6 +326,25 @@ FUNCTION processMapParallel(CONST inputList:T_arrayOfLiteral; CONST expr:P_expre
       dispose(dat[fill],destroy);
     end;
     result:=resultLiteral;
+  end;
+
+FUNCTION aggregate(CONST inputIterator: P_iterator;
+  CONST aggregator: P_aggregator; CONST location: T_tokenLocation;
+  VAR context: T_threadContext): P_literal;
+  VAR rule:P_expressionLiteral;
+      x:P_literal;
+  begin
+    x:=inputIterator^.next(@context);
+    while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors and not(aggregator^.earlyAbort) do begin
+      aggregator^.addToAggregation(
+        x,
+        false,
+        location,
+        context.adapters);
+      disposeLiteral(x);
+      x:=inputIterator^.next(@context);
+    end;
+    if x<>nil then disposeLiteral(x);
   end;
 
 end.
