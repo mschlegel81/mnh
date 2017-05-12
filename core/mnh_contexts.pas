@@ -637,7 +637,7 @@ PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_t
     with payload do begin
       eachIndex       :=idx;
       eachRule        :=expr;
-      eachParameter   :=x;
+      eachParameter   :=x^.rereferenced;
       eachLocation    :=location;
       scope           :=context;
       valueScope      :=values;
@@ -699,6 +699,7 @@ FUNCTION T_futureTask.getResultAsLiteral: P_literal;
 
 DESTRUCTOR T_futureTask.destroy;
   begin
+    disposeLiteral(payload.eachParameter);
     doneCriticalSection(taskCs);
   end;
 

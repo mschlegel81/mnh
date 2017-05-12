@@ -533,7 +533,6 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         if firstRep=nil
         then lastRep:=nil
         else lastRep:=firstRep^.last;
-        {$ifdef debugMode} writeln(stdErr,'        DEBUG: evaluation in T_subrule.replaces finished'); {$endif}
         context.valueStore:=previousValueStore;
 
         if firstCallOfResumable then updateBody;
