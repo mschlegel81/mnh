@@ -134,7 +134,6 @@ TYPE
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
     {$i mnh_gui_main_events.inc}
-    PROCEDURE onAssistantFinished;                                          override;
     PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
     PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
     PROCEDURE onDebuggerEvent;                                              override;
@@ -452,12 +451,5 @@ PROCEDURE TMnhForm.updateExpressionMemo;
   end;
 
 {$i mnh_gui_main_events.inc}
-
-PROCEDURE TMnhForm.onAssistantFinished;
-  begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.onAssistantFinished - begin'); {$endif}
-    if hasEditor then getEditor^.repaintWithStateHash(assistancEvaluator.getStateHash,assistancEvaluator.getErrorHints);
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.onAssistantFinished - end'); {$endif}
-  end;
 
 end.

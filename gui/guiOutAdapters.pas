@@ -7,7 +7,6 @@ USES SynEdit,SynEditKeyCmds,Forms,
 TYPE
   T_abstractMnhForm=class(TForm)
     public
-      PROCEDURE onAssistantFinished;                                          virtual; abstract;
       PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); virtual; abstract;
       PROCEDURE onBreakpoint  (CONST data:pointer);                           virtual; abstract;
       PROCEDURE onDebuggerEvent;                                              virtual; abstract;
@@ -175,7 +174,6 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           if guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
           parentForm.onEndOfEvaluation;
         end;
-        mt_gui_assistantFinished    : parentForm.onAssistantFinished;
         mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
         mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
         mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);

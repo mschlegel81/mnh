@@ -7,7 +7,7 @@ USES  //basic classes
   //GUI: LCL components
   Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,
+  SynEdit, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds, SynEditTypes,
   //GUI: highlighters
   SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,
@@ -57,6 +57,7 @@ T_editorMeta=object(T_codeProvider)
       fileAccessAge:double;
       isChanged:boolean;
     end;
+    assistant:P_codeAssistant;
     language_:T_language;
     sheet       : TTabSheet;
     editor_     : TSynEdit;
@@ -64,7 +65,6 @@ T_editorMeta=object(T_codeProvider)
     highlighter : TSynMnhSyn;
     PROCEDURE setLanguage(CONST languageIndex:T_language);
     PROCEDURE guessLanguage(CONST fallback:T_language);
-    //FUNCTION languageName:string;
 
   public
     CONSTRUCTOR create(CONST idx:longint);
@@ -90,7 +90,7 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE toggleComment;
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
-    PROCEDURE repaintWithStateHash(CONST stateHashForHints:T_hashInt; CONST errorHints:T_arrayOfString);
+    PROCEDURE repaintWithStateHash;
     PROCEDURE closeEditorWithDialogs;
 
     FUNCTION saveAsWithDialog:boolean;
@@ -101,8 +101,9 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION defaultExtensionByLanguage:ansistring;
     PROCEDURE insertText(CONST s:string);
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
-
+    FUNCTION resolveImport(CONST text:string):string;
   private
+    PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
     PROCEDURE InputEditChange(Sender: TObject);
@@ -422,6 +423,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor_.WantTabs:=false;
     editor_.Gutter.MarksPart.visible:=false;
     editor_.Gutter.CodeFoldPart.visible:=false;
+    editor_.Gutter.ChangesPart.visible:=false;
+    editor_.Gutter.MarksPart.width:=breakpointsImagesList.width;
     plugin:=TSynPluginMultiCaret.create(editor_);
     plugin.editor:=editor_;
     plugin.Keystrokes.clear;
@@ -432,8 +435,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor_.OnMouseDown         :=EditMouseDown;
     editor_.OnProcessCommand    :=EditProcessUserCommand;
     editor_.OnProcessUserCommand:=EditProcessUserCommand;
-    editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
-    editor_.Gutter.width:=34;
+    editor_.OnSpecialLineMarkup :=@InputEditSpecialLineMarkup;
     editor_.RightEdge:=-1;
     editor_.Keystrokes.clear;
     addKeystroke(ecUp,38);
@@ -537,6 +539,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
 
 DESTRUCTOR T_editorMeta.destroy;
   begin
+    if (assistant<>nil) then dispose(assistant,destroy);
   end;
 
 FUNCTION T_editorMeta.getLines: T_arrayOfString;
@@ -580,7 +583,6 @@ PROCEDURE T_editorMeta.activate;
     {$endif}
     editor_.Font:=assistanceSynEdit.Font;
     completionLogic.assignEditor(@self);
-    if language_=LANG_MNH then assistancEvaluator.evaluate(@self);
     mainForm.caption:=updateSheetCaption;
 
     for l in T_language do begin
@@ -588,11 +590,20 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.Checked:=(l=language);
     end;
     if language_=LANG_MNH
-    then editor.highlighter:=highlighter
-    else editor.highlighter:=fileTypeMeta[language_].highlighter;
+    then begin
+      editor.highlighter:=highlighter;
+      if assistant=nil then new(assistant,create(@self));
+      highlighter.codeAssistant:=assistant;
+      assistant^.check;
+    end else begin
+      editor.highlighter:=fileTypeMeta[language_].highlighter;
+      if assistant<>nil then begin
+        dispose(assistant,destroy);
+        assistant:=nil;
+      end;
+    end;
     editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
     editor.readonly                :=runnerModel.areEditorsLocked;
-
     settings.value^.workspace.activePage:=index;
     mainForm.onDebuggerEvent;
   end;
@@ -601,7 +612,10 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
     if not(sheet.tabVisible) then exit;
-    if language_=LANG_MNH then assistancEvaluator.evaluate(@self);
+    if language_=LANG_MNH then begin
+      assistant^.check;
+      repaintWithStateHash;
+    end;
     mainForm.caption:=updateSheetCaption;
   end;
 
@@ -750,7 +764,7 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
       editor.Repaint;
     end;
     if forHelpOrJump then with editor do
-      assistancEvaluator.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
+      assistant^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
   end;
 
 PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
@@ -905,19 +919,15 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateHash(CONST stateHashForHints: T_hashInt;
-  CONST errorHints: T_arrayOfString);
-  VAR i:longint;
+PROCEDURE T_editorMeta.repaintWithStateHash;
+  VAR s:string;
   begin
-    {$ifdef debugMode}
-    writeln(stdErr,'        DEBUG: Repainting ',pseudoName(true),' with state ',stateHashForHints,'[',stateHashForHints<>paintedWithStateHash,']',' (',length(errorHints),' hints/errors)');
-    {$endif}
-    if (stateHashForHints<>paintedWithStateHash) then begin
-      paintedWithStateHash:=stateHashForHints;
+    if (paintedWithStateHash<>assistant^.getStateHash) then begin
+      paintedWithStateHash:=assistant^.getStateHash;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
-      for i:=0 to length(errorHints)-1 do assistanceSynEdit.lines.add(errorHints[i]);
+      for s in assistant^.getErrorHints do assistanceSynEdit.lines.add(s);
     end;
   end;
 
@@ -978,6 +988,32 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(
     editor.SelectAll;
     editor.SelText:=concatenatedText;
     editor.EndUndoBlock;
+  end;
+
+FUNCTION T_editorMeta.resolveImport(CONST text: string): string;
+  begin
+    if assistant=nil then result:='' else result:=assistant^.resolveImport(text);
+  end;
+
+PROCEDURE T_editorMeta.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+  VAR warnOnly:boolean;
+  begin
+    if runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=runnerModel.debugLine.editor)
+    then begin
+      Special:=(line=runnerModel.debugLine.line);
+      Markup.FrameColor:=clNone;
+      Markup.FramePriority:=0;
+      Markup.BackPriority:=1;
+      Markup.ForePriority:=1;
+    end else if assistant<>nil then begin
+      Markup.FrameColor:=clRed;
+      Markup.FramePriority:=1;
+      Markup.BackPriority:=-1;
+      Markup.ForePriority:=-1;
+      Special:=assistant^.isErrorLocation(line,warnOnly);
+      if warnOnly then Markup.FrameStyle:=slsDashed
+                  else Markup.FrameStyle:=slsSolid;
+    end;
   end;
 
 PROCEDURE T_editorMeta.exportToHtml;
@@ -1271,7 +1307,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
         for i:=0 to editor.lines.count-1 do
           if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                          else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
-        if language=LANG_MNH then assistancEvaluator.extendCompletionList(wordsInEditor);
+        if language=LANG_MNH then assistant^.extendCompletionList(wordsInEditor);
       end;
     end;
   end;

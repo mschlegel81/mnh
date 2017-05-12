@@ -138,41 +138,40 @@ TYPE
       FUNCTION getScripts:T_scriptMetaArray;
   end;
 
-  P_assistanceEvaluator=^T_assistanceEvaluator;
-  T_assistanceEvaluator=object(T_evaluator)
+  P_codeAssistant=^T_codeAssistant;
+  T_codeAssistant=object
     private
+      context:T_evaluationContext;
+      errorCollector:T_collectingOutAdapter;
+      adapters:P_adapters;
+      package:T_package;
       localErrors,externalErrors:T_storedMessages;
       stateHash:T_hashInt;
       userRules,
       completionList:T_setOfString;
-      PROCEDURE preEval; virtual;
-      PROCEDURE postEval; virtual;
     public
-      CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
-      DESTRUCTOR destroy; virtual;
+      CONSTRUCTOR create(CONST provider:P_codeProvider);
+      DESTRUCTOR destroy;
+      PROCEDURE check;
 
-      PROCEDURE evaluate(CONST provider:P_codeProvider);
-
-      FUNCTION isErrorLocation(CONST lineIndex,tokenStart,tokenEnd:longint):byte;
       FUNCTION getErrorHints:T_arrayOfString;
-      FUNCTION getStateHash:T_hashInt;
+      PROPERTY getStateHash:T_hashInt read stateHash;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_setOfString);
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
+      FUNCTION isErrorLocation(CONST line:longint; OUT warnOnly:boolean):boolean;
   end;
 
 VAR runEvaluator:T_runEvaluator;
-    assistancEvaluator:T_assistanceEvaluator;
 
-PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
+PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
 
 PROCEDURE earlyFinalization;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-    assistanceIsInitialized:boolean=false;
     silentAdapters:T_adapters;
     intrinsicRulesForCompletion:T_setOfString;
 
@@ -282,22 +281,174 @@ FUNCTION main(p:pointer):ptrint;
     threadStopped;
   end; end;
 
-FUNCTION docMain(p:pointer):ptrint;
-  CONST MAX_SLEEP_TIME=100;
-  begin with P_assistanceEvaluator(p)^ do begin
-    result:=0;
-    repeat
-      if (pendingRequest in [er_evaluate,er_callMain,er_reEvaluateWithGUI])  then begin
-        preEval;
-        package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
-        postEval;
+CONSTRUCTOR T_codeAssistant.create(CONST provider: P_codeProvider);
+  begin
+    new(adapters,create);
+    errorCollector.create(at_unknown,C_collectAllOutputBehavior);
+    context.create(adapters);
+    adapters^.addOutAdapter(@errorCollector,false);
+    package.create(provider,nil);
+    stateHash:=0;
+    setLength(localErrors,0);
+    setLength(externalErrors,0);
+    userRules.create;
+    completionList.create;
+  end;
+
+DESTRUCTOR T_codeAssistant.destroy;
+  begin
+    package.destroy;
+    context.destroy;
+    dispose(adapters,destroy);
+    setLength(localErrors,0);
+    setLength(externalErrors,0);
+    userRules.destroy;
+    completionList.destroy;
+    errorCollector.destroy;
+  end;
+
+PROCEDURE T_codeAssistant.check;
+  PROCEDURE updateCompletionList;
+    VAR s:string;
+    begin
+      completionList.clear;
+      completionList.put(intrinsicRulesForCompletion);
+      package.updateLists(userRules);
+      completionList.put(userRules);
+      for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then completionList.put(ID_QUALIFY_CHARACTER+s);
+    end;
+
+  PROCEDURE updateErrors;
+    VAR i:longint;
+    begin
+      setLength(localErrors,0);
+      setLength(externalErrors,0);
+      with errorCollector do
+      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
+      if C_messageTypeMeta[messageType].level>=2 then begin
+        if location.fileName=package.getPath
+        then begin
+          setLength(localErrors,length(localErrors)+1);
+          localErrors[length(localErrors)-1]:=storedMessages[i];
+        end else begin
+          setLength(externalErrors,length(externalErrors)+1);
+          externalErrors[length(externalErrors)-1]:=storedMessages[i];
+        end;
       end;
-      ThreadSwitch;
-      sleep(MAX_SLEEP_TIME);
-      ThreadSwitch;
-    until (pendingRequest=er_die);
-    threadStopped;
-  end; end;
+    end;
+
+  begin
+    if package.getCodeProvider^.stateHash=package.getCodeState then exit;
+    adapters^.clearAll;
+    context.resetForEvaluation(@package,false,false,true);
+    package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
+    updateCompletionList;
+    updateErrors;
+    context.afterEvaluation;
+    stateHash:=package.getCodeState;
+  end;
+
+FUNCTION T_codeAssistant.getErrorHints: T_arrayOfString;
+  VAR k:longint;
+  PROCEDURE addErrors(CONST list:T_storedMessages);
+    VAR i:longint;
+        s:string;
+    begin
+      for i:=0 to length(list)-1 do with list[i] do for s in messageText do begin
+        if k>=length(result) then setLength(result,k+1);
+        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(s);
+        inc(k);
+      end;
+    end;
+
+  begin
+    setLength(result,length(localErrors)+length(externalErrors));
+    k:=0;
+    addErrors(localErrors);
+    addErrors(externalErrors);
+  end;
+
+FUNCTION T_codeAssistant.isUserRule(CONST id: string): boolean;
+  begin
+    result:=userRules.contains(id);
+  end;
+
+FUNCTION T_codeAssistant.resolveImport(CONST id: string): string;
+  begin
+    result:=package.getSecondaryPackageById(id);
+  end;
+
+PROCEDURE T_codeAssistant.extendCompletionList(VAR list: T_setOfString);
+  begin
+    list.put(completionList.values);
+  end;
+
+PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
+  PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
+    VAR doc:P_intrinsicFunctionDocumentation;
+    begin
+      ensureBuiltinDocExamples;
+      if (length(info.tokenText)>1) and (info.tokenText[1]='.')
+      then doc:=functionDocMap.get(copy(info.tokenText,2,length(info.tokenText)-1))
+      else doc:= functionDocMap.get(info.tokenText);
+      if doc=nil then exit;
+      info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
+    end;
+
+  VAR lexer:T_lexer;
+      tokenToExplain:P_token;
+      loc:T_tokenLocation;
+      i:longint;
+  begin
+    if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
+    loc.line:=CaretY;
+    loc.column:=1;
+    loc.package:=@package;
+    lexer.create(fullLine,loc,@package);
+    tokenToExplain:=lexer.getTokenAtColumnOrNil(CaretX,i);
+    if tokenToExplain<>nil then begin
+      info.startLoc:=tokenToExplain^.location;
+      info.location:=tokenToExplain^.location;
+      info.endLoc  :=info.startLoc;
+      info.endLoc.column:=i;
+      info.tokenText:=safeTokenToString(tokenToExplain);
+      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
+      for i:=0 to length(C_specialWordInfo)-1 do
+        if C_specialWordInfo[i].txt=info.tokenText then
+        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+
+      case tokenToExplain^.tokType of
+        tt_intrinsicRule: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          appendBuiltinRuleInfo;
+        end;
+        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
+          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
+          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
+        end;
+      end;
+    end else begin
+      info.tokenExplanation:='';
+      info.tokenText:='';
+      info.startLoc.column:=CaretX;
+      info.startLoc.line:=CaretY;
+      info.location:=info.startLoc;
+      info.endLoc:=info.startLoc;
+    end;
+    lexer.destroy;
+  end;
+
+FUNCTION T_codeAssistant.isErrorLocation(CONST line:longint; OUT warnOnly:boolean):boolean;
+  VAR e:T_storedMessage;
+  begin
+    for e in localErrors do with e do if line=location.line then begin
+      warnOnly:=C_messageTypeMeta[messageType].level<=2;
+      exit(true);
+    end;
+    result:=false;
+  end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);
   VAR t:T_scriptType;
@@ -414,16 +565,6 @@ CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadF
     endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   end;
 
-CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
-  begin
-    inherited create(adapters,threadFunc);
-    stateHash:=0;
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    userRules.create;
-    completionList.create;
-  end;
-
 DESTRUCTOR T_evaluator.destroy;
   begin
     system.enterCriticalSection(cs);
@@ -450,13 +591,6 @@ DESTRUCTOR T_runEvaluator.destroy;
     dispose(editAdapters,destroy);
     inherited destroy;
     setLength(mainParameters,0);
-  end;
-
-DESTRUCTOR T_assistanceEvaluator.destroy;
-  begin
-    inherited destroy;
-    userRules.destroy;
-    completionList.destroy;
   end;
 
 PROCEDURE T_evaluator.haltEvaluation;
@@ -509,20 +643,6 @@ PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST profiling
     request:=er_evaluate;
     package.replaceCodeProvider(provider);
     ensureThread;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_assistanceEvaluator.evaluate(CONST provider:P_codeProvider);
-  begin
-    system.enterCriticalSection(cs);
-    ensureThread;
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_assistanceEvaluator.evaluate - ',state); {$endif}
-    if (state in C_runningStates) then begin
-      system.leaveCriticalSection(cs);
-      exit;
-    end;
-    request:=er_evaluate;
-    if package.getCodeProvider<>provider then package.replaceCodeProvider(provider);
     system.leaveCriticalSection(cs);
   end;
 
@@ -616,72 +736,6 @@ FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_assistanceEvaluator.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
-  PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
-    VAR doc:P_intrinsicFunctionDocumentation;
-    begin
-      ensureBuiltinDocExamples;
-      if (length(info.tokenText)>1) and (info.tokenText[1]='.')
-      then doc:=functionDocMap.get(copy(info.tokenText,2,length(info.tokenText)-1))
-      else doc:= functionDocMap.get(info.tokenText);
-      if doc=nil then exit;
-      info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
-    end;
-
-  VAR lexer:T_lexer;
-      tokenToExplain:P_token;
-      loc:T_tokenLocation;
-      i:longint;
-  begin
-    if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
-    system.enterCriticalSection(cs);
-    while (state in C_runningStates) do begin
-      system.leaveCriticalSection(cs);
-      ThreadSwitch;
-      sleep(1);
-      system.enterCriticalSection(cs);
-    end;
-
-    loc.line:=CaretY;
-    loc.column:=1;
-    loc.package:=@package;
-    lexer.create(fullLine,loc,@package);
-    tokenToExplain:=lexer.getTokenAtColumnOrNil(CaretX,i);
-    if tokenToExplain<>nil then begin
-      info.startLoc:=tokenToExplain^.location;
-      info.location:=tokenToExplain^.location;
-      info.endLoc  :=info.startLoc;
-      info.endLoc.column:=i;
-      info.tokenText:=safeTokenToString(tokenToExplain);
-      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
-      for i:=0 to length(C_specialWordInfo)-1 do
-        if C_specialWordInfo[i].txt=info.tokenText then
-        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
-
-      case tokenToExplain^.tokType of
-        tt_intrinsicRule: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          appendBuiltinRuleInfo;
-        end;
-        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
-          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
-          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
-        end;
-      end;
-    end else begin
-      info.tokenExplanation:='';
-      info.tokenText:='';
-      info.startLoc.column:=CaretX;
-      info.startLoc.line:=CaretY;
-      info.location:=info.startLoc;
-      info.endLoc:=info.startLoc;
-    end;
-    lexer.destroy;
-    system.leaveCriticalSection(cs);
-  end;
-
 PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
   begin
     system.enterCriticalSection(cs);
@@ -705,40 +759,6 @@ FUNCTION T_runEvaluator.getRunnerStateInfo:T_runnerStateInfo;
       else             result.message:=endOfEvaluationText;
     end;
     result.hasPendingEditResult:=(currentEdit<>nil) and (currentEdit^.done);
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_assistanceEvaluator.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    result:=0;
-    for i:=0 to length(localErrors)-1 do with localErrors[i] do
-    if (result=0) and (lineIndex=location.line-1) and ((location.column<0) or (tokenStart<=location.column-1) and (tokenEnd>location.column-1)) then begin
-      if C_messageTypeMeta[messageType].level>2 then result:=2 else result:=1;
-    end;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
-  VAR k:longint;
-  PROCEDURE addErrors(CONST list:T_storedMessages);
-    VAR i:longint;
-        s:string;
-    begin
-      for i:=0 to length(list)-1 do with list[i] do for s in messageText do begin
-        if k>=length(result) then setLength(result,k+1);
-        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(s);
-        inc(k);
-      end;
-    end;
-
-  begin
-    system.enterCriticalSection(cs);
-    setLength(result,length(localErrors)+length(externalErrors));
-    k:=0;
-    addErrors(localErrors);
-    addErrors(externalErrors);
     system.leaveCriticalSection(cs);
   end;
 
@@ -781,15 +801,6 @@ PROCEDURE T_runEvaluator.preEval;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_assistanceEvaluator.preEval;
-  begin
-    system.enterCriticalSection(cs);
-    inherited preEval;
-    adapter^.clearAll;
-    context.resetForEvaluation(@package,false,false,true);
-    system.leaveCriticalSection(cs);
-  end;
-
 PROCEDURE T_evaluator.postEval;
   begin
     system.enterCriticalSection(cs);
@@ -808,42 +819,6 @@ PROCEDURE T_runEvaluator.postEval;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_assistanceEvaluator.postEval;
-  PROCEDURE updateCompletionList;
-    VAR s:string;
-    begin
-      completionList.clear;
-      completionList.put(intrinsicRulesForCompletion);
-      package.updateLists(userRules);
-      completionList.put(userRules);
-      for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then completionList.put(ID_QUALIFY_CHARACTER+s);
-    end;
-
-  VAR i:longint;
-  begin
-    system.enterCriticalSection(cs);
-    inherited postEval;
-    updateCompletionList;
-
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    with P_collectingOutAdapter(adapter^.getAdapter(0))^ do
-    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
-    if C_messageTypeMeta[messageType].level>=2 then begin
-      if location.fileName=package.getPath
-      then begin
-        setLength(localErrors,length(localErrors)+1);
-        localErrors[length(localErrors)-1]:=storedMessages[i];
-      end else begin
-        setLength(externalErrors,length(externalErrors)+1);
-        externalErrors[length(externalErrors)-1]:=storedMessages[i];
-      end;
-    end;
-    stateHash:=package.getCodeState;
-    runEvaluator.adapter^.logEndOfCodeAssistance;
-    system.leaveCriticalSection(cs);
-  end;
-
 FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
   begin
     system.enterCriticalSection(cs);
@@ -851,33 +826,7 @@ FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_assistanceEvaluator.getStateHash: T_hashInt;
-  begin
-    system.enterCriticalSection(cs);
-    result:=stateHash;
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_assistanceEvaluator.isUserRule(CONST id:string):boolean;
-  begin
-    system.enterCriticalSection(cs);
-    result:=userRules.contains(id);
-    system.leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_assistanceEvaluator.resolveImport(CONST id: string): string;
-  begin
-    result:=package.getSecondaryPackageById(id);
-  end;
-
-PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list: T_setOfString);
-  begin
-    system.enterCriticalSection(cs);
-    list.put(completionList.values);
-    leaveCriticalSection(cs);
-  end;
-
-PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
+PROCEDURE initUnit(CONST guiAdapters:P_adapters);
   PROCEDURE initIntrinsicRuleList;
     VAR ids:T_arrayOfString;
         i:longint;
@@ -903,29 +852,15 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters; CONST useAssistance:boolean);
         intrinsicRulesForCompletion.put(C_specialWordInfo[i].txt);
     end;
 
-  VAR collector:P_collectingOutAdapter;
   begin
     runEvaluator.create(guiAdapters,@main);
-    if useAssistance then begin
-      silentAdapters.create;
-      new(collector,create(at_unknown,C_collectAllOutputBehavior));
-      silentAdapters.addOutAdapter(collector,true);
-      assistancEvaluator.create(@silentAdapters,@docMain);
-      assistanceIsInitialized:=true;
-    end;
     initIntrinsicRuleList;
     unitIsInitialized:=true;
   end;
 
 PROCEDURE earlyFinalization;
   begin
-    if unitIsInitialized then begin
-      runEvaluator.destroy;
-      if assistanceIsInitialized then begin
-        assistancEvaluator.destroy;
-        silentAdapters.destroy;
-      end;
-    end;
+    if unitIsInitialized then runEvaluator.destroy;
     unitIsInitialized:=false;
   end;
 

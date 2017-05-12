@@ -95,7 +95,6 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
-    if assistancEvaluator.evaluationRunning then assistancEvaluator.haltEvaluation;
     storeEditorsToSettings;
   end;
 
@@ -141,7 +140,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
 
-    mnh_evalThread.initUnit(@guiAdapters,true);
+    mnh_evalThread.initUnit(@guiAdapters);
     runEvaluator.ensureEditScripts;
     SynHighlighterMnh.initLists;
     guiTaskQueue.create;
@@ -545,7 +544,7 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(idOrName,true);
       exit;
     end;
-    fileName:=assistancEvaluator.resolveImport(idOrName);
+    fileName:=getEditor^.resolveImport(idOrName);
     if (fileName<>'') and fileExists(fileName) then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(fileName,true);
   end;
 
