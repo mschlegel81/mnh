@@ -1,0 +1,27 @@
+memoized resortList(len,k,l)->begin
+  local swapped:=[0..len-1].each(i,i=k ? l : i=l ? k : i);
+  swapped.head(k+1)|reverseList(swapped.tail(k+1));
+end;
+
+nextPermutation(I:intList)->begin
+  local k:=indexOf(I.leading<I.tail).trailing;
+  k.isInt
+  ? I[resortList(I.size,k,indexOf(I[k]<I).max)]
+  : void;
+end;
+nextPermutation()->void;
+
+permutationIterator(count>=1)->{begin
+  local next:=[1..count];
+save;
+  local result:=next;
+  next:=next.nextPermutation;
+  result;
+end};
+
+memoized fannkuch(i:intList)->i[0]=1 ? 0 : 1+fannkuch(i.head(i[0]).reverseList|i.tail(i[0]));
+
+fannkuchRedux(i>=1)->permutationIterator(i).pEach(permutation,fannkuch(permutation),max).print;
+
+//*Performs "fannkuch-redux" for things...
+main(parameter)->fannkuchRedux(parameter.toInt);

@@ -18,6 +18,7 @@ plotters:=demosRoot&[
 private testParameters((demosRoot&'24.mnh'            ))->['demo'];
 private testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
 private testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
+private testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
 private testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
 private testParameters(scriptFileName:string)->[];
 

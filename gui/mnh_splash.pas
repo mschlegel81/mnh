@@ -68,7 +68,11 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
     Label2.caption:='build '+intToStr(BUILT_NUMBER)+' ['+CODE_HASH+']';
+    {$ifdef UNIX}
+    prepareDoc(nil);
+    {$else}
     beginThread(@prepareDoc);
+    {$endif}
   end;
 
 FINALIZATION

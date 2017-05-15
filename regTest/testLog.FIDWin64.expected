@@ -517,6 +517,8 @@ Take one down, pass it around
 no more bottles of beer on the wall.
 
 Go to the store, buy some more.
+***** accumulatorFactory *****
+8.3
 ***** ackermann *****
 See http://rosettacode.org/wiki/Ackermann_function
 ackermann(3,0)=5
@@ -837,6 +839,8 @@ Distribution of seven sided dice (100000 samples):
     1     544
        =======
           578
+***** fannkuch *****
+16
 ***** fibonacci *****
 See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences
 Fibonacci n-step sequence
@@ -961,6 +965,8 @@ png hash: D2104128
 30: 2^1*3^1*5^2*17^1 = 2550
 ***** gcd *****
 The greatest common denominator of 1238124 and 1236 is 12
+***** generator *****
+[529,576,625,676,784,841,900,961,1024,1089]
 ***** gol *****
 
  #####     # ##### #  ##  ### ###  #  ##

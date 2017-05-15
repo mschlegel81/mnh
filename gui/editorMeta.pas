@@ -102,6 +102,8 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
   private
+    PROCEDURE ensureAssistant;
+    PROCEDURE dropAssistant;
     PROCEDURE repaintWithStateHash;
     PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
@@ -538,7 +540,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
 
 DESTRUCTOR T_editorMeta.destroy;
   begin
-    if (assistant<>nil) then dispose(assistant,destroy);
+    dropAssistant;
   end;
 
 FUNCTION T_editorMeta.getLines: T_arrayOfString;
@@ -591,15 +593,11 @@ PROCEDURE T_editorMeta.activate;
     if language_=LANG_MNH
     then begin
       editor.highlighter:=highlighter;
-      if assistant=nil then new(assistant,create(@self));
-      highlighter.codeAssistant:=assistant;
+      ensureAssistant;
       assistant^.check;
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
-      if assistant<>nil then begin
-        dispose(assistant,destroy);
-        assistant:=nil;
-      end;
+      dropAssistant;
     end;
     editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
     editor.readonly                :=runnerModel.areEditorsLocked;
@@ -612,6 +610,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
     if not(sheet.tabVisible) then exit;
     if language_=LANG_MNH then begin
+      ensureAssistant;
       assistant^.check;
       repaintWithStateHash;
     end;
@@ -762,8 +761,10 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
       for m in editorMetaData do m^.setMarkedWord(wordUnderCursor);
       editor.Repaint;
     end;
-    if forHelpOrJump then with editor do
+    if forHelpOrJump then with editor do begin
+      ensureAssistant;
       assistant^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
+    end;
   end;
 
 PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
@@ -918,9 +919,22 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
+PROCEDURE T_editorMeta.ensureAssistant;
+  begin
+    if assistant=nil then new(assistant,create(@self));
+    highlighter.codeAssistant:=assistant;
+  end;
+
+PROCEDURE T_editorMeta.dropAssistant;
+  begin
+    if (assistant<>nil) then dispose(assistant,destroy);
+    assistant:=nil;
+  end;
+
 PROCEDURE T_editorMeta.repaintWithStateHash;
   VAR s:string;
   begin
+    ensureAssistant;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
       editor.Repaint;
@@ -965,13 +979,6 @@ FUNCTION T_editorMeta.fileIsModifiedOnFileSystem: boolean;
     fileAge(fileInfo.filePath,currentFileAge);
     result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
-
-//FUNCTION T_editorMeta.languageName: string;
-//  VAR i:longint;
-//  begin
-//    for i:=0 to length(fileTypeMeta)-1 do if fileTypeMeta[i].language=language_ then exit(lowercase(fileTypeMeta[i].extensionWithoutDot));
-//    result:='';
-//  end;
 
 PROCEDURE T_editorMeta.updateContentAfterEditScript(
   CONST stringListLiteral: P_listLiteral);
@@ -1285,7 +1292,10 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
         for i:=0 to editor.lines.count-1 do
           if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                          else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
-        if language=LANG_MNH then assistant^.extendCompletionList(wordsInEditor);
+        if language=LANG_MNH then begin
+          ensureAssistant;
+          assistant^.extendCompletionList(wordsInEditor);
+        end;
       end;
     end;
   end;

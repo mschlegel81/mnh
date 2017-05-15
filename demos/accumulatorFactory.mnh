@@ -1,0 +1,13 @@
+foo(x:numeric)->{begin
+  local sum:=x;
+save;
+  sum+=$0;
+end};
+
+//*Solves the "Accumulator Factory" task (http://rosettacode.org/wiki/Accumulator_factory)
+main->begin
+  local x:=foo(1);
+  x(5);
+  foo(2);
+  print(x(2.3));
+end;
