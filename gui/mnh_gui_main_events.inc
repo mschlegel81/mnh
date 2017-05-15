@@ -411,21 +411,31 @@ PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
   begin
+    UpdateTimeTimer.enabled:=false;
     OpenDialog.FilterIndex:=1;
     OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
     OpenDialog.title:='Open file';
     if OpenDialog.execute and fileExists(OpenDialog.fileName)
     then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(OpenDialog.fileName,true);
+    UpdateTimeTimer.enabled:=true;
   end;
 
 PROCEDURE TMnhForm.miReloadClick(Sender: TObject); begin if hasEditor then getEditor^.reloadFile(getEditor^.getPath); end;
-PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject); begin if hasEditor then getEditor^.saveAsWithDialog;               end;
+PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
+  begin
+    UpdateTimeTimer.enabled:=false;
+    if hasEditor then getEditor^.saveAsWithDialog;
+    UpdateTimeTimer.enabled:=true;
+  end;
+
 PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
+    UpdateTimeTimer.enabled:=false;
     if hasEditor then begin
       getEditor^.saveWithDialog;
       if getEditor^.getPath=utilityScriptFileName then runEvaluator.ensureEditScripts;
     end;
+    UpdateTimeTimer.enabled:=true;
   end;
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject); begin SettingsForm.fontSize:=SettingsForm.fontSize-1; processFontSettings; end;

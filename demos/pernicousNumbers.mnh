@@ -1,5 +1,5 @@
-private primes:=math.primes(32);
-private isPernicious(n:int)->trueCount((2^[0..32] and n)>0) in primes;
+private P32:=math.primes(32).toSet;
+private isPernicious(n:int)->bits(n).trueCount in P32;
 private pernicousInRange(iMin,iMax)->[iMin..iMax].pEach(i,isPernicious(i) ? i : void);
 //*See http://rosettacode.org/wiki/Pernicious_numbers
 main->print(head(pernicousInRange(0,50),25),"\n",
