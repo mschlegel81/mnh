@@ -1,0 +1,34 @@
+//*Used pro forma to avoid infinite loops
+positiveOrVoid(i>0)->i;
+positiveOrVoid(i)->void;
+
+//*Generates a series of powers
+powerGen(power:int)->{begin
+  local p:=power;
+  local i:=0;
+save;
+  positiveOrVoid((i+=1)^p);
+end};
+
+//*Generates a series of values which are square numbers but not cubic numbers
+squareButNotCubic->{begin
+  local cubes  :=powerGen(3);
+  local squares:=powerGen(2);
+  local nextCube:=cubes();
+  local nextSquare:=squares();
+save;
+  nextSquare:=squares();
+  while(nextCube==nextSquare,begin
+    nextCube:=cubes();
+    nextSquare:=squares();
+  end);
+  while(nextSquare>nextCube,nextCube:=cubes());
+  nextSquare;
+end};
+
+//*Extracts elements with given indexes from a generator
+extract(generator:expression(0), indexes:intList)->
+  [0..max(indexes)].each(i,generator())[indexes];
+
+//*Solves the "Generator/Exponential" task from rosettacode.org (http://rosettacode.org/wiki/Generator/Exponential)
+main->squareButNotCubic.extract([20..29]).print;
