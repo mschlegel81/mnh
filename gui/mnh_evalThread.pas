@@ -160,7 +160,7 @@ TYPE
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_setOfString);
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
-      FUNCTION isErrorLocation(CONST line:longint; OUT warnOnly:boolean):boolean;
+      FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   end;
 
 VAR runEvaluator:T_runEvaluator;
@@ -440,14 +440,14 @@ PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST Ca
     lexer.destroy;
   end;
 
-FUNCTION T_codeAssistant.isErrorLocation(CONST line:longint; OUT warnOnly:boolean):boolean;
+FUNCTION T_codeAssistant.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   VAR e:T_storedMessage;
   begin
-    for e in localErrors do with e do if line=location.line then begin
-      warnOnly:=C_messageTypeMeta[messageType].level<=2;
-      exit(true);
+    result:=0;
+    for e in localErrors do with e do
+    if (result=0) and (lineIndex=location.line-1) and ((location.column<0) or (tokenStart<=location.column-1) and (tokenEnd>location.column-1)) then begin
+      if C_messageTypeMeta[messageType].level>2 then exit(2) else exit(1);
     end;
-    result:=false;
   end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);

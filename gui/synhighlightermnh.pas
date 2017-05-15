@@ -25,6 +25,7 @@ TYPE
     tkNote,
     tkTimingNote,
     tkHighlightedItem);
+  T_tokenSubKind =(skNormal,skWarn,skError);
   T_mnhSynFlavour=(msf_input,msf_output,msf_help);
 
 CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
@@ -40,7 +41,7 @@ TYPE
   private
     //Initialized only
     flavour :T_mnhSynFlavour;
-    styleTable: array[T_tokenKind] of TSynHighlighterAttributes;
+    styleTable: array[T_tokenKind,T_tokenSubKind] of TSynHighlighterAttributes;
 
     isMarked:boolean;
     fLine: PChar;
@@ -49,6 +50,7 @@ TYPE
     run: longint;
     fTokenPos: integer;
     fTokenId: T_tokenKind;
+    fTokenSubId: T_tokenSubKind;
     fLineNumber: integer;
 
     markedToken:record
@@ -90,72 +92,82 @@ VAR listsAreInitialized:boolean=false;
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   VAR t:T_tokenKind;
+      s:T_tokenSubKind;
   begin
     inherited create(AOwner);
     flavour:=flav;
-    styleTable[tkComment         ]:=TSynHighlighterAttributes.create('Comment');
-    styleTable[tkDocComment      ]:=TSynHighlighterAttributes.create('DocComment');
-    styleTable[tkSpecialComment  ]:=TSynHighlighterAttributes.create('SpecialComment');
-    styleTable[tkDefault         ]:=TSynHighlighterAttributes.create('Default');
-    styleTable[tkDollarIdentifier]:=TSynHighlighterAttributes.create('DollarIdentifier');
-    styleTable[tkUserRule        ]:=TSynHighlighterAttributes.create('UserRule');
-    styleTable[tkBultinRule      ]:=TSynHighlighterAttributes.create('BultinRule');
-    styleTable[tkSpecialRule     ]:=TSynHighlighterAttributes.create('SpecialRule');
-    styleTable[tkOperator        ]:=TSynHighlighterAttributes.create('Operator');
-    styleTable[tkNonStringLiteral]:=TSynHighlighterAttributes.create('NonStringLiteral');
-    styleTable[tkString          ]:=TSynHighlighterAttributes.create('String');
-    styleTable[tkModifier        ]:=TSynHighlighterAttributes.create('Modifier');
-    styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
-    styleTable[tkError           ]:=TSynHighlighterAttributes.create('Error');
-    styleTable[tkWarning         ]:=TSynHighlighterAttributes.create('Warn');
-    styleTable[tkNote            ]:=TSynHighlighterAttributes.create('Note');
-    styleTable[tkTimingNote      ]:=TSynHighlighterAttributes.create('Time');
-    styleTable[tkHighlightedItem ]:=TSynHighlighterAttributes.create('Highlighted');
+    for s:=low(T_tokenSubKind) to high(T_tokenSubKind) do begin
+      styleTable[tkComment         ,s]:=TSynHighlighterAttributes.create('Comment');
+      styleTable[tkDocComment      ,s]:=TSynHighlighterAttributes.create('DocComment');
+      styleTable[tkSpecialComment  ,s]:=TSynHighlighterAttributes.create('SpecialComment');
+      styleTable[tkDefault         ,s]:=TSynHighlighterAttributes.create('Default');
+      styleTable[tkDollarIdentifier,s]:=TSynHighlighterAttributes.create('DollarIdentifier');
+      styleTable[tkUserRule        ,s]:=TSynHighlighterAttributes.create('UserRule');
+      styleTable[tkBultinRule      ,s]:=TSynHighlighterAttributes.create('BultinRule');
+      styleTable[tkSpecialRule     ,s]:=TSynHighlighterAttributes.create('SpecialRule');
+      styleTable[tkOperator        ,s]:=TSynHighlighterAttributes.create('Operator');
+      styleTable[tkNonStringLiteral,s]:=TSynHighlighterAttributes.create('NonStringLiteral');
+      styleTable[tkString          ,s]:=TSynHighlighterAttributes.create('String');
+      styleTable[tkModifier        ,s]:=TSynHighlighterAttributes.create('Modifier');
+      styleTable[tkNull            ,s]:=TSynHighlighterAttributes.create('Null');
+      styleTable[tkError           ,s]:=TSynHighlighterAttributes.create('Error');
+      styleTable[tkWarning         ,s]:=TSynHighlighterAttributes.create('Warn');
+      styleTable[tkNote            ,s]:=TSynHighlighterAttributes.create('Note');
+      styleTable[tkTimingNote      ,s]:=TSynHighlighterAttributes.create('Time');
+      styleTable[tkHighlightedItem ,s]:=TSynHighlighterAttributes.create('Highlighted');
 
-    styleTable[tkComment         ].style:=[fsItalic];
-    styleTable[tkDocComment      ].style:=[fsItalic,fsBold];
-    styleTable[tkSpecialComment  ].style:=[fsItalic,fsBold,fsUnderline];
-    styleTable[tkDollarIdentifier].style:=[fsItalic];
-    styleTable[tkBultinRule      ].style:=[fsBold];
-    styleTable[tkSpecialRule     ].style:=[fsBold];
-    styleTable[tkOperator        ].style:=[fsBold];
-    styleTable[tkModifier        ].style:=[fsBold];
-    styleTable[tkError           ].style:=[fsBold];
-    styleTable[tkWarning         ].style:=[fsBold];
-    styleTable[tkNote            ].style:=[fsBold];
-    styleTable[tkTimingNote      ].style:=[fsBold];
+      styleTable[tkComment         ,s].style:=[fsItalic];
+      styleTable[tkDocComment      ,s].style:=[fsItalic,fsBold];
+      styleTable[tkSpecialComment  ,s].style:=[fsItalic,fsBold,fsUnderline];
+      styleTable[tkDollarIdentifier,s].style:=[fsItalic];
+      styleTable[tkBultinRule      ,s].style:=[fsBold];
+      styleTable[tkSpecialRule     ,s].style:=[fsBold];
+      styleTable[tkOperator        ,s].style:=[fsBold];
+      styleTable[tkModifier        ,s].style:=[fsBold];
+      styleTable[tkError           ,s].style:=[fsBold];
+      styleTable[tkWarning         ,s].style:=[fsBold];
+      styleTable[tkNote            ,s].style:=[fsBold];
+      styleTable[tkTimingNote      ,s].style:=[fsBold];
 
-    styleTable[tkComment         ].foreground:=$00999999;
-    styleTable[tkDocComment      ].foreground:=$00999999;
-    styleTable[tkSpecialComment  ].foreground:=$00999999;
-    styleTable[tkDefault         ].foreground:=$00000000;
-    styleTable[tkDollarIdentifier].foreground:=$00000000;
-    styleTable[tkUserRule        ].foreground:=$00FF0000;
-    styleTable[tkBultinRule      ].foreground:=$00FF0000;
-    styleTable[tkSpecialRule     ].foreground:=$00FF0000;
-    styleTable[tkOperator        ].foreground:=$00880000;
-    styleTable[tkNonStringLiteral].foreground:=$000000ff;
-    styleTable[tkString          ].foreground:=$00008800;
-    styleTable[tkModifier        ].foreground:=$000088ff;
-    styleTable[tkNull            ].foreground:=$00000000;
-    styleTable[tkError           ].foreground:=$000000ff;
-    styleTable[tkError           ].background:=$0000FFFF;
-    styleTable[tkWarning         ].foreground:=$000000ff;
-    styleTable[tkTimingNote      ].background:=$00EEEEEE;
+      styleTable[tkComment         ,s].foreground:=$00999999;
+      styleTable[tkDocComment      ,s].foreground:=$00999999;
+      styleTable[tkSpecialComment  ,s].foreground:=$00999999;
+      styleTable[tkDefault         ,s].foreground:=$00000000;
+      styleTable[tkDollarIdentifier,s].foreground:=$00000000;
+      styleTable[tkUserRule        ,s].foreground:=$00FF0000;
+      styleTable[tkBultinRule      ,s].foreground:=$00FF0000;
+      styleTable[tkSpecialRule     ,s].foreground:=$00FF0000;
+      styleTable[tkOperator        ,s].foreground:=$00880000;
+      styleTable[tkNonStringLiteral,s].foreground:=$000000ff;
+      styleTable[tkString          ,s].foreground:=$00008800;
+      styleTable[tkModifier        ,s].foreground:=$000088ff;
+      styleTable[tkNull            ,s].foreground:=$00000000;
+      styleTable[tkError           ,s].foreground:=$000000ff;
+      styleTable[tkError           ,s].background:=$0000FFFF;
+      styleTable[tkWarning         ,s].foreground:=$000000ff;
+      styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
+    end;
+    for t:=low(T_tokenKind) to high(T_tokenKind) do begin
+      styleTable[t,skWarn].style:=styleTable[t,skWarn].style+[fsUnderline];
+      styleTable[t,skError].style:=styleTable[t,skError].style+[fsUnderline];
+      styleTable[t,skError].background:=$0000FFFF;
+    end;
     markedWord:='';
     setMarkedToken(-1,-1);
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
   VAR t: T_tokenKind;
+      s: T_tokenSubKind;
   begin
-    for t:=low(T_tokenKind)    to high(T_tokenKind) do styleTable[t].destroy;
+    for t:=low(T_tokenKind)    to high(T_tokenKind) do
+    for s:=low(T_tokenSubKind) to high(T_tokenSubKind) do styleTable[t,s].destroy;
     inherited destroy;
   end; { Destroy }
 
 FUNCTION TSynMnhSyn.GetDefaultAttribute(index: integer): TSynHighlighterAttributes;
   begin
-    result := styleTable [tkDefault];
+    result := styleTable [tkDefault,skNormal];
   end;
 
 PROCEDURE TSynMnhSyn.SetLine(CONST newValue: ansistring; LineNumber: integer);
@@ -182,7 +194,7 @@ PROCEDURE TSynMnhSyn.setMarkedToken(CONST line,column:longint);
 
 FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
   begin
-    result:=styleTable[kind];
+    result:=styleTable[kind,skNormal];
   end;
 
 PROCEDURE TSynMnhSyn.next;
@@ -208,6 +220,7 @@ PROCEDURE TSynMnhSyn.next;
   begin
     isMarked:=false;
     fTokenId := tkDefault;
+    fTokenSubId:=skNormal;
     fTokenPos := run;
     if run>=RUN_LIMIT then begin
       fTokenId:=tkNull;
@@ -273,7 +286,7 @@ PROCEDURE TSynMnhSyn.next;
         end;
         if tokenTypeMap.containsKey(localId,fTokenId) then begin end
         else if (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
-        else if (codeAssistant<>nil) and (codeAssistant^.isUserRule(localId)) then fTokenId := tkUserRule
+        else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId) then fTokenId := tkUserRule
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
       end;
@@ -348,6 +361,10 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
+    if (flavour=msf_input) and (codeAssistant<>nil) then case codeAssistant^.isErrorLocation(fLineNumber,fTokenPos,run) of
+      2: fTokenSubId:=skError;
+      1: fTokenSubId:=skWarn;
+    end;
   end;
 
 FUNCTION TSynMnhSyn.GetEol: boolean;
@@ -377,11 +394,11 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer)
 
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
-    result := styleTable [fTokenId];
+    result := styleTable [fTokenId,fTokenSubId];
     if isMarked then result.FrameColor:=$000000ff
                 else begin
                   result.FrameColor:=clNone;
-                  if (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString];
+                  if (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
                 end;
   end;
 

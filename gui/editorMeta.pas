@@ -90,7 +90,6 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE toggleComment;
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
-    PROCEDURE repaintWithStateHash;
     PROCEDURE closeEditorWithDialogs;
 
     FUNCTION saveAsWithDialog:boolean;
@@ -103,7 +102,7 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
   private
-    PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+    PROCEDURE repaintWithStateHash;
     PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
     PROCEDURE InputEditChange(Sender: TObject);
@@ -435,7 +434,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor_.OnMouseDown         :=EditMouseDown;
     editor_.OnProcessCommand    :=EditProcessUserCommand;
     editor_.OnProcessUserCommand:=EditProcessUserCommand;
-    editor_.OnSpecialLineMarkup :=@InputEditSpecialLineMarkup;
+    editor_.OnSpecialLineMarkup :=@(runnerModel.InputEditSpecialLineMarkup);
     editor_.RightEdge:=-1;
     editor_.Keystrokes.clear;
     addKeystroke(ecUp,38);
@@ -993,27 +992,6 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(
 FUNCTION T_editorMeta.resolveImport(CONST text: string): string;
   begin
     if assistant=nil then result:='' else result:=assistant^.resolveImport(text);
-  end;
-
-PROCEDURE T_editorMeta.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
-  VAR warnOnly:boolean;
-  begin
-    if runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=runnerModel.debugLine.editor)
-    then begin
-      Special:=(line=runnerModel.debugLine.line);
-      Markup.FrameColor:=clNone;
-      Markup.FramePriority:=0;
-      Markup.BackPriority:=1;
-      Markup.ForePriority:=1;
-    end else if assistant<>nil then begin
-      Markup.FrameColor:=clRed;
-      Markup.FramePriority:=1;
-      Markup.BackPriority:=-1;
-      Markup.ForePriority:=-1;
-      Special:=assistant^.isErrorLocation(line,warnOnly);
-      if warnOnly then Markup.FrameStyle:=slsDashed
-                  else Markup.FrameStyle:=slsSolid;
-    end;
   end;
 
 PROCEDURE T_editorMeta.exportToHtml;
