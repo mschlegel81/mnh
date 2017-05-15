@@ -16,10 +16,12 @@ plotters:=demosRoot&[
 'heart.mnh'];
 
 private testParameters((demosRoot&'24.mnh'            ))->['demo'];
+private testParameters((demosRoot&'clock.mnh'         ))->['test'];
 private testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
 private testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
 private testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
 private testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
+private testParameters((demosRoot&'pascal.mnh'        ))->['12'];
 private testParameters(scriptFileName:string)->[];
 
 private skipFile((demosRoot&'3body.mnh'              ))->true;

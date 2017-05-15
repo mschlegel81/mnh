@@ -1,11 +1,22 @@
-memoized private
-fibNStep(i>=k,k>=1)->[1..k].each(j,fibNStep(i-j,k),+);
-fibNStep(i   ,k)->1;
+private fibonacciGenerator(n>=1)->{begin
+  local state:=[1..n]*0+1;
+  local abort:=20;
+save;
+  abort>=1
+  ? begin
+      local result:=state[max(0,n-2)];
+      abort-=1;
+      state:=state.tail|(state.agg(+));
+      result;
+    end
+  : void;
+end};
+
+private produce(g:expression(0))->g.map({$0}).join("\t");
 
 //*Solves the "Fibonacci n-step" task from http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences
 main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and
       print('Fibonacci n-step sequence') and
       print(' n | values') and
       print('---+-----------------------------------------------------------------------------------------------------') and
-      printf("%s",[1..20].each(k,k&"\t| "&
-                  [1..20].each(i,fibNStep(i+k-3,k)).join("\t")));
+      printf("%s",[1..20].each(k,k&"\t| "& fibonacciGenerator(k).produce));

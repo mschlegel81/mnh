@@ -1,4 +1,4 @@
-private change(amount,set<>[])->
+private memoized change(amount,set<>[])->
 amount<=0 ? 1 : //there is only one way to give out 0 cents
 begin
   local restSet:=set.get(set<=amount); //only work with coins >= amount

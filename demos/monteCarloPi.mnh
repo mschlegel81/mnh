@@ -1,10 +1,5 @@
-private monteCarloPi(sampleSize>0)->4*samplesInCircle(sampleSize)/sampleSize;
-
-//Note:     To improve performance, replace this |vvvv| "each" by "pEach" - however this will lead to nondeterministic results
-private samplesInCircle(sampleSize>10000)->[1..9].each(i,samplesInCircle(sampleSize div 10),+)+samplesInCircle(sampleSize-9*(sampleSize div 10));
-
-private samplesInCircle(sampleSize>0)->trueCount(random(sampleSize)^2+random(sampleSize)^2<1);
+private monteCarloPi(sampleSize>0)->4*trueCount(random(sampleSize)^2+random(sampleSize)^2<1)/sampleSize;
 
 //*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
 main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
-      printf("n=%7d pi approximated as %-9.7g",10^[1..6],(10^[1..6]).each(n,monteCarloPi(n)));
+      printf("n=%{$0}7d pi approximated as %{monteCarloPi($0)}-9.7g",10^[1..6]);
