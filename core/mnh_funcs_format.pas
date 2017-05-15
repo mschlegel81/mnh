@@ -342,6 +342,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         oldSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious([
           se_outputViaAdapter,
           se_readingInternal,
+          se_writingInternal,
           se_readingExternal,
           se_scriptDependent,
           se_executableDependent,
