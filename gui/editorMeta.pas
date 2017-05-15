@@ -740,6 +740,7 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=false;
       fileInfo.isChanged:=false;
+      mainForm.caption:=updateSheetCaption;
     end;
   end;
 
