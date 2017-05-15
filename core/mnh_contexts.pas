@@ -170,7 +170,8 @@ TYPE
       end;
       taskCs:TRTLCriticalSection;
       nextToEvaluate:P_futureTask;
-      PROCEDURE   evaluate(VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
+      PROCEDURE dropEachParameter;
+      PROCEDURE evaluate(VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
     public
       nextToAggregate:P_futureTask;
       CONSTRUCTOR create;
@@ -629,6 +630,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 CONSTRUCTOR T_futureTask.create;
   begin;
     initCriticalSection(taskCs);
+    payload.eachParameter:=nil;
   end;
 
 PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
@@ -647,6 +649,13 @@ PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_t
     nextToAggregate:=nil;
     nextToEvaluate:=nil;
     leaveCriticalSection(taskCs);
+  end;
+PROCEDURE T_futureTask.dropEachParameter;
+  begin
+    if payload.eachParameter<>nil then begin
+      disposeLiteral(payload.eachParameter);
+      payload.eachParameter:=nil;
+    end;
   end;
 
 PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWorkerThread:boolean);
@@ -670,6 +679,7 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWo
       end;
     finally
       enterCriticalSection(taskCs);
+      dropEachParameter;
       payload.state:=fts_ready;
       leaveCriticalSection(taskCs);
     end;
@@ -699,7 +709,7 @@ FUNCTION T_futureTask.getResultAsLiteral: P_literal;
 
 DESTRUCTOR T_futureTask.destroy;
   begin
-    disposeLiteral(payload.eachParameter);
+    dropEachParameter;
     doneCriticalSection(taskCs);
   end;
 
