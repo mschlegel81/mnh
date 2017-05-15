@@ -108,6 +108,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
   begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - begin'); {$endif}
     registerForm(self,true,true);
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
@@ -144,6 +145,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     runEvaluator.ensureEditScripts;
     SynHighlighterMnh.initLists;
     guiTaskQueue.create;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - end'); {$endif}
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -188,6 +190,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
     if firstShow then begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
       initializeSettings;
       editorMeta.setupUnit(self,
                            inputPageControl,
@@ -204,8 +207,10 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       enableDynamicItems;
       firstShow:=false;
       UpdateTimeTimer.enabled:=true;
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - end of initialization block'); {$endif}
     end;
     if hasEditor then getEditor^.activate;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormShow - end'); {$endif}
   end;
 
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -366,11 +371,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
   PROCEDURE displayProgress;
     VAR aid:string;
+        meta:P_editorMeta;
     begin
-      if hasEditor
+      meta:=getEditor;
+      if meta=nil
       then aid:=''
-      else aid:=C_tabChar+intToStr(getEditor^.editor.CaretY)+
-                      ','+intToStr(getEditor^.editor.CaretX);
+      else aid:=C_tabChar+intToStr(meta^.editor.CaretY)+
+                      ','+intToStr(meta^.editor.CaretX);
       StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
     end;
 

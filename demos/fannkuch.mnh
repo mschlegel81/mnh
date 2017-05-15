@@ -21,8 +21,7 @@ end};
 
 memoized fannkuch(i:intList)->i[0]=1 ? 0 : 1+fannkuch(i.head(i[0]).reverseList|i.tail(i[0]));
 
-//fannkuchRedux(i>=1)->permutationIterator(i).each(permutation,fannkuch(permutation),max).print;
-fannkuchRedux(i>=1)->permutationIterator(i).pMap(::fannkuch).max.print;
+fannkuchRedux(i>=1)->permutationIterator(i).pEach(permutation,fannkuch(permutation),max).print;
 
 //*Performs "fannkuch-redux" for things...
 main(parameter)->fannkuchRedux(parameter.toInt);

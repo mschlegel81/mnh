@@ -398,6 +398,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
             assign(handle,cmdParam);
             rewrite(handle);
             isOpen:=true;
+            {$ifdef debugMode} writeln(stdErr,'        DEBUG: creating file ',cmdParam);{$endif}
           end else isOpen:=false;
         end;
         exit(true);
@@ -426,10 +427,12 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
   VAR templateLine:string;
       templateFileHandle:textFile;
   begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
     prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: processing documentation template');{$endif}
     if templateFileName<>'' then begin
       assign(templateFileHandle,templateFileName);
       reset(templateFileHandle);
@@ -452,6 +455,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
       settings.value^.htmlDocGeneratedForCodeHash:=CODE_HASH;
     end;
     with outFile do if isOpen then close(handle);
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready');{$endif}
   end;
 
 PROCEDURE finalizeFunctionDocMap;
