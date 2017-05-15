@@ -64,6 +64,7 @@ TYPE
   public
     class FUNCTION GetLanguageName: ansistring; override;
   public
+    codeAssistant:P_codeAssistant;
     CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour); reintroduce;
     DESTRUCTOR destroy; override;
     {$WARN 5024 OFF}
@@ -285,7 +286,7 @@ PROCEDURE TSynMnhSyn.next;
         end;
         if tokenTypeMap.containsKey(localId,fTokenId) then begin end
         else if (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
-        else if assistancEvaluator.isUserRule(localId) then fTokenId := tkUserRule
+        else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId) then fTokenId := tkUserRule
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
       end;
@@ -360,7 +361,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
-    if (flavour=msf_input) then case assistancEvaluator.isErrorLocation(fLineNumber,fTokenPos,run) of
+    if (flavour=msf_input) and (codeAssistant<>nil) then case codeAssistant^.isErrorLocation(fLineNumber,fTokenPos,run) of
       2: fTokenSubId:=skError;
       1: fTokenSubId:=skWarn;
     end;

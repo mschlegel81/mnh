@@ -20,7 +20,6 @@ TYPE
     PROCEDURE OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE Timer1Timer(Sender: TObject);
 
-    PROCEDURE onAssistantFinished;                                          override;
     PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
     PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
     PROCEDURE onDebuggerEvent;                                              override;
@@ -56,10 +55,6 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
 
-PROCEDURE ToutputOnlyForm.onAssistantFinished;
-begin
-end;
-
 PROCEDURE ToutputOnlyForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
 begin
 end;
@@ -84,7 +79,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
-    mnh_evalThread.initUnit(@guiAdapters,false);
+    mnh_evalThread.initUnit(@guiAdapters);
     setupCallbacks;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
@@ -105,7 +100,6 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
-    if assistancEvaluator.evaluationRunning then assistancEvaluator.haltEvaluation;
   end;
 
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);

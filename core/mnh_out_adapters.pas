@@ -136,7 +136,6 @@ TYPE
       PROCEDURE logInstantPlot;
       PROCEDURE resetFlagsAfterPlotDone;
       PROCEDURE logPlotSettingsChanged;
-      PROCEDURE logEndOfCodeAssistance;
       PROCEDURE logBreakpointEncountered(CONST data:pointer);
       PROCEDURE logEndOfEditScript(CONST data:pointer; CONST success:boolean);
       PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
@@ -586,7 +585,6 @@ PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType
 PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
 PROCEDURE T_adapters.logPlotSettingsChanged;                                                          begin raiseCustomMessage(message(mt_plotSettingsChanged           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation); begin raiseCustomMessage(message(mt_plotFileCreated               ,fileName            ,location          )); end;
-PROCEDURE T_adapters.logEndOfCodeAssistance;                                                          begin raiseCustomMessage(message(mt_gui_assistantFinished,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logBreakpointEncountered(CONST data: pointer);                                   begin raiseCustomMessage(message(mt_gui_breakpointEncountered,C_EMPTY_STRING_ARRAY,C_nilTokenLocation,data)); end;
 PROCEDURE T_adapters.logEndOfEditScript(CONST data: pointer; CONST success: boolean);
   CONST mtOfSuccess:array[false..true] of T_messageType=(mt_gui_editScriptFailed,mt_gui_editScriptSucceeded);

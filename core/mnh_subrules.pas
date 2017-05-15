@@ -160,6 +160,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadC
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
+      subExpressionLevel:longint=0;
   begin
     setLength(preparedBody,0);
     t:=rep;
@@ -172,13 +173,17 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_threadC
         t^.tokType:=tt_EOL; t:=context.recycler.disposeToken(t);
         token.next:=nil;
         case token.tokType of
-          tt_beginBlock: begin inc(scopeLevel); parIdx:=-1; end;
-          tt_endBlock:   begin dec(scopeLevel); parIdx:=-1; end;
+          tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=-1; end;
+          tt_endBlock     : begin dec(scopeLevel        ); parIdx:=-1; end;
+          tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=-1; end;
+          tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
           tt_save: begin
-            if indexOfSave>=0 then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-            if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+            if subExpressionLevel=0 then begin
+              if indexOfSave>=0 then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+              if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+              indexOfSave:=i;
+            end;
             parIdx:=-1;
-            indexOfSave:=i;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
           tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
@@ -265,6 +270,8 @@ PROCEDURE T_subrule.updatePatternForInline;
 CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_threadContext);
   VAR t:P_token;
       i:longint;
+      scopeLevel:longint=0;
+      subExpressionLevel:longint=0;
   begin
     init(srt_inline_for_literal,rep^.location);
     pattern.create;
@@ -277,6 +284,17 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_threadCo
         t^.tokType:=tt_EOL;
         t:=context.recycler.disposeToken(t);
         token.next:=nil;
+        case token.tokType of
+          tt_beginBlock   : inc(scopeLevel        );
+          tt_endBlock     : dec(scopeLevel        );
+          tt_expBraceOpen : inc(subExpressionLevel);
+          tt_expBraceClose: dec(subExpressionLevel);
+          tt_save: if subExpressionLevel=0 then begin
+            if indexOfSave>=0 then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+            if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+            indexOfSave:=i;
+          end;
+        end;
         parIdx:=-1;
       end;
       inc(i);
@@ -425,6 +443,18 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
           and (preparedBody[length(preparedBody)-1].token.tokType=tt_expBraceClose));
     end;
 
+  PROCEDURE updateBody;
+    VAR i:longint;
+        level:longint=1;
+    begin
+      for i:=indexOfSave+2 to length(preparedBody)-1 do with preparedBody[i] do
+      case token.tokType of
+        tt_assignNewBlockLocal: if level=1 then token.tokType:=tt_assignExistingBlockLocal;
+        tt_beginBlock: inc(level);
+        tt_endBlock:   dec(level);
+      end;
+    end;
+
   PROCEDURE prepareResult;
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
@@ -434,6 +464,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         L:P_literal;
         remaining:P_listLiteral=nil;
         previousValueStore:P_valueStore;
+        firstCallOfResumable:boolean=false;
     begin
       enterCriticalSection(subruleCallCs);
       if (indexOfSave>=0) and currentlyEvaluating then begin
@@ -490,6 +521,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         if saveValueStore=nil then begin
           new(saveValueStore,create);
           saveValueStore^.scopePush(blocking);
+          firstCallOfResumable:=true;
         end;
         previousValueStore:=context.valueStore;
         context.valueStore:=saveValueStore;
@@ -501,8 +533,9 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         if firstRep=nil
         then lastRep:=nil
         else lastRep:=firstRep^.last;
-        {$ifdef debugMode} writeln(stdErr,'        DEBUG: evaluation in T_subrule.replaces finished'); {$endif}
         context.valueStore:=previousValueStore;
+
+        if firstCallOfResumable then updateBody;
       end else begin
         lastRep^.next:=context.recycler.newToken(declaredAt,'',tt_semicolon);
         lastRep:=lastRep^.next;

@@ -685,6 +685,7 @@ For built-in rules:<code>
 <li><h4><a     href="#restrictions">Parameter restrictions</a></h4></li>
 <li><h4><a     href="#variadic">Variadic functions</a></h4></li>
 <li><h4><a     href="#beginEnd">Begin-End-Blocks</a></h4></li>
+<li><h4><a     href="#beginSaveEnd">Begin-Save-End-Blocks</a></h4></li>
 <li><h4><a     href="#modifiers">Modifiers</a></h4><ul>
 <li><h5><a href="#privateMod">private</a></h5></li>
 <li><h5><a href="#memoizedMod">memoized</a></h5></li>
@@ -872,12 +873,12 @@ An example for a variadic recursive function, printing out all parameters in a s
 <h3><br><a name="beginEnd">Begin-End-Blocks</a></h3>
 
 <i>Begin-End-Blocks</i> are a means to program in a prodedural manner. It looks as follows <code>
-  begin
+  <span class="builtin">begin</span>
     <i>statement</i>
     <i>...</i>
     <i>statement</i>
     <i>result statement</i>
-  end;
+  <span class="builtin">end</span>;
 </code> The last statement provides a result which is returned from the block. The other statements are executed before and only have an effect if they
 have side effects. <br> Identifiers occuring as the left hand side of an assignment will be created in the current scope if (and only if) they
 are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be found in any surrounding scope.
@@ -890,6 +891,74 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 <!--end-->
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
 Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End-Blocks if block local variables are reassigned.
+
+<h3><br><a name="beginEnd">Begin-Save-End-Blocks</a></h3>
+
+<span class="red"><b>Disclaimer: This is an experimental feature!</b></span><br>
+<i>Begin-Save-End-Blocks</i> are an extension to begin-end-blocks inspired by FORTRAN's "SAVE" keyword. <br>
+These blocks allow to store an internal state of an expression. The <code><span class="builtin">save</span></code> keyword is interpreted on the same level
+as the <code><span class="builtin">begin</span></code> or <code><span class="builtin">end</span></code> keywords.<br>
+Basic structure <code>
+  <span class="builtin">begin</span>
+    <i>init statement</i>
+    <i>...</i>
+    <i>init statement</i>
+  <span class="builtin">save</span>;
+    <i>statement</i>
+    <i>...</i>
+    <i>statement</i>
+    <i>result statement</i>
+  <span class="builtin">end</span>;
+</code> The statements before <code><span class="builtin">save</span></code> are executed only on the first call to the function. On successive calls
+evaluation is resumed after the <code><span class="builtin">save</span></code> keyword, with the same local variables as on the last function exit.<br>
+
+Nullary expressions with <i>internal state</i> (i.e. a <code><span class="builtin">save</span></code> directive) can be used as iterators/generators. This means
+they can be iterated using <code><span class="builtin">each</span></code>, <code><span class="builtin">pEach</span></code>, <code><span class="builtin">agg</span></code>, <code><span class="builtin">map</span></code> and <code><span class="builtin">pMap</span></code>.<br>
+
+To show that the iterator/generator has no next element, return <code><span class="literal">void</span></code>. 
+As a simple example: this is a generator returing the Fibonacci-Sequence and aborting as soon as the result becomes negative (i.e. a silent integer overflow ocurred):
+<code>
+<!--mnh-->
+  fibGen->begin
+    local a:=1;
+    local b:=1;
+  save;
+    local result:=a<0 ? void : a;
+    b:=a+(a:=b);
+    result;
+  end;
+  
+  main->(::fibGen).map(::print);
+<!--end-->
+</code>
+<br>
+As a more sophisticated example consider this generator, returning permutations in lexicographic order: <code>
+<!--mnh-->
+  permutationIterator(count>=1)->{begin
+    local next:=[1..count];
+  save;
+    local result:=next;
+    next:=next.nextPermutation;
+    result;
+  end};
+<!--end-->
+</code>
+And the helper functions:<code>
+<!--mnh-->
+  memoized resortList(len,k,l)->begin
+    local swapped:=[0..len-1].each(i,i=k ? l : i=l ? k : i);
+    swapped.head(k+1)|reverseList(swapped.tail(k+1));
+  end;
+  
+  nextPermutation(I:intList)->begin
+    local k:=indexOf(I.leading<I.tail).trailing;
+    k.isInt
+    ? I[resortList(I.size,k,indexOf(I[k]<I).max)]
+    : void;
+  end;
+  nextPermutation()->void;
+<!--end-->
+</code>
 
 <h3><br><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
