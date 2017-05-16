@@ -7,7 +7,7 @@ USES  //basic classes
   //GUI: LCL components
   Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds, SynEditTypes,
+  SynEdit, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
   SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,

@@ -328,11 +328,8 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
     result:=resultLiteral;
   end;
 
-FUNCTION aggregate(CONST inputIterator: P_iterator;
-  CONST aggregator: P_aggregator; CONST location: T_tokenLocation;
-  VAR context: T_threadContext): P_literal;
-  VAR rule:P_expressionLiteral;
-      x:P_literal;
+FUNCTION aggregate(CONST inputIterator: P_iterator; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+  VAR x:P_literal;
   begin
     x:=inputIterator^.next(@context);
     while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors and not(aggregator^.earlyAbort) do begin

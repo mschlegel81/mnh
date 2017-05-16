@@ -3,7 +3,7 @@ PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-USES {$ifdef UNIX} cthreads, {$else}
+USES {$ifdef UNIX} cthreads, xlib, {$else}
   {$ifdef debugMode}heaptrc,{$endif}{$endif}
   sysutils,
   Interfaces, // this includes the LCL widgetset
@@ -17,9 +17,11 @@ USES {$ifdef UNIX} cthreads, {$else}
 {$R *.res}
 
 begin
+  {$ifdef UNIX}
+  XInitThreads;
+  {$endif}
   if wantMainLoopAfterParseCmdLine then begin
     hideConsole;
-
     Application.title:='MNH5 - GUI';
     RequireDerivedFormResource := true;
     Application.initialize;
