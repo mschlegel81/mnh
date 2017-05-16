@@ -129,7 +129,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_iterator;
       x:P_literal;
   begin
     x:=inputIterator^.next(@context);
-    while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors and not(aggregator^.earlyAbort) do begin
       context.valueStore^.scopePush(false);
       context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
       for rule in rulesList do if not(aggregator^.earlyAbort) then
@@ -208,7 +208,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
     values:=context.valueStore^.readOnlyClone;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.next(@context);
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) and not(aggregator^.earlyAbort) do begin
 
       for rule in rulesList do if not(aggregator^.earlyAbort) then begin
         enqueueForAggregation(createTask(rule,eachIndex,x));
@@ -328,11 +328,8 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
     result:=resultLiteral;
   end;
 
-FUNCTION aggregate(CONST inputIterator: P_iterator;
-  CONST aggregator: P_aggregator; CONST location: T_tokenLocation;
-  VAR context: T_threadContext): P_literal;
-  VAR rule:P_expressionLiteral;
-      x:P_literal;
+FUNCTION aggregate(CONST inputIterator: P_iterator; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+  VAR x:P_literal;
   begin
     x:=inputIterator^.next(@context);
     while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors and not(aggregator^.earlyAbort) do begin

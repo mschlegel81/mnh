@@ -303,7 +303,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
 FUNCTION TMnhForm.openLocation(CONST location:T_searchTokenLocation):boolean;
   VAR newIdx:longint;
   begin
-    if location.fileName='' then exit;
+    if location.fileName='' then exit(false);
     newIdx:=addOrGetEditorMetaForFiles(location.fileName,false);
     if newIdx<0 then exit(false);
     inputPageControl.activePageIndex:=newIdx;

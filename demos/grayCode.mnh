@@ -1,0 +1,25 @@
+USE formattingUtils;
+
+toGray(l:booleanList)->begin
+  local last:=false;
+  l.each(b,last xor (last:=b));
+end;
+
+fromGray(l:booleanList)->begin
+  local last:=false;
+  l.each(g,last:=(g xor last));
+end;
+
+private testGray(i:int)->begin
+  local b :=digits(i,2)=1;
+  local g :=b.toGray;
+  local b2:=g.fromGray;
+  b2==b ? void : fail('Reconstruction was invalid!');
+  [i,b.ord.join,g.ord.join];
+end;
+
+//*See http://rosettacode.org/wiki/Gray_code
+main->[0..16].map(::testGray)
+      .formatTable(['decimal','binary','Gray code'])
+      .join("\n")
+      .print;

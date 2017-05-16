@@ -650,6 +650,7 @@ PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_t
     nextToEvaluate:=nil;
     leaveCriticalSection(taskCs);
   end;
+
 PROCEDURE T_futureTask.dropEachParameter;
   begin
     if payload.eachParameter<>nil then begin
@@ -775,6 +776,7 @@ PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
   end;
 
 INITIALIZATION
+  initialize(globalLock);
   initCriticalSection(globalLock);
 FINALIZATION
   doneCriticalSection(globalLock);

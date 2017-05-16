@@ -46,6 +46,11 @@ scriptFileName.skipFile
 ? note('Not testing ',scriptFileName)
 : begin
     resetRandom;
+
+    mnhInfo['isFullVersion']
+    ? "plot.resetOptions".toExpression()()
+    : void;
+
     doCollect(not(scriptFileName.isSmokeTest));
     local logName:=extractFileNameOnly(scriptFileName);
     print('***** ',logName,' *****');

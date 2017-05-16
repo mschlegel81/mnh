@@ -1,0 +1,8 @@
+isSmithNumber(i>0)->begin
+  local factors:=factorize(i);
+  (factors.size>=2) AND factors.digits.flatten.agg(+)=(i).digits.agg(+);
+end;
+isSmithNumber(i)->false;
+
+//*See http://rosettacode.org/wiki/Smith_numbers
+main->[1..10000].filter(::isSmithNumber).print;

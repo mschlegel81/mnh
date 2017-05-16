@@ -98,6 +98,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       PROCEDURE writeBack(VAR adapters:T_adapters);
+      FUNCTION isInitialized:boolean;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
   end;
 
@@ -504,7 +505,10 @@ PROCEDURE T_mutableRule.setMutableValue(CONST value: P_literal; CONST onDeclarat
   begin
     system.enterCriticalSection(rule_cs);
     namedValue.setValue(value);
-    if not(onDeclaration) then valueChangedAfterDeclaration:=true;
+    if not(onDeclaration) then begin
+      valueChangedAfterDeclaration:=true;
+      called:=true;
+    end;
     system.leaveCriticalSection(rule_cs);
   end;
 
@@ -520,6 +524,12 @@ PROCEDURE T_datastoreRule.readDataStore(VAR context:T_threadContext);
   VAR lit:P_literal;
   begin
     if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta.fileChangedSinceRead) then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: reading datastore for rule ',getId,' ',string(getLocation),
+                     '; called: ',called,
+                     '; valueChangedAfterDeclaration: ',valueChangedAfterDeclaration,
+                     '; fileChanged: ',dataStoreMeta.fileChangedSinceRead);
+      {$endif}
       lit:=dataStoreMeta.readValue(getLocation,context);
       if lit<>nil then begin
         namedValue.setValue(lit);
@@ -540,7 +550,7 @@ FUNCTION T_mutableRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_li
 FUNCTION T_datastoreRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    if not(called) then readDataStore(context);
+    if not(called) and not(valueChangedAfterDeclaration) then readDataStore(context);
     result:=inherited mutateInline(mutation,RHS,location,context);
     system.leaveCriticalSection(rule_cs);
   end;
@@ -553,6 +563,11 @@ PROCEDURE T_datastoreRule.writeBack(VAR adapters: T_adapters);
       dataStoreMeta.writeValue(L,getLocation,@adapters,encodeAsText);
       disposeLiteral(L);
     end;
+  end;
+
+FUNCTION T_datastoreRule.isInitialized:boolean;
+  begin
+    result:=called or valueChangedAfterDeclaration;
   end;
 
 PROCEDURE T_memoizedRule.clearCache;

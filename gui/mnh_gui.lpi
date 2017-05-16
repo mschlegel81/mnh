@@ -164,7 +164,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="50">
+    <Units Count="51">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -406,6 +406,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit49>
+      <Unit50>
+        <Filename Value="..\core\mnh_rule.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit50>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
