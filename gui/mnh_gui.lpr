@@ -17,9 +17,6 @@ USES {$ifdef UNIX} cthreads, xlib, {$else}
 {$R *.res}
 
 begin
-  {$ifdef UNIX}
-  XInitThreads;
-  {$endif}
   if wantMainLoopAfterParseCmdLine then begin
     hideConsole;
     Application.title:='MNH5 - GUI';
