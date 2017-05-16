@@ -843,16 +843,20 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
 FUNCTION T_package.isMain: boolean; begin result:=(@self=mainPackage); end;
 {$ifdef fullVersion}
 PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
-  VAR i:longint;
-      r:T_ruleMap.VALUE_TYPE_ARRAY;
-      value:P_literal;
+  PROCEDURE addRule(CONST rule:P_rule);
+    VAR value:P_literal;
+        reportId:string;
+    begin
+      if not(rule^.isReportable(value)) then exit;
+      reportId:=rule^.getId;
+      if (rule^.getRuleType=rt_datastore) and not(P_datastoreRule(rule)^.isInitialized) then reportId:=reportId+' (uninitialized)';
+      variableReport.addVariable(reportId,value,rule^.getLocation);
+    end;
+
+  VAR rule:P_rule;
   begin
-    r:=importedRules.valueSet;
-    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.getId, value,r[i]^.getLocation);
-    setLength(r,0);
-    r:=packageRules.valueSet;
-    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.getId, value,r[i]^.getLocation);
-    setLength(r,0);
+    for rule in importedRules.valueSet do addRule(rule);
+    for rule in packageRules.valueSet do addRule(rule);
   end;
 {$endif}
 
