@@ -1,0 +1,52 @@
+//*Helper function for enumerating formulas
+private dig3(i:int,digitCount>0)->begin
+  local D:=digits(i,3);
+  D.size=digitCount
+  ? D
+  : D.size<digitCount
+    ? [D.size..digitCount-1].each(i,0)|D
+    : fail;
+end;
+
+private op:=['','+','-'];
+private INPUT:=['1'..'9'];
+
+private range(i0:int,i1>=i0)->{begin
+  local next:=i0-1;
+  local maxVal:=i1;
+save;
+  next>=maxVal ? void : next+=1;
+end};
+
+//*See http://rosettacode.org/wiki/Sum_to_100
+main->begin
+  //Generate a list of all formulas (13122 items)
+  local FORMULA:=[0..2*3^(INPUT.size-1)-1].pEach(i,((i and 1)=1 ? '-' : '') & ([INPUT,op[dig3(i div 2,INPUT.size-1)]].transpose.flatten.join));
+  //Evaluate all formulas
+  local VALUE  :=FORMULA.pEach(f,f.toExpression()());
+
+  //Idea: VALUE=100 returns a boolean mask, which is then used to access FORMULA
+  print("Show all solutions that sum to 100");
+  printf('  100 = %s',FORMULA[VALUE=100]);
+
+  //Idea: - drop negative/zero entries
+  //      - create elementFrequency map
+  //      - sort by inner index 1 (=the number of ocurrences)
+  //      - return the last one
+  //      - use the @-operator to pass the two list elements as two parameters to printf
+  print("\nShow the sum that has the maximum number of solutions");
+  '  %s has %s solutions'.printf@(VALUE[VALUE>0].elementFrequency.sort(1).trailing);
+
+  //Idea: - Iterate until the first number not contained in VALUE is encountered
+  //      - Use a range generator here! Otherwise the list to iterate would require Gigabytes of RAM
+  //      - Use early-abort aggregation here! Otherwise the iteration would take unneccessarily long.
+  print("\nShow the lowest positive number that can't be expressed");
+  print('  ',range(0,123456789).each(i,i in VALUE ? void : i,orElse));
+
+  //Idea: - drop negative/zero entries
+  //      - unique (includes sorting)
+  //      - take the last (i.e. trailing) 10
+  //      - map the findings to nice output
+  print("\nShow the ten highest numbers that can be expressed");
+  VALUE[VALUE>0].unique.trailing(10).pMap({"  "&$i&"\t=\t"&head(FORMULA[VALUE=$i])}).join("\n").print;
+end;
