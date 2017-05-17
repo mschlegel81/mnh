@@ -1,0 +1,11 @@
+recompose(Digits:intList,base:int)->(base^[-size(Digits)..-1]*Digits).agg(+);
+vanDerCorput(i:int,base:int)->digits(i,base).recompose(base);
+vanDerCorput(I:intList,base:int)->pMap(I,{vanDerCorput($i,base)});
+
+plotIfPossible->mnhInfo['isFullVersion']
+                ? format("%{vanDerCorput([0..1000],2).plot('.')}s")
+                : void;
+
+//*See http://rosettacode.org/wiki/Van_der_Corput_sequence
+main-> printf("%s",[2..10].map({"Base "&$base&": "&vanDerCorput([1..13],$base).round(5).join(",\t")&",\t..."}))
+       orElse plotIfPossible;

@@ -127,19 +127,21 @@ PROCEDURE processListSerial(CONST inputIterator:P_iterator;
   VAR rule:P_expressionLiteral;
       eachIndex:longint=0;
       x:P_literal;
+      proceed:boolean=true;
   begin
     x:=inputIterator^.next(@context);
-    while (x<>nil) and (x^.literalType<>lt_void) and context.adapters^.noErrors and not(aggregator^.earlyAbort) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
       context.valueStore^.scopePush(false);
       context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
-      for rule in rulesList do if not(aggregator^.earlyAbort) then
+      for rule in rulesList do if proceed then begin
         aggregator^.addToAggregation(
           rule^.evaluateToLiteral(eachLocation,@context,x),
           true,
           eachLocation,
           context.adapters);
+        proceed:=context.adapters^.noErrors and not(aggregator^.earlyAbort);
+      end;
       context.valueStore^.scopePop;
-
       inc(eachIndex);
       disposeLiteral(x);
       x:=inputIterator^.next(@context);
@@ -202,21 +204,23 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
       eachIndex:longint=0;
       aimEnqueueCount:longint;
       x:P_literal;
+      proceed:boolean=true;
   begin
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
     values:=context.valueStore^.readOnlyClone;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.next(@context);
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) and not(aggregator^.earlyAbort) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
 
-      for rule in rulesList do if not(aggregator^.earlyAbort) then begin
+      for rule in rulesList do if proceed then begin
         enqueueForAggregation(createTask(rule,eachIndex,x));
         if taskQueue^.getQueuedCount>aimEnqueueCount then begin
           if not(canAggregate) then taskQueue^.activeDeqeue(context);
           //if there is not enough pending after dequeuing, increase aimEnqueueCount
           if taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
         end;
+        proceed:=context.adapters^.noErrors and not(aggregator^.earlyAbort);
       end;
 
       inc(eachIndex);

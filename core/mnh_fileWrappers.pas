@@ -55,6 +55,29 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
 PROCEDURE ensurePath(CONST path:ansistring);
 
 IMPLEMENTATION
+VAR fileByIDCache:specialize G_stringKeyMap<string>;
+    lastFileCacheWorkingDir:string='';
+    fileByIdCs:TRTLCriticalSection;
+
+PROCEDURE putFileCache(CONST searchRoot,searchForId,foundFile:string);
+  begin
+    enterCriticalSection(fileByIdCs);
+    fileByIDCache.put(searchRoot+'#'+searchForId,foundFile);
+    leaveCriticalSection(fileByIdCs);
+  end;
+
+FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
+  begin
+    enterCriticalSection(fileByIdCs);
+    if GetCurrentDir=lastFileCacheWorkingDir then begin
+      if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
+    end else begin
+      fileByIDCache.clear;
+      result:='';
+    end;
+    leaveCriticalSection(fileByIdCs);
+  end;
+
 PROCEDURE ensurePath(CONST path:ansistring);
   begin
     ForceDirectories(extractFilePath(expandFileName(path)));
@@ -78,10 +101,16 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 
   begin
     if id='' then exit('');
-    result := '';
-    recursePath(rootPath);
-    if result = '' then recursePath(configDir);
-    if result = '' then recursePath(extractFilePath(paramStr(0)));
+    result := getCachedFile(rootPath,id);
+    if result<>'' then exit(result);
+    if result = ''
+    then recursePath(rootPath);
+    if (result = '') and (configDir<>rootPath)
+    then recursePath     (configDir);
+    if (result = '') and (extractFilePath(paramStr(0))<>rootPath)
+                     and (extractFilePath(paramStr(0))<>configDir)
+    then recursePath     (extractFilePath(paramStr(0)));
+    if result<>'' then putFileCache(rootPath,id,result);
   end;
 
 FUNCTION newFileCodeProvider(CONST path: ansistring): P_fileCodeProvider;
@@ -364,5 +393,14 @@ FUNCTION T_codeProvider.id: ansistring;
   begin
     result:=filenameToPackageId(getPath);
   end;
+
+INITIALIZATION
+  fileByIDCache.create();
+  initialize(fileByIdCs);
+  initCriticalSection(fileByIdCs);
+
+FINALIZATION
+  fileByIDCache.destroy;
+  doneCriticalSection(fileByIdCs);
 
 end.
