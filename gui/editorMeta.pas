@@ -56,6 +56,7 @@ T_editorMeta=object(T_codeProvider)
       filePath:ansistring;
       fileAccessAge:double;
       isChanged:boolean;
+      ignoreDeleted:boolean;
     end;
     assistant:P_codeAssistant;
     language_:T_language;
@@ -65,8 +66,8 @@ T_editorMeta=object(T_codeProvider)
     highlighter : TSynMnhSyn;
     PROCEDURE setLanguage(CONST languageIndex:T_language);
     PROCEDURE guessLanguage(CONST fallback:T_language);
-
   public
+    FUNCTION enabled:boolean;
     CONSTRUCTOR create(CONST idx:longint);
     CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
 
@@ -529,6 +530,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
       isChanged    :=state.changed;
       fileAccessAge:=state.fileAccessAge;
       filePath     :=state.filePath;
+      ignoreDeleted:=false;
     end;
     state.getLines(editor.lines);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
@@ -578,7 +580,7 @@ FUNCTION T_editorMeta.isPseudoFile: boolean;
 PROCEDURE T_editorMeta.activate;
   VAR l:T_language;
   begin
-    if not(sheet.tabVisible) then exit;
+    if not(enabled) then exit;
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: Activating editor "',pseudoName(),'"');
     {$endif}
@@ -608,7 +610,7 @@ PROCEDURE T_editorMeta.activate;
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
-    if not(sheet.tabVisible) then exit;
+    if not(enabled) then exit;
     if language_=LANG_MNH then begin
       ensureAssistant;
       assistant^.check;
@@ -653,6 +655,7 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
     with fileInfo do begin
       filePath:='';
       isChanged:=false;
+      ignoreDeleted:=false;
     end;
     editor.modified:=false;
 
@@ -661,7 +664,7 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
 PROCEDURE T_editorMeta.closeEditorWithDialogs;
   VAR mr:longint;
   begin
-    if not(sheet.tabVisible) then exit;
+    if not(enabled) then exit;
     if changed then begin
       mr:=closeDialogForm.showOnClose(pseudoName(true));
       if mr=mrOk then if not(saveWithDialog) then exit;
@@ -695,6 +698,11 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string;
     setLanguage(fallback);
   end;
 
+FUNCTION T_editorMeta.enabled:boolean;
+  begin
+    result:=sheet.tabVisible;
+  end;
+
 PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
   begin
     setLanguage(copy(extractFileExt(fileInfo.filePath),2,10),fallback);
@@ -704,6 +712,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
     sheet.tabVisible:=true;
     fileInfo.filePath:=fileName;
+    fileInfo.ignoreDeleted:=false;
     editor.clearAll;
     try
       editor.lines.loadFromFile(fileInfo.filePath);
@@ -726,6 +735,7 @@ PROCEDURE T_editorMeta.initForNewFile;
       isChanged       :=false;
       fileAccessAge:=0;
       filePath     :='';
+      ignoreDeleted:=false;
     end;
     editor.clearAll;
     editor.modified:=false;
@@ -735,7 +745,7 @@ PROCEDURE T_editorMeta.initForNewFile;
 
 PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
   begin
-    if sheet.tabVisible and (fileInfo.filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
+    if enabled and (fileInfo.filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
       editor.lines.loadFromFile(fileInfo.filePath);
       fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=false;
@@ -784,7 +794,7 @@ PROCEDURE T_editorMeta.setCaret(CONST location: T_searchTokenLocation);
 
 PROCEDURE T_editorMeta.setMarkedWord(CONST wordText: string);
   begin
-    if sheet.tabVisible and (language_=LANG_MNH) then highlighter.setMarkedWord(wordText);
+    if enabled and (language_=LANG_MNH) then highlighter.setMarkedWord(wordText);
   end;
 
 PROCEDURE T_editorMeta.setWorkingDir;
@@ -802,7 +812,7 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
       settings^.workspace.editorState[i].create;
       inc(i);
     end;
-    settings^.workspace.editorState[index].visible:=sheet.tabVisible;
+    settings^.workspace.editorState[index].visible:=enabled;
     if not(settings^.workspace.editorState[index].visible) then exit;
     setLength(settings^.workspace.editorState[index].markedLines,0);
     for i:=0 to editor.Marks.count-1 do appendIfNew(settings^.workspace.editorState[index].markedLines,editor.Marks[i].line);
@@ -970,13 +980,13 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string): string;
 
 FUNCTION T_editorMeta.fileIsDeleted: boolean;
   begin
-    result:=sheet.tabVisible and isFile and not(fileExists(fileInfo.filePath));
+    result:=enabled and isFile and not(fileExists(fileInfo.filePath));
   end;
 
 FUNCTION T_editorMeta.fileIsModifiedOnFileSystem: boolean;
   VAR currentFileAge:double;
   begin
-    if not(sheet.tabVisible and isFile) or changed then exit(false);
+    if not(enabled and isFile) or changed then exit(false);
     fileAge(fileInfo.filePath,currentFileAge);
     result:=currentFileAge<>fileInfo.fileAccessAge;
   end;
@@ -1037,7 +1047,7 @@ FUNCTION addEditorMetaForNewFile:longint;
   begin
     i:=length(editorMetaData)-1;
     //decrease i until a visible meta is encountered
-    while (i>=0) and not(editorMetaData[i]^.sheet.tabVisible) do dec(i);
+    while (i>=0) and not(editorMetaData[i]^.enabled) do dec(i);
     inc(i);
     //i now is the index of the last visible editor meta +1
     if (i>=0) and (i<length(editorMetaData)) then begin
@@ -1069,13 +1079,13 @@ FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useC
         i:longint;
     begin
       if isPseudoName then begin
-        for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.sheet.tabVisible) and (editorMetaData[i]^.pseudoName=fileName) then begin
+        for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.enabled) and (editorMetaData[i]^.pseudoName=fileName) then begin
           result:=i;
           exit;
         end;
       end else begin
         filePath:=expandFileName(fileName);
-        for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.sheet.tabVisible) and (editorMetaData[i]^.fileInfo.filePath=filePath) then begin
+        for i:=0 to length(editorMetaData)-1 do if (editorMetaData[i]^.enabled) and (editorMetaData[i]^.fileInfo.filePath=filePath) then begin
           result:=i;
           exit;
         end;
@@ -1102,14 +1112,14 @@ FUNCTION allPseudoNames:T_arrayOfString;
   VAR m:P_editorMeta;
   begin
     setLength(result,0);
-    for m in editorMetaData do if m^.sheet.tabVisible then append(result,m^.pseudoName);
+    for m in editorMetaData do if m^.enabled then append(result,m^.pseudoName);
   end;
 
 FUNCTION getMeta(CONST nameOrPseudoName:string):P_editorMeta;
   VAR m:P_editorMeta;
   begin
     result:=nil;
-    for m in editorMetaData do if (m^.sheet.tabVisible) and (m^.pseudoName()=nameOrPseudoName) then exit(m);
+    for m in editorMetaData do if (m^.enabled) and (m^.pseudoName()=nameOrPseudoName) then exit(m);
   end;
 
 PROCEDURE storeEditorsToSettings;
@@ -1137,7 +1147,7 @@ PROCEDURE cycleEditors(CONST cycleForward:boolean);
     if cycleForward then delta:=1 else delta:=length(editorMetaData)-1;
     for k:=0 to length(editorMetaData)-1 do begin
       i:=(i+delta) mod (length(editorMetaData));
-      if editorMetaData[i]^.sheet.tabVisible then begin
+      if editorMetaData[i]^.enabled then begin
         inputPageControl.activePageIndex:=i;
         editorMetaData[i]^.activate;
         exit;
@@ -1158,15 +1168,15 @@ PROCEDURE updateEditorsByGuiStatus;
 PROCEDURE closeAllEditorsButCurrent;
   VAR m:P_editorMeta;
   begin
-    if not(hasEditor and getEditor^.sheet.tabVisible) then exit;
-    for m in editorMetaData do if (m^.index<>inputPageControl.activePageIndex) and (m^.sheet.tabVisible) then m^.closeEditorWithDialogs;
+    if not(hasEditor and getEditor^.enabled) then exit;
+    for m in editorMetaData do if (m^.index<>inputPageControl.activePageIndex) and (m^.enabled) then m^.closeEditorWithDialogs;
   end;
 
 PROCEDURE closeAllUnmodifiedEditors;
   VAR m:P_editorMeta;
   begin
     for m in editorMetaData do if not(m^.changed) then m^.closeEditorWithDialogs;
-    if not(hasEditor and getEditor^.sheet.tabVisible) then cycleEditors(true);
+    if not(hasEditor and getEditor^.enabled) then cycleEditors(true);
   end;
 
 VAR doNotCheckFileBefore:double;
@@ -1177,11 +1187,14 @@ PROCEDURE checkForFileChanges;
     if now<doNotCheckFileBefore then exit;
     doNotCheckFileBefore:=now+1;
     for m in editorMetaData do with m^ do
-    if fileIsDeleted then begin
+    if fileIsDeleted and not(fileInfo.ignoreDeleted) then begin
       modalRes:=closeDialogForm.showOnDeleted(fileInfo.filePath);
       if modalRes=mrOk then closeEditorQuietly;
-      if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else
-      fileInfo.isChanged:=true;
+      if modalRes=mrClose then begin if not(saveWithDialog) then fileInfo.isChanged:=true; end else begin
+        fileInfo.ignoreDeleted:=true;
+        fileInfo.isChanged:=true;
+        updateSheetCaption;
+      end;
       continue;
     end else if fileIsModifiedOnFileSystem then begin
       modalRes:=closeDialogForm.showOnOutOfSync(fileInfo.filePath);
