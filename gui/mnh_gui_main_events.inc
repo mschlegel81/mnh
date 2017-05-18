@@ -198,6 +198,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            SaveDialog,
                            breakpointsImagesList,
                            assistanceSynEdit,
+                           assistanceTabSheet,
                            SynCompletion,
                            outputHighlighter,
                            miLanguageRoot,

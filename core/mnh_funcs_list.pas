@@ -485,7 +485,7 @@ FUNCTION map_imp intFuncSignature;
     end;
   end;
 
-FUNCTION pmap_imp intFuncSignature;
+FUNCTION pMap_imp intFuncSignature;
   VAR iterator:P_iterator;
   begin
     result:=nil;
