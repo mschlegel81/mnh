@@ -76,10 +76,11 @@ private analyzeCase(data,testCase:string)->begin
   .each(sample,sample[1].matches('^[F|L]D')
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
+  local allSamples:=debugSamples|optSamples;
+  allSamples.group(1).pEach(g,g[0,1]|g.getInner(0).reverseList).transpose('').showTable('Times for '&testCase&' (newest first)',true);
+
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
-  local allSamples:=debugSamples|optSamples;
-  allSamples.showTable;
   print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
 
   local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
@@ -96,7 +97,7 @@ private analyzeCase(data,testCase:string)->begin
   setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
   plot([]);
   allSamples:=allSamples.group(1).each(g,g.getInner(0));
-  local minSize:=allSamples.each(s,s.size,min);
+  local minSize:=allSamples.pMap(::size).min;
   allSamples.each(g,g.trailing(minSize).addPlot);
   plot.display;
 end;
@@ -143,7 +144,7 @@ private compareFlavours(data,flavour1:string,flavour2:string)->begin
                      'Delta.avg.'  ,'Delta.last']]|tableData,'Flavour comparison',true);
 end;
 
-private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,i[2]<0 ? void : i);
+private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,0<=i[2]<=500 ? i : void);
 
 main(inputFile:string)->doAnalysis(inputFile.loadAndFilterUnplausible);
 bar(factor,q)->begin
