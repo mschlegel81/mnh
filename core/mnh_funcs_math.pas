@@ -302,13 +302,16 @@ FUNCTION round_imp intFuncSignature;
 {$define ID_MACRO:='round'}
 ROUND_IMPLEMENTATION;
 
+FUNCTION ceil64 (CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)<0 then dec(result); end;
+FUNCTION floor64(CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)>0 then inc(result); end;
+
 FUNCTION ceil_imp intFuncSignature;
-{$define CALL_MACRO:=ceil}
+{$define CALL_MACRO:=ceil64}
 {$define ID_MACRO:='ceil'}
 ROUND_IMPLEMENTATION;
 
 FUNCTION floor_imp intFuncSignature;
-{$define CALL_MACRO:=floor}
+{$define CALL_MACRO:=floor64}
 {$define ID_MACRO:='floor'}
 ROUND_IMPLEMENTATION;
 {$undef ROUND_IMPLEMENTATION}
