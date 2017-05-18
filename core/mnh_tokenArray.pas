@@ -531,20 +531,29 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler;
 FUNCTION T_lexer.getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint): P_token;
   VAR recycler:T_tokenRecycler;
       adapters:T_adapters;
+      prev:P_token=nil;
+      lineToFind:longint;
   begin
     recycler.create;
     adapters.create;
-    while (inputLocation.column<=startColumnIndex) and (fetchNext(recycler,adapters,false)) do begin end;
+    while fetchNext(recycler,adapters,false) do begin end;
+    dec(inputLocation.line);
+    inputLocation.column:=length(input[length(input)-1]);
+
     recycler.destroy;
     adapters.destroy;
     result:=nextStatement.firstToken;
-    while (result<>nil) and (result^.location.column<startColumnIndex) do result:=result^.next;
-    if result=nil then begin
-      result:=lastTokenized;
-      if result=nil then exit;
+    lineToFind:=1+inputLocation.line-inputIndex;
+    while (result<>nil) and (result^.location.line=lineToFind) and (result^.location.column<startColumnIndex) do begin
+      prev:=result;
+      result:=result^.next;
     end;
-    if result^.next=nil then endColumnIndex:=inputLocation.column
-                        else endColumnIndex:=result^.next^.location.column;
+    if prev<>nil  then result:=prev;
+    if result=nil then result:=lastTokenized;
+    if result=nil then exit;
+    if (result^.next=nil) or (result^.next^.location.line<>lineToFind)
+    then endColumnIndex:=length(input[0])
+    else endColumnIndex:=result^.next^.location.column;
   end;
 
 CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);

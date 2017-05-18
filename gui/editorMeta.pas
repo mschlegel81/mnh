@@ -171,6 +171,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
+                    CONST p_assistanceSheet       :TTabSheet;
                     CONST p_SynCompletion         :TSynCompletion;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
@@ -205,6 +206,7 @@ VAR mainForm              :T_abstractMnhForm;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
     assistanceSynEdit     :TSynEdit;
+    assistanceSheet       :TTabSheet;
     SynCompletion1        :TSynCompletion;
 
 VAR fileTypeMeta:array[T_language] of record
@@ -222,6 +224,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
+                    CONST p_assistanceSheet       :TTabSheet;
                     CONST p_SynCompletion         :TSynCompletion;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
@@ -386,15 +389,16 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     end;
 
   begin
-    mainForm              :=P_mainForm              ;
-    inputPageControl      :=P_inputPageControl      ;
-    EditorPopupMenu       :=P_EditorPopupMenu       ;
-    SaveDialog            :=P_SaveDialog            ;
-    breakpointsImagesList :=P_breakpointsImagesList ;
-    EditKeyUp             :=P_EditKeyUp             ;
-    EditMouseDown         :=P_EditMouseDown         ;
-    EditProcessUserCommand:=P_EditProcessUserCommand;
-    assistanceSynEdit     :=P_assistanceSynEdit     ;
+    mainForm              :=p_mainForm              ;
+    inputPageControl      :=p_inputPageControl      ;
+    EditorPopupMenu       :=p_EditorPopupMenu       ;
+    SaveDialog            :=p_SaveDialog            ;
+    breakpointsImagesList :=p_breakpointsImagesList ;
+    EditKeyUp             :=p_EditKeyUp             ;
+    EditMouseDown         :=p_EditMouseDown         ;
+    EditProcessUserCommand:=p_EditProcessUserCommand;
+    assistanceSynEdit     :=p_assistanceSynEdit     ;
+    assistanceSheet       :=p_assistanceSheet       ;
     SynCompletion1        :=p_SynCompletion         ;
     initHighlighters;
     initFileTypes;
@@ -595,10 +599,11 @@ PROCEDURE T_editorMeta.activate;
     if language_=LANG_MNH
     then begin
       editor.highlighter:=highlighter;
-      ensureAssistant;
-      assistant^.check;
+      assistanceSheet.tabVisible:=true;
+      repaintWithStateHash;
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
+      assistanceSheet.tabVisible:=false;
       dropAssistant;
     end;
     editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
@@ -611,11 +616,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
     if not(enabled) then exit;
-    if language_=LANG_MNH then begin
-      ensureAssistant;
-      assistant^.check;
-      repaintWithStateHash;
-    end;
+    if language_=LANG_MNH then repaintWithStateHash;
     mainForm.caption:=updateSheetCaption;
   end;
 
@@ -939,19 +940,28 @@ PROCEDURE T_editorMeta.ensureAssistant;
 PROCEDURE T_editorMeta.dropAssistant;
   begin
     if (assistant<>nil) then dispose(assistant,destroy);
+    highlighter.codeAssistant:=nil;
     assistant:=nil;
   end;
 
 PROCEDURE T_editorMeta.repaintWithStateHash;
   VAR s:string;
+      hints:T_arrayOfString;
+      hasErrors,hasWarnings:boolean;
   begin
     ensureAssistant;
+    assistant^.check;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
-      for s in assistant^.getErrorHints do assistanceSynEdit.lines.add(s);
+      hints:=assistant^.getErrorHints(hasErrors,hasWarnings);
+      if hasErrors then begin if hasWarnings then assistanceSheet.caption:='Errors + Warnings'
+                                             else assistanceSheet.caption:='Errors'; end
+                   else begin if hasWarnings then assistanceSheet.caption:='Warnings'
+                                             else assistanceSheet.caption:='   '; end;
+      for s in hints do assistanceSynEdit.lines.add(s);
     end;
   end;
 
@@ -963,8 +973,11 @@ FUNCTION T_editorMeta.changed: boolean;
 FUNCTION T_editorMeta.saveFile(CONST fileName: string): string;
   VAR arr:T_arrayOfString;
       i:longint;
+      previousName:string;
   begin
+    previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
+    if (previousName<>'') and (previousName<>fileInfo.filePath) then settings.value^.workspace.fileHistory.fileClosed(previousName);
     setLength(arr,editor.lines.count);
     for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
     with fileInfo do begin
@@ -1100,6 +1113,7 @@ FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useC
     if useCurrentPageAsFallback then result:=inputPageControl.activePageIndex
                                 else result:=-1;
     for f in FileNames do openSingleFile(f);
+    if result<>-1 then editorMetaData[result]^.activate;
   end;
 
 PROCEDURE updateFonts;

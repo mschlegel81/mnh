@@ -154,7 +154,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE check;
 
-      FUNCTION getErrorHints:T_arrayOfString;
+      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean):T_arrayOfString;
       PROPERTY getStateHash:T_hashInt read stateHash;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
@@ -172,7 +172,6 @@ FUNCTION utilityScriptFileName:string;
 PROCEDURE earlyFinalization;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-    silentAdapters:T_adapters;
     intrinsicRulesForCompletion:T_setOfString;
 
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
@@ -348,7 +347,7 @@ PROCEDURE T_codeAssistant.check;
     stateHash:=package.getCodeState;
   end;
 
-FUNCTION T_codeAssistant.getErrorHints: T_arrayOfString;
+FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean): T_arrayOfString;
   VAR k:longint;
   PROCEDURE addErrors(CONST list:T_storedMessages);
     VAR i:longint;
@@ -356,12 +355,19 @@ FUNCTION T_codeAssistant.getErrorHints: T_arrayOfString;
     begin
       for i:=0 to length(list)-1 do with list[i] do for s in messageText do begin
         if k>=length(result) then setLength(result,k+1);
-        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(s);
+        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+
+                                      C_messageTypeMeta[messageType].prefix           +
+                   ' '+ansistring(location)+
+                   ' '+s;
+        hasErrors  :=hasErrors   or (C_messageTypeMeta[messageType].level> 2);
+        hasWarnings:=hasWarnings or (C_messageTypeMeta[messageType].level<=2);
         inc(k);
       end;
     end;
 
   begin
+    hasErrors:=false;
+    hasWarnings:=false;
     setLength(result,length(localErrors)+length(externalErrors));
     k:=0;
     addErrors(localErrors);
