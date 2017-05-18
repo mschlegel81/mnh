@@ -599,9 +599,11 @@ PROCEDURE T_editorMeta.activate;
     if language_=LANG_MNH
     then begin
       editor.highlighter:=highlighter;
+      assistanceSheet.tabVisible:=true;
       repaintWithStateHash;
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
+      assistanceSheet.tabVisible:=false;
       dropAssistant;
     end;
     editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
