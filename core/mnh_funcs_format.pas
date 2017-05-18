@@ -172,7 +172,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
-    CONST FORMAT_CHARS:charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
+    CONST FORMAT_CHARS:T_charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
         partStart:longint=1;
         bracketLevel:longint=0;
@@ -473,7 +473,7 @@ FUNCTION formatTime_imp intFuncSignature;
 FUNCTION parseTime_imp intFuncSignature;
   VAR format:ansistring;
   FUNCTION encodeDateTime(input:ansistring):double;
-    CONST digits:charSet=['0'..'9'];
+    CONST digits:T_charSet=['0'..'9'];
     VAR yStr:string='';
         mStr:string='';
         dStr:string='';

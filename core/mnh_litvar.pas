@@ -102,6 +102,7 @@ TYPE
   P_stringLiteral = ^T_stringLiteral;
   T_stringLiteral = object(T_scalarLiteral)
   private
+    enc: T_stringEncoding;
     val: ansistring;
     CONSTRUCTOR create(CONST value: ansistring);
   public
@@ -115,6 +116,7 @@ TYPE
     FUNCTION lower: P_stringLiteral;
     FUNCTION unbrace: P_stringLiteral;
     FUNCTION escape: P_stringLiteral;
+    FUNCTION getEncoding: T_stringEncoding;
     PROCEDURE append(CONST suffix:ansistring);
     //from T_scalarLiteral:
     FUNCTION stringForm: ansistring; virtual;
@@ -734,7 +736,7 @@ CONSTRUCTOR T_voidLiteral.create();                              begin inherited
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init(lt_boolean);    val:=value; end;
 CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init(lt_int);        val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init(lt_real);       val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string);     val:=value; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string); val:=value; enc:=se_testPending; end;
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
   begin
     inherited init(lt_emptyList);
@@ -1624,12 +1626,19 @@ FUNCTION T_stringLiteral.escape: P_stringLiteral;
     result:=newStringLiteral(escapeString(val,es_pickShortest));
   end;
 
+FUNCTION T_stringLiteral.getEncoding: T_stringEncoding;
+  begin
+    if enc=se_testPending then enc:=encoding(val);
+    result:=enc;
+  end;
+
 PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
   begin
     {$ifdef debugMode}
     if numberOfReferences>1 then raise Exception.create('You must not append suffixes to strings which are used elsewhere!');
     {$endif}
     val:=val+suffix;
+    enc:=se_testPending;
   end;
 
 PROCEDURE T_compoundLiteral.modifyType(CONST L: P_literal);
