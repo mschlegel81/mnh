@@ -8,8 +8,11 @@ IMPLEMENTATION
 FUNCTION pos_imp intFuncSignature;
   FUNCTION posInt(x,y:P_literal):P_intLiteral;
     begin
-      result:=newIntLiteral(int64(UTF8Pos(P_stringLiteral(x)^.value,
-                                          P_stringLiteral(y)^.value))-int64(1));
+      if P_stringLiteral(x)^.getEncoding=se_utf8
+      then result:=newIntLiteral(int64(UTF8Pos(P_stringLiteral(x)^.value,
+                                               P_stringLiteral(y)^.value))-int64(1))
+      else result:=newIntLiteral(int64(    pos(P_stringLiteral(x)^.value,
+                                               P_stringLiteral(y)^.value))-int64(1));
     end;
 
   VAR i:longint;
@@ -51,7 +54,7 @@ FUNCTION copy_imp intFuncSignature;
       i1:longint=0;
       i:longint;
 
-  PROCEDURE checkLength(CONST L:P_literal);
+  PROCEDURE checkLength(CONST L:P_literal); inline;
     VAR s:longint;
     begin
       s:=P_listLiteral(L)^.size;
@@ -59,14 +62,14 @@ FUNCTION copy_imp intFuncSignature;
                       else if    i1<>s then allOkay:=false;
     end;
 
-  FUNCTION safeString(CONST index:longint):ansistring;
+  FUNCTION safeString(CONST index:longint):P_stringLiteral; inline;
     begin
       if arg0^.literalType=lt_string
-        then result:=str0^.value
-        else result:=P_stringLiteral(list0^[index])^.value;
+        then result:=str0
+        else result:=P_stringLiteral(list0^[index]);
     end;
 
-  FUNCTION safeStart(CONST index:longint):longint;
+  FUNCTION safeStart(CONST index:longint):longint; inline;
     begin
       if arg1^.literalType=lt_int
         then result:=int1^.value
@@ -74,11 +77,17 @@ FUNCTION copy_imp intFuncSignature;
       inc(result);
     end;
 
-  FUNCTION safeLen(CONST index:longint):longint;
+  FUNCTION safeLen(CONST index:longint):longint; inline;
     begin
       if arg2^.literalType=lt_int
         then result:=int2^.value
         else result:=P_intLiteral(list2^[index])^.value;
+    end;
+
+  FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):string; inline;
+    begin
+      if s^.getEncoding=se_utf8 then result:=UTF8Copy(s^.value,start,len)
+                                else result:=    copy(s^.value,start,len);
     end;
 
   begin
@@ -92,18 +101,27 @@ FUNCTION copy_imp intFuncSignature;
       if arg2^.literalType in [lt_intList   ,lt_emptyList] then checkLength(arg2);
       if not(allOkay) then exit(nil)
       else if not(anyList) then
-        result:=newStringLiteral(copy(str0^.value,
-                                      P_intLiteral   (arg1)^.value+1,
-                                      P_intLiteral   (arg2)^.value))
+        result:=newStringLiteral(myCopy(str0,
+                           P_intLiteral(arg1)^.value+1,
+                           P_intLiteral(arg2)^.value))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
           listResult^.appendString(
-              UTF8Copy(safeString(i),
+                myCopy(safeString(i),
                        safeStart(i),
                        safeLen(i)));
       end;
     end;
+  end;
+
+FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
+  VAR txt:ansistring;
+      c:char;
+  begin
+    txt:=P_stringLiteral(input)^.value;
+    result:=newListLiteral(length(txt));
+    for c in txt do result^.appendString(c);
   end;
 
 FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
@@ -113,6 +131,7 @@ FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
       txt:ansistring;
       sub:ansistring;
   begin
+    if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(input));
     result:=newListLiteral;
     txt:=P_stringLiteral(input)^.value;
     byteIndex:=1;
@@ -148,22 +167,31 @@ FUNCTION charSet_imp intFuncSignature;
         i:longint;
         txt:ansistring;
         sub:ansistring;
-        charSet:T_setOfString;
+        charSetUtf8:T_setOfString;
+        byteSet:T_charset=[];
+        c:char;
     begin
-      charSet.create;
-      txt:=P_stringLiteral(input)^.value;
-      byteIndex:=1;
-      for charIndex:=1 to UTF8Length(txt) do begin
-        sub:='';
-        for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
-          sub:=sub+txt[byteIndex];
-          inc(byteIndex)
+      if P_stringLiteral(input)^.getEncoding=se_utf8 then begin
+        charSetUtf8.create;
+        txt:=P_stringLiteral(input)^.value;
+        byteIndex:=1;
+        for charIndex:=1 to UTF8Length(txt) do begin
+          sub:='';
+          for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+            sub:=sub+txt[byteIndex];
+            inc(byteIndex)
+          end;
+          charSetUtf8.put(sub);
         end;
-        charSet.put(sub);
+        result:=newSetLiteral;
+        for sub in charSetUtf8.values do result^.appendString(sub);
+        charSetUtf8.destroy;
+      end else begin
+        txt:=P_stringLiteral(input)^.value;
+        for c in txt do include(byteSet,c);
+        result:=newSetLiteral;
+        for c in byteSet do result^.appendString(c);
       end;
-      result:=newSetLiteral;
-      for sub in charSet.values do result^.appendString(sub);
-      charSet.destroy;
     end;
 
   VAR i:longint;
@@ -178,14 +206,6 @@ FUNCTION charSet_imp intFuncSignature;
   end;
 
 FUNCTION bytes_imp intFuncSignature;
-  FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
-    VAR i:longint;
-        txt:ansistring;
-    begin
-      txt:=P_stringLiteral(input)^.value;
-      result:=newListLiteral;
-      for i:=1 to length(txt) do result^.appendString(txt[i]);
-    end;
 
   VAR i:longint;
   begin
@@ -444,7 +464,7 @@ FUNCTION repeat_impl intFuncSignature;
   end;
 
 FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveChars}
-  VAR asciiWhitelist:charSet=[];
+  VAR asciiWhitelist:T_charSet=[];
       utf8WhiteList:T_setOfString;
       instead:ansistring;
       insteadC:char;
@@ -554,14 +574,20 @@ FUNCTION reverseString_impl intFuncSignature;
     begin
       result:='';
       txt:=P_stringLiteral(input)^.value;
-      byteIndex:=1;
-      for charIndex:=1 to UTF8Length(txt) do begin
-        sub:='';
-        for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
-          sub:=sub+txt[byteIndex];
-          inc(byteIndex)
+      if P_stringLiteral(input)^.getEncoding=se_utf8 then begin
+        byteIndex:=1;
+        for charIndex:=1 to UTF8Length(txt) do begin
+          sub:='';
+          for i:=0 to UTF8CharacterLength(@txt[byteIndex])-1 do begin
+            sub:=sub+txt[byteIndex];
+            inc(byteIndex)
+          end;
+          result:=sub+result;
         end;
-        result:=sub+result;
+      end else begin
+        i:=length(txt);
+        setLength(result,i);
+        for byteIndex:=1 to i do result[byteIndex]:=txt[i+1-byteIndex];
       end;
     end;
 
@@ -716,14 +742,14 @@ FUNCTION isUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(isUtf8Encoded(str0^.value));
+    then result:=newBoolLiteral(str0^.getEncoding in [se_utf8,se_ascii]);
   end;
 
 FUNCTION isAscii_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(isAsciiEncoded(str0^.value));
+    then result:=newBoolLiteral(str0^.getEncoding=se_ascii);
   end;
 
 FUNCTION utf8ToAnsi_impl intFuncSignature;
@@ -799,7 +825,9 @@ FUNCTION formatTabs_impl intFuncSignature;
     begin
       result:=nil;
       case l^.literalType of
-        lt_string: result:=newIntLiteral(LENGTH_FUNC(P_stringLiteral(L)^.value));
+        lt_string: if P_stringLiteral(L)^.getEncoding=se_utf8
+                   then result:=newIntLiteral(LENGTH_FUNC(P_stringLiteral(L)^.value))
+                   else result:=newIntLiteral(     length(P_stringLiteral(L)^.value));
         lt_list,lt_stringList,lt_emptyList,
         lt_set,lt_stringSet,lt_emptySet:
         begin
