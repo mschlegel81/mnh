@@ -1,4 +1,5 @@
-recompose(Digits:intList,base:int)->(base^[-size(Digits)..-1]*Digits).agg(+);
+memoized factors(len,base)->base^[-len..-1];
+recompose(Digits:intList,base:int)->(factors(Digits.size,base)*Digits).agg(+);
 vanDerCorput(i:int,base:int)->digits(i,base).recompose(base);
 vanDerCorput(I:intList,base:int)->pMap(I,{vanDerCorput($i,base)});
 
