@@ -41,11 +41,11 @@ TYPE
   T_scriptMeta=object
     private
       name:string;
-      editRule:P_subrule;
+      editRule:P_subruleExpression;
       outputLanguage:string;
       createNewEditor:boolean;
       scriptType:T_scriptType;
-      CONSTRUCTOR create(CONST rule:P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);
+      CONSTRUCTOR create(CONST rule:P_subruleExpression; OUT isValid:boolean; VAR adapters:T_adapters);
       DESTRUCTOR destroy;
     public
       PROPERTY getName:string read name;
@@ -217,7 +217,7 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   PROCEDURE ensureEditScripts_impl();
-    VAR subRule:P_subrule;
+    VAR subRule:P_subruleExpression;
         script:P_scriptMeta;
         editContext:T_evaluationContext;
         scriptType:T_scriptType;
@@ -456,7 +456,7 @@ FUNCTION T_codeAssistant.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: 
     end;
   end;
 
-CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subrule; OUT isValid:boolean; VAR adapters:T_adapters);
+CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; VAR adapters:T_adapters);
   VAR t:T_scriptType;
   begin
     editRule:=rule;

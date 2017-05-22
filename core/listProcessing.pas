@@ -21,7 +21,7 @@ FUNCTION processMapSerial(CONST inputIterator:P_iterator; CONST expr:P_expressio
                           VAR context:T_threadContext):P_listLiteral;
 FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_expressionLiteral;
                             VAR context:T_threadContext):P_listLiteral;
-FUNCTION aggregate(CONST inputIterator:P_iterator; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
+PROCEDURE aggregate(CONST inputIterator:P_iterator; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_threadContext);
 
 FUNCTION newIterator(CONST input:P_literal):P_iterator;
 IMPLEMENTATION
@@ -138,7 +138,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_iterator;
           rule^.evaluateToLiteral(eachLocation,@context,x),
           true,
           eachLocation,
-          context.adapters);
+          @context);
         proceed:=context.adapters^.noErrors and not(aggregator^.earlyAbort);
       end;
       context.valueStore^.scopePop;
@@ -179,7 +179,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
         result:=true;
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
-        aggregator^.addToAggregation(toAggregate^.getResultAsLiteral,true,eachLocation,context.adapters);
+        aggregator^.addToAggregation(toAggregate^.getResultAsLiteral,true,eachLocation,@context);
         with recycling do if fill<length(dat) then begin
           dat[fill]:=toAggregate;
           inc(fill);
@@ -332,7 +332,7 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
     result:=resultLiteral;
   end;
 
-FUNCTION aggregate(CONST inputIterator: P_iterator; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+PROCEDURE aggregate(CONST inputIterator: P_iterator; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext);
   VAR x:P_literal;
   begin
     x:=inputIterator^.next(@context);
@@ -341,7 +341,7 @@ FUNCTION aggregate(CONST inputIterator: P_iterator; CONST aggregator: P_aggregat
         x,
         false,
         location,
-        context.adapters);
+        @context);
       disposeLiteral(x);
       x:=inputIterator^.next(@context);
     end;

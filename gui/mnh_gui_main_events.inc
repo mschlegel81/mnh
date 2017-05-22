@@ -161,6 +161,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     runnerModel.destroy;
     completionLogic.destroy;
     guiTaskQueue.destroy;
+    finalizeEditorMeta;
   end;
 
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);

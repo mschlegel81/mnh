@@ -316,7 +316,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           evaluateBody:boolean;
           rulePattern:T_pattern;
           ruleBody:P_token;
-          subRule:P_subrule;
+          subRule:P_subruleExpression;
           ruleGroup:P_rule;
           inlineValue:P_literal;
       begin
@@ -380,7 +380,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
           then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
-            new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
+            new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,context));
             subRule^.setComment(join(statement.comments,C_lineBreakChar));
             subRule^.setAttributes(statement.attributes,context.adapters^);
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
@@ -560,7 +560,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_subrule(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
+          P_expressionLiteral(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
         end;
         //----------------------:special handling if main returns an expression
         context.recycler.cascadeDisposeToken(t);
@@ -685,7 +685,7 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
-  VAR c:T_profileCategory;
+  {$ifdef fullVersion}VAR c:T_profileCategory;{$endif}
   begin
     inherited destroy;
     clear(true);
@@ -887,7 +887,7 @@ FUNCTION T_package.inspect:P_mapLiteral;
 
 FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
   VAR rule:P_rule;
-      subRule:P_subrule;
+      subRule:P_subruleExpression;
       matchesAll:boolean;
       key:string;
   begin
@@ -914,11 +914,11 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
 
   FUNCTION subRulesMeta:P_listLiteral;
     VAR rule:P_rule;
-        subRule:P_subrule;
+        subRule:P_subruleExpression;
     begin
       result:=newListLiteral();
       for rule in packageRules.valueSet do if rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck] then
-      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.getType=srt_normal_public then
+      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.typ=et_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
           .put('subrule'   ,subRule^.rereferenced,false)^

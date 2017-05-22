@@ -3649,7 +3649,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.clearPackageCache','mnh.executor','mnh.clearRuleCache','mnh.import','mnh.parameterNames','mnh.inspect','mnh.listKeywords','mnh.sleep','mnh.arity','mnh.listBuiltin','mnh.bits','mnh.mnhInfo','mnh.hash','mnh.sandBoxExecute','mnh.group','mnh.not','mnh.clearAllCaches','mnh.myPath','mnh.ord']
+out> ['mnh.clearPackageCache','mnh.executor','mnh.OP(-)','mnh.import','mnh.OP(!=)','mnh.OP(>)','mnh.listKeywords','mnh.OP(div)','mnh.OP(&)','mnh.OP(==)','mnh.sandBoxExecute','mnh.group','mnh.OP(/)','mnh.OP(in)','mnh.OP(or)','mnh.OP(OR)','mnh.myPath','mnh.OP(<=)','mnh.clearRuleCache','mnh.parameterNames','mnh.inspect','mnh.OP(xor)','mnh.OP(orElse)','mnh.OP(|)','mnh.sleep','mnh.OP(and)','mnh.arity','mnh.listBuiltin','mnh.OP(*)','mnh.bits','mnh.mnhInfo','mnh.hash','mnh.OP(=) ','mnh.OP(AND)','mnh.OP(+)','mnh.OP(mod)','mnh.OP(<)','mnh.not','mnh.clearAllCaches','mnh.ord','mnh.OP(>=)','mnh.OP(^)']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);

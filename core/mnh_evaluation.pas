@@ -101,9 +101,9 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_subrule(t^.data),@context)
+              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
               else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
@@ -114,7 +114,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
             if context.adapters^.noErrors
-            then aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
+            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
           end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
@@ -133,7 +133,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         //process other body parts (if any)---------------------------------------------
         setLength(bodyRule,length(bodyParts));
         for i:=0 to length(bodyParts)-1 do
-          new(P_subrule(bodyRule[i]),createForEachBody(eachToken^.txt,bodyParts[i].first,context));
+          new(P_inlineExpression(bodyRule[i]),createForEachBody(eachToken^.txt,bodyParts[i].first,context));
         //---------------------------------------------process other body parts (if any)
       end;
 
@@ -193,8 +193,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
   PROCEDURE resolveWhile;
     VAR bracketClosingWhile:P_token=nil;
-        headRule:P_subrule=nil;
-        bodyRule:P_subrule=nil;
+        headRule:P_inlineExpression=nil;
+        bodyRule:P_inlineExpression=nil;
 
     FUNCTION parseBodyOk:boolean;
       VAR i:longint;
@@ -218,8 +218,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(nil,emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,true,context));
-        new(bodyRule,create(nil,emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,true,context));
+        new(headRule,createForWhile(bodyParts[0].first,bodyParts[0].first^.location,context));
+        new(bodyRule,createForWhile(bodyParts[1].first,bodyParts[1].first^.location,context));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;
@@ -254,23 +254,11 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       didSubstitution:=true;
     end;
 
-  PROCEDURE raiseSideEffectError(CONST id:string; CONST violations:T_sideEffects);
-    VAR messageText:string='';
-        eff:T_sideEffect;
-    begin
-      for eff in violations do begin
-        if messageText<>'' then messageText:=messageText+', ';
-        messageText:=messageText+C_sideEffectName[eff];
-      end;
-      messageText:='Cannot apply '+id+' because of side effect(s): ['+messageText+']';
-      context.adapters^.raiseError(messageText,first^.location);
-    end;
-
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
-        inlineRule:P_subrule;
+        inlineRule:P_inlineExpression;
         violations:T_sideEffects;
 
     begin
@@ -303,8 +291,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
            (parameterListLiteral^[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^[0])^.canApplyToNumberOfParameters(2))
         then begin
-            newLiteral:=parameterListLiteral^[0]^.rereferenced;
-            inlineRule:=P_subrule(newLiteral);
+          newLiteral:=parameterListLiteral^[0]^.rereferenced;
           firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
@@ -315,7 +302,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         violations:=violatingSideEffects(first^.data,context.sideEffectWhitelist);
         if violations=[] then newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context)
         else begin
-          raiseSideEffectError('function '+first^.txt,violations);
+          context.raiseSideEffectError('function '+first^.txt,first^.location, violations);
           exit;
         end;
         {$ifndef DEBUGMODE}
@@ -335,10 +322,21 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           exit;
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
-        inlineRule:=first^.data;
-        //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,false)) and
-           not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,true )) then exit;
+        if P_expressionLiteral(first^.data)^.typ in C_builtinExpressionTypes then begin
+          newLiteral:=P_builtinExpression(first^.data)^.evaluate(first^.location,@context,parameterListLiteral);
+          if newLiteral<>nil then begin
+            firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
+            lastReplace:=firstReplace;
+          end else if not(context.adapters^.noErrors) then exit else begin
+            context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+            exit;
+          end;
+        end else begin
+          inlineRule:=first^.data;
+          //failing "replaces" for inline rules will raise evaluation error.
+          if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,false)) and
+             not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,true )) then exit;
+        end;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
@@ -412,7 +410,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     VAR newValue:P_literal;
     begin
       if not(se_writingInternal in context.sideEffectWhitelist) then begin
-        raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,[se_writingInternal]);
+        context.raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,first^.location, [se_writingInternal]);
         exit;
       end;
       newValue:=first^.next^.data;
@@ -435,7 +433,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           first:=context.recycler.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_mapDrop: if first^.data=nil then begin
-          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters);
+          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters,@context);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
@@ -443,7 +441,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           end;
         end else begin
           if not(se_writingInternal in context.sideEffectWhitelist) then begin
-            raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,[se_writingInternal]);
+            context.raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,first^.location,[se_writingInternal]);
             exit;
           end;
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
@@ -534,7 +532,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
                                     stack.dat[stack.topIndex]^.tokType,
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
-                                    context.adapters^);
+                                    context.adapters^,
+                                    @context);
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
@@ -552,7 +551,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
                                     stack.dat[stack.topIndex]^.tokType,
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
-                                    context.adapters^);
+                                    context.adapters^,
+                                    @context);
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
@@ -652,7 +652,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     end;
 
   PROCEDURE resolvePseudoFuncPointer;
-    VAR exRule:P_subrule;
+    VAR exRule:P_builtinExpression;
         ruleToken:P_token;
         temp:P_token;
         location:T_tokenLocation;
@@ -667,8 +667,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         ruleToken^.tokType:=tt_literal;
         first:=ruleToken;
       end else begin
-        ruleToken^.next:=getParametersForPseudoFuncPtr(ruleToken^.data,context,location);
-        new(exRule,createFromInline(ruleToken,context));
+        new(exRule,create(P_intFuncCallback(ruleToken^.data),ruleToken^.location));
+        context.recycler.disposeToken(ruleToken);
         first:=context.recycler.newToken(location,'',tt_literal,exRule); // {f@$params}
       end;
       first^.next:=temp; //-> {f@$params} ...
@@ -791,7 +791,7 @@ end}
             didSubstitution:=true;
           end;
           tt_unaryOpMinus: begin
-            newLit:=P_literal(first^.data)^.negate(stack.dat[stack.topIndex]^.location,context.adapters^);
+            newLit:=P_literal(first^.data)^.negate(stack.dat[stack.topIndex]^.location,context.adapters^,@context);
             disposeLiteral(first^.data);
             first^.data:=newLit;
             stack.popDestroy(context.recycler);
@@ -804,7 +804,8 @@ end}
                                       stack.dat[stack.topIndex]^.tokType,
                                       first^.data,
                                       stack.dat[stack.topIndex]^.location,
-                                      context.adapters^);
+                                      context.adapters^,
+                                      @context);
               //LHS literal is now result of first comparison (still a literal)
               disposeLiteral(stack.dat[stack.topIndex-1]^.data);
               stack.dat[stack.topIndex-1]^.data:=newLit;
