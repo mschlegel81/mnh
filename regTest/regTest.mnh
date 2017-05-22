@@ -72,13 +72,14 @@ private printExecute(code:stringList)->begin
      .print;
 end;
 
-private executeExamples->begin
+private executeExamples(doLog:boolean)->begin
   resetRandom;
   doCollect(true);
   print('***** examples from file *****');
   local codeToExecute:=[];
   local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
   print('Examples file has ',inputLines.size,' lines');
+  local startTime:=time;
   inputLines.each(line,
     line==''
     ? begin
@@ -89,12 +90,15 @@ private executeExamples->begin
       ? doCollect(false)
       : codeToExecute|=line);
   printExecute(codeToExecute);
+  local scriptTime:=time-startTime;
+  doLog ? runTimes|=[["examples/onlineHelp",mnhInfo['flavour'],scriptTime]] : void;
+  note('Time for examples/onlineHelp: ',scriptTime);
 end;
 
 testAll(logging:boolean)->
   begin
    allDemos.map({testFile($0,logging)});
-   executeExamples;
+   executeExamples(logging);
    validateCollectedOutput(logging);
   end;
 
