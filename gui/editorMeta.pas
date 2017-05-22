@@ -194,6 +194,8 @@ PROCEDURE updateEditorsByGuiStatus;
 PROCEDURE closeAllEditorsButCurrent;
 PROCEDURE closeAllUnmodifiedEditors;
 PROCEDURE checkForFileChanges;
+
+PROCEDURE finalizeEditorMeta;
 VAR runnerModel:T_runnerModel;
     completionLogic:T_completionLogic;
 IMPLEMENTATION
@@ -1223,6 +1225,7 @@ PROCEDURE finalizeEditorMeta;
   VAR i:longint;
   begin
     for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
+    setLength(editorMetaData,0);
   end;
 
 PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
