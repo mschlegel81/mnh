@@ -4,12 +4,6 @@ USES mnh_constants, mnh_basicTypes,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_litVar,valueStore,
      mnh_aggregators,mnh_contexts;
-TYPE
-  P_iterator=^T_iterator;
-  T_iterator=object
-    FUNCTION next(CONST context:P_threadContext):P_literal; virtual; abstract;
-    DESTRUCTOR destroy; virtual; abstract;
-  end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_iterator; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                             CONST eachLocation:T_tokenLocation;
@@ -31,15 +25,7 @@ TYPE
     index:longint;
     values:T_arrayOfLiteral;
     CONSTRUCTOR create(CONST v:P_compoundLiteral);
-    FUNCTION next(CONST context:P_threadContext):P_literal; virtual;
-    DESTRUCTOR destroy; virtual;
-  end;
-
-  P_generator=^T_generator;
-  T_generator=object(T_iterator)
-    generator:P_expressionLiteral;
-    CONSTRUCTOR create(CONST g:P_expressionLiteral);
-    FUNCTION next(CONST context:P_threadContext):P_literal; virtual;
+    FUNCTION next(CONST context:pointer):P_literal; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -48,7 +34,7 @@ TYPE
     didDeliver:boolean;
     value:P_literal;
     CONSTRUCTOR create(CONST v:P_literal);
-    FUNCTION next(CONST context:P_threadContext):P_literal; virtual;
+    FUNCTION next(CONST context:pointer):P_literal; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -58,7 +44,7 @@ CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
     values:=v^.iteratableList;
   end;
 
-FUNCTION T_listIterator.next(CONST context:P_threadContext): P_literal;
+FUNCTION T_listIterator.next(CONST context:pointer): P_literal;
   begin
     if index>=length(values)
     then result:=nil
@@ -71,29 +57,13 @@ DESTRUCTOR T_listIterator.destroy;
     disposeLiteral(values);
   end;
 
-CONSTRUCTOR T_generator.create(CONST g: P_expressionLiteral);
-  begin
-    generator:=g;
-    generator^.rereference;
-  end;
-
-FUNCTION T_generator.next(CONST context:P_threadContext): P_literal;
-  begin
-    result:=generator^.evaluateToLiteral(generator^.getLocation,context);
-  end;
-
-DESTRUCTOR T_generator.destroy;
-  begin
-    disposeLiteral(generator);
-  end;
-
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal);
   begin
     didDeliver:=false;
     value:=v^.rereferenced;
   end;
 
-FUNCTION T_singleValueIterator.next(CONST context: P_threadContext): P_literal;
+FUNCTION T_singleValueIterator.next(CONST context: pointer): P_literal;
   begin
     if didDeliver then exit(nil);
     result:=value^.rereferenced;
@@ -110,15 +80,8 @@ FUNCTION newIterator(CONST input:P_literal):P_iterator;
     if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input)))
     else if (input^.literalType=lt_expression) and
             (P_expressionLiteral(input)^.canApplyToNumberOfParameters(0)) and
-            (P_expressionLiteral(input)^.isStateful) then new(P_generator(result),create(P_expressionLiteral(input)))
+            (P_expressionLiteral(input)^.isStateful) then result:=P_expressionLiteral(input)^.getIterator
     else new(P_singleValueIterator(result),create(input));
-  end;
-
-FUNCTION newGeneratorIterator(CONST g:P_expressionLiteral):P_iterator;
-  VAR it:P_generator;
-  begin
-    new(it,create(g));
-    result:=it;
   end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_iterator;

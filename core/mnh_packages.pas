@@ -560,7 +560,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_subrule(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
+          P_expressionLiteral(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
         end;
         //----------------------:special handling if main returns an expression
         context.recycler.cascadeDisposeToken(t);
@@ -918,7 +918,7 @@ FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
     begin
       result:=newListLiteral();
       for rule in packageRules.valueSet do if rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck] then
-      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.getType=srt_normal_public then
+      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.typ=et_normal_public then
         result^.append(newMapLiteral^
           .put('id'        ,subRule^.getId)^
           .put('subrule'   ,subRule^.rereferenced,false)^

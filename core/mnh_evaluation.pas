@@ -101,9 +101,9 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_subrule(t^.data),@context)
+              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
               else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
@@ -114,7 +114,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
             if context.adapters^.noErrors
-            then aggregator:=newCustomAggregator(P_subrule(t^.data),@context);
+            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
           end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;

@@ -237,7 +237,7 @@ PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_adapters);
 FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
   VAR s:P_subrule;
   begin
-    for s in subrules do if s^.getType=srt_normal_public then exit(true);
+    for s in subrules do if s^.typ=et_normal_public then exit(true);
     result:=false;
   end;
 
@@ -293,7 +293,7 @@ FUNCTION T_ruleWithSubrules.replaces(CONST param: P_listLiteral; CONST location:
   begin
     result:=false;
     for uncurrying:=false to true do
-    for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
+    for sub in subrules do if (includePrivateRules or (sub^.typ=et_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,context,uncurrying) then begin
       exit(true);
     end;
     if getRuleType=rt_customTypeCheck then begin
@@ -352,7 +352,7 @@ exit}
       lastRep:=firstRep;
       CLEAN_EXIT(true);
     end else for uncurrying:=false to true do
-             for sub in subrules do if (includePrivateRules or (sub^.getType=srt_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,context,uncurrying) then begin
+             for sub in subrules do if (includePrivateRules or (sub^.typ=et_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,context,uncurrying) then begin
       if (context.callDepth>=STACK_DEPTH_LIMIT) then begin wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
       if (context.adapters^.noErrors) then context.reduceExpression(firstRep);
       if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin

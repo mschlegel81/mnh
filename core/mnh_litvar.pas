@@ -134,18 +134,37 @@ TYPE
   P_setLiteral       = ^T_setLiteral     ;
   P_mapLiteral       = ^T_mapLiteral     ;
 
+  P_iterator=^T_iterator;
+  T_iterator=object
+    FUNCTION next(CONST context:pointer):P_literal; virtual; abstract;
+    DESTRUCTOR destroy; virtual; abstract;
+  end;
+
+  T_expressionType=(et_normal_public,
+                    et_normal_private,
+                    et_inline_for_literal,
+                    et_inline_for_each,
+                    et_inline_for_while,
+                    et_builtin);
+
   P_expressionLiteral = ^T_expressionLiteral;
   T_expressionList = array of P_expressionLiteral;
   T_expressionLiteral = object(T_scalarLiteral)
-    FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;   virtual; abstract;
-    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual; abstract;
-    FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual; abstract;
-    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral; virtual; abstract;
-    FUNCTION arity:longint; virtual; abstract;
-    FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
-    FUNCTION isStateful:boolean; virtual; abstract;
-    FUNCTION getParentId:T_idString; virtual; abstract;
-    PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
+    private
+      expressionType:T_expressionType;
+    public
+      CONSTRUCTOR create(CONST eType:T_expressionType);
+      PROPERTY typ:T_expressionType read expressionType;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;   virtual; abstract;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual; abstract;
+      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual; abstract;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral; virtual; abstract;
+      FUNCTION arity:longint; virtual; abstract;
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
+      FUNCTION isStateful:boolean; virtual; abstract;
+      FUNCTION getParentId:T_idString; virtual; abstract;
+      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
+      FUNCTION getIterator:P_iterator; virtual; abstract;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -733,10 +752,16 @@ FUNCTION T_literal.getId:T_idString;            begin result:=''; end;
 FUNCTION T_literal.getLocation:T_tokenLocation; begin result.package:=nil; result.column:=-1; result.line:=-1; end;
 //CONSTRUCTORS:=================================================================
 CONSTRUCTOR T_voidLiteral.create();                              begin inherited init(lt_void);                   end;
-CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init(lt_boolean);    val:=value; end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init(lt_int);        val:=value; end;
-CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init(lt_real);       val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string); val:=value; enc:=se_testPending; end;
+CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init(lt_boolean); val:=value; end;
+CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init(lt_int);     val:=value; end;
+CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init(lt_real);    val:=value; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string);  val:=value; enc:=se_testPending; end;
+CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType);
+  begin
+    inherited init(lt_expression);
+    expressionType:=eType;
+  end;
+
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
   begin
     inherited init(lt_emptyList);
