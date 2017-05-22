@@ -48,6 +48,7 @@ TYPE
   T_builtinFunctionMetaData=record
     sideEffects:T_sideEffects;
     arityKind  :T_arityKind;
+    qualifiedId:T_idString;
   end;
 
 VAR
@@ -74,6 +75,7 @@ FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     meta.sideEffects:=sideEffects;
     meta.arityKind:=aritiyKind;
+    meta.qualifiedId:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name;
     builtinMetaMap.put(ptr,meta);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;

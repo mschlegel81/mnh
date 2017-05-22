@@ -6,14 +6,13 @@ VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
-{$define UNARY_NUM_TO_REAL:=
-FUNCTION recurse(CONST x:P_literal):P_literal;
+{$define UNARY_NUM_TO_REAL:=FUNCTION recurse(CONST x:P_literal):P_literal;
   VAR iter:T_arrayOfLiteral;
       y:P_literal;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation);
+      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
       lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
@@ -91,7 +90,7 @@ FUNCTION not_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('not',tokenLocation);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('not',tokenLocation,@context);
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
         lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
         lt_list,lt_booleanList,lt_intList,lt_emptyList,
@@ -122,7 +121,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
   begin
     result:=nil;
     case x^.literalType of
-      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation);
+      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
       lt_error: begin result:=x; result^.rereference; end;
       lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
@@ -165,7 +164,7 @@ UNARY_NUM_TO_SAME;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
         lt_error,lt_int: result:=x^.rereferenced;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
@@ -325,7 +324,7 @@ FUNCTION sign_imp intFuncSignature;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation);
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation,@context);
         lt_error: result:=x^.rereferenced;
         lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));

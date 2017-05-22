@@ -251,7 +251,7 @@ FUNCTION async_imp intFuncSignature;
   end;
 
 {$MACRO ON}
-{$define funcForOp:=begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^) else result:=nil; end}
+{$define funcForOp:=begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^,@context) else result:=nil; end}
 {$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      intFuncSignature; funcForOp;
 {$define OP:=tt_comparatorNeq    } FUNCTION funcFor_comparatorNeq     intFuncSignature; funcForOp;
 {$define OP:=tt_comparatorLeq    } FUNCTION funcFor_comparatorLeq     intFuncSignature; funcForOp;

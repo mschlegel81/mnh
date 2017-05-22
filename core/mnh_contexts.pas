@@ -11,8 +11,8 @@ USES //FPC/LCL libraries
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_out_adapters,mnh_litVar,
      mnh_tokens,
-     tokenStack,valueStore,
-     mnh_profiling{$ifdef fullVersion},mnh_debugging{$endif};
+     valueStore,
+     mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging{$endif};
 TYPE
   T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
   T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_notifyParentOfAsyncTaskEnd);
@@ -97,7 +97,7 @@ TYPE
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
 
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
-
+      PROCEDURE raiseSideEffectError(CONST id:string; CONST location:T_tokenLocation; CONST violations:T_sideEffects);
       {$ifdef fullVersion}
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
@@ -588,6 +588,19 @@ PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType:string; CONST
     if length(suffix)>0 then append(totalMessage,suffix);
     adapters^.raiseError(totalMessage,location);
     if missingMain then adapters^.logMissingMain;
+  end;
+
+PROCEDURE T_threadContext.raiseSideEffectError(CONST id:string; CONST location:T_tokenLocation; CONST violations:T_sideEffects);
+  VAR messageText:string='';
+      eff:T_sideEffect;
+  begin
+    if violations=[] then exit;
+    for eff in violations do begin
+      if messageText<>'' then messageText:=messageText+', ';
+      messageText:=messageText+C_sideEffectName[eff];
+    end;
+    messageText:='Cannot apply '+id+' because of side effect(s): ['+messageText+']';
+    adapters^.raiseError(messageText,location);
   end;
 
 {$ifdef fullVersion}

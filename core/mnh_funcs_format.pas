@@ -347,7 +347,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           se_scriptDependent,
           se_executableDependent,
           se_versionDependent]*context.sideEffectWhitelist);
-        temp:=P_subrule(formatSubrule)^.evaluate(tokenLocation,@context,fpar);
+        temp:=P_expression(formatSubrule)^.evaluate(tokenLocation,@context,fpar);
         context.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
         disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_listTypes)
@@ -379,7 +379,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
 
     if formatSubrule=nil
     then i:=length(parts) shr 1
-    else i:=P_subrule(formatSubrule)^.arity;
+    else i:=P_expression(formatSubrule)^.arity;
     if i<>(params^.size-1) then begin
       context.adapters^.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin

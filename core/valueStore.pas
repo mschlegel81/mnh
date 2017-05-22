@@ -16,7 +16,7 @@ TYPE
       CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
-      FUNCTION mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+      FUNCTION mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
@@ -62,7 +62,7 @@ TYPE
       PROCEDURE createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean);
       FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
       PROCEDURE setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters);
-      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST threadContext:pointer):P_literal;
       PROCEDURE scopePush(CONST blocking:boolean);
       PROCEDURE scopePop;
       {$ifdef fullVersion}
@@ -93,7 +93,7 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
     value^.rereference;
   end;
 
-FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
   CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
   VAR oldValue:P_literal;
   begin
@@ -104,7 +104,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
     oldValue:=value;
     case mutation of
       tt_cso_assignPlus..tt_cso_assignDiv: begin
-        value:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location,adapters);
+        value:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location,adapters,threadContext);
         disposeLiteral(oldValue);
         exit(value^.rereferenced);
       end;
@@ -113,7 +113,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
           P_stringLiteral(oldValue)^.append(P_scalarLiteral(RHS)^.stringForm);
           exit(oldValue^.rereferenced);
         end else begin
-          value:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location,adapters);
+          value:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location,adapters,threadContext);
           disposeLiteral(oldValue);
           exit(value^.rereferenced);
         end;
@@ -125,7 +125,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
           else P_collectionLiteral(oldValue)^.appendAll(P_compoundLiteral(RHS));
           exit(oldValue^.rereferenced);
         end else begin
-          value:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location,adapters);
+          value:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location,adapters,threadContext);
           disposeLiteral(oldValue);
           exit(value^.rereferenced);
         end;
@@ -344,13 +344,13 @@ PROCEDURE T_valueStore.setVariableValue(CONST id:T_idString; CONST value:P_liter
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST threadContext:pointer):P_literal;
   VAR named:P_namedVariable;
       blocked:boolean;
   begin
     system.enterCriticalSection(cs);
     named:=getVariable(id,blocked);
-    if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^)
+    if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^,threadContext)
     else begin
       adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
       result:=nil;

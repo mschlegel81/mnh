@@ -10,7 +10,7 @@ USES sysutils,math,
      mnh_contexts,
      mnh_datastores, mnh_caches, mnh_patterns, mnh_subrules;
 TYPE
-  T_subruleArray=array of P_subrule;
+  T_subruleArray=array of P_subruleExpression;
 
   P_rule=^T_rule;
 
@@ -28,7 +28,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleTyp:T_ruleType=rt_normal);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_threadContext); virtual;
+      PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
       PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
@@ -102,42 +102,7 @@ TYPE
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
   end;
 
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
 IMPLEMENTATION
-FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-  VAR last:P_token;
-      i:longint;
-  begin
-    result:=context.recycler.newToken(location,'',tt_braceOpen);
-    last:=result;
-    for i:=0 to minPatternLength-1 do begin
-      if i>0 then begin
-        last^.next:=context.recycler.newToken(location,'',tt_separatorComma);
-        last:=last^.next;
-      end;
-      last^.next:=context.recycler.newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
-      last:=last^.next;
-    end;
-    last^.next:=context.recycler.newToken(location,'',tt_braceClose);
-    last:=last^.next;
-    if variadic then begin
-      last^.next:=context.recycler.newToken(location,'',tt_listToParameterList);
-      last:=last^.next;
-      if minPatternLength>0 then begin
-        last^.next:=context.recycler.newToken(location,'',tt_optionalParameters);
-      end else begin
-        last^.next:=context.recycler.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
-      end;
-    end;
-  end;
-
-FUNCTION getParametersForPseudoFuncPtr(CONST builtinRulePointer:pointer; VAR context:T_threadContext; CONST location:T_tokenLocation):P_token;
-  VAR a:T_arityKind;
-  begin
-    a:=getMeta(builtinRulePointer).arityKind;
-    result:=getParametersForPseudoFuncPtr(C_arityKind[a].fixedParameters,C_arityKind[a].variadic,context,location);
-  end;
 
 CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
@@ -209,7 +174,7 @@ DESTRUCTOR T_datastoreRule.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subrule; VAR context: T_threadContext);
+PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression; VAR context: T_threadContext);
   VAR i,j:longint;
   begin
     if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
@@ -229,13 +194,13 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subrule; VAR cont
   end;
 
 PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_adapters);
-  VAR s:P_subrule;
+  VAR s:P_subruleExpression;
   begin
     for s in subrules do s^.resolveIds(adapters);
   end;
 
 FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
-  VAR s:P_subrule;
+  VAR s:P_subruleExpression;
   begin
     for s in subrules do if s^.typ=et_normal_public then exit(true);
     result:=false;
@@ -267,7 +232,7 @@ FUNCTION T_ruleWithSubrules.getInlineValue: P_literal;
 FUNCTION T_ruleWithSubrules.getDynamicUseMetaLiteral(VAR context: T_threadContext): P_mapLiteral;
   VAR attributes:P_mapLiteral;
       subAttributes:P_mapLiteral;
-      sub:P_subrule;
+      sub:P_subruleExpression;
   begin
     attributes:=newMapLiteral;
     for sub in subrules do begin
@@ -289,7 +254,7 @@ FUNCTION T_mutableRule.getDynamicUseMetaLiteral(VAR context: T_threadContext): P
 
 FUNCTION T_ruleWithSubrules.replaces(CONST param: P_listLiteral; CONST location: T_tokenLocation; OUT firstRep, lastRep: P_token; CONST includePrivateRules: boolean; VAR context: T_threadContext): boolean;
   VAR uncurrying:boolean;
-      sub:P_subrule;
+      sub:P_subruleExpression;
   begin
     result:=false;
     for uncurrying:=false to true do
@@ -328,7 +293,7 @@ exit}
   VAR lit:P_literal;
       useParam:P_listLiteral;
       uncurrying:boolean;
-      sub:P_subrule;
+      sub:P_subruleExpression;
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
@@ -396,7 +361,7 @@ FUNCTION T_datastoreRule.replaces(CONST param: P_listLiteral; CONST location: T_
 
 FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
   FUNCTION subrulesList:P_listLiteral;
-    VAR sub:P_subrule;
+    VAR sub:P_subruleExpression;
     begin
       result:=newListLiteral(length(subrules));
       for sub in subrules do result^.append(sub^.inspect,false);
@@ -440,7 +405,7 @@ FUNCTION T_mutableRule.inspect: P_mapLiteral;
 FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
-      sub:P_subrule;
+      sub:P_subruleExpression;
       tempToken:P_token=nil;
   begin
     if (getRuleType=rt_normal) and (length(subrules)=1) then exit(P_expressionLiteral(subrules[0]^.rereferenced));
@@ -449,15 +414,15 @@ FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CON
       maxPatternLength:=max(maxPatternLength,sub^.arity);
       if sub^.isVariadic then maxPatternLength:=maxLongint;
     end;
-    tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
-    tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
-    new(P_subrule(result),createFromInline(tempToken,context));
+    tempToken      :=context.recycler.newToken(location,getId,ruleTokenType,@self);
+    tempToken^.next:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
+    new(P_inlineExpression(result),createFromInline(tempToken,context));
   end;
 
 FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
   VAR minPatternLength:longint=maxLongint;
       maxPatternLength:longint=0;
-      sub:P_subrule;
+      sub:P_subruleExpression;
       tempToken:P_token=nil;
   begin
     for sub in subrules do begin
@@ -466,8 +431,8 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadCon
       if sub^.isVariadic then maxPatternLength:=maxLongint;
     end;
     tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
-    tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,context,location);
-    new(P_subrule(result),createFromInline(tempToken,context));
+    tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
+    new(P_inlineExpression(result),createFromInline(tempToken,context));
   end;
 
 FUNCTION T_mutableRule.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
@@ -476,11 +441,11 @@ FUNCTION T_mutableRule.getFunctionPointer(VAR context: T_threadContext; CONST ru
     tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=context.recycler.newToken(location,'',tt_braceOpen );
     tempToken^.next^.next:=context.recycler.newToken(location,'',tt_braceClose);
-    new(P_subrule(result),createFromInline(tempToken,context));
+    new(P_inlineExpression(result),createFromInline(tempToken,context));
   end;
 
 FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
-  VAR s:P_subrule;
+  VAR s:P_subruleExpression;
   begin
     result:='';
     for s in subrules do result:=result+C_lineBreakChar+s^.getDocTxt();
@@ -541,7 +506,7 @@ PROCEDURE T_datastoreRule.readDataStore(VAR context:T_threadContext);
 FUNCTION T_mutableRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
+    result:=namedValue.mutate(mutation,RHS,location,context.adapters^,@context);
     valueChangedAfterDeclaration:=true;
     called:=true;
     system.leaveCriticalSection(rule_cs);
