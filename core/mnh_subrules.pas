@@ -821,8 +821,7 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
     end;
   end;
 
-FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation;
-  CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
+FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
