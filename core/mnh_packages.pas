@@ -16,6 +16,7 @@ USES //basic classes
      mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
      mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files, mnh_funcs_regex, mnh_funcs_xml,
      mnh_funcs_format,mnh_funcs_ipc,
+     mnh_builtinGenerators,
 
      mnh_patterns,
      mnh_subrules,

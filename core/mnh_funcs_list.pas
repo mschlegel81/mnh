@@ -445,35 +445,6 @@ FUNCTION group_imp intFuncSignature;
     end;
   end;
 
-FUNCTION filter_imp intFuncSignature;
-  VAR iter:T_arrayOfLiteral;
-      x:P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
-      case arg0^.literalType of
-        lt_emptyList,
-        lt_emptySet,
-        lt_emptyMap: result:=arg0^.rereferenced;
-        lt_map:begin
-          result:=newMapLiteral;
-          iter:=map0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,x) then
-            mapResult^.put(P_listLiteral(x)^[0],P_listLiteral(x)^[1],true);
-          disposeLiteral(iter);
-        end;
-        lt_list..lt_stringList,
-        lt_set ..lt_stringSet: begin
-          result:=collection0^.newOfSameType;
-          iter:=collection0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,x) then
-            collResult^.append(x,true);
-          disposeLiteral(iter);
-        end;
-      end;
-    end;
-  end;
-
 FUNCTION map_imp intFuncSignature;
   VAR iterator:P_iterator;
   begin
@@ -530,7 +501,6 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,[],ak_variadic_2,'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)');
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,[],ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
-  registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal L with all elements x for which acceptor(x) returns true');
   registerRule(LIST_NAMESPACE,'map',    @map_imp   ,[],ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator');
   registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,[],ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator');
 
