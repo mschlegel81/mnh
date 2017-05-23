@@ -35,6 +35,9 @@ TYPE
     public
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+      FUNCTION getParentId:T_idString; virtual;
   end;
 
   P_inlineExpression=^T_inlineExpression;
@@ -76,8 +79,6 @@ TYPE
       //Evaluation calls:
       FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
       FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual;
-
-      FUNCTION getParentId:T_idString; virtual;
 
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
@@ -127,11 +128,24 @@ TYPE
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
       FUNCTION arity:longint; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
-      FUNCTION getParentId:T_idString; virtual;
       FUNCTION isStateful:boolean; virtual;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
+  end;
+
+  P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
+  T_builtinGeneratorExpression=object(T_expression)
+    private
+      FUNCTION getParameterNames:P_listLiteral; virtual;
+    public
+      CONSTRUCTOR create(CONST location:T_tokenLocation);
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;  virtual;
+      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
+      FUNCTION arity:longint; virtual;
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      FUNCTION isStateful:boolean; virtual;
+      //Must implement:
+      //  FUNCTION getId:T_idString; virtual;
+      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual; abstract;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
@@ -360,6 +374,7 @@ FUNCTION T_builtinExpression.canApplyToNumberOfParameters(CONST parCount: longin
             (parCount<=C_arityKind[meta.arityKind].fixedParameters) or
                        C_arityKind[meta.arityKind].variadic;
   end;
+FUNCTION T_builtinGeneratorExpression.canApplyToNumberOfParameters(CONST parCount: longint): boolean; begin result:=parCount=0; end;
 
 FUNCTION T_inlineExpression.isVariadic: boolean; begin result:=pattern.isVariadic;                             end;
 FUNCTION T_subruleExpression.hasValidMainPattern                                 :boolean; begin result:=pattern.isValidMainPattern;                     end;
@@ -651,10 +666,21 @@ FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string;
     disposeLiteral(temp);
   end;
 
+FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:pointer): P_expressionLiteral;
+  begin
+    P_threadContext(threadContext)^.adapters^.raiseError('Cannot manipulate builtin iterator/generator '+getId,funcLocation);
+    result:=nil;
+  end;
+
 PROCEDURE T_inlineExpression.validateSerializability(CONST adapters: P_adapters);
   begin
     if adapters=nil then exit;
     if (typ<>et_inline_for_literal) or isStateful then adapters^.raiseError('Expression literal '+toString(20)+' is not serializable',getLocation);
+  end;
+
+PROCEDURE T_expression.validateSerializability(CONST adapters:P_adapters);
+  begin
+    if adapters<>nil then adapters^.raiseError('Expression '+toString()+' cannot be serialized',getLocation);
   end;
 
 CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
@@ -743,29 +769,32 @@ FUNCTION T_builtinExpression.getParameterNames: P_listLiteral;
     for i:=0 to arity-1 do result^.appendString('$'+intToStr(i));
   end;
 
+FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin result:=newListLiteral(); end;
+
 CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST location:T_tokenLocation);
   begin
     inherited create(et_builtinPlain,location);
     func:=f;
   end;
 
+CONSTRUCTOR T_builtinGeneratorExpression.create(CONST location:T_tokenLocation);
+  begin
+    inherited create(et_builtinStateful,location);
+  end;
+
 FUNCTION T_inlineExpression.toString(CONST lengthLimit: longint): ansistring;
   begin result:=toDocString(true,lengthLimit); end;
-FUNCTION T_builtinExpression.toString(CONST lengthLimit: longint): ansistring;
+FUNCTION T_expression.toString(CONST lengthLimit: longint): ansistring;
   begin result:=C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId; end;
-
-PROCEDURE T_builtinExpression.validateSerializability(CONST adapters:P_adapters);
-  begin
-    if adapters<>nil then adapters^.raiseError('Expression '+toString()+' cannot be serialized',getLocation);
-  end;
 
 PROCEDURE T_subruleExpression.setComment(CONST commentText: ansistring);
   begin
     comment:=commentText;
   end;
 
-FUNCTION T_inlineExpression .isStateful: boolean; begin result:=(indexOfSave>=0); end;
-FUNCTION T_builtinExpression.isStateful: boolean; begin result:=false; end;
+FUNCTION T_inlineExpression          .isStateful: boolean; begin result:=(indexOfSave>=0); end;
+FUNCTION T_builtinExpression         .isStateful: boolean; begin result:=false; end;
+FUNCTION T_builtinGeneratorExpression.isStateful: boolean; begin result:=true;  end;
 
 FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean;
   CONST lengthLimit: longint): ansistring;
@@ -821,6 +850,17 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
     end;
   end;
 
+FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
+  begin
+    if (parameters<>nil) and (parameters^.size<>0) then exit(nil);
+    if not(se_writingInternal in P_threadContext(context)^.sideEffectWhitelist)
+    then begin
+      P_threadContext(context)^.raiseSideEffectError('function '+getId,location, [se_writingInternal]);
+      exit(nil);
+    end;
+    result:=next(location,P_threadContext(context)^);
+  end;
+
 FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
   VAR parameterList:T_listLiteral;
   begin
@@ -840,8 +880,7 @@ FUNCTION T_subruleExpression.getInlineValue: P_literal;
     end else result:=nil;
   end;
 
-FUNCTION T_inlineExpression.getParentId: T_idString; begin result:=''; end;
-FUNCTION T_builtinExpression.getParentId: T_idString; begin result:=''; end;
+FUNCTION T_expression       .getParentId: T_idString; begin result:=''; end;
 FUNCTION T_subruleExpression.getParentId: T_idString; begin result:=parent^.getId; end;
 
 FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
@@ -882,6 +921,7 @@ FUNCTION T_builtinExpression.getId:T_idString;
 
 FUNCTION T_inlineExpression .arity: longint; begin result:=pattern.arity; end;
 FUNCTION T_builtinExpression.arity: longint; begin result:=C_arityKind[getMeta(func).arityKind].fixedParameters; end;
+FUNCTION T_builtinGeneratorExpression.arity: longint; begin result:=0; end;
 
 FUNCTION T_inlineExpression.inspect: P_mapLiteral;
   FUNCTION srtString:string;
