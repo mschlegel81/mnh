@@ -323,7 +323,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         if P_expressionLiteral(first^.data)^.typ in C_builtinExpressionTypes then begin
-          newLiteral:=P_builtinExpression(first^.data)^.evaluate(first^.location,@context,parameterListLiteral);
+          newLiteral:=P_expressionLiteral(first^.data)^.evaluate(first^.location,@context,parameterListLiteral);
           if newLiteral<>nil then begin
             firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
             lastReplace:=firstReplace;
