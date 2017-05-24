@@ -56,7 +56,6 @@ TYPE
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       FUNCTION inspect:P_mapLiteral;
-      FUNCTION getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
@@ -118,6 +117,38 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
     adapter.destroy;
     collector.destroy;
+  end;
+
+FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters):P_literal;
+  VAR fileName:string='';
+      context:T_evaluationContext;
+      package:T_package;
+      tempAdapters:T_adapters;
+      collector:T_collectingOutAdapter;
+  begin
+    if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
+    then fileName:=expandFileName(filenameOrId)
+    else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
+    if (fileName='') or not(fileExists(fileName)) then begin
+      callerAdapters^.raiseWarning('Cannot find script with id or path "'+filenameOrId+'"',locationForWarning);
+      exit(nil);
+    end;
+    {A} tempAdapters.create;
+    {C} collector.create(at_unknown,C_collectAllOutputBehavior);
+        tempAdapters.addOutAdapter(@collector,false);
+    {X} context.create(@tempAdapters);
+    {P} package.create(newFileCodeProvider(filenameOrId),nil);
+    try
+        context.resetForEvaluation(@package,false,false,true);
+        package.load(lu_forCallingMain,context.threadContext^,mainParameters);
+        context.afterEvaluation;
+    finally
+    {P} package.destroy;
+    {X} context.destroy;
+        result:=messagesToLiteralForSandbox(collector.storedMessages);
+    {C} collector.destroy;
+    {A} tempAdapters.destroy;
+    end;
   end;
 
 {$ifdef fullVersion}
@@ -902,34 +933,6 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
         result[length(result)-1]:=subRule;
       end;
     end;
-  end;
-
-FUNCTION T_package.getDynamicUseMeta(VAR context:T_threadContext):P_mapLiteral;
-  FUNCTION rulesMeta:P_mapLiteral;
-    VAR rule:P_rule;
-    begin
-      result:=newMapLiteral;
-      for rule in packageRules.valueSet do if rule^.hasPublicSubrule then
-        result^.put(rule^.getId,rule^.getDynamicUseMetaLiteral(context),false);
-    end;
-
-  FUNCTION subRulesMeta:P_listLiteral;
-    VAR rule:P_rule;
-        subRule:P_subruleExpression;
-    begin
-      result:=newListLiteral();
-      for rule in packageRules.valueSet do if rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck] then
-      for subRule in P_ruleWithSubrules(rule)^.getSubrules do if subRule^.typ=et_normal_public then
-        result^.append(newMapLiteral^
-          .put('id'        ,subRule^.getId)^
-          .put('subrule'   ,subRule^.rereferenced,false)^
-          .put('attributes',subRule^.getAttributesLiteral,false),false);
-    end;
-
-  begin
-    result:=newMapLiteral^
-              .put('rules'   ,rulesMeta   ,false)^
-              .put('subrules',subRulesMeta,false);
   end;
 
 PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);

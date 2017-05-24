@@ -144,25 +144,6 @@ FUNCTION getEnv_impl intFuncSignature;
     end;
   end;
 
-VAR collector: specialize G_lazyVar<P_collectingOutAdapter> ;
-FUNCTION collectOutput_impl intFuncSignature;
-  begin
-    if (params=nil) or (params^.size=0) then begin
-      context.adapters^.addOutAdapter(collector.value,false);
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
-FUNCTION collectedOutput_impl intFuncSignature;
-  begin
-    if (params=nil) or (params^.size=0)
-    then begin
-      result:=messagesToLiteralForSandbox(collector.value^.storedMessages);
-      context.adapters^.removeOutAdapter(collector.value);
-      collector.value^.clear;
-    end else result:=nil;
-  end;
-
 FUNCTION logTo_impl intFuncSignature;
   begin
     result:=nil;
@@ -231,14 +212,7 @@ FUNCTION changeDirectory_impl intFuncSignature;
     end else result:=nil;
   end;
 
-FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
-  begin new(result,create(at_unknown,C_collectAllOutputBehavior)); end;
-
-PROCEDURE disposeAdapter(p:P_collectingOutAdapter);
-  begin dispose(p,destroy); end;
-
 INITIALIZATION
-  collector.create(@newCollectingOutAdapter,@disposeAdapter);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,[se_writingInternal],ak_variadic  ,'resetRandom(seed:int);//Resets internal PRNG with the given seed');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,[se_readingInternal,se_writingInternal],ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,[se_readingInternal,se_writingInternal],ak_variadic_1,'intRandom(k);//Returns an integer random value in range [0,k-1]#random(k,n);//Returns a list of n integer random values in range [0,k-1]');
@@ -249,8 +223,6 @@ INITIALIZATION
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,[se_readingExternal],ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,[se_readingInternal,se_writingInternal],ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput'  ,@collectOutput_impl  ,[se_writingInternal],ak_nullary   ,'collectOutput;//Starts collecting output messages to be accessed via function collectedOutput');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,[se_readingInternal,se_writingInternal],ak_nullary   ,'collectedOutput;//Returns messages collected since the last call of collectOutput.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,[se_writingInternal,se_outputViaAdapter],ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,[se_writingInternal,se_outputViaAdapter],ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,[se_writingInternal],ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
@@ -259,7 +231,6 @@ INITIALIZATION
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
 FINALIZATION
-  collector.destroy;
   builtinLocation_time.destroy;
 
 end.

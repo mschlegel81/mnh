@@ -1,22 +1,6 @@
-USE mnhInfo;
+USE mnhInfo, guiScripts;
 
 datastore log;
-
-private mutable output:=[];
-private mutable collecting:=false;
-
-collectOutput->doCollect(true);
-
-doCollect(requestedCollecting:boolean)->
-  requestedCollecting=collecting
-  ? void
-  : begin
-      collecting:=requestedCollecting;
-      requestedCollecting
-      ? system.collectOutput
-      : output|=collectedOutput.filter({$L[0]=='printline'});
-    end;
-
 startOfEvaluation:=time;
 
 private mnhRoot:=myPath.split(['\','/']).leading(2).{[$x.join('/'),$x.join('\')]};
@@ -27,9 +11,8 @@ testAlreadyPassed->executor.testAlreadyPassed;
 timeForTest(exe:string)->timeForTest(flavour(exe),codeVersion(exe));
 timeForTest(flavour,codeVersion)->log[log.getInner(0)=flavour and log.getInner(1)=codeVersion][0,2];
 
-validateCollectedOutput(doLog:boolean)->begin
-  doCollect(false);
-  local printOut:=output.getInner(2).split("\n").flatten.pEach(line,line.replace(mnhRoot,''));
+validateCollectedOutput(doLog:boolean,output:stringList)->begin
+  local printOut:=output.replace(mnhRoot,'');
   local expectedResultName:=myPath.changeFileExt('.'&flavour&'.expected');
   local lastResultName    :=myPath.changeFileExt('.'&flavour&'.last');
   local stateMessage:='';
@@ -37,11 +20,12 @@ validateCollectedOutput(doLog:boolean)->begin
   print("Test finished at ",formatTime('c',systime));
   fileExists(expectedResultName)
   ? begin
-      expectedResultName.fileLines==printOut
+      (local expectedLines:=expectedResultName.fileLines)==printOut
       ? stateMessage:='o.k.'
       : begin
           lastResultName.writeFileLines(printOut);
           stateMessage:='NOT OK';
+          printf("%s",unifiedDiff(expectedResultName,lastResultName,expectedLines,printOut,2));
           fail("Result is not okay!\nPlease compare "&lastResultName
                                  &"\n           and "&expectedResultName);
         end;

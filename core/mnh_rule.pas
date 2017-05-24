@@ -15,7 +15,6 @@ TYPE
   P_rule=^T_rule;
 
   T_rule=object(T_abstractRule)
-    FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION getDocTxt: ansistring; virtual; abstract;
@@ -35,7 +34,6 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION getInlineValue:P_literal;
       PROPERTY getSubrules:T_subruleArray read subrules;
-      FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral; virtual;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
@@ -80,7 +78,6 @@ TYPE
       PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean); virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
-      FUNCTION getDynamicUseMetaLiteral(VAR context:T_threadContext):P_mapLiteral; virtual;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
@@ -227,29 +224,6 @@ FUNCTION T_ruleWithSubrules.getInlineValue: P_literal;
   begin
     if length(subrules)=1 then result:=subrules[0]^.getInlineValue
                           else result:=nil;
-  end;
-
-FUNCTION T_ruleWithSubrules.getDynamicUseMetaLiteral(VAR context: T_threadContext): P_mapLiteral;
-  VAR attributes:P_mapLiteral;
-      subAttributes:P_mapLiteral;
-      sub:P_subruleExpression;
-  begin
-    attributes:=newMapLiteral;
-    for sub in subrules do begin
-      subAttributes:=sub^.getAttributesLiteral;
-      attributes^.putAll(subAttributes);
-      disposeLiteral(subAttributes);
-    end;
-    result:=newMapLiteral^
-              .put('rule'      ,getFunctionPointer(context,tt_importedUserRule,getLocation),false)^
-              .put('attributes',attributes,false);
-  end;
-
-FUNCTION T_mutableRule.getDynamicUseMetaLiteral(VAR context: T_threadContext): P_mapLiteral;
-  begin
-    result:=newMapLiteral^
-              .put('rule'      ,getFunctionPointer(context,tt_importedUserRule,getLocation),false)^
-              .put('attributes',newMapLiteral,false);
   end;
 
 FUNCTION T_ruleWithSubrules.replaces(CONST param: P_listLiteral; CONST location: T_tokenLocation; OUT firstRep, lastRep: P_token; CONST includePrivateRules: boolean; VAR context: T_threadContext): boolean;

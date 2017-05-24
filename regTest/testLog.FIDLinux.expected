@@ -1843,6 +1843,7 @@ The 7-queens puzzle has 40 solutions
 The 8-queens puzzle has 92 solutions
   e.g. A1 B6 C8 D3 E7 F4 G2 H5 
 ***** quine *****
+main:={print('main:=', main)}
 ***** quine2 *****
 //*Quine via inspection
 main->print(inspect['source']);
@@ -3445,7 +3446,6 @@ king    2548 0.32
 11 15.44        1.4037
 12 16.74        1.3949
 ***** examples from file *****
-Examples file has 773 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3649,7 +3649,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.filter({$s.matches('^mnh\.')}).sort.trailing(10);
-out> ['mnh.inspect','mnh.listBuiltin','mnh.listKeywords','mnh.mnhInfo','mnh.myPath','mnh.not','mnh.ord','mnh.parameterNames','mnh.sandBoxExecute','mnh.sleep']
+out> ['mnh.listBuiltin','mnh.listKeywords','mnh.mnhInfo','mnh.myPath','mnh.not','mnh.ord','mnh.parameterNames','mnh.runScript','mnh.sandBoxExecute','mnh.sleep']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
@@ -4084,7 +4084,6 @@ out> true
 out> true
  in> [true, false, true].toSet.isBooleanSet;
 out> true
-
  in> [1, 2, 3].isIntCollection;
 out> true
  in> [].isIntCollection;

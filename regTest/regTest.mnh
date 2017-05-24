@@ -1,7 +1,7 @@
 USE '../demos/inputs/inputs.mnh',
-    testLog;
+    testLog, mnhInfo;
 
-private demosRoot:=myPath.extractFileDirectory&'/../demos/';
+private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
 private memoized allDemos:=files(demosRoot&'*.mnh').sort;
 datastore runTimes;
 
@@ -38,8 +38,10 @@ private isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
 private isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
 private isSmokeTest(scriptFileName:string)->false;
 
-private checkAfterTest(file in plotters)->printf('png hash: %x',file.changeFileExt('.png').fileStats[3]);
+private printAndReturn(...)->print@... orElse join(...);
+private checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]).printAndReturn;
 private checkAfterTest(file)->void;
+
 
 testFile(scriptFileName:string,doLog:boolean)->
 scriptFileName.skipFile
@@ -51,31 +53,33 @@ scriptFileName.skipFile
     ? "plot.resetOptions".toExpression()()
     : void;
 
-    doCollect(not(scriptFileName.isSmokeTest));
     local logName:=extractFileNameOnly(scriptFileName);
-    print('***** ',logName,' *****');
-    local scriptMain:=import(scriptFileName)['rules','main','rule'];
-    isVoid(scriptMain) ? fail(scriptFileName,' does not have a main rule') : void;
+    local output:=printAndReturn('***** ',logName,' *****');
     local startTime:=time;
-    scriptMain@testParameters(scriptFileName);
+    output|=runScript(scriptFileName,testParameters(scriptFileName))
+            .filter({$e.head=='printline'})
+            .getInner(2)
+            .split("\n")
+            .flatten;
     local scriptTime:=time-startTime;
-    checkAfterTest(scriptFileName);
+    output|=checkAfterTest(scriptFileName);
     doLog ? runTimes|=[[logName,mnhInfo['flavour'],scriptTime]] : void;
     note('Time for ',logName,': ',scriptTime);
+    scriptFileName.isSmokeTest
+    ? void
+    : output;
   end;
 
 private printExecute([])->void;
 private printExecute(code:stringList)->begin
   local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
-  out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2]))
-     .join("\n")
-     .print;
+  out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;
 end;
 
 private executeExamples(doLog:boolean)->begin
   resetRandom;
-  doCollect(true);
-  print('***** examples from file *****');
+  local output:=printAndReturn('***** examples from file *****');
+  local collectOut:=true;
   local codeToExecute:=[];
   local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
   print('Examples file has ',inputLines.size,' lines');
@@ -83,23 +87,29 @@ private executeExamples(doLog:boolean)->begin
   inputLines.each(line,
     line==''
     ? begin
-        printExecute(codeToExecute);
+        collectOut
+        ? output|=printExecute(codeToExecute)
+        :         printExecute(codeToExecute);
         codeToExecute:=[];
       end
     : line.matches('==END REG TEST==')
-      ? doCollect(false)
+      ? collectOut:=false
       : codeToExecute|=line);
   printExecute(codeToExecute);
   local scriptTime:=time-startTime;
   doLog ? runTimes|=[["examples/onlineHelp",mnhInfo['flavour'],scriptTime]] : void;
   note('Time for examples/onlineHelp: ',scriptTime);
+  output;
 end;
 
 testAll(logging:boolean)->
   begin
-   allDemos.map({testFile($0,logging)});
-   executeExamples(logging);
-   validateCollectedOutput(logging);
+    local inParallel:=allDemos.pMap({isLinux ? true : $demoFile.fileContents.matches("random|intRandom")});
+    local output:=allDemos[    inParallel ].map ({testFile($0,logging)}).flatten;
+          output|=allDemos[not(inParallel)].pMap({testFile($0,logging)}).flatten;
+    //local output:=allDemos.map({testFile($0,logging)}).flatten;
+    output|=executeExamples(logging);
+    validateCollectedOutput(logging,output);
   end;
 
 main->testAlreadyPassed
