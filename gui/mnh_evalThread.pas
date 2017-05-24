@@ -194,7 +194,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       P_runEvaluator(p)^.editAdapters^.clearAll;
       context.create(P_runEvaluator(p)^.editAdapters);
-      context.resetForEvaluation(nil,false,false,true);
+      context.resetForEvaluation(nil,false,false,false);
     end;
 
   PROCEDURE doneEdit(VAR context:T_evaluationContext);

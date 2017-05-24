@@ -17,6 +17,18 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
     end;
   end;
 
+FUNCTION runScript_imp intFuncSignature;
+  VAR scriptParams:T_arrayOfString;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_emptyList,lt_stringList]) then begin
+      setLength(scriptParams,list1^.size);
+      for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^[i])^.value;
+      result:=runScript(str0^.value,scriptParams,tokenLocation,context.adapters);
+    end;
+  end;
+
 FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext; CONST registerAsSecondaryPackage:boolean; OUT freshlyCreated:boolean):P_package;
   VAR fileName:string='';
       id      :string='';
@@ -107,18 +119,6 @@ FUNCTION inspect_imp intFuncSignature;
     end;
   end;
 
-FUNCTION import_imp intFuncSignature;
-  VAR p:P_package;
-      freshlyCreated:boolean;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      p:=obtainPackage(P_package(tokenLocation.package),tokenLocation,str0^.value,context,true,freshlyCreated);
-      if freshlyCreated then p^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
-      if p=nil then result:=newListLiteral
-               else result:=p^.getDynamicUseMeta(context);
-    end else result:=nil;
-  end;
-
 FUNCTION clearRuleCache_imp intFuncSignature;
   VAR ruleIdToken:T_token;
   begin
@@ -179,8 +179,8 @@ FUNCTION writeDataStores_imp intFuncSignature;
 {$endif}
 {$ifdef include_initialization}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,[],ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,[],ak_binary,'runScript(filenameOrId:string,parameters:stringList);//executes the given script - in the current program instance but strictly isolated');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,[se_readingExternal,se_readingInternal],ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'import'           ,@import_imp           ,[se_readingExternal,se_writingInternal],ak_unary     ,'import(idOrPath:string);//Returns information on rules of an imported package or a specified MNH source file');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache'   ,@clearRuleCache_imp   ,[se_writingInternal],ak_unary     ,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,[se_writingInternal],ak_unary     ,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches'   ,@clearAllCaches_imp   ,[se_writingInternal],ak_nullary   ,'clearAllCaches;//Clears all memoized rule caches and returns void.');
