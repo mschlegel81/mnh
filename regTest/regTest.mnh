@@ -103,14 +103,9 @@ private executeExamples(doLog:boolean)->begin
 end;
 
 testAll(logging:boolean)->
-  begin
-    local inParallel:=allDemos.pMap({isLinux ? true : $demoFile.fileContents.matches("random|intRandom")});
-    local output:=allDemos[    inParallel ].map ({testFile($0,logging)}).flatten;
-          output|=allDemos[not(inParallel)].pMap({testFile($0,logging)}).flatten;
-    //local output:=allDemos.map({testFile($0,logging)}).flatten;
-    output|=executeExamples(logging);
-    validateCollectedOutput(logging,output);
-  end;
+  validateCollectedOutput(logging,
+                          allDemos.map({testFile($0,logging)}).flatten |
+                          executeExamples(logging));
 
 main->testAlreadyPassed
       ? print('Tests skipped. They have already been passed.')

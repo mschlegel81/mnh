@@ -77,13 +77,21 @@ PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
   end;
 
 PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
-                      CONST location:T_tokenLocation; CONST adapters:P_adapters);
+                      CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR messageHash:T_hashInt);
   VAR streamWrapper:T_outputStreamWrapper;
       memoryStream:TMemoryStream;
       client:TSimpleIPCClient;
       sendStatusOk:boolean;
       serializationOk:boolean=true;
   begin
+    if messageHash=0 then begin
+      messageHash:=T_hashInt(round(now*1000000));
+      messageHash:=messageHash*31+T_hashInt(ThreadID);
+      messageHash:=messageHash*31+T_hashInt(payload^.hash);
+      messageHash:=messageHash*31+hashOfAnsiString(receiverServerId);
+      if messageHash=0 then messageHash:=1;
+    end;
+
     client:=TSimpleIPCClient.create(nil);
     client.serverId:=receiverServerId;
     if not(client.ServerRunning) then begin
@@ -94,6 +102,7 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
     memoryStream:=TMemoryStream.create;
     streamWrapper.create(memoryStream);
     streamWrapper.writeAnsiString(senderServerId);
+    streamWrapper.writeDWord(messageHash);
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.noErrors)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
@@ -117,6 +126,7 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
 
 FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
                      OUT senderId:string;
+                     OUT messageHash:T_hashInt;
                      OUT statusOk:boolean;
                      OUT payload:P_literal;
                      CONST location:T_tokenLocation; CONST adapters:P_adapters):boolean;
@@ -129,6 +139,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     streamWrapper.create(memoryStream);
     memoryStream.position:=0;
     senderId:=streamWrapper.readAnsiString;
+    messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters)
                 else payload:=nil;
@@ -140,20 +151,32 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
   VAR sleepTime:longint=0;
       //Caution: Server must be started and stopped in the same thread!
       server:TSimpleIPCServer;
+      recentRequests:array[0..63] of T_hashInt;
+      recentRequestOffset:byte;
+
+  FUNCTION processThisRequest(CONST hash:T_hashInt):boolean;
+    VAR i:longint;
+    begin
+      for i:=0 to length(recentRequests)-1 do if recentRequests[i]=hash then exit(false);
+      result:=true;
+      recentRequests[recentRequestOffset]:=hash;
+      recentRequestOffset:=(recentRequestOffset+1) and 63;
+    end;
 
   FUNCTION serve:boolean;
     VAR request,response:record
           senderId:string;
           statusOk:boolean;
           payload:P_literal;
+          messageHash:T_hashInt;
         end;
-
         adaptersOrNil:P_adapters;
     begin with P_myIpcServer(p)^ do begin
       if servingContext=nil then adaptersOrNil:=nil
                             else adaptersOrNil:=servingContext^.adapters;
       //Even unique-instance-marker-servers should fetch messages from time to time
-      if readMessage(server,request.senderId,request.statusOk,request.payload,feedbackLocation,adaptersOrNil) and
+      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,adaptersOrNil) and
+         processThisRequest(request.messageHash) and
          (servingContext<>nil) and
          (servingExpression<>nil) then begin
         //execute:-----------------------------------------------
@@ -170,7 +193,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
         //------------------------------------------------:execute
         //respond:------------------------------------------------
         try
-          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil);
+          sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash);
         finally
         end;
         //------------------------------------------------:respond
@@ -180,6 +203,8 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
 
   begin
     with P_myIpcServer(p)^ do begin
+      for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
+      recentRequestOffset:=0;
       if servingContext<>nil then servingContext^.adapters^.raiseNote('IPC server started. '+serverId,feedbackLocation);
       server:=newServer(serverId);
       while not(hasKillRequest) and ((servingContext=nil) or (servingContext^.adapters^.noErrors)) do begin
@@ -268,19 +293,22 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
         statusOk:boolean;
         payload:P_literal;
       end;
+      messageHash:T_hashInt=0;
+      responseHash:T_hashInt;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
        (arg0^.literalType=lt_string) then begin
       temporaryReceiver:=newServer();
-      sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.adapters);
+      sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.adapters,messageHash);
       repeat
-        sleep(1);
-        fetchedResult:=readMessage(temporaryReceiver,response.senderId,response.statusOk,response.payload,tokenLocation,context.adapters);
+        fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,context.adapters);
         if not(fetchedResult) then begin
           inc(aliveCheckCounter);
           if (aliveCheckCounter>100) then begin
-            if not(isServerRunning(str0^.value)) then context.adapters^.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation);
+            if not(isServerRunning(str0^.value))
+            then context.adapters^.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
+            else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.adapters,messageHash);
             aliveCheckCounter:=0;
           end else sleep(1);
         end;
