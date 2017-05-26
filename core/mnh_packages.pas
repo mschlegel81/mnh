@@ -230,9 +230,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
     path:=locateSource(extractFilePath(root),id);
     if adapters<>nil then begin
       if (path='')
-      then adapters^.raiseError('Cannot locate package for id "'+id+'"',tokenLocation)
-      {$ifdef debugMode}
-      else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation){$endif};
+      then adapters^.raiseError('Cannot locate package for id "'+id+'"',tokenLocation);
     end;
     pack:=nil;
   end;
@@ -243,9 +241,7 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     id:=filenameToPackageId(path_);
     if not(fileExists(path)) and fileExists(path_) then path:=path_;
     if not(fileExists(path))
-    then adapters^.raiseError('Cannot locate package "'+path+'"',tokenLocation)
-    {$ifdef debugMode}
-    else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation){$endif};
+    then adapters^.raiseError('Cannot locate package "'+path+'"',tokenLocation);
     pack:=nil;
   end;
 
@@ -766,19 +762,12 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
         else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
       packageRules.put(ruleId,result);
-      {$ifdef debugMode}
-      if ruleType=rt_customTypeCheck
-      then adapters.raiseNote('Creating new rules: '+ruleId+' and is'+ruleId,ruleDeclarationStart)
-      else adapters.raiseNote('Creating new rule: '+ruleId,ruleDeclarationStart);
-      {$endif}
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
       else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
-      then adapters.raiseError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
-      {$ifdef debugMode}
-      else adapters.raiseNote('Extending rule: '+ruleId,ruleDeclarationStart){$endif};
+      then adapters.raiseError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart);
     end;
   end;
 
