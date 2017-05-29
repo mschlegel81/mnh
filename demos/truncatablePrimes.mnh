@@ -1,0 +1,27 @@
+leftTruncatablePrimes(maxPrime>10)->
+  begin
+    local PRIME_SET:=primes(maxPrime);
+    local SUB:=primes(10);
+    SUB|(
+    [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
+      SUB:=PRIME_SET[10^k<=PRIME_SET<=10^(k+1)]
+           .filter({$x mod 10^k in SUB}),|));
+  end;
+
+rightTruncatablePrimes(maxPrime>10)->
+  begin
+    local PRIME_SET:=primes(maxPrime);
+    local SUB:=primes(10);
+    SUB|(
+    [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
+       SUB:=PRIME_SET[10^k<=PRIME_SET<=10^(k+1)]
+            .filter({$x div 10 in SUB}),|));
+  end;
+
+main->begin
+  local ltp:=leftTruncatablePrimes (1000000);
+  local rtp:=rightTruncatablePrimes(1000000);
+  print('There are ',ltp.size, ' left truncatable primes, the largest of which is ',ltp.max);
+  print('There are ',rtp.size,' right truncatable primes, the largest of which is ',rtp.max);
+  print('The largest prime which is both left- and right truncatable is ',ltp.intersect(rtp).max);
+end;
