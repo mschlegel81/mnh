@@ -727,7 +727,7 @@ Call with any string parameter for continuous run.
 1+1/(1+1/(1+1/(1+1/(1+1/(1+...)))))    = 1.6180339887498948
 1+1/(2+1/(2+1/(2+1/(2+1/(2+...)))))    = 1.414213562373095
 2+1/(1+1/(2+2/(3+3/(4+4/(5+...)))))    = 2.7182818284590452
-3+1/(6+9/(6+25/(6+49/(6+81/(6+...))))) = 3.1415924109719807
+3+1/(6+9/(6+25/(6+49/(6+81/(6+...))))) = 3.1415926533405421
 ***** conventions *****
 --------------------------------------------------------------------------------
  in> f->{$y^3};
@@ -3216,6 +3216,8 @@ Show the ten highest numbers that can be expressed
    23456788 = -1+23456789
    23456790 = 1+23456789
   123456789 = 123456789
+***** thueMorseSequence *****
+0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110
 ***** travellingSalesmanProblem *****
 Path length after construction is 33.42
 Path length after polishing is    32.045
@@ -3235,6 +3237,10 @@ png hash: 37E71222
    +--a
    +--b
    \--c
+***** truncatablePrimes *****
+There are 671 left truncatable primes, the largest of which is 998443
+There are 70 right truncatable primes, the largest of which is 739399
+The largest prime which is both left- and right truncatable is 739397
 ***** turtleGfx *****
 png hash: FB769509
 ***** ulam *****
@@ -4126,3 +4132,19 @@ out> [1,5,7,11,13,17,19]
 out> ['A','B','C','D','E','F']
  in> ['a'..'f'].pMap(:: upper);
 out> ['A','B','C','D','E','F']
+ in> [-1, 1,-1, 1,-2, 2].agg(head);
+out> -1
+ in> [-1, 1,-1, 1,-2, 2].agg(trailing);
+out> 2
+ in> [-1, 1,-1, 1,-2, 2].agg(toSet);
+out> [-1,1,-2,2].toSet
+ in> [-1, 1,-1, 1,-2, 2].agg(max);
+out> 2
+ in> [-1, 1,-1, 1,-2, 2].agg(min);
+out> -2
+ in> [-1, 1,-1, 1,-2, 2].agg(&);
+out> '-11-11-22'
+ in> [-1, 1,-1, 1,-2, 2].agg(*);
+out> -4
+ in> [-1, 1,-1, 1,-2, 2].agg(+);
+out> 0
