@@ -32,6 +32,16 @@ TYPE
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
   end;
 
+  P_extendedPackage=^T_extendedPackage;
+  T_extendedPackage=object(T_abstractPackage)
+    private
+      extender:P_abstractPackage;
+    public
+      CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
+  end;
+
   T_enhancedStatement=record
     comments,
     attributes:T_arrayOfString;
@@ -58,6 +68,7 @@ TYPE
       PROCEDURE resetTemp;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage);
+      CONSTRUCTOR create(CONST sourcePackage:P_abstractPackage; CONST inPackage:P_abstractPackage);
       CONSTRUCTOR create(CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
       FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters):T_enhancedStatement;
@@ -453,18 +464,23 @@ CONSTRUCTOR T_lexer.create(CONST input_: T_arrayOfString; CONST location: T_toke
     resetTemp;
   end;
 
-CONSTRUCTOR T_lexer.create(CONST package: P_abstractPackage);
+CONSTRUCTOR T_lexer.create(CONST sourcePackage:P_abstractPackage; CONST inPackage:P_abstractPackage);
   begin
-    input:=package^.getCodeProvider^.getLines;
+    input:=sourcePackage^.getCodeProvider^.getLines;
     inputIndex:=0;
-    inputLocation.package:=package;
+    inputLocation.package:=sourcePackage;
     inputLocation.column:=1;
     inputLocation.line:=1;
     inputColumnOffset:=0;
-    associatedPackage:=package;
+    associatedPackage:=inPackage;
     blob.text:='';
     blob.closer:=#0;
     resetTemp;
+  end;
+
+CONSTRUCTOR T_lexer.create(CONST package: P_abstractPackage);
+  begin
+    create(package,package);
   end;
 
 PROCEDURE T_lexer.resetTemp;
@@ -562,6 +578,12 @@ CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);
     readyForCodeState:=0;
   end;
 
+CONSTRUCTOR T_extendedPackage.create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
+  begin
+    inherited create(provider);
+    extender:=extender_;
+  end;
+
 DESTRUCTOR T_abstractPackage.destroy;
 begin
   if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
@@ -575,6 +597,11 @@ FUNCTION T_abstractPackage.isImportedOrBuiltinPackage(CONST id: string): boolean
     result:=false;
   end;
 
+FUNCTION T_extendedPackage.isImportedOrBuiltinPackage(CONST id:string):boolean;
+  begin
+    result:=extender^.isImportedOrBuiltinPackage(id);
+  end;
+
 PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_adapters);
   VAR intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -586,6 +613,11 @@ PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P
       exit;
     end;
     if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
+  end;
+
+PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
+  begin
+    extender^.resolveId(token,adaptersOrNil);
   end;
 
 PROCEDURE T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider);

@@ -27,7 +27,7 @@ USES //basic classes
 TYPE
   P_package=^T_package;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
+  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution{$ifdef fullVersion},lu_forCodeAssistance{$endif});
 
   T_packageReference=object
     id,path:ansistring;
@@ -42,7 +42,7 @@ TYPE
     private
       mainPackage:P_package;
       secondaryPackages:array of P_package;
-      dynamicallyUsed  :array of P_package;
+      extendedPackages:array of P_extendedPackage;
 
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
@@ -287,7 +287,52 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       end;
     end;
 
+  VAR extendsLevel:byte=0;
+
   PROCEDURE interpret(VAR statement:T_enhancedStatement);
+    PROCEDURE interpretExtendsClause;
+      VAR locationForErrorFeedback:T_tokenLocation;
+          newId:string;
+          first:P_token;
+          helperUse:T_packageReference;
+          lexer:T_lexer;
+          importWrapper:P_extendedPackage;
+          stmt:T_enhancedStatement;
+      begin
+        first:=statement.firstToken;
+        locationForErrorFeedback:=first^.location;
+        if extendsLevel>=32 then begin
+          context.adapters^.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
+          exit;
+        end;
+        first:=context.recycler.disposeToken(first);
+        if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
+          newId:=first^.txt;
+          helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
+        end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+          newId:=P_stringLiteral(first^.data)^.value;
+          helperUse.createWithSpecifiedPath(newId,first^.location,context.adapters);
+        end else begin
+          context.adapters^.raiseError('Invalid extends clause ',locationForErrorFeedback);
+          exit;
+        end;
+        context.recycler.cascadeDisposeToken(first);
+        new(importWrapper,create(newFileCodeProvider(helperUse.path),@self));
+        setLength(extendedPackages,length(extendedPackages)+1);
+        extendedPackages[length(extendedPackages)-1]:=importWrapper;
+
+        helperUse.destroy;
+        lexer.create(importWrapper,@self);
+        stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+        inc(extendsLevel);
+        while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
+          interpret(stmt);
+          stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+        end;
+        dec(extendsLevel);
+        lexer.destroy;
+      end;
+
     PROCEDURE interpretUseClause;
       VAR i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
@@ -481,6 +526,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           exit;
         end;
       end;
+      if (statement.firstToken^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
+         (statement.firstToken^.txt    ='EXTEND') and
+         (statement.firstToken^.next   <>nil) and
+         ((statement.firstToken^.next^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
+          or (statement.firstToken^.next^.tokType=tt_literal) and (P_literal(statement.firstToken^.next^.data)^.literalType=lt_string))
+      then begin
+        interpretExtendsClause;
+        exit;
+      end;
+
       assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
         {$ifdef fullVersion}
@@ -616,14 +671,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
 
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
       interpret(stmt);
-
       if profile then context.timeBaseComponent(pc_tokenizing);
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
       if profile then context.timeBaseComponent(pc_tokenizing);
-
     end;
     lexer.destroy;
-
     {$ifdef fullVersion}
     if usecase=lu_forCodeAssistance then begin
       readyForUsecase:=usecase;
@@ -633,7 +685,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       exit;
     end;
     {$endif}
-
     if context.adapters^.noErrors then begin
       readyForUsecase:=usecase;
       logReady;
@@ -661,8 +712,8 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider;
     mainPackage:=mainPackage_;
     if mainPackage=nil then mainPackage:=@self;
     setLength(secondaryPackages,0);
+    setLength(extendedPackages,0);
     setLength(packageUses,0);
-    setLength(dynamicallyUsed,0);
     packageRules.create(@disposeRule);
     importedRules.create;
     {$ifdef fullVersion}
@@ -677,8 +728,9 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
       for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
       setLength(secondaryPackages,0);
     end;
+    for i:=0 to length(extendedPackages)-1 do dispose(extendedPackages[i],destroy);
+    setLength(extendedPackages,0);
     for i:=0 to length(packageUses)-1 do packageUses[i].destroy; setLength(packageUses,0);
-    setLength(dynamicallyUsed,0);
     packageRules.clear;
     importedRules.clear;
     readyForUsecase:=lu_NONE;
@@ -709,7 +761,6 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
     end;
     setLength(ruleList,0);
     for i:=0 to length(packageUses    )-1 do packageUses[i].pack^.finalize(adapters);
-    for i:=0 to length(dynamicallyUsed)-1 do dynamicallyUsed[i] ^.finalize(adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
@@ -788,12 +839,9 @@ FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
   end;
 
 PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
-  VAR ruleList:array of P_rule;
-      rule:P_rule;
+  VAR rule:P_rule;
   begin
-    ruleList:=packageRules.valueSet;
-    for rule in ruleList do rule^.resolveIds(adapters);
-    setLength(ruleList,0);
+    for rule in packageRules.valueSet do rule^.resolveIds(adapters);
   end;
 
 {$ifdef fullVersion}

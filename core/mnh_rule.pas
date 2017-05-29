@@ -137,7 +137,7 @@ CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_to
 DESTRUCTOR T_ruleWithSubrules.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
+    for i:=0 to length(subrules)-1 do disposeLiteral(subrules[i]);
     setLength(subrules,0);
     inherited destroy;
   end;
