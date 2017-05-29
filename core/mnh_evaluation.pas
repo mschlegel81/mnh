@@ -9,7 +9,7 @@ USES sysutils,
      tokenStack,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
-     mnh_funcs, mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_list,
+     mnh_funcs, mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_list, mnh_funcs_types,
      mnh_patterns,
      mnh_subrules,
      mnh_rule,
@@ -106,9 +106,12 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
               then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
               else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
-              if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
-              if (P_intFuncCallback(t^.data)=BUILTIN_MAX ) then aggregator:=newMaxAggregator else
-              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD) then aggregator:=newHeadAggregator;
+              if (P_intFuncCallback(t^.data)=BUILTIN_MIN)      then aggregator:=newMinAggregator      else
+              if (P_intFuncCallback(t^.data)=BUILTIN_MAX)      then aggregator:=newMaxAggregator      else
+              if (P_intFuncCallback(t^.data)=BUILTIN_TRAILING) then aggregator:=newTrailingAggregator else
+              if (P_intFuncCallback(t^.data)=BUILTIN_TOSET)    then aggregator:=newSetAggregator      else
+              if (P_intFuncCallback(t^.data)=BUILTIN_TOLIST)   then aggregator:=newListAggregator     else
+              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD)     then aggregator:=newHeadAggregator;
           end;
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin
