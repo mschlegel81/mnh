@@ -7,7 +7,6 @@ USES sysutils,
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_tokens,
      mnh_contexts,
      mnh_funcs;
 FUNCTION getMnhInfo:string;
@@ -205,52 +204,6 @@ FUNCTION try_imp intFuncSignature;
     end;
   end;
 
-TYPE P_asyncTask=^T_asyncTask;
-     T_asyncTask=record
-       task:P_token;
-       context:P_threadContext;
-     end;
-
-FUNCTION doAsync(p:pointer):ptrint;
-  begin
-    result:=0;
-    with P_asyncTask(p)^ do begin
-      context^.reduceExpression(task);
-      context^.recycler.cascadeDisposeToken(task);
-      context^.doneEvaluating;
-      dispose(context,destroy);
-    end;
-    freeMem(p,sizeOf(T_asyncTask));
-  end;
-
-FUNCTION async_imp intFuncSignature;
-  VAR p:P_asyncTask;
-      childContext:P_threadContext;
-      parameters:P_listLiteral=nil;
-      dummy:P_token;
-  begin
-    result:=nil;
-    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
-       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
-      childContext:=context.getNewAsyncContext;
-      if childContext<>nil then begin
-        getMem(p,sizeOf(T_asyncTask));
-        p^.context:=childContext;
-        if params^.size=2 then parameters:=list1;
-        if not(subruleReplacesCallback(arg0,parameters,tokenLocation,p^.task,dummy,context,false)) then begin
-          freeMem(p,sizeOf(T_asyncTask));
-          childContext^.doneEvaluating;
-          dispose(childContext,destroy);
-          exit(nil);
-        end;
-        beginThread(@doAsync,p);
-        result:=newVoidLiteral;
-      end else begin
-        context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
-      end;
-    end;
-  end;
-
 {$MACRO ON}
 {$define funcForOp:=begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^,@context) else result:=nil; end}
 {$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      intFuncSignature; funcForOp;
@@ -305,8 +258,6 @@ INITIALIZATION
                'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
                'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal,se_detaching],ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
-               'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_sleep],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,[se_scriptDependent],ak_nullary,'myPath;//returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,[se_executableDependent],ak_nullary,'executor;//returns the path to the currently executing instance of MNH');

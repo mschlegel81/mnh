@@ -9,7 +9,7 @@ USES sysutils,
      tokenStack,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
-     mnh_funcs, mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_list,
+     mnh_funcs, mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_list, mnh_funcs_types,
      mnh_patterns,
      mnh_subrules,
      mnh_rule,
@@ -106,9 +106,12 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
               then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
               else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
-              if (P_intFuncCallback(t^.data)=BUILTIN_MIN ) then aggregator:=newMinAggregator else
-              if (P_intFuncCallback(t^.data)=BUILTIN_MAX ) then aggregator:=newMaxAggregator else
-              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD) then aggregator:=newHeadAggregator;
+              if (P_intFuncCallback(t^.data)=BUILTIN_MIN)      then aggregator:=newMinAggregator      else
+              if (P_intFuncCallback(t^.data)=BUILTIN_MAX)      then aggregator:=newMaxAggregator      else
+              if (P_intFuncCallback(t^.data)=BUILTIN_TRAILING) then aggregator:=newTrailingAggregator else
+              if (P_intFuncCallback(t^.data)=BUILTIN_TOSET)    then aggregator:=newSetAggregator      else
+              if (P_intFuncCallback(t^.data)=BUILTIN_TOLIST)   then aggregator:=newListAggregator     else
+              if (P_intFuncCallback(t^.data)=BUILTIN_HEAD)     then aggregator:=newHeadAggregator;
           end;
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin
@@ -1089,6 +1092,115 @@ end}
     stack.destroy;
   end;
 
+TYPE P_asyncTask=^T_asyncTask;
+     T_asyncTask=object(T_builtinGeneratorExpression)
+       private
+         criticalSection:TRTLCriticalSection;
+         task:P_token;
+         context:P_threadContext;
+         resultValue:P_literal;
+         evaluationFinished:boolean;
+       public
+         CONSTRUCTOR create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation);
+         DESTRUCTOR destroy; virtual;
+         FUNCTION getId:T_idString; virtual;
+         FUNCTION next(CONST location:T_tokenLocation; VAR context_:T_threadContext):P_literal; virtual;
+     end;
+
+CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation);
+  begin
+    inherited create(loc);
+    initCriticalSection(criticalSection);
+    task:=task_;
+    context:=context_;
+    resultValue:=nil;
+    evaluationFinished:=false;
+  end;
+
+DESTRUCTOR T_asyncTask.destroy;
+  begin
+    enterCriticalSection(criticalSection);
+    if context<>nil then begin
+      context^.adapters^.haltEvaluation;
+      while not(evaluationFinished) do begin
+        leaveCriticalSection(criticalSection);
+        ThreadSwitch;
+        sleep(1);
+        enterCriticalSection(criticalSection);
+      end;
+      if task<>nil then context^.recycler.cascadeDisposeToken(task);
+      dispose(context,destroy);
+      context:=nil;
+    end;
+    if resultValue<>nil then disposeLiteral(resultValue);
+    leaveCriticalSection(criticalSection);
+    doneCriticalSection(criticalSection);
+  end;
+
+FUNCTION T_asyncTask.getId:T_idString;
+  begin result:='async_task'; end;
+
+FUNCTION T_asyncTask.next(CONST location:T_tokenLocation; VAR context_:T_threadContext):P_literal;
+  begin
+    enterCriticalSection(criticalSection);
+    while not(evaluationFinished) do begin
+      leaveCriticalSection(criticalSection);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(criticalSection);
+    end;
+    if resultValue=nil then result:=newVoidLiteral
+                       else result:=resultValue^.rereferenced;
+    leaveCriticalSection(criticalSection);
+  end;
+
+FUNCTION doAsync(p:pointer):ptrint;
+  begin
+    result:=0;
+    with P_asyncTask(p)^ do begin
+      context^.reduceExpression(task);
+
+      enterCriticalSection(criticalSection);
+      evaluationFinished:=true;
+      resultValue:=context^.cascadeDisposeToLiteral(task);
+      task:=nil;
+      context^.doneEvaluating;
+      dispose(context,destroy);
+      context:=nil;
+      leaveCriticalSection(criticalSection);
+    end;
+    disposeLiteral(P_asyncTask(p));
+  end;
+
+{$i mnh_func_defines.inc}
+FUNCTION async_imp intFuncSignature;
+  VAR p:P_asyncTask;
+      childContext:P_threadContext;
+      parameters:P_listLiteral=nil;
+      task,dummy:P_token;
+  begin
+    result:=nil;
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
+      childContext:=context.getNewAsyncContext;
+      if childContext<>nil then begin
+        if params^.size=2 then parameters:=list1;
+        if not(subruleReplacesCallback(arg0,parameters,tokenLocation,task,dummy,context,false)) then begin
+          childContext^.doneEvaluating;
+          dispose(childContext,destroy);
+          exit(nil);
+        end;
+        new(p,create(task,childContext,tokenLocation));
+        beginThread(@doAsync,p);
+        result:=p^.rereferenced;
+      end else begin
+        context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
+      end;
+    end;
+  end;
+
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal,se_detaching],ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
 end.

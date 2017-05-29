@@ -718,6 +718,22 @@ toList([2,3,6].toSet);
 //#lists.pMap
 ['a'..'f'].pMap(::upper);
 
+[-1,1,-1,1,-2,2].agg(head);
+
+[-1,1,-1,1,-2,2].agg(trailing);
+
+[-1,1,-1,1,-2,2].agg(toSet);
+
+[-1,1,-1,1,-2,2].agg(max);
+
+[-1,1,-1,1,-2,2].agg(min);
+
+[-1,1,-1,1,-2,2].agg(&);
+
+[-1,1,-1,1,-2,2].agg(*);
+
+[-1,1,-1,1,-2,2].agg(+);
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');

@@ -38,6 +38,7 @@ TYPE
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
+      FUNCTION equals(CONST other:P_literal):boolean; virtual;
   end;
 
   P_inlineExpression=^T_inlineExpression;
@@ -878,6 +879,20 @@ FUNCTION T_subruleExpression.getInlineValue: P_literal;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
+  end;
+
+FUNCTION T_expression.equals(CONST other:P_literal):boolean;
+  begin
+    result:=(other^.literalType=lt_expression) and (P_expressionLiteral(other)^.typ=typ);
+    if result then case typ of
+      et_normal_public,
+      et_normal_private,
+      et_inline_for_literal,
+      et_inline_for_each,
+      et_inline_for_while: result:=not(isStateful) and (other^.toString()=toString()) or (other=@self);
+      et_builtinPlain    : result:=other^.toString()=toString();
+      et_builtinStateful : result:=other            =@self;
+    end;
   end;
 
 FUNCTION T_expression       .getParentId: T_idString; begin result:=''; end;

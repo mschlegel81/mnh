@@ -1,0 +1,7 @@
+thueMorseSequence(targetLength:int)->begin
+  local result:=[false];
+  while(result.size<targetLength,result|=not(result));
+  head(result,targetLength);
+end;
+
+main->thueMorseSequence(100).ord.join.print;

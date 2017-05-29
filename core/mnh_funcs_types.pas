@@ -2,6 +2,7 @@ UNIT mnh_funcs_types;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,mnh_out_adapters,mnh_contexts,myGenerics;
+VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
@@ -196,7 +197,9 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'toBoolean'     ,@toBoolean_imp ,[],ak_unary,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
   registerRule(TYPECAST_NAMESPACE,'toInt'         ,@toInt_imp     ,[],ak_unary,'toInt(X);#Casts X to int or throws an error if not possible');
   registerRule(TYPECAST_NAMESPACE,'toReal'        ,@toReal_imp    ,[],ak_unary,'toReal(X);#Casts X to real or throws an error if not possible');
+  BUILTIN_TOLIST:=
   registerRule(TYPECAST_NAMESPACE,'toList'        ,@toList_imp    ,[],ak_unary,'toList(X);#Casts X to list or wraps a scalar in a list');
+  BUILTIN_TOSET:=
   registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,[],ak_unary,'toSet(X);#Casts X to set or wraps a scalar in a set');
   registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,[],ak_unary,'toMap(X:collection);#Casts X to map or throws an error if not possible');
   registerRule(TYPECAST_NAMESPACE,'typeOf'        ,@typeOf_imp    ,[],ak_unary,'typeOf(x); //Returns a description of x''s type');

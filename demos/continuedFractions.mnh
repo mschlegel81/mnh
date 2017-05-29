@@ -4,10 +4,9 @@ private continuedFraction(a,b)->begin
 
   local resultNum:=0;
   local resultTxt:="...";
-  [100..1].each(n,
+  [1000..1].each(n,
     resultNum       :=B(n)  /(  A(n)  +  resultNum  ),
-    n<=5 ? resultTxt:=B(n)&"/("&A(n)&"+"&resultTxt&")" : void,
-      void);
+    n<=5 ? resultTxt:=B(n)&"/("&A(n)&"+"&resultTxt&")" : void);
   [A(0)&"+"&resultTxt,
    A(0)  +  resultNum];
 end;

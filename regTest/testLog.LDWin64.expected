@@ -725,7 +725,7 @@ Call with any string parameter for continuous run.
 1+1/(1+1/(1+1/(1+1/(1+1/(1+...)))))    = 1.61803398874989
 1+1/(2+1/(2+1/(2+1/(2+1/(2+...)))))    = 1.4142135623731
 2+1/(1+1/(2+2/(3+3/(4+4/(5+...)))))    = 2.71828182845905
-3+1/(6+9/(6+25/(6+49/(6+81/(6+...))))) = 3.14159241097198
+3+1/(6+9/(6+25/(6+49/(6+81/(6+...))))) = 3.14159265334054
 ***** conventions *****
 --------------------------------------------------------------------------------
  in> f->{$y^3};
@@ -3204,6 +3204,8 @@ Show the ten highest numbers that can be expressed
    23456788 = -1+23456789
    23456790 = 1+23456789
   123456789 = 123456789
+***** thueMorseSequence *****
+0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110
 ***** treePrint *****
 \
 +--1
@@ -3219,6 +3221,10 @@ Show the ten highest numbers that can be expressed
    +--a
    +--b
    \--c
+***** truncatablePrimes *****
+There are 671 left truncatable primes, the largest of which is 998443
+There are 70 right truncatable primes, the largest of which is 739399
+The largest prime which is both left- and right truncatable is 739397
 ***** ulam *****
           XX                                        XX          XX                      XX          XX                  
                    XX                XX          XX    XX          XX                                        XX         
@@ -4103,3 +4109,19 @@ out> [1,5,7,11,13,17,19]
 out> ['A','B','C','D','E','F']
  in> ['a'..'f'].pMap(:: upper);
 out> ['A','B','C','D','E','F']
+ in> [-1, 1,-1, 1,-2, 2].agg(head);
+out> -1
+ in> [-1, 1,-1, 1,-2, 2].agg(trailing);
+out> 2
+ in> [-1, 1,-1, 1,-2, 2].agg(toSet);
+out> [-1,1,-2,2].toSet
+ in> [-1, 1,-1, 1,-2, 2].agg(max);
+out> 2
+ in> [-1, 1,-1, 1,-2, 2].agg(min);
+out> -2
+ in> [-1, 1,-1, 1,-2, 2].agg(&);
+out> '-11-11-22'
+ in> [-1, 1,-1, 1,-2, 2].agg(*);
+out> -4
+ in> [-1, 1,-1, 1,-2, 2].agg(+);
+out> 0

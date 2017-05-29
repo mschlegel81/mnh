@@ -9,7 +9,7 @@ USES sysutils,
      mnh_contexts,
      listProcessing,
      mnh_funcs;
-VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL:P_intFuncCallback;
+VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
 {$i mnh_func_defines.inc}
 
 FUNCTION flatten_imp intFuncSignature;
@@ -477,6 +477,7 @@ INITIALIZATION
   BUILTIN_TAIL:=
   registerRule(LIST_NAMESPACE,'tail'    ,@tail_imp    ,[],ak_variadic_1,'tail(L);//Returns list L without the first element#tail(L,k);//Returns L without the first k elements');
   registerRule(LIST_NAMESPACE,'leading' ,@leading_imp ,[],ak_variadic_1,'leading(L);//Returns L without the last element or [] if L is empty#leading(L,k);//Returns L without the last k elements or [] if L is empty');
+  BUILTIN_TRAILING:=
   registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,[],ak_variadic_1,'trailing(L);//Returns the last element of L#trailing(L,k);//Returns the last k elements of L');
   builtinLocation_sort.create(LIST_NAMESPACE,'sort');
   registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,[],ak_variadic_1,

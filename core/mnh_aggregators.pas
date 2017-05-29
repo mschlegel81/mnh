@@ -96,23 +96,37 @@ TYPE
       PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  P_aggregator=^T_aggregator;
-  P_listAggregator=^T_listAggregator;
-  P_concatAggregator=^T_concatAggregator;
-  P_headAggregator=^T_headAggregator;
-  P_minAggregator=^T_minAggregator;
-  P_maxAggregator=^T_maxAggregator;
+  T_trailingAggregator=object(T_aggregatorWithResultLiteral)
+    CONSTRUCTOR create;
+    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+  end;
+
+  T_setAggregator=object(T_aggregatorWithResultLiteral)
+    CONSTRUCTOR create;
+    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+  end;
+
+  P_aggregator            =^T_aggregator;
+  P_listAggregator        =^T_listAggregator;
+  P_concatAggregator      =^T_concatAggregator;
+  P_headAggregator        =^T_headAggregator;
+  P_minAggregator         =^T_minAggregator;
+  P_maxAggregator         =^T_maxAggregator;
   P_stringConcatAggregator=^T_stringConcatAggregator;
-  P_andAggregator=^T_andAggregator;
-  P_orAggregator=^T_orAggregator;
-  P_opAggregator=^T_opAggregator;
-  P_expressionAggregator=^T_expressionAggregator;
+  P_andAggregator         =^T_andAggregator;
+  P_orAggregator          =^T_orAggregator;
+  P_opAggregator          =^T_opAggregator;
+  P_expressionAggregator  =^T_expressionAggregator;
+  P_trailingAggregator    =^T_trailingAggregator;
+  P_setAggregator         =^T_setAggregator;
 
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
 FUNCTION newListAggregator                  :P_listAggregator;
 FUNCTION newMinAggregator                   :P_minAggregator;
 FUNCTION newMaxAggregator                   :P_maxAggregator;
 FUNCTION newHeadAggregator                  :P_headAggregator;
+FUNCTION newTrailingAggregator              :P_trailingAggregator;
+FUNCTION newSetAggregator                   :P_setAggregator;
 FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:pointer):P_expressionAggregator;
 IMPLEMENTATION
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
@@ -127,21 +141,26 @@ FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
     end;
   end;
 
-FUNCTION newListAggregator:P_listAggregator; begin new(result,create); end;
-FUNCTION newMinAggregator :P_minAggregator;  begin new(result,create); end;
-FUNCTION newMaxAggregator :P_maxAggregator;  begin new(result,create); end;
-FUNCTION newHeadAggregator:P_headAggregator; begin new(result,create); end;
+FUNCTION newListAggregator    :P_listAggregator;     begin new(result,create); end;
+FUNCTION newMinAggregator     :P_minAggregator;      begin new(result,create); end;
+FUNCTION newMaxAggregator     :P_maxAggregator;      begin new(result,create); end;
+FUNCTION newHeadAggregator    :P_headAggregator;     begin new(result,create); end;
+FUNCTION newTrailingAggregator:P_trailingAggregator; begin new(result,create); end;
+FUNCTION newSetAggregator     :P_setAggregator;      begin new(result,create); end;
+
 FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:pointer):P_expressionAggregator;
   begin
     new(result,create(ex,contextPointer));
   end;
 
 CONSTRUCTOR T_aggregatorWithResultLiteral.create(CONST initialValue:P_literal); begin resultLiteral:=initialValue; end;
-CONSTRUCTOR T_listAggregator  .create; begin inherited create(newListLiteral); end;
-CONSTRUCTOR T_concatAggregator.create; begin inherited create(newListLiteral); end;
-CONSTRUCTOR T_headAggregator  .create; begin inherited create(nil);            end;
-CONSTRUCTOR T_minAggregator   .create; begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_maxAggregator   .create; begin inherited create(newVoidLiteral); end;
+CONSTRUCTOR T_listAggregator    .create; begin inherited create(newListLiteral); end;
+CONSTRUCTOR T_concatAggregator  .create; begin inherited create(newListLiteral); end;
+CONSTRUCTOR T_headAggregator    .create; begin inherited create(nil);            end;
+CONSTRUCTOR T_minAggregator     .create; begin inherited create(newVoidLiteral); end;
+CONSTRUCTOR T_maxAggregator     .create; begin inherited create(newVoidLiteral); end;
+CONSTRUCTOR T_setAggregator     .create; begin inherited create(newSetLiteral);  end;
+CONSTRUCTOR T_trailingAggregator.create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_stringConcatAggregator.create; begin inherited create(newStringLiteral('',true)); end;
 CONSTRUCTOR T_andAggregator         .create; begin boolResult:=true;  end;
 CONSTRUCTOR T_orAggregator          .create; begin boolResult:=false; end;
@@ -168,6 +187,12 @@ PROCEDURE T_listAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean
     P_listLiteral(resultLiteral)^.append(L,not(doDispose));
   end;
 
+PROCEDURE T_setAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context: P_threadContext);
+  begin
+    if L=nil then exit;
+    P_setLiteral(resultLiteral)^.append(L,not(doDispose));
+  end;
+
 PROCEDURE T_concatAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context:P_threadContext);
   begin
     if L=nil then exit;
@@ -185,6 +210,18 @@ PROCEDURE T_headAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean
       resultLiteral:=L^.rereferenced;
     end;
     if doDispose then disposeLiteral(L);
+  end;
+
+PROCEDURE T_trailingAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context: P_threadContext);
+  begin
+    if L=nil then exit;
+    if L^.literalType=lt_void then begin
+      if doDispose then disposeLiteral(L);
+      exit;
+    end;
+    disposeLiteral(resultLiteral);
+    resultLiteral:=L;
+    if not(doDispose) then L^.rereference;
   end;
 
 PROCEDURE T_minAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
