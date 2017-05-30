@@ -27,7 +27,7 @@ USES //basic classes
 TYPE
   P_package=^T_package;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution{$ifdef fullVersion},lu_forCodeAssistance{$endif});
+  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance);
 
   T_packageReference=object
     id,path:ansistring;
@@ -47,7 +47,10 @@ TYPE
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
-      {$ifdef fullVersion}pseudoCallees:T_packageProfilingCalls;{$endif}
+      {$ifdef fullVersion}
+      pseudoCallees:T_packageProfilingCalls;
+      anyCalled:boolean;
+      {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
       PROCEDURE clear(CONST includeSecondaries:boolean);
@@ -63,7 +66,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
-      PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
+      PROCEDURE complainAboutUnused(VAR adapters:T_adapters);
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
@@ -958,22 +961,39 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
+  PROCEDURE assignLocalRule(CONST tt:T_tokenType); inline;
+    begin
+      token.tokType:=tt;
+      token.data:=userRule;
+      {$ifdef fullVersion}
+      userRule^.setIdResolved;
+      {$endif}
+    end;
+
+  PROCEDURE assignImportedRule(CONST tt:T_tokenType); inline;
+    begin
+      token.tokType:=tt;
+      token.data:=userRule;
+      {$ifdef fullVersion}
+      userRule^.setIdResolved;
+      if (token.location.package=P_objectWithPath(mainPackage)) and
+         (userRule^.getLocation.package<>P_objectWithPath(mainPackage))
+      then P_package(userRule^.getLocation.package)^.anyCalled:=true;
+      {$endif}
+    end;
+
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
       if userRule^.getRuleType=rt_customTypeCheck
-      then token.tokType:=tt_customTypeRule
-      else token.tokType:=tt_localUserRule;
-      token.data:=userRule;
-      {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
+      then assignLocalRule(tt_customTypeRule)
+      else assignLocalRule(tt_localUserRule );
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
       if userRule^.getRuleType=rt_customTypeCheck
-      then token.tokType:=tt_customTypeRule
-      else token.tokType:=tt_importedUserRule;
-      token.data:=userRule;
-      {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
+      then assignImportedRule(tt_customTypeRule  )
+      else assignImportedRule(tt_importedUserRule);
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -984,15 +1004,11 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
     ruleId:=isTypeToType(ruleId);
     if ruleId<>'' then begin
       if packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
-        token.tokType:=tt_customTypeRule;
-        token.data:=userRule;
-        {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
+        assignLocalRule(tt_customTypeRule);
         exit;
       end;
       if importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
-        token.tokType:=tt_customTypeRule;
-        token.data:=userRule;
-        {$ifdef fullVersion} userRule^.setIdResolved; {$endif}
+        assignImportedRule(tt_customTypeRule);
         exit;
       end;
     end;
