@@ -285,7 +285,6 @@ PROCEDURE TSynMnhSyn.next;
           inc(run);
         end;
         if tokenTypeMap.containsKey(localId,fTokenId) then begin end
-        else if (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
         else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId) then fTokenId := tkUserRule
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
@@ -459,7 +458,7 @@ PROCEDURE initLists;
     if listsAreInitialized then exit;
     tokenTypeMap.create();
     for tt:=low(T_tokenType) to high(T_tokenType) do with C_tokenInfo[tt] do put(reservedWordClass,defaultId);
-    for i:=1 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
+    for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
 
     builtin:=intrinsicRuleMap.keySet;
     for i:=0 to length(builtin)-1 do put(rwc_not_reserved,builtin[i]);

@@ -1,0 +1,107 @@
+//ID of the server, used for inter process communication (IPC)
+private IPC_ID:=myPath;
+//ID of the currently running script instance
+private PID:=hash([systime,executor,myPath]);
+
+//Convenience constants for actions
+private COMMIT  :='COMMIT';
+private ROLLBACK:='ROLLBACK';
+private INSERT  :='INSERT';
+private DELETE  :='DELETE';
+
+datastore store:=[];
+
+private synchronized persistStage(stage:list)->
+  stage.each(stageElement,
+    stageElement.head==INSERT
+    ? begin
+        store|=stageElement.trailing;
+        void;
+      end
+    : stageElement.head==DELETE
+      ? begin
+          store:=store.filter({not($storeElement==stageElement.trailing)});
+          void;
+        end
+      : warn('Invalid element on stage: ',stageElement)
+  );
+
+private serve(input)->begin
+  local stage:=[].toMap;
+  //actions, encoded as a look-up table
+  local action:=
+    [[COMMIT,
+      {begin
+         persistStage(stage[$id]);
+         stage>>$id;
+         print($id,' ',$payload,'; Remaining stage elements: ',stage.getInner(1).map(::size).agg(+),' in ',stage.size,' groups');
+         true;
+       end}],
+     [ROLLBACK,
+      {begin
+         stage>>$id;
+         print($id,' ',$payload,'; Remaining stage elements: ',stage.getInner(1).map(::size).agg(+),' in ',stage.size,' groups');
+         true;
+       end}],
+     [INSERT,
+      {begin
+         stage<<[$id,stage[$id]|[$payload]];
+         print($id,' ','STAGE TO INSERT: ',$payload.trailing);
+         true;
+       end}],
+     [DELETE,
+      {begin
+         stage<<[$id,stage[$id]|[$payload]];
+         print($id,' ','STAGE TO DELETE: ',$payload.trailing);
+         true;
+       end}]].toMap;
+  local invalidAction:={begin
+                          warn($id,' Requested invalid action',$payload);
+                          false;
+                        end};
+save;
+  input=='flush'
+  ? begin
+      local result:=stage;
+      stage:=[].toMap;
+      result;
+    end
+  : input.isList(2) AND input.head.isInt
+    ? begin
+        local id     :=input.head;
+        local payload:=input.trailing;
+        (action[payload.head] orElse invalidAction)(id,payload);
+      end
+    : warn('invalid input: ',input) orElse false;
+end;
+
+private ensureServer->isIpcServerRunning(IPC_ID) ? void :
+  begin
+    executor.execAsync([myPath]);
+    sleep(1);
+  end;
+
+private sendRequest(data)->begin
+  ensureServer;
+  sendIpcRequest(IPC_ID,[PID,data]);
+end;
+
+//*Requests insert of the given data item; returns true on success
+//*Note that you have to call commit in order to persist this request
+insert(data)->sendRequest([INSERT,data]);
+//*Requests delete of the given data item; returns true on success
+//*Note that you have to call commit in order to persist this request
+delete(data)->sendRequest([DELETE,data]);
+//*Requests persisting of the stage for the curren PID; returns true on success
+commit->sendRequest(COMMIT);
+//*Requests rollback of the stage for the curren PID; returns true on success
+rollback->sendRequest(ROLLBACK);
+
+//*Starts an IPC server instance.
+//*Implicitly called in a new, standalone instance of MNH if needed.
+main->begin
+  startIpcServer(IPC_ID,::serve);
+  ask("IPC server started: "&myPath&"\nPress enter to shutdown");
+end;
+
+print(myPath);

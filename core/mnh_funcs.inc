@@ -63,12 +63,6 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
                   secondaryPackages[
            length(secondaryPackages)-1]:=result;
       end;
-      with callerPackage^ do begin
-        setLength(dynamicallyUsed,
-           length(dynamicallyUsed)+1);
-                  dynamicallyUsed[
-           length(dynamicallyUsed)-1]:=result;
-      end;
     end;
     leaveCriticalSection(packageCs);
   end;

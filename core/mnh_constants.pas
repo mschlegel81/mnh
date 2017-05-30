@@ -494,17 +494,21 @@ CONST
 {tt_attributeComment}           (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'),
 {tt_blank}                      (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
-  C_specialWordInfo:array[0..6] of record
+  C_use='USE';
+  C_include='INCLUDE';
+
+  C_specialWordInfo:array[0..7] of record
     txt:string;
     reservedWordClass:T_reservedWordClass;
     helpText:string;
-  end=((txt:'USE';      reservedWordClass:rwc_modifier      ; helpText:'Marker: USE#As first token in a package it denotes the use clause#Followed by package paths or package ids'),
+  end=((txt:C_use;             reservedWordClass:rwc_modifier      ; helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
+       (txt:C_include;         reservedWordClass:rwc_modifier      ; helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
        (txt:LITERAL_TEXT_VOID; reservedWordClass:rwc_specialLiteral; helpText:'void literal#Denotes a literal "which is not there"#Intended use: list construction and blank branches of inline if clauses'),
        (txt:LITERAL_NAN_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'not-a-number real literal'),
        (txt:LITERAL_INF_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'infinity real literal'),
-       (txt:'false';    reservedWordClass:rwc_specialLiteral; helpText:'false literal'),
-       (txt:'true';     reservedWordClass:rwc_specialLiteral; helpText:'true literal'),
-       (txt:'main';     reservedWordClass:rwc_not_reserved  ; helpText:'main rule#Called when the script is executed from the command line (or via "call main" in the GUI)'));
+       (txt:'false';           reservedWordClass:rwc_specialLiteral; helpText:'false literal'),
+       (txt:'true';            reservedWordClass:rwc_specialLiteral; helpText:'true literal'),
+       (txt:'main';            reservedWordClass:rwc_not_reserved  ; helpText:'main rule#Called when the script is executed from the command line (or via "call main" in the GUI)'));
 
   C_ruleTypeString: array[tt_localUserRule..tt_customTypeRule] of string = (
     'user function (local)',

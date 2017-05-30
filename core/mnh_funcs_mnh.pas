@@ -10,10 +10,11 @@ USES sysutils,
      mnh_contexts,
      mnh_funcs;
 FUNCTION getMnhInfo:string;
+{$i mnh_func_defines.inc}
 VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorIn] of P_intFuncCallback;
+    BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
 VAR builtinLocation_try:T_identifiedInternalFunction;
-{$i mnh_func_defines.inc}
 
 FUNCTION sleep_imp intFuncSignature;
   VAR sleepUntil:double;
@@ -259,6 +260,7 @@ INITIALIZATION
                'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_sleep],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
+  BUILTIN_MYPATH:=
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,[se_scriptDependent],ak_nullary,'myPath;//returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,[se_executableDependent],ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,[] ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
