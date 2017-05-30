@@ -91,7 +91,7 @@ TYPE
       encodeAsText:boolean;
       PROCEDURE readDataStore(VAR context:T_threadContext);
     public
-      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate,usePlainTextEncoding:boolean);
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST datastorePackage:P_objectWithPath; CONST isPrivate,usePlainTextEncoding:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       PROCEDURE writeBack(VAR adapters:T_adapters);
@@ -127,11 +127,11 @@ CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_toke
     initCriticalSection(rule_cs);
   end;
 
-CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate,usePlainTextEncoding: boolean);
+CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST datastorePackage:P_objectWithPath; CONST isPrivate,usePlainTextEncoding: boolean);
   begin
     inherited create(ruleId,startAt,isPrivate,rt_datastore);
     encodeAsText:=usePlainTextEncoding;
-    dataStoreMeta.create(startAt.package^.getPath,ruleId);
+    dataStoreMeta.create(datastorePackage^.getPath,ruleId);
   end;
 
 DESTRUCTOR T_ruleWithSubrules.destroy;
