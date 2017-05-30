@@ -573,7 +573,7 @@ FUNCTION factorize_impl intFuncSignature;
       p:=3; DIVIDE_THROUGH;
       p:=5; DIVIDE_THROUGH;
       p:=7;
-      while (p*p<n) and (context.adapters^.noErrors) do begin
+      while (p*p<=n) and (context.adapters^.noErrors) do begin
         DIVIDE_THROUGH; inc(p,4); // n*30 +  7
         DIVIDE_THROUGH; inc(p,2); // n*30 + 11
         DIVIDE_THROUGH; inc(p,4); // n*30 + 13
