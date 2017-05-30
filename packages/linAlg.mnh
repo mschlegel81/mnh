@@ -1,5 +1,5 @@
-type Matrix(M:list)->M.pEach(row,row.isNumList,AND) AND M.pEach(row,row.size).unique.size=1;
-type SquareMatrix(M:list)->M.each(row,row.isNumList(M.size),AND);
+type Matrix(M:list)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
+type SquareMatrix(M:list)->M.each(row,row.isNumericList(M.size),AND);
 
 private subMatrix(M:list,skipRow,skipCol)->
   M.each(row,index=skipRow
