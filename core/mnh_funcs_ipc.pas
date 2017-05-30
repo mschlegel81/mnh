@@ -85,10 +85,12 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
       serializationOk:boolean=true;
   begin
     if messageHash=0 then begin
+      {$Q-}{$R-}
       messageHash:=T_hashInt(round(now*1000000));
       messageHash:=messageHash*31+T_hashInt(ThreadID);
       messageHash:=messageHash*31+T_hashInt(payload^.hash);
       messageHash:=messageHash*31+hashOfAnsiString(receiverServerId);
+      {$Q+}{$R+}
       if messageHash=0 then messageHash:=1;
     end;
 
