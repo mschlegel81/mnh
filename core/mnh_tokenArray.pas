@@ -5,7 +5,7 @@ USES sysutils,math,
      mnh_basicTypes,mnh_constants,
      mnh_fileWrappers,
      mnh_litVar,
-     mnh_funcs,
+     mnh_funcs,mnh_funcs_mnh,
      tokenStack,
      {$ifdef fullVersion}
      mnh_html,
@@ -423,6 +423,8 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
             nextToken:=n[1];
           end;
         end else associatedPackage^.resolveId(nextToken^,nil);
+        //This is a hack to ensure that "myPath" behaves nicely when including
+        if (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
       end;
       tt_each,tt_parallelEach: if not(retainBlanks) then begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;
