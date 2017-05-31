@@ -22,11 +22,11 @@ memoized Q(n<=2):=1;
 Q(n)->Q(n-Q(n-1))+Q(n-Q(n-2));
 
 main->begin
-  print('(OEIS A005228) R: ',[1..20].each(n,R(n)).join(', '));
-  print('(OEIS A030124) S: ',[1..20].each(n,S(n)).join(', '));
-  print('(OEIS A005206) G: ',[1..20].each(n,G(n)).join(', '));
-  print('(OEIS A005374) H: ',[1..20].each(n,H(n)).join(', '));
-  print('(OEIS A005378) F: ',[1..20].each(n,F(n)).join(', '));
-  print('(OEIS A005379) M: ',[1..20].each(n,M(n)).join(', '));
-  print('(OEIS A005185) Q: ',[1..20].each(n,Q(n)).join(', '));
+  print('(OEIS A005228) R: ',[1..20].map(::R).join(', '));
+  print('(OEIS A030124) S: ',[1..20].map(::S).join(', '));
+  print('(OEIS A005206) G: ',[1..20].map(::G).join(', '));
+  print('(OEIS A005374) H: ',[1..20].map(::H).join(', '));
+  print('(OEIS A005378) F: ',[1..20].map(::F).join(', '));
+  print('(OEIS A005379) M: ',[1..20].map(::M).join(', '));
+  print('(OEIS A005185) Q: ',[1..20].map(::Q).join(', '));
 end;
