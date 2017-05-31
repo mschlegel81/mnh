@@ -101,8 +101,8 @@ queryOEISInfo(id:string)->begin
               .split("\n")
               .filter({$line.matches('^%[N|S|T|U]')})
               .map({[$line.copy(1,1),$line.copy(11,1000)]});
-  local name:=data['N'];
-  local seq :=clean(data['S'] & data['T'] & data['U'],['0'..'9',','],'').split(',').softCast;
+  local name:=data['N'] orElse '';
+  local seq :=clean(data['S'] & data['T'] & data['U'] orElse '',['0'..'9',','],'').split(',').softCast;
   seq:=seq.head(seq.map(::isInt).not.indexOf[0] orElse seq.size);
   [['name',name],
    ['seq',seq]].toMap;
@@ -161,6 +161,21 @@ testSequence(meta:SequenceMeta)->begin
                                           "\n  computed: ",computed);
 end;
 
+obtainData(id:string)->obtainData(id,100);
+obtainData(id:string,n:int)->begin
+  SequenceTable.each(meta,
+    meta[0]==id
+    ? [['id'  ,id],
+       ['name',meta[3]],
+       ['seq' ,meta[1](min(n,meta[2]))]].toMap
+    : void,head)
+  orElse begin
+    local queried:=queryOEISInfo(id);
+    queried<<['id',id];
+    queried;
+  end;
+end;
+
 //*Validate all sequences
 main('validate')->SequenceTable.pMap(::testSequence);
 
@@ -172,19 +187,8 @@ main(id,nMax)->begin
   id.matches('^A\d{6}$')
   ? void
   : fail('id "',id,'" is not an OEIS sequence id');
-  SequenceTable.each(meta,
-    meta[0]==id
-    ? print('ID    : ',id,
-          "\nName  : ",meta[3],
-          "\nValues: ",meta[1](min(n,meta[2]))) orElse true
-    : void,head)
-  orElse begin
-    local queried:=queryOEISInfo(id);
+  local data:=obtainData(id,n);
     print('ID    : ',id,
-        "\nName  : ",queried['name'],
-        "\nValues: ",queried['seq']);
-  end;
+        "\nName  : ",data['name'],
+        "\nValues: ",data['seq']);
 end;
-
-
-
