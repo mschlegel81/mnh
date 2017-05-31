@@ -505,12 +505,18 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
   VAR i: longint;
+      allZeroes:boolean=true;
+      intResult:int64;
   begin
     result:=nil;
     parsedLength:=0;
     if (length(input)>=offset) and (input [offset] in ['0'..'9', '-', '+']) then begin
       i:=offset;
-      while (i<length(input)) and (input [i+1] in ['0'..'9']) do inc(i);
+      allZeroes:=input[offset] in ['+','-','0'];
+      while (i<length(input)) and (input [i+1] in ['0'..'9']) do begin
+        inc(i);
+        allZeroes:=allZeroes and (input[offset]='0');
+      end;
       parsedLength:=i+1-offset;
       //Only digits on indexes [1..i]; accept decimal point and following digts
       if (i<length(input)) and (input [i+1] = '.') then begin
@@ -529,8 +535,12 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         if suppressOutput then exit(nil);
         result:=newRealLiteral(strToFloatDef(copy(input, offset, parsedLength), Nan));
       end else begin
+
         if suppressOutput then exit(nil);
-        result:=newIntLiteral(StrToInt64Def(copy(input, offset, parsedLength), 0));
+        intResult:=StrToInt64Def(copy(input, offset, parsedLength), 0);
+        if (intResult=0) and not(allZeroes)
+        then result:=newRealLiteral(strToFloatDef(copy(input, offset, parsedLength), Nan))
+        else result:=newIntLiteral(intResult);
       end;
     end;
   end;
