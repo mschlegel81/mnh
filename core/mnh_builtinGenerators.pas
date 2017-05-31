@@ -319,7 +319,7 @@ FUNCTION T_primeGenerator.next(CONST location: T_tokenLocation; VAR context: T_t
   PROCEDURE extendTable;
     VAR offset,newMax:int64;
         k0,k:longint;
-        i,j:int64;
+        i,j:{$ifdef CPU32}longint{$else}int64{$endif};
     begin
       k0:=length(table);
       offset:=k0 shl 8;
