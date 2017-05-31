@@ -355,6 +355,7 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
+FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
 VAR emptyStringSingleton: T_stringLiteral;
 IMPLEMENTATION
 VAR
@@ -2839,6 +2840,40 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     for L in result^.dat.keySet do begin
       L^.rereference;
       result^.modifyType(L);
+    end;
+  end;
+
+FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
+  VAR map1,map2:P_mapLiteral;
+      merger:P_expressionLiteral;
+      entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+      L,M:P_literal;
+  begin
+    if (params=nil) or (params^.size<>3) or
+       (params^[0]^.literalType<>lt_map) or
+       (params^[1]^.literalType<>lt_map) or
+       (params^[2]^.literalType<>lt_expression) then exit(nil);
+    map1  :=P_mapLiteral(params^[0]);
+    map2  :=P_mapLiteral(params^[1]);
+    merger:=P_expressionLiteral(params^[2]);
+    if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
+
+    result:=newMapLiteral^.putAll(map1);
+    for entry in map2^.dat.keyValueList do begin
+      L:=result^.dat.get(entry.key,nil);
+      if L=nil then begin
+        result^.dat.putNew(entry,L);
+        entry.key  ^.rereference;
+        entry.value^.rereference;
+      end else begin
+        M:=merger^.evaluateToLiteral(location,contextPointer,L,entry.value);
+        if M=nil then begin
+          disposeLiteral(result);
+          exit(nil);
+        end;
+        disposeLiteral(L);
+        result^.dat.putNew(entry.key,M,L);
+      end;
     end;
   end;
 

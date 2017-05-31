@@ -213,6 +213,7 @@ FUNCTION reverseList_impl intFuncSignature;
 FUNCTION setUnion_imp     intFuncSignature; begin result:=setUnion    (params); end;
 FUNCTION setIntersect_imp intFuncSignature; begin result:=setIntersect(params); end;
 FUNCTION setMinus_imp     intFuncSignature; begin result:=setMinus    (params); end;
+FUNCTION mergeMaps_imp    intFuncSignature; begin result:=mapMerge    (params,tokenLocation,@context); end;
 
 FUNCTION get_imp intFuncSignature;
   VAR tmpPar:T_listLiteral;
@@ -490,6 +491,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,[],ak_variadic_1,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,[],ak_variadic_1,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,[],ak_binary    ,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,[],ak_ternary   ,'mergeMaps(A:map,B:map,M:expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.');
   registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,[],ak_variadic  ,'flatten(L,...);//Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,[],ak_unary     ,'size(L);//Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,[],ak_unary     ,'trueCount(B:booleanList);//Returns the number of true values in B');
