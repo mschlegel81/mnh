@@ -28,8 +28,26 @@ end}
 
 FUNCTION head_imp intFuncSignature;
 {$define CALL_MACRO:=head}
-{$define SCALAR_FALLBACK:=begin result:=arg0; result^.rereference; end}
-SUB_LIST_IMPL;
+{$define SCALAR_FALLBACK:=result:=arg0^.rereferenced}
+VAR iterator:P_iterator;
+    i:longint;
+begin
+  if (params<>nil)
+     and (params^.size=2)
+     and (arg0^.literalType=lt_expression)
+     and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0))
+     and (P_expressionLiteral(arg0)^.isStateful)
+     and (arg1^.literalType=lt_int)
+     and (int1^.value>=0) then begin
+     if int1^.value=0 then exit(newListLiteral());
+     result:=newListLiteral(int1^.value);
+     iterator:=newIterator(arg0);
+     for i:=1 to int1^.value do listResult^.append(iterator^.next(@context),false);
+     dispose(iterator,destroy);
+     exit(result);
+  end;
+  SUB_LIST_IMPL;
+end;
 
 FUNCTION trailing_imp intFuncSignature;
 {$define CALL_MACRO:=trailing}
