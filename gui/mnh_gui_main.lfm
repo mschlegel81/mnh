@@ -2397,6 +2397,10 @@ object MnhForm: TMnhForm
           RadioItem = True
           OnClick = miMinErrorlevel4Click
         end
+        object miUserErrors: TMenuItem
+          Caption = 'Show all &User defined messages'
+          OnClick = miUserErrorsClick
+        end
       end
       object miIncFontSize: TMenuItem
         Caption = 'Increase Font Size'

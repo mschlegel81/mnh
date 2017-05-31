@@ -60,6 +60,7 @@ PROCEDURE miMinErrorlevel1Click(Sender: TObject);
 PROCEDURE miMinErrorlevel2Click(Sender: TObject);
 PROCEDURE miMinErrorlevel3Click(Sender: TObject);
 PROCEDURE miMinErrorlevel4Click(Sender: TObject);
+PROCEDURE miUserErrorsClick(Sender: TObject);
 PROCEDURE miDeclarationEchoClick(Sender: TObject);
 PROCEDURE miExpressionEchoClick(Sender: TObject);
 PROCEDURE miExpressionResultClick(Sender: TObject);
@@ -446,6 +447,11 @@ PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin setVerbosity(1)
 PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject); begin setVerbosity(2); end;
 PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin setVerbosity(3); end;
 PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin setVerbosity(4); end;
+PROCEDURE TMnhForm.miUserErrorsClick(Sender: TObject);
+  begin
+    if miUserErrors.Checked then setVerbosity(254) else setVerbosity(255);
+  end;
+
 PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .Checked,mt_echo_declaration); end;
 PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .Checked,mt_echo_input);       end;
 PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.Checked,mt_echo_output);      end;

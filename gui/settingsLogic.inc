@@ -13,21 +13,36 @@ PROCEDURE initializeOutputSettings;
       miMinErrorlevel2.Checked:=maxLevel= 2;
       miMinErrorlevel3.Checked:=maxLevel= 3;
       miMinErrorlevel4.Checked:=maxLevel>=4;
+      miUserErrors    .Checked:=(mt_el1_userNote    in settings.value^.outputBehaviour)
+                            and (mt_el2_userWarning in settings.value^.outputBehaviour)
+                            and (mt_el3_userDefined in settings.value^.outputBehaviour);
     end;
     guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour+C_guiOnlyMessages;
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
   end;
 
-PROCEDURE setVerbosity(CONST level:byte);
+PROCEDURE setVerbosity(level:byte);
   VAR j:byte;
   begin
     case level of
-      1: MnhForm.miMinErrorlevel1.Checked:=true;
+      1: begin
+           MnhForm.miMinErrorlevel1.Checked:=true;
+           MnhForm.miUserErrors    .Checked:=true;
+         end;
       2: MnhForm.miMinErrorlevel2.Checked:=true;
       3: MnhForm.miMinErrorlevel3.Checked:=true;
       4: MnhForm.miMinErrorlevel4.Checked:=true;
+    255: MnhForm.miUserErrors    .Checked:=true;
+    254: begin
+           MnhForm.miUserErrors  .Checked:=MnhForm.miMinErrorlevel1.Checked;
+           if MnhForm.miMinErrorlevel1.Checked then level:=1;
+           if MnhForm.miMinErrorlevel2.Checked then level:=2;
+           if MnhForm.miMinErrorlevel3.Checked then level:=3;
+           if MnhForm.miMinErrorlevel4.Checked then level:=4;
+         end;
     end;
-    for j:=1 to 4 do guiOutAdapter.enableMessageType(j>=level,C_errorMessageTypes[j]);
+    if level in [1..4] then for j:=1 to 4 do guiOutAdapter.enableMessageType(j>=level,C_errorMessageTypes[j]);
+    if MnhForm.miUserErrors.Checked then guiOutAdapter.enableMessageType(true,[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined]);
     settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
   end;
 
