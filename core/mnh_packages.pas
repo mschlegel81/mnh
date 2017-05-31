@@ -256,8 +256,7 @@ DESTRUCTOR T_packageReference.destroy;
   end;
 
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
-  VAR statementCounter:longint=0;
-      profile:boolean=false;
+  VAR profile:boolean=false;
 
   PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
     VAR i,j:longint;
@@ -515,7 +514,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;
-      inc(statementCounter);
 
       if (statement.firstToken^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
          (statement.firstToken^.next   <>nil) and
