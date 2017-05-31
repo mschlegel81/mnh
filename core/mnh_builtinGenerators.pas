@@ -177,7 +177,7 @@ FUNCTION T_filterGenerator.next(CONST location: T_tokenLocation; VAR context: T_
         if nextUnfiltered=nil then exit(newVoidLiteral)
                               else exit(nextUnfiltered);
       end;
-    until (result<>nil);
+    until (result<>nil) or not(context.adapters^.noErrors);
   end;
 
 DESTRUCTOR T_filterGenerator.destroy;
@@ -278,10 +278,95 @@ FUNCTION fileLineIterator intFuncSignature;
     end;
   end;
 
+TYPE
+  P_primeGenerator=^T_primeGenerator;
+  T_primeGenerator=object(T_builtinGeneratorExpression)
+    private
+      table:array of bitpacked array[0..255] of boolean;
+      index:int64;
+    public
+      CONSTRUCTOR create(CONST loc:T_tokenLocation);
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_primeGenerator.create(CONST loc: T_tokenLocation);
+  VAR i,j:longint;
+  begin
+    inherited create(loc);
+    setLength(table,1);
+    index:=2;
+
+    for i:=0 to 255 do table[0][i]:=i>=2;
+    for i:=2 to 16 do begin
+      if table[0][i] then begin
+        j:=i*i;
+        while j<=255 do begin
+          table[0][j]:=false;
+          inc(j,i);
+        end;
+      end;
+    end;
+  end;
+
+FUNCTION T_primeGenerator.getId: T_idString;
+  begin
+    result:='primeGenerator';
+  end;
+
+FUNCTION T_primeGenerator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+  PROCEDURE extendTable;
+    VAR offset,newMax:int64;
+        k0,k:longint;
+        i,j:int64;
+    begin
+      k0:=length(table);
+      offset:=k0 shl 8;
+      setLength(table,k0*2);
+      newMax:=256*length(table)-1;
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: computing primes in range ',offset,'..',newMax);
+      {$endif}
+      for k:=k0 to length(table)-1 do for i:=0 to 255 do table[k][i]:=odd(i);
+      for i:=3 to round(sqrt(newMax)) do begin
+        if table[i shr 8][i and 255] then begin
+          j:=i*i;
+          while j<offset do inc(j,i);
+          while j<=newMax do begin
+            table[j shr 8][j and 255]:=false;
+            inc(j,i);
+          end;
+        end;
+      end;
+    end;
+
+  begin
+    if index>=256*length(table) then extendTable;
+    while not(table[index shr 8][index and 255]) do begin
+      inc(index);
+      if index>=256*length(table) then extendTable;
+    end;
+    result:=newIntLiteral(index);
+    inc(index);
+  end;
+
+DESTRUCTOR T_primeGenerator.destroy;
+  begin
+    setLength(table,0);
+  end;
+
+FUNCTION primeGenerator intFuncSignature;
+  begin
+    if (params=nil) or (params^.size=0)
+    then new(P_primeGenerator(result),create(tokenLocation))
+    else result:=nil;
+  end;
+
 INITIALIZATION
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,[],ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,[],ak_binary,'permutationIterator(i:int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true');
   registerRule(LIST_NAMESPACE,'fileLineIterator', @fileLineIterator,[se_readingExternal],ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
-
+  registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,[],ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
 end.
