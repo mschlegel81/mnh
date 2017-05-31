@@ -205,7 +205,7 @@ FUNCTION regexReplace_imp intFuncSignature;
     end;
   end;
 
-CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';
+CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/en/regexp_syntax.html">the used library''s website.</a>';
 INITIALIZATION
   mnh_funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,[],ak_binary ,'matches(searchString,regex);#returns true if string/-list searchString matches string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,[],ak_binary ,'matchComposite(searchString,regex);#returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#If lists are given they must have equal sizes.'+SYNTAX_LINK);
