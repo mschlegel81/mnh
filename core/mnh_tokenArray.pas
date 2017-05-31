@@ -424,7 +424,7 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
           end;
         end else associatedPackage^.resolveId(nextToken^,nil);
         //This is a hack to ensure that "myPath" behaves nicely when including
-        if (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
+        if (nextToken<>nil) and (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
       end;
       tt_each,tt_parallelEach: if not(retainBlanks) then begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;

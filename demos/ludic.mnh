@@ -1,4 +1,4 @@
-sieve->begin
+LudicSieve->begin
   local candidates:=[2..21511];
   local L:=[1];
   while(not(candidates==[]),begin
@@ -18,7 +18,7 @@ end;
 
 //*See http://rosettacode.org/wiki/Ludic_numbers
 main->begin
-  local LUDICS:=sieve;
+  local LUDICS:=LudicSieve;
   local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);
   print("Ludic Numbers",
       "\n  The first 25 are: ",LUDICS.head(25),'.',

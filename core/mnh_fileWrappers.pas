@@ -72,6 +72,7 @@ FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
     if GetCurrentDir=lastFileCacheWorkingDir then begin
       if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
     end else begin
+      lastFileCacheWorkingDir:=GetCurrentDir;
       fileByIDCache.clear;
       result:='';
     end;

@@ -29,8 +29,26 @@ end}
 
 FUNCTION head_imp intFuncSignature;
 {$define CALL_MACRO:=head}
-{$define SCALAR_FALLBACK:=begin result:=arg0; result^.rereference; end}
-SUB_LIST_IMPL;
+{$define SCALAR_FALLBACK:=result:=arg0^.rereferenced}
+VAR iterator:P_iterator;
+    i:longint;
+begin
+  if (params<>nil)
+     and (params^.size=2)
+     and (arg0^.literalType=lt_expression)
+     and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0))
+     and (P_expressionLiteral(arg0)^.isStateful)
+     and (arg1^.literalType=lt_int)
+     and (int1^.value>=0) then begin
+     if int1^.value=0 then exit(newListLiteral());
+     result:=newListLiteral(int1^.value);
+     iterator:=newIterator(arg0);
+     for i:=1 to int1^.value do listResult^.append(iterator^.next(@context),false);
+     dispose(iterator,destroy);
+     exit(result);
+  end;
+  SUB_LIST_IMPL;
+end;
 
 FUNCTION trailing_imp intFuncSignature;
 {$define CALL_MACRO:=trailing}
@@ -214,6 +232,7 @@ FUNCTION reverseList_impl intFuncSignature;
 FUNCTION setUnion_imp     intFuncSignature; begin result:=setUnion    (params); end;
 FUNCTION setIntersect_imp intFuncSignature; begin result:=setIntersect(params); end;
 FUNCTION setMinus_imp     intFuncSignature; begin result:=setMinus    (params); end;
+FUNCTION mergeMaps_imp    intFuncSignature; begin result:=mapMerge    (params,tokenLocation,@context); end;
 
 FUNCTION get_imp intFuncSignature;
   VAR tmpPar:T_listLiteral;
@@ -491,6 +510,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,[],ak_variadic_1,'union(A,...);//Returns a union of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,[],ak_variadic_1,'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,[],ak_binary    ,'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,[],ak_ternary   ,'mergeMaps(A:map,B:map,M:expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.');
   registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,[],ak_variadic  ,'flatten(L,...);//Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,[],ak_unary     ,'size(L);//Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,[],ak_unary     ,'trueCount(B:booleanList);//Returns the number of true values in B');

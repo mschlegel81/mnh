@@ -1,3 +1,8 @@
+projectSLOC->hashFiles
+             .filter({not($file.matches('3rd_party'))})
+             .pMap({$file.fileLines.trim.filter({$line!='' and not($line.matches('^//'))})})
+             .flatten;
+
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 
 type BuildConfig(L:list(7))->L[0].isBoolean AND

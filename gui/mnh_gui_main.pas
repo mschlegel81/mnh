@@ -99,6 +99,7 @@ TYPE
     miEditGuiScripts,
     miUtilityScriptRoot,
     submenuEditorAppearance:   TMenuItem;
+    miUserErrors: TMenuItem;
     miFileHistoryRoot: TMenuItem;
     miHtmlExport: TMenuItem;
     OpenDialog:                TOpenDialog;
