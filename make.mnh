@@ -4,7 +4,7 @@ tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
 private needBuilt(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
 
-private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe').execPipeless(
+private delp->(isLinux ? 'delp' : DelpPath).execPipeless(
        ['gui/lib/i386-win32',
         'gui/lib/x86_64-linux',
         'gui/lib/x86_64-win64',
@@ -28,8 +28,8 @@ private templateToInc(inFile,outFile<>inFile)->templateToInc(inFile,fileLines(in
 
 private ensurePackagesLines->'{'|
     sort(files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
-    .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file))&']'))|
-    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}";
+    .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file).compress)&']'))|
+    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],decompress(f[1])))}";
 
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
@@ -38,9 +38,6 @@ currentCodeHash:=begin
   executor.execPipeless(['../checkstyle.mnh','fix']);
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
-  fileExists('core/built_number.inc')
-  ? void
-  : writeFile('core/built_number.inc',"BUILT_NUMBER=-1;");
   templateToInc('resources/examples.txt'                   ,'core/res_examples.inc');
   templateToInc('resources/html_template.txt'              ,'core/res_html_template.inc');
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
@@ -141,7 +138,6 @@ private cleanup->begin
   .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;
   currentCodeHash:=void;
-  clearAllCaches;
 end;
 
 testIsPassedAccordingToLog(B:BuildConfig)->

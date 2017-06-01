@@ -11,7 +11,7 @@ canPlot->executor.canPlot;
 canPlot(exe:string)->exe.exeInfo['isFullVersion'];
 codeVersion(exe:string)->exe.exeInfo['codeVersion'] orElse '';
 codeHash->executor.codeHash;
-codeHash(exe:string)->exe.exeInfo[['flavour','codeVersion']].join(':');
+codeHash(exe:string)->exe.exeInfo.getAll(['flavour','codeVersion']).join(':');
 isDebug(exe:string)->exe.exeInfo['isDebugVersion'];
 flavour->executor.flavour;
 flavour(exe:string)->exe.exeInfo['flavour'] orElse '';
