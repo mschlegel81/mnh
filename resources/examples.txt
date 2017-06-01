@@ -394,7 +394,20 @@ diff('encode','decode');
 
 diffStats('encode','decode');
 
+//String: %s, Decimal format: %d  (parameters are optional)
 format('%s is a string, %3.3d is a number','X',7);
+
+//Floating point format: %f
+format('%6.3f',3);
+
+//Scientific format: %e
+format('%6.3e',3);
+
+//General number format: %g
+format('%6.3g',3);
+
+//Hexadecimal: %x (parameters are optional)
+format('%6.6x',1234);
 
 formatTime('mm.dd.yyyy',43210);
 
@@ -744,6 +757,8 @@ primeGenerator.head(10);
 [-1,1,-1,1,-2,2].agg(*);
 
 [-1,1,-1,1,-2,2].agg(+);
+
+permutationIterator([3,1,2]).map(::print);
 
 //==END REG TEST==
 
