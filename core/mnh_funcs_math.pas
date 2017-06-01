@@ -659,6 +659,54 @@ FUNCTION digits_impl intFuncSignature;
     end;
   end;
 
+FUNCTION composeDigits_imp intFuncSignature;
+  VAR base:int64=10;
+      Shift:int64=0;
+
+      k  :longint;
+      dig:int64;
+      ir :int64    =0;
+      fr :T_myFloat=0;
+      invalidatedIntResult:boolean=false;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.size<=3) and
+       (arg0^.literalType in [lt_emptyList,lt_intList]) then begin
+      if params^.size>=2 then begin
+        if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value;
+        if base<=1 then begin
+          context.adapters^.raiseError('Cannot compose digits with base '+arg1^.toString,tokenLocation);
+          exit(nil);
+        end;
+      end;
+      if params^.size=3 then begin
+        if arg2^.literalType<>lt_int then exit(nil) else Shift:=int2^.value;
+      end;
+      if arg0^.literalType=lt_emptyList then exit(newIntLiteral(0));
+
+      {$Q-}{$R-}
+      for k:=0 to list0^.size-1 do begin
+        dig:=P_intLiteral(list0^[k])^.value;
+        if (dig>=base) or (dig<0) then context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
+        ir:=ir*base+dig;
+        fr:=fr*base+dig;
+        invalidatedIntResult:=invalidatedIntResult or (ir<0);
+      end;
+      if Shift<0 then for k:=-1 downto Shift do begin
+        ir:=ir*base+dig;
+        fr:=fr*base+dig;
+        invalidatedIntResult:=invalidatedIntResult or (ir<0);
+      end else if Shift>0 then begin
+        dig:=1;
+        for k:=1 to Shift do fr:=fr/base;
+        invalidatedIntResult:=true;
+      end;
+      {$Q+}{$R+}
+      if invalidatedIntResult then exit(newRealLiteral(fr))
+                              else exit(newIntLiteral (ir));
+    end;
+  end;
+
 FUNCTION arctan2_impl intFuncSignature;
   VAR x,y:T_myFloat;
   begin
@@ -709,5 +757,8 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,[],ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
   registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,[],ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
   registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,[],ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
+  registerRule(MATH_NAMESPACE,'composeDigits',@composeDigits_imp,[],ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
+                                                                                  'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
+                                                                                  'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,[],ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
 end.
