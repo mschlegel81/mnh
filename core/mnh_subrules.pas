@@ -145,7 +145,6 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION isStateful:boolean; virtual;
       //Must implement:
-      //  FUNCTION getId:T_idString; virtual;
       FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual; abstract;
   end;
 
@@ -158,7 +157,7 @@ IMPLEMENTATION
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
-      inlineSubRule:P_subruleExpression;
+      inlineSubRule:P_inlineExpression;
   begin
     predigest(rep,nil,context.recycler,context.adapters);
     if (rep^.tokType<>tt_expBraceOpen) then begin
@@ -817,8 +816,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean;
     else                                 result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation;
-  CONST context: pointer; CONST a: P_literal; CONST b: P_literal): boolean;
+FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
   begin
     resultLiteral:=evaluateToLiteral(location,context,a,b);
@@ -844,8 +842,11 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
   VAR violations:T_sideEffects;
   begin
     violations:=violatingSideEffects(func,P_threadContext(context)^.sideEffectWhitelist);
-    if violations=[] then result:=func(parameters,location,P_threadContext(context)^)
-    else begin
+    if violations=[] then begin
+      {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self); {$endif}
+      result:=func(parameters,location,P_threadContext(context)^);
+      {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
+    end else begin
       P_threadContext(context)^.raiseSideEffectError('function '+getId,location, violations);
       result:=nil;
     end;
@@ -859,7 +860,9 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
       P_threadContext(context)^.raiseSideEffectError('function '+getId,location, [se_writingInternal]);
       exit(nil);
     end;
+    {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self); {$endif}
     result:=next(location,P_threadContext(context)^);
+    {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
   end;
 
 FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
@@ -919,7 +922,7 @@ FUNCTION T_subruleExpression.getDocTxt: ansistring;
 
 FUNCTION T_inlineExpression.getId: T_idString;
   begin
-    result:=C_expressionTypeString[typ]+pattern.toString;
+    result:=toString(50);
   end;
 
 FUNCTION T_subruleExpression.getId: T_idString;
