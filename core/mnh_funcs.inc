@@ -113,48 +113,6 @@ FUNCTION inspect_imp intFuncSignature;
     end;
   end;
 
-FUNCTION clearRuleCache_imp intFuncSignature;
-  VAR ruleIdToken:T_token;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      ruleIdToken.create;
-      ruleIdToken.define(tokenLocation,P_stringLiteral(arg0)^.value,tt_identifier);
-      P_abstractPackage(tokenLocation.package)^.resolveId(ruleIdToken,context.adapters);
-      if ruleIdToken.tokType in [tt_customTypeCheck,tt_customTypeRule,tt_localUserRule,tt_importedUserRule] then P_rule(ruleIdToken.data)^.clearCache;
-      ruleIdToken.destroy;
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
-FUNCTION clearPackageCache_imp intFuncSignature;
-  VAR i:longint;
-      id:string;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.clearPackageCache(false);
-      result:=newVoidLiteral;
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      id:=P_stringLiteral(arg0)^.value;
-      with P_package(tokenLocation.package)^ do
-        for i:=0 to length(packageUses)-1 do begin
-          if (packageUses[i].id=id) or (packageUses[i].path=id) then begin
-            packageUses[i].pack^.clearPackageCache(false);
-            if result=nil then result:=newVoidLiteral;
-          end;
-        end;
-      if result=nil then context.adapters^.raiseError('Cannot locate package with id or path "'+id+'"',tokenLocation);
-    end;
-  end;
-
-FUNCTION clearAllCaches_imp intFuncSignature;
-  begin
-    if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.clearPackageCache(true);
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
 FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
@@ -175,9 +133,6 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,[],ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,[],ak_binary,'runScript(filenameOrId:string,parameters:stringList);//executes the given script - in the current program instance but strictly isolated');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,[se_readingExternal,se_readingInternal],ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearRuleCache'   ,@clearRuleCache_imp   ,[se_writingInternal],ak_unary     ,'clearRuleCache(id:string);//Clears memoized rule caches for a specified rule and returns void.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPackageCache',@clearPackageCache_imp,[se_writingInternal],ak_unary     ,'clearPackageCache(id:string);//Clears memoized rule caches for a used package specified by id or path and returns void.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearAllCaches'   ,@clearAllCaches_imp   ,[se_writingInternal],ak_nullary   ,'clearAllCaches;//Clears all memoized rule caches and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,[se_writingExternal],ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,[se_writingExternal],ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
   initialize(packageCs);

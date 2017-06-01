@@ -55,7 +55,6 @@ TYPE
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
       PROCEDURE clear(CONST includeSecondaries:boolean);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
-      PROCEDURE clearPackageCache(CONST recurse:boolean);
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       FUNCTION inspect:P_mapLiteral;
@@ -811,15 +810,6 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
       else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
       then adapters.raiseError(C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart);
     end;
-  end;
-
-PROCEDURE T_package.clearPackageCache(CONST recurse:boolean);
-  VAR r:T_ruleMap.VALUE_TYPE_ARRAY;
-      i:longint;
-  begin
-    r:=packageRules.valueSet;
-    for i:=0 to length(r)-1 do if r[i]^.getRuleType=rt_memoized then r[i]^.clearCache;
-    if recurse then for i:=0 to length(secondaryPackages)-1 do secondaryPackages[i]^.clearPackageCache(true);
   end;
 
 FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
