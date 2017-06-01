@@ -394,7 +394,20 @@ diff('encode','decode');
 
 diffStats('encode','decode');
 
+//String: %s, Decimal format: %d  (parameters are optional)
 format('%s is a string, %3.3d is a number','X',7);
+
+//Floating point format: %f
+format('%6.3f',3);
+
+//Scientific format: %e
+format('%6.3e',3);
+
+//General number format: %g
+format('%6.3g',3);
+
+//Hexadecimal: %x (parameters are optional)
+format('%6.6x',1234);
 
 formatTime('mm.dd.yyyy',43210);
 
@@ -712,20 +725,31 @@ toList([2,3,6].toSet);
 
 [1..20].filter({$x mod 2<>0<>$x mod 3});
 
+//Filtering a generator/iterator results in a new generator/iterator
+rangeGenerator(1,20).filter({$x mod 2<>0<>$x mod 3});
+
 //#lists.map
 ['a'..'f'].map(::upper);
 
 //#lists.pMap
 ['a'..'f'].pMap(::upper);
 
+//head can be used to access the first elements of a generator/iterator
+primeGenerator.head(10);
+
+//head is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(head);
 
+//trailing is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(trailing);
 
+//toSet is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(toSet);
 
+//max is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(max);
 
+//min is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(min);
 
 [-1,1,-1,1,-2,2].agg(&);
@@ -733,6 +757,8 @@ toList([2,3,6].toSet);
 [-1,1,-1,1,-2,2].agg(*);
 
 [-1,1,-1,1,-2,2].agg(+);
+
+permutationIterator([3,1,2]).map(::print);
 
 //==END REG TEST==
 

@@ -172,7 +172,7 @@ PROCEDURE T_debuggingStepper.removeBreakpoint(CONST fileName:string; CONST line:
 PROCEDURE T_debuggingStepper.setState(CONST newState: T_debuggerState);
   begin
     system.enterCriticalSection(cs);
-    if (state=waitingForGUI) then state:=newState;
+    if (state=waitingForGUI) or (newState=breakSoonest) then state:=newState;
     system.leaveCriticalSection(cs);
   end;
 

@@ -1201,6 +1201,7 @@ FUNCTION async_imp intFuncSignature;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal,se_detaching],ak_variadic_1,'async(E:expression);//Calls E asynchronously (without parameters) and returns void.#'+
-               'async(E:expression,par:list);//Calls E@par and asynchronously and returns void.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal,se_detaching],ak_variadic_1,
+               'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
 end.

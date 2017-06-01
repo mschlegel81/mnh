@@ -16,7 +16,6 @@ validateCollectedOutput(doLog:boolean,output:stringList)->begin
   local expectedResultName:=myPath.changeFileExt('.'&flavour&'.expected');
   local lastResultName    :=myPath.changeFileExt('.'&flavour&'.last');
   local stateMessage:='';
-  clearPrint;
   print("Test finished at ",formatTime('c',systime));
   fileExists(expectedResultName)
   ? begin

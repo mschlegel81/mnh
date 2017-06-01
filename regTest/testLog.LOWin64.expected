@@ -1709,6 +1709,7 @@ The approximate taylor expansion of {$t^(1+sin($t))} around 1 is
 ID    : A000002
 Name  : Kolakoski sequence: a(n) is length of n-th run; a(1) = 1; sequence consists just of 1's and 2's.
 Values: [1,2,2,1,1,2,1,2,2,1,2,2,1,1,2,1,1,2,2,1,2,1,1,2,1,2,2,1,1,2,1,1,2,1,2,2,1,2,2,1,1,2,1,2,2,1,2,1,1,2]
+
 ***** opTest *****
 true and false = false
 true or false = true
@@ -3812,6 +3813,14 @@ out> [['adds',1],['matches',5],['modifies',0],['edit',[['+',-1,0],[' ',0,1],['-'
 out> [['adds',1],['deletes',1],['matches',5],['modifies',0]].toMap
  in> format('%s is a string, %3.3d is a number','X', 7);
 out> 'X is a string, 007 is a number'
+ in> format('%6.3f', 3);
+out> ' 3.000'
+ in> format('%6.3e', 3);
+out> '3.00E+000'
+ in> format('%6.3g', 3);
+out> '     3'
+ in> format('%6.6x', 1234);
+out> '0004D2'
  in> formatTime('mm.dd.yyyy', 43210);
 out> '04.20.2018'
  in> isAscii('xyz');
@@ -4111,10 +4120,14 @@ out> ['one','five','-']
 out> true
  in> [1..20].filter({$x mod 2<>0<>$x mod 3});
 out> [1,5,7,11,13,17,19]
+ in> rangeGenerator(1, 20).filter({$x mod 2<>0<>$x mod 3});
+out> ::filter/generator
  in> ['a'..'f'].map(:: upper);
 out> ['A','B','C','D','E','F']
  in> ['a'..'f'].pMap(:: upper);
 out> ['A','B','C','D','E','F']
+ in> primeGenerator.head(10);
+out> [2,3,5,7,11,13,17,19,23,29]
  in> [-1, 1,-1, 1,-2, 2].agg(head);
 out> -1
  in> [-1, 1,-1, 1,-2, 2].agg(trailing);
@@ -4131,3 +4144,10 @@ out> '-11-11-22'
 out> -4
  in> [-1, 1,-1, 1,-2, 2].agg(+);
 out> 0
+ in> permutationIterator([3, 1, 2]).map(:: print);
+[1,3,2]
+[2,1,3]
+[2,3,1]
+[3,1,2]
+[3,2,1]
+out> []

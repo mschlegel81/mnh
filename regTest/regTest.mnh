@@ -124,3 +124,23 @@ main('export',filename:string)->writeFile(filename,runTimes.serialize);
 
 //*Display info on test cases
 main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKIP' : ''].join("\t")}).join("\n").print;
+
+//*Limit number of samples to count per flavour/testcase retaining the newest samples
+main('limit',count:string)->begin
+  local limit:=count.softCast;
+  limit.isInt AND limit>1
+  ? begin
+      print('Samples @pre : ',runTimes.size);
+      print('Filtering samples to be retained (per flavour and testcase)');
+      local indexLists:=runTimes.pEach(sample,sample.leading|index).group(runTimes.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}).getInner(2).each(i,i.isList ? i : [i]);
+      indexLists.each(list,list.size>limit,OR) //update only if at least one list is too long
+      ? begin
+          local indexesToRetain:=indexLists.each(l,l.trailing(limit)).flatten;
+          printf('Dropping %{$1-$0}s of %{$1}s entries',indexesToRetain.size,runTimes.size);
+          runTimes:=runTimes.get(indexesToRetain);
+        end
+      : print('Nothing to be done. Longest sample row has ',indexLists.each(list,list.size,max),' elements');
+      print('Samples @post: ',runTimes.size);
+    end
+  : fail("count must be an integer >=1");
+end;
