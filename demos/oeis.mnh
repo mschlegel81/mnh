@@ -161,7 +161,9 @@ testSequence(meta:SequenceMeta)->begin
                                           "\n  computed: ",computed);
 end;
 
-obtainData(id:string)->obtainData(id,100);
+prettyPrint(m:map)->print("ID\v: ",m['id'] orElse 'A??????',"\nName\v: ",m['name'] orElse '-',"\nValues\v: ",m['seq'] orElse '-',"\n");
+
+obtainData(id:string)->obtainData(id,256);
 obtainData(id:string,n:int)->begin
   SequenceTable.each(meta,
     meta[0]==id
@@ -187,8 +189,5 @@ main(id,nMax)->begin
   id.matches('^A\d{6}$')
   ? void
   : fail('id "',id,'" is not an OEIS sequence id');
-  local data:=obtainData(id,n);
-    print('ID    : ',id,
-        "\nName  : ",data['name'],
-        "\nValues: ",data['seq']);
+  obtainData(id,n).prettyPrint;
 end;
