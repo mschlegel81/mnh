@@ -465,7 +465,10 @@ PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
     miProfile.Checked:=not(miProfile.Checked);
-    if miProfile.Checked and not(miTimingInfo.Checked) then miTimingInfoClick(Sender);
+    if miProfile.Checked and not(miTimingInfo.Checked) then begin
+      miTimingInfo.Checked:=miTimingInfo.AutoCheck;
+      miTimingInfoClick(Sender);
+    end;
   end;
 
 PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);
