@@ -2139,12 +2139,14 @@ FUNCTION T_setLiteral.clone: P_compoundLiteral;
         dat.dat[bin,i].key^.rereference;
       end;
     end;
+    result^.literalType:=literalType;
   end;
 
 FUNCTION T_mapLiteral.clone: P_compoundLiteral;
   VAR bin,i:longint;
   begin
     result:=newMapLiteral;
+    result^.literalType:=literalType;
     setLength(P_mapLiteral(result)^.dat.dat,
                              length(dat.dat));
     for bin:=0 to length(dat.dat)-1 do begin
@@ -2860,15 +2862,25 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
       L,M:P_literal;
   begin
     if (params=nil) or (params^.size<>3) or
-       (params^[0]^.literalType<>lt_map) or
-       (params^[1]^.literalType<>lt_map) or
+       not(params^[0]^.literalType in [lt_map,lt_emptyMap]) or
+       not(params^[1]^.literalType in [lt_map,lt_emptyMap]) or
        (params^[2]^.literalType<>lt_expression) then exit(nil);
-    map1  :=P_mapLiteral(params^[0]);
-    map2  :=P_mapLiteral(params^[1]);
+    if P_mapLiteral(params^[0])^.size>=
+       P_mapLiteral(params^[1])^.size
+    then begin
+      map1:=P_mapLiteral(params^[0]);
+      map2:=P_mapLiteral(params^[1]);
+    end else begin
+      map1:=P_mapLiteral(params^[1]);
+      map2:=P_mapLiteral(params^[0]);
+    end;
     merger:=P_expressionLiteral(params^[2]);
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
 
-    result:=newMapLiteral^.putAll(map1);
+    if map2^.size=0 then exit(P_mapLiteral(map1^.rereferenced));
+
+    result:=P_mapLiteral(map1^.clone);
+
     for entry in map2^.dat.keyValueList do begin
       L:=result^.dat.get(entry.key,nil);
       if L=nil then begin
