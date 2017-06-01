@@ -1717,6 +1717,7 @@ The approximate taylor expansion of {$t^(1+sin($t))} around 1 is
 ID    : A000002
 Name  : Kolakoski sequence: a(n) is length of n-th run; a(1) = 1; sequence consists just of 1's and 2's.
 Values: [1,2,2,1,1,2,1,2,2,1,2,2,1,1,2,1,1,2,2,1,2,1,1,2,1,2,2,1,1,2,1,1,2,1,2,2,1,2,2,1,1,2,1,2,2,1,2,1,1,2]
+
 ***** opTest *****
 true and false = false
 true or false = true
@@ -4134,10 +4135,14 @@ out> ['one','five','-']
 out> true
  in> [1..20].filter({$x mod 2<>0<>$x mod 3});
 out> [1,5,7,11,13,17,19]
+ in> rangeGenerator(1, 20).filter({$x mod 2<>0<>$x mod 3});
+out> ::filter/generator
  in> ['a'..'f'].map(:: upper);
 out> ['A','B','C','D','E','F']
  in> ['a'..'f'].pMap(:: upper);
 out> ['A','B','C','D','E','F']
+ in> primeGenerator.head(10);
+out> [2,3,5,7,11,13,17,19,23,29]
  in> [-1, 1,-1, 1,-2, 2].agg(head);
 out> -1
  in> [-1, 1,-1, 1,-2, 2].agg(trailing);
