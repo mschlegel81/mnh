@@ -47,7 +47,7 @@ packSets(linuxBuiltsReady:boolean,builtNo)->
   linuxBuiltsReady ? [[      'mnh'    ,      'mnh_light'    ],'linux'        ] : void]
   .each(s,[expandedFileName(s[0]),builtNo,s[1]]);
 
-private memoized sevenZipExe->
+memoized sevenZipExe->
   ["c:/Program Files/7-Zip/7z.exe",
    "c:/Program Files (x86)/7-Zip/7z.exe"]
   .each(file,file.fileExists ? file : void,head)

@@ -1,9 +1,6 @@
-USE make_config;
+USE make_config, distroLog;
 
-TARGET_FOLDER:='D:\dev\temp\';
-
-CORE_TARGET_FOLDER:=TARGET_FOLDER&'core\';
-THIRD_TARGET_FOLDER:=TARGET_FOLDER&'3rd_party\';
+DEFAULT_TARGET_FOLDER:='D:\dev\temp\';
 
 NeedLicense(filename:string)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
 License:=//!~
@@ -24,26 +21,45 @@ License:=//!~
 // doesn't work with your project licensing.
 //
 ~.format.split("\n");
-addLicense(fileName:string)->fileName.writeFileLines(License|fileName.fileLines);
+
+Readme:=//!~
+This is the MNH project.
+
+Author: Martin Schlegel <m.schlegel81[at]googlemail.com>
+(c) Martin Schlegel 2010 - %{formatTime('yyyy',systime)}s
+Generated at %{formatTime('c',systime)}s
+
+Windows users:
+  - If not present, install Lazarus (32bit and/or 64bit version)
+  - modify make.bat        (set path to lazbuild.exe correctly)
+  - modify make_config.mnh (set paths to lazbuild.exe, delp.exe, 7z.exe correctly; maybe remove build targets not needed for you)
+  - run make.bat
+
+Linux users:
+  - If not present, install Lazarus (32bit and/or 64bit version)
+  - run make.sh
+~.format.split("\n");
 
 copyWithLicense(sourceName:string,targetName:string)->
   sourceName.NeedLicense
   ? targetName.writeFileLines(License|sourceName.fileLines)
   : copyFile(sourceName,targetName);
 
-main->begin
+main->main(DEFAULT_TARGET_FOLDER);
+main(target)->begin
+  local TargetFolder:=target.matches('/|\\$') ? target : target&'/';
+
+  local CORE_TARGET_FOLDER:=TargetFolder&'core\';
+  local THIRD_TARGET_FOLDER:=TargetFolder&'3rd_party\';
+
   print('Cleaning output folder');
-  allFiles(TARGET_FOLDER,'*').map(::deleteFile);
-  allFolders(TARGET_FOLDER).map({$x.deleteDir ? void : $x});
+  allFiles(TargetFolder,'*').map(::deleteFile);
 
   print('Copying MNH sources');
   allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh'])
-    .filter({not($0.matches('/lib/')) AND
-             not($0.matches('core/res_.*inc')) AND
-             not($0.matches('core/built_number.inc')) AND
-             not($0.matches('core/code_hash.inc')) AND
+    .filter({not($0.matches('/lib/|core/res_.*inc$|core/built_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
-    .pMap({copyWithLicense($0,TARGET_FOLDER&$0)});
+    .pMap({copyWithLicense($0,TargetFolder&$0)});
 
   print('Copying common sources');
   hashFiles
@@ -54,6 +70,15 @@ main->begin
   ['../3rd_party/epikTimer/','../3rd_party/synapse/']
     .each(root,allFiles(root,['*.inc','*.pp','*.pas'])
     .pMap({copyFile($0,THIRD_TARGET_FOLDER&extractFileName($0))}));
+
+  print('Creating readme');
+  writeFileLines(TargetFolder&'readme.txt',Readme);
+
+  changeDirectory(TargetFolder);
+
+  local packedFile:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.7z';
+  sevenZipExe.execPipeless(['a','-r','-bd',packedFile,'*']);
+  print('File ',packedFile,' created');
+  print('Cleaning output folder');
+  allFiles(TargetFolder,'*').map(::deleteFile);
 end;
-
-

@@ -30,8 +30,8 @@
             <Filename Value="mnh"/>
           </Target>
           <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\core"/>
-            <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer"/>
+            <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer;..\3rd_party"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -337,7 +337,7 @@
       <Filename Value="mnh_debug"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir);..\core"/>
+      <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
       <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer;..\3rd_party"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
