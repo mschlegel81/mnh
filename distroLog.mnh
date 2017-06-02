@@ -3,6 +3,8 @@ plain datastore log;
 private max([])->0;
 private max(...)->math.max@...;
 
+maxLoggedBuildNumber->log.getInner(1).max;
+
 memoized getBuiltNumber(codeHash:string)->begin
   isVoid(log)
   ? begin
@@ -11,7 +13,7 @@ memoized getBuiltNumber(codeHash:string)->begin
   : void;
 
   log[codeHash] orElse begin
-    local nextNo:=log.getInner(1).max+1;
+    local nextNo:=maxLoggedBuildNumber+1;
     log<<[codeHash,nextNo];
     nextNo;
   end;

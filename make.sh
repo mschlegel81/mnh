@@ -1,6 +1,4 @@
 #!/bin/bash
-if [ ! -f .gitignore ]; then "7z" x -y git.7z;fi
-if [ ! -f make.mnh ]; then  git reset --hard;fi
 if [ ! -f core/code_hash.inc ]; then echo "CODE_HASH='xxxxxxxx';" > core/code_hash.inc;fi
 if [ ! -f core/built_number.inc ]; then echo "BUILT_NUMBER=0;" > core/built_number.inc;fi
 if [ ! -f mnh_light ]; then
@@ -8,5 +6,9 @@ if [ ! -f mnh_light ]; then
   mv consoles/mnh_light .
 fi
 cp mnh_light mnh_tmp 
-./mnh_tmp make.mnh $@
+if [ $1 == "-h" ]; then
+  ./mnh_tmp -h make.mnh
+else
+  ./mnh_tmp make.mnh $@
+fi
 rm mnh_tmp
