@@ -38,6 +38,12 @@ Windows users:
 Linux users:
   - If not present, install Lazarus (32bit and/or 64bit version)
   - run make.sh
+
+Usage of make.bat/.sh/.mnh
+  - The .bat/.sh script calls the .mnh script, ensuring that a (light) MNH-executable is present to execute it
+  - The .mnh script creates the (full) MNH-exectuable - including GUI, documentation, etc.
+  - Run make[.bat|.sh] -h to find out about the accepted parameters
+
 ~.format.split("\n");
 
 copyWithLicense(sourceName:string,targetName:string)->
@@ -56,7 +62,7 @@ main(target)->begin
   allFiles(TargetFolder,'*').map(::deleteFile);
 
   print('Copying MNH sources');
-  allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh'])
+  allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh','*.expected'])
     .filter({not($0.matches('/lib/|core/res_.*inc$|core/built_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
     .pMap({copyWithLicense($0,TargetFolder&$0)});

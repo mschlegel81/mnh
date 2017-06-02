@@ -6,5 +6,9 @@ if [ ! -f mnh_light ]; then
   mv consoles/mnh_light .
 fi
 cp mnh_light mnh_tmp 
-./mnh_tmp make.mnh $@
+if [ $1 == "-h" ]; then
+  ./mnh_tmp -h make.mnh
+else
+  ./mnh_tmp make.mnh $@
+fi
 rm mnh_tmp
