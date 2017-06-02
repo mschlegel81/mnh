@@ -2147,6 +2147,7 @@ FUNCTION T_mapLiteral.clone: P_compoundLiteral;
   begin
     result:=newMapLiteral;
     result^.literalType:=literalType;
+    P_mapLiteral(result)^.dat.fill:=dat.fill;
     setLength(P_mapLiteral(result)^.dat.dat,
                              length(dat.dat));
     for bin:=0 to length(dat.dat)-1 do begin
@@ -2878,7 +2879,6 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
 
     if map2^.size=0 then exit(P_mapLiteral(map1^.rereferenced));
-
     result:=P_mapLiteral(map1^.clone);
 
     for entry in map2^.dat.keyValueList do begin

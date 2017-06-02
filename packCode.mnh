@@ -1,0 +1,59 @@
+USE make_config;
+
+TARGET_FOLDER:='D:\dev\temp\';
+
+CORE_TARGET_FOLDER:=TARGET_FOLDER&'core\';
+THIRD_TARGET_FOLDER:=TARGET_FOLDER&'3rd_party\';
+
+NeedLicense(filename:string)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
+License:=//!~
+//
+// This file is part of the MNH project.
+// Author: Martin Schlegel <m.schlegel81[at]googlemail.com>
+// (c) Martin Schlegel 2010 - %{formatTime('yyyy',systime)}s
+// Generated at %{formatTime('c',systime)}s
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//
+// This library is licensed on the same Modified LGPL as Free Pascal RTL and LCL are
+// (http://wiki.freepascal.org/modified_LGPL)
+//
+// Please contact the author if you'd like to use this component but the Modified LGPL
+// doesn't work with your project licensing.
+//
+~.format.split("\n");
+addLicense(fileName:string)->fileName.writeFileLines(License|fileName.fileLines);
+
+copyWithLicense(sourceName:string,targetName:string)->
+  sourceName.NeedLicense
+  ? targetName.writeFileLines(License|sourceName.fileLines)
+  : copyFile(sourceName,targetName);
+
+main->begin
+  print('Cleaning output folder');
+  allFiles(TARGET_FOLDER,'*').map(::deleteFile);
+  allFolders(TARGET_FOLDER).map({$x.deleteDir ? void : $x});
+
+  print('Copying MNH sources');
+  allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh'])
+    .filter({not($0.matches('/lib/')) AND
+             not($0.matches('core/res_.*inc')) AND
+             not($0.matches('core/built_number.inc')) AND
+             not($0.matches('core/code_hash.inc')) AND
+             $0.expandedFileName<>myPath.expandedFileName})
+    .pMap({copyWithLicense($0,TARGET_FOLDER&$0)});
+
+  print('Copying common sources');
+  hashFiles
+    .filter({$0.matches('common|diff')})
+    .pMap({copyWithLicense($0,CORE_TARGET_FOLDER&extractFileName($0))});
+
+  print('Copying 3rd party sources');
+  ['../3rd_party/epikTimer/','../3rd_party/synapse/']
+    .each(root,allFiles(root,['*.inc','*.pp','*.pas'])
+    .pMap({copyFile($0,THIRD_TARGET_FOLDER&extractFileName($0))}));
+end;
+
+
