@@ -2,7 +2,7 @@ UNIT mnh_constants;
 INTERFACE
 USES sysutils;
 CONST
-  STACK_DEPTH_LIMIT={$ifdef Windows}63000{$else}4100{$endif};
+  STACK_DEPTH_LIMIT={$ifdef Windows}63000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
   {$i code_hash.inc}
   {$i built_number.inc}
   LOGO:array[0..20] of string=(
@@ -572,6 +572,7 @@ TYPE
   T_messageType = (
     mt_clearConsole,
     mt_printline,
+    mt_printdirect,
     mt_echo_input,
     mt_echo_declaration,
     mt_echo_output,
@@ -618,6 +619,7 @@ CONST
   end = (
 {mt_clearConsole           }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_printline              }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_print                  }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_echo_input             }             (level:-1; mClass:mc_echo;    prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_echo_declaration       }             (level:-1; mClass:mc_echo;    prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_echo_output            }             (level:-1; mClass:mc_echo;    prefix: 'out>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),

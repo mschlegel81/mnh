@@ -148,6 +148,7 @@ TYPE
       PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
       PROCEDURE logMissingMain;
       PROCEDURE printOut(CONST s:T_arrayOfString);
+      PROCEDURE printDirect(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
       PROCEDURE clearAll;
       PROCEDURE stopEvaluation;
@@ -192,13 +193,14 @@ TYPE
 CONST
   C_defaultOutputBehavior_interactive:T_messageTypeSet=[mt_clearConsole,
     mt_printline,
+    mt_printdirect,
     mt_echo_input,
     mt_echo_declaration,
     mt_echo_output,
     mt_echo_continued,
     mt_el3_evalError..high(T_messageTypeSet)];
 
-  C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_el3_evalError..mt_endOfEvaluation
+  C_defaultOutputBehavior_fileMode:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_el3_evalError..mt_endOfEvaluation
     {$ifdef fullVersion},
     mt_plotFileCreated,
     mt_plotCreatedWithDeferredDisplay,
@@ -245,7 +247,7 @@ FUNCTION defaultFormatting(CONST message: T_storedMessage; CONST includeGuiMarke
   VAR i:longint;
       loc:string='';
   begin
-    if message.messageType=mt_printline then exit(message.messageText);
+    if message.messageType in [mt_printline,mt_printdirect] then exit(message.messageText);
     with message do begin
       setLength(result,length(messageText));
       with C_messageTypeMeta[messageType] do begin
@@ -269,8 +271,8 @@ OPERATOR :=(s:string):T_messageTypeSet;
       'V': result:=[];
       'u': result:=result+[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
       'U': result:=result-[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
-      'p': result:=result+[mt_printline,mt_clearConsole];
-      'P': result:=result-[mt_printline,mt_clearConsole];
+      'p': result:=result+[mt_printline,mt_printdirect,mt_clearConsole];
+      'P': result:=result-[mt_printline,mt_printdirect,mt_clearConsole];
       'i': result:=result+[mt_echo_input];
       'I': result:=result-[mt_echo_input];
       'd': result:=result+[mt_echo_declaration];
@@ -335,17 +337,23 @@ FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
       s:string;
   begin
     result:=message.messageType in messageTypesToInclude;
-    if result then with message do case messageType of
-      mt_clearConsole: mySys.clearConsole;
-      mt_printline: begin
-        if not(mySys.isConsoleShowing) then mySys.showConsole;
-        for i:=0 to length(messageText)-1 do begin
-          if messageText[i]=C_formFeedChar
-          then mySys.clearConsole
-          else writeln(messageText[i]);
+    if result then with message do begin
+      case messageType of
+        mt_clearConsole: mySys.clearConsole;
+        mt_printline: begin
+          if not(mySys.isConsoleShowing) then mySys.showConsole;
+          for i:=0 to length(messageText)-1 do begin
+            if messageText[i]=C_formFeedChar
+            then mySys.clearConsole
+            else writeln(messageText[i]);
+          end;
         end;
-      end
-      else for s in defaultFormatting(message,false) do writeln(stdErr,s);
+        mt_printdirect: begin
+          if not(mySys.isConsoleShowing) then mySys.showConsole;
+          for i:=0 to length(messageText)-1 do write(messageText[i]);
+        end;
+        else for s in defaultFormatting(message,false) do writeln(stdErr,s);
+      end;
     end;
   end;
 //==========================================================:T_consoleOutAdapter
@@ -401,6 +409,7 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
 PROCEDURE T_collectingOutAdapter.clear;
   begin
     system.enterCriticalSection(cs);
+    inherited clear;
     setLength(storedMessages,0);
     system.leaveCriticalSection(cs);
   end;
@@ -460,7 +469,8 @@ PROCEDURE T_textFileOutAdapter.flush;
         else rewrite(handle);
         forceRewrite:=false;
         for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
-          mt_printline: for j:=0 to length(messageText)-1 do writeln(handle,messageText[j]);
+          mt_printline  : for j:=0 to length(messageText)-1 do writeln(handle,messageText[j]);
+          mt_printdirect: for j:=0 to length(messageText)-1 do write  (handle,messageText[j]);
           else for s in defaultFormatting(storedMessages[i],false) do writeln(handle,s);
         end;
         clear;
@@ -561,6 +571,7 @@ PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: T_arrayOfString; CONST
 PROCEDURE T_adapters.logTimingInfo    (CONST infoText:T_arrayOfString);                                                 begin raiseCustomMessage(message(mt_timing_info     ,infoText            ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logCallStackInfo (CONST infoText:ansistring; CONST location:T_searchTokenLocation);                begin raiseCustomMessage(message(mt_el3_stackTrace  ,infoText            ,location)); end;
 PROCEDURE T_adapters.printOut         (CONST s: T_arrayOfString);                                                       begin raiseCustomMessage(message(mt_printline       ,s                   ,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.printDirect      (CONST s: T_arrayOfString);                                                       begin raiseCustomMessage(message(mt_printdirect     ,s                   ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.clearPrint;                                                                                        begin raiseCustomMessage(message(mt_clearConsole    ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.echoDeclaration(CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_declaration,m                   ,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.echoInput      (CONST m:string);                                                                   begin raiseCustomMessage(message(mt_echo_input      ,m                   ,C_nilTokenLocation)); end;
@@ -667,7 +678,8 @@ FUNCTION T_adapters.hasStackTrace:boolean;
 
 FUNCTION T_adapters.hasPrintOut:boolean;
   begin
-    result:=hasMessageOfType[mt_printline];
+    result:=hasMessageOfType[mt_printline] or
+            hasMessageOfType[mt_printdirect];
   end;
 
 PROCEDURE T_adapters.resetErrorFlags;
@@ -756,7 +768,7 @@ PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
       else begin
         new(txtAdapter,create(filenameOrBlank,defaultOutputBehavior,false));
         txtAdapter^.adapterType:=at_printTextFileAtRuntime;
-        txtAdapter^.messageTypesToInclude:=[mt_printline];
+        txtAdapter^.messageTypesToInclude:=[mt_printline,mt_printdirect];
         addOutAdapter(txtAdapter,true);
       end;
     end;

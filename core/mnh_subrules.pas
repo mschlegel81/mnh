@@ -796,22 +796,21 @@ FUNCTION T_inlineExpression          .isStateful: boolean; begin result:=(indexO
 FUNCTION T_builtinExpression         .isStateful: boolean; begin result:=false; end;
 FUNCTION T_builtinGeneratorExpression.isStateful: boolean; begin result:=true;  end;
 
-FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean;
-  CONST lengthLimit: longint): ansistring;
+FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST lengthLimit: longint): ansistring;
   VAR i,remainingLength:longint;
       prevIdLike,idLike:boolean;
   begin
     prevIdLike:=false;
     result:='';
     remainingLength:=lengthLimit;
-    for i:=0 to length(preparedBody)-1 do begin
+    for i:=0 to length(preparedBody)-1 do if remainingLength>0 then begin
       result:=result+preparedBody[i].token.toString(prevIdLike,idLike,remainingLength);
       remainingLength:=lengthLimit-length(result);
       prevIdLike:=idLike;
     end;
     if not(includePattern) then exit(result);
     if      typ in [et_inline_for_literal,et_inline_for_while]
-                                    then result:=                 '{'+result+'}'
+                                   then result:=                 '{'+result+'}'
     else if typ=et_inline_for_each then result:=pattern.toString+'{'+result+'}'
     else                                 result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;

@@ -279,11 +279,28 @@ exit}
       lastRep:=lastRep^.next;
     end;
 
+  FUNCTION enterCriticalSectionWithDeadlockDetection:boolean; inline;
+    CONST maxTryCount=1000;
+          millesecondsBeforeRetry=10;
+    VAR tryCount:longint=0;
+    begin
+      while TryEnterCriticalsection(rule_cs)=0 do begin
+        inc(tryCount);
+        if tryCount>maxTryCount then exit(false);
+        sleep(millesecondsBeforeRetry);
+      end;
+      result:=true;
+    end;
+
   begin
     result:=false;
     if param=nil then useParam:=newListLiteral
                  else useParam:=param;
-    enterCriticalSection(rule_cs);
+
+    if not(enterCriticalSectionWithDeadlockDetection) then begin
+      context.adapters^.raiseError('Deadlock detected, trying to access memoized rule '+getId,location);
+      exit(false);
+    end;
     lit:=cache.get(useParam);
     if lit<>nil then begin
       lit^.rereference;

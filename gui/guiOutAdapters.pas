@@ -17,6 +17,7 @@ TYPE
   T_guiOutAdapter=object(T_collectingOutAdapter)
     flushing:boolean;
     parentForm:T_abstractMnhForm;
+    lastWasDirectPrint:boolean;
     CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
     DESTRUCTOR destroy; virtual;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
@@ -146,6 +147,21 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       end;
     end;
 
+  PROCEDURE processDirectPrint(CONST s:string);
+    VAR c:char;
+    begin
+      syn.readonly:=false;
+      for c in s do case c of
+        #8 : syn.ExecuteCommand(ecDeleteLastChar,c,nil);
+        #13: begin
+               syn.ExecuteCommand(ecLineStart,c,nil);
+               syn.ExecuteCommand(ecOverwriteMode,c,nil);
+             end
+        else syn.ExecuteCommand(ecChar,c,nil);
+      end;
+      syn.readonly:=true;
+    end;
+
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
@@ -175,7 +191,27 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             if (length(messageText)>0) and (messageText[0]=C_formFeedChar) then begin
               clearSynAndBuffer;
               for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
+            end else if lastWasDirectPrint then begin
+              if length(messageText)>0 then begin
+                processDirectPrint(messageText[0]);
+              end;
+              for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
             end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
+          end;
+        mt_printdirect:
+          begin
+            if wroteToSyn then begin
+              flushBuffer;
+              wroteToSyn:=false;
+              syn.ExecuteCommand(ecEditorBottom,' ',nil);
+              syn.ExecuteCommand(ecLineStart,' ',nil);
+            end;
+            if not(lastWasDirectPrint) then begin
+              syn.append('');
+              syn.ExecuteCommand(ecEditorBottom,' ',nil);
+              syn.ExecuteCommand(ecLineStart,' ',nil);
+            end;
+            for j:=0 to length(messageText)-1 do processDirectPrint(messageText[j]);
           end;
         mt_endOfEvaluation: begin
           if guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
@@ -189,6 +225,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_output: writeWrapped(messageType,messageText);
         else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
       end;
+      lastWasDirectPrint:=messageType=mt_printdirect;
     end;
     if result then clear;
     if wroteToSyn then begin
@@ -210,6 +247,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
 PROCEDURE T_guiOutAdapter.flushClear;
   begin
     system.enterCriticalSection(cs);
+    lastWasDirectPrint:=false;
     clear;
     append(clearConsoleMessage);
     system.leaveCriticalSection(cs);

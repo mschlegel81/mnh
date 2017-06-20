@@ -132,7 +132,7 @@ FUNCTION clearPrint_imp intFuncSignature;
     result:=newVoidLiteral;
   end;
 
-FUNCTION getStringToPrint(CONST params:P_listLiteral):T_arrayOfString; inline;
+FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:boolean=true):T_arrayOfString; inline;
   VAR i:longint;
       resultText:string;
   begin
@@ -143,13 +143,23 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral):T_arrayOfString; inline;
       lt_list..lt_emptyMap:
         resultText:=resultText + params^.value[i]^.toString;
     end;
-    result:=formatTabs(split(resultText));
+    if doFormatTabs
+    then result:=formatTabs(split(resultText))
+    else result:=resultText;
   end;
 
 FUNCTION print_imp intFuncSignature;
   begin
     system.enterCriticalSection(print_cs);
     context.adapters^.printOut(getStringToPrint(params));
+    system.leaveCriticalSection(print_cs);
+    result:=newVoidLiteral;
+  end;
+
+FUNCTION printDirect_imp intFuncSignature;
+  begin
+    system.enterCriticalSection(print_cs);
+    context.adapters^.printDirect(getStringToPrint(params,false));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -246,6 +256,7 @@ INITIALIZATION
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,[se_outputViaAdapter],ak_nullary ,'clearPrint;//Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,[se_outputViaAdapter],ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,[se_outputViaAdapter],ak_variadic,'printDirect(...);//Prints out the given string without pretty printing or line breaks');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,[se_outputViaAdapter],ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,[se_outputViaAdapter],ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,[se_outputViaAdapter,se_writingInternal],ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');

@@ -40,10 +40,9 @@ private isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
 private isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
 private isSmokeTest(scriptFileName:string)->false;
 
-private printAndReturn(...)->print@... orElse join(...);
-private checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]).printAndReturn;
+private printAndReturn(...)->printDirect@("\rExecuting: "|...| repeat(' ',20)) orElse join('***** '|...|' *****');
+private checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]);
 private checkAfterTest(file)->void;
-
 
 testFile(scriptFileName:string,doLog:boolean)->
 scriptFileName.skipFile
@@ -56,7 +55,7 @@ scriptFileName.skipFile
     : void;
 
     local logName:=extractFileNameOnly(scriptFileName);
-    local output:=printAndReturn('***** ',logName,' *****');
+    local output:=printAndReturn(logName);
     local startTime:=time;
     output|=runScript(scriptFileName,testParameters(scriptFileName))
             .filter({$e.head=='printline'})
@@ -80,7 +79,7 @@ end;
 
 private executeExamples(doLog:boolean)->begin
   resetRandom;
-  local output:=printAndReturn('***** examples from file *****');
+  local output:=printAndReturn('examples from file');
   local collectOut:=true;
   local codeToExecute:=[];
   local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
