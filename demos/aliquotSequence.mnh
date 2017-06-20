@@ -1,3 +1,5 @@
+USE formattingUtils;
+
 private dividerSum(n:int)->n<=1 ? 0 : factorize(n).subSets.each(s,s.agg(*) orElse 1,+)-n;
 
 private classify(n:int)->
@@ -8,7 +10,8 @@ private classify(n:int)->
       seq|=k;
       k:=dividerSum(k);
     end);
-    [k=head(seq)
+    [n,
+     k=head(seq)
      ? (size(seq)=1 ? "perfect" :
         size(seq)=2 ? "amicable" :
         "social")
@@ -19,11 +22,10 @@ private classify(n:int)->
   end;
 
 //*See http://rosettacode.org/wiki/Aliquot_sequence_classifications
-main->begin
-  local input:=[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488];
-  local class:=input.each(n,classify(n));
-    printf("%d\t|\t%s\t|\t%s",
-     "start @"| input,
-     "classification"|( class.getInner(0)),
-     "sequence"|(class.getInner(1)));
-end;
+main->main(11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488);
+
+//*Return Aliquot sequence classifications for the given numbers
+main(...)->
+  (...).pMap(::toInt)
+       .pMap(::classify)
+       .formatTable(['start @','classification','sequence']).join("\n").print;
