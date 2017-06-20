@@ -2,7 +2,7 @@ UNIT mnh_constants;
 INTERFACE
 USES sysutils;
 CONST
-  STACK_DEPTH_LIMIT={$ifdef Windows}63000{$else}4100{$endif};
+  STACK_DEPTH_LIMIT={$ifdef Windows}63000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
   {$i code_hash.inc}
   {$i built_number.inc}
   LOGO:array[0..20] of string=(
