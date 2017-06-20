@@ -1,0 +1,33 @@
+//*Reads a datastore, returning a list [id, contents]
+//*Results in an error if the datastore is malformed
+readDatastore(storeFileName:string)->
+  begin
+    //Try to parse plain text datastore:
+    local contents:=fileLines(storeFileName);
+    contents.head.matches('^[a-zA-Z][a-zA-Z0-9]*:=$')
+    ? [contents.head.replace(":=",''),contents.tail.join.toExpression()()]
+    : begin
+        //Try to parse binary datastore
+        contents:=fileContents(storeFileName);
+        //Note: #255 signifies, that serialized content follows
+        //      #4   marks the next entry as a string
+        local id:=(#255#4&contents).deserialize;
+        local bytesToSkip:=id.serialize.byteLength-2;
+        [id,contents.copy(bytesToSkip,contents.length).deserialize];
+      end;
+  end;
+
+//*Returns a list of integers to be formatted using formatTypeAnalysis
+typeAnalysis(x:boolean)->[1,0,0,0,0,0     ,0,0,0,0];
+typeAnalysis(x:int    )->[0,1,0,0,0,0     ,0,0,0,0];
+typeAnalysis(x:real   )->[0,0,1,0,0,0     ,0,0,0,0];
+typeAnalysis(x:string )->[0,0,0,1,0,0     ,0,0,0,0];
+typeAnalysis(x:list   )->[0,0,0,0,1,x.size,0,0,0,0]+x.pEach(y,y.typeAnalysis,+);
+typeAnalysis(x:set    )->[0,0,0,0,0,0,1,x.size,0,0]+x.pEach(y,y.typeAnalysis,+);
+typeAnalysis(x:map    )->[0,0,0,0,0,0,0,0,1,x.size]+x.pEach(y,y[0].typeAnalysis+y[1].typeAnalysis,+);
+typeAnalysis(x        )->[0,0,0,0,0,0     ,0,0,0,0];
+
+//*Formats the output of typeAnalysis
+formatTypeAnalysis(al:intList(10))->
+  ['booleans','integers','reals','strings','lists','list elements','sets','set elements','maps','map entries'].map({$x&"\t:\t%s\n"}).join
+  .format@al;
