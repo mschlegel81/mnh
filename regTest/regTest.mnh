@@ -21,6 +21,7 @@ private testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
 private testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
 private testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
 private testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
+private testParameters((demosRoot&'gol.mnh'           ))->['40','40','9'];
 private testParameters((demosRoot&'pascal.mnh'        ))->['12'];
 private testParameters((demosRoot&'oeis.mnh'          ))->['A000002','50'];
 private testParameters(scriptFileName:string)->[];
