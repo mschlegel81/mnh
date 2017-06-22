@@ -1,12 +1,12 @@
 UNIT mnh_litVar;
-{$WARN 5024 OFF}
 {$Q-}
 INTERFACE
-{$WARN 3018 OFF}{$WARN 3019 OFF}
 USES sysutils, math, typinfo,
-     myGenerics,myStringUtil, serializationUtil,
      Classes,LazUTF8,
-     mnh_constants, mnh_basicTypes, mnh_out_adapters;
+     myGenerics, myStringUtil, serializationUtil,
+     mnh_constants,
+     mnh_basicTypes,
+     mnh_out_adapters;
 
 TYPE
   P_literal = ^T_literal;
@@ -1496,18 +1496,23 @@ FUNCTION T_mapLiteral.getInner(CONST accessor:P_literal):P_literal;
       result:=nil;
       exit(result);
     end;
-    result:=newListLiteral(dat.fill);
     if wantKeys then begin
       if wantValues then for entry in dat.keyValueList do begin
+        result:=newListLiteral(dat.fill);
         if subAsSet then sub:=newSetLiteral
                     else sub:=newListLiteral(2);
         sub^.append(entry.key  ,true);
         sub^.append(entry.value,true);
         P_listLiteral(result)^.append(sub,false);
-      end else for entry in dat.keyValueList do
-        P_listLiteral(result)^.append(entry.key,true);
-    end else if wantValues then for entry in dat.keyValueList do
+      end else begin
+        result:=newSetLiteral;
+        for entry in dat.keyValueList do P_setLiteral(result)^.append(entry.key,true);
+      end;
+    end else if wantValues then begin
+      result:=newListLiteral(dat.fill);
+      for entry in dat.keyValueList do
       P_listLiteral(result)^.append(entry.value,true);
+    end else result:=newListLiteral();
   end;
 //?.leqForSorting:==============================================================
 FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
@@ -1768,7 +1773,7 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; VAR adapters:T_
                   P_listLiteral(pair)^[1],true);
     end else begin
       result^.containsError:=true;
-      adapters.raiseError('Literal of type '+pair^.typeString+' cannot be intrerpreted as key-value-pair',location);
+      adapters.raiseError('Literal of type '+pair^.typeString+' cannot be interpreted as key-value-pair',location);
     end;
     disposeLiteral(iter);
   end;
@@ -2987,8 +2992,9 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           for i:=0 to listSize-1 do if stream^.allOkay then begin
             mapKey  :=literalFromStream255();
             mapValue:=literalFromStream255();
-            P_mapLiteral(result)^.put(mapKey,mapValue,false);
+            P_mapLiteral(result)^.dat.put(mapKey,mapValue);
           end;
+          result^.literalType:=lt_map;
         end;
         else begin
           errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(literalByte)+') ! Abort.');
@@ -3004,11 +3010,86 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
     end;
 
+  FUNCTION literalFromStream254:P_literal;
+    VAR literalType:T_literalType;
+        reusableIndex:longint;
+        listSize:longint;
+        i:longint;
+        mapKey,mapValue:P_literal;
+    begin
+      reusableIndex:=stream^.readNaturalNumber;
+      if reusableIndex<=byte(high(T_literalType)) then literalType:=T_literalType(byte(reusableIndex))
+      else begin
+        dec(reusableIndex,byte(high(T_literalType))+1);
+        if (reusableIndex<length(reusableLiterals)) then begin
+          result:=reusableLiterals[reusableIndex];
+          result^.rereference;
+        end else begin
+          result:=newVoidLiteral;
+          stream^.logWrongTypeError;
+          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
+        end;
+        exit(result);
+      end;
+      case literalType of
+        lt_boolean  : result:=newBoolLiteral  (stream^.readBoolean   );
+        lt_int      : result:=newIntLiteral   (stream^.readInteger   );
+        lt_real     : result:=newRealLiteral  (stream^.readDouble    );
+        lt_string   : result:=newStringLiteral(stream^.readAnsiString);
+        lt_emptyList: result:=newListLiteral;
+        lt_emptySet : result:=newSetLiteral;
+        lt_emptyMap : result:=newMapLiteral;
+        lt_void     : result:=newVoidLiteral;
+        lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
+        lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
+          listSize:=stream^.readNaturalNumber;
+          if literalType in C_setTypes
+          then result:=newSetLiteral
+          else result:=newListLiteral(listSize);
+          case literalType of
+            lt_booleanList,lt_booleanSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+            lt_intList,lt_intSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendInt(stream^.readInteger);
+            lt_realList,lt_realSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+            lt_stringList,lt_stringSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+            else
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream254(),false);
+          end;
+          if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
+        end;
+        lt_map: begin
+          result:=newMapLiteral;
+          listSize:=stream^.readNaturalNumber;
+          for i:=0 to listSize-1 do if stream^.allOkay then begin
+            mapKey  :=literalFromStream254();
+            mapValue:=literalFromStream254();
+            P_mapLiteral(result)^.dat.put(mapKey,mapValue);
+          end;
+          result^.literalType:=lt_map;
+        end;
+        else begin
+          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(reusableIndex)+') ! Abort.');
+          stream^.logWrongTypeError;
+          exit(newVoidLiteral);
+        end;
+      end;
+      if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
+      if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
+      if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (length(reusableLiterals)<2097151) then begin
+        setLength(reusableLiterals,length(reusableLiterals)+1);
+        reusableLiterals[length(reusableLiterals)-1]:=result;
+      end;
+    end;
+
   begin
     setLength(reusableLiterals,0);
     encodingMethod:=stream^.readByte;
     case encodingMethod of
       255: result:=literalFromStream255;
+      254: result:=literalFromStream254;
       else begin
         errorOrException('Invalid literal encoding type '+intToStr(encodingMethod));
         result:=newVoidLiteral;
@@ -3030,14 +3111,14 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     begin
       reusableIndex:=reusableMap.get(L,2097151);
       if reusableIndex<2097151 then begin
-        stream^.writeByte(255);
+        inc(reusableIndex,byte(high(T_literalType))+1);
         stream^.writeNaturalNumber(reusableIndex);
         exit;
       end;
-      stream^.writeByte(byte(L^.literalType));
+      stream^.writeNaturalNumber(byte(L^.literalType));
       case L^.literalType of
         lt_boolean:stream^.writeBoolean   (P_boolLiteral  (L)^.val);
-        lt_int:    stream^.writeInt64     (P_intLiteral   (L)^.val);
+        lt_int:    stream^.writeInteger   (P_intLiteral   (L)^.val);
         lt_real:   stream^.writeDouble    (P_realLiteral  (L)^.val);
         lt_string: stream^.writeAnsiString(P_stringLiteral(L)^.val);
         lt_booleanList,lt_booleanSet:begin
@@ -3049,7 +3130,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_intList,lt_intSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then stream^.writeInt64(P_intLiteral(x)^.val);
+          for x in iter do if (adapters=nil) or (adapters^.noErrors) then stream^.writeInteger(P_intLiteral(x)^.val);
           disposeLiteral(iter);
         end;
         lt_realList,lt_realSet:begin
@@ -3090,7 +3171,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
 
   begin
     reusableMap.create();
-    stream^.writeByte(255);
+    stream^.writeByte(254);
     writeLiteral(L);
     reusableMap.destroy;
   end;
