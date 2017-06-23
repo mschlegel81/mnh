@@ -19,5 +19,14 @@ memoized getBuiltNumber(codeHash:string)->begin
   end;
 end;
 
-main->isVoid(log) ? print('No build version logged')
-                  : log.sort(1).trailing(10).map({$x.join("\t")&($x[0]==mnhInfo['codeVersion'] ? "\t*" : "")}).join("\n").print;
+main->isVoid(log)
+      ? print('No build version logged')
+      : begin
+          log.sort(1).trailing(10).map({$x.join("\t")&($x[0]==mnhInfo['codeVersion'] ? "\t*" : "")}).join("\n").print;
+          log.size<=50
+          ? void
+          : begin
+              print('Log has ',log.size,' entries - limiting to last 50');
+              log:=log.sort(1).trailing(50).toMap;
+            end;
+        end;
