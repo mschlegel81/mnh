@@ -3935,7 +3935,7 @@ out> '1101111000000000000000000000000000000000000000000000000000000000'
  in> input :=[[1..10], random,'test', random(9)];
  in> serialized :=input.serialize;
  in> print(input.toString.byteLength,' > ', serialized.byteLength);
-261 > 174
+261 > 104
 out> void
  in> input==serialized.deserialize;
 out> true
