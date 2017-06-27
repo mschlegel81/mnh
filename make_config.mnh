@@ -1,7 +1,7 @@
 //Windows only:
 Lazarus64Path:='..\lazarus64';
 Lazarus32Path:='..\lazarus32';
-DelpPath     :='..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe';
+DelpPath     :='..\lazarus64\fpc\3.0.2\bin\x86_64-win64\delp.exe';
 SSL_zip_32   :='3rd_party\openssl-1.0.2k-i386-win32.zip';
 SSL_zip_64   :='3rd_party\openssl-1.0.2k-x64_86-win64.zip';
 

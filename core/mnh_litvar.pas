@@ -3010,6 +3010,41 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
     end;
 
+  PROCEDURE remap(VAR L:P_literal);
+    VAR iter:T_arrayOfLiteral;
+        i:longint;
+    begin
+      if L^.literalType in C_mapTypes then begin
+        iter:=P_mapLiteral(L)^.iteratableList;
+        disposeLiteral(L);
+        L:=newMapLiteral;
+        for i:=0 to length(iter)-1 do begin
+          remap(iter[i]);
+          P_mapLiteral(L)^.put(P_listLiteral(iter[i])^[0],
+                               P_listLiteral(iter[i])^[1],true);
+        end;
+        disposeLiteral(iter);
+      end else if L^.literalType in C_setTypes then begin
+        iter:=P_setLiteral(L)^.iteratableList;
+        disposeLiteral(L);
+        L:=newSetLiteral;
+        for i:=0 to length(iter)-1 do begin
+          remap(iter[i]);
+          P_setLiteral(L)^.append(iter[i],true);
+        end;
+        disposeLiteral(iter);
+      end else if L^.literalType in C_listTypes then begin
+        iter:=P_listLiteral(L)^.iteratableList;
+        disposeLiteral(L);
+        L:=newListLiteral(length(iter));
+        for i:=0 to length(iter)-1 do begin
+          remap(iter[i]);
+          P_listLiteral(L)^.append(iter[i],true);
+        end;
+        disposeLiteral(iter);
+      end;
+    end;
+
   FUNCTION literalFromStream254:P_literal;
     VAR literalType:T_literalType;
         reusableIndex:longint;
@@ -3095,7 +3130,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         result:=newVoidLiteral;
       end;
     end;
-
+    {$ifdef CPU64}remap(result);{$endif}
     setLength(reusableLiterals,0);
   end;
 
