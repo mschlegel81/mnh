@@ -123,7 +123,7 @@ main('noLog')->testAll(false);
 main('export',filename:string)->writeFile(filename,runTimes.serialize);
 
 //*Display info on test cases
-main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKIP' : ''].join("\t")}).join("\n").print;
+main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKIP' : '',$0.testParameters.join(" ")].join("\t")}).join("\n").print;
 
 //*Limit number of samples to count per flavour/testcase retaining the newest samples
 main('limit',count:string)->begin
