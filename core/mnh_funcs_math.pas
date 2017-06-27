@@ -468,6 +468,7 @@ FUNCTION isInfinite_impl {$define PREDICATE:=isInfinite} intFuncSignature; nan_o
 
 FUNCTION subSets_impl intFuncSignature;
   VAR sets:specialize G_literalKeyMap<byte>;
+      acceptOnlySetsOfSize:longint=-1;
   PROCEDURE recurseBuildSets(CONST mustContain,mightContain:T_arrayOfLiteral);
     VAR newMust,newMight:T_arrayOfLiteral;
         newSet:P_collectionLiteral;
@@ -485,6 +486,7 @@ FUNCTION subSets_impl intFuncSignature;
         setLength(newMust,0);
         setLength(newMight,0);
       end else begin
+        if (acceptOnlySetsOfSize<>-1) and (acceptOnlySetsOfSize<>length(mustContain)) then exit;
         newSet:=collection0^.newOfSameType;
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
         if newSet^.literalType in C_listTypes then P_listLiteral(newSet)^.sort;
@@ -496,7 +498,8 @@ FUNCTION subSets_impl intFuncSignature;
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
+    if (params<>nil) and (params^.size>=1) and (params^.size<=2) and ((params^.size=1) or (arg1^.literalType=lt_int)) then begin
+      if params^.size=2 then acceptOnlySetsOfSize:=int1^.value;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         sets.create;
         setLength(mustContain,0);
@@ -752,7 +755,8 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'argMin'      ,@argMin_imp       ,[],ak_unary     ,'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule(MATH_NAMESPACE,'isNan'       ,@isNan_impl       ,[],ak_unary     ,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
   registerRule(MATH_NAMESPACE,'isInfinite'  ,@isInfinite_impl  ,[],ak_unary     ,'isInfinite(n);//Returns true if n is a number representing an infinite value');
-  registerRule(MATH_NAMESPACE,'subSets'     ,@subSets_impl     ,[],ak_unary     ,'subSets(S);//Returns all distinct subsets of S');
+  registerRule(MATH_NAMESPACE,'subSets'     ,@subSets_impl     ,[],ak_variadic_1,'subSets(S);//Returns all distinct subsets of S#'+
+                                                                                 'subSets(S,k:int);//Returns all distinct subsets of S having k elements');
   registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,[],ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
   registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,[],ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
   registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,[],ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
