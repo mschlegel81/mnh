@@ -20,3 +20,8 @@ regTest/testLog.datastore0
 *.png
 *.or
 */backup/*
+mnh
+mnh_debug
+mnh_light
+mnh_light_debug
+versions/*.7z

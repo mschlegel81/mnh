@@ -1,23 +1,67 @@
-private glyphs:=[['0',['  _/_/_/    ','_/      _/  ','_/      _/  ','_/      _/  ','_/      _/  ','_/      _/  ','  _/_/_/    ']],['1',['      _/    ','    _/_/    ','  _/  _/    ','      _/    ','      _/    ','      _/    ','      _/    ']],['2',['  _/_/_/    ','_/      _/  ','      _/    ','    _/      ','  _/        ','_/          ','_/_/_/_/_/  ']],['3',['  _/_/_/    ','_/      _/  ','        _/  ','  _/_/_/    ','        _/  ','_/      _/  ','  _/_/_/    ']],['4',['    _/      ','  _/        ','_/    _/    ','_/_/_/_/_/  ','      _/    ','      _/    ','      _/    ']],['5',['_/_/_/_/_/  ','_/          ','_/          ','_/_/_/_/    ','        _/  ','        _/  ','_/_/_/_/    ']],['6',['  _/_/_/    ','_/      _/  ','_/          ','_/_/_/_/    ','_/      _/  ','_/      _/  ','  _/_/_/    ']],['7',['_/_/_/_/_/  ','        _/  ','        _/  ','      _/    ','    _/      ','  _/        ','_/          ']],['8',['  _/_/_/    ','_/      _/  ','_/      _/  ','  _/_/_/    ','_/      _/  ','_/      _/  ','  _/_/_/    ']],['9',['  _/_/_/    ','_/      _/  ','_/      _/  ','  _/_/_/_/  ','        _/  ','_/      _/  ','  _/_/_/    ']],[':',['    ','    ','_/  ','    ','_/  ','    ','    ']],[' ',['      ','     ','    ','   ','  ',' ','']]];
-private printTime(time:real)->printf('%s',glyphs.getAll(chars(formatTime(' hh:nn:ss',time))).agg(&));
-//*For regtest
-main('test')->begin
-  print('Call with any string parameter for continuous run.');
-  printTime(0.123);
+A:=//!~
+ ********     ****      *******   ********     *       **********  ********  **********  ********   ********.
+**********   *****     ********* **********   **       ********** ********** ********** ********** **********
+****  ****  ******    ***    ***        ***  **  ***   ***        ***               *** ****  **** ***    ***
+****  ****     ***          ***    *******  ********** *********  *********        ***   ********  **********
+****  ****     ***         ***     *******  ********** ********** **********      ***    ********  **********
+****  ****     ***        ***           ***      ***          *** ***    ***     ***    ****  ****        ***
+**********     ***    ********** **********      ***   ********** **********    ***     ********** **********
+ ********      ***    **********  ********       ***   *********   ********    ***       ********   ********.~.replace(['*','.'],['#',' ']);
+
+memoized
+digit(d:int,true )->A.split("\n").each(L,                       L.copy([0..9]*11,10)       ).transpose[d];
+digit(d:int,false)->A.split("\n").each(L,index in [0,2,3,5,7] ? L.copy([0..9]*11,10) : void).transpose[d];
+
+memoized printOnce(s:stringList)->clearPrint orElse printf('%s',s);
+
+asciiArtTime(s:string)->begin
+  local result:=s.chars.each(n,digit(n.toInt,index<2)).transpose('          ').map({$s.join(' ')});
+  (repeat('-',length(result).max+1)&'+')|
+  (result&' |')|
+  (repeat('-',length(result).max+1)&'+');
+end;
+asciiArtTime(t:real)->asciiArtTime(t>=1/24 ? formatTime('hhnn',t) : formatTime('nnss',t));
+
+guessTimeOrInterval(TimeOrIntervalString:string)->
+  begin
+    local S:=TimeOrIntervalString.upper.clean(['0'..'9',':','H','M','S'],'');
+    (pos(['H','M','S'],S)>=0).agg(OR)
+    ? interpret(S.replace(['H','M','S'],['/24+','/(24*60)+','/(24*60*60)+'])&'0')+systime
+    : begin
+        local R:=try({parseTime('hh:nn:ss',S)},
+                     {parseTime('hh:nn'   ,S)});
+        R<systime ? R+1 : R;
+      end;
+  end;
+
+nextSecond->sleep(1-formatTime('0.zzz',systime).toReal);
+nextMinute->sleep(60-formatTime('ss.zzz',systime).toReal);
+
+//*Displays a clock, updating every minute
+main->begin
+  async({while(true,begin asciiArtTime(systime-floor(systime)).printOnce; nextMinute; end)});
+  ask('Press enter to quit');
 end;
 
-private mutable proceed:=true;
+//*Prints a nicely formatted time and returns at once
+main('once')->asciiArtTime(systime-floor(systime)).printOnce;
 
-main()->
-begin
+//*Displays time and timer
+//*valid inputs are e.g.: "15:23" (sleep until 15:23)
+//*                       "1h 5m" (sleep for one hour and 5 minutes)
+//*                       "20s"   (sleep for 20 seconds)
+main(timeOrInterval)->begin
   async({begin
-    ask('Press enter to quit.');
-    proceed:=false;
+    local endTime:=guessTimeOrInterval(timeOrInterval);
+    while(systime<endTime,begin
+      (asciiArtTime(systime-floor(systime))&
+       asciiArtTime(endTime-systime)).printOnce;
+      nextSecond;
+    end);
+    while(true,begin
+      beep;
+      sleep(1);
+    end);
   end});
-  while(proceed,begin
-    clearPrint;
-    print('Press enter to quit.');
-    printTime(systime);
-    sleep(1);
-  end);
+  ask('Press enter to quit');
 end;
