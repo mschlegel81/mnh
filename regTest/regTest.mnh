@@ -16,7 +16,7 @@ plotters:=demosRoot&[
 'heart.mnh'];
 
 private testParameters((demosRoot&'24.mnh'            ))->['demo'];
-private testParameters((demosRoot&'clock.mnh'         ))->['test'];
+private testParameters((demosRoot&'clock.mnh'         ))->['once'];
 private testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
 private testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
 private testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
@@ -30,13 +30,13 @@ private skipFile((demosRoot&'3body.mnh'              ))->true;
 private skipFile((demosRoot&'htmlFunctionPlotter.mnh'))->true;
 private skipFile((demosRoot&'simpleServer.mnh'       ))->true;
 private skipFile((demosRoot&'helloWorldHttp.mnh'     ))->true;
-private skipFile((demosRoot&'timer.mnh'              ))->true;
 private skipFile((demosRoot&'ipcDatastore.mnh'       ))->true;
 private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
 private skipFile(scriptFileName:string)->false;
 
 private isSmokeTest((demosRoot&'task.mnh'          ))->true;
 private isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
+private isSmokeTest((demosRoot&'clock.mnh'         ))->true;
 private isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
 private isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
 private isSmokeTest(scriptFileName:string)->false;
@@ -84,7 +84,6 @@ private executeExamples(doLog:boolean)->begin
   local collectOut:=true;
   local codeToExecute:=[];
   local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
-  print('Examples file has ',inputLines.size,' lines');
   local startTime:=time;
   inputLines.each(line,
     line==''
