@@ -1456,6 +1456,7 @@ FUNCTION toExpression_imp intFuncSignature;
 FUNCTION interpret_imp intFuncSignature;
   VAR first:P_token=nil;
       package:P_abstractPackage;
+      previousPrivileges:T_sideEffects;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
@@ -1464,7 +1465,10 @@ FUNCTION interpret_imp intFuncSignature;
       if      arg0^.literalType=lt_string      then first:=stringToTokens(str0^.value,tokenLocation,package,context)
       else if arg0^.literalType in C_listTypes then first:=listToTokens  (list0      ,tokenLocation,package,context);
       if first=nil then exit(nil);
+      previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(
+                          context.sideEffectWhitelist - [se_inputViaAsk]);
       context.reduceExpression(first);
+      context.setAllowedSideEffectsReturningPrevious(previousPrivileges);
       result:=context.cascadeDisposeToLiteral(first);
     end;
   end;
@@ -1480,7 +1484,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,[],ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,[],ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
   registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,[],ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,[],ak_unary,'interpret(S);//Interprets a string or list S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,C_allSideEffects-[se_inputViaAsk],ak_unary,'interpret(S);//Interprets a string or list S');
 FINALIZATION
   {$ifdef fullVersion}
   generateRowIdentification.destroy;
