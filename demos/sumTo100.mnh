@@ -23,7 +23,7 @@ main->begin
   //Generate a list of all formulas (13122 items)
   local FORMULA:=[0..2*3^(INPUT.size-1)-1].each(i,((i and 1)=1 ? '-' : '') & ([INPUT,op[dig3(i div 2,INPUT.size-1)]].transpose.flatten.join));
   //Evaluate all formulas
-  local VALUE  :=FORMULA.each(f,f.toExpression()());
+  local VALUE  :=FORMULA.pMap(::interpret);
 
   //Idea: VALUE=100 returns a boolean mask, which is then used to access FORMULA
   print("Show all solutions that sum to 100");

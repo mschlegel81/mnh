@@ -1453,6 +1453,22 @@ FUNCTION toExpression_imp intFuncSignature;
     end;
   end;
 
+FUNCTION interpret_imp intFuncSignature;
+  VAR first:P_token=nil;
+      package:P_abstractPackage;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then begin
+      package:=P_abstractPackage(tokenLocation.package);
+      if      arg0^.literalType=lt_string      then first:=stringToTokens(str0^.value,tokenLocation,package,context)
+      else if arg0^.literalType in C_listTypes then first:=listToTokens  (list0      ,tokenLocation,package,context);
+      if first=nil then exit(nil);
+      context.reduceExpression(first);
+      result:=context.cascadeDisposeToLiteral(first);
+    end;
+  end;
+
 INITIALIZATION
   {$ifdef fullVersion}
   generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
@@ -1463,8 +1479,8 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,[],ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,[],ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,[],ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,[],ak_unary,'toExpression(S);//Returns an expression parsed from S');
-
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,[],ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,[],ak_unary,'interpret(S);//Interprets a string or list S');
 FINALIZATION
   {$ifdef fullVersion}
   generateRowIdentification.destroy;
