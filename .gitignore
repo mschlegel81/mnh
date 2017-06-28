@@ -19,3 +19,4 @@ regTest/regTest.datastore0
 regTest/testLog.datastore0
 *.png
 *.or
+*/backup/*
