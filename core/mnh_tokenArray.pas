@@ -503,8 +503,7 @@ DESTRUCTOR T_lexer.destroy;
     end;
   end;
 
-FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler;
-  VAR adapters: T_adapters): T_enhancedStatement;
+FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
   begin

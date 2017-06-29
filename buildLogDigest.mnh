@@ -1,25 +1,27 @@
-ignoredCodes:=[1002,1008,1021,1022,1023,3104,9015,9022,5024,11030,11031,3018,3019,3100,'lazarus'];
-ignoredPaths:=['dev/3rd_party/synapse',
-               'dev/3rd_party/epikTimer',
-               'lazbuild',
-               '--------------------------------',
-               'Free Pascal Compiler',
-               'Statefile not found',
-               'dev/common.*Conversion between ordinals and pointers is not portable',
-               'dev/mnh5/core/mnh_litvar.*"bits" does not seem',
-               'dev/mnh5/core/mnh_litvar.*"significand" does not seem',
-               'dev/mnh5/core/mnh_funcs.*"keyList" of a managed type does not seem',
-               'dev/mnh5/gui/mnh_evalThread.*"params" of a managed type does not seem'];
+ignoredCodes:=[1002,1008,1021,1022,1023,3018,3019,3100,3104,9015,9022,4055,4056,5044];
+ignoredPatterns:=['dev/3rd_party/synapse',
+                  '/igSrc/ig_.*\(5024\).*"(ix|iy|c)"',
+                  '/gui/.*\(5024\)',
+                  '/core/.*\(5024\).*"(location|context)"',
+                  '/core/mnh_func_defines\.inc.*\(5024\).*"tokenLocation"',
+                  '/core/mnh_litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
+                  '/core/mnh_tokens\.pas.*\(5024\).*"adapters"',
+                  '/core/mnh_evaluation\.pas.*\(5024\).*"context_"',
+                  '/core/mnh_tokenArray\.pas.*\(5059\)',
+                  '/core/listProcessing\.pas.*\(5036\).*"lastToAggregate"',
+                  '/core/mnh_subrules\.pas.*\(5024\).*"(intrinsicRuleId|lengthLimit|threadContext)"'];
 
 main->'build.log'.fileLines
 .pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
 .pEach(line,line.replace(['/media/','D:\'],'').replace('\','/'))
-.pEach(line,line.matches(ignoredPaths).agg(OR) ? void : line)
-.unique
-.each(line,[line.matchComposite('\(....\)').trailing[0],line])
-.each(line,line.size!=2 ? void : line)
-.sort
-.each(line,line[1].replace(line[0],"\t"&line[0]))
+.pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line)
+.pMap({[$line.matchComposite('\(....\)').trailing[0],$line]})
+.filter({$line.size=2})
+.elementFrequency
+.pMap({[$f[1],$f[0,0]]|($f[0,1].split($f[0,0]))})
+.sort(2)
+.sort(0)
+.pMap({"%{$0}sx\t%{$2}s\t%{$1}s\t%{$3}s".format@$x})
 .join("\n")
 .print;
 
