@@ -602,6 +602,7 @@ PROCEDURE T_editorMeta.activate;
     then begin
       editor.highlighter:=highlighter;
       assistanceSheet.tabVisible:=true;
+      paintedWithStateHash:=0;
       repaintWithStateHash;
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
