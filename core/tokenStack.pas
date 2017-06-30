@@ -59,7 +59,7 @@ TYPE
     PROCEDURE scopePop;
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
-    PROCEDURE addId(CONST id:ansistring);
+    FUNCTION addId(CONST id:ansistring):boolean;
     FUNCTION hasId(CONST id:ansistring):boolean;
   end;
 
@@ -225,13 +225,15 @@ FUNCTION T_idStack.scopeBottom:boolean;
     result:=length(ids)=0;
   end;
 
-PROCEDURE T_idStack.addId(CONST id:ansistring);
+FUNCTION T_idStack.addId(CONST id:ansistring):boolean;
   VAR i,j:longint;
   begin
     i:=length(ids)-1;
+    for j:=0 to length(ids[i])-1 do if ids[i,j]=id then exit(false);
     j:=length(ids[i]);
     setLength(ids[i],j+1);
     ids[i,j]:=id;
+    result:=true;
   end;
 
 FUNCTION T_idStack.hasId(CONST id:ansistring):boolean;

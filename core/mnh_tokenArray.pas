@@ -520,7 +520,7 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
             tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
               if lastWasLocalModifier then begin
                 lastTokenized^.tokType:=tt_blockLocalVariable;
-                localIdStack.addId(lastTokenized^.txt);
+                if not(localIdStack.addId(lastTokenized^.txt)) then adapters.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
               end else if (localIdStack.hasId(lastTokenized^.txt)) then
                 lastTokenized^.tokType:=tt_blockLocalVariable;
           end;
