@@ -92,7 +92,7 @@ private buildExe(B:BuildConfig)->
       ensureBuiltNumber;
       tprint('Building ',B[2]);
       local compilerOutput:=B[3].exec(B[4]).head;
-      local sepLine:=repeat('-',compilerOutput.each(line,line.length,max));
+      local sepLine:=repeat('-',compilerOutput.each(line,line.length,max) orElse 0);
       compilerOutput:=sepLine|
                       (B[3]|B[4]).join(' ')|
                       sepLine|

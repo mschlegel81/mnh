@@ -114,7 +114,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         firstInLine:boolean=true;
         message:string;
     begin
-      if length(message)<>1 then for message in messageList do begin
+      if length(messageList)<>1 then for message in messageList do begin
         if first
         then appendInternal(marker+C_messageTypeMeta[messageType]      .prefix+' '+message)
         else appendInternal(marker+C_messageTypeMeta[mt_echo_continued].prefix+' '+message);
