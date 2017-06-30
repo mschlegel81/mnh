@@ -18,7 +18,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '1.6.4.0'
   object outputPageControl: TPageControl
     AnchorSideBottom.Control = StatusBar
     Left = 0
@@ -2184,7 +2184,7 @@ object MnhForm: TMnhForm
     Visible = False
     object tbRun: TToolButton
       Left = 1
-      Hint = 'Run/continue'
+      Hint = 'Run/continue (Shift+F5)'
       Top = 2
       Caption = 'tbRun'
       ImageIndex = 0

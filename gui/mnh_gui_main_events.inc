@@ -590,18 +590,38 @@ FUNCTION treeLit_toString(L:P_literal):string;
                             else result:=L^.toString();
   end;
 
+PROCEDURE addChildren(node2:TTreeNode);
+  VAR rootValue:P_compoundLiteral;
+      iter:T_arrayOfLiteral;
+      key,val:P_literal;
+      sub:P_literal;
+  begin
+    rootValue:=P_compoundLiteral(node2.data);
+    if rootValue^.literalType in C_mapTypes then begin
+      iter:=rootValue^.iteratableList;
+      for sub in iter do begin
+        key:=P_listLiteral(sub)^[0];
+        val:=P_listLiteral(sub)^[1];
+        MnhForm.variablesTreeView.items.AddChild(node2,key^.toString()+' => '+treeLit_toString(val)).data:=val;
+      end;
+      disposeLiteral(iter);
+    end else begin
+      iter:=rootValue^.iteratableList;
+      for sub in iter do MnhForm.variablesTreeView.items.AddChild(node2,treeLit_toString(sub)).data:=sub;
+      disposeLiteral(iter);
+    end;
+  end;
+
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
   VAR stackIdx:longint;
       report:T_variableReport;
       i:longint;
   PROCEDURE addVariable(CONST id:string; CONST value:P_literal);
     VAR newNode:TTreeNode;
-        i:longint;
     begin
       newNode:=variablesTreeView.items.add(nil,id+'='+treeLit_toString(value));
       newNode.data:=value;
-      if treeLit_canExpand(value) then for i:=0 to P_listLiteral(value)^.size-1 do
-        variablesTreeView.items.AddChild(newNode,treeLit_toString(P_listLiteral(value)^[i])).data:=P_listLiteral(value)^[i];
+      if treeLit_canExpand(value) then addChildren(newNode);
     end;
 
   begin
@@ -626,15 +646,6 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
   end;
 
 PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
-  PROCEDURE addChildren(node2:TTreeNode);
-    VAR L:P_literal;
-        iter:T_arrayOfLiteral;
-    begin
-      iter:=P_compoundLiteral(node2.data)^.iteratableList;
-      for L in iter do variablesTreeView.items.AddChild(node2,treeLit_toString(L)).data:=L;
-      disposeLiteral(iter);
-    end;
-
   VAR i:longint;
   begin
     AllowExpansion:=treeLit_canExpand(node.data);

@@ -254,7 +254,7 @@ PROCEDURE TMnhForm.onBreakpoint(CONST data:pointer);
     end;
 
   begin
-    if not(runnerModel.debugMode) then exit;
+    if not(runnerModel.debugMode) or (data=nil) then exit;
     onDebuggerEvent;
 
     currentSnapshot:=P_debuggingSnapshot(data);
