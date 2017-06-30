@@ -1,26 +1,34 @@
-A:=//!~
- ********     ****      *******   ********     *       **********  ********  **********  ********   ********.
-**********   *****     ********* **********   **       ********** ********** ********** ********** **********
-****  ****  ******    ***    ***        ***  **  ***   ***        ***               *** ****  **** ***    ***
-****  ****     ***          ***    *******  ********** *********  *********        ***   ********  **********
-****  ****     ***         ***     *******  ********** ********** **********      ***    ********  **********
-****  ****     ***        ***           ***      ***          *** ***    ***     ***    ****  ****        ***
-**********     ***    ********** **********      ***   ********** **********    ***     ********** **********
- ********      ***    **********  ********       ***   *********   ********    ***       ********   ********.~.replace(['*','.'],['#',' ']);
+BIG:=//!~
+ ********    ****     *******  ********    *      ********** ******** ********** ********  ********.
+**********  *****    *******************  **      **************************************************
+****  **** ******   ***    ***       *** **  ***  ***       ***              *******  *******    ***
+****  ****    ***         ***   ******* ******************* *********       ***  ******** **********
+****  ****    ***        ***    ******* ******************************     ***   ******** **********
+****  ****    ***       ***          ***     ***         ******    ***    ***   ****  ****       ***
+**********    ***   ********************     ***  ********************   ***    ********************
+ ********     ***   ********** ********      ***  *********  ********   ***      ********  ********.~
+.replace(['*','.'],['#',' ']).split("\n").map({$s.copy([0..9]*10,10)}).transpose;
+TINY:=//!~
+ _    __ __     _  _ ___ _  _.
+| | /  _) _)/_ |_ |_   /(_)(_)
+|_| | /____) | __)(_) / (_) /.~
+.replace('.',' ').split("\n").map({$s.copy([0..9]*3,3)}).transpose;
 
-memoized
-digit(d:int,true )->A.split("\n").each(L,                       L.copy([0..9]*11,10)       ).transpose[d];
-digit(d:int,false)->A.split("\n").each(L,index in [0,2,3,5,7] ? L.copy([0..9]*11,10) : void).transpose[d];
+digit(d in [0..9],fontStyle=0)->BIG[d];
+digit(d in [0..9],fontStyle=1)->BIG[d].each(L,index in [0,2,3,5,7] ? L : void)|['','',''];
+digit(d in [0..9],fontStyle=2)->['','','','','']|TINY[d];
 
 memoized printOnce(s:stringList)->clearPrint orElse printf('%s',s);
 
 asciiArtTime(s:string)->begin
-  local result:=s.chars.each(n,digit(n.toInt,index<2)).transpose('          ').map({$s.join(' ')});
+  local result:=s.chars.each(n,digit(n.toInt,index div 2))
+                  .transpose(' ').map({('%s %s %s %s              %s%s'.format@$s0).copy(0,43)});
   (repeat('-',length(result).max+1)&'+')|
   (result&' |')|
   (repeat('-',length(result).max+1)&'+');
 end;
-asciiArtTime(t:real)->asciiArtTime(t>=1/24 ? formatTime('hhnn',t) : formatTime('nnss',t));
+asciiArtTime(t:real)->asciiArtTime(formatTime('hhnnss',t));
+
 
 guessTimeOrInterval(TimeOrIntervalString:string)->
   begin
@@ -39,7 +47,7 @@ nextMinute->sleep(60-formatTime('ss.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
-  async({while(true,begin asciiArtTime(systime-floor(systime)).printOnce; nextMinute; end)});
+  async({while(true,begin asciiArtTime(systime-floor(systime)).printOnce; nextSecond; end)});
   ask('Press enter to quit');
 end;
 
@@ -50,7 +58,21 @@ main('once')->asciiArtTime(systime-floor(systime)).printOnce;
 //*valid inputs are e.g.: "15:23" (sleep until 15:23)
 //*                       "1h 5m" (sleep for one hour and 5 minutes)
 //*                       "20s"   (sleep for 20 seconds)
-main(timeOrInterval)->begin
+main(timeOrInterval)->main(timeOrInterval,'-beep');
+
+AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkStation'])}],
+               ['-suspend' ,{execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
+               ['-restart' ,{execPipeless('Shutdown.exe',['-r','-t','00'])}],
+               ['-shutdown',{execPipeless('Shutdown.exe',['-s','-t','00'])}],
+               ['-beep',{while(true,begin beep; sleep(1); end)}]];
+
+//*As with time or interval but with custom action when timer is done
+//*after can be: -lock
+//*              -suspend
+//*              -restart
+//*              -shutdown
+//*              -beep      (default)
+main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
   async({begin
     local endTime:=guessTimeOrInterval(timeOrInterval);
     while(systime<endTime,begin
@@ -58,10 +80,7 @@ main(timeOrInterval)->begin
        asciiArtTime(endTime-systime)).printOnce;
       nextSecond;
     end);
-    while(true,begin
-      beep;
-      sleep(1);
-    end);
+    AFTER_METHOD[after]();
   end});
   ask('Press enter to quit');
 end;
