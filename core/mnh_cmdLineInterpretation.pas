@@ -1,7 +1,7 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
-     myStringUtil,myGenerics,
+     myStringUtil,myGenerics,{$ifdef fullVersion}mySys,{$endif}
      mnh_constants,
      mnh_fileWrappers,
      mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,mnh_settings,{$endif}
@@ -42,6 +42,16 @@ VAR fileOrCommandToInterpret:ansistring='';
       appending:boolean;
     end;
 //---------------:by command line parameters
+{$ifdef fullVersion}
+PROCEDURE addFileToOpen(CONST pathOrPattern:string);
+  VAR info:T_fileInfo;
+  begin
+    if containsPlaceholder(pathOrPattern) then begin
+      for info in findFileInfo(pathOrPattern) do if (info.size>0) and not(aDirectory in info.attributes) then append(filesToOpenInEditor,info.filePath);
+    end else append(filesToOpenInEditor,pathOrPattern);
+  end;
+{$endif}
+
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
   begin
     result:=fileOrCommandToInterpret;

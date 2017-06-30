@@ -46,10 +46,10 @@ private doAnalysis(rt:list)->begin
     print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
     print("Slow tests: ");
     print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
-    local testsWithTime:=testsWithTime.sort(2);
+    testsWithTime:=testsWithTime.sort(2);
     print("Tests with big relative variance: ");
     print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(100*t[2],3)&"%\n",&));
-    local testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
+    testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
     print("Tests with big absolute variance: ");
     print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(t[1]*t[2],6)&"s\n",&));
     totalTime:=filteredTests.getInner(2).agg(+);
