@@ -106,6 +106,7 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
   begin
     if (state=dontBreakAtAll) then exit;
     system.enterCriticalSection(cs);
+    if callStack^.size<>lastBreakLevel then lastBreakLine.line:=-1;
     if state=breakSoonest then state:=waitingForGUI
     else begin
       lineChanged:=not(isEqualLine(lastBreakLine,first^.location));
