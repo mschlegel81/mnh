@@ -29,7 +29,7 @@ FUNCTION runScript_imp intFuncSignature;
     end;
   end;
 
-FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext; CONST registerAsSecondaryPackage:boolean; OUT freshlyCreated:boolean):P_package;
+FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext; OUT freshlyCreated:boolean):P_package;
   VAR fileName:string='';
       id      :string='';
       p       :P_package;
@@ -54,16 +54,7 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
       exit(nil);
     end;
     new(result,create(newFileCodeProvider(fileName),callerPackage^.mainPackage));
-    result^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
     freshlyCreated:=true;
-    if registerAsSecondaryPackage then begin
-      with callerPackage^.mainPackage^ do begin
-        setLength(secondaryPackages,
-           length(secondaryPackages)+1);
-                  secondaryPackages[
-           length(secondaryPackages)-1]:=result;
-      end;
-    end;
     leaveCriticalSection(packageCs);
   end;
 
@@ -82,7 +73,7 @@ FUNCTION inspect_imp intFuncSignature;
     begin
       prevAdapters:=context.enterTryStatementReturningPreviousAdapters;
       collector:=P_collectingOutAdapter(context.adapters^.getAdapter(at_sandboxAdapter));
-      for mt in T_messageType do collector^.enableMessageType(C_messageTypeMeta[mt].mClass in [mc_echo,mc_warning],[mt]);
+      for mt in T_messageType do collector^.enableMessageType(C_messageTypeMeta[mt].mClass in [mc_echo,mc_warning,mc_error],[mt]);
       tempPackage^.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
       loadMessages:=messagesToLiteralForSandbox(collector^.storedMessages);
       context.leaveTryStatementReassumingPreviousAdapters(prevAdapters,true);
@@ -94,7 +85,7 @@ FUNCTION inspect_imp intFuncSignature;
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
-      tempPackage:=obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context,false,needDispose);
+      tempPackage:=obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context,needDispose);
       if tempPackage<>nil then begin
         if needDispose then loadTemporaryPackage;
         result:=tempPackage^.inspect;
