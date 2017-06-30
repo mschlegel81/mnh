@@ -1,4 +1,4 @@
-USE make;
+USE make_config;
 barPlot(captions:list,samples:numericList,targetWidth>0)->
 barPlot(captions     ,samples            ,targetWidth,'%s');
 
