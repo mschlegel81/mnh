@@ -324,7 +324,7 @@ FUNCTION T_primeGenerator.next(CONST location: T_tokenLocation; VAR context: T_t
       k0:=length(table);
       offset:=k0 shl 8;
       setLength(table,k0*2);
-      newMax:=int64(256)*int64(int64(length(table))-int64(1));
+      newMax:=int64(256)*int64(length(table))-int64(1);
       {$ifdef debugMode}
       writeln(stdErr,'        DEBUG: computing primes in range ',offset,'..',newMax);
       {$endif}
