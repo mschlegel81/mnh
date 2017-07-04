@@ -88,6 +88,17 @@ TYPE
   end;
 
   P_adapters=^T_adapters;
+
+  P_connectorAdapter=^T_connectorAdapter;
+  T_connectorAdapter = object(T_abstractOutAdapter)
+    private
+      connectedAdapters:P_adapters;
+    public
+      CONSTRUCTOR create(CONST connected:P_adapters; CONST includePrint,includeWarnings,includeErrors:boolean);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
+  end;
+
   T_adapters=object
     private
       stackTraceCount:longint;
@@ -103,6 +114,7 @@ TYPE
       {$ifdef fullVersion}
       privatePlot:P_plot;
       {$endif}
+      subAdapters:array of P_adapters;
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
     public
       {$ifdef fullVersion}
@@ -181,6 +193,9 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION plot:P_plot;
       {$endif}
+      PROCEDURE addSubAdapters(CONST sub:P_adapters);
+      PROCEDURE remSubAdapters(CONST sub:P_adapters);
+      FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
   end;
 
 CONST
@@ -286,6 +301,28 @@ OPERATOR :=(s:string):T_messageTypeSet;
       end;
     end;
   end;
+
+CONSTRUCTOR T_connectorAdapter.create(CONST connected: P_adapters; CONST includePrint,includeWarnings,includeErrors: boolean);
+  VAR toInclude:T_messageTypeSet=[];
+  begin
+    if includePrint then include(toInclude,mt_printline);
+    if includeWarnings then toInclude:=toInclude+[mt_el1_note..mt_el2_userWarning];
+    if includeErrors   then toInclude:=toInclude+[mt_el3_evalError..mt_el4_systemError];
+    inherited create(at_unknown,toInclude);
+    connectedAdapters:=connected;
+  end;
+
+DESTRUCTOR T_connectorAdapter.destroy;
+  begin
+  end;
+
+FUNCTION T_connectorAdapter.append(CONST message: T_storedMessage): boolean;
+  begin
+    if not(message.messageType in messageTypesToInclude) then exit(false);
+    connectedAdapters^.raiseCustomMessage(message);
+    result:=true;
+  end;
+
 //T_abstractOutAdapter:=========================================================
 PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean; CONST mt: T_messageTypeSet);
   begin
@@ -489,6 +526,7 @@ CONSTRUCTOR T_adapters.create;
     preferredEchoLineLength:=-1;
     {$endif}
     setLength(adapter,0);
+    setLength(subAdapters,0);
     clearAll;
   end;
 
@@ -519,12 +557,18 @@ PROCEDURE T_adapters.clearErrors;
 
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
+      sub:P_adapters;
   begin
     {$ifdef fullVersion}
     hasNeedGUIerror:=hasNeedGUIerror or not(gui_started) and C_messageTypeMeta[message.messageType].triggersGuiStartup;
     {$endif}
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
+    if maxErrorLevel>=3 then begin
+      enterCriticalSection(globalLockCs);
+      for sub in subAdapters do sub^.haltEvaluation;
+      leaveCriticalSection(globalLockCs);
+    end;
     if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_displayTable]+C_guiOnlyMessages{$else}]{$endif}) then exit;
     hasMessageOfType[message.messageType]:=true;
     if (message.messageType=mt_el3_stackTrace) then begin
@@ -820,6 +864,35 @@ FUNCTION T_adapters.plot:P_plot;
     result:=privatePlot;
   end;
 {$endif}
+
+PROCEDURE T_adapters.addSubAdapters(CONST sub:P_adapters);
+  VAR s:P_adapters;
+  begin
+    enterCriticalSection(globalLockCs);
+    for s in subAdapters do if s=sub then begin
+      leaveCriticalSection(globalLockCs);
+      exit;
+    end;
+    setLength(subAdapters,length(subAdapters)+1);
+    subAdapters[length(subAdapters)-1]:=sub;
+    leaveCriticalSection(globalLockCs);
+  end;
+
+PROCEDURE T_adapters.remSubAdapters(CONST sub:P_adapters);
+  VAR i:longint;
+  begin
+    enterCriticalSection(globalLockCs);
+    for i:=0 to length(subAdapters)-1 do if subAdapters[i]=sub then begin
+      subAdapters[i]:=subAdapters[length(subAdapters)-1];
+      setLength(subAdapters,length(subAdapters)-1);
+      leaveCriticalSection(globalLockCs);
+      exit;
+    end;
+    leaveCriticalSection(globalLockCs);
+  end;
+
+FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+  begin new(result,create(@self,includePrint,includeWarnings,includeErrors)); end;
 //===================================================================:T_adapters
 
 INITIALIZATION

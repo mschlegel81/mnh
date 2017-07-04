@@ -121,7 +121,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     collector.destroy;
   end;
 
-FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters):P_literal;
+FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte):P_literal;
   VAR fileName:string='';
       context:T_evaluationContext;
       package:T_package;
@@ -136,6 +136,8 @@ FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfStri
       exit(nil);
     end;
     {A} tempAdapters.create;
+        callerAdapters^.addSubAdapters(@tempAdapters);
+        if connectLevel>0 then tempAdapters.addOutAdapter(callerAdapters^.getConnector(connectLevel>=1,connectLevel>=2,connectLevel>=3),true);
     {C} collector.create(at_unknown,C_collectAllOutputBehavior);
         tempAdapters.addOutAdapter(@collector,false);
     {X} context.create(@tempAdapters);
@@ -149,6 +151,7 @@ FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfStri
     {X} context.destroy;
         result:=messagesToLiteralForSandbox(collector.storedMessages);
     {C} collector.destroy;
+        callerAdapters^.remSubAdapters(@tempAdapters);
     {A} tempAdapters.destroy;
     end;
   end;
