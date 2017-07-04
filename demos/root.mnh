@@ -1,26 +1,23 @@
-regulaFalsi(F:expression,x0input:numeric,x1input>x0input,steps>0)->begin
+regulaFalsi(F:expression,x0input:numeric,x1input>x0input,epsilonF>0.0,epsilonX>0.0)->begin
   local x0:=x0input;
   local f0:=F(x0);
   local x1:=x1input;
   local f1:=F(x1);
-  [1..steps].each(step,
-    f0=0 or f1=0 ? void :
-    begin
-      local xm:=x1-f1*(x0-x1)/(f0-f1);
-      local fm:=F(xm);
-      sign(f0)=sign(fm)
-      ? begin f0:=fm; x0:=xm; end
-      : begin f1:=fm; x1:=xm; end;
-      void;
-    end
-  );
+  local counter:=1000;
+  while(abs(f0)>epsilonF<abs(f1) AND abs(x1-x0)>epsilonX AND (counter-=1)>0,begin
+    local xm:=x1-f1*(x0-x1)/(f0-f1);
+    local fm:=F(xm);
+    f0*fm>0
+    ? begin f0:=fm; x0:=xm; end
+    : begin f1:=fm; x1:=xm; f0*=0.9; end;
+  end);
   abs(f1)<abs(f0) ? x1 : x0;
 end;
 
-roots(F:expression,x0:numeric,x1:numeric)->begin
-  local X:=x0|sort(x0+random(1000)*(x1-x0))|x1;
+roots(F:expression(1),x0:numeric,x1:numeric)->begin
+  local X:=x0|sort(x0+random(100)*(x1-x0))|x1;
   local S:=X.each(x,sign(F(x)));
-  [0..size(S)-2].each(i,S.get(i)<>S.get(i+1) ? regulaFalsi(F,X.get(i),X.get(i+1),100) : void);
+  [0..size(S)-2].each(i,S.get(i)<>S.get(i+1) ? regulaFalsi(F,X.get(i),X.get(i+1),1E-16,1E-16) : void);
 end;
 
 private epsilon:=1E-12;
