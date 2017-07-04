@@ -20,12 +20,18 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
 FUNCTION runScript_imp intFuncSignature;
   VAR scriptParams:T_arrayOfString;
       i:longint;
+      connect:byte=0;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_emptyList,lt_stringList]) then begin
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
+       (arg0^.literalType=lt_string) and
+       (arg1^.literalType in [lt_emptyList,lt_stringList]) and
+       ((params^.size=2) or (arg2^.literalType=lt_int) and (int2^.value>=0) and (int2^.value<=3))
+    then begin
       setLength(scriptParams,list1^.size);
       for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^[i])^.value;
-      result:=runScript(str0^.value,scriptParams,tokenLocation,context.adapters);
+      if params^.size>2 then connect:=byte(int2^.value and 255);
+      result:=runScript(str0^.value,scriptParams,tokenLocation,context.adapters,connect);
     end;
   end;
 
@@ -122,7 +128,8 @@ FUNCTION writeDataStores_imp intFuncSignature;
 {$endif}
 {$ifdef include_initialization}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,[],ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,[],ak_binary,'runScript(filenameOrId:string,parameters:stringList);//executes the given script - in the current program instance but strictly isolated');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,[],ak_binary,'runScript(filenameOrId:string,parameters:stringList);//executes the given script - in the current program instance but strictly isolated#'+
+                                                                                           'runScript(filenameOrId:string,parameters:stringList,connectionLevel);//executes the given script with connectionLevel#  // 0: isolated#  // 1: print#  // 2: print and warnings#  // 3: print, warnings and errors');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,[se_readingExternal,se_readingInternal],ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,[se_writingExternal],ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,[se_writingExternal],ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');

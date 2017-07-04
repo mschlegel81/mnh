@@ -151,7 +151,8 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('flavour'        ,{$ifdef fullVersion}'F'{$else}'L'{$endif}+
                                                                                {$ifdef imig}'I'{$else}''{$endif}+
                              {$ifdef debugMode}  'D'{$else}'O'{$endif}+
-                             {$I %FPCTargetOS%}                          )
+                             {$I %FPCTargetOS%}                          )^
+      .put('configDir'      ,configDir)
     else result:=nil;
   end;
 
