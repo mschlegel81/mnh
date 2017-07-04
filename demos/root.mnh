@@ -1,4 +1,5 @@
-regulaFalsi(F:expression,x0input:numeric,x1input>x0input,epsilonF>0.0,epsilonX>0.0)->begin
+//@Algorithm Name=Regula Falsi
+regulaFalsi(F:expression,x0input:numeric,x1input<>x0input,epsilonF>0.0,epsilonX>0.0)->begin
   local x0:=x0input;
   local f0:=F(x0);
   local x1:=x1input;
@@ -7,23 +8,36 @@ regulaFalsi(F:expression,x0input:numeric,x1input>x0input,epsilonF>0.0,epsilonX>0
   while(abs(f0)>epsilonF<abs(f1) AND abs(x1-x0)>epsilonX AND (counter-=1)>0,begin
     local xm:=x1-f1*(x0-x1)/(f0-f1);
     local fm:=F(xm);
+    fm=f1 OR fm=f0 ? counter:=0 : void;
     f0*fm>0
     ? begin f0:=fm; x0:=xm; end
-    : begin f1:=fm; x1:=xm; f0*=0.9; end;
+    : begin f1:=fm; x1:=xm; f0*=0.5; end;
   end);
-  abs(f1)<abs(f0) ? x1 : x0;
+  x1-f1*(x0-x1)/(f0-f1);
 end;
 
-roots(F:expression(1),x0:numeric,x1:numeric)->begin
-  local X:=x0|sort(x0+random(100)*(x1-x0))|x1;
-  local S:=X.each(x,sign(F(x)));
-  [0..size(S)-2].each(i,S.get(i)<>S.get(i+1) ? regulaFalsi(F,X.get(i),X.get(i+1),1E-16,1E-16) : void);
+roots(F:expression(1),x0,x1)->begin
+  local lastX:=x0;
+  local lastS:=F(x0).sign;
+  rangeGenerator(1,100)
+  .map({x0+(x1-x0)/100*$i})
+  .each(x,
+    begin
+      local s:=F(x).sign;
+      s=lastS ? void : begin
+        lastS:=s;
+        [lastX,x];
+      end;
+    end,
+    begin
+      lastX:=x;
+      void;
+    end)
+  .pEach(x,regulaFalsi(F,x[0],x[1],1E-50,1E-50)).unique.map({[$x,F($x)=0]});
 end;
-
-private epsilon:=1E-12;
 
 roots(F:expression)->print("Analyzing ",F.toString.unbrace.unbrace) and
-                     roots(F,-6,6).each(r,print("Root found ",abs(F(r))<epsilon?"at   ":"near ",r));
+                     roots(F,-6,6).each(r,print("Root found ",r[1] ? "at   ":"near ",r[0]));
 main(F)->roots(F.toExpression);
 //*Solves the "Roots of a function" task from http://rosettacode.org/wiki/Roots_of_a_function
 main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and

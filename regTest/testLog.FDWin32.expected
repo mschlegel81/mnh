@@ -2015,7 +2015,8 @@ MDCLXVI    (roman)  =       1666 (arabic)
 ***** root *****
 See http://rosettacode.org/wiki/Roots_of_a_function
 Analyzing $x^3-3*$x^2+2*$x
-Root found at   7.141451521665913554E-153
+Root found at   0.0
+Root found near 4.336808689942017736E-18
 Root found at   1.0
 Root found at   2.0
 ***** rotatingCube *****
