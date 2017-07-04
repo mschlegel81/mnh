@@ -1101,12 +1101,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
 {$ifdef fullVersion}
 VAR generateRowIdentification:T_identifiedInternalFunction;
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
-  VAR subRule:P_subruleExpression=nil;
-
-      firstRep:P_token=nil;
-      lastRep:P_token=nil;
-
-      tRow :T_arrayOfDouble;
+  VAR tRow :T_arrayOfDouble;
       TList:P_listLiteral=nil;
       dataRow:T_dataRow;
 
@@ -1118,20 +1113,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       dataReadyVectorized:boolean=false;
       dataReadyScalar    :boolean=false;
 
-  FUNCTION evaluateOk:boolean;
-    begin
-      tempcontext.threadContext^.reduceExpression(firstRep);
-      result:=tempcontext.adapters^.noErrors and
-              (firstRep<>nil) and
-              (firstRep^.next=nil) and
-              (firstRep^.tokType=tt_literal) and
-              (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
-              (P_listLiteral(firstRep^.data)^.size = TList^.size);
-      tempcontext.adapters^.clearErrors;
-      if not(result) then context.recycler.cascadeDisposeToken(firstRep);
-    end;
-
   FUNCTION evaluatePEachExpressionOk:boolean;
+    VAR firstRep:P_token=nil;
+        lastRep:P_token=nil;
     begin
       firstRep:=context.recycler.newToken(location,'',tt_literal,TList); TList^.rereference;
       firstRep^.next:=context.recycler.newToken(location,'t',tt_parallelEach);
@@ -1143,16 +1127,33 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       lastRep^.next:=context.recycler.newToken(location,'',tt_literal,f); f^.rereference;
       lastRep:=lastRep^.next;
       lastRep^.next:=context.recycler.newToken(location,'',tt_braceClose);
-      result:=evaluateOk;
+      tempcontext.threadContext^.reduceExpression(firstRep);
+      result:=tempcontext.adapters^.noErrors and
+              (firstRep<>nil) and
+              (firstRep^.next=nil) and
+              (firstRep^.tokType=tt_literal) and
+              (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
+              (P_listLiteral(firstRep^.data)^.size = TList^.size);
+      tempcontext.adapters^.clearErrors;
+      if result then resultLiteral:=P_listLiteral(P_literal(firstRep^.data)^.rereferenced);
+      context.recycler.cascadeDisposeToken(firstRep);
     end;
 
   FUNCTION evaluateVectorExpressionOk:boolean;
     VAR params:T_listLiteral;
+        temp:P_literal;
     begin
       params.create(1);
       params.append(TList,true);
-      result:=subRule^.replaces(@params,location,firstRep,lastRep,tempcontext.threadContext^,false) and evaluateOk;
+      temp:=f^.evaluate(location,tempcontext.threadContext,@params);
       params.destroy;
+      result:=tempcontext.adapters^.noErrors and
+              (temp<>nil) and
+              (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
+              (P_listLiteral(temp)^.size = TList^.size);
+      if result then resultLiteral:=P_listLiteral(temp)
+      else if temp<>nil then disposeLiteral(temp);
+      tempcontext.adapters^.clearErrors;
     end;
 
   PROCEDURE constructInitialTList;
@@ -1221,7 +1222,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         stillOk:=dataReadyVectorized and evaluateVectorExpressionOk
               or dataReadyScalar     and evaluatePEachExpressionOk;
         if stillOk then begin
-          resultLiteral:=P_listLiteral(firstRep^.data);
           if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
           then newRow:=newDataRow(resultLiteral,TList)
           else newRow:=newDataRow(resultLiteral);
@@ -1258,14 +1258,13 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           end;
           //------------------------------------------------------:Merge samples
         end;
-        context.recycler.cascadeDisposeToken(firstRep);
+        disposeLiteral(resultLiteral);
         disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;
     end;
 
   begin
-    subRule:=P_subruleExpression(f);
     tempcontext.createAndResetSilentContext(nil,[]);
     collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
     tempcontext.adapters^.addOutAdapter(@collector,false);
@@ -1275,11 +1274,10 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     if not(dataReadyVectorized) then dataReadyScalar:=evaluatePEachExpressionOk;
 
     if dataReadyScalar or dataReadyVectorized then begin
-      resultLiteral:=P_listLiteral(firstRep^.data);
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
-      context.recycler.cascadeDisposeToken(firstRep);
+      disposeLiteral(resultLiteral);
       disposeLiteral(TList);
       refineDataRow;
     end else begin

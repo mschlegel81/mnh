@@ -47,7 +47,7 @@ TYPE
     style: T_plotStyles;
     color: T_color;
     styleModifier: double;
-    CONSTRUCTOR create(CONST index: byte);
+    CONSTRUCTOR create(CONST index: longint);
     DESTRUCTOR destroy;
     PROCEDURE parseStyle(CONST styleString: ansistring);
 
@@ -58,7 +58,7 @@ TYPE
   T_sampleRow = object
     style: T_style;
     sample: T_dataRow;
-    CONSTRUCTOR create(CONST index: byte; CONST row:T_dataRow);
+    CONSTRUCTOR create(CONST index: longint; CONST row:T_dataRow);
     PROCEDURE getBoundingBox(CONST logX, logY, autoscaleX, autoscaleY: boolean; VAR box: T_boundingBox);
     DESTRUCTOR destroy;
   end;
@@ -137,7 +137,7 @@ TYPE
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 
-CONSTRUCTOR T_sampleRow.create(CONST index: byte; CONST row:T_dataRow);
+CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row:T_dataRow);
   VAR i:longint;
   begin
     style.create(index);
@@ -178,7 +178,7 @@ CONST
      (name: 'purple'; color:(192,  0,192)),
      (name: 'orange'; color:(255, 96,  0)));
 
-CONSTRUCTOR T_style.create(CONST index: byte);
+CONSTRUCTOR T_style.create(CONST index: longint);
   begin
     title:='';
     style:=[ps_straight];
