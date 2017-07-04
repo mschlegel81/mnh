@@ -228,9 +228,7 @@ FUNCTION defaultFormatting(CONST message:T_storedMessage; CONST includeGuiMarker
 OPERATOR :=(s:string):T_messageTypeSet;
 FUNCTION clearConsoleMessage:T_storedMessage;
 IMPLEMENTATION
-{$ifdef fullVersion}
 VAR globalLockCs:TRTLCriticalSection;
-{$endif}
 
 FUNCTION message(CONST messageType: T_messageType;
                  CONST messageText: T_arrayOfString;
@@ -897,12 +895,8 @@ FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeError
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
-  {$ifdef fullVersion}
   initCriticalSection(globalLockCs);
-  {$endif}
 
 FINALIZATION
-  {$ifdef fullVersion}
   doneCriticalSection(globalLockCs);
-  {$endif}
 end.
