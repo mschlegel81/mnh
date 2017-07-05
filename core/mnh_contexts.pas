@@ -5,7 +5,7 @@ USES //FPC/LCL libraries
      //3rd party libraries
      EpikTimer, RegExpr,
      //my libraries
-     myGenerics,{$ifndef fullVersion}mySys,{$endif}
+     myGenerics,mySys,
      //MNH:
      mnh_constants, mnh_basicTypes,
      {$ifdef fullVersion}mnh_settings,{$endif}
@@ -136,6 +136,7 @@ TYPE
       allowedSideEffects:T_sideEffects;
       PROCEDURE setupThreadContext(CONST context:P_threadContext);
     public
+      prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
       CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
@@ -253,6 +254,8 @@ DESTRUCTOR T_threadContext.destroy;
 
 CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
   begin
+    prng.create;
+    prng.randomize;
     wallClock:=nil;
     {$ifdef fullVersion}
     profiler:=nil;
@@ -279,6 +282,7 @@ CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_obje
 
 DESTRUCTOR T_evaluationContext.destroy;
   begin
+    prng.destroy;
     if wallClock<>nil then FreeAndNil(wallClock);
     {$ifdef fullVersion}
     if profiler<>nil then dispose(profiler,destroy);
