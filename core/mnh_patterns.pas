@@ -149,7 +149,7 @@ FUNCTION T_patternElement.toString: ansistring;
 FUNCTION T_patternElement.toCmdLineHelpStringString:ansistring;
   begin
     case restrictionType of
-      tt_comparatorListEq: if restrictionId='' then begin
+      tt_comparatorListEq, tt_comparatorEq: if restrictionId='' then begin
         if restrictionValue^.literalType=lt_string then result:=P_stringLiteral(restrictionValue)^.value
                                                    else result:=restrictionValue^.toString
       end else result:='<'+id+'>';
