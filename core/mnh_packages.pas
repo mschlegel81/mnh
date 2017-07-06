@@ -32,6 +32,7 @@ TYPE
   T_packageReference=object
     id,path:ansistring;
     pack:P_package;
+    locationOfDeclaration:T_tokenLocation;
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
@@ -233,6 +234,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
 
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
+    locationOfDeclaration:=tokenLocation;
     id:=packId;
     path:=locateSource(extractFilePath(root),id);
     if adapters<>nil then begin
@@ -244,6 +246,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
 
 CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
+    locationOfDeclaration:=tokenLocation;
     path:=extractFilePath(tokenLocation.package^.getPath)+path_;
     id:=filenameToPackageId(path_);
     if not(fileExists(path)) and fileExists(path_) then path:=path_;
@@ -858,7 +861,7 @@ PROCEDURE T_package.complainAboutUnused(VAR adapters:T_adapters);
   begin
     for rule in packageRules.valueSet do rule^.complainAboutUnused(adapters);
     for import in packageUses do if not(import.pack^.anyCalled) then
-      adapters.raiseWarning('Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')',packageTokenLocation(import.pack));
+      adapters.raiseWarning('Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')',import.locationOfDeclaration);
   end;
 {$endif}
 
