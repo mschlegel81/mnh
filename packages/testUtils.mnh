@@ -4,3 +4,9 @@ testExpression(...)->... .each(e,e.isExpression
                      printf("%s\t=\t%s",
                             ... .each(e,e.toString.unbrace.unbrace),
                             ... .each(e,toString(e())));
+
+//*Returns true if the given list of sandbox messages contain an error
+messagesContainError(sandboxMessages:list)->sandboxMessages.each(m,m.size>0 AND m[0].matches('Error'),OR);
+
+//*Returns the created printout as a list of strings
+extractPrintout(sandboxMessages:list)->sandboxMessages.each(m,m.size=3 AND m[0]=='printline' ? m[2].split("\n") : void,|);
