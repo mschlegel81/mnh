@@ -22,7 +22,7 @@ FUNCTION resetRandom_impl intFuncSignature;
 FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getParent^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       count:=int0^.value;
       if count>0 then begin
