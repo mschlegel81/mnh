@@ -100,7 +100,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       stmt:T_enhancedStatement;
   begin
     tryObtainName(false);
-    if fileName='' then exit(newVoidLiteral);
+    if fileName='' then exit(nil);
     if fileHasBinaryFormat then begin
       wrapper.createToReadFromFile(fileName);
       wrapper.readAnsiString;

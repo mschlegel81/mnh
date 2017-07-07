@@ -755,6 +755,7 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       editor.modified:=false;
       fileInfo.isChanged:=false;
       mainForm.caption:=updateSheetCaption;
+      if language_=LANG_MNH then repaintWithStateHash;
     end;
   end;
 

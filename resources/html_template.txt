@@ -92,6 +92,7 @@ f(x)->sin(x);
 <ul>
   <li><h5><a href="#defining">Defining a package</a></h5></li>
   <li><h5><a href="#importing">Importing a package</a></h5></li>
+  <li><h5><a href="#including">Including a package</a></h5></li>
   <li><h5><a href="#executables">Executable packages</a></h5></li>
   <li><h5><a href="#comments">Comments</a></h5></li>
   <li><h5><a href="#attributes">Attributes</a></h5></li>
@@ -115,7 +116,7 @@ To define a package, just create a file with the extension <code>.mnh</code> (or
   <li>The filename must not be any of the built-in pseudo packages' identifiers.</li>
 </ul><br>
 <h4><a name="importing">Importing a package</a></h4>
-To import a package, start your package with a <i>use clause</i>, e.g.:<code>
+To import a package, employ the <i>use clause</i>, e.g.:<code>
 <!--mnh-->
   USE basic;
 <!--end-->
@@ -125,12 +126,32 @@ This will import the first package with a filename <code>basic.mnh</code> in the
   <li> The current executable's folders, or its subfolders </li>
   <li> The current working directory, or its subfolders </li>
 </ul>
+Instead of using an identifier to specify a package, you may use a string literal denoting it's path - either absolute or relative to the importing package.
+<br>
 Having imported a package, you might run into naming conflicts. All rules can be accessed using either their name or qualified access via package.name, e.g.<code>
 <!--mnh-->
    basic.sum([1,2,6]);
 <!--end-->
 </code>
-<br><h4><a name="executables">Executable packages</a></h4>
+<h4><br><a name="including">Including a package</a></h4>
+Including another package with the <i>include clause</i> means that the contents of the existing package are (more or less) inlined in the existing package.
+<br>
+There are some key differences to importing via <code><span class="modifier">USE</span></code> which may also be the reason to use this:
+<ul>
+<li>The including package can call the included package's private functions</li>
+<li>Datastores defined in the included package will be accessed as if declared in the including package</li>
+<li>Calls to <code><span class="builtin">myPath</span></code> behave as if declared in the including package</li>
+<li>As any other function, the main routine may be defined in the included package</li>
+</ul>
+<br>
+To include a package, use e.g.:<code>
+<!--mnh-->
+  INCLUDE basic;
+<!--end-->
+</code>
+The rules for finding the package to include are the same as for the use clause.
+
+<h4><br><a name="executables">Executable packages</a></h4>
 A package is <i>executable</i> if it contains a rule called <code>main</code>.
 Executable packages can be executed from the command line. If called as<code>
   mnh </code><i>packageName</i><code>.mnh
@@ -146,7 +167,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
 <code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
 <br>
 <h4><a name="attributes">Attributes</a></h4>
-An attribute is a comment starting with <code>//@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via inspection.<br>
+An attribute is a comment starting with <code>//@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via <a href="builtin.html#mnh.inspect">inspection</a>.<br>
 Attributes are key-value pairs where the value can be omitted. They generally take the form:<code>
 <!--mnh-->
   //@key=value

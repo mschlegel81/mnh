@@ -1,4 +1,4 @@
-USE GUI;
+USE GUI, mnhUtil;
 
 private avg([])->Nan;
 private avg(L:numericList)->L.agg(+)/L.size;
@@ -144,7 +144,25 @@ private compareFlavours(data,flavour1:string,flavour2:string)->begin
                      'Delta.avg.'  ,'Delta.last']]|tableData,'Flavour comparison',true);
 end;
 
-private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,0<=i[2]<=500 ? i : void);
+private loadAndFilterUnplausible(filename)->
+  (filename.fileExists
+   ? filename.fileContents.deserialize
+   : begin
+       local result:=readDatastore('regTest.datastore0')[1];
+       filename.writeFile(result.serialize);
+       result;
+     end).pEach(i,0<=i[2]<=500 ? i : void);
+
+main('merge',fileA,fileB<>fileA,output)->begin
+  fileExists(fileA) ? void : fail(fileA,' cannot be found');
+  fileExists(fileB) ? void : fail(fileB,' cannot be found');
+  output.writeFile(serialize(
+  print('Reading ',fileA,' and applying suffix "_A"')|
+  fileA.fileContents.deserialize.pEach(x,[x[0],x[1]&'_A',x[2]])|
+  print('Reading ',fileB,' and applying suffix "_B"')|
+  fileA.fileContents.deserialize.pEach(x,[x[0],x[1]&'_B',x[2]])|
+  print('Writing ',output)));
+end;
 
 main(inputFile:string)->doAnalysis(inputFile.loadAndFilterUnplausible);
 bar(factor,q)->begin
@@ -179,3 +197,5 @@ main(inputFile:string,flavour1:string,flavour2:string)->begin
       print('Flavours: ',data.getInner(1).unique.join(' '));
     end;
 end;
+
+loadAndFilterUnplausible('times').head(10);

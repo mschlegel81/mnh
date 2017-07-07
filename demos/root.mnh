@@ -13,6 +13,8 @@ regulaFalsi(F:expression,x0input:numeric,x1input<>x0input,epsilonF>0.0,epsilonX>
     ? begin f0:=fm; x0:=xm; end
     : begin f1:=fm; x1:=xm; f0*=0.5; end;
   end);
+  f0=0 ? x0 :
+  f1=0 ? x1 :
   x1-f1*(x0-x1)/(f0-f1);
 end;
 

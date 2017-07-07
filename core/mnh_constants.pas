@@ -62,7 +62,9 @@ CONST
   SPECIAL_COMMENT_BLOB_BEGIN    =COMMENT_PREFIX+'!';
   {$ifdef fullVersion}
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
+  SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
   {$endif}
+
 TYPE
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
@@ -164,6 +166,7 @@ TYPE
     tt_EOL,
     tt_docComment,
     tt_attributeComment,
+    tt_use,tt_include,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -298,7 +301,6 @@ CONST
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckExpression];
   C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
-  C_unpureTokens:T_tokenTypeSet=[tt_declare..tt_cso_mapDrop,tt_pseudoFuncPointer,tt_toId];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
@@ -403,12 +405,12 @@ CONST
 {tt_braceClose}                 (defaultId:')';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Closing round bracket#Used as in default mathematical syntax.'),
 {tt_parList_constructor}        (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'A parameter list constructor'),
 {tt_parList}                    (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'A parameter list'),
-{tt_listBraceOpen}              (defaultId:'[';             defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'Square opening bracket#Used for list construction and list access'),
-{tt_listBraceClose}             (defaultId:']';             defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'Square closing bracket#Used for list construction and list access'),
-{tt_list_constructor}           (defaultId:'';              defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'A list constructor'),
-{tt_list_Constructor_ranging}   (defaultId:'';              defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'A list constructor'),
-{tt_expBraceOpen}               (defaultId:'{';             defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'Curly opening bracket#Delimits an expression'),
-{tt_expBraceClose}              (defaultId:'}';             defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'Curly closing bracket#Delimits an expression'),
+{tt_listBraceOpen}              (defaultId:'[';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Square opening bracket#Used for list construction and list access'),
+{tt_listBraceClose}             (defaultId:']';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Square closing bracket#Used for list construction and list access'),
+{tt_list_constructor}           (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'A list constructor'),
+{tt_list_Constructor_ranging}   (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'A list constructor'),
+{tt_expBraceOpen}               (defaultId:'{';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Curly opening bracket#Delimits an expression'),
+{tt_expBraceClose}              (defaultId:'}';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Curly closing bracket#Delimits an expression'),
 {tt_separatorComma}             (defaultId:',';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator comma'),
 {tt_separatorCnt}               (defaultId:'..';            defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator ..#Used for constructing ranges and only allowed in that context'),
 {tt_comparatorEq}               (defaultId:'=';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Equals operator#Returns true if the scalar comparands are type-compatible#and equal#For list operands a list of booleans is returned'),
@@ -492,18 +494,15 @@ CONST
 {tt_EOL}                        (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'),
 {tt_docComment}                 (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'),
 {tt_attributeComment}           (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'),
+{tt_use}                        (defaultId:'USE';           defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
+{tt_include}                    (defaultId:'INCLUDE';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
 {tt_blank}                      (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
-  C_use='USE';
-  C_include='INCLUDE';
-
-  C_specialWordInfo:array[0..7] of record
+  C_specialWordInfo:array[0..5] of record
     txt:string;
     reservedWordClass:T_reservedWordClass;
     helpText:string;
-  end=((txt:C_use;             reservedWordClass:rwc_modifier      ; helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
-       (txt:C_include;         reservedWordClass:rwc_modifier      ; helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
-       (txt:LITERAL_TEXT_VOID; reservedWordClass:rwc_specialLiteral; helpText:'void literal#Denotes a literal "which is not there"#Intended use: list construction and blank branches of inline if clauses'),
+  end=((txt:LITERAL_TEXT_VOID; reservedWordClass:rwc_specialLiteral; helpText:'void literal#Denotes a literal "which is not there"#Intended use: list construction and blank branches of inline if clauses'),
        (txt:LITERAL_NAN_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'not-a-number real literal'),
        (txt:LITERAL_INF_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'infinity real literal'),
        (txt:'false';           reservedWordClass:rwc_specialLiteral; helpText:'false literal'),

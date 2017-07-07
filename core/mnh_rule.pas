@@ -71,7 +71,10 @@ TYPE
       called,
       valueChangedAfterDeclaration:boolean;
       namedValue:T_namedVariable;
+      meta:T_ruleMetaData;
     public
+      PROPERTY metaData:T_ruleMetaData read meta;
+
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate:boolean; CONST ruleType:T_ruleType=rt_mutable);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
@@ -122,6 +125,7 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
 CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate: boolean; CONST ruleType: T_ruleType);
   begin
     inherited create(ruleId,startAt,ruleType);
+    meta.create;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);
     initCriticalSection(rule_cs);
@@ -159,6 +163,7 @@ DESTRUCTOR T_memoizedRule.destroy;
 DESTRUCTOR T_mutableRule.destroy;
   begin
     enterCriticalSection(rule_cs);
+    meta.destroy;
     inherited destroy;
     namedValue.destroy;
     leaveCriticalSection(rule_cs);
@@ -187,6 +192,9 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
+    {$ifdef fullVersion}
+    if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then setIdResolved;
+    {$endif}
     clearCache;
   end;
 
@@ -382,7 +390,9 @@ FUNCTION T_mutableRule.inspect: P_mapLiteral;
         .put('location',getLocation     )^
         .put('type'    ,privateOrPublic )^
         .put('comment' ,''              )^
-        .put('body'    ,value^.toString ),false);
+        .put('body'    ,value^.toString )^
+        .put('comment'   ,meta.comment  )^
+        .put('attributes',meta.getAttributesLiteral,false),false);
       value^.unreference;
     end;
 
@@ -450,6 +460,8 @@ FUNCTION T_mutableRule.getDocTxt: ansistring;
     result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+
             'in '+getLocation.package^.getPath+C_lineBreakChar+
             'declared '+ansistring(getLocation);
+    if meta.comment<>'' then result:=result+C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX);
+    result:=result+meta.getAttributesDocTxt;
   end;
 
 FUNCTION T_mutableRule.hasPublicSubrule: boolean;
