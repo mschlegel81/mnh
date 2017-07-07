@@ -474,7 +474,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,context));
             subRule^.metaData.setComment(join(statement.comments,C_lineBreakChar));
-            subRule^.metaData.setAttributes(statement.attributes,subrule^.getLocation,context.adapters^);
+            subRule^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
             if (ruleGroup^.getRuleType in C_mutableRuleTypes)
             then begin
@@ -486,8 +486,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
                    end
               else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
               P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
-              P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subrule^.getLocation,context.adapters^);
-              {$ifdef FULLVERSION}
+              P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
+              {$ifdef fullVersion}
               if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then ruleGroup^.setIdResolved;
               {$endif}
               dispose(subRule,destroy);

@@ -192,7 +192,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
-    {$ifdef FULLVERSION}
+    {$ifdef fullVersion}
     if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then setIdResolved;
     {$endif}
     clearCache;
