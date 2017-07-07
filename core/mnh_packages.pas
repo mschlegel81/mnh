@@ -36,7 +36,7 @@ TYPE
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
-    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
+    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
   end;
 
   T_package=object(T_abstractPackage)
@@ -206,7 +206,8 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$define include_implementation}
 {$include mnh_funcs.inc}
 
-PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
+PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
+  CONST usecase:array[false..true] of T_packageLoadUsecase = (lu_forImport,lu_forCodeAssistance);
   VAR i:longint;
   begin
     with containingPackage^.mainPackage^ do begin
@@ -216,8 +217,8 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
-            if secondaryPackages[i]^.readyForUsecase<>lu_forImport then
-            secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+            if secondaryPackages[i]^.readyForUsecase<>usecase[forCodeAssistance] then
+            secondaryPackages[i]^.load(usecase[forCodeAssistance],context,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -228,7 +229,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
       new(pack,create(newFileCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
-      pack^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+      pack^.load(usecase[forCodeAssistance],context,C_EMPTY_STRING_ARRAY);
     end;
   end;
 
@@ -274,7 +275,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       context.callStackPush(@self,pc_importing,pseudoCallees);
       {$endif}
       if profile then context.timeBaseComponent(pc_importing);
-      for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context);
+      for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context,usecase=lu_forCodeAssistance);
       if profile then context.timeBaseComponent(pc_importing);
       {$ifdef fullVersion}
       context.callStackPop();
@@ -368,7 +369,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
             newId:=first^.txt;
             {$ifdef fullVersion}
             if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
-              if not(gui_started) then context.adapters^.logGuiNeeded;
+              if not(gui_started) and (usecase<>lu_forCodeAssistance) then context.adapters^.logGuiNeeded;
             end else
             {$endif}
             begin
@@ -472,8 +473,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
           if context.adapters^.noErrors then begin
             new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,context));
-            subRule^.setComment(join(statement.comments,C_lineBreakChar));
-            subRule^.setAttributes(statement.attributes,context.adapters^);
+            subRule^.metaData.setComment(join(statement.comments,C_lineBreakChar));
+            subRule^.metaData.setAttributes(statement.attributes,subrule^.getLocation,context.adapters^);
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
             if (ruleGroup^.getRuleType in C_mutableRuleTypes)
             then begin
@@ -484,6 +485,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
                      inlineValue^.unreference;
                    end
               else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
+              P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
+              P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subrule^.getLocation,context.adapters^);
               dispose(subRule,destroy);
             end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
             statement.firstToken:=nil;
@@ -950,7 +953,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     for rule in packageRules.valueSet do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck]) then
     for subRule in P_ruleWithSubrules(rule)^.getSubrules do begin
       matchesAll:=true;
-      for key in attributeKeys do matchesAll:=matchesAll and subRule^.hasAttribute(key,caseSensitive);
+      for key in attributeKeys do matchesAll:=matchesAll and subRule^.metaData.hasAttribute(key,caseSensitive);
       if matchesAll then begin
         setLength(result,length(result)+1);
         result[length(result)-1]:=subRule;

@@ -88,13 +88,29 @@ TYPE
       FUNCTION inspect:P_mapLiteral; virtual;
   end;
 
+  T_ruleMetaData=object
+    private
+      attributes:array of T_subruleAttribute;
+    public
+      comment:ansistring;
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+      FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
+      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
+      FUNCTION getAttributesLiteral:P_mapLiteral;
+      FUNCTION getAttributesDocTxt:ansistring;
+      PROCEDURE setComment(CONST commentText:ansistring);
+  end;
+
   P_subruleExpression=^T_subruleExpression;
   T_subruleExpression=object(T_inlineExpression)
     private
-      attributes:array of T_subruleAttribute;
-      comment:ansistring;
+      meta:T_ruleMetaData;
       parent:P_objectWithIdAndLocation;
     public
+      PROPERTY metaData:T_ruleMetaData read meta;
+
       CONSTRUCTOR create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
@@ -102,19 +118,13 @@ TYPE
       FUNCTION hasEquivalentPattern(CONST s:P_subruleExpression):boolean;
       FUNCTION hidesSubrule(CONST s:P_subruleExpression):boolean;
       //Inspection/documentation calls
-      PROCEDURE setComment(CONST commentText:ansistring);
       FUNCTION getInlineValue:P_literal;
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
-      FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
-      FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
-      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; VAR adapters:T_adapters);
-      FUNCTION getAttributesLiteral:P_mapLiteral;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
-
   end;
 
   P_builtinExpression=^T_builtinExpression;
@@ -267,8 +277,7 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
     pattern:=pat;
     constructExpression(rep,context,false);
     resolveIds(nil);
-    setLength(attributes,0);
-    comment:='';
+    meta.create;
     parent:=parent_;
   end;
 
@@ -361,7 +370,7 @@ DESTRUCTOR T_inlineExpression.destroy;
 
 DESTRUCTOR T_subruleExpression.destroy;
   begin
-    setLength(attributes,0);
+    meta.destroy;
     inherited destroy;
   end;
 
@@ -787,11 +796,6 @@ FUNCTION T_inlineExpression.toString(CONST lengthLimit: longint): ansistring;
 FUNCTION T_expression.toString(CONST lengthLimit: longint): ansistring;
   begin result:=C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId; end;
 
-PROCEDURE T_subruleExpression.setComment(CONST commentText: ansistring);
-  begin
-    comment:=commentText;
-  end;
-
 FUNCTION T_inlineExpression          .isStateful: boolean; begin result:=(indexOfSave>=0); end;
 FUNCTION T_builtinExpression         .isStateful: boolean; begin result:=false; end;
 FUNCTION T_builtinGeneratorExpression.isStateful: boolean; begin result:=true;  end;
@@ -903,20 +907,16 @@ FUNCTION T_subruleExpression.getParentId: T_idString; begin result:=parent^.getI
 FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
   begin
     result:='  '+pattern.toCmdLineHelpStringString;
-    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+COMMENT_PREFIX);
+    if meta.comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+COMMENT_PREFIX);
   end;
 
 FUNCTION T_subruleExpression.getDocTxt: ansistring;
-  VAR att:T_subruleAttribute;
   begin
     result:=ECHO_MARKER+'@Line '+intToStr(getLocation.line)+': '+C_tabChar;
     if typ=et_normal_private then result:=result+'private ';
     result:=result+getId+';';
-    if comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
-    for att in attributes do begin
-      result:=result+C_lineBreakChar+C_tabChar+'@'+att.key;
-      if att.value<>'' then result:=result+'='+att.value;
-    end;
+    if meta.comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
+    result:=result+meta.getAttributesDocTxt;
   end;
 
 FUNCTION T_inlineExpression.getId: T_idString;
@@ -959,44 +959,38 @@ FUNCTION T_inlineExpression.inspect: P_mapLiteral;
   end;
 
 FUNCTION T_subruleExpression.inspect: P_mapLiteral;
-  FUNCTION attributeList:P_mapLiteral;
-    VAR attrib:T_subruleAttribute;
-    begin
-      result:=newMapLiteral;
-      for attrib in attributes do result^.put(attrib.key,attrib.value);
-    end;
-
   begin
-    result:=inherited inspect^.put('comment'   ,comment            )^
-                              .put('attributes',attributeList,false);
+    result:=inherited inspect^.put('comment'   ,meta.comment            )^
+                              .put('attributes',meta.getAttributesLiteral,false);
   end;
 
-FUNCTION T_subruleExpression.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); end;
+DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
+PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
+  begin
+    comment:=commentText;
+  end;
+
+FUNCTION T_ruleMetaData.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
   begin
     result:=getAttribute(attributeKey,caseSensitive).key<>'';
   end;
 
-FUNCTION T_subruleExpression.getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
+FUNCTION T_ruleMetaData.getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
   CONST blankAttribute:T_subruleAttribute=(key:'';value:'');
-        publicAttribute:T_subruleAttribute=(key:PUBLIC_TEXT;value:'');
-        privateAttribute:T_subruleAttribute=(key:PRIVATE_TEXT;value:'');
   VAR attrib:T_subruleAttribute;
       useKey:string;
   begin
     if caseSensitive then begin
-      if (attributeKey=privateAttribute.key) and (typ=et_normal_private) then exit(privateAttribute);
-      if (attributeKey=publicAttribute .key) and (typ=et_normal_public ) then exit(publicAttribute);
       for attrib in attributes do if attrib.key=attributeKey then exit(attrib);
     end else begin
       useKey:=uppercase(attributeKey);
-      if (useKey=uppercase(privateAttribute.key)) and (typ=et_normal_private) then exit(privateAttribute);
-      if (useKey=uppercase(publicAttribute .key)) and (typ=et_normal_public ) then exit(publicAttribute);
       for attrib in attributes do if attrib.key=useKey then exit(attrib);
     end;
     result:=blankAttribute;
   end;
 
-PROCEDURE T_subruleExpression.setAttributes(CONST attributeLines:T_arrayOfString; VAR adapters:T_adapters);
+PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
   VAR line:string;
       parts:T_arrayOfString;
       newAttriuteIndex:longint=0;
@@ -1004,7 +998,7 @@ PROCEDURE T_subruleExpression.setAttributes(CONST attributeLines:T_arrayOfString
     VAR i:longint;
     begin
       for i:=0 to length(attributes)-1 do if attributes[i].key=key then begin
-        adapters.raiseWarning('Duplicate attribute key "'+key+'"',getLocation);
+        adapters.raiseWarning('Duplicate attribute key "'+key+'"',location);
         exit(i);
       end;
       result:=length(attributes);
@@ -1029,11 +1023,21 @@ FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_li
     result:=pattern.acceptsSingleLiteral(literalTypeToAccept);
   end;
 
-FUNCTION T_subruleExpression.getAttributesLiteral: P_mapLiteral;
+FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
   VAR i:longint;
   begin
     result:=newMapLiteral();
     for i:=0 to length(attributes)-1 do result^.put(attributes[i].key,attributes[i].value);
+  end;
+
+FUNCTION T_ruleMetaData.getAttributesDocTxt:ansistring;
+  VAR att:T_subruleAttribute;
+  begin
+    result:='';
+    for att in attributes do begin
+      result:=result+C_lineBreakChar+C_tabChar+'@'+att.key;
+      if att.value<>'' then result:=result+'='+att.value;
+    end;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);

@@ -460,12 +460,12 @@ CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boo
   VAR t:T_scriptType;
   begin
     editRule:=rule;
-    outputLanguage:=editRule^.getAttribute('language').value;
-    createNewEditor:=editRule^.hasAttribute('newEdit');
+    outputLanguage:=editRule^.metaData.getAttribute('language').value;
+    createNewEditor:=editRule^.metaData.hasAttribute('newEdit');
     isValid:=false;
-    for t in T_scriptType do if rule^.hasAttribute(C_scriptTypeMeta[t].nameAttribute) then begin
+    for t in T_scriptType do if rule^.metaData.hasAttribute(C_scriptTypeMeta[t].nameAttribute) then begin
       scriptType:=t;
-      name:=editRule^.getAttribute(C_scriptTypeMeta[t].nameAttribute).value;
+      name:=editRule^.metaData.getAttribute(C_scriptTypeMeta[t].nameAttribute).value;
       isValid:=true;
     end;
     if name='' then name:=editRule^.getId;
