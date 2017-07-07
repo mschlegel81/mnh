@@ -41,6 +41,7 @@ VAR fileOrCommandToInterpret:ansistring='';
       nameAndOption:string;
       appending:boolean;
     end;
+    headless:boolean=false;
 //---------------:by command line parameters
 {$ifdef fullVersion}
 PROCEDURE addFileToOpen(CONST pathOrPattern:string);
@@ -96,6 +97,7 @@ PROCEDURE displayHelp;
     writeln('  -h                display this help or help on the input file if present and quit');
     writeln('  -version          show version info and exit');
     writeln('  -codeHash         show codeHash and exit');
+    writeln('  -headless         forbid input via ask (scripts using ask will crash)');
     writeln('  -cmd              directly execute the following command');
     writeln('  -info             show info; same as -cmd mnhInfo.print');
     {$ifdef fullVersion}
@@ -154,6 +156,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         context.destroy;
         exit;
       end;
+      if headless then context.threadContext^.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package.load(lu_forCallingMain,context.threadContext^,mainParameters);
       {$ifdef fullVersion} if not(context.adapters^.hasNeedGUIerror) then {$endif}
       context.afterEvaluation;
@@ -228,6 +231,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           addParameter(mnhParameters,i);
         end
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
+        else if startsWith(paramStr(i),'-headless') then headless:=true
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
