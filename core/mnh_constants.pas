@@ -634,7 +634,7 @@ CONST
 {mt_el3_userDefined        }             (level: 3; mClass:mc_error;   prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:2),
 {mt_el4_systemError        }             (level: 4; mClass:mc_error;   prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:5),
 {mt_el4_haltMessageReceived}             (level: 4; mClass:mc_error;   prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el4_haltMessageQuiet   }             (level: 4; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_el4_haltMessageQuiet   }             (level: 4; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_endOfEvaluation        }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_timing_info            }             (level:-1; mClass:mc_timing;  prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0)
 {$ifdef fullVersion},

@@ -370,7 +370,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLite
     begin
       if C_messageTypeMeta[messageType].prefix=''
       then result:=newListLiteral(3)^.appendString(copy(getEnumName(TypeInfo(messageType),ord(messageType)),4,1000))
-      else result:=newListLiteral(3)^.appendString(C_messageTypeMeta[messageType].prefix);
+      else result:=newListLiteral(3)^.appendString(trim(C_messageTypeMeta[messageType].prefix));
     end;
 
   VAR i:longint;
@@ -3311,7 +3311,6 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
-  randomize;
 
 FINALIZATION
   errLit.destroy;

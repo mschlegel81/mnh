@@ -13,25 +13,32 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(runAlone(src));
+      result:=messagesToLiteralForSandbox(runAlone(src,context.getParent^.prng.XOS));
     end;
   end;
 
 FUNCTION runScript_imp intFuncSignature;
   VAR scriptParams:T_arrayOfString;
       i:longint;
-      connect:byte=0;
+      connect:int64=0;
+      enforceDeterminism:boolean=false;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
+    if (params<>nil) and (params^.size>=2) and (params^.size<=4) and
        (arg0^.literalType=lt_string) and
-       (arg1^.literalType in [lt_emptyList,lt_stringList]) and
-       ((params^.size=2) or (arg2^.literalType=lt_int) and (int2^.value>=0) and (int2^.value<=3))
+       (arg1^.literalType in [lt_emptyList,lt_stringList])
     then begin
+      for i:=2 to params^.size-1 do case params^[i]^.literalType of
+        lt_int: begin
+          connect:=P_intLiteral(params^[i])^.value;
+          if (connect<0) or (connect>3) then exit(nil);
+        end;
+        lt_boolean: enforceDeterminism:=P_boolLiteral(params^[i])^.value;
+        else exit(nil);
+      end;
       setLength(scriptParams,list1^.size);
       for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^[i])^.value;
-      if params^.size>2 then connect:=byte(int2^.value and 255);
-      result:=runScript(str0^.value,scriptParams,tokenLocation,context.adapters,connect);
+      result:=runScript(str0^.value,scriptParams,tokenLocation,context.adapters,byte(connect),enforceDeterminism);
     end;
   end;
 
@@ -129,7 +136,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
 {$ifdef include_initialization}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,[],ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,[],ak_binary,'runScript(filenameOrId:string,parameters:stringList);//executes the given script - in the current program instance but strictly isolated#'+
-                                                                                           'runScript(filenameOrId:string,parameters:stringList,connectionLevel);//executes the given script with connectionLevel#  // 0: isolated#  // 1: print#  // 2: print and warnings#  // 3: print, warnings and errors');
+                                                                                           'runScript(filenameOrId:string,parameters:stringList,connectionLevel);//executes the given script with connectionLevel#  // 0: isolated#  // 1: print#  // 2: print and warnings#  // 3: print, warnings and errors#  // Add an additional boolean parameter true to enforce determinism');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,[se_readingExternal,se_readingInternal],ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,[se_writingExternal],ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,[se_writingExternal],ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');

@@ -1162,8 +1162,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         t:T_myFloat;
     begin
       initialSampleCount:=(samples div 100)-1;
-      if initialSampleCount< 1 then
-         initialSampleCount:=1;
+      if initialSampleCount< 5 then
+         initialSampleCount:=5;
       TList:=newListLiteral;
       setLength(tRow,initialSampleCount+1);
       for sampleIndex:=0 to initialSampleCount do begin
@@ -1257,8 +1257,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
             inc(j); inc(k);
           end;
           //------------------------------------------------------:Merge samples
+          disposeLiteral(resultLiteral);
         end;
-        disposeLiteral(resultLiteral);
         disposeLiteral(TList);
         //--------------------------------------------:Prepare new point samples
       end;

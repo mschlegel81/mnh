@@ -32,6 +32,7 @@ TYPE
   T_packageReference=object
     id,path:ansistring;
     pack:P_package;
+    locationOfDeclaration:T_tokenLocation;
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
@@ -78,8 +79,8 @@ TYPE
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
-FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
+PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST randomSeed:dword=4294967295);
+FUNCTION runAlone(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
 {$undef include_interface}
 IMPLEMENTATION
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
@@ -94,19 +95,20 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
-PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
+PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST randomSeed:dword=4294967295);
   VAR context:T_evaluationContext;
       package:T_package;
   begin
     context.create(adapter);
     package.create(newVirtualFileCodeProvider('?',input),nil);
     context.resetForEvaluation(@package,false,false,true);
+    if randomSeed<>4294967295 then context.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
     package.destroy;
     context.destroy;
   end;
 
-FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
+FUNCTION runAlone(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
   VAR collector:T_collectingOutAdapter;
       adapter:T_adapters;
       i:longint;
@@ -114,14 +116,14 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     collector.create(at_unknown,C_collectAllOutputBehavior);
     adapter.create;
     adapter.addOutAdapter(@collector,false);
-    runAlone(input,@adapter);
+    runAlone(input,@adapter,randomSeed);
     setLength(result,length(collector.storedMessages));
     for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
     adapter.destroy;
     collector.destroy;
   end;
 
-FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte):P_literal;
+FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
       context:T_evaluationContext;
       package:T_package;
@@ -141,6 +143,7 @@ FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfStri
     {C} collector.create(at_unknown,C_collectAllOutputBehavior);
         tempAdapters.addOutAdapter(@collector,false);
     {X} context.create(@tempAdapters);
+    if enforceDeterminism then context.prng.resetSeed(0);
     {P} package.create(newFileCodeProvider(filenameOrId),nil);
     try
         context.resetForEvaluation(@package,false,false,true);
@@ -231,6 +234,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
 
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
+    locationOfDeclaration:=tokenLocation;
     id:=packId;
     path:=locateSource(extractFilePath(root),id);
     if adapters<>nil then begin
@@ -242,6 +246,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
 
 CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
+    locationOfDeclaration:=tokenLocation;
     path:=extractFilePath(tokenLocation.package^.getPath)+path_;
     id:=filenameToPackageId(path_);
     if not(fileExists(path)) and fileExists(path_) then path:=path_;
@@ -856,7 +861,7 @@ PROCEDURE T_package.complainAboutUnused(VAR adapters:T_adapters);
   begin
     for rule in packageRules.valueSet do rule^.complainAboutUnused(adapters);
     for import in packageUses do if not(import.pack^.anyCalled) then
-      adapters.raiseWarning('Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')',packageTokenLocation(import.pack));
+      adapters.raiseWarning('Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')',import.locationOfDeclaration);
   end;
 {$endif}
 

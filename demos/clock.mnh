@@ -1,3 +1,13 @@
+formatTimeNoDate(t<1)->formatTime('hhnnss',t);
+formatTimeNoDate(t<100/24)->begin
+  local rest:=t*24;
+  rest:=(rest-(local hours  :=floor(rest)))*60;
+  rest:=(rest-(local minutes:=floor(rest)))*60;
+               local seconds:=floor(rest);
+  format('%2.2d%2.2d%2.2d',hours,minutes,seconds);
+end;
+formatTimeNoDate(t)->'995959';
+
 BIG:=//!~
  ********    ****     *******  ********    *      ********** ******** ********** ********  ********.
 **********  *****    *******************  **      **************************************************
@@ -47,7 +57,7 @@ nextMinute->sleep(60-formatTime('ss.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
-  async({while(true,begin asciiArtTime(systime-floor(systime)).printOnce; nextSecond; end)});
+  async({while(true,begin (asciiArtTime(systime-floor(systime))|'Press Enter to quit').printOnce; nextSecond; end)});
   ask('Press enter to quit');
 end;
 
@@ -76,11 +86,12 @@ main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
   async({begin
     local endTime:=guessTimeOrInterval(timeOrInterval);
     while(systime<endTime,begin
-      (asciiArtTime(systime-floor(systime))&
-       asciiArtTime(endTime-systime)).printOnce;
+      ((asciiArtTime(systime-floor(systime))&
+        asciiArtTime(formatTimeNoDate(endTime-systime)))|
+       ['Action: '&after,'Press Enter to cancel']).printOnce;
       nextSecond;
     end);
     AFTER_METHOD[after]();
   end});
-  ask('Press enter to quit');
+  ask('Press enter to cancel');
 end;

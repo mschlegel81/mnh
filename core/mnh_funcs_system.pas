@@ -15,19 +15,19 @@ VAR builtinLocation_time:T_identifiedInternalFunction;
 FUNCTION resetRandom_impl intFuncSignature;
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then begin randseed:=0; result:=newVoidLiteral; end else
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin randseed:=int0^.value; result:=newVoidLiteral; end;
+    if (params= nil) or  (params^.size=0) then begin context.getParent^.prng.resetSeed(0); result:=newVoidLiteral; end else
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin context.getParent^.prng.resetSeed(int0^.value); result:=newVoidLiteral; end;
   end;
 
 FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getParent^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       count:=int0^.value;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do listResult^.appendReal(random);
+        for i:=1 to count do listResult^.appendReal(context.getParent^.prng.realRandom);
         exit(result);
       end;
     end;
@@ -37,12 +37,12 @@ FUNCTION random_imp intFuncSignature;
 FUNCTION intRandom_imp intFuncSignature;
   VAR i,count:longint;
   begin
-     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(random(int0^.value)))
+     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(context.getParent^.prng.intRandom(int0^.value)))
      else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       count:=int1^.value;
       if count>=0 then begin
         result:=newListLiteral;
-        for i:=1 to count do listResult^.appendInt(random(int0^.value));
+        for i:=1 to count do listResult^.appendInt(context.getParent^.prng.intRandom(int0^.value));
         exit(result);
       end;
     end;
