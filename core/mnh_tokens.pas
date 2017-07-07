@@ -182,7 +182,7 @@ PROCEDURE T_abstractRule.setIdResolved;
   end;
 
 FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
-  CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
+  CONST PUBLIC_MITIGATION=' (rule is public and might be used by importing packages)';
   FUNCTION mitigate:string;
     begin
       if hasPublicSubrule then result:=PUBLIC_MITIGATION else result:='';
@@ -190,7 +190,7 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
 
   begin
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
-    if result then adapters.raiseWarning('Unused rule '+id+mitigate,lineLocation(declarationStart));
+    if result then adapters.raiseWarning('Unused rule '+id+mitigate+' - you can suppress this warning with '+ATTRIBUTE_COMMENT_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE,lineLocation(declarationStart));
   end;
 {$endif}
 

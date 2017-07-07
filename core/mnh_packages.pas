@@ -487,6 +487,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
               else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
               P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
               P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subrule^.getLocation,context.adapters^);
+              {$ifdef FULLVERSION}
+              if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then ruleGroup^.setIdResolved;
+              {$endif}
               dispose(subRule,destroy);
             end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
             statement.firstToken:=nil;

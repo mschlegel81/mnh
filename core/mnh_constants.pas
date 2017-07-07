@@ -62,7 +62,9 @@ CONST
   SPECIAL_COMMENT_BLOB_BEGIN    =COMMENT_PREFIX+'!';
   {$ifdef fullVersion}
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
+  SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
   {$endif}
+
 TYPE
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
