@@ -49,8 +49,6 @@ testFile(scriptFileName:string,doLog:boolean)->
 scriptFileName.skipFile
 ? note('Not testing ',scriptFileName)
 : begin
-    resetRandom;
-
     mnhInfo['isFullVersion']
     ? "plot.resetOptions".toExpression()()
     : void;
@@ -58,7 +56,7 @@ scriptFileName.skipFile
     local logName:=extractFileNameOnly(scriptFileName);
     local output:=printAndReturn(logName);
     local startTime:=time;
-    output|=runScript(scriptFileName,testParameters(scriptFileName))
+    output|=runScript(scriptFileName,testParameters(scriptFileName),true)
             .filter({$e.head=='printline'})
             .getInner(2)
             .split("\n")
