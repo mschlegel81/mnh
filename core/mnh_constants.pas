@@ -161,6 +161,7 @@ TYPE
     tt_EOL,
     tt_docComment,
     tt_attributeComment,
+    tt_use,tt_include,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -489,18 +490,15 @@ CONST
 {tt_EOL}                        (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'),
 {tt_docComment}                 (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'),
 {tt_attributeComment}           (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'),
+{tt_use}                        (defaultId:'USE';           defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
+{tt_include}                    (defaultId:'INCLUDE';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
 {tt_blank}                      (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
-  C_use='USE';
-  C_include='INCLUDE';
-
-  C_specialWordInfo:array[0..7] of record
+  C_specialWordInfo:array[0..5] of record
     txt:string;
     reservedWordClass:T_reservedWordClass;
     helpText:string;
-  end=((txt:C_use;             reservedWordClass:rwc_modifier      ; helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
-       (txt:C_include;         reservedWordClass:rwc_modifier      ; helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
-       (txt:LITERAL_TEXT_VOID; reservedWordClass:rwc_specialLiteral; helpText:'void literal#Denotes a literal "which is not there"#Intended use: list construction and blank branches of inline if clauses'),
+  end=((txt:LITERAL_TEXT_VOID; reservedWordClass:rwc_specialLiteral; helpText:'void literal#Denotes a literal "which is not there"#Intended use: list construction and blank branches of inline if clauses'),
        (txt:LITERAL_NAN_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'not-a-number real literal'),
        (txt:LITERAL_INF_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'infinity real literal'),
        (txt:'false';           reservedWordClass:rwc_specialLiteral; helpText:'false literal'),

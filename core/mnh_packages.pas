@@ -308,6 +308,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           importWrapper:P_extendedPackage;
           stmt:T_enhancedStatement;
       begin
+        if statement.firstToken^.next=nil then begin
+          context.adapters^.raiseError('Empty include clause',statement.firstToken^.location);
+          context.recycler.cascadeDisposeToken(statement.firstToken);
+          exit;
+        end;
         first:=statement.firstToken;
         locationForErrorFeedback:=first^.location;
         if extendsLevel>=32 then begin
@@ -322,7 +327,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           newId:=P_stringLiteral(first^.data)^.value;
           helperUse.createWithSpecifiedPath(newId,first^.location,context.adapters);
         end else begin
-          context.adapters^.raiseError('Invalid extends clause ',locationForErrorFeedback);
+          context.adapters^.raiseError('Invalid include clause ',locationForErrorFeedback);
           exit;
         end;
         context.recycler.cascadeDisposeToken(first);
@@ -348,6 +353,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
           newId:string;
           first:P_token;
       begin
+        if statement.firstToken^.next=nil then begin
+          context.adapters^.raiseError('Empty use clause',statement.firstToken^.location);
+          context.recycler.cascadeDisposeToken(statement.firstToken);
+          exit;
+        end;
         initialize(newId);
         first:=statement.firstToken;
         locationForErrorFeedback:=first^.location;
@@ -522,19 +532,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
         exit;
       end;
 
-      if (statement.firstToken^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
-         (statement.firstToken^.next   <>nil) and
-         ((statement.firstToken^.next^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
-          or (statement.firstToken^.next^.tokType=tt_literal) and (P_literal(statement.firstToken^.next^.data)^.literalType=lt_string))
-      then begin
-        if (statement.firstToken^.txt=C_use) then begin
-          interpretUseClause;
-          exit;
-        end;
-        if (statement.firstToken^.txt=C_include) then begin
-          interpretIncludeClause;
-          exit;
-        end;
+      if (statement.firstToken^.tokType=tt_use) then begin
+        interpretUseClause;
+        exit;
+      end;
+
+      if (statement.firstToken^.tokType=tt_include) then begin
+        interpretIncludeClause;
+        exit;
       end;
 
       assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
