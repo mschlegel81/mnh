@@ -158,7 +158,7 @@ main('merge',fileA,fileB<>fileA,output)->begin
   print('Reading ',fileA,' and applying suffix "_A"')|
   fileA.fileContents.deserialize.pEach(x,[x[0],x[1]&'_A',x[2]])|
   print('Reading ',fileB,' and applying suffix "_B"')|
-  fileA.fileContents.deserialize.pEach(x,[x[0],x[1]&'_B',x[2]])|
+  fileB.fileContents.deserialize.pEach(x,[x[0],x[1]&'_B',x[2]])|
   print('Writing ',output)));
 end;
 
