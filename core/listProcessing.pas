@@ -189,6 +189,8 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
 
   VAR values:P_valueStore;
       taskQueue:P_taskQueue;
+      initialDepth:longint;
+      initialAllow:T_sideEffects;
 
   FUNCTION createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal):P_futureTask; inline;
     begin
@@ -196,7 +198,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
         dec(fill);
         result:=dat[fill];
       end else new(result,create);
-      result^.define(expr,expr^.getLocation,idx,x,@context,values);
+      result^.define(expr,expr^.getLocation,idx,x,@context,values,initialDepth,initialAllow);
       taskQueue^.enqueue(result,@context);
     end;
 
@@ -209,6 +211,8 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
     values:=context.valueStore^.readOnlyClone;
+    initialDepth:=context.callDepth;
+    initialAllow:=context.sideEffectWhitelist;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.next(@context);
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
@@ -291,6 +295,8 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
 
   VAR values:P_valueStore;
       taskQueue:P_taskQueue;
+      initialDepth:longint;
+      initialAllow:T_sideEffects;
 
   FUNCTION createTask(CONST x:P_literal):P_futureTask; inline;
     begin
@@ -298,7 +304,7 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
         dec(fill);
         result:=dat[fill];
       end else new(result,create);
-      result^.define(expr,expr^.getLocation,-1,x,@context,values);
+      result^.define(expr,expr^.getLocation,-1,x,@context,values,initialDepth,initialAllow);
       taskQueue^.enqueue(result,@context);
     end;
 
@@ -309,6 +315,8 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
     recycling.fill:=0;
     taskQueue:=context.getParent^.getTaskQueue;
     values:=context.valueStore^.readOnlyClone;
+    initialDepth:=context.callDepth;
+    initialAllow:=context.sideEffectWhitelist;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.next(@context);
     while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin

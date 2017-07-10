@@ -90,7 +90,7 @@ TYPE
       PROCEDURE doneEvaluating;
       FUNCTION getNewAsyncContext:P_threadContext;
 
-      PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST callingContext_:P_threadContext);
+      PROCEDURE attachWorkerContext(CONST valueScope:P_valueStore; CONST callingContext_:P_threadContext; CONST initialCallDepth:longint; CONST allowedSideEffList:T_sideEffects);
       PROCEDURE detachWorkerContext;
 
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
@@ -168,6 +168,8 @@ TYPE
         valueScope:P_valueStore;
         evaluationResult:P_literal;
         state:T_futureTaskState;
+        callDepth:longint;
+        allowedSideEffects:T_sideEffects;
       end;
       taskCs:TRTLCriticalSection;
       nextToEvaluate:P_futureTask;
@@ -176,7 +178,7 @@ TYPE
     public
       nextToAggregate:P_futureTask;
       CONSTRUCTOR create;
-      PROCEDURE   define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
+      PROCEDURE   define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore; CONST callDepth:longint; CONST allowed:T_sideEffects);
       FUNCTION    canGetResult:boolean;
       FUNCTION    getResultAsLiteral:P_literal;
       DESTRUCTOR  destroy;
@@ -477,19 +479,19 @@ FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
   end;
 
-PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CONST callingContext_:P_threadContext);
+PROCEDURE T_threadContext.attachWorkerContext(CONST valueScope:P_valueStore; CONST callingContext_:P_threadContext; CONST initialCallDepth:longint; CONST allowedSideEffList:T_sideEffects);
   begin
     callingContext:=callingContext_;
     parent        :=callingContext^.parent;
     adapters      :=callingContext^.adapters;
     options       :=callingContext^.options;
-    allowedSideEffects:=callingContext^.allowedSideEffects;
+    allowedSideEffects:=allowedSideEffList;
     valueStore^.clear;
     valueStore^.parentStore:=valueScope;
     {$ifdef fullVersion}
     callStack.clear;
     {$endif}
-    callDepth:=0;
+    callDepth:=initialCallDepth;
   end;
 
 PROCEDURE T_threadContext.detachWorkerContext;
@@ -650,7 +652,7 @@ CONSTRUCTOR T_futureTask.create;
     payload.eachParameter:=nil;
   end;
 
-PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore);
+PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_threadContext; CONST values:P_valueStore; CONST callDepth:longint; CONST allowed:T_sideEffects);
   begin
     enterCriticalSection(taskCs);
     with payload do begin
@@ -662,7 +664,9 @@ PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_t
       valueScope      :=values;
       state           :=fts_pending;
       evaluationResult:=nil;
+      allowedSideEffects:=allowed;
     end;
+    payload.callDepth:=callDepth;
     nextToAggregate:=nil;
     nextToEvaluate:=nil;
     leaveCriticalSection(taskCs);
@@ -684,7 +688,7 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWo
     leaveCriticalSection(taskCs);
     try
       if context.adapters^.noErrors then with payload do begin
-        if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope);
+        if calledFromWorkerThread then context.attachWorkerContext(valueScope,scope,callDepth,allowedSideEffects);
         if (eachIndex>=0) then begin
           context.valueStore^.scopePush(false);
           idxLit:=newIntLiteral(eachIndex);

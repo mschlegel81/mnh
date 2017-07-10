@@ -25,7 +25,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
   PROCEDURE initTokTypes; {$ifndef DEBUGMODE}inline;{$endif}
     begin
-      if stack.topIndex>=0 then cTokType[-1]:=stack.dat[stack.topIndex]^.tokType
+      if stack.topIndex>=0 then cTokType[-1]:=stack.topType
                            else cTokType[-1]:=tt_EOL;
       if first<>nil then begin
         cTokType[0]:=first^.tokType;
@@ -532,7 +532,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         tt_comparatorEq..tt_operatorIn:
           if C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]] then begin
             newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    stack.dat[stack.topIndex]^.tokType,
+                                    stack.topType,
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
                                     context.adapters^,
@@ -551,7 +551,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
           begin
             newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    stack.dat[stack.topIndex]^.tokType,
+                                    stack.topType,
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
                                     context.adapters^,
@@ -685,11 +685,11 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         case first^.tokType of
           tt_beginBlock,tt_beginExpression,tt_beginRule: context.valueStore^.scopePush( first^.tokType=tt_beginRule);
           tt_endBlock,tt_endExpression,tt_endRule: begin
-            while (stack.topIndex>=0) and not(stack.dat[stack.topIndex]^.tokType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
+            while (stack.topIndex>=0) and not(stack.topType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
             stack.popDestroy(context.recycler);
-            if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.dat[stack.topIndex]^.tokType]) then begin
+            if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.topType]) then begin
               {$ifdef fullVersion}
-              if (stack.dat[stack.topIndex]^.tokType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
+              if (stack.topType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
               {$endif}
               stack.popDestroy(context.recycler);
               context.valueStore^.scopePop;
@@ -857,7 +857,7 @@ end}
             if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
               newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                      stack.dat[stack.topIndex]^.tokType,
+                                      stack.topType,
                                       first^.data,
                                       stack.dat[stack.topIndex]^.location,
                                       context.adapters^,
@@ -889,7 +889,7 @@ end}
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
                 P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
-                              stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
+                              stack.topType=tt_list_constructor_ranging);
                 if first^.next^.tokType=tt_separatorCnt
                 then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
                 else stack.dat[stack.topIndex]^.tokType:=tt_list_constructor;
@@ -901,13 +901,13 @@ end}
             end;
             tt_listBraceClose: begin // [ | <Lit> ] ...
               P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
-                            stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
+                            stack.topType=tt_list_constructor_ranging);
               first:=context.recycler.disposeToken(first);
               first:=context.recycler.disposeToken(first);
               stack.popLink(first);   // -> ? | [ ...
               first^.tokType:=tt_literal; // -> ? | <NewList>
               didSubstitution:=true;
-              if (stack.topIndex>=0) and (stack.dat[stack.topIndex]^.tokType=tt_literal) then begin
+              if (stack.topIndex>=0) and (stack.topType=tt_literal) then begin
                 // <Lit> | <NewList> ...
                 stack.popLink(first); // -> | <Lit> <NewList> ...
                 newLit:=newListLiteral;
