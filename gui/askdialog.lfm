@@ -29,11 +29,13 @@ object askForm: TaskForm
   end
   object Label1: TLabel
     Left = 0
-    Height = 0
+    Height = 20
     Top = 0
     Width = 342
     Align = alClient
     Caption = 'Very long sample text. Very long sample text indeed. Now really: Very long sample text.'
+    Constraints.MinHeight = 20
+    Constraints.MinWidth = 342
     ParentColor = False
     WordWrap = True
   end
