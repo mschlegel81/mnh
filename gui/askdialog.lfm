@@ -15,7 +15,7 @@ object askForm: TaskForm
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '1.6.4.0'
   object ComboBox1: TComboBox
     Left = 0
     Height = 23
@@ -29,11 +29,13 @@ object askForm: TaskForm
   end
   object Label1: TLabel
     Left = 0
-    Height = 0
+    Height = 20
     Top = 0
     Width = 342
     Align = alClient
-    Caption = 'Label1'
+    Caption = 'Very long sample text. Very long sample text indeed. Now really: Very long sample text.'
+    Constraints.MinHeight = 20
+    Constraints.MinWidth = 342
     ParentColor = False
     WordWrap = True
   end

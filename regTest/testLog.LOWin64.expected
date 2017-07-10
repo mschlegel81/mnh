@@ -15,7 +15,7 @@
 12. "Exactly 4 of the preceding statements are true."                is false
 ***** 24 *****
 This is a demo - start without argument to play.
- ?> Find an expression to calculate 24 from the numbers [7,6,1,5].
+ ?> Find an expression to calculate 24 from the numbers [1,5,6,7].
  !> ((5*6)+1)-7
 The solution is valid.
  ?> Another round?

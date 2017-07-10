@@ -112,7 +112,7 @@ TYPE
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression, tt_save, tt_toId, tt_pseudoFuncPointer,
+    tt_each, tt_parallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginRule, tt_beginExpression, tt_endBlock, tt_endRule, tt_endExpression, tt_save, tt_return, tt_toId, tt_pseudoFuncPointer,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor, tt_list_constructor_ranging,
@@ -313,6 +313,7 @@ CONST
     {tt_endRule}            tt_EOL,
     {tt_endExpression}      tt_EOL,
     {tt_save}               tt_EOL,
+    {tt_return}             tt_EOL,
     {tt_toId}               tt_EOL,
                             tt_EOL,
     {tt_braceOpen}          tt_braceClose,
@@ -399,6 +400,7 @@ CONST
 {tt_endRule}                    (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
 {tt_endExpression}              (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:''), {No default ID, because tokenizer shall not produce this token}
 {tt_save}                       (defaultId:'save';          defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: save#Saves the current value store for future function calls'),
+{tt_return}                     (defaultId:'return';        defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: return#Returns from the current function with the given result value'),
 {tt_toId}                       (defaultId:'toId';          defaultHtmlSpan:'builtin';    reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
 {tt_pseudoFuncPointer}          (defaultId:'::';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_specialConstruct; helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'),
 {tt_braceOpen}                  (defaultId:'(';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Opening round bracket#Used as in default mathematical syntax.'),

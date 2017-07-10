@@ -1,3 +1,5 @@
+private areFangs(fangs,sortedDigits)->fangs.digits.flatten.sort == sortedDigits;
+
 private getFangs(i:int)->begin
   local iDigits:=i.digits.sort;
   local digitCount:=iDigits.size div 2;
@@ -7,11 +9,7 @@ private getFangs(i:int)->begin
   local toTest:=abs(toTest2-toTest1)<abs(toTest3-toTest2)
                  ? [toTest1..toTest2]
                  : [toTest3..toTest2];
-  toTest
-  .get(i mod toTest=0)
-  .pEach(d,(digits(d)|digits(i div d)).sort==iDigits
-           ? [i div d,d]
-           : void);
+  toTest[i mod toTest=0].pMap({[i div $x,$x]}).filter({$f.areFangs(iDigits)});
 end;
 
 private printVampire(i:int)->begin
@@ -48,3 +46,8 @@ end;
 
 //*As above but abridged for regression test
 main->printFirstKVampires(25);
+
+
+//factorize(16758243290880).subSets.pMap({$x.agg(*)});
+
+getFangs(16758243290880);

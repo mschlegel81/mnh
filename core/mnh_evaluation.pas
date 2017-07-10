@@ -25,7 +25,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
   PROCEDURE initTokTypes; {$ifndef DEBUGMODE}inline;{$endif}
     begin
-      if stack.topIndex>=0 then cTokType[-1]:=stack.dat[stack.topIndex]^.tokType
+      if stack.topIndex>=0 then cTokType[-1]:=stack.topType
                            else cTokType[-1]:=tt_EOL;
       if first<>nil then begin
         cTokType[0]:=first^.tokType;
@@ -532,7 +532,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         tt_comparatorEq..tt_operatorIn:
           if C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]] then begin
             newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    stack.dat[stack.topIndex]^.tokType,
+                                    stack.topType,
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
                                     context.adapters^,
@@ -551,7 +551,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
           begin
             newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    stack.dat[stack.topIndex]^.tokType,
+                                    stack.topType,
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
                                     context.adapters^,
@@ -685,11 +685,11 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         case first^.tokType of
           tt_beginBlock,tt_beginExpression,tt_beginRule: context.valueStore^.scopePush( first^.tokType=tt_beginRule);
           tt_endBlock,tt_endExpression,tt_endRule: begin
-            while (stack.topIndex>=0) and not(stack.dat[stack.topIndex]^.tokType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
+            while (stack.topIndex>=0) and not(stack.topType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
             stack.popDestroy(context.recycler);
-            if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.dat[stack.topIndex]^.tokType]) then begin
+            if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.topType]) then begin
               {$ifdef fullVersion}
-              if (stack.dat[stack.topIndex]^.tokType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
+              if (stack.topType in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
               {$endif}
               stack.popDestroy(context.recycler);
               context.valueStore^.scopePop;
@@ -700,6 +700,63 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       end;
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
       if first<>nil then context.recycler.cascadeDisposeToken(first);
+    end;
+
+  PROCEDURE processReturnStatement;
+    VAR returnToken:P_token;
+        level:longint=1;
+    begin
+      if not(stack.hasTokenTypeAnywhere(tt_beginRule)) then begin
+        context.adapters^.raiseError('You cannot return from here (not a subrule)',stack.dat[stack.topIndex]^.location);
+        exit;
+      end;
+
+      stack.popDestroy(context.recycler); //pop "return" from stack
+      returnToken:=first; //result is first (tt_literal);
+      first:=context.recycler.disposeToken(first^.next); //drop semicolon
+
+      while not(level=0) and (context.adapters^.noErrors) do begin
+        while not(stack.topType  in [tt_beginRule,tt_beginExpression,tt_beginBlock,
+                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do stack.popDestroy(context.recycler);
+        while (first<>nil) and
+              not(first^.tokType in [tt_beginRule,tt_beginExpression,tt_beginBlock,
+                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do first:=context.recycler.disposeToken(first);
+        if first=nil
+        then context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location)
+        else case first^.tokType of
+          tt_beginBlock:            begin stack.push(first); context.valueStore^.scopePush(false); end;
+          tt_beginExpression:       begin stack.push(first); context.valueStore^.scopePush(false); end;
+          tt_beginRule: begin inc(level); stack.push(first); context.valueStore^.scopePush(true);  end;
+          tt_endBlock:
+            if stack.topType=tt_beginBlock
+            then begin
+              context.valueStore^.scopePop;
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+          tt_endExpression:
+            if stack.topType=tt_beginExpression
+            then begin
+              {$ifdef fullVersion} context.callStackPop; {$endif}
+              context.valueStore^.scopePop;
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+          tt_endRule:
+            if stack.topType=tt_beginRule
+            then begin
+              {$ifdef fullVersion} context.callStackPop; {$endif}
+              context.valueStore^.scopePop;
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+              dec(level);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+          else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+        end;
+      end;
+      returnToken^.next:=first;
+      first:=returnToken;
+      didSubstitution:=true;
     end;
 
 {$MACRO ON}
@@ -731,6 +788,7 @@ tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in lis
 tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$WARN 2005 OFF}
+//COMMON_SEMICOLON_HANDLING is defined for cTokType[0]=tt_literal; case C_tokType[1] of ...
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
@@ -804,7 +862,7 @@ end}
             if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
               newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                      stack.dat[stack.topIndex]^.tokType,
+                                      stack.topType,
                                       first^.data,
                                       stack.dat[stack.topIndex]^.location,
                                       context.adapters^,
@@ -836,7 +894,7 @@ end}
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
                 P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
-                              stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
+                              stack.topType=tt_list_constructor_ranging);
                 if first^.next^.tokType=tt_separatorCnt
                 then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
                 else stack.dat[stack.topIndex]^.tokType:=tt_list_constructor;
@@ -848,13 +906,13 @@ end}
             end;
             tt_listBraceClose: begin // [ | <Lit> ] ...
               P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
-                            stack.dat[stack.topIndex]^.tokType=tt_list_constructor_ranging);
+                            stack.topType=tt_list_constructor_ranging);
               first:=context.recycler.disposeToken(first);
               first:=context.recycler.disposeToken(first);
               stack.popLink(first);   // -> ? | [ ...
               first^.tokType:=tt_literal; // -> ? | <NewList>
               didSubstitution:=true;
-              if (stack.topIndex>=0) and (stack.dat[stack.topIndex]^.tokType=tt_literal) then begin
+              if (stack.topIndex>=0) and (stack.topType=tt_literal) then begin
                 // <Lit> | <NewList> ...
                 stack.popLink(first); // -> | <Lit> <NewList> ...
                 newLit:=newListLiteral;
@@ -930,6 +988,10 @@ end}
               stack.popLink(first);
               applyLocalAssignment(cTokType[-1]);
             end;
+            COMMON_CASES;
+          end;
+          tt_return: case cTokType[1] of
+            tt_semicolon: processReturnStatement;
             COMMON_CASES;
           end;
           else begin
@@ -1053,6 +1115,10 @@ end}
         tt_save: if cTokType[1]=tt_semicolon then begin
           first:=context.recycler.disposeToken(first);
           first:=context.recycler.disposeToken(first);
+          didSubstitution:=true;
+        end;
+        tt_return: begin
+          stack.push(first);
           didSubstitution:=true;
         end;
       end;
