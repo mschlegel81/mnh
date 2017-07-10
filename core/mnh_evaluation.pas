@@ -702,6 +702,58 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       if first<>nil then context.recycler.cascadeDisposeToken(first);
     end;
 
+  PROCEDURE processReturnStatement;
+    VAR returnToken:P_token;
+        level:longint=1;
+    begin
+      if not(stack.hasTokenTypeAnywhere(tt_beginRule)) then begin
+        context.adapters^.raiseError('You cannot return from here (not a subrule)',stack.dat[stack.topIndex]^.location);
+        exit;
+      end;
+
+      stack.popDestroy(context.recycler); //pop "return" from stack
+      returnToken:=first; //result is first (tt_literal);
+      first:=context.recycler.disposeToken(first^.next); //drop semicolon
+
+      while not(level=0) and (context.adapters^.noErrors) do begin
+        while not(stack.topType  in [tt_beginRule,tt_beginExpression,tt_beginBlock,
+                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do stack.popDestroy(context.recycler);
+        while (first<>nil) and
+              not(first^.tokType in [tt_beginRule,tt_beginExpression,tt_beginBlock,
+                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do first:=context.recycler.disposeToken(first);
+        if first=nil
+        then context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location)
+        else case first^.tokType of
+          tt_beginBlock:      stack.push(first);
+          tt_beginExpression: stack.push(first);
+          tt_beginRule: begin inc(level); stack.push(first); end;
+          tt_endBlock:
+            if stack.topType=tt_beginBlock
+            then begin
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+          tt_endExpression:
+            if stack.topType=tt_beginExpression
+            then begin
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+          tt_endRule:
+            if stack.topType=tt_beginRule
+            then begin
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+              dec(level);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+          else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
+        end;
+      end;
+      returnToken^.next:=first;
+      first:=returnToken;
+      didSubstitution:=true;
+    end;
+
 {$MACRO ON}
 {$define COMMON_CASES:=
 tt_listBraceOpen: begin
@@ -731,6 +783,7 @@ tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in lis
 tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$WARN 2005 OFF}
+//COMMON_SEMICOLON_HANDLING is defined for cTokType[0]=tt_literal; case C_tokType[1] of ...
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
@@ -932,6 +985,10 @@ end}
             end;
             COMMON_CASES;
           end;
+          tt_return: case cTokType[1] of
+            tt_semicolon: processReturnStatement;
+            COMMON_CASES;
+          end;
           else begin
             case cTokType[1] of
               COMMON_SEMICOLON_HANDLING;
@@ -1053,6 +1110,10 @@ end}
         tt_save: if cTokType[1]=tt_semicolon then begin
           first:=context.recycler.disposeToken(first);
           first:=context.recycler.disposeToken(first);
+          didSubstitution:=true;
+        end;
+        tt_return: begin
+          stack.push(first);
           didSubstitution:=true;
         end;
       end;

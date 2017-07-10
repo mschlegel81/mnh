@@ -1,6 +1,7 @@
 UNIT tokenStack;
 INTERFACE
 USES //MNH:
+     mnh_constants,
      mnh_basicTypes,
      mnh_out_adapters,
      mnh_litVar,
@@ -18,6 +19,8 @@ TYPE
     PROCEDURE push(VAR first:P_token);
     PROCEDURE quietPush(CONST first:P_token);
     PROCEDURE quietPop;
+    FUNCTION topType:T_tokenType;
+    FUNCTION hasTokenTypeAnywhere(CONST t:T_tokenType):boolean;
     FUNCTION toString(CONST first:P_token; CONST lengthLimit:longint=maxLongint):ansistring;
   end;
 
@@ -171,6 +174,19 @@ PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
 PROCEDURE T_TokenStack.quietPop;
   begin
     dec(topIndex);
+  end;
+
+FUNCTION T_TokenStack.topType:T_tokenType;
+  begin
+    if topIndex>=0 then result:=dat[topIndex]^.tokType
+                   else result:=tt_EOL;
+  end;
+
+FUNCTION T_TokenStack.hasTokenTypeAnywhere(CONST t:T_tokenType):boolean;
+  VAR i:longint;
+  begin
+    result:=false;
+    for i:=topIndex downto 0 do if dat[i]^.tokType=t then exit(true);
   end;
 
 FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint): ansistring;

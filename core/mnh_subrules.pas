@@ -55,7 +55,7 @@ TYPE
       currentlyEvaluating:boolean;
 
       PROCEDURE updatePatternForInline;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
@@ -203,11 +203,12 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
     end;
   end;
 
-PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:T_threadContext; CONST forEach:boolean);
+PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:T_threadContext);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
       subExpressionLevel:longint=0;
+
   begin
     setLength(preparedBody,0);
     t:=rep;
@@ -232,6 +233,10 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             end;
             parIdx:=-1;
           end;
+          tt_return: begin
+            if not(typ in C_subruleExpressionTypes) then context.adapters^.raiseError('return statements are currently only allowed in subrules',token.location);
+            parIdx:=-1;
+          end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
           tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
             parIdx:=pattern.indexOfId(token.txt);
@@ -239,7 +244,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
               if parIdx>=REMAINING_PARAMETERS_IDX
               then token.tokType:=tt_parameterIdentifier
               else token.tokType:=tt_identifier;
-            end else if forEach and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable
+            end else if (typ=et_inline_for_each) and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable
             else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
           end;
           else parIdx:=-1;
@@ -266,7 +271,7 @@ CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: 
   begin
     init(et_inline_for_while,declAt);
     pattern.create;
-    constructExpression(rep,context,false);
+    constructExpression(rep,context);
     resolveIds(nil);
   end;
 
@@ -275,7 +280,7 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
     if isPrivate then init(et_normal_private,declAt)
                  else init(et_normal_public ,declAt);
     pattern:=pat;
-    constructExpression(rep,context,false);
+    constructExpression(rep,context);
     resolveIds(nil);
     meta.create;
     parent:=parent_;
@@ -287,7 +292,7 @@ CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring;
     init(et_inline_for_each,rep^.location);
     pattern.create;
     pattern.appendFreeId(parameterId);
-    constructExpression(rep,context,true);
+    constructExpression(rep,context);
     resolveIds(nil);
   end;
 
