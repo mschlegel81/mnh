@@ -1,22 +1,19 @@
 private OPLIST:=['+','-','*','/'];
+private OP_TRIPLET:=cross(OPLIST,OPLIST,OPLIST);
+private testSolution(s:string)->interpret(s)=24 ? s : void;
+private testSolution(N:intList(4),O:stringList(3))->testSolution('((%{$0}s%{$4}s%{$1}s)%{$5}s%{$2}s)%{$6}s%{$3}s'.format@(N|O));
 
-private
-canSolve(set)->permutations(set).unique.each(x,
-               [x[0]+x[1],x[0]-x[1],x[0]*x[1],x[0]/x[1]].each(y,
-               [y   +x[2],y   -x[2],y   *x[2],y   /x[2]].each(z,
-              ([z   +x[3],z   -x[3],z   *x[3],z   /x[3]]=24).agg(OR),OR),OR),OR);
-private
-testSolution(s:string)->toExpression(s)()=24 ? s : void;
-private
-findSolution(set)->head(flatten(permutations(set).each(x,
-                   OPLIST.each(op1,OPLIST.each(op2,OPLIST.each(op3,
-                   testSolution('(('&x[0]&op1&x[1]&')'&op2&x[2]&')'&op3&x[3])))))));
+private findSolution(set)->
+  set.permutationIterator.each(N,
+               OP_TRIPLET.each(O,testSolution(N,O),head),head);
 
-private getRiddle->begin
-  local numbers:=1+intRandom(9,4);
-  while(not(canSolve(numbers)),numbers:=1+intRandom(9,4));
-  numbers;
-end;
+private canSolve(set)->not(isVoid(findSolution(set)));
+
+private getRiddle->rangeGenerator(0,1000).each(i,
+  begin
+    local n:=1+intRandom(9,4);
+    canSolve(n) ? n.sort : void;
+  end,head);
 
 private errPrint(...)->print@(...) orElse false;
 
@@ -26,25 +23,32 @@ private isCorrectSolution(set,text)->text.trim=="" ? false : begin
   local invalids:=text.tokenSplit.trim.each(tok,tok in valids ? void : tok);
   invalids==[]
   ? void
-  : result:=errPrint('The input contains invalid token(s): ',invalids);
-
-  result
-  ? begin
-      local expressionResult:=try({toExpression(text)()},{$0});
-      not(expressionResult=24)
-      ? errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
-      : print('The solution is valid.')
-        orElse true;
-    end
-  : false;
+  : return errPrint('The input contains invalid token(s): ',invalids);
+  local expressionResult:=try({interpret(text)},{$0});
+  not(expressionResult=24)
+  ? return errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
+  : print('The solution is valid.');
+  true;
 end;
 
-private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
-private playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&toString(set)&'.'));
-private playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another round?',['yes','no'])='yes' ? playARound : void)
-                                                              : (ask('Retry?',['yes','no'])='yes' ? playARound(set) :
-                                                                 print('A possible solution would have been: ',findSolution(set)) |
-                                                                (ask('Another round?',['yes','no'])='yes' ? playARound : void));
+private playARound->begin
+  print('-------------------------------------------------------------------');
+  local set:=getRiddle;
+  local answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.');
+  local retrying:=true;
+  local solutionOk:=false;
+  while(retrying and not(solutionOk:=isCorrectSolution(set,answer)),
+  begin
+    retrying:=ask('Retry?',['yes','no'])='yes';
+    retrying
+    ? answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.')
+    : void;
+  end);
+  solutionOk
+  ? void
+  : print('A possible solution would have been: ',findSolution(set));
+end;
+
 private demo(set)->print(' ?> Find an expression to calculate 24 from the numbers '&toString(set)&'.') |
                    print(' !> ',findSolution(set))|
                    print('The solution is valid.')|
@@ -53,4 +57,10 @@ private demo(set)->print(' ?> Find an expression to calculate 24 from the number
 //*Demo - mainly for reg-testing
 main('demo')->print('This is a demo - start without argument to play.',resetRandom)|demo(getRiddle);
 
-main->playARound;
+main->begin
+  local continue:=true;
+  while(continue, begin
+    playARound;
+    continue:=ask('Another round?',['yes','no'])='yes';
+  end);
+end;
