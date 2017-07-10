@@ -724,24 +724,29 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         if first=nil
         then context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location)
         else case first^.tokType of
-          tt_beginBlock:      stack.push(first);
-          tt_beginExpression: stack.push(first);
-          tt_beginRule: begin inc(level); stack.push(first); end;
+          tt_beginBlock:            begin stack.push(first); context.valueStore^.scopePush(false); end;
+          tt_beginExpression:       begin stack.push(first); context.valueStore^.scopePush(false); end;
+          tt_beginRule: begin inc(level); stack.push(first); context.valueStore^.scopePush(true);  end;
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
+              context.valueStore^.scopePop;
               stack.popDestroy(context.recycler);
               first:=context.recycler.disposeToken(first);
             end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
           tt_endExpression:
             if stack.topType=tt_beginExpression
             then begin
+              {$ifdef fullVersion} context.callStackPop; {$endif}
+              context.valueStore^.scopePop;
               stack.popDestroy(context.recycler);
               first:=context.recycler.disposeToken(first);
             end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
           tt_endRule:
             if stack.topType=tt_beginRule
             then begin
+              {$ifdef fullVersion} context.callStackPop; {$endif}
+              context.valueStore^.scopePop;
               stack.popDestroy(context.recycler);
               first:=context.recycler.disposeToken(first);
               dec(level);
