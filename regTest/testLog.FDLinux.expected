@@ -1395,7 +1395,7 @@ decimal | binary | Gray code
 ***** grep *****
 Usage: /demos/grep.mnh pattern [options] [filePattern1,[filePattern2,...]]
 if no file pattern is given, * is assumed
-Options: -i  case insensitive matching (by converting input to lowercase)
+Options: -i  case insensitive matching
          -n# show # additional lines before and after
          -l  only list files
          -r  recurse subdirectories
