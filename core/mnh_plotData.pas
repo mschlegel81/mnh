@@ -16,7 +16,7 @@ TYPE
   T_plotStyles=set of T_plotStyle;
 
 CONST
-  C_lineStyles:T_plotStyles=[ps_straight..ps_filled];
+  C_lineStyles:T_plotStyles=[ps_straight..ps_stepRight];
   C_styleName: array[T_plotStyle] of array[0..1] of string=
      {ps_none,     }  (('',''),
      {ps_straight, }   ('line'     , 'l'),
@@ -43,14 +43,13 @@ TYPE
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
   T_style = object
-    title: string;
     style: T_plotStyles;
     color: T_color;
     styleModifier: double;
     CONSTRUCTOR create(CONST index: longint);
     DESTRUCTOR destroy;
     PROCEDURE parseStyle(CONST styleString: ansistring);
-
+    FUNCTION toString:ansistring;
     FUNCTION getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
   end;
 
@@ -181,7 +180,6 @@ CONST
 
 CONSTRUCTOR T_style.create(CONST index: longint);
   begin
-    title:='';
     style:=[ps_straight];
     color:=C_defaultColor[index mod length(C_defaultColor)].color;
     styleModifier:=1;
@@ -306,6 +304,16 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
       if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
     until options = '';
     if style = [] then style:=[ps_straight];
+  end;
+
+FUNCTION T_style.toString:ansistring;
+  VAR s:T_plotStyle;
+  begin
+    result:=floatToStr(styleModifier)+' ';
+    for s in style do result:=result+C_styleName[s,0]+' ';
+    result:=result+'RGB'+floatToStr(color[cc_red]/255)
+                  +','  +floatToStr(color[cc_green]/255)
+                  +','  +floatToStr(color[cc_blue]);
   end;
 
 FUNCTION T_style.getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
@@ -840,12 +848,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
           y0:=screenHeight*scalingFactor;
         if (y1<0) then y1:=0 else if y1>screenHeight*scalingFactor then
           y1:=screenHeight*scalingFactor;
-        if x1<x0 then
-          begin
-          x:=x1;
-          x1:=x0;
-          x0:=x;
-          end;
+        if x1<x0 then begin
+          x :=x1; y :=y1;
+          x1:=x0; y1:=y0;
+          x0:=x;  y0:=y;
+        end;
         for x:=x0 to x1 do
           begin
           if (x1>x0) then
@@ -914,6 +921,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
       if yBaseLine<0 then yBaseLine:=0
       else if yBaseLine>=target.height then yBaseLine:=target.height-1;
       for rowId:=0 to length(row)-1 do begin
+        {$ifdef debugMode}
+        writeln('Drawing row #',rowId,' with style: ',row[rowId].style.toString);
+        {$endif}
         scaleAndColor:=row[rowId].style.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
         patternIdx:=rowId and 3;
 
