@@ -328,8 +328,8 @@ PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
     if not(showing) then Show;
-    if isPlotInteractive then Caption:='MNH plot - close this window to leave interactive mode'
-                         else Caption:='MNH plot';
+    if isPlotInteractive then caption:='MNH plot - close this window to leave interactive mode'
+                         else caption:='MNH plot';
     if (now-broughtToFront)>5/(24*60*60) then begin
       BringToFront;
       broughtToFront:=now;

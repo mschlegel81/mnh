@@ -47,13 +47,13 @@ PROCEDURE postRescale;
     request.value:=r;
   end;
 
-procedure postPlotClosed;
+PROCEDURE postPlotClosed;
   begin
     if not(initialized) then exit;
     request.value:=KILL_REQUEST;
   end;
 
-function isPlotInteractive: boolean;
+FUNCTION isPlotInteractive: boolean;
   begin
     result:=dynamicPlotLoopRunning.value;
   end;
