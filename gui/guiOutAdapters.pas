@@ -3,7 +3,7 @@ INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
      myStringUtil,myGenerics,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
-     mnh_plotForm, mnh_tables{$ifdef imig},mnh_imig_form{$endif};
+     mnh_plotForm, mnh_tables{$ifdef imig},mnh_imig_form{$endif},dynamicPlotting;
 
 TYPE
   T_abstractMnhForm=class(TForm)
@@ -42,6 +42,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
     mnh_out_adapters.gui_started:=true;
+    initializeDynamicPlotting;
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);

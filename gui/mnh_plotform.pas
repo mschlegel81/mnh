@@ -13,7 +13,8 @@ USES
   mnh_out_adapters,
   mnh_litVar, mnh_funcs,
   mnh_contexts,
-  mnh_evalThread;
+  mnh_evalThread,
+  dynamicPlotting;
 
 TYPE
 
@@ -110,9 +111,6 @@ FUNCTION plotFormIsInitialized:boolean;
   end;
 
 {$R *.lfm}
-
-{ TplotForm }
-
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['+','-']) then begin
@@ -120,6 +118,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
                  else guiAdapters^.plot^.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
       pullPlotSettingsToGui();
       doOrPostPlot();
+      dynamicPlotting.postRescale;
     end;
   end;
 
@@ -262,7 +261,7 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     if ssLeft in Shift then with plotSubsystem do begin
       guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
       mouseUpTriggersPlot:=true;
-    end;
+    end else postMouseMove(p[0],p[1]);
     with plotSubsystem do begin
       lastMouseX:=x;
       lastMouseY:=y;
@@ -273,6 +272,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
+      dynamicPlotting.postRescale;
       lastMouseX:=x;
       lastMouseY:=y;
       doOrPostPlot();
@@ -281,6 +281,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    postPlotClosed;
   end;
 
 PROCEDURE TplotForm.pullPlotSettingsToGui;
@@ -327,6 +328,8 @@ PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
     if not(showing) then Show;
+    if isPlotInteractive then Caption:='MNH plot - close this window to leave interactive mode'
+                         else Caption:='MNH plot';
     if (now-broughtToFront)>5/(24*60*60) then begin
       BringToFront;
       broughtToFront:=now;

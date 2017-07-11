@@ -14,7 +14,7 @@ object plotForm: TplotForm
   OnResize = FormResize
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '1.6.4.0'
   object plotImage: TImage
     Cursor = crCross
     Left = 0

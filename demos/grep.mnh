@@ -1,12 +1,18 @@
+private showIndex(matchMask:booleanList, additional=0)->indexOf(matchMask).map({['',$x]});
 private showIndex(matchMask:booleanList, additional:int)->begin
   local matchIndex:=indexOf(matchMask);
   matchIndex:=[-additional..additional].each(offset,matchIndex+offset).flatten.unique;
-  matchIndex[0<=matchIndex<matchMask.size];
+  local lastX:=-1;
+  matchIndex[0<=matchIndex<matchMask.size].each(
+    lineIndex,
+    [(lastX+1==(lastX:=lineIndex) OR index==0 ? '' : "\n")&
+     (matchMask[lineIndex] ? "*" : " "),
+     lineIndex]);
 end;
 
 //*Usage: grep pattern [options] [filePattern1,[filePattern2,...]]
 //*if no file pattern is given, * is assumed
-//*Options: -i  case insensitive matching (by converting input to lowercase)
+//*Options: -i  case insensitive matching
 //*         -n# show # additional lines before and after
 //*         -l  only list files
 //*         -r  recurse subdirectories
@@ -28,15 +34,12 @@ main(searchPattern,...)->begin
   .sort
   .each(file,begin
     local lines:=fileLines(file);
-    local linesToScan:=matchCaseSensitive
-                       ? lines
-                       : lines.lower;
-    local toShow:=linesToScan.matches(searchPattern).showIndex(additionalLines);
+    local toShow:=lines.matches((matchCaseSensitive ? '' : '(?i)')& searchPattern).showIndex(additionalLines);
     toShow==[]
     ? void
     : print(file) orElse listOnly
                          ? void
-                         : printf('  %4d:%s',toShow+1,lines[toShow]);
+                         : printf('%s  %4d:%s',toShow.getInner(0),toShow.getInner(1)+1,lines[toShow.getInner(1)]);
   end);
 end;
 
