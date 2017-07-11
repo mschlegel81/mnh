@@ -115,6 +115,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
+      PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
 
       FUNCTION realToScreen(CONST p: T_point): T_point;
       FUNCTION realToScreen(CONST x, y: double): T_point;
@@ -640,6 +641,17 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     setLength(row, index+1);
     row[index].create(index,rowData);
     if trim(styleOptions)<>'' then row[index].style.parseStyle(styleOptions);
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove:longint);
+  VAR i0,i:longint;
+  begin
+    if numberOfRowsToRemove<=0 then exit;
+    system.enterCriticalSection(cs);
+    i0:=length(row)-numberOfRowsToRemove; if i0<0 then i0:=0;
+    for i:=i0 to length(row)-1 do row[i].destroy;
+    setLength(row,i0);
     system.leaveCriticalSection(cs);
   end;
 

@@ -10,7 +10,7 @@ USES //basic classes
      mnh_caches,
      mnh_tokens, mnh_contexts,
      mnh_profiling,
-     {$ifdef fullVersion}mnh_doc, mnh_plotData,mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
+     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
      mnh_funcs,
 
      mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
