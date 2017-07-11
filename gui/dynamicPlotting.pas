@@ -9,6 +9,8 @@ USES sysutils,
 PROCEDURE initializeDynamicPlotting;
 PROCEDURE postMouseMove(CONST newX,newY:double);
 PROCEDURE postRescale;
+PROCEDURE postPlotClosed;
+FUNCTION isPlotInteractive:boolean;
 IMPLEMENTATION
 TYPE T_requestKind=(rk_none,rk_kill,rk_mouseMove,rk_resize);
      T_request=record
@@ -43,6 +45,17 @@ PROCEDURE postRescale;
   begin
     if not(initialized) then exit;
     request.value:=r;
+  end;
+
+procedure postPlotClosed;
+  begin
+    if not(initialized) then exit;
+    request.value:=KILL_REQUEST;
+  end;
+
+function isPlotInteractive: boolean;
+  begin
+    result:=dynamicPlotLoopRunning.value;
   end;
 
 FUNCTION dynamicPlotThread(p:pointer):ptrint;
@@ -149,6 +162,10 @@ FUNCTION dynamicPlot_impl intFuncSignature;
       if allOkay then applyParameters;
       result:=newBoolLiteral(allOkay);
       leaveCriticalSection(setupCs);
+      while context.adapters^.noErrors and dynamicPlotLoopRunning.value do begin
+        sleep(10);
+        ThreadSwitch;
+      end;
     end;
   end;
 

@@ -227,9 +227,6 @@ FUNCTION renderToFile_impl intFuncSignature;
       if params^.size>3 then supersampling:=int3^.value
                         else supersampling:=1;
       if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
-        context.adapters^.raiseError(
-          'Function renderToFile expects parameters (filename,width,height,[supersampling]).',
-          tokenLocation);
         exit(nil);
       end;
       try
@@ -316,7 +313,7 @@ INITIALIZATION
   mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, [se_writingInternal], ak_nullary,
     'resetOptions;//Sets the default plot options');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, [se_readingInternal,se_writingExternal], ak_variadic_3,
-    'renderToFile(filename,width,height,[supersampling]);//Renders the current plot to a file.');
+    'renderToFile(filename<>'',width>=1,height>=1,[supersampling]);//Renders the current plot to a file.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, [se_readingInternal], ak_variadic_2,
     'renderToString(width,height,[supersampling]);//Renders the current plot to a string.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_writingInternal], ak_nullary,

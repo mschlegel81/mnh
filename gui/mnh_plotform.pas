@@ -281,6 +281,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    postPlotClosed;
   end;
 
 PROCEDURE TplotForm.pullPlotSettingsToGui;
@@ -327,6 +328,8 @@ PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
     if not(showing) then Show;
+    if isPlotInteractive then Caption:='MNH plot - close this window to leave interactive mode'
+                         else Caption:='MNH plot';
     if (now-broughtToFront)>5/(24*60*60) then begin
       BringToFront;
       broughtToFront:=now;
