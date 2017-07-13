@@ -839,6 +839,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
 
     PROCEDURE drawPatternRect(x0, y0, x1, y1: longint);
       VAR x, y, locY: longint;
+          points:array[0..3] of TPoint;
       begin
         if (x0<0) then x0:=0 else if x0>screenWidth*scalingFactor then
           x0:=screenWidth*scalingFactor;
@@ -853,23 +854,14 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
           x1:=x0; y1:=y0;
           x0:=x;  y0:=y;
         end;
-        for x:=x0 to x1 do
-          begin
-          if (x1>x0) then
-            locY:=round(y0+(y1-y0)*(x-x0)/(x1-x0))
-          else
-            locY:=round(0.5*(y0+y1));
-          if locY>yBaseLine then
-            begin
-            for y:=yBaseLine to locY do
-              if (x and 1)+2*(y and 1) = patternIdx then
-                target.Pixels[x, y]:=scaleAndColor.solidColor;
-            end
-          else
-            for y:=yBaseLine downto locY do
-              if (x and 1)+2*(y and 1) = patternIdx then
-                target.Pixels[x, y]:=scaleAndColor.solidColor;
-          end;
+        points[0].x:=x0; points[0].y:=y0;
+        points[1].x:=x0; points[1].y:=yBaseLine;
+        points[2].x:=x1; points[2].y:=yBaseLine;
+        points[3].x:=x1; points[3].y:=y1;
+
+        plotImage.Canvas.Brush.Style:=bsSolid;
+        plotImage.Canvas.Brush.Color:=scaleAndColor.solidColor;
+        plotImage.Canvas.Polygon(points);
       end;
 
     begin
