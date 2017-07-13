@@ -1,7 +1,15 @@
 UNIT mnh_funcs_plot;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils, mnh_funcs,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts,myGenerics;
+USES sysutils,math,
+     myGenerics,
+     mnh_basicTypes,
+     mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_contexts,
+     mnh_funcs,
+     mnh_plotData,plotstyles;
 TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
@@ -119,8 +127,8 @@ FUNCTION getOptions intFuncSignature;
         .put('autoscaleFactor',opt.autoscaleFactor )^
         .put('logscaleX'      ,opt.logscale['x']   )^
         .put('logscaleY'      ,opt.logscale['y']   )^
-        .put('axisStyleX'     ,opt.axisStyle['x']  )^
-        .put('axisStyleY'     ,opt.axisStyle['y']  );
+        .put('axisStyleX'     ,byte(opt.axisStyle['x']))^
+        .put('axisStyleY'     ,byte(opt.axisStyle['y']));
     end;
   end;
 

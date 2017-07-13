@@ -14,7 +14,8 @@ USES
   mnh_litVar, mnh_funcs,
   mnh_contexts,
   mnh_evalThread,
-  dynamicPlotting;
+  dynamicPlotting,
+  plotstyles;
 
 TYPE
 
@@ -288,12 +289,12 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
   VAR o:T_scalingOptions;
   begin
     o:=guiAdapters^.plot^.options;
-    miXTics.Checked         :=(o.axisStyle['x'] and C_tics)=C_tics;
-    miXGrid.Checked         :=(o.axisStyle['x'] and C_grid)=C_grid;
-    miXFinerGrid.Checked    :=(o.axisStyle['x'] and C_finerGrid)=C_finerGrid;
-    miYTics.Checked         :=(o.axisStyle['y'] and C_tics)=C_tics;
-    miYGrid.Checked         :=(o.axisStyle['y'] and C_grid)=C_grid;
-    miYFinerGrid.Checked    :=(o.axisStyle['y'] and C_finerGrid)=C_finerGrid;
+    miXTics.Checked         :=gse_tics       in o.axisStyle['x'];
+    miXGrid.Checked         :=gse_coarseGrid in o.axisStyle['x'];
+    miXFinerGrid.Checked    :=gse_fineGrid   in o.axisStyle['x'];
+    miYTics.Checked         :=gse_tics       in o.axisStyle['y'];
+    miYGrid.Checked         :=gse_coarseGrid in o.axisStyle['y'];
+    miYFinerGrid.Checked    :=gse_fineGrid   in o.axisStyle['y'];
     miPreserveAspect.Checked:=o.preserveAspect;
     miAutoscaleX.Checked    :=o.autoscale['x'];
     miAutoscaleY.Checked    :=o.autoscale['y'];
@@ -305,14 +306,14 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
   VAR o:T_scalingOptions;
   begin
     o:=guiAdapters^.plot^.options;
-    o.axisStyle['x']:=0;
-    if miXTics.Checked      then o.axisStyle['x']:=C_tics;
-    if miXGrid.Checked      then o.axisStyle['x']:=o.axisStyle['x'] or C_grid;
-    if miXFinerGrid.Checked then o.axisStyle['x']:=o.axisStyle['x'] or C_finerGrid;
-    o.axisStyle['y']:=0;
-    if miYTics.Checked      then o.axisStyle['y']:=C_tics;
-    if miYGrid.Checked      then o.axisStyle['y']:=o.axisStyle['y'] or C_grid;
-    if miYFinerGrid.Checked then o.axisStyle['y']:=o.axisStyle['y'] or C_finerGrid;
+    o.axisStyle['x']:=[];
+    if miXTics.Checked      then include(o.axisStyle['x'],gse_tics      );
+    if miXGrid.Checked      then include(o.axisStyle['x'],gse_coarseGrid);
+    if miXFinerGrid.Checked then include(o.axisStyle['x'],gse_fineGrid  );
+    o.axisStyle['y']:=[];
+    if miYTics.Checked      then include(o.axisStyle['y'],gse_tics      );
+    if miYGrid.Checked      then include(o.axisStyle['y'],gse_coarseGrid);
+    if miYFinerGrid.Checked then include(o.axisStyle['y'],gse_fineGrid  );
     o.preserveAspect:=miPreserveAspect.Checked;
     o.logscale['x']:=miLogscaleX.Checked;
     o.logscale['y']:=miLogscaleY.Checked;

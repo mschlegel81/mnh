@@ -1,45 +1,7 @@
 UNIT mnh_plotData;
 INTERFACE
-USES mnh_basicTypes, sysutils, math, mnh_constants,Interfaces, Classes, ExtCtrls, Graphics, types;
+USES mnh_basicTypes, sysutils, math, mnh_constants,Interfaces, Classes, ExtCtrls, Graphics, types, plotstyles;
 TYPE
-  T_plotStyle=(ps_none,
-               ps_straight,
-               ps_stepLeft,
-               ps_stepRight,
-               ps_filled,
-               ps_bar,
-               ps_box,
-               ps_dot,
-               ps_plus,
-               ps_cross,
-               ps_impulse);
-  T_plotStyles=set of T_plotStyle;
-
-CONST
-  C_lineStyles:T_plotStyles=[ps_straight..ps_stepRight];
-  C_styleName: array[T_plotStyle] of array[0..1] of string=
-     {ps_none,     }  (('',''),
-     {ps_straight, }   ('line'     , 'l'),
-     {ps_stepLeft, }   ('stepLeft' , '' ),
-     {ps_stepRight,}   ('stepRight', '' ),
-     {ps_filled,   }   ('fill'     , 'f'),
-     {ps_bar,      }   ('bar'      , '' ),
-     {ps_box,      }   ('box'      , '' ),
-     {ps_dot,      }   ('dot'      , '.'),
-     {ps_plus,     }   ('plus'     , '+'),
-     {ps_cross,    }   ('cross'    , 'x'),
-     {ps_impulse); }   ('impulse'  , 'i'));
-
-TYPE
-  T_colorChannel = (cc_red, cc_green, cc_blue);
-  T_color = array[T_colorChannel] of byte;
-  T_scaleAndColor = record
-    lineWidth:longint;
-    symbolRadius:longint;
-    symbolWidth:longint;
-    lineColor:longint;
-    solidColor:longint;
-  end;
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
   T_style = object
@@ -62,17 +24,10 @@ TYPE
     DESTRUCTOR destroy;
   end;
 
-CONST
-  C_tics = 1;
-  C_grid = 2;
-  C_finerGrid = C_grid+4; //=6
-  C_ticsAndGrid = C_tics+C_grid; //=3
-  C_ticsAndFinerGrid = C_tics+C_finerGrid; //=7
-
 TYPE
   T_scalingOptions=record
     range: array['x'..'y', 0..1] of double;
-    axisStyle: array['x'..'y'] of byte;
+    axisStyle: array['x'..'y'] of T_gridStyle;
     autoscale, logscale: array['x'..'y'] of boolean;
     preserveAspect: boolean;
     relativeFontSize: double;
@@ -360,8 +315,8 @@ PROCEDURE T_plot.setDefaults;
         range[axis, 0]:=-1.5;
         range[axis, 1]:=1.5;
         logscale[axis]:=false;
-        axisStyle[axis]:=C_ticsAndFinerGrid;
         autoscale[axis]:=true;
+        axisStyle[axis]:=[gse_tics,gse_coarseGrid,gse_fineGrid];
       end;
       preserveAspect:=true;
       relativeFontSize:=10;
@@ -622,8 +577,8 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:bool
     system.enterCriticalSection(cs);
     screenWidth:=width;
     screenHeight:=height;
-    if (scalingOptions.axisStyle['y'] and C_tics)=0 then xOffset:=0;
-    if (scalingOptions.axisStyle['x'] and C_tics)=0 then yOffset:=height;
+    if not(gse_tics in scalingOptions.axisStyle['y']) then xOffset:=0;
+    if not(gse_tics in scalingOptions.axisStyle['x']) then yOffset:=height;
     getRanges;
     if not(skipTics) then begin
       initTics('x');
@@ -748,8 +703,9 @@ PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
     with scalingOptions do begin
       range:=value.range;
       autoscale:=value.autoscale;
-      for axis:='x' to 'y' do if value.axisStyle[axis] in [0, C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]
-           then axisStyle[axis]:=value.axisStyle[axis];
+      for axis:='x' to 'y' do if (gse_coarseGrid in value.axisStyle[axis])
+                           or not(gse_fineGrid   in value.axisStyle[axis])
+      then axisStyle[axis]:=value.axisStyle[axis];
       for axis:='x' to 'y' do if logscale[axis]<>value.logscale[axis] then begin
         for i:=0 to 1 do range[axis,i]:=oex(range[axis,i]);
         logscale[axis]:=value.logscale[axis];
@@ -859,8 +815,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
         points[2].x:=x1; points[2].y:=yBaseLine;
         points[3].x:=x1; points[3].y:=y1;
 
-        plotImage.Canvas.Brush.Style:=bsSolid;
-        plotImage.Canvas.Brush.Color:=scaleAndColor.solidColor;
+        plotImage.Canvas.Brush.style:=bsSolid;
+        plotImage.Canvas.Brush.color:=scaleAndColor.solidColor;
         plotImage.Canvas.Polygon(points);
       end;
 
@@ -880,12 +836,12 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
       scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
-      if (scalingOptions.axisStyle['y'] and C_finerGrid) = C_finerGrid then
+      if (gse_fineGrid in scalingOptions.axisStyle['y']) then
       for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if not(major) then begin
         y:=round(pos*scalingFactor);
         target.line(0, y, screenWidth*scalingFactor, y);
       end;
-      if (scalingOptions.axisStyle['x'] and C_finerGrid) = C_finerGrid then
+      if (gse_fineGrid in scalingOptions.axisStyle['x']) then
       for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if not(major) then begin
         x:=round(pos*scalingFactor);
         target.line(x, 0, x, screenHeight*scalingFactor);
@@ -895,12 +851,12 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
       scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
       target.Pen.color:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
-      if (scalingOptions.axisStyle['y'] and C_grid) = C_grid then
+      if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
       for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
         y:=round(pos*scalingFactor);
         target.line(0, y, screenWidth*scalingFactor, y);
       end;
-      if (scalingOptions.axisStyle['x'] and C_grid) = C_grid then
+      if (gse_coarseGrid in scalingOptions.axisStyle['x']) then
       for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
         x:=round(pos*scalingFactor);
         target.line(x, 0, x, screenHeight*scalingFactor);
@@ -1159,26 +1115,26 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
       target.Pen.style:=psClear;
       target.Pen.width:=1;
       target.Pen.EndCap:=pecSquare;
-      if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then target.FillRect(0,0, xOffset, screenHeight);
-      if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) > 0 then target.FillRect(xOffset, yOffset,screenWidth, screenHeight);
+      if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0, xOffset, screenHeight);
+      if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(xOffset, yOffset,screenWidth, screenHeight);
       //-----------------------------------------------------------:clear border
       //axis:-------------------------------------------------------------------
       target.Pen.style:=psSolid;
       target.Pen.color:=clBlack;
       target.Pen.width:=1;
-      if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then target.line(xOffset, 0, xOffset, yOffset);
-      if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) > 0 then target.line(screenWidth, yOffset, xOffset, yOffset);
+      if (scalingOptions.axisStyle['y']<>[]) then target.line(xOffset, 0, xOffset, yOffset);
+      if (scalingOptions.axisStyle['x']<>[]) then target.line(screenWidth, yOffset, xOffset, yOffset);
       //-------------------------------------------------------------------:axis
       //tics:-------------------------------------------------------------------
-      if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
+      if (scalingOptions.axisStyle['y']<>[]) then for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
         y:=round(pos);
         target.line(xOffset-5, y, xOffset, y);
-        if (scalingOptions.axisStyle['y'] and C_tics)>0 then target.textOut(xOffset-5-target.TextWidth(txt), y-target.TextHeight(txt) shr 1, txt);
+        if (gse_tics in scalingOptions.axisStyle['y']) then target.textOut(xOffset-5-target.TextWidth(txt), y-target.TextHeight(txt) shr 1, txt);
       end;
-      if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) >0 then for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
+      if (scalingOptions.axisStyle['x']<>[]) then for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
         x:=round(pos);
         target.line(x, yOffset+5, x, yOffset);
-        if (scalingOptions.axisStyle['x'] and C_tics)>0 then target.textOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
+        if (gse_tics in scalingOptions.axisStyle['x']) then target.textOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
       end;
       //-------------------------------------------------------------------:tics
       //======================================================:coordinate system
@@ -1187,11 +1143,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
   FUNCTION setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
     begin with scalingOptions do begin
       result:=false;
-      if ((axisStyle['y'] and C_tics)>0) and (xOffset<>yTicWidth+5) then begin
+      if (gse_tics in axisStyle['y']) and (xOffset<>yTicWidth+5) then begin
         xOffset:=yTicWidth+5;
         result:=true;
       end;
-      if ((axisStyle['x'] and C_tics)>0) and (yOffset<>screenHeight-(xTicHeight+5)) then begin
+      if (gse_tics in axisStyle['x']) and (yOffset<>screenHeight-(xTicHeight+5)) then begin
         yOffset:=screenHeight-(xTicHeight+5);
         result:=true;
       end;
