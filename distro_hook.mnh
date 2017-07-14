@@ -1,9 +1,13 @@
-main->['mnh.exe','mnh_light.exe','mnhi.exe'].each(file,
-  fileExists(file)
-  ? begin
-      deleteFile('C:\bin\'&file);
-      copyFile(file,'C:\bin\'&file)
-      ? print('Copied ',file,' -> C:\bin\',file)
-      : fail('Copy ',file,' -> C:\bin\',file,' failed');
-    end
-  : void);
+main->
+['mnh.exe',
+ 'mnh_light.exe',
+ 'mnhi.exe',
+ '..\art.bin\workflowScriptTemplate.mnh']
+ .filter(::fileExists)
+ .map({[$f,'C:\bin\'&extractFileName($f)]})
+ .map({begin
+    deleteFile($f[1]);
+    copyFile@$f
+    ? print('Copied ',$f[0],' -> C:\bin\',$f[1])
+    : fail('Copy ',$f[0],' -> C:\bin\',$f[1],' failed');
+  end});
