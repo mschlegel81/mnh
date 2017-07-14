@@ -1,7 +1,7 @@
 UNIT mnh_subrules;
 INTERFACE
 USES //basic classes
-     sysutils, {$ifdef fullVersion}math,{$endif}
+     sysutils,
      //my utilities
      myGenerics,myStringUtil,
      //MNH:
@@ -14,7 +14,7 @@ USES //basic classes
      mnh_tokenArray,
      valueStore,
      {$ifdef fullVersion}
-     mnh_plotData,mnh_funcs_plot,
+     mnh_plotData,mnh_funcs_plot,plotMath,
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_list,mnh_funcs_strings,
      mnh_patterns;
@@ -1188,20 +1188,18 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         i,j,k:longint;
         oldTimes,newTimes:T_arrayOfDouble;
         oldRow  ,newRow  :T_dataRow;
-
-        oLogRow:T_dataRow;
+        screenRow:T_rowToPaint;
         t:double;
         stillOk:boolean=true;
 
     begin
       while stillOk and (length(dataRow)<samples) do begin
         //Prepare threshold:----------------------------------------------------
-        oLogRow:=context.adapters^.plot^.olxy(dataRow);
+        screenRow:=context.adapters^.plot^.options.transformRow(dataRow,1);
         for i:=1 to length(dataRow)-1 do
-        if not(isNan(oLogRow[i,0])) and not(isNan(oLogRow[i-1,0])) and
-           not(isNan(oLogRow[i,1])) and not(isNan(oLogRow[i-1,1])) then begin
-          distThreshold:=distThreshold+sqr(oLogRow[i,0]-oLogRow[i-1,0])
-                                      +sqr(oLogRow[i,1]-oLogRow[i-1,1]);
+        if screenRow[i-1].valid and screenRow[i].valid then begin
+          distThreshold:=distThreshold+sqr(screenRow[i].x-screenRow[i-1].x)
+                                      +sqr(screenRow[i].y-screenRow[i-1].y);
           inc(distThresholdSamples);
         end;
         distThreshold:=distThreshold/distThresholdSamples;
@@ -1210,9 +1208,10 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         setLength(newTimes,0);
         TList:=newListLiteral;
         for i:=1 to length(dataRow)-1 do
-        if (isNan(oLogRow[i,0])) or (isNan(oLogRow[i-1,0])) or
-           (isNan(oLogRow[i,1])) or (isNan(oLogRow[i-1,1])) or
-          (sqr(oLogRow[i,0]-oLogRow[i-1,0])+sqr(oLogRow[i,1]-oLogRow[i-1,1])>=distThreshold) then begin
+        if not(screenRow[i  ].valid) or
+           not(screenRow[i-1].valid) or
+          (sqr(screenRow[i].x-screenRow[i-1].x)
+          +sqr(screenRow[i].y-screenRow[i-1].y)>=distThreshold) then begin
           t:=tRow[i]*0.5+tRow[i-1]*0.5;
           TList^.appendReal(t);
           append(newTimes,t);

@@ -1476,7 +1476,7 @@ A.Age | A.Name | B.Character | B.Nemesis
 28    | Alan   | Alan        | Zombies
       |        | Me          | Things
 ***** heart *****
-png hash: 88B30F70
+png hash: 5B1176FE
 ***** helloWorld *****
 Hello world
 ***** hereDoc *****
@@ -3889,7 +3889,7 @@ out> 1
 in> toReal(3);
 out> 3.0
 in> getOptions;
-out> [['fontsize',10.0],['autoscaleY',true],['y0',-1.5],['logscaleX',false],['x0',-1.5],['y1',1.5],['preserveAspect',true],['logscaleY',false],['axisStyleX',7],['x1',1.5],['autoscaleX',true],['autoscaleFactor',1.0],['axisStyleY',7]].toMap
+out> [['fontsize',10.0],['autoscaleY',true],['y0',-1.0],['logscaleX',false],['x0',-1.0],['y1',1.0],['preserveAspect',true],['logscaleY',false],['axisStyleX',7],['x1',1.0],['autoscaleX',true],['autoscaleFactor',1.0],['axisStyleY',7]].toMap
 in> executor;
 out> '/mnhi_debug'
 in> print("1\n2.0\n03.45");

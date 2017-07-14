@@ -14,7 +14,9 @@ USES
   mnh_litVar, mnh_funcs,
   mnh_contexts,
   mnh_evalThread,
-  dynamicPlotting;
+  dynamicPlotting,
+  plotstyles,
+  plotMath;
 
 TYPE
 
@@ -256,7 +258,7 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
 PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
-    p:=guiAdapters^.plot^.screenToReal(x,y);
+    p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
       guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
@@ -288,34 +290,34 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
   VAR o:T_scalingOptions;
   begin
     o:=guiAdapters^.plot^.options;
-    miXTics.Checked         :=(o.axisStyle['x'] and C_tics)=C_tics;
-    miXGrid.Checked         :=(o.axisStyle['x'] and C_grid)=C_grid;
-    miXFinerGrid.Checked    :=(o.axisStyle['x'] and C_finerGrid)=C_finerGrid;
-    miYTics.Checked         :=(o.axisStyle['y'] and C_tics)=C_tics;
-    miYGrid.Checked         :=(o.axisStyle['y'] and C_grid)=C_grid;
-    miYFinerGrid.Checked    :=(o.axisStyle['y'] and C_finerGrid)=C_finerGrid;
+    miXTics.Checked         :=gse_tics       in o.axisStyle['x'];
+    miXGrid.Checked         :=gse_coarseGrid in o.axisStyle['x'];
+    miXFinerGrid.Checked    :=gse_fineGrid   in o.axisStyle['x'];
+    miYTics.Checked         :=gse_tics       in o.axisStyle['y'];
+    miYGrid.Checked         :=gse_coarseGrid in o.axisStyle['y'];
+    miYFinerGrid.Checked    :=gse_fineGrid   in o.axisStyle['y'];
     miPreserveAspect.Checked:=o.preserveAspect;
     miAutoscaleX.Checked    :=o.autoscale['x'];
     miAutoscaleY.Checked    :=o.autoscale['y'];
-    miLogscaleX.Checked     :=o.logscale['x'];
-    miLogscaleY.Checked     :=o.logscale['y'];
+    miLogscaleX.Checked     :=o.axisTrafo['x'].logscale;
+    miLogscaleY.Checked     :=o.axisTrafo['y'].logscale;
   end;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
   VAR o:T_scalingOptions;
   begin
     o:=guiAdapters^.plot^.options;
-    o.axisStyle['x']:=0;
-    if miXTics.Checked      then o.axisStyle['x']:=C_tics;
-    if miXGrid.Checked      then o.axisStyle['x']:=o.axisStyle['x'] or C_grid;
-    if miXFinerGrid.Checked then o.axisStyle['x']:=o.axisStyle['x'] or C_finerGrid;
-    o.axisStyle['y']:=0;
-    if miYTics.Checked      then o.axisStyle['y']:=C_tics;
-    if miYGrid.Checked      then o.axisStyle['y']:=o.axisStyle['y'] or C_grid;
-    if miYFinerGrid.Checked then o.axisStyle['y']:=o.axisStyle['y'] or C_finerGrid;
+    o.axisStyle['x']:=[];
+    if miXTics.Checked      then include(o.axisStyle['x'],gse_tics      );
+    if miXGrid.Checked      then include(o.axisStyle['x'],gse_coarseGrid);
+    if miXFinerGrid.Checked then include(o.axisStyle['x'],gse_fineGrid  );
+    o.axisStyle['y']:=[];
+    if miYTics.Checked      then include(o.axisStyle['y'],gse_tics      );
+    if miYGrid.Checked      then include(o.axisStyle['y'],gse_coarseGrid);
+    if miYFinerGrid.Checked then include(o.axisStyle['y'],gse_fineGrid  );
     o.preserveAspect:=miPreserveAspect.Checked;
-    o.logscale['x']:=miLogscaleX.Checked;
-    o.logscale['y']:=miLogscaleY.Checked;
+    o.axisTrafo['x'].logscale:=miLogscaleX.Checked;
+    o.axisTrafo['y'].logscale:=miLogscaleY.Checked;
     o.autoscale['x']:=miAutoscaleX.Checked;
     o.autoscale['y']:=miAutoscaleY.Checked;
     guiAdapters^.plot^.options:=o;
@@ -328,8 +330,8 @@ PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
     if not(showing) then Show;
-    if isPlotInteractive then Caption:='MNH plot - close this window to leave interactive mode'
-                         else Caption:='MNH plot';
+    if isPlotInteractive then caption:='MNH plot - close this window to leave interactive mode'
+                         else caption:='MNH plot';
     if (now-broughtToFront)>5/(24*60*60) then begin
       BringToFront;
       broughtToFront:=now;

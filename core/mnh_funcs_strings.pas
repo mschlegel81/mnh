@@ -168,7 +168,7 @@ FUNCTION charSet_imp intFuncSignature;
         txt:ansistring;
         sub:ansistring;
         charSetUtf8:T_setOfString;
-        byteSet:T_charset=[];
+        byteSet:T_charSet=[];
         c:char;
     begin
       if P_stringLiteral(input)^.getEncoding=se_utf8 then begin

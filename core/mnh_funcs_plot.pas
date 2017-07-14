@@ -1,7 +1,15 @@
 UNIT mnh_funcs_plot;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils, mnh_funcs,mnh_litVar,mnh_basicTypes,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts,myGenerics;
+USES sysutils,math,
+     myGenerics,
+     mnh_basicTypes,
+     mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_contexts,
+     mnh_funcs,
+     mnh_plotData,plotstyles,plotMath;
 TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
@@ -108,19 +116,19 @@ FUNCTION getOptions intFuncSignature;
     if (params=nil) or (params^.size=0) then begin
       opt:=context.adapters^.plot^.options;
       result:=newMapLiteral^
-        .put('x0'             ,opt.range['x',0]    )^
-        .put('x1'             ,opt.range['x',1]    )^
-        .put('y0'             ,opt.range['y',0]    )^
-        .put('y1'             ,opt.range['y',1]    )^
+        .put('x0'             ,opt.axisTrafo['x'].worldMin)^
+        .put('x1'             ,opt.axisTrafo['x'].worldMax)^
+        .put('y0'             ,opt.axisTrafo['y'].worldMin)^
+        .put('y1'             ,opt.axisTrafo['y'].worldMax)^
         .put('fontsize'       ,opt.relativeFontSize)^
         .put('preserveAspect' ,opt.preserveAspect  )^
         .put('autoscaleX'     ,opt.autoscale['x']  )^
         .put('autoscaleY'     ,opt.autoscale['y']  )^
         .put('autoscaleFactor',opt.autoscaleFactor )^
-        .put('logscaleX'      ,opt.logscale['x']   )^
-        .put('logscaleY'      ,opt.logscale['y']   )^
-        .put('axisStyleX'     ,opt.axisStyle['x']  )^
-        .put('axisStyleY'     ,opt.axisStyle['y']  );
+        .put('logscaleX'      ,opt.axisTrafo['x'].logscale)^
+        .put('logscaleY'      ,opt.axisTrafo['y'].logscale)^
+        .put('axisStyleX'     ,byte(opt.axisStyle['x']))^
+        .put('axisStyleY'     ,byte(opt.axisStyle['y']));
     end;
   end;
 
@@ -137,16 +145,16 @@ FUNCTION setOptions intFuncSignature;
     VAR f:double;
     begin
       if (key='x0'            ) and (value^.literalType in [lt_int,lt_real]) then begin
-        f:=fReal(value); if isNan(f) then fail else opt.range['x',0]:=f;
+        f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['x'].worldMin:=f;
       end else
       if (key='x1'            ) and (value^.literalType in [lt_int,lt_real]) then begin
-        f:=fReal(value); if isNan(f) then fail else opt.range['x',1]:=f;
+        f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['x'].worldMax:=f;
       end else
       if (key='y0'            ) and (value^.literalType in [lt_int,lt_real]) then begin
-        f:=fReal(value); if isNan(f) then fail else opt.range['y',0]:=f;
+        f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['y'].worldMin:=f;
       end else
       if (key='y1'            ) and (value^.literalType in [lt_int,lt_real]) then begin
-        f:=fReal(value); if isNan(f) then fail else opt.range['y',1]:=f;
+        f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['y'].worldMax:=f;
       end else
       if (key='fontsize'      ) and (value^.literalType in [lt_int,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.relativeFontSize:=f;
@@ -164,10 +172,10 @@ FUNCTION setOptions intFuncSignature;
         opt.autoscale['y']:=P_boolLiteral(value)^.value;
       end else
       if (key='logscaleX'     ) and (value^.literalType=lt_boolean) then begin
-        opt.logscale['x']:=P_boolLiteral(value)^.value;
+        opt.axisTrafo['x'].logscale:=P_boolLiteral(value)^.value;
       end else
       if (key='logscaleY'     ) and (value^.literalType=lt_boolean) then begin
-        opt.logscale['y']:=P_boolLiteral(value)^.value;
+        opt.axisTrafo['y'].logscale:=P_boolLiteral(value)^.value;
       end else
       if (key='axisStyleX'    ) and (value^.literalType=lt_int) then begin
         opt.axisStyle['x']:=P_intLiteral(value)^.value and 7;
