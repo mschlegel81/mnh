@@ -12,7 +12,8 @@ TYPE
                ps_dot,
                ps_plus,
                ps_cross,
-               ps_impulse);
+               ps_impulse,
+               ps_textOut);
   T_plotStyles=set of T_plotStyle;
   T_colorChannel = (cc_red, cc_green, cc_blue);
   T_color = array[T_colorChannel] of byte;
@@ -20,28 +21,31 @@ TYPE
 CONST
   C_lineStyles:T_plotStyles=[ps_straight..ps_stepRight];
   C_styleName: array[T_plotStyle] of array[0..1] of string=
-     {ps_none,     }  (('',''),
-     {ps_straight, }   ('line'     , 'l'),
-     {ps_stepLeft, }   ('stepLeft' , '' ),
-     {ps_stepRight,}   ('stepRight', '' ),
-     {ps_filled,   }   ('fill'     , 'f'),
-     {ps_bar,      }   ('bar'      , '' ),
-     {ps_box,      }   ('box'      , '' ),
-     {ps_dot,      }   ('dot'      , '.'),
-     {ps_plus,     }   ('plus'     , '+'),
-     {ps_cross,    }   ('cross'    , 'x'),
-     {ps_impulse); }   ('impulse'  , 'i'));
+     {ps_none      }  (('',''),
+     {ps_straight  }   ('line'     , 'l'),
+     {ps_stepLeft  }   ('stepLeft' , '' ),
+     {ps_stepRight }   ('stepRight', '' ),
+     {ps_filled    }   ('fill'     , 'f'),
+     {ps_bar       }   ('bar'      , '' ),
+     {ps_box       }   ('box'      , '' ),
+     {ps_dot       }   ('dot'      , '.'),
+     {ps_plus      }   ('plus'     , '+'),
+     {ps_cross     }   ('cross'    , 'x'),
+     {ps_impulse   }   ('impulse'  , 'i'),
+     {ps_textOut   }   ('text'     , 't'));
 
 TYPE
   T_scaleAndColor = record
     lineWidth   ,
     symbolRadius,
     symbolWidth ,
+    fontSize    ,
     lineColor   ,
     solidColor  :longint;
   end;
 
   T_style = object
+    txt:string;
     style: T_plotStyles;
     color: T_color;
     styleModifier: double;
@@ -49,7 +53,7 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE parseStyle(CONST styleString: ansistring);
     FUNCTION toString:ansistring;
-    FUNCTION getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
+    FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
   end;
 
   T_gridStyleElement=(gse_tics,gse_coarseGrid,gse_fineGrid);
@@ -90,6 +94,7 @@ CONSTRUCTOR T_style.create(CONST index: longint);
   begin
     style:=[ps_straight];
     color:=C_defaultColor[index mod length(C_defaultColor)].color;
+    txt:='';
     styleModifier:=1;
   end;
 
@@ -207,6 +212,10 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         if ps in C_lineStyles
         then style:=style-C_lineStyles+[ps]
         else include(style,ps);
+        if ps=ps_textOut then begin
+          style:=[ps_textOut];
+          txt:=options;
+        end;
         mightBeColor:=false;
       end;
       if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
@@ -224,15 +233,16 @@ FUNCTION T_style.toString:ansistring;
                   +','  +floatToStr(color[cc_blue]);
   end;
 
-FUNCTION T_style.getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
+FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
   FUNCTION toByte(CONST d:double):byte;
     begin
       if d>255 then result:=255 else if d<0 then result:=0 else result:=round(d);
     end;
 
-  VAR ideal:double;
+  VAR scalingFactor,ideal:double;
   begin
     result.solidColor:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
+    scalingFactor:=sqrt(sqr(xRes)+sqr(yRes))/1000;
     //line width
     ideal:=styleModifier*scalingFactor;
     if ideal>1 then begin
@@ -244,6 +254,7 @@ FUNCTION T_style.getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColo
                     or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
                     or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
     end;
+    result.fontSize    :=round(scalingFactor          *styleModifier);
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;

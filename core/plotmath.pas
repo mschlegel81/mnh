@@ -79,9 +79,9 @@ TYPE
     axisStyle:array['x'..'y'] of T_gridStyle;
 
     PROCEDURE updateForPlot(CONST Canvas:TCanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
-    PROCEDURE setFontSize(CONST Canvas:TCanvas);
     FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:longint):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
+    FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
   end;
 
 IMPLEMENTATION
@@ -328,7 +328,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         end;
         initLinearTics(i,10,1);
         if majorTicCount>10 then begin
-          initLinearTics(i+1,5,1);
+          initLinearTics(i,50,10);
         end;
       end;
     end;
@@ -338,10 +338,10 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
     VAR newX0,newY0:longint;
     begin
       if gse_tics in axisStyle['x']
-      then newX0:=Canvas.Font.GetTextWidth(ticSampleText)
+      then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
       else newX0:=0;
-      if gse_tics in axisStyle['x']
-      then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)
+      if gse_tics in axisStyle['y']
+      then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
       else newY0:=aimHeight;
 
       result:=(axisTrafo['x'].screenRange[0]<newX0-20) or
@@ -370,24 +370,26 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
 
   VAR axis:char;
   begin
-    setFontSize(Canvas);
+    Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
     ticSampleText:='.0E12';
     updateBorders;
+    {$ifdef debugMode}
+    writeln('Borders (1): ',axisTrafo['x'].screenRange[0],', ',aimHeight-axisTrafo['y'].screenRange[0]);
+    {$endif}
     prepareRanges;
     for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
     ticSampleText:=longestTic;
     if updateBorders then begin
+      {$ifdef debugMode}
+      writeln('Borders (2): ',axisTrafo['x'].screenRange[0],', ',aimHeight-axisTrafo['y'].screenRange[0]);
+      {$endif}
       prepareRanges;
       for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
     end;
   end;
 
-PROCEDURE T_scalingOptions.setFontSize(CONST Canvas: TCanvas);
-  begin
-    Canvas.Font.size:=round(sqrt(sqr(Canvas.width)+sqr(Canvas.height))/1000*relativeFontSize);
-  end;
-
-FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor:longint): T_rowToPaint;
+FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow;
+  CONST scalingFactor: longint): T_rowToPaint;
   VAR i:longint;
       tx,ty:double;
   begin
@@ -404,10 +406,19 @@ FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor
     end;
   end;
 
-FUNCTION T_scalingOptions.screenToReal(CONST x,y:integer):T_point;
+FUNCTION T_scalingOptions.screenToReal(CONST x, y: integer): T_point;
   begin
     result[0]:=axisTrafo['x'].applyInverse(x);
     result[1]:=axisTrafo['y'].applyInverse(y);
+  end;
+
+FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
+  VAR tempStyle:T_style;
+  begin
+    tempStyle.create(0);
+    tempStyle.styleModifier:=relativeFontSize;
+    result:=tempStyle.getLineScaleAndColor(xRes,yRes).fontSize;
+    tempStyle.destroy;
   end;
 
 CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row: T_dataRow);
