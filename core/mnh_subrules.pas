@@ -1,7 +1,7 @@
 UNIT mnh_subrules;
 INTERFACE
 USES //basic classes
-     sysutils, {$ifdef fullVersion}math,{$endif}
+     sysutils,
      //my utilities
      myGenerics,myStringUtil,
      //MNH:
