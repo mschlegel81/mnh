@@ -15,7 +15,8 @@ USES
   mnh_contexts,
   mnh_evalThread,
   dynamicPlotting,
-  plotstyles;
+  plotstyles,
+  plotMath;
 
 TYPE
 
@@ -257,7 +258,7 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
 PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
-    p:=guiAdapters^.plot^.screenToReal(x,y);
+    p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
       guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
@@ -298,8 +299,8 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
     miPreserveAspect.Checked:=o.preserveAspect;
     miAutoscaleX.Checked    :=o.autoscale['x'];
     miAutoscaleY.Checked    :=o.autoscale['y'];
-    miLogscaleX.Checked     :=o.logscale['x'];
-    miLogscaleY.Checked     :=o.logscale['y'];
+    miLogscaleX.Checked     :=o.axisTrafo['x'].logscale;
+    miLogscaleY.Checked     :=o.axisTrafo['y'].logscale;
   end;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
@@ -315,8 +316,8 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     if miYGrid.Checked      then include(o.axisStyle['y'],gse_coarseGrid);
     if miYFinerGrid.Checked then include(o.axisStyle['y'],gse_fineGrid  );
     o.preserveAspect:=miPreserveAspect.Checked;
-    o.logscale['x']:=miLogscaleX.Checked;
-    o.logscale['y']:=miLogscaleY.Checked;
+    o.axisTrafo['x'].logscale:=miLogscaleX.Checked;
+    o.axisTrafo['y'].logscale:=miLogscaleY.Checked;
     o.autoscale['x']:=miAutoscaleX.Checked;
     o.autoscale['y']:=miAutoscaleY.Checked;
     guiAdapters^.plot^.options:=o;
