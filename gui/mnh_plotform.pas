@@ -101,7 +101,6 @@ VAR plotSubsystem:record
       lastMouseX,lastMouseY:longint;
     end;
     myPlotForm:TplotForm=nil;
-    currentScalingOptions:T_scalingOptions;
 
 FUNCTION plotForm: TplotForm;
   begin
@@ -272,7 +271,7 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
     if ssLeft in Shift then begin
       plotSubsystem.lastMouseX:=x;
       plotSubsystem.lastMouseY:=y;
-      p:=currentScalingOptions.screenToReal(x,y);
+      p:=guiAdapters^.plot^.options.screenToReal(x,y);
       postMouseClick(p[0],p[1]);
     end;
   end;
@@ -280,12 +279,12 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
 PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
-    p:=currentScalingOptions.screenToReal(x,y);
+    p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
       if (x<>lastMouseX) or (y<>lastMouseY) then begin
         guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
-        currentScalingOptions:=guiAdapters^.plot^.options;
+        guiAdapters^.plot^.options:=guiAdapters^.plot^.options;
         mouseUpTriggersPlot:=true;
       end;
     end else postMouseMove(p[0],p[1]);
@@ -298,7 +297,6 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
 PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
-      guiAdapters^.plot^.options:=currentScalingOptions;
       pullPlotSettingsToGui();
       dynamicPlotting.postRescale;
       lastMouseX:=x;
@@ -330,6 +328,7 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
   end;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
+  VAR currentScalingOptions:T_scalingOptions;
   begin
     currentScalingOptions:=guiAdapters^.plot^.options;
     currentScalingOptions.axisStyle['x']:=[];
@@ -384,7 +383,6 @@ PROCEDURE TplotForm.doPlot;
     end;
 
   VAR factor:longint;
-      tempPlot:T_plot;
   begin
     if not(showing) then Show;
     updateInteractiveSection;
@@ -397,12 +395,8 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing3.Checked then factor:=3
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
-    tempPlot.createWithDefaults;
-    tempPlot.CopyFrom(guiAdapters^.plot^);
+    guiAdapters^.plot^.renderPlot(plotImage,factor);
     guiAdapters^.resetFlagsAfterPlotDone;
-    tempPlot.renderPlot(plotImage,factor);
-    currentScalingOptions:=tempPlot.options;
-    tempPlot.destroy;
   end;
 
 PROCEDURE TplotForm.doOrPostPlot;
