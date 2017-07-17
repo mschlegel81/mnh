@@ -5,24 +5,27 @@ UNIT mnh_plotForm;
 INTERFACE
 {$WARN 5024 OFF}
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls,
-  mnhFormHandler,
-  mnh_constants, mnh_basicTypes,
-  mnh_plotData,
-  mnh_settings,
-  mnh_out_adapters,
-  mnh_litVar, mnh_funcs,
-  mnh_contexts,
-  mnh_evalThread,
-  dynamicPlotting,
-  plotstyles,
-  plotMath;
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  Menus, ComCtrls, StdCtrls, mnhFormHandler, mnh_constants, mnh_basicTypes,
+  mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
+  mnh_contexts, mnh_evalThread, dynamicPlotting, plotstyles, plotMath;
 
 TYPE
 
   { TplotForm }
 
   TplotForm = class(TForm)
+    CustomEventButton0: TButton;
+    ButtonLeaveInteractiveMode: TButton;
+    CustomEventButton1: TButton;
+    CustomEventButton2: TButton;
+    CustomEventButton3: TButton;
+    CustomEventButton4: TButton;
+    CustomEventButton5: TButton;
+    CustomEventButton6: TButton;
+    CustomEventButton7: TButton;
+    InteractionPanel: TFlowPanel;
+    InteractiveLabel: TLabel;
     MainMenu: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
@@ -51,6 +54,8 @@ TYPE
     miAntiAliasing5: TMenuItem;
     plotImage: TImage;
     StatusBar: TStatusBar;
+    PROCEDURE ButtonLeaveInteractiveModeClick(Sender: TObject);
+    PROCEDURE CustomEventButton0Click(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -129,6 +134,17 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
   end;
 
+PROCEDURE TplotForm.ButtonLeaveInteractiveModeClick(Sender: TObject);
+  begin
+    postEndOfInteractiveMode;
+    doOrPostPlot();
+  end;
+
+PROCEDURE TplotForm.CustomEventButton0Click(Sender: TObject);
+  begin
+    postCustomEvent(TButton(Sender).Tag);
+  end;
+
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
@@ -137,6 +153,8 @@ PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     plotImage.Align:=alClient;
+    InteractionPanel.Align:=alTop;
+    InteractionPanel.AutoSize:=true;
     doPlot();
   end;
 
@@ -248,10 +266,13 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
   end;
 
 PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  VAR p:T_point;
   begin
     if ssLeft in Shift then begin
       plotSubsystem.lastMouseX:=x;
       plotSubsystem.lastMouseY:=y;
+      p:=guiAdapters^.plot^.options.screenToReal(x,y);
+      postMouseClick(p[0],p[1]);
     end;
   end;
 
@@ -261,8 +282,11 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
-      guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
-      mouseUpTriggersPlot:=true;
+      if (x<>lastMouseX) or (y<>lastMouseY) then begin
+        guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
+        guiAdapters^.plot^.options:=guiAdapters^.plot^.options;
+        mouseUpTriggersPlot:=true;
+      end;
     end else postMouseMove(p[0],p[1]);
     with plotSubsystem do begin
       lastMouseX:=x;
@@ -287,51 +311,81 @@ PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TplotForm.pullPlotSettingsToGui;
-  VAR o:T_scalingOptions;
+  VAR currentScalingOptions:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot^.options;
-    miXTics.Checked         :=gse_tics       in o.axisStyle['x'];
-    miXGrid.Checked         :=gse_coarseGrid in o.axisStyle['x'];
-    miXFinerGrid.Checked    :=gse_fineGrid   in o.axisStyle['x'];
-    miYTics.Checked         :=gse_tics       in o.axisStyle['y'];
-    miYGrid.Checked         :=gse_coarseGrid in o.axisStyle['y'];
-    miYFinerGrid.Checked    :=gse_fineGrid   in o.axisStyle['y'];
-    miPreserveAspect.Checked:=o.preserveAspect;
-    miAutoscaleX.Checked    :=o.autoscale['x'];
-    miAutoscaleY.Checked    :=o.autoscale['y'];
-    miLogscaleX.Checked     :=o.axisTrafo['x'].logscale;
-    miLogscaleY.Checked     :=o.axisTrafo['y'].logscale;
+    currentScalingOptions:=guiAdapters^.plot^.options;
+    miXTics.Checked         :=gse_tics       in currentScalingOptions.axisStyle['x'];
+    miXGrid.Checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['x'];
+    miXFinerGrid.Checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['x'];
+    miYTics.Checked         :=gse_tics       in currentScalingOptions.axisStyle['y'];
+    miYGrid.Checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['y'];
+    miYFinerGrid.Checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['y'];
+    miPreserveAspect.Checked:=currentScalingOptions.preserveAspect;
+    miAutoscaleX.Checked    :=currentScalingOptions.autoscale['x'];
+    miAutoscaleY.Checked    :=currentScalingOptions.autoscale['y'];
+    miLogscaleX.Checked     :=currentScalingOptions.axisTrafo['x'].logscale;
+    miLogscaleY.Checked     :=currentScalingOptions.axisTrafo['y'].logscale;
   end;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
-  VAR o:T_scalingOptions;
+  VAR currentScalingOptions:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot^.options;
-    o.axisStyle['x']:=[];
-    if miXTics.Checked      then include(o.axisStyle['x'],gse_tics      );
-    if miXGrid.Checked      then include(o.axisStyle['x'],gse_coarseGrid);
-    if miXFinerGrid.Checked then include(o.axisStyle['x'],gse_fineGrid  );
-    o.axisStyle['y']:=[];
-    if miYTics.Checked      then include(o.axisStyle['y'],gse_tics      );
-    if miYGrid.Checked      then include(o.axisStyle['y'],gse_coarseGrid);
-    if miYFinerGrid.Checked then include(o.axisStyle['y'],gse_fineGrid  );
-    o.preserveAspect:=miPreserveAspect.Checked;
-    o.axisTrafo['x'].logscale:=miLogscaleX.Checked;
-    o.axisTrafo['y'].logscale:=miLogscaleY.Checked;
-    o.autoscale['x']:=miAutoscaleX.Checked;
-    o.autoscale['y']:=miAutoscaleY.Checked;
-    guiAdapters^.plot^.options:=o;
+    currentScalingOptions:=guiAdapters^.plot^.options;
+    currentScalingOptions.axisStyle['x']:=[];
+    if miXTics.Checked      then include(currentScalingOptions.axisStyle['x'],gse_tics      );
+    if miXGrid.Checked      then include(currentScalingOptions.axisStyle['x'],gse_coarseGrid);
+    if miXFinerGrid.Checked then include(currentScalingOptions.axisStyle['x'],gse_fineGrid  );
+    currentScalingOptions.axisStyle['y']:=[];
+    if miYTics.Checked      then include(currentScalingOptions.axisStyle['y'],gse_tics      );
+    if miYGrid.Checked      then include(currentScalingOptions.axisStyle['y'],gse_coarseGrid);
+    if miYFinerGrid.Checked then include(currentScalingOptions.axisStyle['y'],gse_fineGrid  );
+    currentScalingOptions.preserveAspect:=miPreserveAspect.Checked;
+    currentScalingOptions.axisTrafo['x'].logscale:=miLogscaleX.Checked;
+    currentScalingOptions.axisTrafo['y'].logscale:=miLogscaleY.Checked;
+    currentScalingOptions.autoscale['x']:=miAutoscaleX.Checked;
+    currentScalingOptions.autoscale['y']:=miAutoscaleY.Checked;
+    guiAdapters^.plot^.options:=currentScalingOptions;
     pullPlotSettingsToGui();
     doOrPostPlot();
   end;
 
 VAR broughtToFront:double;
 PROCEDURE TplotForm.doPlot;
+  PROCEDURE updateInteractiveSection;
+    FUNCTION CustomEventButton(CONST index:byte):TButton;
+      begin
+        case index of
+          0: result:=CustomEventButton0;
+          1: result:=CustomEventButton1;
+          2: result:=CustomEventButton2;
+          3: result:=CustomEventButton3;
+          4: result:=CustomEventButton4;
+          5: result:=CustomEventButton5;
+          6: result:=CustomEventButton6;
+          7: result:=CustomEventButton7;
+        end;
+      end;
+
+    VAR i:byte;
+        buttonCaption:string;
+    begin
+      InteractionPanel.visible:=isPlotInteractive;
+      if not(InteractionPanel.visible) then exit;
+      InteractiveLabel.caption:=dynamicPlotLabelText.value;
+      for i:=0 to 7 do begin
+        CustomEventButton(i).visible:=isCustomEventEnabled(i,buttonCaption);
+        CustomEventButton(i).enabled:=CustomEventButton(i).visible;
+        CustomEventButton(i).caption:=buttonCaption;
+      end;
+      InteractiveLabel.height:=0;
+      InteractiveLabel.Constraints.MinHeight:=0;
+      InteractiveLabel.AutoSize:=true;
+    end;
+
   VAR factor:longint;
   begin
     if not(showing) then Show;
-    if isPlotInteractive then caption:='MNH plot - close this window to leave interactive mode'
-                         else caption:='MNH plot';
+    updateInteractiveSection;
     if (now-broughtToFront)>5/(24*60*60) then begin
       BringToFront;
       broughtToFront:=now;
@@ -341,8 +395,8 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing3.Checked then factor:=3
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
-    guiAdapters^.resetFlagsAfterPlotDone;
     guiAdapters^.plot^.renderPlot(plotImage,factor);
+    guiAdapters^.resetFlagsAfterPlotDone;
   end;
 
 PROCEDURE TplotForm.doOrPostPlot;
