@@ -228,7 +228,7 @@ FUNCTION T_style.toString:ansistring;
   begin
     result:=floatToStr(styleModifier)+' ';
     for s in style do result:=result+C_styleName[s,0]+' ';
-    result:=result+'RGB'+FloatToStrF(color[cc_red  ]/255,ffGeneral,3,4)
+    result:=result+'RGB'+floatToStrF(color[cc_red  ]/255,ffGeneral,3,4)
                   +','  +floatToStrF(color[cc_green]/255,ffGeneral,3,4)
                   +','  +floatToStrF(color[cc_blue ]/255,ffGeneral,3,4);
   end;

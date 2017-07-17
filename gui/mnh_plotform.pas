@@ -352,7 +352,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
 VAR broughtToFront:double;
 PROCEDURE TplotForm.doPlot;
   PROCEDURE updateInteractiveSection;
-    FUNCTION customEventButton(CONST index:byte):TButton;
+    FUNCTION CustomEventButton(CONST index:byte):TButton;
       begin
         case index of
           0: result:=CustomEventButton0;
