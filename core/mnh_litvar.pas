@@ -183,6 +183,7 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE rehash(CONST grow:boolean);
     PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
+    PROCEDURE rehashForExpectedSize(CONST expectedFill:longint);
     FUNCTION putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
@@ -333,7 +334,7 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
 FUNCTION newListLiteral  (CONST initialSize:longint=0): P_listLiteral;       inline;
 FUNCTION newListLiteral  (CONST a:P_literal;
                           CONST b:P_literal=nil)      : P_listLiteral; inline;
-FUNCTION newSetLiteral                                : P_setLiteral;        inline;
+FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;        inline;
 FUNCTION newMapLiteral                                : P_mapLiteral;        inline;
 FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 FUNCTION newErrorLiteral                              : P_literal; inline;
@@ -438,7 +439,7 @@ FUNCTION newListLiteral(CONST a:P_literal; CONST b:P_literal=nil): P_listLiteral
     if b<>nil then result^.append(b,true);
   end;
 
-FUNCTION newSetLiteral                              : P_setLiteral;        begin new(result,create);              end;
+FUNCTION newSetLiteral(CONST expectedSize:longint=0): P_setLiteral;        begin new(result,create); if expectedSize>0 then result^.dat.rehashForExpectedSize(expectedSize); end;
 FUNCTION newMapLiteral                              : P_mapLiteral;        begin new(result,create);              end;
 FUNCTION newVoidLiteral                             : P_voidLiteral;       begin result:=P_voidLiteral(voidLit       .rereferenced); end;
 FUNCTION newErrorLiteral                            : P_literal;           begin result:=              errLit        .rereferenced ; end;
@@ -628,6 +629,11 @@ PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
     end;
     dat[binIdx,j].value:=value;
     if fill>length(dat)*4 then rehash(true);
+  end;
+
+PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
+  begin
+    while expectedFill>length(dat)*4 do rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
@@ -1184,7 +1190,7 @@ FUNCTION T_setLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:
       iter:T_arrayOfLiteral;
       x:P_literal;
   begin
-    res:=newSetLiteral;
+    res:=newSetLiteral(dat.fill);
     iter:=iteratableList;
     for x in iter do res^.append(x^.negate(minusLocation,adapters,threadContext),false);
     disposeLiteral(iter);
@@ -1455,7 +1461,7 @@ FUNCTION T_setLiteral.getInner(CONST accessor:P_literal):P_literal;
       sub:P_literal;
   begin
     iter:=iteratableList;
-    result:=newSetLiteral;
+    result:=newSetLiteral(length(iter));
     for sub in iter do if sub^.literalType in C_compoundTypes
     then P_setLiteral(result)^.append(P_compoundLiteral(sub)^.get(accessor),false)
     else begin
@@ -1499,13 +1505,13 @@ FUNCTION T_mapLiteral.getInner(CONST accessor:P_literal):P_literal;
     if wantKeys then begin
       if wantValues then for entry in dat.keyValueList do begin
         result:=newListLiteral(dat.fill);
-        if subAsSet then sub:=newSetLiteral
+        if subAsSet then sub:=newSetLiteral(2)
                     else sub:=newListLiteral(2);
         sub^.append(entry.key  ,true);
         sub^.append(entry.value,true);
         P_listLiteral(result)^.append(sub,false);
       end else begin
-        result:=newSetLiteral;
+        result:=newSetLiteral(dat.fill);
         for entry in dat.keyValueList do P_setLiteral(result)^.append(entry.key,true);
       end;
     end else if wantValues then begin
@@ -1752,7 +1758,7 @@ PROCEDURE T_compoundLiteral.modifyType(CONST L: P_literal);
 FUNCTION T_compoundLiteral.toSet: P_setLiteral;
   begin
     if literalType in C_setTypes then exit(P_setLiteral(rereferenced));
-    result:=P_setLiteral(newSetLiteral^.appendAll(@self));
+    result:=P_setLiteral(newSetLiteral(size)^.appendAll(@self));
   end;
 
 FUNCTION T_compoundLiteral.toList: P_listLiteral;
@@ -2810,7 +2816,7 @@ FUNCTION setUnion(CONST params:P_listLiteral):P_setLiteral;
     if not((params<>nil) and (params^.size>=1)) then exit(nil);
     for i:=0 to params^.size-1 do if not(params^[i]^.literalType in C_compoundTypes) then exit(nil);
     if params^.size=1 then exit(P_compoundLiteral(params^[0])^.toSet());
-    result:=newSetLiteral;
+    result:=newSetLiteral(P_compoundLiteral(params^[0])^.size);
     for i:=0 to params^.size-1 do result^.appendAll(P_compoundLiteral(params^[i]));
   end;
 
@@ -2905,7 +2911,8 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
   end;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-  VAR reusableLiterals:array of P_literal;
+  VAR reusableLiterals:array[0..2097151] of P_literal;
+      reusableFill:longint=0;
       encodingMethod:byte=0;
   PROCEDURE errorOrException(CONST message:string);
     begin
@@ -2929,7 +2936,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       literalByte:=stream^.readByte;
       if literalByte=255 then begin
         reusableIndex:=stream^.readNaturalNumber;
-        if (reusableIndex<length(reusableLiterals)) then begin
+        if (reusableIndex<reusableFill) then begin
           result:=reusableLiterals[reusableIndex];
           result^.rereference;
         end else begin
@@ -2948,28 +2955,28 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_booleanList,lt_booleanSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
-          then result:=newSetLiteral
+          then result:=newSetLiteral(listSize)
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
         end;
         lt_intList,lt_intSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
-          then result:=newSetLiteral
+          then result:=newSetLiteral(listSize)
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendInt(stream^.readInt64);
         end;
         lt_realList,lt_realSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
-          then result:=newSetLiteral
+          then result:=newSetLiteral(listSize)
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
         end;
         lt_stringList,lt_stringSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
-          then result:=newSetLiteral
+          then result:=newSetLiteral(listSize)
           else result:=newListLiteral(listSize);
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
         end;
@@ -2981,7 +2988,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_numList,lt_numSet:begin
           listSize:=stream^.readNaturalNumber;
           case literalType of
-            lt_set,lt_numSet: result:=newSetLiteral;
+            lt_set,lt_numSet: result:=newSetLiteral(listSize);
             else              result:=newListLiteral(listSize);
           end;
           for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream255(),false);
@@ -3004,44 +3011,9 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       if (result^.literalType<>literalType) and (adapters<>nil) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
       if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
-      if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (length(reusableLiterals)<2097151) then begin
-        setLength(reusableLiterals,length(reusableLiterals)+1);
-        reusableLiterals[length(reusableLiterals)-1]:=result;
-      end;
-    end;
-
-  PROCEDURE remap(VAR L:P_literal);
-    VAR iter:T_arrayOfLiteral;
-        i:longint;
-    begin
-      if L^.literalType in C_mapTypes then begin
-        iter:=P_mapLiteral(L)^.iteratableList;
-        disposeLiteral(L);
-        L:=newMapLiteral;
-        for i:=0 to length(iter)-1 do begin
-          remap(iter[i]);
-          P_mapLiteral(L)^.put(P_listLiteral(iter[i])^[0],
-                               P_listLiteral(iter[i])^[1],true);
-        end;
-        disposeLiteral(iter);
-      end else if L^.literalType in C_setTypes then begin
-        iter:=P_setLiteral(L)^.iteratableList;
-        disposeLiteral(L);
-        L:=newSetLiteral;
-        for i:=0 to length(iter)-1 do begin
-          remap(iter[i]);
-          P_setLiteral(L)^.append(iter[i],true);
-        end;
-        disposeLiteral(iter);
-      end else if L^.literalType in C_listTypes then begin
-        iter:=P_listLiteral(L)^.iteratableList;
-        disposeLiteral(L);
-        L:=newListLiteral(length(iter));
-        for i:=0 to length(iter)-1 do begin
-          remap(iter[i]);
-          P_listLiteral(L)^.append(iter[i],true);
-        end;
-        disposeLiteral(iter);
+      if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (reusableFill<2097151) then begin
+        reusableLiterals[reusableFill]:=result;
+        inc(reusableFill);
       end;
     end;
 
@@ -3056,7 +3028,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       if reusableIndex<=byte(high(T_literalType)) then literalType:=T_literalType(byte(reusableIndex))
       else begin
         dec(reusableIndex,byte(high(T_literalType))+1);
-        if (reusableIndex<length(reusableLiterals)) then begin
+        if (reusableIndex<reusableFill) then begin
           result:=reusableLiterals[reusableIndex];
           result^.rereference;
         end else begin
@@ -3079,7 +3051,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
           listSize:=stream^.readNaturalNumber;
           if literalType in C_setTypes
-          then result:=newSetLiteral
+          then result:=newSetLiteral(listSize)
           else result:=newListLiteral(listSize);
           case literalType of
             lt_booleanList,lt_booleanSet:
@@ -3113,14 +3085,13 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
       if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
-      if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (length(reusableLiterals)<2097151) then begin
-        setLength(reusableLiterals,length(reusableLiterals)+1);
-        reusableLiterals[length(reusableLiterals)-1]:=result;
+      if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (reusableFill<2097151) then begin
+        reusableLiterals[reusableFill]:=result;
+        inc(reusableFill);
       end;
     end;
 
   begin
-    setLength(reusableLiterals,0);
     encodingMethod:=stream^.readByte;
     case encodingMethod of
       255: result:=literalFromStream255;
@@ -3130,8 +3101,6 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         result:=newVoidLiteral;
       end;
     end;
-    {$ifdef CPU64}remap(result);{$endif}
-    setLength(reusableLiterals,0);
   end;
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
