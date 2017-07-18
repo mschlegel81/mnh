@@ -2911,7 +2911,7 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
   end;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-  VAR reusableLiterals:array[0..2097151] of P_literal;
+  VAR reusableLiterals:{$ifdef Windows}array[0..2097151] of P_literal;{$else}^P_literal;{$endif}
       reusableFill:longint=0;
       encodingMethod:byte=0;
   PROCEDURE errorOrException(CONST message:string);
@@ -3092,6 +3092,9 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
     end;
 
   begin
+    {$ifndef Windows}
+    getMem(reusableLiterals,sizeOf(P_literal)*2097151);
+    {$endif}
     encodingMethod:=stream^.readByte;
     case encodingMethod of
       255: result:=literalFromStream255;
@@ -3101,6 +3104,9 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         result:=newVoidLiteral;
       end;
     end;
+    {$ifndef Windows}
+    freeMem(reusableLiterals,sizeOf(P_literal)*2097151);
+    {$endif}
   end;
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
