@@ -3017,7 +3017,6 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
     end;
 
-
   FUNCTION literalFromStream254:P_literal;
     VAR literalType:T_literalType;
         reusableIndex:longint;
