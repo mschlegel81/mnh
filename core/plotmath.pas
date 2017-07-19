@@ -590,6 +590,7 @@ PROCEDURE T_axisTrafo.pan(CONST screenDelta: longint);
   begin
     worldDelta:=screenDelta/factor;
     if logscale then begin
+      worldDelta:=exp(worldDelta);
       range[0]:=range[0]*worldDelta;
       range[1]:=range[1]*worldDelta;
     end else begin
