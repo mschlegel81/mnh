@@ -17,18 +17,24 @@ TYPE
     private
       nextVal,minVal,maxVal,increment:int64;
     public
-      CONSTRUCTOR create(CONST min_,max_:int64; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST first,last:int64; CONST loc:T_tokenLocation);
       FUNCTION getId:T_idString; virtual;
       FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
   end;
 
-CONSTRUCTOR T_rangeGenerator.create(CONST min_, max_: int64; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_rangeGenerator.create(CONST first,last: int64; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
-    nextVal:=min_;
-    minVal:=min_;
-    maxVal:=max_;
-    if maxVal>minVal then increment:=1 else increment:=-1;
+    nextVal:=first;
+    if last>=first then begin
+      maxVal:=last;
+      minVal:=first;
+      increment:=1;
+    end else begin
+      maxVal:=first;
+      minVal:=last;
+      increment:=-1;
+    end;
   end;
 
 FUNCTION T_rangeGenerator.getId: T_idString;
