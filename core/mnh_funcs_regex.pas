@@ -68,6 +68,34 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
     end;
   end;
 
+FUNCTION regexValidate_imp intFuncSignature;
+  VAR regexCache:P_regexMap;
+      regex:TRegExpr;
+      message:string='';
+      feedbackMethod:P_expressionLiteral=nil;
+      feedbackInput :P_stringLiteral;
+  begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      feedbackMethod:=P_expressionLiteral(arg1);
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+    end else exit(nil);
+    regexCache:=assertRegexCache(context);
+    regex:=regexForExpression(regexCache,str0^.value);
+    try
+      regex.Exec(str0^.value+str0^.value);
+    except
+      on e:Exception do begin message:=e.message; end;
+    end;
+    if feedbackMethod=nil then exit(newBoolLiteral(message=''));
+    if message<>'' then begin
+      feedbackInput:=newStringLiteral(message);
+      result:=feedbackMethod^.evaluateToLiteral(tokenLocation,@context,feedbackInput);
+      disposeLiteral(feedbackInput);
+      exit(result);
+    end;
+    result:=newVoidLiteral;
+  end;
+
 FUNCTION regexMatch_imp intFuncSignature;
   VAR regexCache:P_regexMap;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
@@ -207,9 +235,10 @@ FUNCTION regexReplace_imp intFuncSignature;
 
 CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/en/regexp_syntax.html">the used library''s website.</a>';
 INITIALIZATION
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,[],ak_binary ,'matches(searchString,regex);#returns true if string/-list searchString matches string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,[],ak_binary ,'matchComposite(searchString,regex);#returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#If lists are given they must have equal sizes.'+SYNTAX_LINK);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,[],ak_binary ,'split(searchString,regex);#splits the string/-list searchString using string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,[],ak_ternary,'replace(searchString,regex,replaceString);#replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'validate'      ,@regexValidate_imp      ,[],ak_variadic_1,'validate(regex:string);//Returns true iff regex is valid, false otherwise#validate(regex:string,feedback:expression(1));//Returns void iff regex is valid, invokes feedback with error message otherwise',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,[],ak_binary ,'matches(searchString,regex);//returns true if string/-list searchString matches string/-list regex#//If lists are given they must have equal sizes.'+SYNTAX_LINK);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,[],ak_binary ,'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,[],ak_binary ,'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,[],ak_ternary,'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
 
 end.
