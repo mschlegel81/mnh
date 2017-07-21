@@ -127,6 +127,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       PROCEDURE reEvaluateWithGUI;
       PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST profiling,debugging:boolean);
+      FUNCTION getPackageForPostEvaluation(CONST provider:P_codeProvider):P_package;
       PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST profiling,debugging:boolean);
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
@@ -153,7 +154,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy;
       PROCEDURE check;
-
+      FUNCTION getPackage:P_package;
       FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean):T_arrayOfString;
       PROPERTY getStateHash:T_hashInt read stateHash;
       FUNCTION isUserRule(CONST id:string):boolean;
@@ -345,6 +346,11 @@ PROCEDURE T_codeAssistant.check;
     updateErrors;
     context.afterEvaluation;
     stateHash:=package.getCodeState;
+  end;
+
+FUNCTION T_codeAssistant.getPackage:P_package;
+  begin
+    result:=@package;
   end;
 
 FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean): T_arrayOfString;
@@ -652,7 +658,21 @@ PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST profiling
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.callMain(CONST provider:P_codeProvider; params: ansistring; CONST profiling,debugging:boolean);
+FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvider): P_package;
+  begin
+    system.enterCriticalSection(cs);
+    while state in C_runningStates do begin
+      system.leaveCriticalSection(cs);
+      sleep(1); ThreadSwitch;
+      system.enterCriticalSection(cs);
+    end;
+    package.replaceCodeProvider(provider);
+    result:=@package;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider;
+  params: ansistring; CONST profiling, debugging: boolean);
   VAR sp:longint;
   begin
     system.enterCriticalSection(cs);
@@ -680,7 +700,7 @@ PROCEDURE T_runEvaluator.callMain(CONST provider:P_codeProvider; params: ansistr
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.ensureEditScripts();
+PROCEDURE T_runEvaluator.ensureEditScripts;
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) or (currentEdit<>nil) then begin
@@ -705,7 +725,7 @@ PROCEDURE T_runEvaluator.runUtilScript(CONST scriptIndex,editorIndex:longint; CO
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_runEvaluator.getCurrentEdit:P_editScriptTask;
+FUNCTION T_runEvaluator.getCurrentEdit: P_editScriptTask;
   begin
     system.enterCriticalSection(cs);
     result:=currentEdit;
@@ -720,7 +740,7 @@ PROCEDURE T_runEvaluator.freeCurrentEdit;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_runEvaluator.getScripts:T_scriptMetaArray;
+FUNCTION T_runEvaluator.getScripts: T_scriptMetaArray;
   begin
     result:=utilityScriptList;
   end;
@@ -749,7 +769,7 @@ PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_runEvaluator.getRunnerStateInfo:T_runnerStateInfo;
+FUNCTION T_runEvaluator.getRunnerStateInfo: T_runnerStateInfo;
   begin
     system.enterCriticalSection(cs);
     result.state:=state;

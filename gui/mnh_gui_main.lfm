@@ -2483,19 +2483,6 @@ object MnhForm: TMnhForm
     left = 272
     top = 136
   end
-  object SynCompletion: TSynCompletion
-    Position = 0
-    LinesInWindow = 6
-    SelectedColor = clHighlight
-    CaseSensitive = False
-    Width = 262
-    AutoUseSingleIdent = True
-    ShortCut = 16416
-    EndOfTokenChr = '()[],{}+-*/&^:?<>='
-    ExecCommandID = ecSynCompletionExecute
-    left = 400
-    top = 80
-  end
   object debugItemsImageList: TImageList
     Height = 30
     Width = 30
