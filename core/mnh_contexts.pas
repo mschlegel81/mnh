@@ -154,7 +154,7 @@ TYPE
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
       CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean);
+      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean; CONST enforceWallClock:boolean=false);
       PROCEDURE afterEvaluation;
       PROPERTY evaluationOptions:T_evaluationContextOptions read options;
       PROPERTY threadContext:P_threadContext read primaryThreadContext;
@@ -306,7 +306,7 @@ DESTRUCTOR T_evaluationContext.destroy;
     if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
   end;
 
-PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean);
+PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean; CONST enforceWallClock:boolean=false);
   VAR pc:T_profileCategory;
   begin
     //set options
@@ -340,7 +340,7 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath;
 
     detachedAsyncChildCount:=0;
     //timing:
-    if (eco_timing in options) or (eco_profiling in options) then begin
+    if (eco_timing in options) or (eco_profiling in options) or enforceWallClock then begin
       if wallClock=nil then wallClock:=TEpikTimer.create(nil);
       with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
       wallClock.clear;

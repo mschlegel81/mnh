@@ -16,15 +16,11 @@ USES
   mnh_evalThread;
 
 TYPE
-
-  { TSimpleMnhForm }
-
   TSimpleMnhForm = class(TForm)
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     SimpleMnhInputEdit: TSynEdit;
     SimpleMnhOutputEdit: TSynEdit;
-    SynCompletion1: TSynCompletion;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -38,6 +34,7 @@ TYPE
     blankCodeProvider:P_blankCodeProvider;
     package:P_package;
     completion:T_completionLogic;
+
     { private declarations }
   public
     { public declarations }

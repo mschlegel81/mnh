@@ -51,6 +51,7 @@ CONSTRUCTOR T_completionLogic.create;
     SynCompletion.OnCodeCompletion:=@SynCompletionCodeCompletion;
     SynCompletion.OnExecute       :=@SynCompletionExecute;
     SynCompletion.OnSearchPosition:=@SynCompletionSearchPosition;
+    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:?<>=@';
   end;
 
 DESTRUCTOR T_completionLogic.destroy;
