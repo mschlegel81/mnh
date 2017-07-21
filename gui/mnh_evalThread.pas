@@ -148,8 +148,7 @@ TYPE
       package:T_package;
       localErrors,externalErrors:T_storedMessages;
       stateHash:T_hashInt;
-      userRules,
-      completionList:T_setOfString;
+      userRules:T_setOfString;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy;
@@ -159,7 +158,6 @@ TYPE
       PROPERTY getStateHash:T_hashInt read stateHash;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
-      PROCEDURE extendCompletionList(VAR list:T_setOfString);
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   end;
@@ -173,7 +171,6 @@ FUNCTION utilityScriptFileName:string;
 PROCEDURE earlyFinalization;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-    intrinsicRulesForCompletion:T_setOfString;
 
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
   begin
@@ -292,7 +289,6 @@ CONSTRUCTOR T_codeAssistant.create(CONST provider: P_codeProvider);
     setLength(localErrors,0);
     setLength(externalErrors,0);
     userRules.create;
-    completionList.create;
   end;
 
 DESTRUCTOR T_codeAssistant.destroy;
@@ -303,20 +299,10 @@ DESTRUCTOR T_codeAssistant.destroy;
     setLength(localErrors,0);
     setLength(externalErrors,0);
     userRules.destroy;
-    completionList.destroy;
     errorCollector.destroy;
   end;
 
 PROCEDURE T_codeAssistant.check;
-  PROCEDURE updateCompletionList;
-    VAR s:string;
-    begin
-      completionList.clear;
-      completionList.put(intrinsicRulesForCompletion);
-      package.updateLists(userRules);
-      completionList.put(userRules);
-      for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then completionList.put(ID_QUALIFY_CHARACTER+s);
-    end;
 
   PROCEDURE updateErrors;
     VAR i:longint;
@@ -342,7 +328,7 @@ PROCEDURE T_codeAssistant.check;
     adapters^.clearAll;
     context.resetForEvaluation(@package,false,false,true);
     package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
-    updateCompletionList;
+    package.updateLists(userRules);
     updateErrors;
     context.afterEvaluation;
     stateHash:=package.getCodeState;
@@ -388,11 +374,6 @@ FUNCTION T_codeAssistant.isUserRule(CONST id: string): boolean;
 FUNCTION T_codeAssistant.resolveImport(CONST id: string): string;
   begin
     result:=package.getSecondaryPackageById(id);
-  end;
-
-PROCEDURE T_codeAssistant.extendCompletionList(VAR list: T_setOfString);
-  begin
-    list.put(completionList.values);
   end;
 
 PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
@@ -853,34 +834,8 @@ FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
   end;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
-  PROCEDURE initIntrinsicRuleList;
-    VAR ids:T_arrayOfString;
-        i:longint;
-        tt:T_tokenType;
-    begin
-      ids:=mnh_funcs.intrinsicRuleMap.keySet;
-      intrinsicRulesForCompletion.create;
-      for i:=0 to length(ids)-1 do begin
-        if pos(ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
-          intrinsicRulesForCompletion.put(ids[i]);
-          intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+ids[i]);
-        end else begin
-          intrinsicRulesForCompletion.put(ids[i]);
-          intrinsicRulesForCompletion.put(split(ids[i],ID_QUALIFY_CHARACTER)[0]);
-          intrinsicRulesForCompletion.put(split(ids[i],ID_QUALIFY_CHARACTER)[1]);
-          intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[0]);
-          intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[1]);
-        end;
-      end;
-      for tt:=low(T_tokenType) to high(T_tokenType) do if isIdentifier(C_tokenInfo[tt].defaultId,true) then
-        intrinsicRulesForCompletion.put(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
-      for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
-        intrinsicRulesForCompletion.put(C_specialWordInfo[i].txt);
-    end;
-
   begin
     runEvaluator.create(guiAdapters,@main);
-    initIntrinsicRuleList;
     unitIsInitialized:=true;
   end;
 
