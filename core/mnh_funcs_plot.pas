@@ -301,9 +301,19 @@ INITIALIZATION
     '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
     '#options are optional and given in the form of a string, the individual option items being delimited by spaces'+
     '#valid options are:'+'#Style/size modifier: any real number'+
-    '#Styles:'+'#  line; l;'+'#  stepLeft;'+'#  stepRight;'+
-    '#  fill;'+'#  bar;'+'#  box;'+'#  dot; .;'+'#  plus; +;'+
-    '#  cross; x;'+'#  impulse; i;'+'#Colors:'+'#  black;'+
+    '#Styles:'+
+    '#  line; l;'+
+    '#  stepLeft;'+
+    '#  stepRight;'+
+    '#  fill; f;'+
+    '#  fillSolid; fs;'+
+    '#  bar;'+
+    '#  box;'+
+    '#  dot; .;'+
+    '#  plus; +;'+
+    '#  cross; x;'+
+    '#  impulse; i;'+
+    '#Colors:'+'#  black;'+
     '#  red;'+'#  blue;'+'#  green;'+'#  purple;'+
     '#  orange;'+'#  RGB$,$,$; //With three real numbers in range [0,1]'+
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+

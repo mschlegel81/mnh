@@ -175,7 +175,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
       scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
 
-  PROCEDURE drawPatternRect(x0, y0, x1, y1: longint);
+  PROCEDURE drawPatternRect(x0, y0, x1, y1: longint; CONST solid:boolean);
     VAR points:array[0..3] of TPoint;
     begin
       points[0].x:=x0; points[0].y:=y0;
@@ -183,7 +183,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
       points[2].x:=x1; points[2].y:=yBaseLine;
       points[3].x:=x1; points[3].y:=y1;
       target.Brush.color:=scaleAndColor.solidColor;
-      case byte(rowId and 3) of
+      if solid then target.brush.style:=bsSolid else case byte(rowId and 3) of
         0: target.Brush.style:=bsFDiagonal ;
         1: target.Brush.style:=bsBDiagonal ;
         2: target.Brush.style:=bsHorizontal;
@@ -259,8 +259,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
           if screenRow[i].valid then begin
             if lastWasValid then begin
               target.LineTo(screenRow[i].x, screenRow[i].y);
-              if ps_filled in row[rowId].style.style then
-                drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y);
+              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,false);
+              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,true);
             end else
               target.MoveTo(screenRow[i].x, screenRow[i].y);
             lastX:=screenRow[i].x;
@@ -279,8 +279,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
             if lastWasValid then begin
               target.LineTo(lastX, screenRow[i].y);
               target.LineTo(screenRow[i].x, screenRow[i].y);
-              if ps_filled in row[rowId].style.style then
-                drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y);
+              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,false);
+              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,true);
             end else target.MoveTo(screenRow[i].x, screenRow[i].y);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
@@ -298,8 +298,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
             if lastWasValid then begin
               target.LineTo(screenRow[i].x, lastY);
               target.LineTo(screenRow[i].x, screenRow[i].y);
-              if ps_filled in row[rowId].style.style then
-                drawPatternRect(lastX, lastY, screenRow[i].x, lastY);
+              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, lastY,false);
+              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, lastY,true);
             end else target.MoveTo(screenRow[i].x, screenRow[i].y);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
@@ -317,7 +317,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
           if screenRow[i].valid then begin
             if lastWasValid then
               drawPatternRect(round(lastX*0.95+screenRow[i].x*0.05), lastY,
-                              round(lastX*0.05+screenRow[i].x*0.95), lastY);
+                              round(lastX*0.05+screenRow[i].x*0.95), lastY,ps_fillSolid in row[rowId].style.style);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
             lastWasValid:=screenRow[i].valid;
