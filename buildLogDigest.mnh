@@ -27,23 +27,32 @@ main->'build.log'.fileLines
 
 private existing(f:string)->fileExists(f) ? f : void;
 
-main('files')->
-'build.log'.fileLines
-.{$L[$L.matches('\(3104\)')]}
-.unique
-.replace('(3104) Compiling','')
-.replace('/media/dev/mnh5','')
-.replace('/media/dev/','../')
-.replace('D:\dev\mnh5\','')
-.replace('D:\dev\','..\')
-.replace('\','/')
-.trim
-.unique
-.each(file,existing(file) orElse
-           existing('gui/'&file) orElse
-           existing('consoles/'&file))
-.union(allFiles('','*.inc').minus(['core/code_hash.inc','core/built_number.inc']))
-.sort
-.escape
-.join(",\n\v")
-.{print("hashFiles:=[\v",$s,'];')};
+
+USE make_config;
+main('files')->begin
+  local newList:='build.log'.fileLines
+    .{$L[$L.matches('\(3104\)')]}
+    .unique
+    .replace('(3104) Compiling','')
+    .replace('/media/dev/mnh5','')
+    .replace('/media/dev/','../')
+    .replace('D:\dev\mnh5\','')
+    .replace('D:\dev\','..\')
+    .replace('\','/')
+    .trim
+    .unique
+    .each(file,existing(file) orElse
+               existing('gui/'&file) orElse
+               existing('consoles/'&file))
+    .union(allFiles('','*.inc').minus(['core/code_hash.inc','core/built_number.inc']))
+    .sort;
+
+  newList.escape
+  .join(",\n\v")
+  .{print("hashFiles:=[\v",$s,'];')};
+
+  newList==hashFiles
+  ? print('List is up to date')
+  : print('To be added  : ',newList.minus(hashFiles).toList,
+        "\nTo be removed: ",hashFiles.minus(newList).toList);
+end;

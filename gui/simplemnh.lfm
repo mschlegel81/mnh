@@ -10,20 +10,21 @@ object SimpleMnhForm: TSimpleMnhForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
+  Position = poOwnerFormCenter
   LCLVersion = '1.6.4.0'
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 105
+    Height = 72
     Top = 0
     Width = 320
     Align = alTop
     Caption = 'Input'
-    ClientHeight = 85
+    ClientHeight = 52
     ClientWidth = 316
     TabOrder = 0
     inline SimpleMnhInputEdit: TSynEdit
       Left = 0
-      Height = 85
+      Height = 52
       Top = 0
       Width = 316
       Align = alClient
@@ -467,6 +468,7 @@ object SimpleMnhForm: TSimpleMnhForm
         'SimpleMnhInputEdit'
       )
       VisibleSpecialChars = [vscSpace, vscTabAtLast]
+      ScrollBars = ssNone
       SelectedColor.BackPriority = 50
       SelectedColor.ForePriority = 50
       SelectedColor.FramePriority = 50
@@ -525,17 +527,17 @@ object SimpleMnhForm: TSimpleMnhForm
   end
   object GroupBox2: TGroupBox
     Left = 0
-    Height = 135
-    Top = 105
+    Height = 168
+    Top = 72
     Width = 320
     Align = alClient
     Caption = 'Output'
-    ClientHeight = 115
+    ClientHeight = 148
     ClientWidth = 316
     TabOrder = 1
     inline SimpleMnhOutputEdit: TSynEdit
       Left = 0
-      Height = 115
+      Height = 148
       Top = 0
       Width = 316
       Align = alClient
@@ -979,6 +981,8 @@ object SimpleMnhForm: TSimpleMnhForm
         'SimpleMnhOutputEdit'
       )
       VisibleSpecialChars = [vscSpace, vscTabAtLast]
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
       SelectedColor.BackPriority = 50
       SelectedColor.ForePriority = 50
       SelectedColor.FramePriority = 50
@@ -1033,18 +1037,5 @@ object SimpleMnhForm: TSimpleMnhForm
         end
       end
     end
-  end
-  object SynCompletion1: TSynCompletion
-    Position = 0
-    LinesInWindow = 6
-    SelectedColor = clHighlight
-    CaseSensitive = False
-    Width = 262
-    AutoUseSingleIdent = True
-    ShortCut = 16416
-    EndOfTokenChr = '()[].'
-    ExecCommandID = ecSynCompletionExecute
-    left = 44
-    top = 32
   end
 end

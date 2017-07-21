@@ -396,11 +396,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     displayProgress;
     enableDynamicItems;
     if askForm.displayPending then askForm.Show;
-    if isSimpleMnhShowing and guiOutAdapter.flushToGui(getSimpleMnh.SimpleMnhOutputEdit)
-                           or guiOutAdapter.flushToGui(OutputEdit) then exit;
+    if isSimpleMnhShowing then begin
+      if not(delayFlush) then guiOutAdapter.flushToGui(getSimpleMnh.SimpleMnhOutputEdit);
+      exit;
+    end;
+    if guiOutAdapter.flushToGui(OutputEdit) then exit;
     while guiTaskQueue.executeTask do;
     autosaveSettings;
-    if not(isSimpleMnhShowing) then checkForFileChanges;
+    checkForFileChanges;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
