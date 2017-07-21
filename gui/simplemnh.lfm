@@ -10,6 +10,7 @@ object SimpleMnhForm: TSimpleMnhForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
+  Position = poOwnerFormCenter
   LCLVersion = '1.6.4.0'
   object GroupBox1: TGroupBox
     Left = 0
@@ -980,6 +981,8 @@ object SimpleMnhForm: TSimpleMnhForm
         'SimpleMnhOutputEdit'
       )
       VisibleSpecialChars = [vscSpace, vscTabAtLast]
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
       SelectedColor.BackPriority = 50
       SelectedColor.ForePriority = 50
       SelectedColor.FramePriority = 50

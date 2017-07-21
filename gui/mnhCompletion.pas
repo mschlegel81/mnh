@@ -143,7 +143,7 @@ PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
-finalization
+FINALIZATION
   if intrinsicRulesForCompletion_ready then intrinsicRulesForCompletion.destroy;
 
 end.
