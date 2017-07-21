@@ -7,6 +7,7 @@ TYPE
                ps_stepLeft,
                ps_stepRight,
                ps_filled,
+               ps_fillSolid,
                ps_bar,
                ps_box,
                ps_dot,
@@ -26,6 +27,7 @@ CONST
      {ps_stepLeft  }   ('stepLeft' , '' ),
      {ps_stepRight }   ('stepRight', '' ),
      {ps_filled    }   ('fill'     , 'f'),
+     {ps_fillSolid }   ('fillSolid', 'fs'),
      {ps_bar       }   ('bar'      , '' ),
      {ps_box       }   ('box'      , '' ),
      {ps_dot       }   ('dot'      , '.'),
@@ -220,7 +222,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
       end;
       if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
     until options = '';
-    if (style = []) or (style=[ps_filled]) then include(style,ps_straight);
+    if (style-[ps_filled,ps_fillSolid])=[] then include(style,ps_straight);
   end;
 
 FUNCTION T_style.toString:ansistring;
