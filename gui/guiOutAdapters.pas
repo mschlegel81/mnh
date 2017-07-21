@@ -11,6 +11,7 @@ TYPE
       PROCEDURE onBreakpoint  (CONST data:pointer);                           virtual; abstract;
       PROCEDURE onDebuggerEvent;                                              virtual; abstract;
       PROCEDURE onEndOfEvaluation;                                            virtual; abstract;
+      PROCEDURE triggerFastPolling;                                           virtual; abstract;
   end;
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
@@ -177,7 +178,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       case messageType of
         mt_clearConsole: clearSynAndBuffer;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
-        mt_plotCreatedWithInstantDisplay: plotForm.doPlot();
+        mt_plotCreatedWithInstantDisplay: begin
+          plotForm.doPlot(true);
+          parentForm.triggerFastPolling;
+        end;
         mt_displayTable: conditionalShowTables;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:

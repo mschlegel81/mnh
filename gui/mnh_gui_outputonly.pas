@@ -24,6 +24,7 @@ TYPE
     PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
     PROCEDURE onDebuggerEvent;                                              override;
     PROCEDURE onEndOfEvaluation; override;
+    PROCEDURE triggerFastPolling; override;
   private
     outputHighlighter:TSynMnhSyn;
   end;
@@ -34,8 +35,7 @@ VAR
 IMPLEMENTATION
 {$R *.lfm}
 PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
-  CONST MIN_INTERVALL=1;
-        MAX_INTERVALL=1000;
+  CONST MAX_INTERVALL=50;
 
   VAR flushPerformed:boolean=false;
       currentRunnerInfo:T_runnerStateInfo;
@@ -48,7 +48,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
       askForm.Show;
       flushPerformed:=true;
     end;
-    if flushPerformed then Timer1.interval:=MIN_INTERVALL else begin
+    if not(flushPerformed) then begin
       Timer1.interval:=Timer1.interval+1;
       if Timer1.interval>MAX_INTERVALL then Timer1.interval:=MAX_INTERVALL;
     end;
@@ -59,7 +59,7 @@ PROCEDURE ToutputOnlyForm.onEditFinished(CONST data: pointer; CONST successful: 
 begin
 end;
 
-PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data:pointer);
+PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data: pointer);
 begin
 end;
 
@@ -70,6 +70,11 @@ end;
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin
     caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
+  end;
+
+PROCEDURE ToutputOnlyForm.triggerFastPolling;
+  begin
+    Timer1.interval:=1;
   end;
 
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);

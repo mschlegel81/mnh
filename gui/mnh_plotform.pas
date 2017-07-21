@@ -86,7 +86,7 @@ TYPE
   public
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
-    PROCEDURE doPlot();
+    PROCEDURE doPlot(CONST useTemporary:boolean=false);
     PROCEDURE doOrPostPlot();
     { public declarations }
   end;
@@ -101,6 +101,7 @@ VAR plotSubsystem:record
       lastMouseX,lastMouseY:longint;
     end;
     myPlotForm:TplotForm=nil;
+    tempPlot:T_plot;
 
 FUNCTION plotForm: TplotForm;
   begin
@@ -108,6 +109,7 @@ FUNCTION plotForm: TplotForm;
       myPlotForm:=TplotForm.create(nil);
       myPlotForm.pullPlotSettingsToGui();
       registerForm(myPlotForm,false,true);
+      tempPlot.createWithDefaults;
     end;
     result:=myPlotForm;
   end;
@@ -350,7 +352,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
   end;
 
 VAR broughtToFront:double;
-PROCEDURE TplotForm.doPlot;
+PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
   PROCEDURE updateInteractiveSection;
     FUNCTION CustomEventButton(CONST index:byte):TButton;
       begin
@@ -395,8 +397,14 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing3.Checked then factor:=3
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
-    guiAdapters^.plot^.renderPlot(plotImage,factor);
-    guiAdapters^.resetFlagsAfterPlotDone;
+    if useTemporary then begin
+      tempPlot.CopyFrom(guiAdapters^.plot^);
+      guiAdapters^.resetFlagsAfterPlotDone;
+      tempPlot.renderPlot(plotImage,factor);
+    end else begin
+      guiAdapters^.plot^.renderPlot(plotImage,factor);
+      guiAdapters^.resetFlagsAfterPlotDone;
+    end;
   end;
 
 PROCEDURE TplotForm.doOrPostPlot;
@@ -415,7 +423,10 @@ INITIALIZATION
   broughtToFront:=0;
   registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,[se_readingInternal],ak_nullary,'plotShowing;#Returns true if the plot is currently showing, false otherwise');
 FINALIZATION
-  if myPlotForm<>nil then FreeAndNil(myPlotForm);
+  if myPlotForm<>nil then begin
+    FreeAndNil(myPlotForm);
+    tempPlot.destroy;
+  end;
 
 end.
 

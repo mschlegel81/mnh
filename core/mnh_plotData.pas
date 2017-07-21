@@ -183,7 +183,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
       points[2].x:=x1; points[2].y:=yBaseLine;
       points[3].x:=x1; points[3].y:=y1;
       target.Brush.color:=scaleAndColor.solidColor;
-      if solid then target.brush.style:=bsSolid else case byte(rowId and 3) of
+      if solid then target.Brush.style:=bsSolid else case byte(rowId and 3) of
         0: target.Brush.style:=bsFDiagonal ;
         1: target.Brush.style:=bsBDiagonal ;
         2: target.Brush.style:=bsHorizontal;

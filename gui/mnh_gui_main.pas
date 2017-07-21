@@ -140,6 +140,7 @@ TYPE
     PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
     PROCEDURE onDebuggerEvent;                                              override;
     PROCEDURE onEndOfEvaluation;                                            override;
+    PROCEDURE triggerFastPolling;                                           override;
     PROCEDURE positionHelpNotifier;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE enableDynamicItems;
@@ -231,7 +232,7 @@ PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean
 
 VAR currentSnapshot:P_debuggingSnapshot=nil;
 
-PROCEDURE TMnhForm.onBreakpoint(CONST data:pointer);
+PROCEDURE TMnhForm.onBreakpoint(CONST data: pointer);
   PROCEDURE jumpToFile;
     begin
       runnerModel.markDebugLine(OutputEdit,-1);
@@ -280,6 +281,11 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
     outputPageControl.activePage:=outputTabSheet;
   end;
 
+PROCEDURE TMnhForm.triggerFastPolling;
+  begin
+    UpdateTimeTimer.interval:=1;
+  end;
+
 PROCEDURE TMnhForm.positionHelpNotifier;
   VAR maxLineLength:longint=0;
       i:longint;
@@ -302,7 +308,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
-FUNCTION TMnhForm.openLocation(CONST location:T_searchTokenLocation):boolean;
+FUNCTION TMnhForm.openLocation(CONST location: T_searchTokenLocation): boolean;
   VAR newIdx:longint;
   begin
     if location.fileName='' then exit(false);
