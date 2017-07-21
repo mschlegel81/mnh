@@ -2345,6 +2345,11 @@ object MnhForm: TMnhForm
         Caption = 'Profile'
         OnClick = miProfileClick
       end
+      object miOpenSimpleMnh: TMenuItem
+        Caption = 'Simple interpreter'
+        ShortCut = 115
+        OnClick = miOpenSimpleMnhClick
+      end
     end
     object submenuEditorAppearance: TMenuItem
       Caption = '&Appearance'
@@ -2482,19 +2487,6 @@ object MnhForm: TMnhForm
     Options = [ofOverwritePrompt, ofExtensionDifferent, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofNoDereferenceLinks, ofEnableSizing]
     left = 272
     top = 136
-  end
-  object SynCompletion: TSynCompletion
-    Position = 0
-    LinesInWindow = 6
-    SelectedColor = clHighlight
-    CaseSensitive = False
-    Width = 262
-    AutoUseSingleIdent = True
-    ShortCut = 16416
-    EndOfTokenChr = '()[],{}+-*/&^:?<>='
-    ExecCommandID = ecSynCompletionExecute
-    left = 400
-    top = 80
   end
   object debugItemsImageList: TImageList
     Height = 30

@@ -59,6 +59,7 @@ TYPE
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       FUNCTION inspect:P_mapLiteral;
+      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
@@ -76,6 +77,7 @@ TYPE
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$endif}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
+      PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -263,364 +265,374 @@ DESTRUCTOR T_packageReference.destroy;
     pack:=nil;
   end;
 
-PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
-  VAR profile:boolean=false;
-
-  PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
-    VAR i,j:longint;
-        rulesSet:T_ruleMap.KEY_VALUE_LIST;
-        dummyRule:P_rule;
-    begin
-      {$ifdef fullVersion}
-      context.callStackPush(@self,pc_importing,pseudoCallees);
-      {$endif}
-      if profile then context.timeBaseComponent(pc_importing);
-      for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context,usecase=lu_forCodeAssistance);
-      if profile then context.timeBaseComponent(pc_importing);
-      {$ifdef fullVersion}
-      context.callStackPop();
-      {$endif}
-      i:=0;
-      while i<length(packageUses) do begin
-        if packageUses[i].pack=nil then begin
-          for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
-          setLength(packageUses,length(packageUses)-1);
-        end else inc(i);
-      end;
-      if context.adapters^.noErrors then for i:=length(packageUses)-1 downto 0 do begin
-         rulesSet:=packageUses[i].pack^.packageRules.entrySet;
-         for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
-           if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
-           then importedRules.put(rulesSet[j].key,rulesSet[j].value);
-           importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
-         end;
-      end;
-    end;
-
+PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
   VAR extendsLevel:byte=0;
-
-  PROCEDURE interpret(VAR statement:T_enhancedStatement);
-    PROCEDURE interpretIncludeClause;
-      VAR locationForErrorFeedback:T_tokenLocation;
-          newId:string;
-          first:P_token;
-          helperUse:T_packageReference;
-          lexer:T_lexer;
-          importWrapper:P_extendedPackage;
-          stmt:T_enhancedStatement;
-      begin
-        if statement.firstToken^.next=nil then begin
-          context.adapters^.raiseError('Empty include clause',statement.firstToken^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          exit;
-        end;
-        first:=statement.firstToken;
-        locationForErrorFeedback:=first^.location;
-        if extendsLevel>=32 then begin
-          context.adapters^.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
-          exit;
-        end;
-        first:=context.recycler.disposeToken(first);
-        if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
-          newId:=first^.txt;
-          helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
-        end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
-          newId:=P_stringLiteral(first^.data)^.value;
-          helperUse.createWithSpecifiedPath(newId,first^.location,context.adapters);
-        end else begin
-          context.adapters^.raiseError('Invalid include clause ',locationForErrorFeedback);
-          exit;
-        end;
-        context.recycler.cascadeDisposeToken(first);
-        new(importWrapper,create(newFileCodeProvider(helperUse.path),@self));
-        setLength(extendedPackages,length(extendedPackages)+1);
-        extendedPackages[length(extendedPackages)-1]:=importWrapper;
-
-        helperUse.destroy;
-        lexer.create(importWrapper,@self);
-        stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
-        inc(extendsLevel);
-        while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
-          interpret(stmt);
-          stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
-        end;
-        dec(extendsLevel);
-        lexer.destroy;
-      end;
-
-    PROCEDURE interpretUseClause;
-      VAR i,j:longint;
-          locationForErrorFeedback:T_tokenLocation;
-          newId:string;
-          first:P_token;
-      begin
-        if statement.firstToken^.next=nil then begin
-          context.adapters^.raiseError('Empty use clause',statement.firstToken^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          exit;
-        end;
-        initialize(newId);
-        first:=statement.firstToken;
-        locationForErrorFeedback:=first^.location;
-        first:=context.recycler.disposeToken(first);
-        while first<>nil do begin
-          j:=-1;
-          if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
-            newId:=first^.txt;
-            {$ifdef fullVersion}
-            if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
-              if not(gui_started) and (usecase<>lu_forCodeAssistance) then context.adapters^.logGuiNeeded;
-            end else
-            {$endif}
-            begin
-              j:=length(packageUses);
-              setLength(packageUses,j+1);
-              packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
-            end;
-          end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
-            newId:=P_stringLiteral(first^.data)^.value;
-            j:=length(packageUses);
-            setLength(packageUses,j+1);
-            packageUses[j].createWithSpecifiedPath(newId,first^.location,context.adapters);
-          end else if first^.tokType<>tt_separatorComma then
-            context.adapters^.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
-          if (j>0) then for i:=0 to j-1 do
-            if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
-                           or (packageUses[i].id   =               packageUses[j].id)
-            then context.adapters^.raiseWarning('Duplicate import: '+newId,first^.location);
-          first:=context.recycler.disposeToken(first);
-        end;
-        if not(context.adapters^.noErrors) then begin
-          for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
-          setLength(packageUses,0);
-        end;
-        reloadAllPackages(locationForErrorFeedback);
-      end;
-
-    VAR assignmentToken:P_token;
-        ruleDeclarationStart:T_tokenLocation;
-
-    PROCEDURE parseRule;
-      VAR p:P_token; //iterator
-          //rule meta data
-          ruleModifiers:T_modifierSet=[];
-          ruleId:T_idString='';
-          evaluateBody:boolean;
-          rulePattern:T_pattern;
-          ruleBody:P_token;
-          subRule:P_subruleExpression;
-          ruleGroup:P_rule;
-          inlineValue:P_literal;
-      begin
-        ruleDeclarationStart:=statement.firstToken^.location;
-        evaluateBody:=(assignmentToken^.tokType=tt_assign);
-        ruleBody:=assignmentToken^.next;
-        assignmentToken^.next:=nil;
-        //plausis:
-        if (ruleBody=nil) then begin
-          context.adapters^.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          exit;
-        end;
-        while (statement.firstToken<>nil) and (statement.firstToken^.tokType in C_ruleModifiers) do begin
-          include(ruleModifiers,statement.firstToken^.tokType);
-          statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
-        end;
-        evaluateBody:=evaluateBody
-                   or (tt_modifier_mutable    in ruleModifiers);
-
-        if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
-          context.adapters^.raiseError('Declaration does not start with an identifier.',statement.firstToken^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          context.recycler.cascadeDisposeToken(ruleBody);
-          exit;
-        end;
-        p:=statement.firstToken;
-        while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
-          if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
-            context.adapters^.raiseError('Declaration head contains qualified ID.',p^.location);
-            context.recycler.cascadeDisposeToken(statement.firstToken);
-            context.recycler.cascadeDisposeToken(ruleBody);
-            exit;
-          end;
-          p:=p^.next;
-        end;
-        //:plausis
-        ruleId:=trim(statement.firstToken^.txt);
-        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
-        if not(statement.firstToken^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
-          context.adapters^.raiseError('Invalid declaration head.',statement.firstToken^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          context.recycler.cascadeDisposeToken(ruleBody);
-          exit;
-        end;
-        rulePattern.create;
-        if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,context);
-        if statement.firstToken<>nil then begin
-          statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
-        end else begin
-          context.adapters^.raiseError('Invalid declaration.',ruleDeclarationStart);
-          context.recycler.cascadeDisposeToken(ruleBody);
-          exit;
-        end;
-        rulePattern.toParameterIds(ruleBody);
-        //[marker 1]
-        if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then context.reduceExpression(ruleBody);
-
-        if context.adapters^.noErrors then begin
-          ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^);
-          if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
-          then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
-          if context.adapters^.noErrors then begin
-            new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,context));
-            subRule^.metaData.setComment(join(statement.comments,C_lineBreakChar));
-            subRule^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
-            //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
-            if (ruleGroup^.getRuleType in C_mutableRuleTypes)
-            then begin
-              if (usecase<>lu_forCodeAssistance)
-              then begin
-                     inlineValue:=subRule^.getInlineValue;
-                     P_mutableRule(ruleGroup)^.setMutableValue(inlineValue,true);
-                     inlineValue^.unreference;
-                   end
-              else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
-              P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
-              P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
-              {$ifdef fullVersion}
-              if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then ruleGroup^.setIdResolved;
-              {$endif}
-              dispose(subRule,destroy);
-            end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
-            statement.firstToken:=nil;
-          end else begin
-            context.recycler.cascadeDisposeToken(statement.firstToken);
-            context.recycler.cascadeDisposeToken(ruleBody);
-          end;
-        end else begin
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          context.recycler.cascadeDisposeToken(ruleBody);
-        end;
-      end;
-
-    PROCEDURE parseDataStore;
-      VAR ruleModifiers:T_modifierSet=[];
-          loc:T_tokenLocation;
-      begin
-        if (getCodeProvider^.isPseudoFile) then begin
-          context.adapters^.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          exit;
-        end;
-        while (statement.firstToken<>nil) and (statement.firstToken^.tokType in C_ruleModifiers) do begin
-          include(ruleModifiers,statement.firstToken^.tokType);
-          loc:=statement.firstToken^.location;
-          statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
-        end;
-        if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
-           (statement.firstToken^.next<>nil) then begin
-          if statement.firstToken<>nil then loc:=statement.firstToken^.location;
-          context.adapters^.raiseError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          exit;
-        end;
-        ensureRuleId(statement.firstToken^.txt,
-                     ruleModifiers,
-                     statement.firstToken^.location,context.adapters^);
-      end;
-
+      profile:boolean=false;
+  PROCEDURE interpretIncludeClause;
+    VAR locationForErrorFeedback:T_tokenLocation;
+        newId:string;
+        first:P_token;
+        helperUse:T_packageReference;
+        lexer:T_lexer;
+        importWrapper:P_extendedPackage;
+        stmt:T_enhancedStatement;
     begin
-      if statement.firstToken=nil then exit;
-      if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
-
-      if not(context.adapters^.noErrors) then begin
+      if statement.firstToken^.next=nil then begin
+        context.adapters^.raiseError('Empty include clause',statement.firstToken^.location);
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;
-
-      if (statement.firstToken^.tokType=tt_use) then begin
-        interpretUseClause;
+      first:=statement.firstToken;
+      locationForErrorFeedback:=first^.location;
+      if extendsLevel>=32 then begin
+        context.adapters^.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
       end;
-
-      if (statement.firstToken^.tokType=tt_include) then begin
-        interpretIncludeClause;
+      first:=context.recycler.disposeToken(first);
+      if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
+        newId:=first^.txt;
+        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
+      end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+        newId:=P_stringLiteral(first^.data)^.value;
+        helperUse.createWithSpecifiedPath(newId,first^.location,context.adapters);
+      end else begin
+        context.adapters^.raiseError('Invalid include clause ',locationForErrorFeedback);
         exit;
       end;
+      context.recycler.cascadeDisposeToken(first);
+      new(importWrapper,create(newFileCodeProvider(helperUse.path),@self));
+      setLength(extendedPackages,length(extendedPackages)+1);
+      extendedPackages[length(extendedPackages)-1]:=importWrapper;
 
-      assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
-      if (assignmentToken<>nil) then begin
-        {$ifdef fullVersion}
-        context.callStackPush(@self,pc_declaration,pseudoCallees);
-        {$endif}
-        if profile then context.timeBaseComponent(pc_declaration);
-        if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          exit;
-        end;
-        predigest(assignmentToken,@self,context.recycler,context.adapters);
-        if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(statement.firstToken)+';');
-        parseRule;
-        if profile then context.timeBaseComponent(pc_declaration);
-        {$ifdef fullVersion}
-        context.callStackPop();
-        {$endif}
-      end else if statement.firstToken^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
-        {$ifdef fullVersion}
-        context.callStackPush(@self,pc_declaration,pseudoCallees);
-        {$endif}
-        if profile then context.timeBaseComponent(pc_declaration);
-        if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(statement.firstToken)+';');
-        parseDataStore;
-        if profile then context.timeBaseComponent(pc_declaration);
-        {$ifdef fullVersion}
-        context.callStackPop();
-        {$endif}
-      end else if context.adapters^.noErrors then begin
-        case usecase of
-          lu_forDirectExecution:begin
-            {$ifdef fullVersion}
-            context.callStackPush(@self,pc_interpretation,pseudoCallees);
-            {$endif}
-            if profile then context.timeBaseComponent(pc_interpretation);
-            if not ((statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.adapters^)) then begin
-              context.recycler.cascadeDisposeToken(statement.firstToken);
-              exit;
-            end;
-            predigest(statement.firstToken,@self,context.recycler,context.adapters);
-            if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(statement.firstToken)+';');
-            context.reduceExpression(statement.firstToken);
-            if profile then context.timeBaseComponent(pc_interpretation);
-            {$ifdef fullVersion}
-            context.callStackPop();
-            {$endif}
-            if (statement.firstToken<>nil) and context.adapters^.doShowExpressionOut then begin
-              {$ifdef fullVersion}
-              if (statement.firstToken<>nil) and
-                 (statement.firstToken^.next=nil) and
-                 (statement.firstToken^.tokType=tt_literal) and
-                 (context.adapters^.preferredEchoLineLength>10) then begin
-                context.adapters^.echoOutput(
-                  serializeToStringList(P_literal(statement.firstToken^.data),
-                                        statement.firstToken^.location,
-                                        nil,
-                                        context.adapters^.preferredEchoLineLength));
-              end else {$endif}
-                context.adapters^.echoOutput(tokensToString(statement.firstToken));
-            end;
-          end;
-          lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.adapters^) then begin
-            predigest(statement.firstToken,@self,context.recycler,context.adapters);
-            resolveBuiltinIDs(statement.firstToken,context.adapters);
-            if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(statement.firstToken)+';');
-          end
-          else context.adapters^.raiseNote('Skipping expression '+tokensToString(statement.firstToken,50),statement.firstToken^.location);
-        end;
+      helperUse.destroy;
+      lexer.create(importWrapper,@self);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      inc(extendsLevel);
+      while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
+        interpret(stmt,usecase,context);
+        stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
       end;
-      if statement.firstToken<>nil then context.recycler.cascadeDisposeToken(statement.firstToken);
-      statement.firstToken:=nil;
+      dec(extendsLevel);
+      lexer.destroy;
     end;
 
+  PROCEDURE interpretUseClause;
+    VAR i,j:longint;
+        locationForErrorFeedback:T_tokenLocation;
+        newId:string;
+        first:P_token;
+
+    PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
+      VAR i,j:longint;
+          rulesSet:T_ruleMap.KEY_VALUE_LIST;
+          dummyRule:P_rule;
+      begin
+        {$ifdef fullVersion}
+        context.callStackPush(@self,pc_importing,pseudoCallees);
+        {$endif}
+        if profile then context.timeBaseComponent(pc_importing);
+        for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context,usecase=lu_forCodeAssistance);
+        if profile then context.timeBaseComponent(pc_importing);
+        {$ifdef fullVersion}
+        context.callStackPop();
+        {$endif}
+        i:=0;
+        while i<length(packageUses) do begin
+          if packageUses[i].pack=nil then begin
+            for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
+            setLength(packageUses,length(packageUses)-1);
+          end else inc(i);
+        end;
+        if context.adapters^.noErrors then for i:=length(packageUses)-1 downto 0 do begin
+           rulesSet:=packageUses[i].pack^.packageRules.entrySet;
+           for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
+             if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
+             then importedRules.put(rulesSet[j].key,rulesSet[j].value);
+             importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
+           end;
+        end;
+      end;
+
+    begin
+      if statement.firstToken^.next=nil then begin
+        context.adapters^.raiseError('Empty use clause',statement.firstToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      initialize(newId);
+      first:=statement.firstToken;
+      locationForErrorFeedback:=first^.location;
+      first:=context.recycler.disposeToken(first);
+      while first<>nil do begin
+        j:=-1;
+        if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
+          newId:=first^.txt;
+          {$ifdef fullVersion}
+          if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
+            if not(gui_started) and (usecase<>lu_forCodeAssistance) then context.adapters^.logGuiNeeded;
+          end else
+          {$endif}
+          begin
+            j:=length(packageUses);
+            setLength(packageUses,j+1);
+            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
+          end;
+        end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+          newId:=P_stringLiteral(first^.data)^.value;
+          j:=length(packageUses);
+          setLength(packageUses,j+1);
+          packageUses[j].createWithSpecifiedPath(newId,first^.location,context.adapters);
+        end else if first^.tokType<>tt_separatorComma then
+          context.adapters^.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
+        if (j>0) then for i:=0 to j-1 do
+          if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
+                         or (packageUses[i].id   =               packageUses[j].id)
+          then context.adapters^.raiseWarning('Duplicate import: '+newId,first^.location);
+        first:=context.recycler.disposeToken(first);
+      end;
+      if not(context.adapters^.noErrors) then begin
+        for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
+        setLength(packageUses,0);
+      end;
+      reloadAllPackages(locationForErrorFeedback);
+    end;
+
+  VAR assignmentToken:P_token;
+      ruleDeclarationStart:T_tokenLocation;
+
+  PROCEDURE parseRule;
+    VAR p:P_token; //iterator
+        //rule meta data
+        ruleModifiers:T_modifierSet=[];
+        ruleId:T_idString='';
+        evaluateBody:boolean;
+        rulePattern:T_pattern;
+        ruleBody:P_token;
+        subRule:P_subruleExpression;
+        ruleGroup:P_rule;
+        inlineValue:P_literal;
+    begin
+      ruleDeclarationStart:=statement.firstToken^.location;
+      evaluateBody:=(assignmentToken^.tokType=tt_assign);
+      ruleBody:=assignmentToken^.next;
+      assignmentToken^.next:=nil;
+      //plausis:
+      if (ruleBody=nil) then begin
+        context.adapters^.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      while (statement.firstToken<>nil) and (statement.firstToken^.tokType in C_ruleModifiers) do begin
+        include(ruleModifiers,statement.firstToken^.tokType);
+        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+      end;
+      evaluateBody:=evaluateBody
+                 or (tt_modifier_mutable    in ruleModifiers);
+
+      if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
+        context.adapters^.raiseError('Declaration does not start with an identifier.',statement.firstToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        context.recycler.cascadeDisposeToken(ruleBody);
+        exit;
+      end;
+      p:=statement.firstToken;
+      while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
+        if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
+          context.adapters^.raiseError('Declaration head contains qualified ID.',p^.location);
+          context.recycler.cascadeDisposeToken(statement.firstToken);
+          context.recycler.cascadeDisposeToken(ruleBody);
+          exit;
+        end;
+        p:=p^.next;
+      end;
+      //:plausis
+      ruleId:=trim(statement.firstToken^.txt);
+      statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+      if not(statement.firstToken^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
+        context.adapters^.raiseError('Invalid declaration head.',statement.firstToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        context.recycler.cascadeDisposeToken(ruleBody);
+        exit;
+      end;
+      rulePattern.create;
+      if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,context);
+      if statement.firstToken<>nil then begin
+        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+      end else begin
+        context.adapters^.raiseError('Invalid declaration.',ruleDeclarationStart);
+        context.recycler.cascadeDisposeToken(ruleBody);
+        exit;
+      end;
+      rulePattern.toParameterIds(ruleBody);
+      //[marker 1]
+      if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then context.reduceExpression(ruleBody);
+
+      if context.adapters^.noErrors then begin
+        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^);
+        if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
+        then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
+        if context.adapters^.noErrors then begin
+          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,context));
+          subRule^.metaData.setComment(join(statement.comments,C_lineBreakChar));
+          subRule^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
+          //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
+          if (ruleGroup^.getRuleType in C_mutableRuleTypes)
+          then begin
+            if (usecase<>lu_forCodeAssistance)
+            then begin
+                   inlineValue:=subRule^.getInlineValue;
+                   P_mutableRule(ruleGroup)^.setMutableValue(inlineValue,true);
+                   inlineValue^.unreference;
+                 end
+            else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
+            P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
+            P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
+            {$ifdef fullVersion}
+            if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then ruleGroup^.setIdResolved;
+            {$endif}
+            dispose(subRule,destroy);
+          end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
+          statement.firstToken:=nil;
+        end else begin
+          context.recycler.cascadeDisposeToken(statement.firstToken);
+          context.recycler.cascadeDisposeToken(ruleBody);
+        end;
+      end else begin
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        context.recycler.cascadeDisposeToken(ruleBody);
+      end;
+    end;
+
+  PROCEDURE parseDataStore;
+    VAR ruleModifiers:T_modifierSet=[];
+        loc:T_tokenLocation;
+    begin
+      if (getCodeProvider^.isPseudoFile) then begin
+        context.adapters^.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      while (statement.firstToken<>nil) and (statement.firstToken^.tokType in C_ruleModifiers) do begin
+        include(ruleModifiers,statement.firstToken^.tokType);
+        loc:=statement.firstToken^.location;
+        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+      end;
+      if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
+         (statement.firstToken^.next<>nil) then begin
+        if statement.firstToken<>nil then loc:=statement.firstToken^.location;
+        context.adapters^.raiseError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      ensureRuleId(statement.firstToken^.txt,
+                   ruleModifiers,
+                   statement.firstToken^.location,context.adapters^);
+    end;
+
+  begin
+    profile:=context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
+    if statement.firstToken=nil then exit;
+    if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
+
+    if not(context.adapters^.noErrors) then begin
+      context.recycler.cascadeDisposeToken(statement.firstToken);
+      exit;
+    end;
+
+    if (statement.firstToken^.tokType=tt_use) then begin
+      interpretUseClause;
+      exit;
+    end;
+
+    if (statement.firstToken^.tokType=tt_include) then begin
+      interpretIncludeClause;
+      exit;
+    end;
+
+    assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
+    if (assignmentToken<>nil) then begin
+      if not(se_writingInternal in context.sideEffectWhitelist) then begin
+        context.adapters^.raiseError('Rule declaration is not allowed here',assignmentToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      {$ifdef fullVersion}
+      context.callStackPush(@self,pc_declaration,pseudoCallees);
+      {$endif}
+      if profile then context.timeBaseComponent(pc_declaration);
+      if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      predigest(assignmentToken,@self,context.recycler,context.adapters);
+      if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(statement.firstToken)+';');
+      parseRule;
+      if profile then context.timeBaseComponent(pc_declaration);
+      {$ifdef fullVersion}
+      context.callStackPop();
+      {$endif}
+    end else if statement.firstToken^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
+      if not(se_writingInternal in context.sideEffectWhitelist) then begin
+        context.adapters^.raiseError('Datastore declaration is not allowed here',assignmentToken^.location);
+        context.recycler.cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      {$ifdef fullVersion}
+      context.callStackPush(@self,pc_declaration,pseudoCallees);
+      {$endif}
+      if profile then context.timeBaseComponent(pc_declaration);
+      if context.adapters^.doEchoDeclaration then context.adapters^.echoDeclaration(tokensToString(statement.firstToken)+';');
+      parseDataStore;
+      if profile then context.timeBaseComponent(pc_declaration);
+      {$ifdef fullVersion}
+      context.callStackPop();
+      {$endif}
+    end else if context.adapters^.noErrors then begin
+      case usecase of
+        lu_forDirectExecution:begin
+          {$ifdef fullVersion}
+          context.callStackPush(@self,pc_interpretation,pseudoCallees);
+          {$endif}
+          if profile then context.timeBaseComponent(pc_interpretation);
+          if not ((statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.adapters^)) then begin
+            context.recycler.cascadeDisposeToken(statement.firstToken);
+            exit;
+          end;
+          predigest(statement.firstToken,@self,context.recycler,context.adapters);
+          if context.adapters^.doEchoInput then context.adapters^.echoInput(tokensToString(statement.firstToken)+';');
+          context.reduceExpression(statement.firstToken);
+          if profile then context.timeBaseComponent(pc_interpretation);
+          {$ifdef fullVersion}
+          context.callStackPop();
+          {$endif}
+          if (statement.firstToken<>nil) and context.adapters^.doShowExpressionOut then begin
+            {$ifdef fullVersion}
+            if (statement.firstToken<>nil) and
+               (statement.firstToken^.next=nil) and
+               (statement.firstToken^.tokType=tt_literal) and
+               (context.adapters^.preferredEchoLineLength>10) then begin
+              context.adapters^.echoOutput(
+                serializeToStringList(P_literal(statement.firstToken^.data),
+                                      statement.firstToken^.location,
+                                      nil,
+                                      context.adapters^.preferredEchoLineLength));
+            end else {$endif}
+              context.adapters^.echoOutput(tokensToString(statement.firstToken));
+          end;
+        end;
+        lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.adapters^) then begin
+          predigest(statement.firstToken,@self,context.recycler,context.adapters);
+          resolveBuiltinIDs(statement.firstToken,context.adapters);
+        end
+        else context.adapters^.raiseNote('Skipping expression '+tokensToString(statement.firstToken,50),statement.firstToken^.location);
+      end;
+    end;
+    if statement.firstToken<>nil then context.recycler.cascadeDisposeToken(statement.firstToken);
+    statement.firstToken:=nil;
+  end;
+
+PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
+  VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
         parametersForMain:P_listLiteral=nil;
@@ -682,7 +694,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     if profile then context.timeBaseComponent(pc_tokenizing);
 
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
-      interpret(stmt);
+      interpret(stmt,usecase,context);
       if profile then context.timeBaseComponent(pc_tokenizing);
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
       if profile then context.timeBaseComponent(pc_tokenizing);
@@ -764,10 +776,8 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
     mnh_funcs_format.onPackageFinalization(@self);
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do begin
+    for i:=0 to length(ruleList)-1 do
       if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(adapters);
-      ruleList[i]^.clearCache;
-    end;
     setLength(ruleList,0);
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;
@@ -1020,6 +1030,28 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
       end;
     end;
     if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
+  end;
+
+PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
+  CONST loadMode:array[false..true] of T_packageLoadUsecase=(lu_forCodeAssistance,lu_forDirectExecution);
+  VAR lexer:T_lexer;
+      stmt :T_enhancedStatement;
+      oldSideEffects:T_sideEffects;
+      doExecute:boolean;
+  begin
+    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+
+    oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist-C_writingSideEffects);
+    for doExecute:=false to true do if context.adapters^.noErrors then begin
+      lexer.create(input,packageTokenLocation(@self),@self);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
+        interpret(stmt,loadMode[doExecute],context);
+        stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      end;
+      lexer.destroy;
+    end;
+    context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
   end;
 
 {$undef include_implementation}

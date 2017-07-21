@@ -38,6 +38,17 @@ TYPE
       FUNCTION isPseudoFile:boolean;      virtual;
   end;
 
+  P_blankCodeProvider=^T_blankCodeProvider;
+  T_blankCodeProvider=object(T_codeProvider)
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;                 virtual;
+    FUNCTION getLines: T_arrayOfString; virtual;
+    FUNCTION getPath: ansistring;       virtual;
+    FUNCTION stateHash:T_hashInt;       virtual;
+    FUNCTION isPseudoFile:boolean;      virtual;
+    FUNCTION disposeOnPackageDestruction:boolean; virtual;
+  end;
+
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_fileCodeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
 
@@ -319,6 +330,14 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
   begin
     result:=ExtractFileNameOnly(filenameOrPath);
   end;
+
+CONSTRUCTOR T_blankCodeProvider.create; begin end;
+DESTRUCTOR T_blankCodeProvider.destroy; begin end;
+FUNCTION T_blankCodeProvider.getLines: T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
+FUNCTION T_blankCodeProvider.getPath: ansistring; begin result:='-'; end;
+FUNCTION T_blankCodeProvider.stateHash: T_hashInt; begin result:=1; end;
+FUNCTION T_blankCodeProvider.isPseudoFile: boolean; begin result:=true; end;
+FUNCTION T_blankCodeProvider.disposeOnPackageDestruction: boolean; begin result:=false; end;
 
 CONSTRUCTOR T_virtualFileCodeProvider.create(CONST path: ansistring; CONST lineData: T_arrayOfString);
   begin

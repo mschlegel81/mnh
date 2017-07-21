@@ -24,7 +24,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
-      PROCEDURE replaceCodeProvider(CONST newProvider:P_codeProvider);
+      FUNCTION replaceCodeProvider(CONST newProvider:P_codeProvider):boolean;
       FUNCTION codeChanged:boolean;
       FUNCTION getId:T_idString; virtual;
       FUNCTION getPath:ansistring; virtual;
@@ -621,11 +621,13 @@ PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_a
     extender^.resolveId(token,adaptersOrNil);
   end;
 
-PROCEDURE T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider);
+FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider):boolean;
   begin
+    if (codeProvider=newProvider) then exit(false);
     if (codeProvider<>nil) and (codeProvider^.disposeOnPackageDestruction) then dispose(codeProvider,destroy);
     codeProvider:=newProvider;
     readyForCodeState:=0;
+    result:=true;
   end;
 
 FUNCTION T_abstractPackage.codeChanged: boolean;  begin result:=readyForCodeState<>codeProvider^.stateHash; end;

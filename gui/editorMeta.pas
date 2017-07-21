@@ -25,6 +25,7 @@ USES  //basic classes
   mnh_debugging,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
+  mnhCompletion,
   guiOutAdapters;
 
 TYPE T_language=(LANG_MNH   = 0,
@@ -102,6 +103,7 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE insertText(CONST s:string);
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
+    PROCEDURE assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
   private
     PROCEDURE ensureAssistant;
     PROCEDURE dropAssistant;
@@ -150,21 +152,6 @@ T_runnerModel=object
     PROCEDURE haltEvaluation;
   end;
 
-T_completionLogic=object
-  private
-    wordsInEditor:T_setOfString;
-    editorMeta:P_editorMeta;
-    lastWordsCaret:longint;
-    PROCEDURE ensureWordsInEditorForCompletion;
-  public
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE assignEditor(CONST meta:P_editorMeta);
-    PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
-    PROCEDURE SynCompletionExecute(Sender: TObject);
-    PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
-end;
-
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_EditorPopupMenu       :TPopupMenu;
@@ -172,7 +159,6 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceSheet       :TTabSheet;
-                    CONST p_SynCompletion         :TSynCompletion;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
@@ -209,7 +195,6 @@ VAR mainForm              :T_abstractMnhForm;
     EditProcessUserCommand:TProcessCommandEvent;
     assistanceSynEdit     :TSynEdit;
     assistanceSheet       :TTabSheet;
-    SynCompletion1        :TSynCompletion;
 
 VAR fileTypeMeta:array[T_language] of record
       highlighter:TSynCustomHighlighter;
@@ -227,7 +212,6 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceSheet       :TTabSheet;
-                    CONST p_SynCompletion         :TSynCompletion;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
@@ -401,7 +385,6 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
     assistanceSheet       :=p_assistanceSheet       ;
-    SynCompletion1        :=p_SynCompletion         ;
     initHighlighters;
     initFileTypes;
     completionLogic.create;
@@ -591,7 +574,6 @@ PROCEDURE T_editorMeta.activate;
     writeln(stdErr,'        DEBUG: Activating editor "',pseudoName(),'"');
     {$endif}
     editor_.Font:=assistanceSynEdit.Font;
-    completionLogic.assignEditor(@self);
     mainForm.caption:=updateSheetCaption;
 
     for l in T_language do begin
@@ -604,10 +586,12 @@ PROCEDURE T_editorMeta.activate;
       assistanceSheet.tabVisible:=true;
       paintedWithStateHash:=0;
       repaintWithStateHash;
+      completionLogic.assignEditor(editor_,assistant^.getPackage);
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
       assistanceSheet.tabVisible:=false;
       dropAssistant;
+      completionLogic.assignEditor(editor_,nil);
     end;
     editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
     editor.readonly                :=runnerModel.areEditorsLocked;
@@ -939,6 +923,11 @@ PROCEDURE T_editorMeta.ensureAssistant;
   begin
     if assistant=nil then new(assistant,create(@self));
     highlighter.codeAssistant:=assistant;
+  end;
+
+PROCEDURE T_editorMeta.assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
+  begin
+    additionalHighlighter.codeAssistant:=assistant;
   end;
 
 PROCEDURE T_editorMeta.dropAssistant;
@@ -1310,82 +1299,6 @@ PROCEDURE T_runnerModel.haltEvaluation;
   begin
     runEvaluator.haltEvaluation;
     if debugMode_ then runEvaluator.context.stepper^.haltEvaluation;
-  end;
-
-PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
-  VAR caret:TPoint;
-      i:longint;
-  begin
-    with editorMeta^ do begin
-      caret:=editor.CaretXY;
-      if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
-      lastWordsCaret:=caret.y;
-      wordsInEditor.clear;
-      with getEditor^ do begin
-        for i:=0 to editor.lines.count-1 do
-          if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
-                         else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
-        if language=LANG_MNH then begin
-          ensureAssistant;
-          assistant^.extendCompletionList(wordsInEditor);
-        end;
-      end;
-    end;
-  end;
-
-CONSTRUCTOR T_completionLogic.create;
-  begin
-    editorMeta:=nil;
-    lastWordsCaret:=maxLongint;
-    wordsInEditor.create;
-    SynCompletion1.OnCodeCompletion:=@SynCompletionCodeCompletion;
-    SynCompletion1.OnExecute       :=@SynCompletionExecute;
-    SynCompletion1.OnSearchPosition:=@SynCompletionSearchPosition;
-  end;
-
-DESTRUCTOR T_completionLogic.destroy;
-  begin
-    wordsInEditor.destroy;
-  end;
-
-PROCEDURE T_completionLogic.assignEditor(CONST meta: P_editorMeta);
-  begin
-    editorMeta:=meta;
-    wordsInEditor.clear;
-    SynCompletion1.editor:=editorMeta^.editor;
-  end;
-
-PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
-  begin
-    value:=copy(sourceValue,1,LastDelimiter('.',sourceValue)-1)+value;
-    wordsInEditor.clear;
-  end;
-
-PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
-  VAR s:string;
-      w:string;
-  begin
-    ensureWordsInEditorForCompletion;
-    SynCompletion1.ItemList.clear;
-    s:=SynCompletion1.CurrentString;
-    for w in wordsInEditor.values do if (s='') or (pos(s,w)=1) then SynCompletion1.ItemList.add(w);
-  end;
-
-PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
-  VAR i:longint;
-      s:string;
-      w:string;
-  begin
-    ensureWordsInEditorForCompletion;
-    SynCompletion1.ItemList.clear;
-    s:=SynCompletion1.CurrentString;
-    i:=LastDelimiter('.',s);
-    if i>1 then begin
-      s:=copy(s,i,length(s));
-      SynCompletion1.CurrentString:=s;
-    end;
-    for w in wordsInEditor.values do if pos(s,w)=1 then SynCompletion1.ItemList.add(w);
-    if SynCompletion1.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
 INITIALIZATION

@@ -10,7 +10,7 @@ USES
   //GUI: LCL components
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynCompletion, SynMemo, SynGutterMarks, SynEditKeyCmds,
+  SynEdit, SynMemo, SynGutterMarks, SynEditKeyCmds,
   //GUI: highlighters
   SynHighlighterMnh,
   SynExportHTML,
@@ -35,6 +35,7 @@ USES
   mnh_doc,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
+  simpleMnh,
   guiOutAdapters;
 TYPE
   {$define includeInterface}
@@ -99,6 +100,7 @@ TYPE
     miEditGuiScripts,
     miUtilityScriptRoot,
     submenuEditorAppearance:   TMenuItem;
+    miOpenSimpleMnh: TMenuItem;
     miUserErrors: TMenuItem;
     miFileHistoryRoot: TMenuItem;
     miHtmlExport: TMenuItem;
@@ -115,7 +117,6 @@ TYPE
     Splitter3:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
-    SynCompletion:             TSynCompletion;
     OutputEdit:                TSynEdit;
     assistanceSynEdit:         TSynEdit;
     SynExporterHTML:           TSynExporterHTML;
