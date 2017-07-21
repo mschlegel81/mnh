@@ -10,7 +10,7 @@ USES
   //GUI: LCL components
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynCompletion, SynMemo, SynGutterMarks, SynEditKeyCmds,
+  SynEdit, SynMemo, SynGutterMarks, SynEditKeyCmds,
   //GUI: highlighters
   SynHighlighterMnh,
   SynExportHTML,
