@@ -2345,6 +2345,11 @@ object MnhForm: TMnhForm
         Caption = 'Profile'
         OnClick = miProfileClick
       end
+      object miOpenSimpleMnh: TMenuItem
+        Caption = 'Simple interpreter'
+        ShortCut = 115
+        OnClick = miOpenSimpleMnhClick
+      end
     end
     object submenuEditorAppearance: TMenuItem
       Caption = '&Appearance'

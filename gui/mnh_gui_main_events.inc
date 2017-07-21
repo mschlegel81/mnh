@@ -11,6 +11,7 @@ PROCEDURE FormShow(Sender: TObject);
 //Jump to declaration:
 PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE miOpenSimpleMnhClick(Sender: TObject);
 PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -201,7 +202,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            breakpointsImagesList,
                            assistanceSynEdit,
                            assistanceTabSheet,
-                           SynCompletion,
                            outputHighlighter,
                            miLanguageRoot,
                            @InputEditKeyDown,
@@ -240,6 +240,13 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     getEditor^.setUnderCursor(mark,help or jump,point);
     if jump then openLocation(getHelpLocation);
     if help then positionHelpNotifier;
+  end;
+
+PROCEDURE TMnhForm.miOpenSimpleMnhClick(Sender: TObject);
+  begin
+    getSimpleMnh.SimpleMnhInputEdit .Font:=OutputEdit.Font;
+    getSimpleMnh.SimpleMnhOutputEdit.Font:=OutputEdit.Font;
+    getSimpleMnh.showModalFor(getEditor);
   end;
 
 PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -389,10 +396,11 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     displayProgress;
     enableDynamicItems;
     if askForm.displayPending then askForm.Show;
-    if guiOutAdapter.flushToGui(OutputEdit) then exit;
+    if isSimpleMnhShowing and guiOutAdapter.flushToGui(getSimpleMnh.SimpleMnhOutputEdit)
+                           or guiOutAdapter.flushToGui(OutputEdit) then exit;
     while guiTaskQueue.executeTask do;
     autosaveSettings;
-    checkForFileChanges;
+    if not(isSimpleMnhShowing) then checkForFileChanges;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
