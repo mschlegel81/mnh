@@ -38,6 +38,7 @@ TYPE
 
 FUNCTION getSimpleMnh: TSimpleMnhForm;
 FUNCTION isSimpleMnhShowing:boolean;
+FUNCTION delayFlush:boolean;
 IMPLEMENTATION
 VAR SimpleMnhForm: TSimpleMnhForm=nil;
     interpretation:record
@@ -59,6 +60,15 @@ FUNCTION getSimpleMnh: TSimpleMnhForm;
       end;
     end;
     result:=SimpleMnhForm;
+  end;
+
+FUNCTION delayFlush:boolean;
+  begin
+    with interpretation do begin
+      enterCriticalSection(criticalSection);
+      result:=busy;
+      leaveCriticalSection(criticalSection);
+    end;
   end;
 
 FUNCTION isSimpleMnhShowing: boolean;
@@ -130,9 +140,8 @@ PROCEDURE TSimpleMnhForm.SimpleMnhInputEditChange(Sender: TObject);
       if busy then Cursor:=crHourGlass
               else begin
                      Cursor:=crDefault;
+                     guiAdapters.clearAll;
                      guiOutAdapter.flushClear;
-                     guiAdapters.resetErrorFlags;
-                     SimpleMnhOutputEdit.clear;
                    end;
       leaveCriticalSection(criticalSection);
     end;
