@@ -679,7 +679,9 @@ PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_t
       env             :=env_;
       eachIndex       :=idx;
       eachRule        :=expr;
-      eachParameter   :=x^.rereferenced;
+      if x=nil
+      then eachParameter:=nil
+      else eachParameter:=x^.rereferenced;
       eachLocation    :=location;
       state           :=fts_pending;
       evaluationResult:=nil;

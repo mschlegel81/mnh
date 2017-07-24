@@ -468,7 +468,9 @@ FUNCTION map_imp intFuncSignature;
   VAR iterator:P_iterator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
+        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
       result:=processMapSerial(iterator,P_expressionLiteral(arg1),context);
       dispose(iterator,destroy);
@@ -479,7 +481,9 @@ FUNCTION pMap_imp intFuncSignature;
   VAR iterator:P_iterator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
+       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
+        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
       if tco_spawnWorker in context.threadOptions
       then result:=processMapParallel(iterator,P_expressionLiteral(arg1),context)
@@ -522,8 +526,8 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,[],ak_variadic_2,'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)');
   builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group'         ,@group_imp         ,[],ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
-  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,[],ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator');
-  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,[],ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator');
+  registerRule(LIST_NAMESPACE,'map',    @map_imp   ,[],ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
+  registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,[],ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
 
 FINALIZATION
   builtinLocation_sort.destroy;
