@@ -1,3 +1,4 @@
+//@demo_for=formatting, fractal
 //*Solves the "Sierpinski-Triangle" task from http://rosettacode.org/wiki/Sierpinski_triangle
 main(recursionDepth:string)->begin
   local n:=softCast(recursionDepth);

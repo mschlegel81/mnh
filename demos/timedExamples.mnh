@@ -32,6 +32,7 @@ sineSum4(s:numericList)->s.map(::sin).agg(+);
 
 test(f:expression(1),input)->time(f,[input])['time'];
 
+//@demo_for=list processing
 main->begin
   local times:=[test(::fib0,22),test(::fib1,22),test(::fib2,22),test(::fib3,22)];
   print("Fibonacci\n  Source");

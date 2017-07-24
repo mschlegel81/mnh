@@ -1,3 +1,4 @@
+//@demo_for=fractal, formatting
 memoized
 carpet(x:int,y:int)->(x mod 3)<>1 OR (y mod 3)<>1
                       ? x>2<y

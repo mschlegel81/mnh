@@ -12,10 +12,11 @@ arctanSummands(n:int)->begin
   ((-1)^N/(2*N+1));
 end;
 
-private EPSILONS:=(10^[0..-10]);//.each(f,f,f*0.5,f*0.2);
+private EPSILONS:=(10^[0..-10]);
 
 guessLimit(samples:numericList)->(samples.trailing(4)*[1..4]*0.1).agg(+);
 
+//@demo_for=UTF-8 output, numerics
 guessEpsilons(samples:numericList)->begin
   local Max:=
   local Min:=samples.trailing;

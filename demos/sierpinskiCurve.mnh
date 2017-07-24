@@ -1,5 +1,6 @@
 private deg45:=arctan(1);
 
+//@demo_for=fractal, plotting
 sc(depth)->begin
   local result:=[];
   local position:=[0.353553390593275,0.707106781186549]*2;

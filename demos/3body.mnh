@@ -37,6 +37,7 @@ end;
 
 private timeStepSize:=1E-2;
 
+//@demo_for=plotting, animation
 main->begin
   plot.setOptions([['x0',-2],['y0',-2],['x1',2],['y1',2],['axisStyleX',3],['axisStyleY',3]]);
   async({begin

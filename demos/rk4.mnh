@@ -2,6 +2,7 @@ private absNorm(v:numeric)->abs(v);
 private absNorm(v:numericList)->abs(v).agg(+);
 private absNorm(L:list)->L.each(v,v.absNorm,+);
 
+//@Algorithm Name=Runge-Kutta Method
 RK4(y0,F:expression(1),dt>0.0)->begin
   local F1:=dt*F(y0       );
   local F2:=dt*F(y0+0.5*F1);
@@ -44,7 +45,7 @@ private df     :={[1,$x.get(0)*sqrt($x.get(1))]};
 private initial:=[0,1];
 private exact(t)->1/16*(t^2+4)^2;
 
-
+//@demo_for=expressions
 //*Solves the Runge-Kutta task from http://rosettacode.org/wiki/Runge-Kutta_method
 main->begin
   local tolSteps:=initial.rk4evolve(df,0.1,100,1E-3);

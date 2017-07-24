@@ -1,4 +1,5 @@
 USE lindenmayer;
+//@demo_for=fractal, plotting
 //*Draws a fractal plant
 main->plot.setOptions([['axisStyleX',0],['axisStyleY',0]]) and
       plot.plot(lindenmayerTurtle(PLANT,6)) and

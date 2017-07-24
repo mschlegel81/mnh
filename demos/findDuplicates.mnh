@@ -1,3 +1,4 @@
+//@demo_for=file processing
 main(rootFolder,...)->begin
   print('Root folder: ',rootFolder);
   local filesToCheck:=allFiles(rootFolder);

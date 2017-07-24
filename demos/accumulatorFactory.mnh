@@ -1,3 +1,4 @@
+//@demo_for=stateful expressions
 foo(x:numeric)->{begin
   local sum:=x;
 save;

@@ -2,7 +2,7 @@ mutable counter:=0;
 
 serve(method,request='/page.html',protocol)->begin counter+=1; wrapTextInHttp("Hello world"); end;
 serve(method,request,protocol)->httpError;
-
+//@demo_for=httpServer
 main->begin
   //start server without timeout (=0) -> server will stop on end of evaluation
   startHttpServer('127.0.0.1:65432',::serve,0);

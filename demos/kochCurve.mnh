@@ -1,16 +1,16 @@
-//*The running sum of the empty list is <code>[]</code>
+//@demo for=local variables
 runningSum([])->[];
-//*Returns the running sum of numeric list L (nested numeric lists are supported)
-runningSum(L)->(size(L)<10 ? [1..size(L)].each(i,head(L,i).agg(+)) : runningSum_merge(runningSum(head(L,size(L) div 2)),runningSum(tail(L,size(L) div 2))));
-private safePlus(summand     ,list<>[])->summand+list;
-private runningSum_merge(L1,L2)->L1|safePlus(L1.get(size(L1)-1),L2);
+runningSum(L)->begin
+  local sum:=L.head;
+  sum|L.tail.each(i,sum+=i);
+end;
 
-interlace(X,Y)->[0..size(X)-1].each(i,[X.get(i),Y.get(i)]);
 kochCurve(depth)->kochCurve(depth,1,0);
+//@demo_for=fractal, plotting
 private kochCurve(depth>=0,LX,LY)->kochCurve(depth-1,
   (LX*0.333)|(LX*0.167-LY*0.288)|(LX*0.167+LY*0.288)|(LX*0.333),
   (LY*0.333)|(LY*0.167+LX*0.288)|(LY*0.167-LX*0.288)|(LY*0.333));
-private kochCurve(depth,LX,LY)->interlace(runningSum(LX),runningSum(LY));
+private kochCurve(depth,LX,LY)->transpose([runningSum(LX),runningSum(LY)]);
 
 private main_impl(filename:string,xRes:int,yRes:int)->
   plot.setOptions([['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]) and

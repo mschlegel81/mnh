@@ -18,6 +18,7 @@ save;
   next>=maxVal ? void : next+=1;
 end};
 
+//@demo_for=list processing, expressions
 //*See http://rosettacode.org/wiki/Sum_to_100
 main->begin
   //Generate a list of all formulas (13122 items)

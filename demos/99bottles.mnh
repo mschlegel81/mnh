@@ -1,3 +1,4 @@
+//@demo_for=formatting
 //Demonstrates use of printf with expressions and "here doc" strings
 private B(0)->"no more bottles";
 private B(1)->"1 bottle";

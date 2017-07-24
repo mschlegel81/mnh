@@ -1,5 +1,4 @@
-private gcd(a,0)->a;
-private gcd(a,b)->gcd(b, a mod b);
+USE gcd;
 type Rational(l:intList(2))->true;
 
 shorten(r:Rational)->begin

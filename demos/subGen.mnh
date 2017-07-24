@@ -1,6 +1,6 @@
 private m109(x>=0)->x mod 10^9;
 private m109(x)->m109(x+10^9);
-
+//@demo_for=memoization
 memoized
 private s(0)->292929;
 private s(1)->1;

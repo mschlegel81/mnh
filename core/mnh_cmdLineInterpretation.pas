@@ -201,7 +201,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           halt(0);
         end else if (paramStr(i)='-edit') then while i<paramCount do begin
           inc(i);
-          addFileToOpen(paramstr(i));
+          addFileToOpen(paramStr(i));
         end
         else if (paramStr(i)='-profile') then profilingRun:=true
         {$ifdef debugMode}

@@ -2,6 +2,7 @@
 positiveOrVoid(i>0)->i;
 positiveOrVoid(i)->void;
 
+//@demo_for=stateful expressions
 //*Generates a series of powers
 powerGen(power:int)->{begin
   local p:=power;

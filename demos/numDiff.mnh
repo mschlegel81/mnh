@@ -25,6 +25,8 @@ private factorial(n)->1;
 //*Returns the factors of the Taylor series expansion of f around x0
 taylorFactors(f:expression(1),x0:numeric,h>0.0,termCount>=1)->[0..termCount-1].each(i,f.D(x0,h,i)/factorial(i));
 //*Returns Taylor series expansion of f around x0
+//@Algorithm Name=Taylor expansion (numeric)
+//@demo_for=expressions
 taylorExpansion(f:expression(1),x0:numeric,h>0.0,termCount>=1)->f.taylorFactors(x0,h,termCount).each(term,term.abs<1E-6 ? void : taylorPower(x0,index)*term,+);
 //*Returns MacLaurin series expansion of f (i.e. the Taylor series expansion arounf 0)
 macLaurinExpansion(f:expression(1),h>0.0,termCount>=1)->taylorExpansion(f,0,h,termCount);

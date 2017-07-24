@@ -1,8 +1,10 @@
 USE gcd;
-
+//@demo_for=list construction
 memoized sternBrocotSequence(len>=4)->begin
   local L:=[1,1];
   [1..ceil((len-2)/2)].each(i,begin L|=L[i]+L[i-1]; L|=L[i]; void; end);
+  //Note: try the following implementation instead (semantically identical but 100x slower):
+  //[1..ceil((len-2)/2)].each(i,L|=L[i]+L[i-1], L|=L[i]);
   (len and 1)=1
   ? L.head(len)
   : L;

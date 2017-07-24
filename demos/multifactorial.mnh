@@ -6,5 +6,6 @@ multifactorial(degree=1)->{[1.0,1..$n].agg(*)};
 multifactorial(degree>1)->{(toReal($n)-degree*[0..($n-1) div degree]).agg(*)};
 
 //*See http://rosettacode.org/wiki/Multifactorial
+//@demo_for=formatting, expressions
 main->printf('%s',[1..5].each(degree,flatten(degree,[1..10].map(multifactorial(degree)).round))
 .formatTable('Degree'|('#'&[1..10])));

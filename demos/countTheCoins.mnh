@@ -1,3 +1,4 @@
+//@demo_for=memoization
 private memoized change(amount,set<>[])->
 amount<=0 ? 1 : //there is only one way to give out 0 cents
 begin
