@@ -1,0 +1,22 @@
+USE gcd;
+
+memoized sternBrocotSequence(len>=4)->begin
+  local L:=[1,1];
+  [1..ceil((len-2)/2)].each(i,begin L|=L[i]+L[i-1]; L|=L[i]; void; end);
+  (len and 1)=1
+  ? L.head(len)
+  : L;
+end;
+
+//*See http://rosettacode.org/wiki/Stern-Brocot_sequence
+main->begin
+  print('Stern-Brocot seqence');
+  print('  First 15: ',sternBrocotSequence(15));
+  printf("  %s\tfirst occurs at index\t%s",
+    [1..10,100],
+  1+[1..10,100].each(k,indexOf(sternBrocotSequence(10000)=k).head));
+
+  [sternBrocotSequence(1000).tail,sternBrocotSequence(1000).leading].transpose.pEach(i,gcd@i=1,AND)
+  ? print('Correct: The first 999 consecutive pairs are relative prime!')
+  : fail('Unexpected function result');
+end;
