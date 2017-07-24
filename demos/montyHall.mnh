@@ -32,7 +32,7 @@ private printResult(counts:intList(2))->printf("  Probability to win without swi
 main->begin
   print ('Monty Hall Problem');
   print ('  1000 random runs');
-  printResult([1..1000].pMap(::montyHallRandomRun).ord.agg(+));
+  printResult([1..1000].map(::montyHallRandomRun).ord.agg(+));
   print ('  Deterministic runs');
   printResult([0..17].pMap(::montyHallDeterministicRun).ord.agg(+));
 end;
