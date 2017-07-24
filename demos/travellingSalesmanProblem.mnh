@@ -1,3 +1,5 @@
+//@demo_for=datastore
+//points is quite expensive to obtain, so this is a datastore to allow reusing the input
 datastore points;
 //*Returns the contents of datastore points.
 //*If necessary, the datastore is initialized first.

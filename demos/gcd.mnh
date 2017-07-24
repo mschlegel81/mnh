@@ -1,5 +1,6 @@
-private gcd(a,0)->a;
-private gcd(a,b)->gcd(b, a mod b);
+//@Algorithm Name=Euklidean Algorithm, Greatest common divider
+gcd(a,0)->a;
+gcd(a,b)->gcd(b, a mod b);
 
 //*For regression test
 main->main(1238124,1236);

@@ -21,4 +21,5 @@ treePrint(Tree)->begin
   children.each(child,child.treePrint('',Tree.isMap,index=children.size-1));
 end;
 
+//@demo_for=text formatting
 main->[1,2,[[3,['X'..'Z']],[4,5]].toMap,['a'..'c']].treePrint;

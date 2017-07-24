@@ -96,6 +96,7 @@ A005379(len      )->[0..len-1].map(::hofstadter_sequences.M);
 A005185(len      )->[1..len  ].map(::hofstadter_sequences.Q);
 A007947(len      )->[1..len  ].pMap({$n.factorize.unique.agg(*)});
 
+//@demo_for=httpGet
 queryOEISInfo(id:string)->begin
   local data:=httpGet('https://oeis.org/search?q=id:'&id&'&fmt=text')
               .split("\n")

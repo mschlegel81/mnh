@@ -3,5 +3,5 @@ thueMorseSequence(targetLength:int)->begin
   while(result.size<targetLength,result|=not(result));
   head(result,targetLength);
 end;
-
+//*See http://rosettacode.org/wiki/Thue-Morse
 main->thueMorseSequence(100).ord.join.print;

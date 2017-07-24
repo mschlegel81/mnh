@@ -28,6 +28,7 @@ end;
 //*Fallback
 serve(request,path,rawParameters)->complainOnce@$params;
 
+//@demo_for=httpServer
 main->begin
   startHttpServer(ipAndPort,::serve,0);
   openUrl(address+'/index.html');

@@ -1,3 +1,4 @@
+//@demo_for=formatting, date/time formatting
 private bigDigit:=
 [[' ### ','#   #','#   #','#   #',' ### '],
  ['  # ',' ## ','# # ','  # ',' ###'],

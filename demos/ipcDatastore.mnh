@@ -99,9 +99,8 @@ rollback->sendRequest(ROLLBACK);
 
 //*Starts an IPC server instance.
 //*Implicitly called in a new, standalone instance of MNH if needed.
+//@demo_for=Inter Process Communication, datastores
 main->begin
   startIpcServer(IPC_ID,::serve);
   ask("IPC server started: "&myPath&"\nPress enter to shutdown");
 end;
-
-print(myPath);

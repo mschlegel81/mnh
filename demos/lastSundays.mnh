@@ -1,3 +1,4 @@
+//@demo_for=time/date manipulation, time/date formatting
 private lastSundaysInYear(year:int)->begin
   local lastDays:=floor(parseTime('yyyymmdd',format('%4.4d%2.2d01',year,[2..12])|format('%4.4d0101',year+1)))-1;
   local numberOfDaysAfterSuday:=(lastDays+6) mod 7;

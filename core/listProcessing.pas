@@ -237,11 +237,15 @@ PROCEDURE processListParallel(CONST inputIterator:P_iterator;
 FUNCTION processMapSerial(CONST inputIterator:P_iterator; CONST expr:P_expressionLiteral;
                           VAR context:T_threadContext):P_listLiteral;
   VAR x:P_literal;
+      isExpressionNullary:boolean;
   begin
+    isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     result:=newListLiteral();
     x:=inputIterator^.next(@context);
     while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
-      result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,x),false);
+      if isExpressionNullary
+      then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context  ),false)
+      else result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,x),false);
       disposeLiteral(x);
       x:=inputIterator^.next(@context);
     end;
@@ -299,14 +303,18 @@ FUNCTION processMapParallel(CONST inputIterator:P_iterator; CONST expr:P_express
 
   VAR x:P_literal;
       aimEnqueueCount:longint;
+      isExpressionNullary:boolean;
   begin
+    isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.next(@context);
     while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
-      enqueueForAggregation(createTask(x));
+      if isExpressionNullary
+      then enqueueForAggregation(createTask(nil))
+      else enqueueForAggregation(createTask(x  ));
       if environment.taskQueue^.getQueuedCount>aimEnqueueCount then begin
         if not(canAggregate) then environment.taskQueue^.activeDeqeue(context);
         //if there is not enough pending after dequeuing, increase aimEnqueueCount

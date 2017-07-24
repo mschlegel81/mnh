@@ -1,3 +1,4 @@
+//@demo_for=memoization
 memoized
 private ackermann(m=0,n>0)->n+1;
 private ackermann(m>0,n=0)->ackermann(m-1,1);

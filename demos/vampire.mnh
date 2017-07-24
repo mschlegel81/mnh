@@ -46,8 +46,3 @@ end;
 
 //*As above but abridged for regression test
 main->printFirstKVampires(25);
-
-
-//factorize(16758243290880).subSets.pMap({$x.agg(*)});
-
-getFangs(16758243290880);

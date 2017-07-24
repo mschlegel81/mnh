@@ -1,3 +1,4 @@
+//@demo_for=memoization, iterators
 memoized fannkuch(i:intList)->i[0]=1 ? 0 : 1+fannkuch(i.head(i[0]).reverseList|i.tail(i[0]));
 
 fannkuchRedux(i>=1)->permutationIterator([1..i]).pEach(permutation,fannkuch(permutation),max).print;

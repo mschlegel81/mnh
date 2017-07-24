@@ -1,3 +1,4 @@
+//@demo_for=memoization
 memoized
 private digitSquareFinal(1)->1;
 private digitSquareFinal(89)->89;

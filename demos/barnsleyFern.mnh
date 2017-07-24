@@ -19,6 +19,7 @@ private main_impl(filename:string,xRes:int,yRes:int)->begin
   plot.renderToFile(filename,xRes,yRes,4);
 end;
 
+//@demo_for=fractal, plotting
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x").get(0)),softCast(split(resolution,"x").get(1)));
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution

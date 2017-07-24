@@ -18,6 +18,8 @@ rightTruncatablePrimes(maxPrime>10)->
             .filter({$x div 10 in SUB}),|));
   end;
 
+//@demo_for=list processing
+//*See http://rosettacode.org/wiki/Truncatable_primes
 main->begin
   local ltp:=leftTruncatablePrimes (1000000);
   local rtp:=rightTruncatablePrimes(1000000);

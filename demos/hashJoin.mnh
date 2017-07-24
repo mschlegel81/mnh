@@ -23,6 +23,7 @@ private TabToMap(Table:list,KeyIndex:int)->begin
   map;
 end;
 
+//@Algorithm name=Inner hash join
 innerJoin(Tab1:list,KeyIndex1:int,Tab2:list,KeyIndex2:int)->
   begin
     local Map2:=TabToMap(Tab2,KeyIndex2);
@@ -33,6 +34,7 @@ innerJoin(Tab1:list,KeyIndex1:int,Tab2:list,KeyIndex2:int)->
     end,|);
   end;
 
+//@Algorithm name=Outer hash join
 outerJoin(Tab1:list,KeyIndex1:int,Tab2:list,KeyIndex2:int)->
   begin
     local tab1Substitute:=[1..Tab1.each(row,row.size,max)].each(n,'');

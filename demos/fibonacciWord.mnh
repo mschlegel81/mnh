@@ -1,5 +1,5 @@
 USE shannonEntropy;
-
+//@demo_for=memoization
 memoized
 private fibWord(i<=1)->"1";
 private fibWord(i<=2)->"0";

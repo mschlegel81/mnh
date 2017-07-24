@@ -1,3 +1,4 @@
+//@demo_for=datastores
 //*Format is [[name1,timeSpent1],[name2,timeSpent2],...]
 private datastore allTasks;
 //*Format is [name,startedAt]
