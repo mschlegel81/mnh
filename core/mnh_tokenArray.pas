@@ -513,7 +513,7 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
         localIdStack.clear;
         localIdStack.scopePush;
         lastWasLocalModifier:=false;
-        while fetchNext(recycler,adapters) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
+        while fetchNext(recycler,adapters) and (lastTokenized<>nil) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
           case lastTokenized^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
             tt_endBlock      : localIdStack.scopePop;

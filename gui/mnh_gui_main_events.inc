@@ -363,6 +363,7 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
+  CONST MAX_INTERVAL=50;
   FUNCTION processIpcMessages:boolean;
     VAR filesToOpen:T_arrayOfString;
     begin
@@ -404,6 +405,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     while guiTaskQueue.executeTask do;
     autosaveSettings;
     checkForFileChanges;
+    if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
