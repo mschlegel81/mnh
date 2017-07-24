@@ -1,0 +1,37 @@
+//*Returns a "broken" random number generator, returning deterministic (and easily predictable) values
+private myRandomGenerator(seed:int)->{
+  begin
+    local residue:=seed;
+  save;
+    local result:=residue mod $k;
+    residue:=residue div $k;
+    result;
+  end};
+
+//*Accepts an expression returning a pseudo random number
+//*Returns a booleanList(2): [win without switching, win with switching]
+private montyHallCustomRun(rand:expression(1))->begin
+  local doors:=rand(3)=[0..2];
+  local firstPick:=rand(3);
+  local goatDoors:=indexOf(not(doors) and not([0..2]=firstPick));
+  local goatDoorToOpen:=goatDoors[rand(goatDoors.size)];
+  local option:=[0..2].filter({firstPick<>$k<>goatDoorToOpen}).head;
+  doors[[firstPick,option]];
+end;
+
+private montyHallRandomRun                  ->montyHallCustomRun(::intRandom             );
+private montyHallDeterministicRun(index:int)->montyHallCustomRun(myRandomGenerator(index));
+
+private printResult(counts:intList(2))->printf("  Probability to win without switching doors\t%s\v%%\n"+
+                                               "  Probability to win with switching\t%s\v%%",
+                                               counts[0]/counts.agg(+)*100,
+                                               counts[1]/counts.agg(+)*100);
+
+//See http://rosettacode.org/wiki/Monty_Hall_problem
+main->begin
+  print ('Monty Hall Problem');
+  print ('  1000 random runs');
+  printResult([1..1000].pMap(::montyHallRandomRun).ord.agg(+));
+  print ('  Deterministic runs');
+  printResult([0..17].pMap(::montyHallDeterministicRun).ord.agg(+));
+end;
