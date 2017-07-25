@@ -295,7 +295,7 @@ FUNCTION display_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, [se_writingInternal], ak_variadic,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, [se_alterPlotState], ak_variadic,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
     '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
@@ -319,24 +319,24 @@ INITIALIZATION
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, [se_writingInternal], ak_variadic_1,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, [se_alterPlotState], ak_variadic_1,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, [se_readingInternal], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, [], ak_nullary,
     'getOptions;//returns plot options as a key-value-list.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, [se_writingInternal], ak_variadic_1,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, [se_alterPlotState], ak_variadic_1,
     'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
     'setOptions(key:string,value);//Sets a single plot option');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, [se_writingInternal], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, [se_alterPlotState], ak_nullary,
     'resetOptions;//Sets the default plot options');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, [se_readingInternal,se_writingExternal], ak_variadic_3,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, [se_writeFile], ak_variadic_3,
     'renderToFile(filename<>'',width>=1,height>=1,[supersampling]);//Renders the current plot to a file.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, [se_readingInternal], ak_variadic_2,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, [], ak_variadic_2,
     'renderToString(width,height,[supersampling]);//Renders the current plot to a string.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_writingInternal], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_alterPlotState], ak_nullary,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp, [se_readingInternal,se_outputViaAdapter], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp, [se_outputViaAdapter], ak_nullary,
     'display;//Displays the plot as soon as possible, even during evaluation.');
 
 end.

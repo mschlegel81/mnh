@@ -25,10 +25,19 @@ TYPE
                 se_sleep,
                 se_detaching,
                 se_server,
-                se_readingInternal,
-                se_writingInternal,
-                se_readingExternal,
-                se_writingExternal,
+                se_readPackageState,
+                se_alterPackageState,
+                se_alterContextState,
+                se_alterPlotState,
+                {$ifdef fullVersion}
+                se_readGuiState,
+                se_alterGuiState,
+                {$endif}
+                se_readFile,
+                se_writeFile,
+                se_os_query,
+                se_accessHttp,
+                se_accessIpc,
                 se_executingExternal,
                 se_scriptDependent,
                 se_executableDependent,
@@ -43,10 +52,19 @@ CONST
                 'sleep',
                 'detaching',
                 'server',
-                'readingInternal',
-                'writingInternal',
-                'readingExternal',
-                'writingExternal',
+                'read package state',
+                'alter package state',
+                'alter context state',
+                'alter plot state',
+                {$ifdef fullVersion}
+                'read GUI state',
+                'alter GUI state',
+                {$endif}
+                'read file',
+                'write file',
+                'OS query',
+                'http',
+                'ipc',
                 'executingExternal',
                 'scriptDependent',
                 'executableDependent',
@@ -54,11 +72,6 @@ CONST
 
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
   C_equivalentOption:array[tco_spawnWorker..tco_debugging] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging);
-  C_writingSideEffects:T_sideEffects=[se_detaching,
-                                      se_server,
-                                      se_writingInternal,
-                                      se_writingExternal,
-                                      se_executingExternal];
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
 
 TYPE

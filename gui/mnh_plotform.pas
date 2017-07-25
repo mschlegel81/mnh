@@ -421,7 +421,7 @@ FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 
 INITIALIZATION
   broughtToFront:=0;
-  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,[se_readingInternal],ak_nullary,'plotShowing;#Returns true if the plot is currently showing, false otherwise');
+  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,[se_readGuiState],ak_nullary,'plotShowing;#Returns true if the plot is currently showing, false otherwise');
 FINALIZATION
   if myPlotForm<>nil then begin
     FreeAndNil(myPlotForm);

@@ -259,7 +259,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,[se_outputViaAdapter],ak_variadic,'printDirect(...);//Prints out the given string without pretty printing or line breaks');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,[se_outputViaAdapter],ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,[se_outputViaAdapter],ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,[se_outputViaAdapter,se_writingInternal],ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,[se_outputViaAdapter],ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,[],ak_unary   ,'serialize(x);//Returns a string representing x.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,[],ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,[],ak_unary   ,'bits(i:int);//Returns the bits of i');

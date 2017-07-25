@@ -21,7 +21,7 @@ TYPE
       PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: longint; VAR gridTic: T_ticInfos);
       PROCEDURE drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
       PROCEDURE drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
-      FUNCTION  obtainPlot(CONST width,height,supersampling:longint):TImage;
+      FUNCTION  obtainPlot(CONST width,height:longint; supersampling:longint):TImage;
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -35,7 +35,7 @@ TYPE
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
 
-      PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
+      PROCEDURE renderPlot(VAR plotImage: TImage; supersampling:longint);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
@@ -487,10 +487,12 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
     dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; supersampling:longint);
   VAR renderImage:TImage;
       gridTics:T_ticInfos;
   begin
+    while (plotImage.width *supersampling>=10000) or
+          (plotImage.height*supersampling>=10000) do dec(supersampling);
     system.enterCriticalSection(cs);
     try
       scalingOptions.updateForPlot(plotImage.Canvas,plotImage.width,plotImage.height,row,gridTics);
@@ -506,10 +508,12 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
     end;
   end;
 
-FUNCTION T_plot.obtainPlot(CONST width,height,supersampling:longint):TImage;
+FUNCTION T_plot.obtainPlot(CONST width,height:longint; supersampling:longint):TImage;
   VAR renderImage:TImage;
       gridTics:T_ticInfos;
   begin
+    while (width *supersampling>=10000) or
+          (height*supersampling>=10000) do dec(supersampling);
     system.enterCriticalSection(cs);
     try
       renderImage:=TImage.create(nil);

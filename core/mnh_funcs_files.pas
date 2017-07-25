@@ -497,20 +497,20 @@ FUNCTION relativeFilename_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(FILES_BUILTIN_NAMESPACE,'files'          ,@files_impl         ,[se_readingExternal],ak_unary     ,'files(searchPattern:string);//Returns a list of files matching the given search pattern');
-  registerRule(FILES_BUILTIN_NAMESPACE,'allFiles'       ,@allFiles_impl      ,[se_readingExternal],ak_variadic_1,'allFiles(root);//Returns a list of all files below root (string or stringList)#'+
-                                                                              'allFiles(root,pattern);//Returns a list of all files matching pattern(s) (string or stringList)#'+
-                                                                              'allFiles(root,pattern,recurse=false);//As above but without recursing subfolders');
-  registerRule(FILES_BUILTIN_NAMESPACE,'folders'        ,@folders_impl       ,[se_readingExternal],ak_unary     ,'folders(searchPattern:string);//Returns a list of folders matching the given search pattern');
-  registerRule(FILES_BUILTIN_NAMESPACE,'allFolders'     ,@allFolders_impl    ,[se_readingExternal],ak_unary     ,'allFolders(rootFolder:string);//Returns a list of all folders below and including a given root directory');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileExists'     ,@fileExists_impl    ,[se_readingExternal],ak_unary     ,'fileExists(filename:string);//Returns true if the specified file exists and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'folderExists'   ,@folderExists_impl  ,[se_readingExternal],ak_unary     ,'folderExists(foldername:string);//Returns true if the specified folder exists and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,[se_readingExternal],ak_unary     ,'fileContents(filename:string);//Returns the contents of the specified file as one string');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileLines'      ,@fileLines_impl     ,[se_readingExternal],ak_unary     ,'fileLines(filename:string);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost');
-  registerRule(FILES_BUILTIN_NAMESPACE,'writeFile'      ,@writeFile_impl     ,[se_writingExternal],ak_binary    ,'writeFile(filename:string, content:string);//Writes the specified content to the specified file and returns true');
-  registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines' ,@writeFileLines_impl,[se_writingExternal],ak_variadic_2,'writeFileLines(filename:string, content:stringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
-                                                                                   'writeFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending');
-  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,[se_readingExternal,se_writingExternal],ak_variadic_2,'appendFileLines(filename:string, content:stringList);//Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+  registerRule(FILES_BUILTIN_NAMESPACE,'files'          ,@files_impl         ,[se_os_query] ,ak_unary     ,'files(searchPattern:string);//Returns a list of files matching the given search pattern');
+  registerRule(FILES_BUILTIN_NAMESPACE,'allFiles'       ,@allFiles_impl      ,[se_os_query] ,ak_variadic_1,'allFiles(root);//Returns a list of all files below root (string or stringList)#'+
+                                                                                                           'allFiles(root,pattern);//Returns a list of all files matching pattern(s) (string or stringList)#'+
+                                                                                                           'allFiles(root,pattern,recurse=false);//As above but without recursing subfolders');
+  registerRule(FILES_BUILTIN_NAMESPACE,'folders'        ,@folders_impl       ,[se_os_query] ,ak_unary     ,'folders(searchPattern:string);//Returns a list of folders matching the given search pattern');
+  registerRule(FILES_BUILTIN_NAMESPACE,'allFolders'     ,@allFolders_impl    ,[se_os_query] ,ak_unary     ,'allFolders(rootFolder:string);//Returns a list of all folders below and including a given root directory');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileExists'     ,@fileExists_impl    ,[se_os_query] ,ak_unary     ,'fileExists(filename:string);//Returns true if the specified file exists and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'folderExists'   ,@folderExists_impl  ,[se_os_query] ,ak_unary     ,'folderExists(foldername:string);//Returns true if the specified folder exists and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,[se_readFile] ,ak_unary     ,'fileContents(filename:string);//Returns the contents of the specified file as one string');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileLines'      ,@fileLines_impl     ,[se_readFile] ,ak_unary     ,'fileLines(filename:string);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost');
+  registerRule(FILES_BUILTIN_NAMESPACE,'writeFile'      ,@writeFile_impl     ,[se_writeFile],ak_binary    ,'writeFile(filename:string, content:string);//Writes the specified content to the specified file and returns true');
+  registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines' ,@writeFileLines_impl,[se_writeFile],ak_variadic_2,'writeFileLines(filename:string, content:stringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                                                           'writeFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending');
+  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,[se_readFile,se_writeFile],ak_variadic_2,'appendFileLines(filename:string, content:stringList);//Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
                                                                               'appendFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending (will be used only if a new file is created)');
   registerRule(FILES_BUILTIN_NAMESPACE,'exec'           ,@execSync_impl,[se_executingExternal],ak_variadic_1,
                                        'exec(programPath:string);//Executes the specified program and returns the text output including stdErr output and the exitcode as a nested list: [[output,...],exitCode]#'+
@@ -519,18 +519,18 @@ INITIALIZATION
                                        'exec(programPath:string,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output');
   registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,[se_executingExternal],ak_variadic_1,'execAsync(programPath:string,parameters ...);//Starts the specified program and returns void');
   registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless'        ,@execPipeless_impl,[se_executingExternal],ak_variadic_1,'execPipeless(programPath:string,parameters ...);//Executes the specified program, waiting for exit and returns the exit code');
-  registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,[se_writingExternal],ak_unary     ,'deleteFile(filename:string);//Deletes the given file, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir'           ,@deleteDir_imp    ,[se_writingExternal],ak_unary     ,'deleteDir(directoryname:string);//Deletes the given directory, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'copyFile'            ,@copyFile_imp     ,[se_writingExternal],ak_binary    ,'copyFile(source:string,dest:string);//Copies a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'moveFile'            ,@moveFile_imp     ,[se_writingExternal],ak_binary    ,'moveFile(source:string,dest:string);//Moves a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo'            ,@fileInfo_imp     ,[se_readingExternal],ak_unary     ,'fileInfo(filenameOrPattern:string);//Retuns file info as a key-value-list#fileInfo(filenameOrPattern:stringList);');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats'           ,@fileStats_imp    ,[se_readingExternal],ak_unary     ,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:stringList);');
-  registerRule(FILES_BUILTIN_NAMESPACE,'expandedFileName'    ,@expandedFileName_imp    ,[se_readingInternal],ak_unary ,'expandedFileName(F);//Returns the expanded file name of file(s) given by string or stringList F');
+  registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,[se_writeFile],ak_unary     ,'deleteFile(filename:string);//Deletes the given file, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir'           ,@deleteDir_imp    ,[se_writeFile],ak_unary     ,'deleteDir(directoryname:string);//Deletes the given directory, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'copyFile'            ,@copyFile_imp     ,[se_readFile,se_writeFile],ak_binary    ,'copyFile(source:string,dest:string);//Copies a file from source to dest, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'moveFile'            ,@moveFile_imp     ,[se_readFile,se_writeFile],ak_binary    ,'moveFile(source:string,dest:string);//Moves a file from source to dest, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo'            ,@fileInfo_imp     ,[se_os_query],ak_unary     ,'fileInfo(filenameOrPattern:string);//Retuns file info as a key-value-list#fileInfo(filenameOrPattern:stringList);');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats'           ,@fileStats_imp    ,[se_readFile],ak_unary     ,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:stringList);');
+  registerRule(FILES_BUILTIN_NAMESPACE,'expandedFileName'    ,@expandedFileName_imp    ,[],ak_unary ,'expandedFileName(F);//Returns the expanded file name of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileDirectory',@extractFileDirectory_imp,[],ak_unary ,'extractFileDirectory(F);//Returns the expanded file directories of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileName'     ,@extractFileName_imp     ,[],ak_unary ,'extractFileName(F);//Returns the expanded file names (without path) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileNameOnly' ,@extractFileNameOnly_imp ,[],ak_unary ,'extractFileNameOnly(F);//Returns the expanded file names (without path and extension) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileExt'      ,@extractFileExt_imp      ,[],ak_unary ,'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt'       ,@changeFileExtension_imp ,[],ak_binary,'changeFileExt(filename,newExtension);//Returns the path of file with the new extension');
-  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename'    ,@relativeFilename_impl   ,[se_readingInternal],ak_binary,'relativeFilename(reference,file);//Returns the path of file relative to reference');
+  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename'    ,@relativeFilename_impl   ,[],ak_binary,'relativeFilename(reference,file);//Returns the path of file relative to reference');
 
 end.

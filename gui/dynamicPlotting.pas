@@ -262,7 +262,7 @@ PROCEDURE initializeDynamicPlotting;
     dynamicPlotLoopRunning.create(false);
     dynamicPlotLabelText.create('');
     initCriticalSection(setupCs);
-    registerRule(PLOT_NAMESPACE,'dynamicPlot',@dynamicPlot_impl,[se_writingInternal],ak_unary,
+    registerRule(PLOT_NAMESPACE,'dynamicPlot',@dynamicPlot_impl,[se_alterPlotState,se_inputViaAsk],ak_unary,
       'dynamicPlot(events:map);//Sets up dynamic plotting with the given events#'+
       '//expected map structure (all entries optional):#'+
       '//  [["mouseMove" ,expression(2)],#'+

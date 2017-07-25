@@ -341,9 +341,13 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       if formatSubrule<>nil then begin
         oldSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious([
           se_outputViaAdapter,
-          se_readingInternal,
-          se_writingInternal,
-          se_readingExternal,
+          se_readPackageState,
+          se_alterContextState,
+          se_readFile,
+          se_os_query,
+          se_accessHttp,
+          se_accessIpc,
+          se_executingExternal,
           se_scriptDependent,
           se_executableDependent,
           se_versionDependent]*context.sideEffectWhitelist);
@@ -541,7 +545,7 @@ INITIALIZATION
   builtinLocation_format.create(STRINGS_NAMESPACE,'format');
   registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,[],ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,[],ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,[se_readingInternal],ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,[],ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
 
 FINALIZATION
   clearCachedFormats;
