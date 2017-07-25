@@ -700,15 +700,17 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
       if profile then context.timeBaseComponent(pc_tokenizing);
     end;
     lexer.destroy;
-    {$ifdef fullVersion}
     if usecase=lu_forCodeAssistance then begin
       readyForUsecase:=usecase;
       logReady;
-      resolveRuleIds(context.adapters);
-      complainAboutUnused(context.adapters^);
+      {$ifdef fullVersion}
+      if gui_started then begin
+        resolveRuleIds(context.adapters);
+        complainAboutUnused(context.adapters^);
+      end;
+      {$endif}
       exit;
     end;
-    {$endif}
     if context.adapters^.noErrors then begin
       readyForUsecase:=usecase;
       logReady;

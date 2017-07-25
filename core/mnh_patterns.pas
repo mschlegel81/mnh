@@ -147,11 +147,24 @@ FUNCTION T_patternElement.toString: ansistring;
   end;
 
 FUNCTION T_patternElement.toCmdLineHelpStringString:ansistring;
+  VAR iter:T_arrayOfLiteral;
+      l:P_literal;
   begin
     case restrictionType of
       tt_comparatorListEq, tt_comparatorEq: if restrictionId='' then begin
         if restrictionValue^.literalType=lt_string then result:=P_stringLiteral(restrictionValue)^.value
                                                    else result:=restrictionValue^.toString
+      end else result:='<'+id+'>';
+      tt_operatorIn: if (restrictionValue<>nil) and (restrictionValue^.literalType in [lt_stringList,lt_stringSet]) then begin
+        iter:=P_compoundLiteral(restrictionValue)^.iteratableList;
+        result:='';
+        for l in iter do begin
+          if result<>'' then result:=result+'|';
+          result:=result+P_stringLiteral(l)^.value;
+        end;
+        result:='['+result+']';
+        disposeLiteral(iter);
+        if id<>'' then result:='<'+id+'> in '+result;
       end else result:='<'+id+'>';
       else result:='<'+id+'>';
     end;
