@@ -863,11 +863,6 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
 FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
   begin
     if (parameters<>nil) and (parameters^.size<>0) then exit(nil);
-    if not(se_writingInternal in P_threadContext(context)^.sideEffectWhitelist)
-    then begin
-      P_threadContext(context)^.raiseSideEffectError('function '+getId,location, [se_writingInternal]);
-      exit(nil);
-    end;
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self); {$endif}
     result:=next(location,P_threadContext(context)^);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}

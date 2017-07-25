@@ -551,7 +551,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
     assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
     if (assignmentToken<>nil) then begin
-      if not(se_writingInternal in context.sideEffectWhitelist) then begin
+      if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.adapters^.raiseError('Rule declaration is not allowed here',assignmentToken^.location);
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
@@ -572,7 +572,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       context.callStackPop();
       {$endif}
     end else if statement.firstToken^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
-      if not(se_writingInternal in context.sideEffectWhitelist) then begin
+      if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.adapters^.raiseError('Datastore declaration is not allowed here',assignmentToken^.location);
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
@@ -1041,7 +1041,21 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
   begin
     if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
 
-    oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist-C_writingSideEffects);
+    oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*
+    [se_inputViaAsk,
+     se_outputViaAdapter,
+     se_sound,
+     se_sleep,
+     se_readPackageState,
+     se_alterContextState,
+     se_alterPlotState,
+     se_readFile,
+     se_os_query,
+     se_accessHttp,
+     se_accessIpc,
+     se_scriptDependent,
+     se_executableDependent,
+     se_versionDependent]);
     for doExecute:=false to true do if context.adapters^.noErrors then begin
       lexer.create(input,packageTokenLocation(@self),@self);
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^);

@@ -33,6 +33,7 @@ TYPE
     blankCodeProvider:P_blankCodeProvider;
     package:P_package;
     completion:T_completionLogic;
+    PROCEDURE setCursor(CONST c:TCursor);
   public
   end;
 
@@ -68,6 +69,7 @@ FUNCTION delayFlush:boolean;
       enterCriticalSection(criticalSection);
       result:=busy;
       leaveCriticalSection(criticalSection);
+      if not(result) then SimpleMnhForm.setCursor(crDefault);
     end;
   end;
 
@@ -137,22 +139,28 @@ PROCEDURE TSimpleMnhForm.SimpleMnhInputEditChange(Sender: TObject);
       setLength(request,SimpleMnhInputEdit.lines.count);
       for k:=0 to length(request)-1 do request[k]:=SimpleMnhInputEdit.lines[k];
       inc(requestId);
-      if busy then Cursor:=crHourGlass
-              else begin
-                     Cursor:=crDefault;
-                     guiAdapters.clearAll;
-                     guiOutAdapter.flushClear;
-                   end;
+      setCursor(crHourGlass);
+      if not(busy) then begin
+        guiAdapters.clearAll;
+        guiOutAdapter.flushClear;
+      end;
       leaveCriticalSection(criticalSection);
     end;
   end;
 
-PROCEDURE TSimpleMnhForm.showModalFor(CONST meta:P_editorMeta);
+PROCEDURE TSimpleMnhForm.showModalFor(CONST meta: P_editorMeta);
   begin
     meta^.setWorkingDir;
     meta^.assignAdditionalHighlighter(inputHighlighter);
     package:=runEvaluator.getPackageForPostEvaluation(meta);
     ShowModal;
+  end;
+
+PROCEDURE TSimpleMnhForm.setCursor(CONST c: TCursor);
+  begin
+    Cursor:=c;
+    SimpleMnhInputEdit.Cursor:=c;
+    SimpleMnhOutputEdit.Cursor:=c;
   end;
 
 PROCEDURE TSimpleMnhForm.FormShow(Sender: TObject);

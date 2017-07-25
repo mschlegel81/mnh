@@ -350,20 +350,20 @@ INITIALIZATION
   initialize(imigCS);
   initCriticalSection(imigCS);
   registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,[],ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
-  registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,[se_readingInternal,se_readingExternal,se_writingInternal,se_writingExternal],ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
+  registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,[se_alterContextState,se_writeFile],ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
                                                                      '#//Give an additional expression(1) parameter for progress output');
-  registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,[se_readingExternal,se_writingInternal],ak_unary,'loadImage(filename:string);//Loads image from the given file');
-  registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,[se_readingInternal,se_writingExternal],ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
-  registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,[se_writingInternal],ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
-  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,[se_readingInternal],ak_nullary,'imageSize;//Returns the size as [width,height] of the current image.');
-  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,[se_readingInternal,se_writingInternal],ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
-  registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,[se_readingInternal,se_writingInternal],ak_nullary,'displayImage;//Displays the current image.');
-  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,[se_readingInternal],ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
+  registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,[se_alterContextState,se_readFile],ak_unary,'loadImage(filename:string);//Loads image from the given file');
+  registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,[se_writeFile],ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
+  registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,[se_alterContextState],ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
+  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,[],ak_nullary,'imageSize;//Returns the size as [width,height] of the current image.');
+  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,[se_alterContextState],ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
+  registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,[se_alterPlotState],ak_nullary,'displayImage;//Displays the current image.');
+  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,[],ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,[],ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
-  registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,[se_readingExternal],ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
+  registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,[se_readFile],ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.

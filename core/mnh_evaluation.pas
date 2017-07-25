@@ -412,8 +412,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   PROCEDURE applyMutation;
     VAR newValue:P_literal;
     begin
-      if not(se_writingInternal in context.sideEffectWhitelist) then begin
-        context.raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,first^.location, [se_writingInternal]);
+      if not(se_alterPackageState in context.sideEffectWhitelist) then begin
+        context.raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,first^.location, [se_alterPackageState]);
         exit;
       end;
       newValue:=first^.next^.data;
@@ -443,8 +443,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
             first^.data:=newValue;
           end;
         end else begin
-          if not(se_writingInternal in context.sideEffectWhitelist) then begin
-            context.raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,first^.location,[se_writingInternal]);
+          if not(se_alterPackageState in context.sideEffectWhitelist) then begin
+            context.raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,first^.location,[se_alterPackageState]);
             exit;
           end;
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
@@ -1267,7 +1267,7 @@ FUNCTION async_imp intFuncSignature;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_writingInternal,se_detaching],ak_variadic_1,
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_detaching],ak_variadic_1,
                'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
 end.
