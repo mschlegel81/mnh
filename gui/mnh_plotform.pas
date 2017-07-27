@@ -91,7 +91,6 @@ TYPE
     fpsSamplingStart:double;
     framesSampled:longint;
     FUNCTION getPlotQuality:byte;
-    { private declarations }
   public
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
@@ -99,7 +98,6 @@ TYPE
     PROCEDURE doOrPostPlot();
     FUNCTION timerTick:boolean;
     FUNCTION wantTimerInterval:longint;
-    { public declarations }
   end;
 
 VAR guiAdapters:P_adapters;
@@ -299,11 +297,12 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: integer);
+PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
-    p:=guiAdapters^.plot^.options.screenToReal(x,y);
+    if (animationFrameIndex>=0) and (animationFrameIndex<animation.frameCount)
+    then p:=animation.screenToReal(animationFrameIndex,x,y)
+    else p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
       if (x<>lastMouseX) or (y<>lastMouseY) then begin
@@ -458,8 +457,8 @@ FUNCTION TplotForm.timerTick:boolean;
       animation.nextFrame(animationFrameIndex);
       animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
       inc(framesSampled);
-      if now-fpsSamplingStart>1/(24*60*60) then begin
-        animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+' FPS';
+      if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
+        animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
         fpsSamplingStart:=now;
         framesSampled:=0;
       end;
@@ -468,10 +467,10 @@ FUNCTION TplotForm.timerTick:boolean;
   end;
 
 FUNCTION TplotForm.wantTimerInterval: longint;
+  CONST intendedMsPerFrame:array[0..10] of longint=(2000,1000,500,200,100,50,30,20,15,10,1);
   begin
-    if animateCheckBox.Checked then result:=animationSpeedTrackbar.position*10
+    if animateCheckBox.Checked then result:=intendedMsPerFrame[animationSpeedTrackbar.position]
                                else result:=50;
-    if result<=0 then result:=1;
   end;
 
 FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;

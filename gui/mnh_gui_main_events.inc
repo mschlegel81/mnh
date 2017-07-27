@@ -406,7 +406,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       checkForFileChanges;
     end;
     if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
-    if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval;
+    if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
+    else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);

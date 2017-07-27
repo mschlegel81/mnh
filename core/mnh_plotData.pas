@@ -56,6 +56,7 @@ TYPE
         quality:byte;
         plotData:T_plot;
       end;
+      seriesCs:TRTLCriticalSection;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -64,6 +65,7 @@ TYPE
       PROCEDURE getFrame(CONST target:TImage; CONST frameIndex:longint; CONST quality:byte);
       PROCEDURE addFrame(VAR plot:T_plot);
       PROCEDURE nextFrame(VAR frameIndex:longint);
+      FUNCTION screenToReal(CONST animationFrameIndex,x,y:longint):T_point;
   end;
 
 IMPLEMENTATION
@@ -72,31 +74,41 @@ VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 CONSTRUCTOR T_plotSeries.create;
   begin
     setLength(frame,0);
+    initCriticalSection(seriesCs);
   end;
 
 DESTRUCTOR T_plotSeries.destroy;
   begin
     clear;
+    doneCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.clear;
   VAR i:longint;
   begin
+    enterCriticalSection(seriesCs);
     for i:=0 to length(frame)-1 do with frame[i] do begin
       if image<>nil then FreeAndNil(image);
       plotData.destroy;
     end;
     setLength(frame,0);
+    leaveCriticalSection(seriesCs);
   end;
 
 FUNCTION T_plotSeries.frameCount: longint;
   begin
+    enterCriticalSection(seriesCs);
     result:=length(frame);
+    leaveCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.getFrame(CONST target: TImage; CONST frameIndex: longint; CONST quality: byte);
   begin
-    if (frameIndex<0) or (frameIndex>=length(frame)) then exit;
+    enterCriticalSection(seriesCs);
+    if (frameIndex<0) or (frameIndex>=length(frame)) then begin
+      leaveCriticalSection(seriesCs);
+      exit;
+    end;
     with frame[frameIndex] do if (image<>nil) and
         ((image.width <>target.width) or
          (image.height<>target.height)) then FreeAndNil(image);
@@ -108,27 +120,36 @@ PROCEDURE T_plotSeries.getFrame(CONST target: TImage; CONST frameIndex: longint;
       frame[frameIndex].quality:=quality;
     end;
     target.Canvas.draw(0,0,frame[frameIndex].image.picture.Bitmap);
+    leaveCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   VAR newIdx:longint;
   begin
+    enterCriticalSection(seriesCs);
     newIdx:=length(frame);
-    writeln('T_plotSeries.addFrame - new frame index=',newIdx);
     setLength(frame,newIdx+1);
     frame[newIdx].plotData.createWithDefaults;
     frame[newIdx].plotData.CopyFrom(plot);
     frame[newIdx].quality:=255;
     frame[newIdx].image:=nil;
+    leaveCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.nextFrame(VAR frameIndex: longint);
   begin
+    enterCriticalSection(seriesCs);
     if length(frame)=0 then frameIndex:=-1
     else begin
       inc(frameIndex);
       if frameIndex>=length(frame) then frameIndex:=0;
     end;
+    leaveCriticalSection(seriesCs);
+  end;
+
+FUNCTION T_plotSeries.screenToReal(CONST animationFrameIndex, x, y:longint): T_point;
+  begin
+    result:=frame[animationFrameIndex].plotData.scalingOptions.screenToReal(x,y);
   end;
 
 CONSTRUCTOR T_plot.createWithDefaults;
