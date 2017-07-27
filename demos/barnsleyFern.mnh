@@ -1,22 +1,22 @@
-private interlace(X,Y)->[0..size(X)-1].each(i,[X.get(i),Y.get(i)]);
-
 private barnsleyFern(sampleCount)->begin
   local x:=random(1);
   local y:=random(1);
   while (size(x)<=sampleCount, begin
-    local p1:=random(size(x))<0.01;
-    local p2:=random(size(x))<0.11;
-    local xNew:=flatten(   0*x.get(p1), 0.85*x+0.04*y    ,0.20*x.get(p2)-0.26*y.get(p2)    ,-0.15*x.get(p2)+0.28*y.get(p2)     );
-    y:=         flatten(0.16*y.get(p1),-0.04*x+0.85*y+1.6,0.23*x.get(p2)+0.22*y.get(p2)+1.6, 0.26*x.get(p2)+0.24*y.get(p2)+0.44);
+    local p1:=random(size(x))<0.02;
+    local p2:=random(size(x))<0.17;
+    local x1:=x[p1]; local y1:=y[p1];
+    local x2:=x[p2]; local y2:=y[p2];
+    local xNew:=flatten(   0*x1, 0.85*x+0.04*y    ,0.20*x2-0.26*y2    ,-0.15*x2+0.28*y2     );
+    y:=         flatten(0.16*y1,-0.04*x+0.85*y+1.6,0.23*x2+0.22*y2+1.6, 0.26*x2+0.24*y2+0.44);
     x:=xNew;
   end);
-  interlace(x,y);
+  transpose([x,y]);
 end;
 
 private main_impl(filename:string,xRes:int,yRes:int)->begin
   plot.setOptions([['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]);
   plot.plot(barnsleyFern(100000),"0.2 . green");
-  plot.renderToFile(filename,xRes,yRes,4);
+  plot.renderToFile(filename,xRes,yRes,1);
 end;
 
 //@demo_for=fractal, plotting
@@ -27,4 +27,4 @@ main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,
 //*Plots a Barnsley Fern to file <code>filename</code> using a resolution of 768x768
 main(filename           )->main_impl(filename                        ,768,768);
 //*Plots a Barnsley Fern using the package path and a resolution of 768x768
-main                     ->main_impl(replace(myPath&"#","mnh#","png"),768,768);
+main                     ->main_impl(changeFileExt(myPath,'.png'),768,768);

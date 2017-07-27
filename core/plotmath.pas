@@ -28,7 +28,7 @@ TYPE
   T_axisTrafo=object
     private
       logs:boolean;
-      range:array[0..1] of double;
+      rangeByAutosize,rangeByUser:array[0..1] of double;
       screenRange:array[0..1] of longint;
 
       factor,offset:double;
@@ -46,8 +46,8 @@ TYPE
       PROCEDURE reset;
 
       PROPERTY logscale:boolean read logs write setLogScale;
-      PROPERTY worldMin:double read range[0] write setWorldMin;
-      PROPERTY worldMax:double read range[1] write setWorldMax;
+      PROPERTY worldMin:double read rangeByUser[0] write setWorldMin;
+      PROPERTY worldMax:double read rangeByUser[1] write setWorldMax;
       PROPERTY screenMin:longint read screenRange[0] write setScreenMin;
       PROPERTY screenMax:longint read screenRange[1] write setScreenMax;
       FUNCTION screenExtend:longint;
@@ -67,9 +67,6 @@ TYPE
   end;
 
   T_allSamples=array of T_sampleRow;
-
-  { T_scalingOptions }
-
   T_scalingOptions=object
     autoscale: array['x'..'y'] of boolean;
     preserveAspect  : boolean;
@@ -79,7 +76,7 @@ TYPE
     axisStyle:array['x'..'y'] of T_gridStyle;
 
     PROCEDURE updateForPlot(CONST Canvas:TCanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
-    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:longint):T_rowToPaint;
+    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
   end;
@@ -103,8 +100,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         result[axis,0]:= infinity;
         result[axis,1]:=-infinity;
       end else begin
-        result[axis,0]:=axisTrafo[axis].range[0];
-        result[axis,1]:=axisTrafo[axis].range[1];
+        result[axis,0]:=axisTrafo[axis].rangeByUser[0];
+        result[axis,1]:=axisTrafo[axis].rangeByUser[1];
       end;
       for row in samples do for point in row.sample do begin
         x:=point[0]; if (x<MIN_VALUE_FOR[axisTrafo['x'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['x'].logs]) then continue;
@@ -137,36 +134,20 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         range['x', 1]:=center+extend;
       end;
 
-    PROCEDURE harmonizeScale(VAR range:T_boundingBox; CONST xStretch,yStretch:double);
-      VAR center, extend: double;
-          xCorrection,yCorrection:double;
-      begin
-        if abs(xStretch/yStretch-1)>0.01 then begin
-          xCorrection:=sqrt(yStretch/xStretch);
-          yCorrection:=1/xCorrection;
-          center:=(range['x',1]+range['x',0])*0.5;
-          extend:=(range['x',1]-range['x',0])*0.5;
-          range['x', 0]:=center-extend*xCorrection;
-          range['x', 1]:=center+extend*xCorrection;
-          center:=(range['y',1]+range['y',0])*0.5;
-          extend:=(range['y',1]-range['y',0])*0.5;
-          range['y', 0]:=center-extend*yCorrection;
-          range['y', 1]:=center+extend*yCorrection;
-        end;
-      end;
-
   PROCEDURE prepareRanges;
     VAR axis:char;
         boundingBox:T_boundingBox;
         i:longint;
         tmp:double;
     begin
-      boundingBox:=getSamplesBoundingBox;
+      if autoscale['x'] or autoscale['y']
+      then boundingBox:=getSamplesBoundingBox
+      else for axis:='x' to 'y' do for i:=0 to 1 do boundingBox[axis,i]:=axisTrafo[axis].rangeByUser[i];
       //Stretch bounding box, potentially transform to logscale:----------------------------------
       if (validSampleCount>=1) then for axis:='x' to 'y' do begin
         for i:=0 to 1 do begin
           if isNan(boundingBox[axis,i]) or isInfinite(boundingBox[axis,i])
-          then boundingBox[axis,i]:=axisTrafo[axis].range[i];
+          then boundingBox[axis,i]:=axisTrafo[axis].rangeByUser[i];
           if axisTrafo[axis].logs then boundingBox[axis,i]:=ln(boundingBox[axis,i]);
         end;
         tmp:=(boundingBox[axis,1]-boundingBox[axis,0])*(1-autoscaleFactor);
@@ -185,9 +166,12 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
               else autoscaleByY(boundingBox);
             end else autoscaleByX(boundingBox);
           end else if autoscale['y'] then autoscaleByY(boundingBox);
-        end else harmonizeScale(boundingBox,
-                               (boundingBox['x',1]-boundingBox['x',0])/axisTrafo['x'].screenExtend,
-                               (boundingBox['y',1]-boundingBox['y',0])/axisTrafo['y'].screenExtend);
+        end else begin
+          if (boundingBox['x',1]-boundingBox['x',0])/axisTrafo['x'].screenExtend>
+             (boundingBox['y',1]-boundingBox['y',0])/axisTrafo['y'].screenExtend
+          then autoscaleByX(boundingBox)
+          else autoscaleByY(boundingBox);
+        end;
       end;
       //-------------------------------:Adapt bounding box to respect preservation of aspect ratio
       for axis:='x' to 'y' do begin
@@ -245,8 +229,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
       VAR j: longint;
       begin
         setLength(grid[axis], 0);
-        for j:=floor(axisTrafo[axis].range[0]*pot10(-power)) to
-                ceil(axisTrafo[axis].range[1]*pot10(-power)) do
+        for j:=floor(axisTrafo[axis].rangeByAutosize[0]*pot10(-power)) to
+                ceil(axisTrafo[axis].rangeByAutosize[1]*pot10(-power)) do
         if j mod minorTicRest = 0 then addTic(pot10(power)*j, niceText(j div 10, power+1), (j mod majorTicRest) = 0);
       end;
 
@@ -256,20 +240,20 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
       begin
         setLength(grid[axis], 0);
         if ppot=-1 then begin
-          for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                  ceil(ln(axisTrafo[axis].range[1])/ln(10)) do for j:=1 to 9 do
+          for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                  ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do for j:=1 to 9 do
             addTic(pot10(i)*j,niceText(j,i),true);
         end else if ppot=0 then begin
-          for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                  ceil(ln(axisTrafo[axis].range[1])/ln(10)) do for j:=1 to 9 do
+          for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                  ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do for j:=1 to 9 do
             addTic(pot10(i)*j,niceText(j,i),j in [1,2,5]);
         end else if ppot=1 then begin
-          for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                  ceil(ln(axisTrafo[axis].range[1])/ln(10)) do for j:=1 to 9 do
+          for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                  ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do for j:=1 to 9 do
             addTic(pot10(i)*j,niceText(j,i),j=1);
         end else begin
-          for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                  ceil(ln(axisTrafo[axis].range[1])/ln(10)) do
+          for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                  ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do
             if (i mod (ppot-1)=0) then addTic(pot10(i),niceText(1,i),i mod ppot=0);
         end;
       end;
@@ -289,8 +273,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
       if axisTrafo[axis].logscale then begin
         //Tics: ... 0.5 0.6 0.7 0.8 0.9 1 2 3 4 5 ...
         k:=0;
-        for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                ceil(ln(axisTrafo[axis].range[1])/ln(10)) do for j:=1 to 9 do
+        for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do for j:=1 to 9 do
         if axisTrafo[axis].sampleIsInRange(pot10(i)*j) then inc(k);
         if k<15 then begin
           initLogTics(-1);
@@ -298,8 +282,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         end;
         //Tics: ... 0.5 1 2 5 10 20 50 ...
         k:=0;
-        for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                ceil(ln(axisTrafo[axis].range[1])/ln(10)) do for j:=1 to 5 do
+        for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do for j:=1 to 5 do
         if (j in [1,2,5]) and axisTrafo[axis].sampleIsInRange(pot10(i)*j) then inc(k);
         if k<15 then begin
           initLogTics(0);
@@ -308,8 +292,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         //Tics: ... 0.01 0.1 1 10 100 ...
         for j:=1 to 60 do begin
           k:=0;
-          for i:=floor(ln(axisTrafo[axis].range[0])/ln(10)) to
-                  ceil(ln(axisTrafo[axis].range[1])/ln(10)) do
+          for i:=floor(ln(axisTrafo[axis].rangeByAutosize[0])/ln(10)) to
+                  ceil(ln(axisTrafo[axis].rangeByAutosize[1])/ln(10)) do
           if (i mod j = 0) and axisTrafo[axis].sampleIsInRange(pot10(i)*j) then inc(k);
           if k<15 then begin
             initLogTics(j);
@@ -318,9 +302,9 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         end;
       end else begin
         if (preserveAspect)
-        then logRange:=0.5*(log10(axisTrafo['x'].range[1]-axisTrafo['x'].range[0])
-                           +log10(axisTrafo['y'].range[1]-axisTrafo['y'].range[0]))
-        else logRange:=log10(axisTrafo[axis].range[1]-axisTrafo[axis].range[0]);
+        then logRange:=0.5*(log10(axisTrafo['x'].rangeByAutosize[1]-axisTrafo['x'].rangeByAutosize[0])
+                           +log10(axisTrafo['y'].rangeByAutosize[1]-axisTrafo['y'].rangeByAutosize[0]))
+        else logRange:=log10(axisTrafo[axis].rangeByAutosize[1]-axisTrafo[axis].rangeByAutosize[0]);
         try
           i:=round(logRange-1.8);
         except
@@ -337,10 +321,10 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
   FUNCTION updateBorders:boolean;
     VAR newX0,newY0:longint;
     begin
-      if gse_tics in axisStyle['x']
+      if gse_tics in axisStyle['y']
       then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
       else newX0:=0;
-      if gse_tics in axisStyle['y']
+      if gse_tics in axisStyle['x']
       then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
       else newY0:=aimHeight;
 
@@ -388,17 +372,16 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
     end;
   end;
 
-FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow;
-  CONST scalingFactor: longint): T_rowToPaint;
+FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double): T_rowToPaint;
   VAR i:longint;
       tx,ty:double;
   begin
     setLength(result,length(row));
     for i:=0 to length(row)-1 do begin
-      tx:=axisTrafo['x'].apply(row[i,0])*scalingFactor;
+      tx:=axisTrafo['x'].apply(row[i,0])*scalingFactor+subPixelDx;
       result[i].valid:=not(isNan(tx)) and (tx>=-2147483648) and (tx<=2147483647);
       if not(result[i].valid) then continue;
-      ty:=axisTrafo['y'].apply(row[i,1])*scalingFactor;
+      ty:=axisTrafo['y'].apply(row[i,1])*scalingFactor+subPixelDy;
       result[i].valid:=not(isNan(ty)) and (ty>=-2147483648) and (ty<=2147483647);
       if not(result[i].valid) then continue;
       result[i].x:=round(tx);
@@ -417,7 +400,7 @@ FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
   begin
     tempStyle.create(0);
     tempStyle.styleModifier:=relativeFontSize;
-    result:=tempStyle.getLineScaleAndColor(xRes,yRes).fontSize;
+    result:=tempStyle.getLineScaleAndColor(xRes,yRes,0).fontSize;
     tempStyle.destroy;
   end;
 
@@ -441,11 +424,11 @@ PROCEDURE T_axisTrafo.prepare;
     //     = x/(worldRangeMax-worldRangeMin)*(screenRangeMax-screenRangeMin) + screenRangeMin - worldRangeMin/(worldRangeMax-worldRangeMin)*(screenRangeMax-screenRangeMin);
     //       x*factor                                                        + offset
     if logscale then begin
-      x0:=ln(range[0])/ln(10);
-      x1:=ln(range[1])/ln(10);
+      x0:=ln(rangeByAutosize[0])/ln(10);
+      x1:=ln(rangeByAutosize[1])/ln(10);
     end else begin
-      x0:=range[0];
-      x1:=range[1];
+      x0:=rangeByAutosize[0];
+      x1:=rangeByAutosize[1];
     end;
     factor:=(screenRange[1]-screenRange[0])/(x1-x0);
     offset:=screenRange[0]-factor*x0;
@@ -455,38 +438,35 @@ PROCEDURE T_axisTrafo.prepare;
 PROCEDURE T_axisTrafo.setLogScale(CONST value: boolean);
   begin
     logs:=value;
-    if not(isValidMinimum(range[0])) then range[0]:=MIN_VALUE_FOR[value];
-    if not(isValidMaximum(range[1])) then range[1]:=MAX_VALUE_FOR[value];
+    if not(isValidMinimum(rangeByUser[0])) then rangeByUser[0]:=MIN_VALUE_FOR[value];
+    if not(isValidMaximum(rangeByUser[1])) then rangeByUser[1]:=MAX_VALUE_FOR[value];
     if value then begin
-      if range[1]<range[0]*10 then range[1]:=range[0]*10;
+      if rangeByUser[1]<rangeByUser[0]*10 then rangeByUser[1]:=rangeByUser[0]*10;
     end else begin
-      if range[1]<range[0]+abs(range[0])*0.00001 then range[1]:=range[0]+abs(range[0])*0.00001;
+      if rangeByUser[1]<rangeByUser[0]+abs(rangeByUser[0])*0.00001 then rangeByUser[1]:=rangeByUser[0]+abs(rangeByUser[0])*0.00001;
     end;
-    prepare;
   end;
 
 PROCEDURE T_axisTrafo.setWorldMin(CONST value: double);
   begin
     if not(isValidMinimum(value)) then exit;
-    range[0]:=value;
+    rangeByUser[0]:=value;
     if logscale then begin
-      if range[1]<range[0]*10 then range[1]:=range[0]*10;
+      if rangeByUser[1]<rangeByUser[0]*10 then rangeByUser[1]:=rangeByUser[0]*10;
     end else begin
-      if range[1]<range[0]+abs(range[0])*0.00001 then range[1]:=range[0]+abs(range[0])*0.00001;
+      if rangeByUser[1]<rangeByUser[0]+abs(rangeByUser[0])*0.00001 then rangeByUser[1]:=rangeByUser[0]+abs(rangeByUser[0])*0.00001;
     end;
-    prepare;
   end;
 
 PROCEDURE T_axisTrafo.setWorldMax(CONST value: double);
   begin
     if not(isValidMaximum(value)) then exit;
-    range[1]:=value;
+    rangeByUser[1]:=value;
     if logscale then begin
-      if range[1]<range[0]*10 then range[0]:=range[1]/10;
+      if rangeByUser[1]<rangeByUser[0]*10 then rangeByUser[0]:=rangeByUser[1]/10;
     end else begin
-      if range[1]<range[0]+abs(range[0])*0.00001 then range[0]:=range[1]-abs(range[0])*0.00001;
+      if rangeByUser[1]<rangeByUser[0]+abs(rangeByUser[0])*0.00001 then rangeByUser[0]:=rangeByUser[1]-abs(rangeByUser[0])*0.00001;
     end;
-    prepare;
   end;
 
 PROCEDURE T_axisTrafo.setWorldRange(CONST x0, x1: double);
@@ -495,20 +475,20 @@ PROCEDURE T_axisTrafo.setWorldRange(CONST x0, x1: double);
     if logscale then begin
       if x1<x0*10 then begin
         xc:=sqrt(x0*x1);
-        range[0]:=xc/sqrt(10);
-        range[1]:=xc*sqrt(10);
+        rangeByAutosize[0]:=xc/sqrt(10);
+        rangeByAutosize[1]:=xc*sqrt(10);
       end else begin
-        range[0]:=x0;
-        range[1]:=x1;
+        rangeByAutosize[0]:=x0;
+        rangeByAutosize[1]:=x1;
       end;
     end else begin
       xc:=(x0+x1)*0.5;
       if x1<x0+abs(xc)*0.00001 then begin
-        range[0]:=xc-abs(xc)*0.000005;
-        range[1]:=xc+abs(xc)*0.000005;
+        rangeByAutosize[0]:=xc-abs(xc)*0.000005;
+        rangeByAutosize[1]:=xc+abs(xc)*0.000005;
       end else begin
-        range[0]:=x0;
-        range[1]:=x1;
+        rangeByAutosize[0]:=x0;
+        rangeByAutosize[1]:=x1;
       end;
     end;
     prepare;
@@ -539,8 +519,9 @@ FUNCTION T_axisTrafo.isValidMaximum(CONST x: double): boolean;
 PROCEDURE T_axisTrafo.reset;
   begin
     logs:=false;
-    range[0]:=-1;
-    range[1]:=1;
+    rangeByUser[0]:=-1;
+    rangeByUser[1]:=1;
+    rangeByAutosize:=rangeByUser;
     screenRange[0]:=0;
     screenRange[1]:=100;
     prepare;
@@ -573,15 +554,16 @@ PROCEDURE T_axisTrafo.zoom(CONST screenCoordinate: longint;
     hold:=applyInverse(screenCoordinate);
     if logscale then begin
       hold    :=ln(hold);
-      range[0]:=ln(range[0]);
-      range[1]:=ln(range[1]);
+      rangeByAutosize[0]:=ln(rangeByAutosize[0]);
+      rangeByAutosize[1]:=ln(rangeByAutosize[1]);
     end;
-    range[0]:=(range[0]-hold)*zoomFactor+hold;
-    range[1]:=(range[1]-hold)*zoomFactor+hold;
+    rangeByAutosize[0]:=(rangeByAutosize[0]-hold)*zoomFactor+hold;
+    rangeByAutosize[1]:=(rangeByAutosize[1]-hold)*zoomFactor+hold;
     if logscale then begin
-      range[0]:=exp(range[0]);
-      range[1]:=exp(range[1]);
+      rangeByAutosize[0]:=exp(rangeByAutosize[0]);
+      rangeByAutosize[1]:=exp(rangeByAutosize[1]);
     end;
+    rangeByUser:=rangeByAutosize;
     prepare;
   end;
 
@@ -591,18 +573,19 @@ PROCEDURE T_axisTrafo.pan(CONST screenDelta: longint);
     worldDelta:=screenDelta/factor;
     if logscale then begin
       worldDelta:=exp(worldDelta);
-      range[0]:=range[0]*worldDelta;
-      range[1]:=range[1]*worldDelta;
+      rangeByAutosize[0]:=rangeByAutosize[0]*worldDelta;
+      rangeByAutosize[1]:=rangeByAutosize[1]*worldDelta;
     end else begin
-      range[0]:=range[0]+worldDelta;
-      range[1]:=range[1]+worldDelta;
+      rangeByAutosize[0]:=rangeByAutosize[0]+worldDelta;
+      rangeByAutosize[1]:=rangeByAutosize[1]+worldDelta;
     end;
+    rangeByUser:=rangeByAutosize;
     prepare;
   end;
 
 FUNCTION T_axisTrafo.sampleIsInRange(CONST x: double): boolean;
   begin
-    result:=not(isNan(x)) and (x>=range[0]) and (x<=range[1]);
+    result:=not(isNan(x)) and (x>=rangeByAutosize[0]) and (x<=rangeByAutosize[1]);
   end;
 end.
 

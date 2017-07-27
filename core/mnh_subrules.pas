@@ -1190,7 +1190,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       while stillOk and (length(dataRow)<samples) do begin
         //Prepare threshold:----------------------------------------------------
-        screenRow:=context.adapters^.plot^.options.transformRow(dataRow,1);
+        screenRow:=context.adapters^.plot^.options.transformRow(dataRow,1,0,0);
         for i:=1 to length(dataRow)-1 do
         if screenRow[i-1].valid and screenRow[i].valid then begin
           distThreshold:=distThreshold+sqr(screenRow[i].x-screenRow[i-1].x)

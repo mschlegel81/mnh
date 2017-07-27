@@ -622,7 +622,7 @@ evil, levi, live, veil, vile
 ][]][][[][[[]]   NOT o.k.
 [[]]]][[][]][[][ NOT o.k.
 ***** barnsleyFern *****
-png hash: DE316142
+png hash: 366169DD
 ***** benford *****
 actual expected
    300   301.03
@@ -924,7 +924,7 @@ The solutions for 3..9 (unique) are:
   [9,6,4,5,3,7,8]
 The number of solutions for 0..9 (nonunique) is: 2860
 ***** fractalPlant *****
-png hash: D2104128
+png hash: D337C9EE
 ***** fractran *****
 0: 2^1 = 2
 1: 3^1*5^1 = 15
@@ -1433,50 +1433,12 @@ The first Harshad Number >1000 is 1002
 ***** hash *****
 982D6E49
 ***** hashJoin *****
-Table A:
-Age | Name
-----+-------
-27  | Jonah
-18  | Alan
-28  | Glory
-18  | Popeye
-28  | Alan
-
-Table B:
-Character | Nemesis
-----------+--------
-Jonah     | Whales
-Jonah     | Spiders
-Alan      | Ghosts
-Alan      | Zombies
-Glory     | Buffy
-Me        | Things
-
-Inner join:
-A.Age | A.Name | B.Character | B.Nemesis
-------+--------+-------------+----------
-27    | Jonah  | Jonah       | Whales
-27    | Jonah  | Jonah       | Spiders
-18    | Alan   | Alan        | Ghosts
-18    | Alan   | Alan        | Zombies
-28    | Glory  | Glory       | Buffy
-28    | Alan   | Alan        | Ghosts
-28    | Alan   | Alan        | Zombies
-
-Outer join:
-A.Age | A.Name | B.Character | B.Nemesis
-------+--------+-------------+----------
-27    | Jonah  | Jonah       | Whales
-27    | Jonah  | Jonah       | Spiders
-18    | Alan   | Alan        | Ghosts
-18    | Alan   | Alan        | Zombies
-28    | Glory  | Glory       | Buffy
-18    | Popeye |             |
-28    | Alan   | Alan        | Ghosts
-28    | Alan   | Alan        | Zombies
-      |        | Me          | Things
+Cannot resolve ID "formatTable"
+Cannot resolve ID "formatTable"
+Cannot resolve ID "formatTable"
+Cannot resolve ID "formatTable"
 ***** heart *****
-png hash: F60A43E6
+png hash: C763C33D
 ***** helloWorld *****
 Hello world
 ***** hereDoc *****
@@ -1597,7 +1559,7 @@ Survivors: [30]
 ***** kaprekar *****
 The Kaprekar numbers up to 10000 are [1,9,45,55,99,297,703,999,2223,2728,4879,4950,5050,5292,7272,7777,9999]
 ***** kochCurve *****
-png hash: 5B38376D
+png hash: 627B79EB
 ***** lastSundays *****
 25.01.2015
 22.02.2015
@@ -1711,13 +1673,7 @@ Monty Hall Problem
   Probability to win without switching doors 33.333333333333329%
   Probability to win with switching          66.666666666666657%
 ***** multifactorial *****
-Degree | #1 | #2 | #3 | #4 | #5  | #6  | #7   | #8    | #9     | #10
--------+----+----+----+----+-----+-----+------+-------+--------+--------
-1      | 1  | 2  | 6  | 24 | 120 | 720 | 5040 | 40320 | 362880 | 3628800
-2      | 1  | 2  | 3  |  8 |  15 |  48 |  105 |   384 |    945 |    3840
-3      | 1  | 2  | 3  |  4 |  10 |  18 |   28 |    80 |    162 |     280
-4      | 1  | 2  | 3  |  4 |   5 |  12 |   21 |    32 |     45 |     120
-5      | 1  | 2  | 3  |  4 |   5 |   6 |   14 |    24 |     36 |      50
+Cannot resolve ID "formatTable"
 ***** numDiff *****
 The approximate taylor expansion of {$t^(1+sin($t))} around 1 is 
   {($x-1)^0*1.0+($x-1)^1*1.841552734375+($x-1)^2*1.3151092529296875+($x-1)^3*0.26312255859375+($x-1)^4*-0.39539845784505206+($x-1)^5*-0.3090026537577311}
@@ -2035,7 +1991,7 @@ Root found at   0.0
 Root found at   1.0
 Root found at   2.0
 ***** rotatingCube *****
-png hash: C8606BFC
+png hash: 3264FE9D
 ***** selfRefSeq *****
 0099, 2029, 102219, 10212219, 10313219, 1031122319, 1041222319, 103132131419, 105112331419, 10511223141519, 10612213142519, 1051321314151619, 1071122314251619, 106132131415161719, 108112231415261719, 10713213141516171819, 10911223141516271819, 10813213141516171829, 10812223141516172819, 10714213141516172819, 10812213241516271819
 ***** semiprime *****
@@ -2145,7 +2101,7 @@ Consolidation of [{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]
 []  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  [][]  []
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
 ***** sierpinskiCurve *****
-png hash: D0FA89AC
+png hash: 5DB8B183
 ***** sierpinskiTriangle *****
                                A                                                               
                               A A                                                             
@@ -3251,7 +3207,7 @@ Show the ten highest numbers that can be expressed
 ***** travellingSalesmanProblem *****
 Path length after construction is 32.932
 Path length after polishing is    31.739
-png hash: F1CB4E59
+png hash: 87C45502
 ***** treePrint *****
 \
 +--1
@@ -3272,7 +3228,7 @@ There are 671 left truncatable primes, the largest of which is 998443
 There are 70 right truncatable primes, the largest of which is 739399
 The largest prime which is both left- and right truncatable is 739397
 ***** turtleGfx *****
-png hash: 427DABDB
+png hash: 5C3F22AD
 ***** ulam *****
           XX                                        XX          XX                      XX          XX                  
                    XX                XX          XX    XX          XX                                        XX         
@@ -3723,7 +3679,7 @@ out> ['TEXT','ABC']
 in> t :=[0..1000]*2*pi/1000;
 in> plot(t, sin(t));
 out> void
-in> plot.renderToFile('plotDemo1.png', 600, 300, 4);
+in> plot.renderToFile('plotDemo1.png', 600, 300, 3);
 Image: \plotDemo1.png
 out> void
 in> abs({$x});

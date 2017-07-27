@@ -230,7 +230,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_output: writeWrapped(messageType,messageText);
         else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
       end;
-      lastWasDirectPrint:=messageType=mt_printdirect;
+      if messageType in [mt_clearConsole..mt_timing_info] then lastWasDirectPrint:=messageType=mt_printdirect;
     end;
     if result then clear;
     if wroteToSyn then begin

@@ -57,7 +57,7 @@ scriptFileName.skipFile
     local output:=printAndReturn(logName);
     local startTime:=time;
     output|=runScript(scriptFileName,testParameters(scriptFileName),true)
-            .filter({$e.head=='printline'})
+            .filter({$e.head=='printline' OR $e.head.matches('[E|e]rror')})
             .getInner(2)
             .split("\n")
             .flatten;
