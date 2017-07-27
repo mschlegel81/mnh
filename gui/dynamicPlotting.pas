@@ -111,7 +111,7 @@ FUNCTION isPlotInteractive: boolean;
 FUNCTION isCustomEventEnabled(CONST index: byte; OUT caption: string): boolean;
   begin
     caption:='';
-    result:=(index<length(customEventName)) and (customEventName[index]<>'');
+    result:=dynamicPlotLoopRunning.value and (index<length(customEventName)) and (customEventName[index]<>'');
     if result then caption:=customEventName[index];
   end;
 
@@ -251,6 +251,7 @@ FUNCTION dynamicPlot_impl intFuncSignature;
       if allOkay and applyParameters then doInteractiveLoop;
       result:=newBoolLiteral(allOkay);
       leaveCriticalSection(setupCs);
+      for i:=0 to length(customEventName)-1 do customEventName[i]:='';
     end;
   end;
 

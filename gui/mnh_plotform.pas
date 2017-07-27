@@ -184,6 +184,10 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
     miIncFontSize.ShortCut:=16605;
     {$endif}
     position:=poDefault;
+    if InteractionPanel.visible then begin
+      InteractionPanel.AutoSize:=false;
+      InteractionPanel.AutoSize:=true;
+    end;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
@@ -405,7 +409,7 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
       if not(InteractionPanel.visible) then begin
         InteractionPanel.height:=0;
         exit;
-      end else InteractionPanel.AutoSize:=true;
+      end;
       AnimationGroupBox.visible:=(animation.frameCount>0);
       AnimationGroupBox.enabled:=(animation.frameCount>0);
       ButtonLeaveInteractiveMode.visible:=isPlotInteractive;
@@ -419,7 +423,6 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
       end;
       InteractiveLabel.height:=0;
       InteractiveLabel.Constraints.MinHeight:=0;
-      InteractiveLabel.AutoSize:=true;
     end;
 
   begin
