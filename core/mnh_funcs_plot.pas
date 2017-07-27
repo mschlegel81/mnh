@@ -220,7 +220,7 @@ FUNCTION resetOptions_impl intFuncSignature;
 
 FUNCTION renderToFile_impl intFuncSignature;
   VAR fileName: ansistring;
-      width, height, supersampling: longint;
+      width, height, quality: longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=3) and
@@ -232,14 +232,12 @@ FUNCTION renderToFile_impl intFuncSignature;
       fileName:=str0^.value;
       width:=int1^.value;
       height:=int2^.value;
-      if params^.size>3 then supersampling:=int3^.value
-                        else supersampling:=1;
-      if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
-        exit(nil);
-      end;
+      if params^.size>3 then quality:=int3^.value
+                        else quality:=0;
+      if (fileName = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       try
         fileName:=ChangeFileExt(fileName,'.png');
-        context.adapters^.plot^.renderToFile(fileName,width,height,supersampling);
+        context.adapters^.plot^.renderToFile(fileName,width,height,quality);
         context.adapters^.logPlotFileCreated(expandFileName(ChangeFileExt(fileName,'.png')),tokenLocation);
       except
         on e:Exception do begin
@@ -252,7 +250,7 @@ FUNCTION renderToFile_impl intFuncSignature;
   end;
 
 FUNCTION renderToString_impl intFuncSignature;
-  VAR width, height, supersampling: longint;
+  VAR width, height, quality: longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and
@@ -262,15 +260,10 @@ FUNCTION renderToString_impl intFuncSignature;
       (arg2^.literalType = lt_int)) then begin
       width:=int0^.value;
       height:=int1^.value;
-      if params^.size>2 then supersampling:=int2^.value
-                        else supersampling:=1;
-      if  (width<1) or (height<1) or (supersampling<1) then begin
-        context.adapters^.raiseError(
-          'Function renderToString expects parameters (filename,width,height,[supersampling]).',
-          tokenLocation);
-        exit(nil);
-      end;
-      result:=newStringLiteral(context.adapters^.plot^.renderToString(width,height,supersampling));
+      if params^.size>2 then quality:=int2^.value
+                        else quality:=0;
+      if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
+      result:=newStringLiteral(context.adapters^.plot^.renderToString(width,height,quality));
     end;
   end;
 
@@ -331,9 +324,9 @@ INITIALIZATION
   mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, [se_alterPlotState], ak_nullary,
     'resetOptions;//Sets the default plot options');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, [se_writeFile], ak_variadic_3,
-    'renderToFile(filename<>'',width>=1,height>=1,[supersampling]);//Renders the current plot to a file.');
+    'renderToFile(filename<>'',width>=1,height>=1,[quality in [0..3]]);//Renders the current plot to a file.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, [], ak_variadic_2,
-    'renderToString(width,height,[supersampling]);//Renders the current plot to a string.');
+    'renderToString(width,height,[quality in [0..3]]);//Renders the current plot to a string.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_alterPlotState], ak_nullary,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp, [se_outputViaAdapter], ak_nullary,

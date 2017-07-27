@@ -30,6 +30,7 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    miAntiAliasing4: TMenuItem;
     miIncFontSize: TMenuItem;
     miDecFontSize: TMenuItem;
     miAutoReset: TMenuItem;
@@ -50,8 +51,6 @@ TYPE
     miAntiAliasing1: TMenuItem;
     miAntiAliasing2: TMenuItem;
     miAntiAliasing3: TMenuItem;
-    miAntiAliasing4: TMenuItem;
-    miAntiAliasing5: TMenuItem;
     plotImage: TImage;
     StatusBar: TStatusBar;
     PROCEDURE ButtonLeaveInteractiveModeClick(Sender: TObject);
@@ -372,7 +371,10 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
         buttonCaption:string;
     begin
       InteractionPanel.visible:=isPlotInteractive;
-      if not(InteractionPanel.visible) then exit;
+      if not(InteractionPanel.visible) then begin
+        InteractionPanel.height:=0;
+        exit;
+      end else InteractionPanel.AutoSize:=true;
       InteractiveLabel.caption:=dynamicPlotLabelText.value;
       for i:=0 to 7 do begin
         CustomEventButton(i).visible:=isCustomEventEnabled(i,buttonCaption);
@@ -392,11 +394,10 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
       BringToFront;
       broughtToFront:=now;
     end;
-    if      miAntiAliasing5.Checked then factor:=5
-    else if miAntiAliasing4.Checked then factor:=4
-    else if miAntiAliasing3.Checked then factor:=3
-    else if miAntiAliasing2.Checked then factor:=2
-    else                                 factor:=1;
+    if      miAntiAliasing4.Checked then factor:=PLOT_QUALITY_HIGH
+    else if miAntiAliasing3.Checked then factor:=PLOT_QUALITY_MEDIUM_2
+    else if miAntiAliasing2.Checked then factor:=PLOT_QUALITY_MEDIUM_1
+    else                                 factor:=PLOT_QUALITY_LOW;
     if useTemporary then begin
       tempPlot.CopyFrom(guiAdapters^.plot^);
       guiAdapters^.resetFlagsAfterPlotDone;

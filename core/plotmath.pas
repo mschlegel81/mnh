@@ -67,9 +67,6 @@ TYPE
   end;
 
   T_allSamples=array of T_sampleRow;
-
-  { T_scalingOptions }
-
   T_scalingOptions=object
     autoscale: array['x'..'y'] of boolean;
     preserveAspect  : boolean;
@@ -79,7 +76,7 @@ TYPE
     axisStyle:array['x'..'y'] of T_gridStyle;
 
     PROCEDURE updateForPlot(CONST Canvas:TCanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
-    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:longint):T_rowToPaint;
+    FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
   end;
@@ -324,10 +321,10 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
   FUNCTION updateBorders:boolean;
     VAR newX0,newY0:longint;
     begin
-      if gse_tics in axisStyle['x']
+      if gse_tics in axisStyle['y']
       then newX0:=Canvas.Font.GetTextWidth(ticSampleText)+5
       else newX0:=0;
-      if gse_tics in axisStyle['y']
+      if gse_tics in axisStyle['x']
       then newY0:=aimHeight-Canvas.Font.GetTextHeight(ticSampleText)-5
       else newY0:=aimHeight;
 
@@ -375,17 +372,16 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
     end;
   end;
 
-FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow;
-  CONST scalingFactor: longint): T_rowToPaint;
+FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double): T_rowToPaint;
   VAR i:longint;
       tx,ty:double;
   begin
     setLength(result,length(row));
     for i:=0 to length(row)-1 do begin
-      tx:=axisTrafo['x'].apply(row[i,0])*scalingFactor;
+      tx:=axisTrafo['x'].apply(row[i,0])*scalingFactor+subPixelDx;
       result[i].valid:=not(isNan(tx)) and (tx>=-2147483648) and (tx<=2147483647);
       if not(result[i].valid) then continue;
-      ty:=axisTrafo['y'].apply(row[i,1])*scalingFactor;
+      ty:=axisTrafo['y'].apply(row[i,1])*scalingFactor+subPixelDy;
       result[i].valid:=not(isNan(ty)) and (ty>=-2147483648) and (ty<=2147483647);
       if not(result[i].valid) then continue;
       result[i].x:=round(tx);
@@ -404,7 +400,7 @@ FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
   begin
     tempStyle.create(0);
     tempStyle.styleModifier:=relativeFontSize;
-    result:=tempStyle.getLineScaleAndColor(xRes,yRes).fontSize;
+    result:=tempStyle.getLineScaleAndColor(xRes,yRes,0).fontSize;
     tempStyle.destroy;
   end;
 

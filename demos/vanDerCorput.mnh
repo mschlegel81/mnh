@@ -3,7 +3,7 @@ vanDerCorput(i:int,base:int)->digits(i,base).recompose(base);
 vanDerCorput(I:intList,base:int)->I.digits(base).pMap({recompose($digits,base)});
 
 plotIfPossible->mnhInfo['isFullVersion']
-                ? format("%{vanDerCorput([0..1000],2).plot('.')}s")
+                ? interpret("vanDerCorput([0..1000],2).plot('.')")
                 : void;
 
 //*See http://rosettacode.org/wiki/Van_der_Corput_sequence

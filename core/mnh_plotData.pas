@@ -4,7 +4,14 @@ USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
      myGenerics,myStringUtil,
      mnh_basicTypes, mnh_constants,
-     plotstyles,plotMath;
+     plotstyles,plotMath,plotMaps;
+TYPE
+  T_plotQuality=0..3;
+CONST
+  PLOT_QUALITY_LOW     =0;
+  PLOT_QUALITY_MEDIUM_1=1;
+  PLOT_QUALITY_MEDIUM_2=2;
+  PLOT_QUALITY_HIGH    =3;
 TYPE
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
@@ -18,10 +25,10 @@ TYPE
 
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
-      PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: longint; VAR gridTic: T_ticInfos);
+      PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
       PROCEDURE drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
       PROCEDURE drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
-      FUNCTION  obtainPlot(CONST width,height:longint; supersampling:longint):TImage;
+      FUNCTION  obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -35,7 +42,7 @@ TYPE
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
 
-      PROCEDURE renderPlot(VAR plotImage: TImage; supersampling:longint);
+      PROCEDURE renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
@@ -167,7 +174,12 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     system.leaveCriticalSection(cs);
   end; end;
 
-PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
+  CONST darts_delta:array[0..4,0..1] of single=(( 0.12, 0.24),
+                                                (-0.12,-0.24),
+                                                ( 0.24,-0.12),
+                                                (-0.24, 0.12),
+                                                (0,0));
   VAR rowId, i, yBaseLine:longint;
       lastX: longint = 0;
       lastY: longint = 0;
@@ -175,64 +187,62 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
       scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
 
-  PROCEDURE drawPatternRect(x0, y0, x1, y1: longint; CONST solid:boolean);
+  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST solid:boolean);
     VAR points:array[0..3] of TPoint;
     begin
+      if solid then target.Brush.style:=bsSolid
+               else target.Brush.style:=scaleAndColor.solidStyle;
+      if target.Brush.style=bsClear then exit;
+      target.Brush.color:=scaleAndColor.solidColor;
       points[0].x:=x0; points[0].y:=y0;
       points[1].x:=x0; points[1].y:=yBaseLine;
       points[2].x:=x1; points[2].y:=yBaseLine;
       points[3].x:=x1; points[3].y:=y1;
-      target.Brush.color:=scaleAndColor.solidColor;
-      if solid then target.Brush.style:=bsSolid else case byte(rowId and 3) of
-        0: target.Brush.style:=bsFDiagonal ;
-        1: target.Brush.style:=bsBDiagonal ;
-        2: target.Brush.style:=bsHorizontal;
-        3: target.Brush.style:=bsVertical  ;
-      end;
       target.Pen.style:=psClear;
       target.Polygon(points);
       target.Pen.style:=psSolid;
     end;
 
   begin
+    target.LockCanvas;
     //Clear:------------------------------------------------------------------
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
-    target.FillRect(0, 0, target.width-1, target.height-1);
+    target.FillRect(0, 0, intendedWidth*scalingFactor-1, intendedHeight*scalingFactor-1);
     target.clear;
     //------------------------------------------------------------------:Clear
     //coordinate grid:========================================================
     target.Pen.style:=psSolid;
     //minor grid:-------------------------------------------------------------
-    scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(target.width,target.height);
+    scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_fineGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if not(major) then begin
       lastY:=round(pos*scalingFactor);
-      target.line(0, lastY, target.width, lastY);
+      target.line(0, lastY, intendedWidth*scalingFactor, lastY);
     end;
     if (gse_fineGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if not(major) then begin
       lastX:=round(pos*scalingFactor);
-      target.line(lastX, 0, lastX, target.height);
+      target.line(lastX, 0, lastX, intendedHeight*scalingFactor);
     end;
     //-------------------------------------------------------------:minor grid
     //major grid:-------------------------------------------------------------
-    scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(target.width,target.height);
+    scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
       lastY:=round(pos*scalingFactor);
-      target.line(0, lastY, target.width, lastY);
+      target.line(0, lastY, intendedWidth*scalingFactor, lastY);
     end;
     if (gse_coarseGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
       lastX:=round(pos*scalingFactor);
-      target.line(lastX, 0, lastX, target.height);
+      target.line(lastX, 0, lastX, intendedHeight*scalingFactor);
     end;
     //-------------------------------------------------------------:major grid
     //========================================================:coordinate grid
@@ -240,14 +250,21 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
     then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin
     else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0)*scalingFactor);
     if      yBaseLine<0 then yBaseLine:=0
-    else if yBaseLine>=target.height then yBaseLine:=target.height-1;
+    else if yBaseLine>=intendedHeight*scalingFactor then yBaseLine:=intendedHeight*scalingFactor-1;
     //row data:===============================================================
     for rowId:=0 to length(row)-1 do begin
+      screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
+      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,sampleIndex);
       {$ifdef debugMode}
       writeln('Drawing row #',rowId,' with style: ',row[rowId].style.toString);
+      with scaleAndColor do writeln('Effective style; lineWidth=',lineWidth,
+                                                '; symbolRadius=',symbolRadius,
+                                                '; symbolWidth=',symbolWidth,
+                                                '; fontSize=',fontSize,
+                                                '; lineColor=',IntToHex(lineColor,8),
+                                                '; solidColor=',IntToHex(solidColor,8),
+                                                '; solidStyle=',solidStyle);
       {$endif}
-      screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor);
-      scaleAndColor:=row[rowId].style.getLineScaleAndColor(target.width,target.height);
 
       if ps_straight in row[rowId].style.style then begin
         target.Pen.style:=psSolid;
@@ -358,7 +375,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecSquare;
+        target.Pen.EndCap:=pecRound;
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
           target.line(screenRow[i].x-scaleAndColor.symbolWidth,
                       screenRow[i].y,
@@ -374,7 +391,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
-        target.Pen.EndCap:=pecSquare;
+        target.Pen.EndCap:=pecRound;
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
           target.line(screenRow[i].x-scaleAndColor.symbolRadius,
                       screenRow[i].y-scaleAndColor.symbolRadius,
@@ -399,6 +416,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: lon
       end;
     end;
     //===============================================================:row data
+    target.UnlockCanvas;
   end;
 
 PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
@@ -411,8 +429,8 @@ PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,inten
       {$ifdef debugMode}
       writeln('Drawing row #',rowId,' with style: ',row[rowId].style.toString);
       {$endif}
-      screenRow:=scalingOptions.transformRow(row[rowId].sample,1);
-      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth,intendedHeight);
+      screenRow:=scalingOptions.transformRow(row[rowId].sample,1,0,0);
+      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth,intendedHeight,SINGLE_SAMPLE_INDEX);
       lines:=split(row[rowId].style.txt);
       TextWidth :=0;
       TextHeight:=0;
@@ -444,33 +462,34 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
     target.Font.color:=clBlack;
     cSysX:=scalingOptions.axisTrafo['x'].screenMin;
     cSysY:=scalingOptions.axisTrafo['y'].screenMin;
-    //coordinate system:======================================================
     //clear border:-----------------------------------------------------------
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.width:=1;
     target.Pen.EndCap:=pecSquare;
-    if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,target.height);
-    if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,target.width,target.height);
+    if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,intendedHeight);
+    if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
     //-----------------------------------------------------------:clear border
+    //coordinate system:======================================================
     //axis:-------------------------------------------------------------------
     target.Pen.style:=psSolid;
     target.Pen.color:=clBlack;
     target.Pen.width:=1;
-    if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
-    if (scalingOptions.axisStyle['x']<>[]) then target.line(target.width, cSysY, cSysX, cSysY);
+    if (scalingOptions.axisStyle['x']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
+    if (scalingOptions.axisStyle['y']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
     //-------------------------------------------------------------------:axis
     //tics:-------------------------------------------------------------------
-    if (scalingOptions.axisStyle['y']<>[]) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
+    if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
       y:=round(pos);
       target.line(cSysX-5, y, cSysX, y);
-      if (gse_tics in scalingOptions.axisStyle['y']) then target.textOut(cSysX-5-target.TextWidth(txt), y-target.TextHeight(txt) shr 1, txt);
+      target.textOut(cSysX-5-target.TextWidth(txt),
+                          y-target.TextHeight(txt) shr 1, txt);
     end;
-    if (scalingOptions.axisStyle['x']<>[]) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
+    if (gse_tics in scalingOptions.axisStyle['x']) then for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
       x:=round(pos);
       target.line(x, cSysY+5, x, cSysY);
-      if (gse_tics in scalingOptions.axisStyle['x']) then target.textOut(x-target.TextWidth(txt) shr 1, cSysY+5, txt);
+      target.textOut(x-target.TextWidth(txt) shr 1, cSysY+5, txt);
     end;
     //-------------------------------------------------------------------:tics
     //======================================================:coordinate system
@@ -487,20 +506,51 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
     dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; supersampling:longint);
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
   VAR renderImage:TImage;
       gridTics:T_ticInfos;
+      average:T_wordColMap;
+      k:byte;
   begin
-    while (plotImage.width *supersampling>=10000) or
-          (plotImage.height*supersampling>=10000) do dec(supersampling);
     system.enterCriticalSection(cs);
     try
       scalingOptions.updateForPlot(plotImage.Canvas,plotImage.width,plotImage.height,row,gridTics);
-      renderImage:=TImage.create(nil);
-      renderImage.SetInitialBounds(0,0,plotImage.width*supersampling,plotImage.height*supersampling);
-      drawGridAndRows(renderImage.Canvas,supersampling,gridTics);
-      scale(renderImage,plotImage,1/supersampling);
-      renderImage.destroy;
+      case quality of
+        PLOT_QUALITY_LOW:
+          drawGridAndRows(plotImage.Canvas,plotImage.width,plotImage.height,1,gridTics,SINGLE_SAMPLE_INDEX);
+        PLOT_QUALITY_MEDIUM_1:
+          begin
+            renderImage:=TImage.create(nil);
+            renderImage.SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
+            drawGridAndRows(renderImage.Canvas,plotImage.width,plotImage.height,2,gridTics,SINGLE_SAMPLE_INDEX);
+            scale(renderImage,plotImage,0.5);
+            renderImage.destroy;
+          end;
+        PLOT_QUALITY_MEDIUM_2:
+          begin
+            average.create(plotImage.width,plotImage.height);
+            for k:=0 to 3 do begin
+              drawGridAndRows(plotImage.Canvas,plotImage.width,plotImage.height,1,gridTics,k);
+              average.addSample(plotImage.picture.Bitmap);
+            end;
+            average.obtainAveragedResult(plotImage.picture);
+            average.destroy;
+          end;
+        PLOT_QUALITY_HIGH:
+          begin
+            renderImage:=TImage.create(nil);
+            renderImage.SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
+            average.create(plotImage.width*2,plotImage.height*2);
+            for k:=0 to 3 do begin
+              drawGridAndRows(renderImage.Canvas,plotImage.width,plotImage.height,2,gridTics,k);
+              scale(renderImage,plotImage,0.5);
+              average.addSample(plotImage.picture.Bitmap);
+            end;
+            renderImage.destroy;
+            average.obtainAveragedResult(plotImage.picture);
+            average.destroy;
+          end;
+      end;
       drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
       drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
     finally
@@ -508,27 +558,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; supersampling:longint);
     end;
   end;
 
-FUNCTION T_plot.obtainPlot(CONST width,height:longint; supersampling:longint):TImage;
-  VAR renderImage:TImage;
-      gridTics:T_ticInfos;
+FUNCTION T_plot.obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
   begin
-    while (width *supersampling>=10000) or
-          (height*supersampling>=10000) do dec(supersampling);
-    system.enterCriticalSection(cs);
-    try
-      renderImage:=TImage.create(nil);
-      renderImage.SetInitialBounds(0,0,width*supersampling,height*supersampling);
-      scalingOptions.updateForPlot(renderImage.Canvas,width,height,row,gridTics);
-      drawGridAndRows(renderImage.Canvas,supersampling,gridTics);
-      result:=TImage.create(nil);
-      result.SetInitialBounds(0,0,width,height);
-      scale(renderImage,result,1/supersampling);
-      renderImage.destroy;
-      drawCustomText(result.Canvas,width,height);
-      drawCoordSys(result.Canvas,width,height,gridTics);
-    finally
-      system.leaveCriticalSection(cs);
-    end;
+    result:=TImage.create(nil);
+    result.SetInitialBounds(0,0,width,height);
+    renderPlot(result,quality);
   end;
 
 PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);

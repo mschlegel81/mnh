@@ -232,32 +232,26 @@ object plotForm: TplotForm
       Caption = '&Quality'
       object miAntiAliasing1: TMenuItem
         AutoCheck = True
-        Caption = '&No anti aliasing'
+        Caption = '&Low'
         Checked = True
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing2: TMenuItem
         AutoCheck = True
-        Caption = '&2x anti-aliasing'
+        Caption = 'Medium (&1)'
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing3: TMenuItem
         AutoCheck = True
-        Caption = '&3x anti-aliasing'
+        Caption = 'Medium (&2)'
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing4: TMenuItem
         AutoCheck = True
-        Caption = '&4x anti-aliasing'
-        RadioItem = True
-        OnClick = miAntiAliasing1Click
-      end
-      object miAntiAliasing5: TMenuItem
-        AutoCheck = True
-        Caption = '&5x anti-aliasing'
+        Caption = '&High'
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end

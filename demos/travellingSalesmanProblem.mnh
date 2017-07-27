@@ -101,5 +101,5 @@ main->begin
   plot.setOptions([['axisStyleX',0],['axisStyleY',0]]);
   local L:=polish(scSort(getPoints));
   plot(L|L.get([0]),'. l');
-  plot.renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
+  plot.renderToFile(replace(myPath,'.mnh','.png'),768,768,3);
 end;
