@@ -49,8 +49,87 @@ TYPE
       PROCEDURE CopyFrom(VAR p:T_plot);
   end;
 
+  T_plotSeries=object
+    private
+      frame:array of record
+        image:TImage;
+        quality:byte;
+        plotData:T_plot;
+      end;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      FUNCTION frameCount:longint;
+      PROCEDURE getFrame(CONST target:TImage; CONST frameIndex:longint; CONST quality:byte);
+      PROCEDURE addFrame(VAR plot:T_plot);
+      PROCEDURE nextFrame(VAR frameIndex:longint);
+  end;
+
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
+
+CONSTRUCTOR T_plotSeries.create;
+  begin
+    setLength(frame,0);
+  end;
+
+DESTRUCTOR T_plotSeries.destroy;
+  begin
+    clear;
+  end;
+
+PROCEDURE T_plotSeries.clear;
+  VAR i:longint;
+  begin
+    for i:=0 to length(frame)-1 do with frame[i] do begin
+      if image<>nil then FreeAndNil(image);
+      plotData.destroy;
+    end;
+    setLength(frame,0);
+  end;
+
+FUNCTION T_plotSeries.frameCount: longint;
+  begin
+    result:=length(frame);
+  end;
+
+PROCEDURE T_plotSeries.getFrame(CONST target: TImage; CONST frameIndex: longint; CONST quality: byte);
+  begin
+    if (frameIndex<0) or (frameIndex>=length(frame)) then exit;
+    with frame[frameIndex] do if (image<>nil) and
+        ((image.width <>target.width) or
+         (image.height<>target.height)) then FreeAndNil(image);
+    if frame[frameIndex].image=nil then begin
+      frame[frameIndex].image:=frame[frameIndex].plotData.obtainPlot(target.width,target.height,quality);
+      frame[frameIndex].quality:=quality;
+    end else if frame[frameIndex].quality<>quality then begin
+      frame[frameIndex].plotData.renderPlot(frame[frameIndex].image,quality);
+      frame[frameIndex].quality:=quality;
+    end;
+    target.Canvas.draw(0,0,frame[frameIndex].image.picture.Bitmap);
+  end;
+
+PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
+  VAR newIdx:longint;
+  begin
+    newIdx:=length(frame);
+    writeln('T_plotSeries.addFrame - new frame index=',newIdx);
+    setLength(frame,newIdx+1);
+    frame[newIdx].plotData.createWithDefaults;
+    frame[newIdx].plotData.CopyFrom(plot);
+    frame[newIdx].quality:=255;
+    frame[newIdx].image:=nil;
+  end;
+
+PROCEDURE T_plotSeries.nextFrame(VAR frameIndex: longint);
+  begin
+    if length(frame)=0 then frameIndex:=-1
+    else begin
+      inc(frameIndex);
+      if frameIndex>=length(frame) then frameIndex:=0;
+    end;
+  end;
 
 CONSTRUCTOR T_plot.createWithDefaults;
   begin

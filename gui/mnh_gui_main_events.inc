@@ -399,13 +399,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if askForm.displayPending then askForm.Show;
     if isSimpleMnhShowing then begin
       if not(delayFlush) then guiOutAdapter.flushToGui(getSimpleMnh.SimpleMnhOutputEdit);
-      exit;
+    end else begin
+      if guiOutAdapter.flushToGui(OutputEdit) then exit;
+      while guiTaskQueue.executeTask do;
+      autosaveSettings;
+      checkForFileChanges;
     end;
-    if guiOutAdapter.flushToGui(OutputEdit) then exit;
-    while guiTaskQueue.executeTask do;
-    autosaveSettings;
-    checkForFileChanges;
     if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
+    if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);

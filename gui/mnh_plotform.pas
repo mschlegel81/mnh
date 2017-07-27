@@ -15,6 +15,7 @@ TYPE
   { TplotForm }
 
   TplotForm = class(TForm)
+    animateCheckBox: TCheckBox;
     CustomEventButton0: TButton;
     ButtonLeaveInteractiveMode: TButton;
     CustomEventButton1: TButton;
@@ -24,8 +25,10 @@ TYPE
     CustomEventButton5: TButton;
     CustomEventButton6: TButton;
     CustomEventButton7: TButton;
+    AnimationGroupBox: TGroupBox;
     InteractionPanel: TFlowPanel;
     InteractiveLabel: TLabel;
+    animationFPSLabel: TLabel;
     MainMenu: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
@@ -53,9 +56,11 @@ TYPE
     miAntiAliasing3: TMenuItem;
     plotImage: TImage;
     StatusBar: TStatusBar;
+    animationSpeedTrackbar: TTrackBar;
     PROCEDURE ButtonLeaveInteractiveModeClick(Sender: TObject);
     PROCEDURE CustomEventButton0Click(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
@@ -80,13 +85,20 @@ TYPE
     PROCEDURE plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   private
-
+    animationFrameIndex:longint;
+    tempPlot:T_plot;
+    animation:T_plotSeries;
+    fpsSamplingStart:double;
+    framesSampled:longint;
+    FUNCTION getPlotQuality:byte;
     { private declarations }
   public
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
     PROCEDURE doPlot(CONST useTemporary:boolean=false);
     PROCEDURE doOrPostPlot();
+    FUNCTION timerTick:boolean;
+    FUNCTION wantTimerInterval:longint;
     { public declarations }
   end;
 
@@ -100,7 +112,6 @@ VAR plotSubsystem:record
       lastMouseX,lastMouseY:longint;
     end;
     myPlotForm:TplotForm=nil;
-    tempPlot:T_plot;
 
 FUNCTION plotForm: TplotForm;
   begin
@@ -108,7 +119,6 @@ FUNCTION plotForm: TplotForm;
       myPlotForm:=TplotForm.create(nil);
       myPlotForm.pullPlotSettingsToGui();
       registerForm(myPlotForm,false,true);
-      tempPlot.createWithDefaults;
     end;
     result:=myPlotForm;
   end;
@@ -133,6 +143,16 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
+    tempPlot.createWithDefaults;
+    animation.create;
+    fpsSamplingStart:=now;
+    framesSampled:=0;
+  end;
+
+PROCEDURE TplotForm.FormDestroy(Sender: TObject);
+  begin
+    tempPlot.destroy;
+    animation.destroy;
   end;
 
 PROCEDURE TplotForm.ButtonLeaveInteractiveModeClick(Sender: TObject);
@@ -146,7 +166,8 @@ PROCEDURE TplotForm.CustomEventButton0Click(Sender: TObject);
     postCustomEvent(TButton(Sender).Tag);
   end;
 
-PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
+  );
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
@@ -266,7 +287,8 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
     pushSettingsToPlotContainer;
   end;
 
-PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
     if ssLeft in Shift then begin
@@ -277,7 +299,8 @@ PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Sh
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: integer);
   VAR p:T_point;
   begin
     p:=guiAdapters^.plot^.options.screenToReal(x,y);
@@ -295,7 +318,8 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
@@ -309,6 +333,14 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     postPlotClosed;
+  end;
+
+FUNCTION TplotForm.getPlotQuality: byte;
+  begin
+    if      miAntiAliasing4.Checked then result:=PLOT_QUALITY_HIGH
+    else if miAntiAliasing3.Checked then result:=PLOT_QUALITY_MEDIUM_2
+    else if miAntiAliasing2.Checked then result:=PLOT_QUALITY_MEDIUM_1
+    else                                 result:=PLOT_QUALITY_LOW;
   end;
 
 PROCEDURE TplotForm.pullPlotSettingsToGui;
@@ -351,7 +383,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
   end;
 
 VAR broughtToFront:double;
-PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
+PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
   PROCEDURE updateInteractiveSection;
     FUNCTION CustomEventButton(CONST index:byte):TButton;
       begin
@@ -370,11 +402,16 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
     VAR i:byte;
         buttonCaption:string;
     begin
-      InteractionPanel.visible:=isPlotInteractive;
+      InteractionPanel.visible:=isPlotInteractive or (animation.frameCount>0);
       if not(InteractionPanel.visible) then begin
         InteractionPanel.height:=0;
         exit;
       end else InteractionPanel.AutoSize:=true;
+      AnimationGroupBox.visible:=(animation.frameCount>0);
+      AnimationGroupBox.enabled:=(animation.frameCount>0);
+      ButtonLeaveInteractiveMode.visible:=isPlotInteractive;
+      ButtonLeaveInteractiveMode.enabled:=isPlotInteractive;
+      InteractiveLabel.visible:=isPlotInteractive;
       InteractiveLabel.caption:=dynamicPlotLabelText.value;
       for i:=0 to 7 do begin
         CustomEventButton(i).visible:=isCustomEventEnabled(i,buttonCaption);
@@ -386,7 +423,6 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
       InteractiveLabel.AutoSize:=true;
     end;
 
-  VAR factor:longint;
   begin
     if not(showing) then Show;
     updateInteractiveSection;
@@ -394,16 +430,17 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary:boolean=false);
       BringToFront;
       broughtToFront:=now;
     end;
-    if      miAntiAliasing4.Checked then factor:=PLOT_QUALITY_HIGH
-    else if miAntiAliasing3.Checked then factor:=PLOT_QUALITY_MEDIUM_2
-    else if miAntiAliasing2.Checked then factor:=PLOT_QUALITY_MEDIUM_1
-    else                                 factor:=PLOT_QUALITY_LOW;
+    if animation.frameCount<>0 then begin
+      animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+      guiAdapters^.resetFlagsAfterPlotDone;
+      exit;
+    end;
     if useTemporary then begin
       tempPlot.CopyFrom(guiAdapters^.plot^);
       guiAdapters^.resetFlagsAfterPlotDone;
-      tempPlot.renderPlot(plotImage,factor);
+      tempPlot.renderPlot(plotImage,getPlotQuality);
     end else begin
-      guiAdapters^.plot^.renderPlot(plotImage,factor);
+      guiAdapters^.plot^.renderPlot(plotImage,getPlotQuality);
       guiAdapters^.resetFlagsAfterPlotDone;
     end;
   end;
@@ -415,19 +452,52 @@ PROCEDURE TplotForm.doOrPostPlot;
     else doPlot();
   end;
 
+FUNCTION TplotForm.timerTick:boolean;
+  begin
+    if gui_started and (showing) and (animation.frameCount>0) and (animateCheckBox.Checked) then begin
+      animation.nextFrame(animationFrameIndex);
+      animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+      inc(framesSampled);
+      if now-fpsSamplingStart>1/(24*60*60) then begin
+        animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+' FPS';
+        fpsSamplingStart:=now;
+        framesSampled:=0;
+      end;
+      result:=true;
+    end else result:=false;
+  end;
+
+FUNCTION TplotForm.wantTimerInterval: longint;
+  begin
+    if animateCheckBox.Checked then result:=animationSpeedTrackbar.position*10
+                               else result:=50;
+    if result<=0 then result:=1;
+  end;
+
 FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   begin
     result:=newBoolLiteral(gui_started and plotForm.showing);
   end;
 
+FUNCTION clearPlotAnim_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  begin
+    result:=newVoidLiteral;
+    plotForm.animation.clear;
+  end;
+
+FUNCTION addAnimFrame_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  begin
+    result:=newVoidLiteral;
+    plotForm.animation.addFrame(context.adapters^.plot^);
+  end;
+
 INITIALIZATION
   broughtToFront:=0;
-  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,[se_readGuiState],ak_nullary,'plotShowing;#Returns true if the plot is currently showing, false otherwise');
+  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,[se_readGuiState],ak_nullary,'plotShowing;//Returns true if the plot is currently showing, false otherwise');
+  registerRule(PLOT_NAMESPACE,'clearAnimation',@clearPlotAnim_impl,[se_alterGuiState],ak_nullary,'clearAnimation;//Clears the animated plot');
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl,[se_alterGuiState],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
 FINALIZATION
-  if myPlotForm<>nil then begin
-    FreeAndNil(myPlotForm);
-    tempPlot.destroy;
-  end;
+  if myPlotForm<>nil then FreeAndNil(myPlotForm);
 
 end.
 

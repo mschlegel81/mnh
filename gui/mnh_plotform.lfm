@@ -1,14 +1,15 @@
 object plotForm: TplotForm
-  Left = 2
-  Height = 700
-  Top = 1
+  Left = 430
+  Height = 451
+  Top = 165
   Width = 700
   Caption = 'MNH plot'
-  ClientHeight = 680
+  ClientHeight = 431
   ClientWidth = 700
   Menu = MainMenu
   OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnKeyPress = FormKeyPress
   OnKeyUp = FormKeyUp
   OnResize = FormResize
@@ -28,13 +29,13 @@ object plotForm: TplotForm
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
-    Top = 657
+    Top = 408
     Width = 700
     Panels = <>
   end
   object InteractionPanel: TFlowPanel
     Left = 0
-    Height = 53
+    Height = 98
     Top = 0
     Width = 700
     Align = alTop
@@ -89,6 +90,11 @@ object plotForm: TplotForm
         Control = CustomEventButton7
         WrapAfter = waAuto
         Index = 9
+      end    
+      item
+        Control = AnimationGroupBox
+        WrapAfter = waAuto
+        Index = 10
       end>
     FlowStyle = fsLeftRightTopBottom
     TabOrder = 1
@@ -206,6 +212,45 @@ object plotForm: TplotForm
       Caption = 'CustomEventButton7'
       OnClick = CustomEventButton0Click
       TabOrder = 8
+    end
+    object AnimationGroupBox: TGroupBox
+      Left = 1
+      Height = 45
+      Top = 51
+      Width = 268
+      Anchors = []
+      AutoSize = True
+      Caption = 'Animation'
+      ClientHeight = 25
+      ClientWidth = 264
+      TabOrder = 9
+      object animateCheckBox: TCheckBox
+        Left = 0
+        Height = 25
+        Top = 0
+        Width = 63
+        Align = alLeft
+        Caption = 'animate'
+        TabOrder = 0
+      end
+      object animationSpeedTrackbar: TTrackBar
+        Left = 63
+        Height = 25
+        Top = 0
+        Width = 100
+        Position = 1
+        Align = alLeft
+        TabOrder = 1
+      end
+      object animationFPSLabel: TLabel
+        Left = 163
+        Height = 25
+        Top = 0
+        Width = 101
+        Align = alLeft
+        Caption = 'animationFPSLabel'
+        ParentColor = False
+      end
     end
   end
   object MainMenu: TMainMenu

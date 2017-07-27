@@ -69,7 +69,18 @@ PROCEDURE T_wordColMap.obtainAveragedResult(CONST picture:TPicture);
   begin
     try
       if tempIntfImage=nil then tempIntfImage:=picture.Bitmap.CreateIntfImage;
-      for y:=0 to min(yRes,picture.Bitmap.height)-1 do begin
+      if sampleCount=4
+      then for y:=0 to min(yRes,picture.Bitmap.height)-1 do begin
+        p:=data+y*xRes;
+        b:=tempIntfImage.GetDataLineStart(y);
+        for x:=0 to min(xRes,picture.Bitmap.width )-1 do begin
+          b^:=(p^.BLUE  shr 2); inc(b);
+          b^:=(p^.GREEN shr 2); inc(b);
+          b^:=(p^.RED   shr 2); inc(b);
+          inc(p);
+        end;
+      end
+      else for y:=0 to min(yRes,picture.Bitmap.height)-1 do begin
         p:=data+y*xRes;
         b:=tempIntfImage.GetDataLineStart(y);
         for x:=0 to min(xRes,picture.Bitmap.width )-1 do begin
