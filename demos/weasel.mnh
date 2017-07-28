@@ -1,17 +1,14 @@
 private target:="METHINKS IT IS LIKE A WEASEL";
-private fitness(s:string)-> abs(ord(target.chars)-
-                                ord(     s.chars)).agg(+);
+private fitness(s:string)-> abs(ord(target.bytes)-
+                                ord(     s.bytes)).agg(+);
 private CHARSET:=['A'..'Z',' '];
 private randomCharacter->CHARSET.get(intRandom(size(CHARSET)));
 
 private multiplyAndSelect(parent:string,offspringCount, mutateProb)->
-   [0..offspringCount].each(i,
-        begin
-          local individual:=i=0 ? parent : parent.chars.each(c,random<mutateProb ? randomCharacter : c).join;
-          [individual,fitness(individual)];
-        end,
-        aggregator({$x.get(1)<=$y.get(1) ? $x : $y})) //Selection: the fittest survives this aggregator ;-)
-        .head;
+   ([parent]|map([1..offspringCount],{parent.bytes.each(c,random<mutateProb ? randomCharacter : c).join}))
+   .pMap({[$i,fitness($i)]})
+   .sort(1)
+   .head.head;
 
 private evolve(mutationFalloff,offspringCount,generationLimit)->begin
   local parent:=[0..length(target)-1].each(i,randomCharacter,&);
