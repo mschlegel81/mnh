@@ -576,8 +576,8 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
     target.Pen.style:=psSolid;
     target.Pen.color:=clBlack;
     target.Pen.width:=1;
-    if (scalingOptions.axisStyle['x']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
-    if (scalingOptions.axisStyle['y']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
+    if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
+    if (scalingOptions.axisStyle['x']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
     //-------------------------------------------------------------------:axis
     //tics:-------------------------------------------------------------------
     if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
