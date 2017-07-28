@@ -105,6 +105,7 @@ VAR guiAdapters:P_adapters;
 FUNCTION plotForm: TplotForm;
 FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot;
+PROCEDURE initializePlotForm;
 IMPLEMENTATION
 VAR plotSubsystem:record
       mouseUpTriggersPlot:boolean;
@@ -537,12 +538,26 @@ FUNCTION display_imp intFuncSignature;
     result:=newVoidLiteral;
   end else result:=nil; end;
 
+FUNCTION uninitialized_fallback intFuncSignature;
+  begin
+    context.adapters^.hasNeedGUIerror:=true;
+    result:=nil;
+  end;
+
+PROCEDURE initializePlotForm;
+  begin
+    broughtToFront:=0;
+    reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
+    reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
+    reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
+    reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
+  end;
+
 INITIALIZATION
-  broughtToFront:=0;
-  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,[se_readGuiState    ],ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
-  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,[se_alterGuiState   ],ak_nullary,'clearAnimation;//Clears the animated plot');
-  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,[se_alterGuiState   ],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
-  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,[se_outputViaAdapter],ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
+  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@uninitialized_fallback,[se_readGuiState    ],ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@uninitialized_fallback,[se_alterGuiState   ],ak_nullary,'clearAnimation;//Clears the animated plot');
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@uninitialized_fallback,[se_alterGuiState   ],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
+  registerRule(PLOT_NAMESPACE,'display'          ,@uninitialized_fallback,[se_outputViaAdapter],ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
 
 FINALIZATION
   if myPlotForm<>nil then FreeAndNil(myPlotForm);

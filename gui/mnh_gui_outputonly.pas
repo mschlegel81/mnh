@@ -35,23 +35,16 @@ VAR
 IMPLEMENTATION
 {$R *.lfm}
 PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
-  CONST MAX_INTERVALL=50;
-
-  VAR flushPerformed:boolean=false;
-      currentRunnerInfo:T_runnerStateInfo;
-
+  CONST MAX_INTERVAL=50;
+  VAR currentRunnerInfo:T_runnerStateInfo;
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
-    flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
+    guiOutAdapter.flushToGui(OutputEdit);
     if guiAdapters.isDeferredPlotLogged and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
-    if askForm.displayPending then begin
-      askForm.Show;
-      flushPerformed:=true;
-    end;
-    if not(flushPerformed) then begin
-      Timer1.interval:=Timer1.interval+1;
-      if Timer1.interval>MAX_INTERVALL then Timer1.interval:=MAX_INTERVALL;
-    end;
+    if askForm.displayPending then askForm.Show;
+    if Timer1.interval<MAX_INTERVAL then Timer1.interval:=Timer1.interval+1;
+    if plotFormIsInitialized and plotForm.timerTick then Timer1.interval:=plotForm.wantTimerInterval
+    else if Timer1.interval>MAX_INTERVAL then Timer1.interval:=MAX_INTERVAL;
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
 
