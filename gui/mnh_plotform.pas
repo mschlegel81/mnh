@@ -414,7 +414,7 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
     VAR i:byte;
         buttonCaption:string;
     begin
-      InteractionPanel.visible:=not(useTemporary) and (isPlotInteractive or (animation.frameCount>0));
+      InteractionPanel.visible:=(isPlotInteractive or (animation.frameCount>0));
       if not(InteractionPanel.visible) then begin
         InteractionPanel.height:=0;
         exit;
