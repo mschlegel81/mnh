@@ -1,0 +1,65 @@
+USE root,RK4,GUI;
+private l1:=1;
+private l2:=1;
+private m1:=1;
+private m2:=1;
+private g:=9.81;
+
+//*phi1'', dependent on phi2''
+F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->-m2/(m1+m2)*l2/l1*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
+//*phi2'', dependent on phi1''
+F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->-l1/l2*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
+//*Returns an expression F1(F2($x))-$x (for Regula Falsi)
+F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
+
+//*Overloaded for use in RK4
+accel(state:numericList(4))->accel@state;
+//*Returns first derivative in time for given state
+accel(phi1,phi2,phi1dt,phi2dt)->
+  begin
+    [phi1dt,
+     phi2dt,
+     local phi1dtt:=regulaFalsi(F12(phi1,phi2,phi1dt,phi2dt),-pi,pi,1E-3,1E-3),
+     F2(phi1,phi2,phi1dt,phi2dt,phi1dtt)];
+  end;
+
+//*Transforms the state (by angles) to a list of points (Cartesian, 2D)
+plottable(state:numericList(4))->begin
+  [[0,0],local d1:=[sin(state[0]),-cos(state[0])]*l1,
+               d1+ [sin(state[1]),-cos(state[1])]*l2];
+end;
+
+//*Plot function
+private plotIt(p1,p2,trace1,trace2)->begin
+  setOptions([['x0',min(getOptions['x0'],min(p1.getInner(0)),min(p2.getInner(0)))],
+              ['x1',max(getOptions['x1'],max(p1.getInner(0)),max(p2.getInner(0)))],
+              ['y0',min(getOptions['y0'],min(p1.getInner(1)),min(p2.getInner(1)))],
+              ['y1',max(getOptions['y1'],max(p1.getInner(1)),max(p2.getInner(1)))]]);
+  plot   (trace2,'red');   addPlot(trace1,'black');
+  addPlot(p2,'3 . red l'); addPlot(p1,'3 . black l');
+  display;
+end;
+
+private secondsPreFrame:=1/40;
+main->begin
+  setOptions([['autoscaleX',false],['autoscaleY',false],['x0',0],['x1',0],['y0',0],['y1',0]]);
+  local state1:=[pi/2     ,0,0,0];
+  local state2:=[pi/2+1E-6,0,0,0];
+  local trace1:=[state1.plottable.trailing];
+  local trace2:=[state2.plottable.trailing];
+  local replot:={begin
+                   local p1:=state1.plottable;
+                   local p2:=state2.plottable;
+                   trace1:=trace1.trailing(100)|[p1.trailing];
+                   trace2:=trace2.trailing(100)|[p2.trailing];
+                   plotIt(p1,p2,trace1,trace2);
+                 end};
+  replot();
+  local frameTime:=time;
+  while(not(plotClosed),begin
+    state1:=state1.RK4(::accel,0.02,1E-2);
+    state2:=state2.RK4(::accel,0.02,1E-2);
+    sleepUntil(frameTime+=secondsPreFrame);
+    replot();
+  end);
+end;
