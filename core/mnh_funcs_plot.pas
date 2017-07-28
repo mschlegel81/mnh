@@ -279,14 +279,6 @@ FUNCTION removePlot_imp intFuncSignature;
     end else result:=nil;
   end;
 
-FUNCTION display_imp intFuncSignature;
-  begin
-    if (params=nil) or (params^.size=0) then begin
-      context.adapters^.logInstantPlot;
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
 INITIALIZATION
   mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, [se_alterPlotState], ak_variadic,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
@@ -329,7 +321,5 @@ INITIALIZATION
     'renderToString(width,height,[quality in [0..3]]);//Renders the current plot to a string.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_alterPlotState], ak_nullary,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp, [se_outputViaAdapter], ak_nullary,
-    'display;//Displays the plot as soon as possible, even during evaluation.');
 
 end.

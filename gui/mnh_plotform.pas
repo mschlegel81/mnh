@@ -405,7 +405,7 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
     VAR i:byte;
         buttonCaption:string;
     begin
-      InteractionPanel.visible:=isPlotInteractive or (animation.frameCount>0);
+      InteractionPanel.visible:=not(useTemporary) and (isPlotInteractive or (animation.frameCount>0));
       if not(InteractionPanel.visible) then begin
         InteractionPanel.height:=0;
         exit;
@@ -438,9 +438,8 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
       exit;
     end;
     if useTemporary then begin
-      tempPlot.CopyFrom(guiAdapters^.plot^);
-      guiAdapters^.resetFlagsAfterPlotDone;
       tempPlot.renderPlot(plotImage,getPlotQuality);
+      guiAdapters^.resetFlagsAfterPlotDone;
     end else begin
       guiAdapters^.plot^.renderPlot(plotImage,getPlotQuality);
       guiAdapters^.resetFlagsAfterPlotDone;
@@ -476,28 +475,38 @@ FUNCTION TplotForm.wantTimerInterval: longint;
                                else result:=50;
   end;
 
-FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  begin
+{$i mnh_func_defines.inc}
+FUNCTION plotShowing intFuncSignature;
+  begin if (params=nil) or (params^.size=0) then begin
     result:=newBoolLiteral(gui_started and plotForm.showing);
-  end;
+  end else result:=nil; end;
 
-FUNCTION clearPlotAnim_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  begin
+FUNCTION clearPlotAnim_impl intFuncSignature;
+  begin if (params=nil) or (params^.size=0) then begin
     result:=newVoidLiteral;
     plotForm.animation.clear;
-  end;
+  end else result:=nil; end;
 
-FUNCTION addAnimFrame_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  begin
+FUNCTION addAnimFrame_impl intFuncSignature;
+  begin if (params=nil) or (params^.size=0) then begin
     result:=newVoidLiteral;
     plotForm.animation.addFrame(context.adapters^.plot^);
-  end;
+  end else result:=nil; end;
+
+FUNCTION display_imp intFuncSignature;
+  begin if (params=nil) or (params^.size=0) then begin
+    context.adapters^.logInstantPlot;
+    plotForm.tempPlot.CopyFrom(context.adapters^.plot^);
+    result:=newVoidLiteral;
+  end else result:=nil; end;
 
 INITIALIZATION
   broughtToFront:=0;
-  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,[se_readGuiState],ak_nullary,'plotShowing;//Returns true if the plot is currently showing, false otherwise');
-  registerRule(PLOT_NAMESPACE,'clearAnimation',@clearPlotAnim_impl,[se_alterGuiState],ak_nullary,'clearAnimation;//Clears the animated plot');
-  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl,[se_alterGuiState],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
+  registerRule(PLOT_NAMESPACE,'plotShowing'      ,@plotShowing       ,[se_readGuiState    ],ak_nullary,'plotShowing;//Returns true if the plot is currently showing, false otherwise');
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl,[se_alterGuiState   ],ak_nullary,'clearAnimation;//Clears the animated plot');
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl ,[se_alterGuiState   ],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
+  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp       ,[se_outputViaAdapter],ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
+
 FINALIZATION
   if myPlotForm<>nil then FreeAndNil(myPlotForm);
 
