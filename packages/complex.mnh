@@ -1,7 +1,10 @@
+//@SuppressUnusedWarning
 //*Returns the real part of a complex number x
 Re(x:numericList(2))->x[0];
+//@SuppressUnusedWarning
 //*Returns the imaginary part of a complex number x
 Im(x:numericList(2))->x[1];
+//@SuppressUnusedWarning
 //*Returns the absolute value of a complex number
 Abs(x:numericList(2))->x.sqr.agg(+).sqrt;
 //*Returns the argument of x
@@ -12,6 +15,7 @@ cMult(x:numericList(2),y:numericList(2))->[x[0]*y[0]-x[1]*y[1],x[0]*y[1]+x[1]*y[
 cSqr(x:numericList(2))->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]];
 //*Returns 1/x for a complex number x
 cInv(x:numericList(2))->[x[0],-x[1]]/(sqr(x[0])+sqr(x[1]));
+//@SuppressUnusedWarning
 //*Returns x/y for complex numbers x and y
 cDiv(x:numericList(2),y:numericList(2))->x.cMult(y.cInv);
 //*Returns exponential of complex x
@@ -26,6 +30,7 @@ cPot(x:numericList(2),k:int)->(k and 1)=1 ? x.cPot(k-1).cMult(x)
 cPot(x:numericList(2),k:real)->k=0 ? [1,0] : (x.cLn*k).cExp;
 cPot(x:numericList(2),k:numericList(2))->k=0 ? [1,0] : (x.cLn.cMult(k)).cExp;
 
+//@SuppressUnusedWarning
 //*Returns cosinus of complex x
 cCos(x:numericList(2))->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
@@ -33,6 +38,7 @@ cCos(x:numericList(2))->begin
   (result+cInv(result))*0.5;
 end;
 
+//@SuppressUnusedWarning
 //*Returns sinus of complex x
 cSin(x:numericList(2))->begin
   //sin(x)=(e^(ix)-e^(-ix))/2

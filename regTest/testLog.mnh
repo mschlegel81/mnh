@@ -11,6 +11,7 @@ testAlreadyPassed->executor.testAlreadyPassed;
 timeForTest(exe:string)->timeForTest(flavour(exe),codeVersion(exe));
 timeForTest(flavour,codeVersion)->log[log.getInner(0)=flavour and log.getInner(1)=codeVersion][0,2];
 
+//@SuppressUnusedWarning
 validateCollectedOutput(doLog:boolean,output:stringList)->begin
   local printOut:=output.replace(mnhRoot,'');
   local expectedResultName:=myPath.changeFileExt('.'&flavour&'.expected');
@@ -41,6 +42,7 @@ validateCollectedOutput(doLog:boolean,output:stringList)->begin
   : void;
 end;
 
+//@SuppressUnusedWarning
 testHistory->begin
   local hashes:=log.getInner(1);
   hashes:=hashes.each(h,h in hashes.head(index) ? void : h);

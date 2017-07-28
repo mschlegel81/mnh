@@ -1,6 +1,7 @@
 //*Returns a list suitbable for input of rule folderChanged
 timedFolderContent(folderPath:string)->fileInfo(folderPath&'/*').each(info,[info['path'],info]).sort(0);
 //*Returns the updated folder content or false if the content is unchanged
+//@SuppressUnusedWarning
 changedFolderContent(folderPath:string,previousContent:list)->begin
   local currentContent:=timedFolderContent(folderPath);
   currentContent==previousContent
@@ -28,6 +29,7 @@ waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSec
                : [n,'new',currentContent[n]]);
 end;
 
+//@SuppressUnusedWarning
 changeSymbol:=[['',''],['modified','*'],['deleted','-'],['new','+']];
 
 
@@ -40,9 +42,11 @@ waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSec
 waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,2^31);
 
 //*Returns a list as waitForFolderChange but without waiting
+//@SuppressUnusedWarning
 pseudoFolderChange(folderPath:string)->timedFolderContent(folderPath).each(e,[e[0],'',e[1]]);
 
 //*Waits for a folder change and calls onChange when the folder is changed
+//@SuppressUnusedWarning
 watchFolder(folderPath:string,onChange:expression,maxSleepTimeInSeconds:numeric)->
   async({begin
     local contents:=timedFolderContent(folderPath);
@@ -55,6 +59,7 @@ watchFolder(folderPath:string,onChange:expression,maxSleepTimeInSeconds:numeric)
 
 //*Returns a temp file name by the specified pattern.
 //*pattern must contain exactly one "#" as placeholder
+//@SuppressUnusedWarning
 tempFile(pattern:string)->
   trueCount(pattern.chars='#')!=1
   ? fail('pattern must contain exactly one "#" as placeholder')
@@ -66,14 +71,17 @@ tempFile(pattern:string)->
 
 //*Returns the file time of the newest file in the subTree or -1 if there is no file
 //*Optional parameters indicate patterns
+//@SuppressUnusedWarning
 maxFileTime(folder,...)->allFiles(folder,...==[] ? void : ...).fileInfo.getInner('time').agg(max) orElse -1;
 
 //*Returns the file time of the given file
+//@SuppressUnusedWarning
 fileTime(file)->file.fileInfo['time'] orElse -1;
 
 isLinux:=mnhInfo['targetOs']='Linux' orElse false;
 
 //*Returns true if the file names indicate equal files
+//@SuppressUnusedWarning
 isSameFileName(filename1:string,filename2:string)->begin
   local case:=isLinux ? {$x} : {$x.upper};
   (filename1.expandedFileName.case)==
