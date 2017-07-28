@@ -2,7 +2,7 @@ USE '../demos/inputs/inputs.mnh',
     testLog, mnhInfo;
 
 private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
-private memoized allDemos:=files(demosRoot&'*.mnh').sort;
+memoized allDemos:=files(demosRoot&'*.mnh').sort;
 datastore runTimes;
 
 plotters:=demosRoot&[
@@ -15,22 +15,23 @@ plotters:=demosRoot&[
 'turtleGfx.mnh',
 'heart.mnh'];
 
-private testParameters((demosRoot&'24.mnh'            ))->['demo'];
-private testParameters((demosRoot&'clock.mnh'         ))->['once'];
-private testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
-private testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
-private testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
-private testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
-private testParameters((demosRoot&'gol.mnh'           ))->['40','40','9'];
-private testParameters((demosRoot&'pascal.mnh'        ))->['12'];
-private testParameters((demosRoot&'oeis.mnh'          ))->['A000002','50'];
-private testParameters(scriptFileName:string)->[];
+testParameters((demosRoot&'24.mnh'            ))->['demo'];
+testParameters((demosRoot&'clock.mnh'         ))->['once'];
+testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
+testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
+testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
+testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
+testParameters((demosRoot&'gol.mnh'           ))->['40','40','9'];
+testParameters((demosRoot&'pascal.mnh'        ))->['12'];
+testParameters((demosRoot&'oeis.mnh'          ))->['A000002','50'];
+testParameters(scriptFileName:string)->[];
 
 private skipFile((demosRoot&'3body.mnh'              ))->true;
 private skipFile((demosRoot&'htmlFunctionPlotter.mnh'))->true;
 private skipFile((demosRoot&'simpleServer.mnh'       ))->true;
 private skipFile((demosRoot&'helloWorldHttp.mnh'     ))->true;
 private skipFile((demosRoot&'ipcDatastore.mnh'       ))->true;
+private skipFile((demosRoot&'doublePendulum.mnh'     ))->true;
 private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
 private skipFile(scriptFileName:string)->false;
 

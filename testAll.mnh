@@ -1,4 +1,4 @@
-USE fileUtils;
+USE fileUtils, regTest;
 
 private log:='D:\heaptrace_per_demo.txt';
 private mutable failedTests:=[];
@@ -13,19 +13,8 @@ pipingBat(command:string)->begin
   deleteFile(name);
 end;
 
-mnhParameter(demo)->
-  demo.matches('htmlFunctionPlotter') OR demo.matches('timer') ? ' ' :
-  ' -vP3 ';
-demoParamter(demo)->
-  demo.matches('24\.mnh'  ) ? ' demo' :
-  demo.matches('diff\.mnh') ? ' test' :
-  demo.matches('emptyFolders\.mnh' ) OR demo.matches('findDuplicates\.mnh')  ? ' .' :
-  demo.matches('grep\.mnh') ? ' group demos/*.mnh' :
-  '';
-
 main->begin
-  local tasks:=files('demos/*.mnh')
-    .each(demo,executor&mnhParameter(demo)&demo.expandedFileName&demoParamter(demo));
+  local tasks:=allDemos.pMap({executor&' '&$demo&' '&testParameters($demo).map(::escapeJava).join(" ")});
   tasks.each(task,begin
     index=0
     ? log.writeFileLines([task])

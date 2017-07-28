@@ -1,7 +1,9 @@
 //*Return a random element from a list
+//@SuppressUnusedWarning
 randomElementFromList(L!=[])->L[intRandom(L.size)];
 
 //*Scramble a list
+//@SuppressUnusedWarning
 scramble(L:list)->L[random(L.size).sortPerm];
 
 //*Returns L without the k-th element

@@ -44,6 +44,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     unitIsInitialized:=true;
     mnh_out_adapters.gui_started:=true;
     initializeDynamicPlotting;
+    initializePlotForm;
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);

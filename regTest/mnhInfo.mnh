@@ -9,12 +9,15 @@ isLinux->mnhInfo['targetOs']='Linux';
 isLinux(exe:string)->exe.exeInfo['targetOs']=='Linux';
 canPlot->executor.canPlot;
 canPlot(exe:string)->exe.exeInfo['isFullVersion'];
+//@SuppressUnusedWarning
 codeVersion(exe:string)->exe.exeInfo['codeVersion'] orElse '';
 codeHash->executor.codeHash;
 codeHash(exe:string)->exe.exeInfo.getAll(['flavour','codeVersion']).join(':');
+//@SuppressUnusedWarning
 isDebug(exe:string)->exe.exeInfo['isDebugVersion'];
 flavour->executor.flavour;
 flavour(exe:string)->exe.exeInfo['flavour'] orElse '';
+//@SuppressUnusedWarning
 compileTime(exe:string)->exe.exeInfo['compileTime'] orElse '';
 
 main(exe)->exe.exeInfo.each(line,line.join("\t")).join("\n").print;

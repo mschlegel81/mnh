@@ -397,6 +397,11 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     displayProgress;
     enableDynamicItems;
     if askForm.displayPending then askForm.Show;
+
+    if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
+    if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
+    else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
+
     if isSimpleMnhShowing then begin
       if not(delayFlush) then guiOutAdapter.flushToGui(getSimpleMnh.SimpleMnhOutputEdit);
     end else begin
@@ -405,9 +410,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       autosaveSettings;
       checkForFileChanges;
     end;
-    if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
-    if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
-    else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);

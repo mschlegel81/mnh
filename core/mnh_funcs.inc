@@ -1,5 +1,4 @@
 {$ifdef include_implementation}
-VAR packageCs:TRTLCriticalSection;
 {$i mnh_func_defines.inc}
 FUNCTION sandBoxExecute_imp intFuncSignature;
   VAR src:T_arrayOfString;
@@ -47,7 +46,6 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
       id      :string='';
       p       :P_package;
   begin
-    enterCriticalSection(packageCs);
     freshlyCreated:=false;
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
@@ -55,20 +53,14 @@ FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T
     for p in callerPackage^.mainPackage^.secondaryPackages do
       if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.getCodeProvider^.id    ))
       or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
-      then begin
-        if p^.codeChanged or (p^.readyForUsecase<>lu_forImport) then p^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
-        leaveCriticalSection(packageCs);
-        exit(p);
-      end;
+      then exit(p);
     if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
     if (fileName='') or not(fileExists(fileName)) then begin
       context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
-      leaveCriticalSection(packageCs);
       exit(nil);
     end;
-    new(result,create(newFileCodeProvider(fileName),callerPackage^.mainPackage));
+    new(result,create(newFileCodeProvider(fileName),nil));
     freshlyCreated:=true;
-    leaveCriticalSection(packageCs);
   end;
 
 FUNCTION inspect_imp intFuncSignature;
@@ -140,10 +132,5 @@ FUNCTION writeDataStores_imp intFuncSignature;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp          ,[se_readFile],ak_variadic_1,'inspect;//Returs information on the current package#inspect(idOrPath:string);//Returns information on an imported package or a specified MNH source file#inspect(path:string,source:stringList);//Returns information of a package with given path and source');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,[se_writeFile,se_alterPackageState],ak_nullary,'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages).');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,[se_writeFile,se_alterPackageState],ak_nullary,'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages).');
-  initialize(packageCs);
-  initCriticalSection(packageCs);
-{$endif}
-{$ifdef include_finalization}
-  doneCriticalSection(packageCs);
 {$endif}
 

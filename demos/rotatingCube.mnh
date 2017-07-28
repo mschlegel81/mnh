@@ -16,9 +16,18 @@ drawCube(t)->begin
   local p:=cubePoints(t);
   plot(p,'black .');
   LINES.each(l,addPlot(p[l],'black'));
+  void;
 end;
 
 //*This solves the "rotating cube" task: http://rosettacode.org/wiki/Draw_a_rotating_cube
-main('animate')->([0..100]/100*2*pi).each(t,drawCube(t),display,sleep(0.05));
+main('animate')->begin
+  drawCube(0);
+  display;
+  ([0..100]/100*2*pi).each(t,drawCube(t),addAnimationFrame);
+end;
+
 //*Renders to a file (for regression test)
-main->drawCube(0.5) | renderToFile(myPath.replace('.mnh','.png'),768,768,3);
+main->begin
+  drawCube(0.5);
+  renderToFile(changeFileExt(myPath,'.png'),768,768,3);
+end;

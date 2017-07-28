@@ -35,6 +35,24 @@ FUNCTION sleep_imp intFuncSignature;
     end;
   end;
 
+FUNCTION sleepUntil_imp intFuncSignature;
+  VAR sleepUntil:double;
+      sleepInt:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) then begin
+      result:=newVoidLiteral;
+      if arg0^.literalType=lt_int
+      then sleepUntil:=P_intLiteral (arg0)^.value
+      else sleepUntil:=P_realLiteral(arg0)^.value;
+      while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
+        sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
+        if sleepInt>1000 then sleepInt:=1000;
+        if (sleepInt>0) then sleep(sleepInt);
+      end;
+    end;
+  end;
+
 FUNCTION myPath_impl intFuncSignature;
   begin
     result:=nil;
@@ -261,6 +279,7 @@ INITIALIZATION
                'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
                'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_sleep],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,[se_sleep],ak_unary  ,'sleepUntil(wallClockSeconds:number);//Sleeps until the wallclock reaches the given value');
   BUILTIN_MYPATH:=
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,[se_scriptDependent],ak_nullary,'myPath;//returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,[se_executableDependent],ak_nullary,'executor;//returns the path to the currently executing instance of MNH');

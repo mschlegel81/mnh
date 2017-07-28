@@ -54,7 +54,6 @@ guessTimeOrInterval(TimeOrIntervalString:string)->
   end;
 
 nextSecond->sleep(1-formatTime('0.zzz',systime).toReal);
-nextMinute->sleep(60-formatTime('ss.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
