@@ -57,6 +57,8 @@ TYPE
         plotData:T_plot;
       end;
       seriesCs:TRTLCriticalSection;
+      FUNCTION getOptions(CONST index:longint):T_scalingOptions;
+      PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -65,11 +67,26 @@ TYPE
       PROCEDURE getFrame(CONST target:TImage; CONST frameIndex:longint; CONST quality:byte);
       PROCEDURE addFrame(VAR plot:T_plot);
       PROCEDURE nextFrame(VAR frameIndex:longint);
-      FUNCTION screenToReal(CONST animationFrameIndex,x,y:longint):T_point;
+      PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
+
+FUNCTION T_plotSeries.getOptions(CONST index: longint): T_scalingOptions;
+  begin
+    enterCriticalSection(seriesCs);
+    result:=frame[index].plotData.scalingOptions;
+    leaveCriticalSection(seriesCs);
+  end;
+
+PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOptions);
+  begin
+    enterCriticalSection(seriesCs);
+    frame[index].plotData.scalingOptions:=value;
+    frame[index].quality:=255;
+    leaveCriticalSection(seriesCs);
+  end;
 
 CONSTRUCTOR T_plotSeries.create;
   begin
@@ -145,11 +162,6 @@ PROCEDURE T_plotSeries.nextFrame(VAR frameIndex: longint);
       if frameIndex>=length(frame) then frameIndex:=0;
     end;
     leaveCriticalSection(seriesCs);
-  end;
-
-FUNCTION T_plotSeries.screenToReal(CONST animationFrameIndex, x, y:longint): T_point;
-  begin
-    result:=frame[animationFrameIndex].plotData.scalingOptions.screenToReal(x,y);
   end;
 
 CONSTRUCTOR T_plot.createWithDefaults;

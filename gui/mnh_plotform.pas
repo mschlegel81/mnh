@@ -321,7 +321,7 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
   VAR p:T_point;
   begin
     if (animationFrameIndex>=0) and (animationFrameIndex<animation.frameCount)
-    then p:=animation.screenToReal(animationFrameIndex,x,y)
+    then p:=animation.options[animationFrameIndex].screenToReal(x,y)
     else p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
@@ -353,6 +353,7 @@ PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     postPlotClosed;
     closedByUser:=true;
+    animateCheckBox.Checked:=false;
   end;
 
 FUNCTION TplotForm.getPlotQuality: byte;
@@ -382,24 +383,37 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
   VAR currentScalingOptions:T_scalingOptions;
+      i:longint;
+  PROCEDURE updateCurrent;
+    begin
+      currentScalingOptions.axisStyle['x']:=[];
+      if miXTics.Checked      then include(currentScalingOptions.axisStyle['x'],gse_tics      );
+      if miXGrid.Checked      then include(currentScalingOptions.axisStyle['x'],gse_coarseGrid);
+      if miXFinerGrid.Checked then include(currentScalingOptions.axisStyle['x'],gse_fineGrid  );
+      currentScalingOptions.axisStyle['y']:=[];
+      if miYTics.Checked      then include(currentScalingOptions.axisStyle['y'],gse_tics      );
+      if miYGrid.Checked      then include(currentScalingOptions.axisStyle['y'],gse_coarseGrid);
+      if miYFinerGrid.Checked then include(currentScalingOptions.axisStyle['y'],gse_fineGrid  );
+      currentScalingOptions.preserveAspect:=miPreserveAspect.Checked;
+      currentScalingOptions.axisTrafo['x'].logscale:=miLogscaleX.Checked;
+      currentScalingOptions.axisTrafo['y'].logscale:=miLogscaleY.Checked;
+      currentScalingOptions.autoscale['x']:=miAutoscaleX.Checked;
+      currentScalingOptions.autoscale['y']:=miAutoscaleY.Checked;
+    end;
+
   begin
     currentScalingOptions:=guiAdapters^.plot^.options;
-    currentScalingOptions.axisStyle['x']:=[];
-    if miXTics.Checked      then include(currentScalingOptions.axisStyle['x'],gse_tics      );
-    if miXGrid.Checked      then include(currentScalingOptions.axisStyle['x'],gse_coarseGrid);
-    if miXFinerGrid.Checked then include(currentScalingOptions.axisStyle['x'],gse_fineGrid  );
-    currentScalingOptions.axisStyle['y']:=[];
-    if miYTics.Checked      then include(currentScalingOptions.axisStyle['y'],gse_tics      );
-    if miYGrid.Checked      then include(currentScalingOptions.axisStyle['y'],gse_coarseGrid);
-    if miYFinerGrid.Checked then include(currentScalingOptions.axisStyle['y'],gse_fineGrid  );
-    currentScalingOptions.preserveAspect:=miPreserveAspect.Checked;
-    currentScalingOptions.axisTrafo['x'].logscale:=miLogscaleX.Checked;
-    currentScalingOptions.axisTrafo['y'].logscale:=miLogscaleY.Checked;
-    currentScalingOptions.autoscale['x']:=miAutoscaleX.Checked;
-    currentScalingOptions.autoscale['y']:=miAutoscaleY.Checked;
+    updateCurrent;
     guiAdapters^.plot^.options:=currentScalingOptions;
     pullPlotSettingsToGui();
-    doOrPostPlot();
+    if animation.frameCount<=0 then doOrPostPlot();
+    i:=0;
+    while i<animation.frameCount do begin
+      currentScalingOptions:=animation.options[i];
+      updateCurrent;
+      animation.options[i]:=currentScalingOptions;
+      inc(i);
+    end;
   end;
 
 VAR broughtToFront:double;
