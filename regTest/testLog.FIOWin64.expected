@@ -1433,10 +1433,48 @@ The first Harshad Number >1000 is 1002
 ***** hash *****
 982D6E49
 ***** hashJoin *****
-Cannot resolve ID "formatTable"
-Cannot resolve ID "formatTable"
-Cannot resolve ID "formatTable"
-Cannot resolve ID "formatTable"
+Table A:
+Age | Name
+----+-------
+27  | Jonah
+18  | Alan
+28  | Glory
+18  | Popeye
+28  | Alan
+
+Table B:
+Character | Nemesis
+----------+--------
+Jonah     | Whales
+Jonah     | Spiders
+Alan      | Ghosts
+Alan      | Zombies
+Glory     | Buffy
+Me        | Things
+
+Inner join:
+A.Age | A.Name | B.Character | B.Nemesis
+------+--------+-------------+----------
+27    | Jonah  | Jonah       | Whales
+27    | Jonah  | Jonah       | Spiders
+18    | Alan   | Alan        | Ghosts
+18    | Alan   | Alan        | Zombies
+28    | Glory  | Glory       | Buffy
+28    | Alan   | Alan        | Ghosts
+28    | Alan   | Alan        | Zombies
+
+Outer join:
+A.Age | A.Name | B.Character | B.Nemesis
+------+--------+-------------+----------
+27    | Jonah  | Jonah       | Whales
+27    | Jonah  | Jonah       | Spiders
+18    | Alan   | Alan        | Ghosts
+18    | Alan   | Alan        | Zombies
+28    | Glory  | Glory       | Buffy
+18    | Popeye |             |
+28    | Alan   | Alan        | Ghosts
+28    | Alan   | Alan        | Zombies
+      |        | Me          | Things
 ***** heart *****
 png hash: C763C33D
 ***** helloWorld *****
@@ -1673,7 +1711,13 @@ Monty Hall Problem
   Probability to win without switching doors 33.333333333333329%
   Probability to win with switching          66.666666666666657%
 ***** multifactorial *****
-Cannot resolve ID "formatTable"
+Degree | #1 | #2 | #3 | #4 | #5  | #6  | #7   | #8    | #9     | #10
+-------+----+----+----+----+-----+-----+------+-------+--------+--------
+1      | 1  | 2  | 6  | 24 | 120 | 720 | 5040 | 40320 | 362880 | 3628800
+2      | 1  | 2  | 3  |  8 |  15 |  48 |  105 |   384 |    945 |    3840
+3      | 1  | 2  | 3  |  4 |  10 |  18 |   28 |    80 |    162 |     280
+4      | 1  | 2  | 3  |  4 |   5 |  12 |   21 |    32 |     45 |     120
+5      | 1  | 2  | 3  |  4 |   5 |   6 |   14 |    24 |     36 |      50
 ***** numDiff *****
 The approximate taylor expansion of {$t^(1+sin($t))} around 1 is 
   {($x-1)^0*1.0+($x-1)^1*1.841552734375+($x-1)^2*1.3151092529296875+($x-1)^3*0.26312255859375+($x-1)^4*-0.39539845784505206+($x-1)^5*-0.3090026537577311}

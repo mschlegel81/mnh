@@ -99,6 +99,8 @@ PROCEDURE TaskForm.FormShow(Sender: TObject);
   begin
     displayPending := false;
     position:=poDefault;
+    AutoSize:=false;
+    AutoSize:=true;
   end;
 
 PROCEDURE TaskForm.ButtonClick(Sender: TObject);
@@ -204,13 +206,15 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
   VAR i:longint;
   begin
     if enable then begin
+      ComboBox1.enabled:=false;
+      ComboBox1.visible:=false;
       for i:=0 to 15 do begin
         button(i).enabled:=length(options)>i;
         button(i).visible:=length(options)>i;
-        if length(options)>i then button(i).caption:=options[i];
+        if length(options)>i then begin
+          button(i).caption:=options[i];
+        end;
       end;
-      ComboBox1.enabled:=false;
-      ComboBox1.visible:=false;
     end else begin
       ComboBox1.enabled:=true;
       ComboBox1.visible:=true;
@@ -219,6 +223,8 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
         button(i).visible:=false;
       end;
     end;
+    AutoSize:=false;
+    AutoSize:=true;
   end;
 
 FUNCTION ask_impl intFuncSignature;
