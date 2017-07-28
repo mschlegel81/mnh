@@ -488,7 +488,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
             P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
             {$ifdef fullVersion}
-            if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then ruleGroup^.setIdResolved;
+            if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
+              if (tt_modifier_private in ruleModifiers)
+              then context.adapters^.raiseWarning('Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules',ruleDeclarationStart)
+              else ruleGroup^.setIdResolved;
+            end;
             {$endif}
             dispose(subRule,destroy);
           end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);

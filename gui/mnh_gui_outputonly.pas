@@ -104,7 +104,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
 
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
+    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
   end;
 
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);

@@ -11,9 +11,6 @@ USES
   mnh_contexts, mnh_evalThread, dynamicPlotting, plotstyles, plotMath;
 
 TYPE
-
-  { TplotForm }
-
   TplotForm = class(TForm)
     animateCheckBox: TCheckBox;
     CustomEventButton0: TButton;
@@ -90,6 +87,7 @@ TYPE
     animation:T_plotSeries;
     fpsSamplingStart:double;
     framesSampled:longint;
+    closedByUser:boolean;
     FUNCTION getPlotQuality:byte;
   public
     PROCEDURE pullPlotSettingsToGui();
@@ -104,6 +102,7 @@ VAR guiAdapters:P_adapters;
 
 FUNCTION plotForm: TplotForm;
 FUNCTION plotFormIsInitialized:boolean;
+PROCEDURE resetPlot;
 IMPLEMENTATION
 VAR plotSubsystem:record
       mouseUpTriggersPlot:boolean;
@@ -126,6 +125,14 @@ FUNCTION plotFormIsInitialized:boolean;
     result:=myPlotForm<>nil;
   end;
 
+PROCEDURE resetPlot;
+  begin
+    if myPlotForm=nil then exit;
+    myPlotForm.animation.clear;
+    myPlotForm.tempPlot.clear;
+    myPlotForm.closedByUser:=false;
+  end;
+
 {$R *.lfm}
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
@@ -145,6 +152,7 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     animation.create;
     fpsSamplingStart:=now;
     framesSampled:=0;
+    closedByUser:=false;
   end;
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
@@ -336,6 +344,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     postPlotClosed;
+    closedByUser:=true;
   end;
 
 FUNCTION TplotForm.getPlotQuality: byte;
@@ -476,9 +485,9 @@ FUNCTION TplotForm.wantTimerInterval: longint;
   end;
 
 {$i mnh_func_defines.inc}
-FUNCTION plotShowing intFuncSignature;
+FUNCTION plotClosedByUser_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
-    result:=newBoolLiteral(gui_started and plotForm.showing);
+    result:=newBoolLiteral((myPlotForm<>nil) and myPlotForm.closedByUser);
   end else result:=nil; end;
 
 FUNCTION clearPlotAnim_impl intFuncSignature;
@@ -502,10 +511,10 @@ FUNCTION display_imp intFuncSignature;
 
 INITIALIZATION
   broughtToFront:=0;
-  registerRule(PLOT_NAMESPACE,'plotShowing'      ,@plotShowing       ,[se_readGuiState    ],ak_nullary,'plotShowing;//Returns true if the plot is currently showing, false otherwise');
-  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl,[se_alterGuiState   ],ak_nullary,'clearAnimation;//Clears the animated plot');
-  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl ,[se_alterGuiState   ],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
-  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp       ,[se_outputViaAdapter],ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
+  registerRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl,[se_readGuiState    ],ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
+  registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   ,[se_alterGuiState   ],ak_nullary,'clearAnimation;//Clears the animated plot');
+  registerRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    ,[se_alterGuiState   ],ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
+  registerRule(PLOT_NAMESPACE,'display'          ,@display_imp          ,[se_outputViaAdapter],ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
 
 FINALIZATION
   if myPlotForm<>nil then FreeAndNil(myPlotForm);
