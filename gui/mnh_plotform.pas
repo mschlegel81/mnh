@@ -54,6 +54,7 @@ TYPE
     plotImage: TImage;
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
+    frameTrackBar: TTrackBar;
     PROCEDURE ButtonLeaveInteractiveModeClick(Sender: TObject);
     PROCEDURE CustomEventButton0Click(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
@@ -62,6 +63,7 @@ TYPE
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE frameTrackBarChange(Sender: TObject);
     PROCEDURE miAntiAliasing1Click(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
     PROCEDURE miAutoscaleXClick(Sender: TObject);
@@ -172,8 +174,7 @@ PROCEDURE TplotForm.CustomEventButton0Click(Sender: TObject);
     postCustomEvent(TButton(Sender).Tag);
   end;
 
-PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
-  );
+PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
@@ -196,6 +197,13 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
       InteractionPanel.AutoSize:=false;
       InteractionPanel.AutoSize:=true;
     end;
+  end;
+
+PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
+  begin
+    if animationFrameIndex=frameTrackBar.position then exit;
+    animationFrameIndex:=frameTrackBar.position;
+    animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
   end;
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
@@ -464,16 +472,22 @@ PROCEDURE TplotForm.doOrPostPlot;
 
 FUNCTION TplotForm.timerTick:boolean;
   begin
-    if gui_started and (showing) and (animation.frameCount>0) and (animateCheckBox.Checked) then begin
-      animation.nextFrame(animationFrameIndex);
-      animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
-      inc(framesSampled);
-      if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
-        animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
-        fpsSamplingStart:=now;
-        framesSampled:=0;
+    if gui_started and (showing) and (animation.frameCount>0) then begin
+      if animateCheckBox.Checked then begin
+        animation.nextFrame(animationFrameIndex);
+        animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+        inc(framesSampled);
+        if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
+          animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
+          fpsSamplingStart:=now;
+          framesSampled:=0;
+        end;
+        result:=true;
       end;
-      result:=true;
+      frameTrackBar.max:=animation.frameCount-1;
+      frameTrackBar.position:=animationFrameIndex;
+      if frameTrackBar.max>20 then frameTrackBar.frequency:=5
+                              else frameTrackBar.frequency:=1;
     end else result:=false;
   end;
 
