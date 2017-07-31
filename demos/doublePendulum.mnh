@@ -1,14 +1,26 @@
 USE root,RK4,GUI;
-private l1:=1;
-private l2:=1;
-private m1:=1;
-private m2:=1;
+private mutable l1:=1;
+private mutable l2:=1;
+private mutable m1:=1;
+private mutable m2:=1;
 private g:=9.81;
+private mutable F1fak:=-m2/(m1+m2)*l2/l1;
+private mutable F2fak:=-l1/l2;
+
+private initialize(l1_,l2_,m1_,m2_)->begin
+  l1:=l1_.toReal;
+  l2:=l2_.toReal;
+  m1:=m1_.toReal;
+  m2:=m2_.toReal;
+  F1fak:=-m2/(m1+m2)*l2/l1;
+  F2fak:=-l1/l2;
+  void;
+end;
 
 //*phi1'', dependent on phi2''
-F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->-m2/(m1+m2)*l2/l1*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
+F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
 //*phi2'', dependent on phi1''
-F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->-l1/l2*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
+F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
 //*Returns an expression F1(F2($x))-$x (for Regula Falsi)
 F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
 
@@ -40,11 +52,17 @@ private plotIt(p1,p2,trace1,trace2)->begin
   display;
 end;
 
+private chaosMeasure(phi1,phi2)->
+  (RK4([phi1-1E-6,phi2,0,0],::accel,0.1,1E-2)-
+   RK4([phi1+1E-6,phi2,0,0],::accel,0.1,1E-2)).sqr.agg(+).sqrt;
+
 private secondsPreFrame:=1/40;
+//*Animates a double pendulum with standard parameters (l1=l2=m1=m2=1)
+//*The animation will consist of two double pendulums with a tiny variation in the starting conditions
 main->begin
   setOptions([['autoscaleX',false],['autoscaleY',false],['x0',0],['x1',0],['y0',0],['y1',0]]);
-  local state1:=[pi/2     ,0,0,0];
-  local state2:=[pi/2+1E-6,0,0,0];
+  local state1:=[pi/2+(random-0.5)*1E-6,pi/4+(random-0.5)*1E-6,0,0];
+  local state2:=[pi/2+(random-0.5)*1E-6,pi/4+(random-0.5)*1E-6,0,0];
   local trace1:=[state1.plottable.trailing];
   local trace2:=[state2.plottable.trailing];
   local replot:={begin
@@ -63,3 +81,8 @@ main->begin
     replot();
   end);
 end;
+
+//*Animates a double pendulum with custom parameters
+//*Note that smaller lengths lead to faster pendulums
+//*but only the ratio of the lenghts changes the behavior qualitatively
+main(L1,L2,M1,M2)->initialize@$params orElse main;
