@@ -31,7 +31,7 @@ accel(phi1,phi2,phi1dt,phi2dt)->
   begin
     [phi1dt,
      phi2dt,
-     local phi1dtt:=regulaFalsi(F12(phi1,phi2,phi1dt,phi2dt),-pi,pi,1E-3,1E-3),
+     local phi1dtt:=regulaFalsi(F12(phi1,phi2,phi1dt,phi2dt),-pi,pi,1E-2,1E-2),
      F2(phi1,phi2,phi1dt,phi2dt,phi1dtt)];
   end;
 
@@ -51,10 +51,6 @@ private plotIt(p1,p2,trace1,trace2)->begin
   addPlot(p2,'3 . red l'); addPlot(p1,'3 . black l');
   display;
 end;
-
-private chaosMeasure(phi1,phi2)->
-  (RK4([phi1-1E-6,phi2,0,0],::accel,0.1,1E-2)-
-   RK4([phi1+1E-6,phi2,0,0],::accel,0.1,1E-2)).sqr.agg(+).sqrt;
 
 private secondsPreFrame:=1/40;
 //*Animates a double pendulum with standard parameters (l1=l2=m1=m2=1)
