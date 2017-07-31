@@ -1656,10 +1656,9 @@ object MnhForm: TMnhForm
     Width = 717
     TabStop = False
     Align = alClient
-    MultiLine = True
     TabOrder = 0
     OnChange = inputPageControlChange
-    Options = [nboMultiLine, nboKeyboardTabSwitch]
+    Options = [nboKeyboardTabSwitch]
   end
   object Splitter1: TSplitter
     Cursor = crVSplit
