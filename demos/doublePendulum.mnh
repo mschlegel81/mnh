@@ -41,17 +41,6 @@ plottable(state:numericList(4))->begin
                d1+ [sin(state[1]),-cos(state[1])]*l2];
 end;
 
-//*Plot function
-private plotIt(p1,p2,trace1,trace2)->begin
-  setOptions([['x0',min(getOptions['x0'],min(p1.getInner(0)),min(p2.getInner(0)))],
-              ['x1',max(getOptions['x1'],max(p1.getInner(0)),max(p2.getInner(0)))],
-              ['y0',min(getOptions['y0'],min(p1.getInner(1)),min(p2.getInner(1)))],
-              ['y1',max(getOptions['y1'],max(p1.getInner(1)),max(p2.getInner(1)))]]);
-  plot   (trace2,'red');   addPlot(trace1,'black');
-  addPlot(p2,'3 . red l'); addPlot(p1,'3 . black l');
-  display;
-end;
-
 private secondsPreFrame:=1/40;
 //*Animates a double pendulum with standard parameters (l1=l2=m1=m2=1)
 //*The animation will consist of two double pendulums with a tiny variation in the starting conditions
@@ -66,13 +55,23 @@ main->begin
                    local p2:=state2.plottable;
                    trace1:=trace1.trailing(100)|[p1.trailing];
                    trace2:=trace2.trailing(100)|[p2.trailing];
-                   plotIt(p1,p2,trace1,trace2);
+                   setOptions([['x0',min(getOptions['x0'],min(p1.getInner(0)),min(p2.getInner(0)))],
+                               ['x1',max(getOptions['x1'],max(p1.getInner(0)),max(p2.getInner(0)))],
+                               ['y0',min(getOptions['y0'],min(p1.getInner(1)),min(p2.getInner(1)))],
+                               ['y1',max(getOptions['y1'],max(p1.getInner(1)),max(p2.getInner(1)))]]);
+                   plot   (trace2,'red');
+                   addPlot(trace1,'black');
+                   addPlot(p2,'3 . red l');
+                   addPlot(p1,'3 . black l');
+                   display;
                  end};
   replot();
+  local i1:=RK4Integrator(::accel,0.02,1E-3);
+  local i2:=RK4Integrator(::accel,0.02,1E-3);
   local frameTime:=time;
   while(not(plotClosed),begin
-    state1:=state1.RK4(::accel,0.02,1E-2);
-    state2:=state2.RK4(::accel,0.02,1E-2);
+    state1:=i1(state1);
+    state2:=i2(state2);
     sleepUntil(frameTime+=secondsPreFrame);
     replot();
   end);
