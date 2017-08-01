@@ -70,6 +70,7 @@ TYPE
     protected
       outputFileName:ansistring;
       forceRewrite:boolean;
+      lastOutput:double;
       FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
       PROCEDURE flush; virtual; abstract;
     public
@@ -455,6 +456,7 @@ CONSTRUCTOR T_abstractFileOutAdapter.create(CONST typ:T_adapterType; CONST fileN
     inherited create(typ,messageTypesToInclude_);
     outputFileName:=expandFileName(fileName);
     forceRewrite:=forceNewFile;
+    lastOutput:=now;
   end;
 
 DESTRUCTOR T_abstractFileOutAdapter.destroy;
@@ -464,9 +466,13 @@ DESTRUCTOR T_abstractFileOutAdapter.destroy;
   end;
 
 FUNCTION T_abstractFileOutAdapter.append(CONST message: T_storedMessage):boolean;
+  CONST flushAt=10/(24*60*60); //=10 seconds
   begin
     result:=inherited append(message);
-    if result {$ifndef DEBUGMODE} and (length(storedMessages)>=100) {$endif} then flush();
+    if result {$ifndef DEBUGMODE} and ((now>lastOutput+flushAt) or (length(storedMessages)>=100)) {$endif} then begin
+      lastOutput:=now;
+      flush();
+    end;
   end;
 
 FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
@@ -478,6 +484,7 @@ FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
       leaveCriticalSection(cs);
       exit(false);
     end;
+    lastOutput:=now;
     flush();
     outputFileName:=newFullFileName;
     result:=true;
