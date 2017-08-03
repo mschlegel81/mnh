@@ -374,7 +374,9 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString): longint;
 FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
   begin
     if index=ALL_PARAMETERS_PAR_IDX then exit(ALL_PARAMETERS_TOKEN_TEXT);
-    result:=sig[index].id;
+    if (index>=0) and (index<length(sig))
+    then result:=sig[index].id
+    else result:='';
     if result='' then result:='$'+intToStr(index);
   end;
 
