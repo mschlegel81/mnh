@@ -46,13 +46,13 @@ private secondsPreFrame:=1/40;
 //*The animation will consist of two double pendulums with a tiny variation in the starting conditions
 main->begin
   setOptions([['autoscaleX',false],['autoscaleY',false],['x0',0],['x1',0],['y0',0],['y1',0]]);
-  local state1:=[pi/2+(random-0.5)*1E-6,pi/4+(random-0.5)*1E-6,0,0];
-  local state2:=[pi/2+(random-0.5)*1E-6,pi/4+(random-0.5)*1E-6,0,0];
+  local state1:=[pi/2,pi/4,0,0];
+  local state2:=state1+(random(4)-0.5)*1E-6;
   local trace1:=[state1.plottable.trailing];
   local trace2:=[state2.plottable.trailing];
+  local p1:=state1.plottable;
+  local p2:=state2.plottable;
   local replot:={begin
-                   local p1:=state1.plottable;
-                   local p2:=state2.plottable;
                    trace1:=trace1.trailing(100)|[p1.trailing];
                    trace2:=trace2.trailing(100)|[p2.trailing];
                    setOptions([['x0',min(getOptions['x0'],min(p1.getInner(0)),min(p2.getInner(0)))],
@@ -66,13 +66,14 @@ main->begin
                    display;
                  end};
   replot();
-  local i1:=RK4Integrator(::accel,0.02,1E-3);
-  local i2:=RK4Integrator(::accel,0.02,1E-3);
+  local step:={$0.RK4(::accel,0.02,1E-3)};
   local frameTime:=time;
+  state1:=async(step,[state1]);
+  state2:=async(step,[state2]);
   while(not(plotClosed),begin
-    state1:=i1(state1);
-    state2:=i2(state2);
     sleepUntil(frameTime+=secondsPreFrame);
+    p1:=(state1:=state1()).plottable; state1:=async(step,[state1]);
+    p2:=(state2:=state2()).plottable; state2:=async(step,[state2]);
     replot();
   end);
 end;
