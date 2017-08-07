@@ -417,7 +417,6 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     end;
   end;
 
-VAR broughtToFront:double;
 PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
   PROCEDURE updateInteractiveSection;
     FUNCTION CustomEventButton(CONST index:byte):TButton;
@@ -460,10 +459,6 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
   begin
     if not(showing) then Show;
     updateInteractiveSection;
-    if (now-broughtToFront)>5/(24*60*60) then begin
-      BringToFront;
-      broughtToFront:=now;
-    end;
     if animation.frameCount<>0 then begin
       animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
       guiAdapters^.resetFlagsAfterPlotDone;
@@ -546,7 +541,6 @@ FUNCTION uninitialized_fallback intFuncSignature;
 
 PROCEDURE initializePlotForm;
   begin
-    broughtToFront:=0;
     reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
