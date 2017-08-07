@@ -237,7 +237,6 @@ FUNCTION try_imp intFuncSignature;
 {$define OP:=tt_operatorXor      } FUNCTION funcFor_operatorXor       intFuncSignature; funcForOp;
 FUNCTION funcFor_operatorLazyAnd intFuncSignature;
   begin
-
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_boolean) then begin
       if bool0^.value then result:=arg1 else result:=arg0;
       result^.rereference;
@@ -287,29 +286,29 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,[se_versionDependent],ak_nullary,'listKeywords;//Returns a list of all keywords by category');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,[] ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,[se_versionDependent],ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
-  intFuncForOperator[tt_comparatorEq     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(=) '    ,@funcFor_comparatorEq     ,[],ak_binary,'');
-  intFuncForOperator[tt_comparatorNeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(!=)'    ,@funcFor_comparatorNeq    ,[],ak_binary,'');
-  intFuncForOperator[tt_comparatorLeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(<=)'    ,@funcFor_comparatorLeq    ,[],ak_binary,'');
-  intFuncForOperator[tt_comparatorGeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(>=)'    ,@funcFor_comparatorGeq    ,[],ak_binary,'');
-  intFuncForOperator[tt_comparatorLss    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(<)'     ,@funcFor_comparatorLss    ,[],ak_binary,'');
-  intFuncForOperator[tt_comparatorGrt    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(>)'     ,@funcFor_comparatorGrt    ,[],ak_binary,'');
-  intFuncForOperator[tt_comparatorListEq ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(==)'    ,@funcFor_comparatorListEq ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorAnd      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(and)'   ,@funcFor_operatorAnd      ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorOr       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(or)'    ,@funcFor_operatorOr       ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorXor      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(xor)'   ,@funcFor_operatorXor      ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorLazyAnd  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(AND)'   ,@funcFor_operatorLazyAnd  ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorLazyOr   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(OR)'    ,@funcFor_operatorLazyOr   ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorPlus     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(+)'     ,@funcFor_operatorPlus     ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorMinus    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(-)'     ,@funcFor_operatorMinus    ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorMult     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(*)'     ,@funcFor_operatorMult     ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorDivReal  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(/)'     ,@funcFor_operatorDivReal  ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorDivInt   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(div)'   ,@funcFor_operatorDivInt   ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorMod      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(mod)'   ,@funcFor_operatorMod      ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorPot      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(^)'     ,@funcFor_operatorPot      ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorStrConcat]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(&)'     ,@funcFor_operatorStrConcat,[],ak_binary,'');
-  intFuncForOperator[tt_operatorOrElse   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(orElse)',@funcFor_operatorOrElse   ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorConcat   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(|)'     ,@funcFor_operatorConcat   ,[],ak_binary,'');
-  intFuncForOperator[tt_operatorIn       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP(in)'    ,@funcFor_operatorIn       ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorEq     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_equals'    ,@funcFor_comparatorEq     ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorNeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_neq'       ,@funcFor_comparatorNeq    ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorLeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_leq'       ,@funcFor_comparatorLeq    ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorGeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_geq'       ,@funcFor_comparatorGeq    ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorLss    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_lesser'    ,@funcFor_comparatorLss    ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorGrt    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_greater'   ,@funcFor_comparatorGrt    ,[],ak_binary,'');
+  intFuncForOperator[tt_comparatorListEq ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_listEquals',@funcFor_comparatorListEq ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorAnd      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_and'       ,@funcFor_operatorAnd      ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorOr       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_or'        ,@funcFor_operatorOr       ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorXor      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_xor'       ,@funcFor_operatorXor      ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorLazyAnd  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_AND'       ,@funcFor_operatorLazyAnd  ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorLazyOr   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_OR'        ,@funcFor_operatorLazyOr   ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorPlus     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_plus'      ,@funcFor_operatorPlus     ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorMinus    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_minus'     ,@funcFor_operatorMinus    ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorMult     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_mult'      ,@funcFor_operatorMult     ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorDivReal  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_divReal'   ,@funcFor_operatorDivReal  ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorDivInt   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_divInt'    ,@funcFor_operatorDivInt   ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorMod      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_mod'       ,@funcFor_operatorMod      ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorPot      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_pot'       ,@funcFor_operatorPot      ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorStrConcat]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_strConcat' ,@funcFor_operatorStrConcat,[],ak_binary,'');
+  intFuncForOperator[tt_operatorOrElse   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_orElse'    ,@funcFor_operatorOrElse   ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorConcat   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_listConcat',@funcFor_operatorConcat   ,[],ak_binary,'');
+  intFuncForOperator[tt_operatorIn       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_in'        ,@funcFor_operatorIn       ,[],ak_binary,'');
 FINALIZATION
   builtinLocation_try   .destroy;
 
