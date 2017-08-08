@@ -577,9 +577,7 @@ FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral
     result:=P_subruleExpression(subrulePointer)^.replaces(param,callLocation,firstRep,lastRep,context,useUncurryingFallback);
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal;
-  CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation
-  );
+CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
   VAR i:longint;
       r:P_subruleExpression;
       embrace:boolean;

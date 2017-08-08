@@ -3,7 +3,7 @@ private absNorm(v:numericList)->abs(v).agg(+);
 private absNorm(L:list)->L.each(v,v.absNorm,+);
 
 //@Algorithm Name=Runge-Kutta Method
-RK4(y0,F:expression(1),dt>0.0)->begin
+RK4(y0,F:expression(1),dt:numeric)->begin
   local F1:=dt*F(y0       );
   local F2:=dt*F(y0+0.5*F1);
   local F3:=dt*F(y0+0.5*F2);
@@ -11,7 +11,7 @@ RK4(y0,F:expression(1),dt>0.0)->begin
   y0+(1/6)*(F1+2*F2+2*F3+F4);
 end;
 
-RK4(y0,F:expression(1),dt>0.0,tolerance>0.0)->begin
+RK4(y0,F:expression(1),dt:numeric,tolerance>0.0)->begin
   local F1:=dt*F(y0       );
   local F2:=dt*F(y0+0.5*F1);
   local F3:=dt*F(y0+0.5*F2);
@@ -28,41 +28,6 @@ RK4(y0,F:expression(1),dt>0.0,tolerance>0.0)->begin
     end;
 end;
 
-//@SuppressUnusedWarning
-//*Returns an integrator for a fixed expression, stepsize and tolerance;
-//*The number of substeps is automatically adapted
-RK4Integrator(F_:expression,dt_>0.0,tolerance_>0.0)->{begin
-  local F:=F_;
-  local subStepCount:=1;
-  local dt:=dt_;
-  local tolerance:=tolerance_;
-save;
-  local y:=$y0;
-  local reiterate:=true;
-  while(reiterate,begin
-    y:=$y0;
-    local maxErr:=[1..subStepCount].each(step,begin
-    local y0:=y;
-    local F1:=dt*F(y       );
-    local F2:=dt*F(y+0.5*F1);
-    local F3:=dt*F(y+0.5*F2);
-    local F4:=dt*F(y    +F3);
-    y:=y+(1/6)*(F1+2*F2+2*F3+F4);
-    absNorm(y0+F4-y)/tolerance;
-  end).max;
-    ceil(maxErr*subStepCount)>subStepCount
-    ? begin
-        subStepCount:=ceil(maxErr*subStepCount);
-        dt:=dt_/subStepCount;
-      end
-    : begin
-        reiterate:=false;
-        subStepCount:=round(subStepCount*(0.9+maxErr*0.1));
-        dt:=dt_/subStepCount;
-      end;
-  end);
-  y;
-end};
 
 //*Solves the autonomous Differential equation y(0)=y0; dy/dt=F; returns y(tEnd)
 //*Dynamic sub step selection based on tolerance is employed
