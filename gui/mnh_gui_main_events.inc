@@ -29,7 +29,9 @@ PROCEDURE miFindPreviousClick(Sender: TObject);
 //Running
 PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
+PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
+PROCEDURE miStackTracingClick(Sender: TObject);
 PROCEDURE miHaltEvalutaionClick(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
@@ -67,7 +69,6 @@ PROCEDURE miExpressionEchoClick(Sender: TObject);
 PROCEDURE miExpressionResultClick(Sender: TObject);
 PROCEDURE miTimingInfoClick(Sender: TObject);
 PROCEDURE miWrapEchoClick(Sender: TObject);
-PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miFullscreenClick(Sender: TObject);
 
 PROCEDURE subMenuFileClick(Sender: TObject);
@@ -117,7 +118,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     //Dynamic GUI components:
     setLength(scriptMenuItems[st_edit  ],0);
     setLength(scriptMenuItems[st_insert],0);
-    setLength(scriptMenuItems[st_util ],0);
+    setLength(scriptMenuItems[st_util  ],0);
     setLength(historyMenuItems,0);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     helpHighlighter  :=TSynMnhSyn.create(self,msf_help  );
@@ -325,11 +326,26 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     runnerModel.customRun(false,miProfile.Checked);
   end;
 
+PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
+  begin
+    miProfile.Checked:=not(miProfile.Checked);
+    if miProfile.Checked and not(miTimingInfo.Checked) then begin
+      miTimingInfo.Checked:=miTimingInfo.AutoCheck;
+      miTimingInfoClick(Sender);
+    end;
+  end;
+
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   begin
     miDebug.Checked:=not(miDebug.Checked);
     runnerModel.debugMode:=miDebug.Checked;
     onDebuggerEvent;
+  end;
+
+PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
+  begin
+    miStackTracing.Checked:=not(miStackTracing.Checked);
+    runnerModel.stackTracing:=miStackTracing.Checked;
   end;
 
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
@@ -477,15 +493,6 @@ PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
   begin
     settings.value^.wordWrapEcho:=miWrapEcho.Checked;
     updateWordWrap;
-  end;
-
-PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
-  begin
-    miProfile.Checked:=not(miProfile.Checked);
-    if miProfile.Checked and not(miTimingInfo.Checked) then begin
-      miTimingInfo.Checked:=miTimingInfo.AutoCheck;
-      miTimingInfoClick(Sender);
-    end;
   end;
 
 PROCEDURE TMnhForm.miFullscreenClick(Sender: TObject);

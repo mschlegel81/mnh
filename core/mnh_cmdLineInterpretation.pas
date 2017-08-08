@@ -126,6 +126,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
                   ' for ',{$I %FPCTARGET%},' ',{$I %FPCTargetOS%});
     end;
 
+  CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   PROCEDURE doDirect;
     VAR context:T_evaluationContext;
         package:P_package;
@@ -133,7 +134,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       context.create(@consoleAdapters);
 
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
-      context.resetForEvaluation(package,{$ifdef fullVersion}profilingRun{$else}false{$endif},false,false);
+      context.resetForEvaluation(package,contextType[profilingRun]);
       package^.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
       dispose(package,destroy);
@@ -147,7 +148,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     begin
       package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
       context.create(@consoleAdapters);
-      context.resetForEvaluation(@package,{$ifdef fullVersion}profilingRun{$else}false{$endif},false,false);
+      context.resetForEvaluation(@package,contextType[profilingRun]);
       if wantHelpDisplay then begin
         package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
         writeln(package.getHelpOnMain);

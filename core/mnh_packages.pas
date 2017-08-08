@@ -103,7 +103,7 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST random
   begin
     context.create(adapter);
     package.create(newVirtualFileCodeProvider('?',input),nil);
-    context.resetForEvaluation(@package,false,false,true);
+    context.resetForEvaluation(@package,ect_silent);
     if randomSeed<>4294967295 then context.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
     package.destroy;
@@ -148,7 +148,7 @@ FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfStri
     if enforceDeterminism then context.prng.resetSeed(0);
     {P} package.create(newFileCodeProvider(filenameOrId),nil);
     try
-        context.resetForEvaluation(@package,false,false,true);
+        context.resetForEvaluation(@package,ect_silent);
         package.load(lu_forCallingMain,context.threadContext^,mainParameters);
         context.afterEvaluation;
     finally

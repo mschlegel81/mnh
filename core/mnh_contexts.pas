@@ -14,11 +14,23 @@ USES //FPC/LCL libraries
      valueStore,
      mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging{$endif};
 TYPE
-  T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_beepOnError);
-  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_notifyParentOfAsyncTaskEnd);
+  T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace,eco_beepOnError);
+  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_stackTrace,tco_notifyParentOfAsyncTaskEnd);
   T_evaluationContextOptions=set of T_evaluationContextOption;
   T_threadContextOptions    =set of T_threadContextOption;
-  T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging{$endif},ect_silentlyRunAlone);
+  T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging,ect_debuggingAndProfiling,ect_stackTracing{$endif},ect_silent);
+CONST
+  C_evaluationContextOptions:array[T_evaluationContextType] of T_evaluationContextOptions=(
+  {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
+  {$ifdef fullVersion}
+  {ect_profiling}             [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace,eco_profiling],
+  {ect_debugging}             [                                       eco_beepOnError,eco_stackTrace,              eco_debugging],
+  {ect_debuggingAndProfiling} [                                       eco_beepOnError,eco_stackTrace,eco_profiling,eco_debugging],
+  {ect_stackTracing}          [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError,eco_stackTrace],
+  {$endif}
+  {ect_silent}                [eco_spawnWorker,eco_createDetachedTask]);
+
+TYPE
   T_sideEffect=(se_inputViaAsk,
                 se_outputViaAdapter,
                 se_sound,
@@ -71,7 +83,7 @@ CONST
                 'versionDependent');
 
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
-  C_equivalentOption:array[tco_spawnWorker..tco_debugging] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging);
+  C_equivalentOption:array[tco_spawnWorker..tco_stackTrace] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace);
   C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
 
 TYPE
@@ -167,7 +179,7 @@ TYPE
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
       CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean; CONST enforceWallClock:boolean=false);
+      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST enforceWallClock:boolean=false);
       PROCEDURE afterEvaluation;
       PROPERTY evaluationOptions:T_evaluationContextOptions read options;
       PROPERTY threadContext:P_threadContext read primaryThreadContext;
@@ -303,7 +315,7 @@ CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_obje
     taskQueue:=nil;
     disposeAdaptersOnDestruction:=true;
     allowedSideEffects:=customSideEffecWhitelist;
-    resetForEvaluation(package,false,false,true);
+    resetForEvaluation(package,ect_silent);
   end;
 
 DESTRUCTOR T_evaluationContext.destroy;
@@ -319,16 +331,13 @@ DESTRUCTOR T_evaluationContext.destroy;
     if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
   end;
 
-PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST doProfiling,doDebugging,silentMode:boolean; CONST enforceWallClock:boolean=false);
+PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST enforceWallClock:boolean=false);
   VAR pc:T_profileCategory;
   begin
     //set options
-    options:=[eco_spawnWorker,eco_createDetachedTask,eco_beepOnError];
+    options:=C_evaluationContextOptions[evaluationContextType];
     if adapters^.doShowTimingInfo then options:=options+[eco_timing];
-    if doProfiling then options:=options+[eco_profiling];
-    if doDebugging then options:=options+[eco_debugging]-[eco_createDetachedTask,eco_spawnWorker];
-    if silentMode  then options:=options-[eco_beepOnError,eco_debugging,eco_timing,eco_profiling];
-    if silentMode  then allowedSideEffects:=allowedSideEffects-[se_inputViaAsk];
+    if evaluationContextType=ect_silent then allowedSideEffects:=allowedSideEffects-[se_inputViaAsk];
     {$ifdef fullVersion}
     //prepare or dispose profiler:
     if eco_profiling in options then begin
@@ -547,20 +556,20 @@ PROCEDURE T_threadContext.leaveTryStatementReassumingPreviousAdapters(CONST prev
 {$ifdef fullVersion}
 PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation);
   begin
-    if options*[tco_debugging,tco_profiling]=[] then exit;
+    if not(tco_stackTrace in options) then exit;
     callStack.push(wallclockTime,callerLocation,callee);
   end;
 
 PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
   begin
-    if options*[tco_debugging,tco_profiling]=[] then exit;
+    if not(tco_stackTrace in options) then exit;
     if calls[category]=nil then new(calls[category],create(package,category));
     callStack.push(wallclockTime,calls[category]^.getLocation,calls[category]);
   end;
 
 PROCEDURE T_threadContext.callStackPop;
   begin
-    if options*[tco_debugging,tco_profiling]=[] then exit;
+    if not(tco_stackTrace in options) then exit;
     callStack.pop(wallclockTime,parent^.profiler);
   end;
 {$endif}
@@ -605,7 +614,7 @@ PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
   VAR p:P_threadContext;
       a:P_adapters;
   begin
-    if options*[tco_debugging,tco_profiling]=[] then exit;
+    if not(tco_stackTrace in options) then exit;
     a:=targetAdapters;
     if a=nil then a:=adapters;
     if a=nil then exit;

@@ -108,7 +108,7 @@ FUNCTION interpretationLoop(p:pointer):ptrint;
     with interpretation do begin
       idleSince:=now;
       while SimpleMnhForm.showing and (now-idleSince<idleTimeout) do if hasRequest then begin
-        evalContext.resetForEvaluation(SimpleMnhForm.package,false,false,false);
+        evalContext.resetForEvaluation(SimpleMnhForm.package,ect_normal);
         SimpleMnhForm.package^.interpretInPackage(input,evalContext.threadContext^);
         idleSince:=now;
         enterCriticalSection(criticalSection);
