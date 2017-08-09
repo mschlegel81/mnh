@@ -1,4 +1,4 @@
-USE root,RK4,GUI;
+USE rungeKutta,GUI;
 private mutable l1:=1;
 private mutable l2:=1;
 private mutable m1:=1;
@@ -17,6 +17,7 @@ private initialize(l1_,l2_,m1_,m2_)->begin
   void;
 end;
 
+
 //*phi1'', dependent on phi2''
 F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
 //*phi2'', dependent on phi1''
@@ -26,12 +27,15 @@ F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi
 
 //*Overloaded for use in RK4
 accel(state:numericList(4))->accel@state;
+
+quickRoot(F:expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
+
 //*Returns first derivative in time for given state
 accel(phi1,phi2,phi1dt,phi2dt)->
   begin
     [phi1dt,
      phi2dt,
-     local phi1dtt:=regulaFalsi(F12(phi1,phi2,phi1dt,phi2dt),-pi,pi,1E-2,1E-2),
+     local phi1dtt:=quickRoot(F12(phi1,phi2,phi1dt,phi2dt)),
      F2(phi1,phi2,phi1dt,phi2dt,phi1dtt)];
   end;
 
@@ -66,12 +70,13 @@ main->begin
                    display;
                  end};
   replot();
-  local step:={$0.RK4(::accel,0.02,1E-3)};
+  local step:=integrator(CASH_KARP,::accel,0.02,1E-4);
   local frameTime:=time;
   state1:=async(step,[state1]);
   state2:=async(step,[state2]);
   while(not(plotClosed),begin
     sleepUntil(frameTime+=secondsPreFrame);
+    frameTime:=time;
     p1:=(state1:=state1()).plottable; state1:=async(step,[state1]);
     p2:=(state2:=state2()).plottable; state2:=async(step,[state2]);
     replot();
