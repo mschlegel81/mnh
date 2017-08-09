@@ -100,6 +100,7 @@ TYPE
     miEditGuiScripts,
     miUtilityScriptRoot,
     submenuEditorAppearance:   TMenuItem;
+    miStackTracing: TMenuItem;
     miOpenSimpleMnh: TMenuItem;
     miUserErrors: TMenuItem;
     miFileHistoryRoot: TMenuItem;

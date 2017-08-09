@@ -108,8 +108,7 @@ TYPE
   T_runEvaluator=object(T_evaluator)
     private
       //request variables
-      profilingRequested:boolean;
-      debuggingRequested:boolean;
+      requestedContextType:T_evaluationContextType;
       mainParameters:T_arrayOfString;
       //internal state variables
       startOfEvaluation:double;
@@ -126,9 +125,9 @@ TYPE
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE reEvaluateWithGUI;
-      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST profiling,debugging:boolean);
+      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
       FUNCTION getPackageForPostEvaluation(CONST provider:P_codeProvider):P_package;
-      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST profiling,debugging:boolean);
+      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
@@ -192,7 +191,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       P_runEvaluator(p)^.editAdapters^.clearAll;
       context.create(P_runEvaluator(p)^.editAdapters);
-      context.resetForEvaluation(nil,false,false,false);
+      context.resetForEvaluation(nil,ect_normal);
     end;
 
   PROCEDURE doneEdit(VAR context:T_evaluationContext);
@@ -326,7 +325,7 @@ PROCEDURE T_codeAssistant.check;
   begin
     if package.getCodeProvider^.stateHash=package.getCodeState then exit;
     adapters^.clearAll;
-    context.resetForEvaluation(@package,false,false,true);
+    context.resetForEvaluation(@package,ect_silent);
     package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
     package.updateLists(userRules);
     updateErrors;
@@ -616,23 +615,23 @@ PROCEDURE T_runEvaluator.reEvaluateWithGUI;
       system.leaveCriticalSection(cs);
       exit;
     end;
-    debuggingRequested:=false;
-    profilingRequested:=mnh_cmdLineInterpretation.profilingRun;
+    if mnh_cmdLineInterpretation.profilingRun
+    then requestedContextType:=ect_profiling
+    else requestedContextType:=ect_normal;
     mainParameters:=mnh_cmdLineInterpretation.mainParameters;
     request:=er_reEvaluateWithGUI;
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST profiling,debugging:boolean);
+PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
-    profilingRequested:=profiling;
-    debuggingRequested:=debugging;
+    requestedContextType:=contextType;
     request:=er_evaluate;
     package.replaceCodeProvider(provider);
     ensureThread;
@@ -652,8 +651,7 @@ FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvid
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider;
-  params: ansistring; CONST profiling, debugging: boolean);
+PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
   VAR sp:longint;
   begin
     system.enterCriticalSection(cs);
@@ -661,8 +659,7 @@ PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider;
       system.leaveCriticalSection(cs);
       exit;
     end;
-    profilingRequested:=profiling;
-    debuggingRequested:=debugging;
+    requestedContextType:=contextType;
     setLength(mainParameters,0);
     params:=trim(params);
     while params<>'' do begin
@@ -755,7 +752,7 @@ FUNCTION T_runEvaluator.getRunnerStateInfo: T_runnerStateInfo;
     system.enterCriticalSection(cs);
     result.state:=state;
     if (context.isPaused) then result.state:=es_debugHalted;
-    if (debuggingRequested) and (result.state=es_running) then result.state:=es_debugRunning;
+    if (requestedContextType in [ect_debugging,ect_debuggingAndProfiling]) and (result.state=es_running) then result.state:=es_debugRunning;
     result.request:=request;
     case result.state of
       es_running     : result.message:='Evaluating... '+myTimeToStr(now-startOfEvaluation);
@@ -804,7 +801,7 @@ PROCEDURE T_runEvaluator.preEval;
     system.enterCriticalSection(cs);
     inherited preEval;
     startOfEvaluation:=now;
-    context.resetForEvaluation(@package,profilingRequested,debuggingRequested,false);
+    context.resetForEvaluation(@package,requestedContextType);
     system.leaveCriticalSection(cs);
   end;
 

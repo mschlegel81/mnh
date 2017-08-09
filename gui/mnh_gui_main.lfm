@@ -2344,6 +2344,10 @@ object MnhForm: TMnhForm
         Caption = 'Profile'
         OnClick = miProfileClick
       end
+      object miStackTracing: TMenuItem
+        Caption = 'Keep stack trace'
+        OnClick = miStackTracingClick
+      end
       object miOpenSimpleMnh: TMenuItem
         Caption = 'Simple interpreter'
         ShortCut = 115

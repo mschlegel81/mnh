@@ -20,6 +20,7 @@ USES  //basic classes
   mnh_plotForm,
   //MNH:
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
+  mnh_contexts,
   mnh_litVar,
   mnh_funcs,
   mnh_debugging,
@@ -139,6 +140,7 @@ T_runnerModel=object
     debugMode_:boolean;
     PROCEDURE setDebugMode(CONST value:boolean);
   public
+    stackTracing:boolean;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
@@ -1229,6 +1231,7 @@ PROCEDURE T_runnerModel.setDebugMode(CONST value: boolean);
 CONSTRUCTOR T_runnerModel.create;
   begin
     debugMode_:=false;
+    stackTracing:=false;
     with lastStart do begin mainCall:=false; parameters:=''; end;
   end;
 
@@ -1249,6 +1252,7 @@ FUNCTION T_runnerModel.canRun: boolean;
 
 PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST mainParameters: string);
   VAR m:P_editorMeta;
+      contextType:T_evaluationContextType;
   begin
     if not(canRun) then exit;
     guiOutAdapter.flushClear;
@@ -1264,8 +1268,17 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
       runEvaluator.context.stepper^.clearBreakpoints;
       for m in editorMetaData do m^.setStepperBreakpoints;
     end;
-    if mainCall then runEvaluator.callMain(getEditor,mainParameters,profiling,debugMode_)
-                else runEvaluator.evaluate(getEditor,               profiling,debugMode_);
+    if profiling then begin
+      if debugMode_ then contextType:=ect_debuggingAndProfiling
+                    else contextType:=ect_profiling;
+    end else begin
+      if debugMode_        then contextType:=ect_debugging
+      else if stackTracing then contextType:=ect_stackTracing
+                           else contextType:=ect_normal;
+    end;
+
+    if mainCall then runEvaluator.callMain(getEditor,mainParameters,contextType)
+                else runEvaluator.evaluate(getEditor,               contextType);
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;
   end;

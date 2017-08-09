@@ -1385,6 +1385,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
                     else last^.next:=subTokens;
       last:=subTokens^.last;
     end;
+    preprocessStatement(result,context.adapters^);
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;

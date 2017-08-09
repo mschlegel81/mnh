@@ -1,0 +1,157 @@
+//*Butcher Tableau of an explicit Runge-Kutta method (ERK)
+type ERK_ButcherTableau(T:list)->T.each(row,row.isNumericList AND row.size<=index+1,AND);
+
+//@SuppressUnusedWarning
+absNorm(x:numericList)->x.abs.agg(+)/x.size;
+//@SuppressUnusedWarning
+absNorm(l:list)->begin
+  local f:=l.flatten;
+  f.isNumericList ? absNorm(f) : fail;
+end;
+
+private rkCodeStart(intermediate,y,dt,...)->[
+                          ...[0],'F0'         ,':=',dt,'*$1(',y,')',';']|
+  intermediate.each(stage,...[0],'F'&(index+1),':=',dt,'*$1(',y ,
+                          stage.each(a ,a=0 ? void : [a,'F'&index])
+                               .each(af,'+',
+                                        af[0]=1 ? void : af[0],
+                                        af[0]=1 ? void : '*',
+                                        af[1],|),
+                          ')',';',|);
+private summationStageCode(summationStage:numericList,intern:boolean)->
+  (intern ? 'y+=' :'$0')| summationStage.each(a ,a=0 ? void : [a,'F'&index])
+                      .each(af,'+',
+                            af[0]=1 ? void : af[0],
+                            af[0]=1 ? void : '*',
+                            af[1],|);
+
+//*Constructs an explicit Runge-Kutta method from its Butcher Tableau
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
+private rungeKuttaStepper(Tableau:ERK_ButcherTableau)->begin
+  local intermediate  :=Tableau.leading;
+  local summationStage:=Tableau.trailing;
+  toExpression('begin'|rkCodeStart(intermediate,'$0','$2','local')|
+                summationStageCode(summationStage,false)|';'|'end');
+end;
+
+//*Constructs an embedded explicit Runge-Kutta method from its Butcher Tableau
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:int)->begin
+  local intermediate   :=Tableau.leading(2);
+  local summationStages:=Tableau.trailing(2);
+  local code:=['begin'             ,rkCodeStart       (intermediate,'$0','$2','local'),
+                   'local result:=',summationStageCode(summationStages[0],false),';',
+  '(local subSteps:=ceil((absNorm(',summationStageCode(summationStages[1],false),'-result)/$3)^',1/order,'))<=1 ? result : ',
+  'begin','local dt:=$2/subSteps',';','local y:=$0',';','[1..subSteps].each(step,','begin',
+                                    rkCodeStart       (intermediate,'y','dt'),
+                                    summationStageCode(summationStages[0],true),';','void',';',
+  'end)',';','y',';','end',';','end'].flatten;
+  code.toExpression;
+end;
+
+//*Explicit Runge-Kutta Method RK4, a.k.a. "The" Runge-Kutta Method
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
+//@SuppressUnusedWarning
+memoized RK4->rungeKuttaStepper(
+  [[1/2            ],
+   [ 0 ,1/2        ],
+   [ 0 , 0 , 1     ],
+   [1/6,1/3,1/3,1/6]]);
+
+//*Explicit Runge-Kutta Method RK4b
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
+//@SuppressUnusedWarning
+memoized RK4b->rungeKuttaStepper(
+  [[ 1/3            ],
+   [-1/3, 1         ],
+   [  1 ,-1 , 1     ],
+   [1/8 ,3/8,3/8,1/8]]);
+
+//*Explicit Runge-Kutta Method RK32 (3-stage 2nd order)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
+//@SuppressUnusedWarning
+memoized RK32->rungeKuttaStepper(
+  [[ 1         ],
+   [1/2,1/2    ],
+   [1/3,1/3,1/3]]);
+
+//*Family of 2-stage 2nd order Runge-Kutta Methods
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
+//@SuppressUnusedWarning
+memoized RK2(a)->rungeKuttaStepper(
+  [[a               ],
+   [1-1/(2*a),1/2*a]]);
+
+//*Euler Forward, as Runge-Kutta Method
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
+//@SuppressUnusedWarning
+memoized RK1->rungeKuttaStepper([[1]]);
+
+//*Heun-Euler embedded explicit Runge-Kutta Method (Order 2)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+//@SuppressUnusedWarning
+memoized HEUN_EULER->embeddedRungeKuttaStepper(
+  [[ 1     ],
+   [1/2,1/2],
+   [ 1 , 0 ]],2);
+
+//*Fehlberg RK1(2) embedded explicit Runge-Kutta Method (Order 2)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+//@SuppressUnusedWarning
+memoized FEHLBERG_RK12->embeddedRungeKuttaStepper(
+  [[1/2                ],
+   [1/256,255/256      ],
+   [1/512,255/256,1/512],
+   [1/256,255/256      ]],2);
+
+//*Bogacki-Shampine embedded explicit Runge-Kutta Method (Order 3)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+//@SuppressUnusedWarning
+memoized BOGACKI_SHAMPINE->embeddedRungeKuttaStepper(
+  [[1/2              ],
+   [ 0  ,3/4         ],
+   [2/9 ,1/3,4/9     ],
+   [2/9 ,1/3,4/9     ],
+   [7/24,1/4,1/3,1/8]],3);
+
+//*Fehlberg embedded explicit Runge-Kutta Method (Order 5)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+//@SuppressUnusedWarning
+memoized FEHLBERG->embeddedRungeKuttaStepper(
+  [[   1/4                                                  ],
+   [   3/32  ,    9/32                                      ],
+   [1932/2197,-7200/2197, 7296/2197                         ],
+   [ 439/216 ,    -8    , 3680/513  , -845/4104             ],
+   [  -8/27  ,     2    ,-3544/2565 , 1859/4104 ,-11/40     ],
+   [  16/135 ,     0    , 6656/12825,28561/56430, -9/50,2/55],
+   [  25/216 ,     0    , 1408/2565 , 2197/4104 , -1/5 , 0  ]],5);
+
+//*Cash-Carp embedded explicit Runge-Kutta Method (Order 5)
+//*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
+//@SuppressUnusedWarning
+memoized CASH_KARP->embeddedRungeKuttaStepper(
+[[   1/5                                                        ],
+ [   3/40   ,  9/40                                             ],
+ [   3/10   , -9/10 ,    6/5                                    ],
+ [ -11/54   ,  5/2  ,  -70/27   ,   35/27                       ],
+ [1631/55296,175/512,  575/13824,44275/110592,253/4096          ],
+ [  37/378  ,   0   ,  250/621  ,  125/594   ,      0  ,512/1771],
+ [2825/27648,   0   ,18575/48384,13525/55296 ,277/14336,  1/4   ]],5);
+
+//*Returns an integrator based on an explicit Runge-Kutta method
+integrator(ERK :expression(3),df:expression(1),dt:numeric              )->{ERK($0,df,dt)};
+//*Returns an integrator based on an embedded explicit Runge-Kutta method
+integrator(EERK:expression(4),df:expression(1),dt:numeric,tolerance>0.0)->{EERK($0,df,dt,tolerance)};
+
+//@SuppressUnusedWarning
+//*Iterates, returning all results
+iterate(initialValue,f:expression(1),stepCount>=1)->begin
+  [local y:=initialValue]| rangeGenerator(1,stepCount).each(step,y:=f(y));
+end;
+
+//*Iterates, returning only the last value
+//@SuppressUnusedWarning
+iterateLast(initialValue,f:expression(1),stepCount>=1)->begin
+  local y:=initialValue;
+  rangeGenerator(1,stepCount).each(step,y:=f(y),trailing);
+end;
