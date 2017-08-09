@@ -75,6 +75,7 @@ TYPE
       FUNCTION getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint):P_token;
   end;
 
+PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
 IMPLEMENTATION
@@ -501,6 +502,40 @@ DESTRUCTOR T_lexer.destroy;
       nextStatement.firstToken:=nextStatement.firstToken^.next;
       dispose(lastTokenized,destroy);
     end;
+  end;
+
+PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
+  VAR t:P_token;
+      localIdStack:T_idStack;
+      lastWasLocalModifier:boolean=false;
+  begin
+    localIdStack.create;
+    t:=token;
+    while (t<>nil) do case t^.tokType of
+      tt_beginBlock: begin
+        localIdStack.clear;
+        localIdStack.scopePush;
+        lastWasLocalModifier:=false;
+        t:=t^.next;
+        while (t<>nil) and not((t^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
+          case t^.tokType of
+            tt_beginBlock    : localIdStack.scopePush;
+            tt_endBlock      : localIdStack.scopePop;
+            tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
+              if lastWasLocalModifier then begin
+                t^.tokType:=tt_blockLocalVariable;
+                if not(localIdStack.addId(t^.txt)) then adapters.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+              end else if (localIdStack.hasId(t^.txt)) then
+                t^.tokType:=tt_blockLocalVariable;
+          end;
+          lastWasLocalModifier:=t^.tokType=tt_modifier_local;
+          t:=t^.next;
+        end;
+        if t<>nil then t:=t^.next;
+      end;
+      else t:=t^.next;
+    end;
+    localIdStack.destroy;
   end;
 
 FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters): T_enhancedStatement;
