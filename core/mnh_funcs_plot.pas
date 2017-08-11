@@ -294,6 +294,7 @@ INITIALIZATION
     '#  fillSolid; fs;'+
     '#  bar;'+
     '#  box;'+
+    '#  tube;'+
     '#  dot; .;'+
     '#  plus; +;'+
     '#  cross; x;'+
