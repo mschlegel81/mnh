@@ -11,6 +11,8 @@ USES sysutils,math,
      mnh_datastores, mnh_caches, mnh_patterns, mnh_subrules;
 TYPE
   T_subruleArray=array of P_subruleExpression;
+  T_outlineEntry=record location:T_tokenLocation; isPublic:boolean; id:string; info:string; end;
+  T_outline=array of T_outlineEntry;
 
   P_rule=^T_rule;
 
@@ -18,6 +20,7 @@ TYPE
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION getDocTxt: ansistring; virtual; abstract;
+    FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual; abstract;
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -36,6 +39,7 @@ TYPE
       PROPERTY getSubrules:T_subruleArray read subrules;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
   end;
@@ -83,6 +87,7 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
   end;
@@ -405,6 +410,36 @@ FUNCTION T_mutableRule.inspect: P_mapLiteral;
       .put('type'    ,C_ruleTypeText[getRuleType])^
       .put('location',getLocation        )^
       .put('subrules',subrulesList,false      );
+  end;
+
+FUNCTION T_ruleWithSubrules.getOutline(CONST includePrivate:boolean):T_outline;
+  VAR i,j:longint;
+  begin
+    setLength(result,length(subrules));
+    j:=0;
+    for i:=0 to length(subrules)-1 do if includePrivate or (subrules[i]^.typ=et_normal_public) then begin
+      result[j].location:=subrules[i]^.getLocation;
+      result[j].isPublic:=subrules[i]^.typ=et_normal_public;
+      result[j].id:=getId;
+      result[j].info:=C_ruleTypeText[getRuleType];
+      if not(result[j].isPublic) then result[j].info:=result[j].info+C_tokenInfo[tt_modifier_private].defaultId+' ';
+      result[j].info:=result[j].info+result[j].id+subrules[i]^.patternString;
+      inc(j);
+    end;
+    setLength(result,j);
+  end;
+
+FUNCTION T_mutableRule.getOutline(CONST includePrivate:boolean):T_outline;
+  begin
+    if hasPublicSubrule or includePrivate then begin
+      setLength(result,1);
+      result[0].location:=getLocation;
+      result[0].isPublic:=not(privateRule);
+      result[0].id:=getId;
+      result[0].info:=C_ruleTypeText[getRuleType];
+      if privateRule then result[0].info:=result[0].info+C_tokenInfo[tt_modifier_private].defaultId+' ';
+      result[0].info:=result[0].info+result[0].id;
+    end else setLength(result,0);
   end;
 
 FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;

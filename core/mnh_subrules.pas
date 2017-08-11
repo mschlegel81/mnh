@@ -86,6 +86,7 @@ TYPE
       FUNCTION isStateful:boolean; virtual;
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION patternString:string;
   end;
 
   T_ruleMetaData=object
@@ -961,6 +962,8 @@ FUNCTION T_subruleExpression.inspect: P_mapLiteral;
     result:=inherited inspect^.put('comment'   ,meta.comment            )^
                               .put('attributes',meta.getAttributesLiteral,false);
   end;
+
+FUNCTION T_inlineExpression.patternString:string; begin result:=pattern.toString; end;
 
 CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); end;
 DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;

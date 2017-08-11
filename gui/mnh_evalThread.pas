@@ -148,13 +148,15 @@ TYPE
       localErrors,externalErrors:T_storedMessages;
       stateHash:T_hashInt;
       userRules:T_setOfString;
+      outLineText:T_arrayOfString;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy;
-      PROCEDURE check;
+      PROCEDURE check(CONST includePrivateInOutline,incudeImportedInOutline:boolean);
       FUNCTION getPackage:P_package;
       FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean):T_arrayOfString;
       PROPERTY getStateHash:T_hashInt read stateHash;
+      PROPERTY outline:T_arrayOfString read outLineText;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
@@ -287,6 +289,7 @@ CONSTRUCTOR T_codeAssistant.create(CONST provider: P_codeProvider);
     stateHash:=0;
     setLength(localErrors,0);
     setLength(externalErrors,0);
+    setLength(outLineText,0);
     userRules.create;
   end;
 
@@ -301,7 +304,7 @@ DESTRUCTOR T_codeAssistant.destroy;
     errorCollector.destroy;
   end;
 
-PROCEDURE T_codeAssistant.check;
+PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOutline:boolean);
 
   PROCEDURE updateErrors;
     VAR i:longint;
@@ -323,14 +326,16 @@ PROCEDURE T_codeAssistant.check;
     end;
 
   begin
-    if package.getCodeProvider^.stateHash=package.getCodeState then exit;
-    adapters^.clearAll;
-    context.resetForEvaluation(@package,ect_silent);
-    package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
-    package.updateLists(userRules);
-    updateErrors;
-    context.afterEvaluation;
+    if package.getCodeProvider^.stateHash<>package.getCodeState then begin
+      adapters^.clearAll;
+      context.resetForEvaluation(@package,ect_silent);
+      package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
+      package.updateLists(userRules);
+      updateErrors;
+      context.afterEvaluation;
+    end;
     stateHash:=package.getCodeState;
+    outLineText:=package.outline(includePrivateInOutline,incudeImportedInOutline);
   end;
 
 FUNCTION T_codeAssistant.getPackage:P_package;

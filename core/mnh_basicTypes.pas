@@ -36,6 +36,7 @@ OPERATOR := (CONST x: T_tokenLocation): ansistring;
 OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
 OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
+OPERATOR < (CONST x,y:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
 IMPLEMENTATION
 FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
@@ -78,6 +79,15 @@ OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
   begin
     result:=(x.package=y.package) and (x.line=y.line) and (x.column=y.column);
+  end;
+
+OPERATOR < (CONST x,y:T_tokenLocation):boolean;
+  begin
+    if (x.package^.getPath<y.package^.getPath) then exit(true);
+    if (x.package^.getPath>y.package^.getPath) then exit(false);
+    if (x.line            <y.line            ) then exit(true);
+    if (x.line            >y.line            ) then exit(false);
+    result:=x.column      <y.column;
   end;
 
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;

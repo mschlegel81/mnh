@@ -160,18 +160,19 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
-                    CONST p_assistanceSheet       :TTabSheet;
+                    CONST p_outlineSynEdit        :TSynEdit;
+                    CONST p_assistanceGroup       :TGroupBox;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent);
-
+PROCEDURE setOutlineOptions(CONST includePrivate,includeImported:boolean);
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
 FUNCTION addEditorMetaForNewFile:longint;
 FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;
-PROCEDURE updateFonts;
+PROCEDURE updateFonts(CONST Font:TFont);
 FUNCTION allPseudoNames:T_arrayOfString;
 FUNCTION getMeta(CONST nameOrPseudoName:string):P_editorMeta;
 PROCEDURE storeEditorsToSettings;
@@ -196,7 +197,9 @@ VAR mainForm              :T_abstractMnhForm;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
     assistanceSynEdit     :TSynEdit;
-    assistanceSheet       :TTabSheet;
+    outlineSynEdit        :TSynEdit;
+    assistanceGroup       :TGroupBox;
+    editorFont            :TFont;
 
 VAR fileTypeMeta:array[T_language] of record
       highlighter:TSynCustomHighlighter;
@@ -213,7 +216,8 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
-                    CONST p_assistanceSheet       :TTabSheet;
+                    CONST p_outlineSynEdit        :TSynEdit;
+                    CONST p_assistanceGroup       :TGroupBox;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
@@ -386,11 +390,25 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditMouseDown         :=p_EditMouseDown         ;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
-    assistanceSheet       :=p_assistanceSheet       ;
+    outlineSynEdit        :=p_outlineSynEdit        ;
+    assistanceGroup       :=p_assistanceGroup       ;
     initHighlighters;
     initFileTypes;
     completionLogic.create;
+    editorFont:=assistanceSynEdit.Font;
     restoreEditors;
+  end;
+
+VAR outlineOptions:record
+      includePrivate,includeImported:boolean;
+    end;
+PROCEDURE setOutlineOptions(CONST includePrivate,includeImported:boolean);
+  VAR edit:P_editorMeta;
+  begin
+    outlineOptions.includePrivate:=includePrivate;
+    outlineOptions.includeImported:=includeImported;
+    edit:=getEditor;
+    if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.repaintWithStateHash;
   end;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
@@ -575,7 +593,7 @@ PROCEDURE T_editorMeta.activate;
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: Activating editor "',pseudoName(),'"');
     {$endif}
-    editor_.Font:=assistanceSynEdit.Font;
+    editor_.Font:=editorFont;
     mainForm.caption:=updateSheetCaption;
 
     for l in T_language do begin
@@ -585,13 +603,13 @@ PROCEDURE T_editorMeta.activate;
     if language_=LANG_MNH
     then begin
       editor.highlighter:=highlighter;
-      assistanceSheet.tabVisible:=true;
       paintedWithStateHash:=0;
       repaintWithStateHash;
       completionLogic.assignEditor(editor_,assistant^.getPackage);
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
-      assistanceSheet.tabVisible:=false;
+      assistanceSynEdit.clearAll;
+      assistanceGroup.caption:='';
       dropAssistant;
       completionLogic.assignEditor(editor_,nil);
     end;
@@ -945,19 +963,22 @@ PROCEDURE T_editorMeta.repaintWithStateHash;
       hasErrors,hasWarnings:boolean;
   begin
     ensureAssistant;
-    assistant^.check;
+    assistant^.check(outlineOptions.includePrivate,outlineOptions.includeImported);
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
       hints:=assistant^.getErrorHints(hasErrors,hasWarnings);
-      if hasErrors then begin if hasWarnings then assistanceSheet.caption:='Errors + Warnings'
-                                             else assistanceSheet.caption:='Errors'; end
-                   else begin if hasWarnings then assistanceSheet.caption:='Warnings'
-                                             else assistanceSheet.caption:='   '; end;
+      if hasErrors then begin if hasWarnings then assistanceGroup.caption:='Errors + Warnings'
+                                             else assistanceGroup.caption:='Errors'; end
+                   else begin if hasWarnings then assistanceGroup.caption:='Warnings'
+                                             else assistanceGroup.caption:=''; end;
       for s in hints do assistanceSynEdit.lines.add(s);
     end;
+    outlineSynEdit.clearAll;
+    for s in assistant^.outline do outlineSynEdit.lines.add(s);
+    outlineSynEdit.highlighter:=highlighter;
   end;
 
 FUNCTION T_editorMeta.changed: boolean;
@@ -1066,7 +1087,7 @@ FUNCTION addEditorMetaForNewFile:longint;
     i:=length(editorMetaData);
     setLength(editorMetaData,i+1);
     new(editorMetaData[i],create(i));
-    editorMetaData[i]^.editor.Font:=assistanceSynEdit.Font;
+    editorMetaData[i]^.editor.Font:=editorFont;
 
     result:=i;
     editorMetaData[i]^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (editorMetaData[i]^.language=LANG_MNH);
@@ -1099,7 +1120,7 @@ FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useC
         end;
         result:=addEditorMetaForNewFile();
         editorMetaData[result]^.setFile(filePath);
-        editorMetaData[result]^.editor.Font:=assistanceSynEdit.Font;
+        editorMetaData[result]^.editor.Font:=editorFont;
       end;
     end;
 
@@ -1111,10 +1132,11 @@ FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useC
     if result<>-1 then editorMetaData[result]^.activate;
   end;
 
-PROCEDURE updateFonts;
+PROCEDURE updateFonts(CONST Font:TFont);
   VAR m:P_editorMeta;
   begin
-    for m in editorMetaData do m^.editor.Font:=assistanceSynEdit.Font;
+    editorFont:=Font;
+    for m in editorMetaData do m^.editor.Font:=editorFont;
   end;
 
 FUNCTION allPseudoNames:T_arrayOfString;
