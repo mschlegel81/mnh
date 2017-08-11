@@ -95,7 +95,9 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 
 PROCEDURE TMnhForm.cbOutlineShowPrivateChange(Sender: TObject);
   begin
-    setOutlineOptions(cbOutlineShowPrivate.Checked,cbOutlineShowImported.Checked);
+    setOutlineOptions(cbOutlineShowPrivate .Checked,
+                      cbOutlineShowImported.Checked,
+                      cbOutlineSortByName  .Checked);
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);

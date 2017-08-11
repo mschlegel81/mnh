@@ -152,7 +152,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy;
-      PROCEDURE check(CONST includePrivateInOutline,incudeImportedInOutline:boolean);
+      PROCEDURE check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
       FUNCTION getPackage:P_package;
       FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean):T_arrayOfString;
       PROPERTY getStateHash:T_hashInt read stateHash;
@@ -304,7 +304,7 @@ DESTRUCTOR T_codeAssistant.destroy;
     errorCollector.destroy;
   end;
 
-PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOutline:boolean);
+PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
 
   PROCEDURE updateErrors;
     VAR i:longint;
@@ -335,7 +335,7 @@ PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOu
       context.afterEvaluation;
     end;
     stateHash:=package.getCodeState;
-    outLineText:=package.outline(includePrivateInOutline,incudeImportedInOutline);
+    outLineText:=package.outline(includePrivateInOutline,incudeImportedInOutline,sortOutlineByName);
   end;
 
 FUNCTION T_codeAssistant.getPackage:P_package;

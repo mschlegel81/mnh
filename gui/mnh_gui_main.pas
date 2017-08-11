@@ -43,6 +43,7 @@ TYPE
   {$WARN 5024 OFF}
 
   TMnhForm = class(T_abstractMnhForm)
+    cbOutlineSortByName,
     cbOutlineShowPrivate,
     cbOutlineShowImported:       TCheckBox;
     FindDialog:                TFindDialog;

@@ -78,7 +78,7 @@ TYPE
       {$endif}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
-      FUNCTION outline(CONST includePrivate,includeImported:boolean):T_arrayOfString;
+      FUNCTION outline(CONST includePrivate,includeImported,sortByName:boolean):T_arrayOfString;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -1075,11 +1075,11 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
   end;
 
-FUNCTION T_package.outline(CONST includePrivate,includeImported:boolean):T_arrayOfString;
+FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boolean):T_arrayOfString;
   VAR temp:T_outline;
       entry:T_outlineEntry;
       rule:P_rule;
-      i:longint;
+      i,j:longint;
       longestInfo:longint=0;
 
   PROCEDURE addInfo(CONST info:T_outlineEntry);
@@ -1093,6 +1093,15 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported:boolean):T_array
     setLength(temp,0);
     for rule in packageRules.valueSet do for entry in rule^.getOutline(includePrivate) do addInfo(entry);
     if includeImported then for rule in importedRules.valueSet do for entry in rule^.getOutline(false) do addInfo(entry);
+    if sortbyName then begin
+      for i:=1 to length(temp)-1 do for j:=0 to i-1 do if (temp[i].id<temp[j].id) or (temp[i].id=temp[j].id) and (temp[i].location<temp[j].location) then begin
+        entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
+      end;
+    end else begin
+      for i:=1 to length(temp)-1 do for j:=0 to i-1 do if temp[i].location<temp[j].location then begin
+        entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
+      end;
+    end;
     setLength(result,length(temp));
     for i:=0 to length(result)-1 do result[i]:=temp[i].info+StringOfChar(' ',1+longestInfo-length(temp[i].info))+ansistring(temp[i].location);
   end;

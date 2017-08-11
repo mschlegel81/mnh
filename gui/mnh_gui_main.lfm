@@ -1767,8 +1767,8 @@ object MnhForm: TMnhForm
       end
       inline outlineSynEdit: TSynEdit
         Left = 0
-        Height = 52
-        Top = 38
+        Height = 33
+        Top = 57
         Width = 166
         Align = alClient
         Font.Height = -13
@@ -2272,6 +2272,16 @@ object MnhForm: TMnhForm
             MouseActionsCollapsed = <>
           end
         end
+      end
+      object cbOutlineSortByName: TCheckBox
+        Left = 0
+        Height = 19
+        Top = 38
+        Width = 166
+        Align = alTop
+        Caption = 'sort by name'
+        OnChange = cbOutlineShowPrivateChange
+        TabOrder = 3
       end
     end
     object errorWarningGroupBox: TGroupBox

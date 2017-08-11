@@ -167,7 +167,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent);
-PROCEDURE setOutlineOptions(CONST includePrivate,includeImported:boolean);
+PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:boolean);
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
 FUNCTION addEditorMetaForNewFile:longint;
@@ -400,13 +400,14 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
   end;
 
 VAR outlineOptions:record
-      includePrivate,includeImported:boolean;
+      includePrivate,includeImported,sortByName:boolean;
     end;
-PROCEDURE setOutlineOptions(CONST includePrivate,includeImported:boolean);
+PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:boolean);
   VAR edit:P_editorMeta;
   begin
     outlineOptions.includePrivate:=includePrivate;
     outlineOptions.includeImported:=includeImported;
+    outlineOptions.sortByName:=sortByName;
     edit:=getEditor;
     if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.repaintWithStateHash;
   end;
@@ -963,7 +964,7 @@ PROCEDURE T_editorMeta.repaintWithStateHash;
       hasErrors,hasWarnings:boolean;
   begin
     ensureAssistant;
-    assistant^.check(outlineOptions.includePrivate,outlineOptions.includeImported);
+    assistant^.check(outlineOptions.includePrivate,outlineOptions.includeImported,outlineOptions.sortByName);
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
       editor.Repaint;
