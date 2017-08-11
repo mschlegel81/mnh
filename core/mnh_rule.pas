@@ -118,7 +118,7 @@ CONSTRUCTOR T_protectedRuleWithSubrules.create(CONST ruleId: T_idString; CONST s
 
 CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation);
   begin
-    inherited create(ruleId,startAt);
+    inherited create(ruleId,startAt,rt_memoized);
     cache.create(rule_cs);
   end;
 
