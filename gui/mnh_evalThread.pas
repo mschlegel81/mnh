@@ -154,7 +154,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
       FUNCTION getPackage:P_package;
-      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean):T_arrayOfString;
+      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint):T_arrayOfString;
       PROPERTY getStateHash:T_hashInt read stateHash;
       PROPERTY outline:T_arrayOfString read outLineText;
       FUNCTION isUserRule(CONST id:string):boolean;
@@ -343,21 +343,39 @@ FUNCTION T_codeAssistant.getPackage:P_package;
     result:=@package;
   end;
 
-FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean): T_arrayOfString;
+FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
   VAR k:longint;
+  PROCEDURE splitAtSpace(VAR headOrAll:string; OUT tail:string; CONST dontSplitBefore,lengthLimit:longint);
+    VAR splitIndex:longint;
+    begin
+      if length(headOrAll)<lengthLimit then begin
+        tail:='';
+        exit;
+      end;
+      splitIndex:=lengthLimit;
+      while (splitIndex>dontSplitBefore) and (headOrAll[splitIndex]<>' ') do dec(splitIndex);
+      if splitIndex<=dontSplitBefore then splitIndex:=lengthLimit;
+      tail:=copy(headOrAll,splitIndex,length(headOrAll));
+      headOrAll:=copy(headOrAll,1,splitIndex-1);
+    end;
+
   PROCEDURE addErrors(CONST list:T_storedMessages);
     VAR i:longint;
-        s:string;
+        s,head,rest:string;
     begin
-      for i:=0 to length(list)-1 do with list[i] do for s in messageText do begin
-        if k>=length(result) then setLength(result,k+1);
-        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+
-                                      C_messageTypeMeta[messageType].prefix           +
-                   ' '+ansistring(location)+
-                   ' '+s;
+      for i:=0 to length(list)-1 do with list[i] do begin
         hasErrors  :=hasErrors   or (C_messageTypeMeta[messageType].level> 2);
         hasWarnings:=hasWarnings or (C_messageTypeMeta[messageType].level<=2);
-        inc(k);
+        for s in messageText do begin
+          head:=ansistring(location)+' '+s;
+          repeat
+            splitAtSpace(head,rest,3,lengthLimit);
+            if k>=length(result) then setLength(result,k+1);
+            result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head;
+            inc(k);
+            head:='. '+rest;
+          until rest='';
+        end;
       end;
     end;
 

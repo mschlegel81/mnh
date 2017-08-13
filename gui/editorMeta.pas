@@ -970,7 +970,7 @@ PROCEDURE T_editorMeta.repaintWithStateHash;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
-      hints:=assistant^.getErrorHints(hasErrors,hasWarnings);
+      hints:=assistant^.getErrorHints(hasErrors,hasWarnings,assistanceSynEdit.charsInWindow);
       if hasErrors then begin if hasWarnings then assistanceGroup.caption:='Errors + Warnings'
                                              else assistanceGroup.caption:='Errors'; end
                    else begin if hasWarnings then assistanceGroup.caption:='Warnings'
