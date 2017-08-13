@@ -531,7 +531,7 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
       'datastore ',
       'synchronized ',
       'type ');
-      C_validModifierCombinations:array[0..14] of record
+      C_validModifierCombinations:array[0..15] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
       end=((modifiers:[];                                             ruleType:rt_normal),
@@ -548,7 +548,8 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
            (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
            (modifiers:[tt_modifier_synchronized];                     ruleType:rt_synchronized),
            (modifiers:[tt_modifier_synchronized,tt_modifier_private]; ruleType:rt_synchronized),
-           (modifiers:[tt_modifier_customType];                       ruleType:rt_customTypeCheck));
+           (modifiers:[tt_modifier_customType];                       ruleType:rt_customTypeCheck),
+           (modifiers:[tt_modifier_customType,tt_modifier_private];   ruleType:rt_customTypeCheck));
 
 TYPE
   T_messageClass=(mc_echo   ,
