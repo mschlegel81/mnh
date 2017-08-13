@@ -44,7 +44,8 @@ private plottable(state:numericList(4))->begin
                d1+ [sin(state[1]),-cos(state[1])]*l2];
 end;
 
-private secondsPreFrame:=1/40;
+private secondsPerFrame:=1/40;
+private timeStepPerFrame:=0.02;
 //*Animates a double pendulum with standard parameters (l1=l2=m1=m2=1)
 //*The animation will consist of two double pendulums with a tiny variation in the starting conditions
 main->begin
@@ -71,20 +72,19 @@ main->begin
                    display;
                  end};
   replot();
-  local step:=integrator(CASH_KARP,::accel,0.02,1E-4);
+  local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
   local frameTime:=time;
   state1:=async(step,[state1]);
   state2:=async(step,[state2]);
   while(not(plotClosed),begin
-    sleepUntil(frameTime+=secondsPreFrame);
+    sleepUntil(frameTime+=secondsPerFrame);
     frameTime:=time;
     p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=async(step,[state1]);
     p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=async(step,[state2]);
     replot();
   end);
 
-
-  local t:=[0..hist1.size-1]*0.02;
+  local t:=[0..hist1.size-1]*timeStepPerFrame;
   local mask:=[0..hist1.size-1] mod max(1,round(hist1.size/2000))=0;
   t:=t[mask].each(it,it,it);
 
