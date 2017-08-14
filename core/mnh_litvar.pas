@@ -2821,27 +2821,29 @@ FUNCTION setUnion(CONST params:P_listLiteral):P_setLiteral;
   end;
 
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
-  TYPE T_occurenceCount=specialize G_literalKeyMap<longint>;
+  TYPE T_occurenceCount=specialize G_literalKeyMap<word>;
+  CONST bit:array[0..15] of word=(1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768);
   VAR counterSet:T_occurenceCount;
-      prevInt, //dummy
+      prevMask:word; //dummy
       i:longint;
       entry:T_occurenceCount.CACHE_ENTRY;
       iter:T_arrayOfLiteral;
       x:P_literal;
+      acceptMask:word=0;
   begin
-    if not((params<>nil) and (params^.size>=1)) then exit(nil);
+    if not((params<>nil) and (params^.size>=1)) or (params^.size>16) then exit(nil);
     for i:=0 to params^.size-1 do if not(params^[i]^.literalType in C_compoundTypes) then exit(nil);
     if params^.size=1 then exit(P_compoundLiteral(params^[0])^.toSet());
 
     counterSet.create;
     for i:=0 to params^.size-1 do begin//with P_compoundLiteral(params^[i])^ do
       iter:=P_compoundLiteral(params^[i])^.iteratableList;
-      for x in iter do counterSet.putNew(x,counterSet.get(x,0)+1,prevInt);
+      for x in iter do counterSet.putNew(x,counterSet.get(x,0) or bit[i],prevMask);
       disposeLiteral(iter);
+      inc(acceptMask,bit[i]);
     end;
     result:=newSetLiteral;
-    i:=params^.size;
-    for entry in counterSet.keyValueList do if (entry.value=i) then result^.append(entry.key,true);
+    for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(entry.key,true);
     counterSet.destroy;
   end;
 
