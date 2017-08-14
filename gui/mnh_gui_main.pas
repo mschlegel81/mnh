@@ -43,9 +43,14 @@ TYPE
   {$WARN 5024 OFF}
 
   TMnhForm = class(T_abstractMnhForm)
+    cbOutlineSortByName,
+    cbOutlineShowPrivate,
+    cbOutlineShowImported:       TCheckBox;
     FindDialog:                TFindDialog;
     callStackGroupBox,
-    currentExpressionGroupBox: TGroupBox;
+    currentExpressionGroupBox,
+    GroupBox1,
+    errorWarningGroupBox:      TGroupBox;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
@@ -99,15 +104,16 @@ TYPE
     miInserScriptRoot,
     miEditGuiScripts,
     miUtilityScriptRoot,
-    submenuEditorAppearance:   TMenuItem;
-    miStackTracing: TMenuItem;
-    miOpenSimpleMnh: TMenuItem;
-    miUserErrors: TMenuItem;
-    miFileHistoryRoot: TMenuItem;
-    miHtmlExport: TMenuItem;
+    submenuEditorAppearance,
+    miStackTracing,
+    miOpenSimpleMnh,
+    miUserErrors,
+    miFileHistoryRoot,
+    miHtmlExport:              TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
+    leftHandSidePanel,
     Panel1,
     Panel2:                    TPanel;
     EditorPopupMenu:           TPopupMenu;
@@ -115,16 +121,18 @@ TYPE
     SaveDialog:                TSaveDialog;
     Splitter1,
     Splitter2,
-    Splitter3:                 TSplitter;
+    Splitter3,
+    Splitter4,
+    Splitter5:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
-    OutputEdit:                TSynEdit;
+    outlineSynEdit,
+    OutputEdit,
     assistanceSynEdit:         TSynEdit;
     SynExporterHTML:           TSynExporterHTML;
     SynGutterMarks0:           TSynGutterMarks;
     helpPopupMemo,
     currentExpressionMemo:     TSynMemo;
-    assistanceTabSheet:        TTabSheet;
     debugTabSheet:             TTabSheet;
     outputTabSheet:            TTabSheet;
     UpdateTimeTimer:           TTimer;

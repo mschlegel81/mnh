@@ -299,7 +299,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
       scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
 
-  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST solid:boolean);
+  PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST solid:boolean);
     VAR points:array[0..3] of TPoint;
     begin
       if solid then target.Brush.style:=bsSolid
@@ -307,12 +307,20 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
       if target.Brush.style=bsClear then exit;
       target.Brush.color:=scaleAndColor.solidColor;
       points[0].x:=x0; points[0].y:=y0;
-      points[1].x:=x0; points[1].y:=yBaseLine;
-      points[2].x:=x1; points[2].y:=yBaseLine;
-      points[3].x:=x1; points[3].y:=y1;
+      points[1].x:=x1; points[1].y:=y1;
+      points[2].x:=x2; points[2].y:=y2;
+      points[3].x:=x3; points[3].y:=y3;
       target.Pen.style:=psClear;
       target.Polygon(points);
       target.Pen.style:=psSolid;
+    end;
+
+  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST solid:boolean);
+    begin
+      drawCustomQuad(x0,y0,
+                     x0,yBaseLine,
+                     x1,yBaseLine,
+                     x1,y1,solid);
     end;
 
   begin
@@ -465,6 +473,25 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
                             screenRow[i+1].x, screenRow[i+1].y);
           end;
           inc(i, 2);
+        end;
+      end else if ps_tube in row[rowId].style.style then begin
+        i:=0;
+        while i+3<length(screenRow) do begin
+          target.Pen.style:=psSolid;
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
+          target.Pen.EndCap:=pecRound;
+          if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
+                                                                            screenRow[i+2].x,screenRow[i+2].y);
+          if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
+                                                                            screenRow[i+3].x,screenRow[i+3].y);
+          if screenRow[i  ].valid and screenRow[i+2].valid and
+             screenRow[i+1].valid and screenRow[i+3].valid then
+          drawCustomQuad(screenRow[i  ].x,screenRow[i  ].y,
+                         screenRow[i+2].x,screenRow[i+2].y,
+                         screenRow[i+3].x,screenRow[i+3].y,
+                         screenRow[i+1].x,screenRow[i+1].y,ps_fillSolid in row[rowId].style.style);
+          inc(i,2);
         end;
       end;
       if ps_dot in row[rowId].style.style then begin

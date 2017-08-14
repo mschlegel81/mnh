@@ -1,4 +1,5 @@
 {$ifdef includeInterface}
+PROCEDURE cbOutlineShowPrivateChange(Sender: TObject);
 PROCEDURE EditorPopupMenuPopup(Sender: TObject);
 
 PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -12,9 +13,6 @@ PROCEDURE FormShow(Sender: TObject);
 PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE miOpenSimpleMnhClick(Sender: TObject);
-PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -95,6 +93,13 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
                         focusedEditor.TextBetweenPoints[focusedEditor.BlockBegin,focusedEditor.BlockEnd]);
   end;
 
+PROCEDURE TMnhForm.cbOutlineShowPrivateChange(Sender: TObject);
+  begin
+    setOutlineOptions(cbOutlineShowPrivate .Checked,
+                      cbOutlineShowImported.Checked,
+                      cbOutlineSortByName  .Checked);
+  end;
+
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
@@ -125,10 +130,12 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     debugHighlighter :=TSynMnhSyn.create(self,msf_input );
     OutputEdit           .highlighter:=outputHighlighter;
     assistanceSynEdit    .highlighter:=outputHighlighter;
+    outlineSynEdit       .highlighter:=outputHighlighter;
     helpPopupMemo        .highlighter:=helpHighlighter  ;
     currentExpressionMemo.highlighter:=debugHighlighter ;
     OutputEdit       .clearAll;
     assistanceSynEdit.clearAll;
+    outlineSynEdit   .clearAll;
     //Initialize state:
     popupModel.create(pmiOpenFile1,pmiOpenFile2,@pmiOpenFile);
     searchReplaceModel.create(FindDialog,ReplaceDialog);
@@ -202,12 +209,14 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            SaveDialog,
                            breakpointsImagesList,
                            assistanceSynEdit,
-                           assistanceTabSheet,
+                           outlineSynEdit,
+                           errorWarningGroupBox,
                            outputHighlighter,
                            miLanguageRoot,
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
+      processFontSettings;
       enableDynamicItems;
       firstShow:=false;
       UpdateTimeTimer.enabled:=true;
@@ -250,41 +259,23 @@ PROCEDURE TMnhForm.miOpenSimpleMnhClick(Sender: TObject);
     getSimpleMnh.showModalFor(getEditor);
   end;
 
-PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-  begin
-    if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(OutputEdit.lines[OutputEdit.CaretY-1],false));
-  end;
-
-PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  VAR point:TPoint;
-  begin
-    if (ssCtrl) in Shift then begin
-      point.x:=x;
-      point.y:=y;
-      point:=OutputEdit.PixelsToRowColumn(point);
-      focusEditorOnEditMouseUp:=openLocation(guessLocationFromString(OutputEdit.lines[point.y-1],false));
-    end;
-  end;
-
-PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  begin
-    if focusEditorOnEditMouseUp then ActiveControl:=getEditor^.editor;
-    focusEditorOnEditMouseUp :=false;
-  end;
-
 PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  VAR caller:TSynEdit;
   begin
-    if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(assistanceSynEdit.lines[assistanceSynEdit.CaretY-1],false));
+    caller:=TSynEdit(Sender);
+    if (key=13) and (ssCtrl in Shift) then openLocation(guessLocationFromString(caller.lines[caller.CaretY-1],false));
   end;
 
 PROCEDURE TMnhForm.assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
+      caller:TSynEdit;
   begin
     if (ssCtrl) in Shift then begin
+      caller:=TSynEdit(Sender);
       point.x:=x;
       point.y:=y;
-      point:=assistanceSynEdit.PixelsToRowColumn(point);
-      focusEditorOnEditMouseUp:=openLocation(guessLocationFromString(assistanceSynEdit.lines[point.y-1],false));
+      point:=caller.PixelsToRowColumn(point);
+      focusEditorOnEditMouseUp:=openLocation(guessLocationFromString(caller.lines[point.y-1],false));
     end;
   end;
 

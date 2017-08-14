@@ -148,13 +148,15 @@ TYPE
       localErrors,externalErrors:T_storedMessages;
       stateHash:T_hashInt;
       userRules:T_setOfString;
+      outLineText:T_arrayOfString;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy;
-      PROCEDURE check;
+      PROCEDURE check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
       FUNCTION getPackage:P_package;
-      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean):T_arrayOfString;
+      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint):T_arrayOfString;
       PROPERTY getStateHash:T_hashInt read stateHash;
+      PROPERTY outline:T_arrayOfString read outLineText;
       FUNCTION isUserRule(CONST id:string):boolean;
       FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
@@ -287,6 +289,7 @@ CONSTRUCTOR T_codeAssistant.create(CONST provider: P_codeProvider);
     stateHash:=0;
     setLength(localErrors,0);
     setLength(externalErrors,0);
+    setLength(outLineText,0);
     userRules.create;
   end;
 
@@ -301,7 +304,7 @@ DESTRUCTOR T_codeAssistant.destroy;
     errorCollector.destroy;
   end;
 
-PROCEDURE T_codeAssistant.check;
+PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
 
   PROCEDURE updateErrors;
     VAR i:longint;
@@ -323,14 +326,16 @@ PROCEDURE T_codeAssistant.check;
     end;
 
   begin
-    if package.getCodeProvider^.stateHash=package.getCodeState then exit;
-    adapters^.clearAll;
-    context.resetForEvaluation(@package,ect_silent);
-    package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
-    package.updateLists(userRules);
-    updateErrors;
-    context.afterEvaluation;
+    if package.getCodeProvider^.stateHash<>package.getCodeState then begin
+      adapters^.clearAll;
+      context.resetForEvaluation(@package,ect_silent);
+      package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
+      package.updateLists(userRules);
+      updateErrors;
+      context.afterEvaluation;
+    end;
     stateHash:=package.getCodeState;
+    outLineText:=package.outline(includePrivateInOutline,incudeImportedInOutline,sortOutlineByName);
   end;
 
 FUNCTION T_codeAssistant.getPackage:P_package;
@@ -338,21 +343,39 @@ FUNCTION T_codeAssistant.getPackage:P_package;
     result:=@package;
   end;
 
-FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean): T_arrayOfString;
+FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
   VAR k:longint;
+  PROCEDURE splitAtSpace(VAR headOrAll:string; OUT tail:string; CONST dontSplitBefore,lengthLimit:longint);
+    VAR splitIndex:longint;
+    begin
+      if length(headOrAll)<lengthLimit then begin
+        tail:='';
+        exit;
+      end;
+      splitIndex:=lengthLimit;
+      while (splitIndex>dontSplitBefore) and (headOrAll[splitIndex]<>' ') do dec(splitIndex);
+      if splitIndex<=dontSplitBefore then splitIndex:=lengthLimit;
+      tail:=copy(headOrAll,splitIndex,length(headOrAll));
+      headOrAll:=copy(headOrAll,1,splitIndex-1);
+    end;
+
   PROCEDURE addErrors(CONST list:T_storedMessages);
     VAR i:longint;
-        s:string;
+        s,head,rest:string;
     begin
-      for i:=0 to length(list)-1 do with list[i] do for s in messageText do begin
-        if k>=length(result) then setLength(result,k+1);
-        result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+
-                                      C_messageTypeMeta[messageType].prefix           +
-                   ' '+ansistring(location)+
-                   ' '+s;
+      for i:=0 to length(list)-1 do with list[i] do begin
         hasErrors  :=hasErrors   or (C_messageTypeMeta[messageType].level> 2);
         hasWarnings:=hasWarnings or (C_messageTypeMeta[messageType].level<=2);
-        inc(k);
+        for s in messageText do begin
+          head:=ansistring(location)+' '+s;
+          repeat
+            splitAtSpace(head,rest,3,lengthLimit);
+            if k>=length(result) then setLength(result,k+1);
+            result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head;
+            inc(k);
+            head:='. '+rest;
+          until rest='';
+        end;
       end;
     end;
 

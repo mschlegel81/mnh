@@ -68,10 +68,11 @@ PROCEDURE processFontSettings;
       then OutputEdit.Font.quality:=fqCleartypeNatural
       else OutputEdit.Font.quality:=fqNonAntialiased;
       currentExpressionMemo.Font:=OutputEdit.Font;
-      assistanceSynEdit.Font:=OutputEdit.Font;
+      editorMeta.updateFonts(OutputEdit.Font);
       helpPopupMemo.Font:=OutputEdit.Font;
       helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
-      editorMeta.updateFonts;
+      assistanceSynEdit.Font:=helpPopupMemo.Font;
+      outlineSynEdit.Font:=helpPopupMemo.Font;
       updateWordWrap;
     end;
   end;

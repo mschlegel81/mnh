@@ -17,21 +17,20 @@ private initialize(l1_,l2_,m1_,m2_)->begin
   void;
 end;
 
-
 //*phi1'', dependent on phi2''
-F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
+private F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
 //*phi2'', dependent on phi1''
-F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
+private F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
 //*Returns an expression F1(F2($x))-$x (for Regula Falsi)
-F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
+private F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
 
 //*Overloaded for use in RK4
-accel(state:numericList(4))->accel@state;
+private accel(state:numericList(4))->accel@state;
 
-quickRoot(F:expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
+private quickRoot(F:expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
 
 //*Returns first derivative in time for given state
-accel(phi1,phi2,phi1dt,phi2dt)->
+private accel(phi1,phi2,phi1dt,phi2dt)->
   begin
     [phi1dt,
      phi2dt,
@@ -40,18 +39,21 @@ accel(phi1,phi2,phi1dt,phi2dt)->
   end;
 
 //*Transforms the state (by angles) to a list of points (Cartesian, 2D)
-plottable(state:numericList(4))->begin
+private plottable(state:numericList(4))->begin
   [[0,0],local d1:=[sin(state[0]),-cos(state[0])]*l1,
                d1+ [sin(state[1]),-cos(state[1])]*l2];
 end;
 
-private secondsPreFrame:=1/40;
+private secondsPerFrame:=1/40;
+private timeStepPerFrame:=0.02;
 //*Animates a double pendulum with standard parameters (l1=l2=m1=m2=1)
 //*The animation will consist of two double pendulums with a tiny variation in the starting conditions
 main->begin
-  setOptions([['autoscaleX',false],['autoscaleY',false],['x0',0],['x1',0],['y0',0],['y1',0]]);
-  local state1:=[pi/2,pi/4,0,0];
+  setOptions([['autoscaleX',false],['autoscaleY',false],['preserveAspect',true],['x0',0],['x1',0],['y0',0],['y1',0],['axisStyleX',0],['axisStyleY',0]]);
+  local state1:=[pi/2,-pi/2,0,0];
   local state2:=state1+(random(4)-0.5)*1E-6;
+  local hist1:=[state1];
+  local hist2:=[state2];
   local trace1:=[state1.plottable.trailing];
   local trace2:=[state2.plottable.trailing];
   local p1:=state1.plottable;
@@ -70,20 +72,35 @@ main->begin
                    display;
                  end};
   replot();
-  local step:=integrator(CASH_KARP,::accel,0.02,1E-4);
+  local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
   local frameTime:=time;
   state1:=async(step,[state1]);
   state2:=async(step,[state2]);
   while(not(plotClosed),begin
-    sleepUntil(frameTime+=secondsPreFrame);
+    sleepUntil(frameTime+=secondsPerFrame);
     frameTime:=time;
-    p1:=(state1:=state1()).plottable; state1:=async(step,[state1]);
-    p2:=(state2:=state2()).plottable; state2:=async(step,[state2]);
+    p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=async(step,[state1]);
+    p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=async(step,[state2]);
     replot();
   end);
+
+  local t:=[0..hist1.size-1]*timeStepPerFrame;
+  local mask:=[0..hist1.size-1] mod max(1,round(hist1.size/2000))=0;
+  t:=t[mask].each(it,it,it);
+
+  setOptions([['autoscaleX',true],['autoscaleY',true],['preserveAspect',false],['axisStyleX',3],['axisStyleY',3]]);
+  plot   (t,[hist1[mask].getInner(0),hist2[mask].getInner(0)].transpose.flatten,'red 0.5 tube');
+  addPlot(t,[hist1[mask].getInner(1),hist2[mask].getInner(1)].transpose.flatten,'blue 0.5 tube');
+
+//  addPlot(t,hist2.getInner(0),'black');
+//  addPlot(t,hist1.getInner(1),'red box');
+//  addPlot(t,hist2.getInner(1),'red');
+  display;
 end;
 
 //*Animates a double pendulum with custom parameters
 //*Note that smaller lengths lead to faster pendulums
 //*but only the ratio of the lenghts changes the behavior qualitatively
 main(L1,L2,M1,M2)->initialize@$params orElse main;
+
+getOptions;
