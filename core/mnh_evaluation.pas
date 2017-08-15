@@ -1049,7 +1049,7 @@ end}
         end;
         tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
         tt_identifier: begin
-          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
+          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters,true);
           didSubstitution:=true;
         end;
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
@@ -1081,7 +1081,7 @@ end}
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
-              P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
+              P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters,true);
               first^.next:=context.recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);

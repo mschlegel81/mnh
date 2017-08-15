@@ -71,7 +71,7 @@ TYPE
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters; CONST toBeCalled:boolean); virtual;
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -981,7 +981,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     end;
   end;
 
-PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
+PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters; CONST toBeCalled:boolean);
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -990,7 +990,7 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      userRule^.setIdResolved;
+      if toBeCalled then userRule^.setIdResolved;
       {$endif}
     end;
 
@@ -999,10 +999,12 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      userRule^.setIdResolved;
-      if (token.location.package=P_objectWithPath(mainPackage)) and
-         (userRule^.getLocation.package<>P_objectWithPath(mainPackage))
-      then P_package(userRule^.getLocation.package)^.anyCalled:=true;
+      if toBeCalled then begin
+        userRule^.setIdResolved;
+        if (token.location.package=P_objectWithPath(mainPackage)) and
+           (userRule^.getLocation.package<>P_objectWithPath(mainPackage))
+        then P_package(userRule^.getLocation.package)^.anyCalled:=true;
+      end;
       {$endif}
     end;
 
