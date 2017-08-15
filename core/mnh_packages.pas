@@ -81,11 +81,68 @@ TYPE
       FUNCTION outline(CONST includePrivate,includeImported,sortByName:boolean):T_arrayOfString;
     end;
 
+  P_sandbox=^T_sandbox;
+  T_sandbox=object
+    private
+      evaluationContext:T_evaluationContext;
+      adapters:T_adapters;
+      collector:T_collectingOutAdapter;
+      busy:boolean;
+      package:T_package;
+      cs:TRTLCriticalSection;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
+  end;
+
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST randomSeed:dword=4294967295);
-FUNCTION runAlone(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
+FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
 IMPLEMENTATION
+VAR sandboxes:array[0..15] of P_sandbox;
+    sbLock:TRTLCriticalSection;
+PROCEDURE setupSandboxes;
+  VAR i:longint;
+  begin
+    initCriticalSection(sbLock);
+    enterCriticalSection(sbLock);
+    for i:=0 to 15 do sandboxes[i]:=nil;
+    leaveCriticalSection(sbLock);
+  end;
+
+PROCEDURE doneSandboxes;
+  VAR i:longint;
+  begin
+    enterCriticalSection(sbLock);
+    for i:=0 to 15 do if sandboxes[i]<>nil then dispose(sandboxes[i],destroy);
+    leaveCriticalSection(sbLock);
+    doneCriticalSection(sbLock);
+  end;
+
+FUNCTION sandbox:P_sandbox;
+  VAR i:longint;
+  begin
+    result:=nil;
+    enterCriticalSection(sbLock);
+    for i:=0 to 15 do if result=nil then begin
+      if (sandboxes[i]=nil) then begin
+        new(sandboxes[i],create);
+        sandboxes[i]^.busy:=true;
+        result:=sandboxes[i];
+      end;
+      if (sandboxes[i]<>nil) then begin
+        enterCriticalSection(sandboxes[i]^.cs);
+        if not(sandboxes[i]^.busy) then begin
+          sandboxes[i]^.busy:=true;
+          result:=sandboxes[i];
+        end;
+        leaveCriticalSection(sandboxes[i]^.cs);
+      end;
+    end;
+    leaveCriticalSection(sbLock);
+  end;
+
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
   begin
     if (length(id)>=3) and (id[1]='i') and (id[2]='s')
@@ -98,32 +155,42 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
-PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST randomSeed:dword=4294967295);
-  VAR context:T_evaluationContext;
-      package:T_package;
+CONSTRUCTOR T_sandbox.create;
   begin
-    context.create(adapter);
-    package.create(newVirtualFileCodeProvider('?',input),nil);
-    context.resetForEvaluation(@package,ect_silent);
-    if randomSeed<>4294967295 then context.prng.resetSeed(randomSeed);
-    package.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
-    package.destroy;
-    context.destroy;
+    initCriticalSection(cs);
+    collector.create(at_unknown,C_collectAllOutputBehavior);
+    adapters.create;
+    adapters.addOutAdapter(@collector,false);
+    evaluationContext.create(@adapters);
+    package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
+    busy:=false;
   end;
 
-FUNCTION runAlone(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
-  VAR collector:T_collectingOutAdapter;
-      adapter:T_adapters;
-      i:longint;
+DESTRUCTOR T_sandbox.destroy;
   begin
-    collector.create(at_unknown,C_collectAllOutputBehavior);
-    adapter.create;
-    adapter.addOutAdapter(@collector,false);
-    runAlone(input,@adapter,randomSeed);
-    setLength(result,length(collector.storedMessages));
-    for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
-    adapter.destroy;
+    enterCriticalSection(cs);
+    package.destroy;
+    evaluationContext.destroy;
+    adapters.destroy;
     collector.destroy;
+    leaveCriticalSection(cs);
+    doneCriticalSection(cs);
+  end;
+
+FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword): T_storedMessages;
+  begin
+    enterCriticalSection(cs);
+    busy:=true;
+    leaveCriticalSection(cs);
+    adapters.clearAll;
+    package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
+    evaluationContext.resetForEvaluation(@package,ect_silent);
+    if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
+    package.load(lu_forDirectExecution,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
+    result:=collector.storedMessages;
+    enterCriticalSection(cs);
+    busy:=false;
+    leaveCriticalSection(cs);
   end;
 
 FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
@@ -170,7 +237,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       raw:T_rawTokenArray;
       tok:T_rawToken;
   begin
-    messages:=runAlone(input);
+    messages:=sandbox^.execute(input);
     setLength(textOut,0);
     setLength(htmlOut,0);
     setLength(usedBuiltinIDs,0);
@@ -1121,7 +1188,7 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
     setLength(temp,0);
     for rule in packageRules.valueSet do for entry in rule^.getOutline(includePrivate) do addInfo(entry);
     if includeImported then for rule in importedRules.valueSet do for entry in rule^.getOutline(false) do addInfo(entry);
-    if sortbyName then begin
+    if sortByName then begin
       for i:=1 to length(temp)-1 do for j:=0 to i-1 do if (temp[i].id<temp[j].id) or (temp[i].id=temp[j].id) and (temp[i].location<temp[j].location) then begin
         entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
       end;
@@ -1136,6 +1203,7 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
 
 {$undef include_implementation}
 INITIALIZATION
+  setupSandboxes;
 {$define include_initialization}
   //callbacks in doc
   {$ifdef fullVersion}
@@ -1145,6 +1213,8 @@ INITIALIZATION
 {$undef include_initialization}
 
 FINALIZATION
+
+  doneSandboxes;
 {$define include_finalization}
 {$include mnh_funcs.inc}
 end.

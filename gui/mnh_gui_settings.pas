@@ -126,13 +126,13 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
   {$i res_ensureAssoc.inc}
   begin
-    runAlone(ensureAssoc_mnh);
+    sandbox^.execute(ensureAssoc_mnh);
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
   {$i res_removeAssoc.inc}
   begin
-    runAlone(removeAssoc_mnh);
+    sandbox^.execute(removeAssoc_mnh);
   end;
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
@@ -149,7 +149,7 @@ PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
 PROCEDURE TSettingsForm.Button1Click(Sender: TObject);
   {$i res_ensureNppHighlighting.inc}
   begin
-    runAlone(ensureNotepad__Highlighting_mnh);
+    sandbox^.execute(ensureNotepad__Highlighting_mnh);
   end;
 
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
