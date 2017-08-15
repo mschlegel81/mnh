@@ -409,18 +409,21 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
             n[2]:=fetch;
             if (n[2]<>nil) and (n[2]^.tokType=tt_identifier) then begin
               nextToken^.txt:=nextToken^.txt+ID_QUALIFY_CHARACTER+n[2]^.txt;
+              BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil,false);
               recycler.disposeToken(n[1]);
               recycler.disposeToken(n[2]);
             end else begin
+              BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil,false);
               appendToken(nextToken);
               appendToken(n[1]);
               nextToken:=n[2];
             end;
           end else begin
+            BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil,false);
             appendToken(nextToken);
             nextToken:=n[1];
           end;
-        end;
+        end else BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil,false);
         //This is a hack to ensure that "myPath" behaves nicely when including
         if (nextToken<>nil) and (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
       end;

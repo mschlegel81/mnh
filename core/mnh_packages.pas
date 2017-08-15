@@ -542,7 +542,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       while (t<>nil) do begin
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then begin
           resolveId(t^.next^,nil,false);
-          if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved;
+          {$ifdef fullVersion} if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved; {$endif}
         end;
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
           newNext:=t^.next^.next;
@@ -559,7 +559,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       result:=nil;
     end;
-
 
   begin
     profile:=context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]);

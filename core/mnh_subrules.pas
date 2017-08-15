@@ -282,9 +282,9 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
                  else init(et_normal_public ,declAt);
     pattern:=pat;
     constructExpression(rep,context);
+    parent:=parent_;
     resolveIds(nil);
     meta.create;
-    parent:=parent_;
   end;
 
 CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring;
@@ -901,7 +901,7 @@ FUNCTION T_expression.equals(CONST other:P_literal):boolean;
   end;
 
 FUNCTION T_expression       .getParentId: T_idString; begin result:=''; end;
-FUNCTION T_subruleExpression.getParentId: T_idString; begin result:=parent^.getId; end;
+FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;
 
 FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
   begin

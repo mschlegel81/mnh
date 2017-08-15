@@ -66,6 +66,7 @@ TYPE
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
     {$endif}
+    PROCEDURE setSingleLocationForExpression(CONST loc:T_tokenLocation);
   end;
 
   P_tokenRecycler=^T_tokenRecycler;
@@ -410,6 +411,16 @@ FUNCTION T_token.getRawToken: T_rawToken;
     result.txt:=singleTokenToString;
   end;
 {$endif}
+
+PROCEDURE T_token.setSingleLocationForExpression(CONST loc:T_tokenLocation);
+  VAR t:P_token;
+  begin
+    t:=@self;
+    while t<>nil do begin
+      t^.location:=loc;
+      t:=t^.next;
+    end;
+  end;
 
 CONSTRUCTOR T_tokenRecycler.create;
   VAR i:longint;
