@@ -71,7 +71,7 @@ TYPE
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters; CONST toBeCalled:boolean); virtual;
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -81,11 +81,68 @@ TYPE
       FUNCTION outline(CONST includePrivate,includeImported,sortByName:boolean):T_arrayOfString;
     end;
 
+  P_sandbox=^T_sandbox;
+  T_sandbox=object
+    private
+      evaluationContext:T_evaluationContext;
+      adapters:T_adapters;
+      collector:T_collectingOutAdapter;
+      busy:boolean;
+      package:T_package;
+      cs:TRTLCriticalSection;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
+  end;
+
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
-PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST randomSeed:dword=4294967295);
-FUNCTION runAlone(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
+FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
 IMPLEMENTATION
+VAR sandboxes:array[0..15] of P_sandbox;
+    sbLock:TRTLCriticalSection;
+PROCEDURE setupSandboxes;
+  VAR i:longint;
+  begin
+    initCriticalSection(sbLock);
+    enterCriticalSection(sbLock);
+    for i:=0 to 15 do sandboxes[i]:=nil;
+    leaveCriticalSection(sbLock);
+  end;
+
+PROCEDURE doneSandboxes;
+  VAR i:longint;
+  begin
+    enterCriticalSection(sbLock);
+    for i:=0 to 15 do if sandboxes[i]<>nil then dispose(sandboxes[i],destroy);
+    leaveCriticalSection(sbLock);
+    doneCriticalSection(sbLock);
+  end;
+
+FUNCTION sandbox:P_sandbox;
+  VAR i:longint;
+  begin
+    result:=nil;
+    enterCriticalSection(sbLock);
+    for i:=0 to 15 do if result=nil then begin
+      if (sandboxes[i]=nil) then begin
+        new(sandboxes[i],create);
+        sandboxes[i]^.busy:=true;
+        result:=sandboxes[i];
+      end;
+      if (sandboxes[i]<>nil) then begin
+        enterCriticalSection(sandboxes[i]^.cs);
+        if not(sandboxes[i]^.busy) then begin
+          sandboxes[i]^.busy:=true;
+          result:=sandboxes[i];
+        end;
+        leaveCriticalSection(sandboxes[i]^.cs);
+      end;
+    end;
+    leaveCriticalSection(sbLock);
+  end;
+
 FUNCTION isTypeToType(CONST id:T_idString):T_idString;
   begin
     if (length(id)>=3) and (id[1]='i') and (id[2]='s')
@@ -98,32 +155,42 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
-PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters; CONST randomSeed:dword=4294967295);
-  VAR context:T_evaluationContext;
-      package:T_package;
+CONSTRUCTOR T_sandbox.create;
   begin
-    context.create(adapter);
-    package.create(newVirtualFileCodeProvider('?',input),nil);
-    context.resetForEvaluation(@package,ect_silent);
-    if randomSeed<>4294967295 then context.prng.resetSeed(randomSeed);
-    package.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
-    package.destroy;
-    context.destroy;
+    initCriticalSection(cs);
+    collector.create(at_unknown,C_collectAllOutputBehavior);
+    adapters.create;
+    adapters.addOutAdapter(@collector,false);
+    evaluationContext.create(@adapters);
+    package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
+    busy:=false;
   end;
 
-FUNCTION runAlone(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
-  VAR collector:T_collectingOutAdapter;
-      adapter:T_adapters;
-      i:longint;
+DESTRUCTOR T_sandbox.destroy;
   begin
-    collector.create(at_unknown,C_collectAllOutputBehavior);
-    adapter.create;
-    adapter.addOutAdapter(@collector,false);
-    runAlone(input,@adapter,randomSeed);
-    setLength(result,length(collector.storedMessages));
-    for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
-    adapter.destroy;
+    enterCriticalSection(cs);
+    package.destroy;
+    evaluationContext.destroy;
+    adapters.destroy;
     collector.destroy;
+    leaveCriticalSection(cs);
+    doneCriticalSection(cs);
+  end;
+
+FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword): T_storedMessages;
+  begin
+    enterCriticalSection(cs);
+    busy:=true;
+    leaveCriticalSection(cs);
+    adapters.clearAll;
+    package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
+    evaluationContext.resetForEvaluation(@package,ect_silent);
+    if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
+    package.load(lu_forDirectExecution,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
+    result:=collector.storedMessages;
+    enterCriticalSection(cs);
+    busy:=false;
+    leaveCriticalSection(cs);
   end;
 
 FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
@@ -170,7 +237,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       raw:T_rawTokenArray;
       tok:T_rawToken;
   begin
-    messages:=runAlone(input);
+    messages:=sandbox^.execute(input);
     setLength(textOut,0);
     setLength(htmlOut,0);
     setLength(usedBuiltinIDs,0);
@@ -534,6 +601,32 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
                    statement.firstToken^.location,context.adapters^);
     end;
 
+  FUNCTION getDeclarationOrAssignmentToken: P_token;
+    VAR level:longint=0;
+        t,newNext:P_token;
+    begin
+      t:=statement.firstToken;
+      while (t<>nil) do begin
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then begin
+          resolveId(t^.next^,nil,false);
+          {$ifdef fullVersion} if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved; {$endif}
+        end;
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
+          newNext:=t^.next^.next;
+          t^.tokType:=tt_customTypeCheck;
+          t^.txt    :=t^.next^.txt;
+          t^.data   :=t^.next^.data;
+          dispose(t^.next,destroy);
+          t^.next:=newNext;
+        end;
+        if t^.tokType      in C_openingBrackets then inc(level)
+        else if t^.tokType in C_closingBrackets then dec(level);
+        if (level=0) and (t^.tokType=tt_assign) or (t^.tokType=tt_declare) then exit(t);
+        t:=t^.next;
+      end;
+      result:=nil;
+    end;
+
   begin
     profile:=context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.firstToken=nil then exit;
@@ -554,7 +647,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       exit;
     end;
 
-    assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
+    assignmentToken:=getDeclarationOrAssignmentToken;
     if (assignmentToken<>nil) then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.adapters^.raiseError('Rule declaration is not allowed here',assignmentToken^.location);
@@ -981,7 +1074,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     end;
   end;
 
-PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
+PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters; CONST toBeCalled:boolean);
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -990,7 +1083,7 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      userRule^.setIdResolved;
+      if toBeCalled then userRule^.setIdResolved;
       {$endif}
     end;
 
@@ -999,10 +1092,12 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      userRule^.setIdResolved;
-      if (token.location.package=P_objectWithPath(mainPackage)) and
-         (userRule^.getLocation.package<>P_objectWithPath(mainPackage))
-      then P_package(userRule^.getLocation.package)^.anyCalled:=true;
+      if toBeCalled then begin
+        userRule^.setIdResolved;
+        if (token.location.package=P_objectWithPath(mainPackage)) and
+           (userRule^.getLocation.package<>P_objectWithPath(mainPackage))
+        then P_package(userRule^.getLocation.package)^.anyCalled:=true;
+      end;
       {$endif}
     end;
 
@@ -1093,7 +1188,7 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
     setLength(temp,0);
     for rule in packageRules.valueSet do for entry in rule^.getOutline(includePrivate) do addInfo(entry);
     if includeImported then for rule in importedRules.valueSet do for entry in rule^.getOutline(false) do addInfo(entry);
-    if sortbyName then begin
+    if sortByName then begin
       for i:=1 to length(temp)-1 do for j:=0 to i-1 do if (temp[i].id<temp[j].id) or (temp[i].id=temp[j].id) and (temp[i].location<temp[j].location) then begin
         entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
       end;
@@ -1108,6 +1203,7 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
 
 {$undef include_implementation}
 INITIALIZATION
+  setupSandboxes;
 {$define include_initialization}
   //callbacks in doc
   {$ifdef fullVersion}
@@ -1117,6 +1213,8 @@ INITIALIZATION
 {$undef include_initialization}
 
 FINALIZATION
+
+  doneSandboxes;
 {$define include_finalization}
 {$include mnh_funcs.inc}
 end.

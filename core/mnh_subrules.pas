@@ -282,9 +282,9 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
                  else init(et_normal_public ,declAt);
     pattern:=pat;
     constructExpression(rep,context);
+    parent:=parent_;
     resolveIds(nil);
     meta.create;
-    parent:=parent_;
   end;
 
 CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring;
@@ -901,7 +901,7 @@ FUNCTION T_expression.equals(CONST other:P_literal):boolean;
   end;
 
 FUNCTION T_expression       .getParentId: T_idString; begin result:=''; end;
-FUNCTION T_subruleExpression.getParentId: T_idString; begin result:=parent^.getId; end;
+FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;
 
 FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
   begin
@@ -1063,7 +1063,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
-          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters);
+          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters,false);
       end;
       t:=t^.next;
     end;
@@ -1094,7 +1094,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          P_abstractPackage(token.location.package)^.resolveId(token,adapters);
+          P_abstractPackage(token.location.package)^.resolveId(token,adapters,true);
           functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
         end;
       end;

@@ -118,6 +118,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       dropFirst(fileLines,1);
       lexer.create(fileLines,location,P_abstractPackage(location.package));
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      stmt.firstToken^.setSingleLocationForExpression(location);
       lexer.destroy;
       context.reduceExpression(stmt.firstToken);
       result:=context.cascadeDisposeToLiteral(stmt.firstToken);

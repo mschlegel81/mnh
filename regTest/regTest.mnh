@@ -1,5 +1,5 @@
 USE '../demos/inputs/inputs.mnh',
-    testLog, mnhInfo;
+    testLog;
 
 private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
 memoized allDemos:=files(demosRoot&'*.mnh').sort;

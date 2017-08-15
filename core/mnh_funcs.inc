@@ -12,7 +12,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(runAlone(src,context.getParent^.prng.XOS));
+      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getParent^.prng.XOS));
     end;
   end;
 
@@ -124,6 +124,7 @@ FUNCTION writeDataStores_imp intFuncSignature;
       result:=newVoidLiteral;
     end else result:=nil;
   end;
+
 {$endif}
 {$ifdef include_initialization}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,[],ak_unary,'sandBoxExecute(source);//Executes the source (string or stringList) and returns created messages');

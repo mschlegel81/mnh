@@ -5,6 +5,7 @@ private max(...)->math.max@...;
 
 maxLoggedBuildNumber->log.getInner(1).max;
 
+//@SuppressUnusedWarning
 memoized getBuiltNumber(codeHash:string)->begin
   isVoid(log)
   ? begin
