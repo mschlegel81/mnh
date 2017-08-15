@@ -345,6 +345,13 @@ FUNCTION T_codeAssistant.getPackage:P_package;
 
 FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
   VAR k:longint;
+  PROCEDURE resultAppend(CONST s:string);
+    begin
+      if k>=length(result) then setLength(result,round(k*1.1+1));
+      result[k]:=s;
+      inc(k);
+    end;
+
   PROCEDURE splitAtSpace(VAR headOrAll:string; OUT tail:string; CONST dontSplitBefore,lengthLimit:longint);
     VAR splitIndex:longint;
     begin
@@ -354,7 +361,10 @@ FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST 
       end;
       splitIndex:=lengthLimit;
       while (splitIndex>dontSplitBefore) and (headOrAll[splitIndex]<>' ') do dec(splitIndex);
-      if splitIndex<=dontSplitBefore then splitIndex:=lengthLimit;
+      if splitIndex<=dontSplitBefore then begin
+        splitIndex:=lengthLimit;
+        while (splitIndex<=length(headOrAll)) and (headOrAll[splitIndex]<>' ') do inc(splitIndex);
+      end;
       tail:=copy(headOrAll,splitIndex,length(headOrAll));
       headOrAll:=copy(headOrAll,1,splitIndex-1);
     end;
@@ -367,12 +377,14 @@ FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST 
         hasErrors  :=hasErrors   or (C_messageTypeMeta[messageType].level> 2);
         hasWarnings:=hasWarnings or (C_messageTypeMeta[messageType].level<=2);
         for s in messageText do begin
-          head:=ansistring(location)+' '+s;
+          head:=ansistring(location);
+          if length(head)>=lengthLimit-3 then begin
+            resultAppend(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head);
+            head:='. '+s;
+          end else head:=head+' '+s;
           repeat
             splitAtSpace(head,rest,3,lengthLimit);
-            if k>=length(result) then setLength(result,k+1);
-            result[k]:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head;
-            inc(k);
+            resultAppend(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head);
             head:='. '+rest;
           until rest='';
         end;
@@ -386,6 +398,7 @@ FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST 
     k:=0;
     addErrors(localErrors);
     addErrors(externalErrors);
+    setLength(result,k);
   end;
 
 FUNCTION T_codeAssistant.isUserRule(CONST id: string): boolean;

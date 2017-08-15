@@ -2745,7 +2745,7 @@ object MnhForm: TMnhForm
         VisibleSpecialChars = [vscSpace, vscTabAtLast]
         ReadOnly = True
         RightEdge = -1
-        ScrollBars = ssAutoBoth
+        ScrollBars = ssAutoVertical
         SelectedColor.BackPriority = 50
         SelectedColor.ForePriority = 50
         SelectedColor.FramePriority = 50
