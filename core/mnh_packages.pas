@@ -534,6 +534,33 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
                    statement.firstToken^.location,context.adapters^);
     end;
 
+  FUNCTION getDeclarationOrAssignmentToken: P_token;
+    VAR level:longint=0;
+        t,newNext:P_token;
+    begin
+      t:=statement.firstToken;
+      while (t<>nil) do begin
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then begin
+          resolveId(t^.next^,nil,false);
+          if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved;
+        end;
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
+          newNext:=t^.next^.next;
+          t^.tokType:=tt_customTypeCheck;
+          t^.txt    :=t^.next^.txt;
+          t^.data   :=t^.next^.data;
+          dispose(t^.next,destroy);
+          t^.next:=newNext;
+        end;
+        if t^.tokType      in C_openingBrackets then inc(level)
+        else if t^.tokType in C_closingBrackets then dec(level);
+        if (level=0) and (t^.tokType=tt_assign) or (t^.tokType=tt_declare) then exit(t);
+        t:=t^.next;
+      end;
+      result:=nil;
+    end;
+
+
   begin
     profile:=context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.firstToken=nil then exit;
@@ -554,7 +581,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       exit;
     end;
 
-    assignmentToken:=statement.firstToken^.getDeclarationOrAssignmentToken;
+    assignmentToken:=getDeclarationOrAssignmentToken;
     if (assignmentToken<>nil) then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.adapters^.raiseError('Rule declaration is not allowed here',assignmentToken^.location);

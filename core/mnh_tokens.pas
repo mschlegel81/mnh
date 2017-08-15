@@ -63,7 +63,6 @@ TYPE
     FUNCTION singleTokenToString:ansistring;
     FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_adapters):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
-    FUNCTION getDeclarationOrAssignmentToken:P_token;
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
     {$endif}
@@ -399,29 +398,6 @@ FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLev
       if t^.tokType      in C_openingBrackets then inc(level)
       else if t^.tokType in C_closingBrackets then dec(level);
       if (level=onLevel) and (t^.tokType in types) then exit(t);
-      t:=t^.next;
-    end;
-    result:=nil;
-  end;
-
-FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
-  VAR level:longint=0;
-      t,newNext:P_token;
-
-  begin
-    t:=@self;
-    while (t<>nil) do begin
-      if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
-        newNext:=t^.next^.next;
-        t^.tokType:=tt_customTypeCheck;
-        t^.txt    :=t^.next^.txt;
-        t^.data   :=t^.next^.data;
-        dispose(t^.next,destroy);
-        t^.next:=newNext;
-      end;
-      if t^.tokType      in C_openingBrackets then inc(level)
-      else if t^.tokType in C_closingBrackets then dec(level);
-      if (level=0) and (t^.tokType=tt_assign) or (t^.tokType=tt_declare) then exit(t);
       t:=t^.next;
     end;
     result:=nil;
