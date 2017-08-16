@@ -125,21 +125,29 @@ FUNCTION sandbox:P_sandbox;
   begin
     result:=nil;
     enterCriticalSection(sbLock);
-    for i:=0 to 15 do if result=nil then begin
-      if (sandboxes[i]=nil) then begin
-        new(sandboxes[i],create);
-        sandboxes[i]^.busy:=true;
-        result:=sandboxes[i];
-      end;
-      if (sandboxes[i]<>nil) then begin
-        enterCriticalSection(sandboxes[i]^.cs);
-        if not(sandboxes[i]^.busy) then begin
+    repeat
+      for i:=0 to 15 do if result=nil then begin
+        if (sandboxes[i]=nil) then begin
+          new(sandboxes[i],create);
           sandboxes[i]^.busy:=true;
           result:=sandboxes[i];
         end;
-        leaveCriticalSection(sandboxes[i]^.cs);
+        if (sandboxes[i]<>nil) then begin
+          enterCriticalSection(sandboxes[i]^.cs);
+          if not(sandboxes[i]^.busy) then begin
+            sandboxes[i]^.busy:=true;
+            result:=sandboxes[i];
+          end;
+          leaveCriticalSection(sandboxes[i]^.cs);
+        end;
       end;
-    end;
+      if result=nil then begin
+        leaveCriticalSection(sbLock);
+        sleep(1);
+        ThreadSwitch;
+        enterCriticalSection(sbLock);
+      end;
+    until result<>nil;
     leaveCriticalSection(sbLock);
   end;
 
