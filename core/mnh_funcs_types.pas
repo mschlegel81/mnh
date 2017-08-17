@@ -139,6 +139,18 @@ FUNCTION toMap_imp intFuncSignature;
     end;
   end;
 
+FUNCTION isStateful intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then
+    result:=newBoolLiteral((arg0^.literalType=lt_expression)
+    and P_expressionLiteral(arg0)^.isStateful)
+    else if (params^.size=2) and (arg1^.literalType=lt_int) then
+    result:=newBoolLiteral((arg0^.literalType=lt_expression)
+    and P_expressionLiteral(arg0)^.isStateful
+    and P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(int1^.value));
+  end;
+
 {$MACRO ON}
 {$define GENERIC_TYPE_CHECK:=FUNCTION FUNC_ID intFuncSignature;
   begin
@@ -230,5 +242,6 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'isNumericCollection',@isNumericCollection,[],ak_variadic_1,'isNumericCollection(x); //Returns true if x is a numericCollection. Specify an additional int parameter to additionally check the size.');
   registerRule(TYPECAST_NAMESPACE,'isMap'              ,@isMap              ,[],ak_variadic_1,'isMap(x); //Returns true if x is a map. Specify an additional int parameter to additionally check the size.');
   registerRule(TYPECAST_NAMESPACE,'isExpression'       ,@isExpression       ,[],ak_variadic_1,'isExpression(x); //Returns true if x is a expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
+  registerRule(TYPECAST_NAMESPACE,'isStateful'         ,@isStateful         ,[],ak_variadic_1,'isStateful(x); //Returns true if x is a statefil expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
 end.
 
