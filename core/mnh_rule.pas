@@ -90,7 +90,7 @@ TYPE
       FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
-      PROPERTY value:T_namedVariable read namedValue;
+      FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
   end;
 
   P_datastoreRule=^T_datastoreRule;
@@ -106,6 +106,7 @@ TYPE
       PROCEDURE writeBack(VAR adapters:T_adapters);
       FUNCTION isInitialized:boolean;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; VAR context:T_threadContext):boolean; virtual;
+      FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
   end;
 
 IMPLEMENTATION
@@ -368,6 +369,21 @@ FUNCTION T_datastoreRule.replaces(CONST param: P_listLiteral; CONST location: T_
     end;
   end;
 
+FUNCTION T_mutableRule.getValue(VAR context:T_threadContext):P_literal;
+  begin
+    system.enterCriticalSection(rule_cs);
+    result:=namedValue.getValue;
+    system.leaveCriticalSection(rule_cs);
+  end;
+
+FUNCTION T_datastoreRule.getValue(VAR context:T_threadContext):P_literal;
+  begin
+    system.enterCriticalSection(rule_cs);
+    readDataStore(context);
+    result:=namedValue.getValue;
+    system.leaveCriticalSection(rule_cs);
+  end;
+
 FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
@@ -532,12 +548,6 @@ PROCEDURE T_datastoreRule.readDataStore(VAR context:T_threadContext);
   VAR lit:P_literal;
   begin
     if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta.fileChangedSinceRead) then begin
-      {$ifdef debugMode}
-      writeln(stdErr,'        DEBUG: reading datastore for rule ',getId,' ',string(getLocation),
-                     '; called: ',called,
-                     '; valueChangedAfterDeclaration: ',valueChangedAfterDeclaration,
-                     '; fileChanged: ',dataStoreMeta.fileChangedSinceRead);
-      {$endif}
       lit:=dataStoreMeta.readValue(getLocation,context);
       if lit<>nil then begin
         namedValue.setValue(lit);

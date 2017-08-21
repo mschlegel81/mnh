@@ -947,7 +947,7 @@ end}
                 end else begin
                   if first^.tokType=tt_blockLocalVariable
                   then newLit:=context.valueStore^.getVariableValue(first^.txt)
-                  else newLit:=P_mutableRule(first^.data)^.value.getValue;
+                  else newLit:=P_mutableRule(first^.data)^.getValue(context);
                   if newLit<>nil then begin
                     first^.data:=newLit;
                     first^.tokType:=tt_literal;
