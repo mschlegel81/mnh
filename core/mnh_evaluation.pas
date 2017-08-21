@@ -759,6 +759,21 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       didSubstitution:=true;
     end;
 
+  PROCEDURE resolveElementAccess;
+    begin
+      newLit:=newListLiteral;
+      P_listLiteral(newLit)^
+      .append(first^.data,false)^
+      .appendAll(first^.next^.data);
+      disposeLiteral(first^.next^.data);
+      first^.tokType:=tt_intrinsicRule;
+      first^.data:=BUILTIN_GET;
+      first^.txt:='get';
+      first^.next^.tokType:=tt_parList;
+      first^.next^.data:=newLit;
+      applyRule(first^.next,first^.next^.next);
+    end;
+
 {$MACRO ON}
 {$define COMMON_CASES:=
 tt_listBraceOpen: begin
@@ -878,7 +893,7 @@ end}
           end;
           tt_operatorAnd, tt_operatorOr,
           tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
-          tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorConcat, tt_operatorIn: process_op_lit;
+          tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorConcat, tt_operatorConcatAlt, tt_operatorIn: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack.popDestroy(context.recycler);
@@ -912,19 +927,37 @@ end}
               stack.popLink(first);   // -> ? | [ ...
               first^.tokType:=tt_literal; // -> ? | <NewList>
               didSubstitution:=true;
-              if (stack.topIndex>=0) and (stack.topType=tt_literal) then begin
+              if (stack.topType in [tt_blockLocalVariable,tt_localUserRule,tt_importedUserRule]) then begin
+                // x # [y]:=... -> x<<[y]|...;
+                stack.popLink(first);
+                if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
+                if cTokType[2]in [tt_assign,tt_mutate] then begin
+                  //first=                   x
+                  //first^.next=             [y]
+                  //first^.next^.next=       :=
+                  //first^.next^.next^.next= ... (some expression)
+                  first^.tokType:=tt_cso_mapPut;
+                  writeln('Mutated := to <<; has pointer: ',first^.data<>nil);
+                  first^.next^.next^.tokType:=tt_operatorConcatAlt;
+                  //first=                   x<<
+                  //first^.next=             [y]
+                  //first^.next^.next=       ||
+                  //first^.next^.next^.next= ... (some expression)
+                  stack.push(first);
+                end else begin
+                  if first^.tokType=tt_blockLocalVariable
+                  then newLit:=context.valueStore^.getVariableValue(first^.txt)
+                  else newLit:=P_mutableRule(first^.data)^.value.getValue;
+                  if newLit<>nil then begin
+                    first^.data:=newLit;
+                    first^.tokType:=tt_literal;
+                    resolveElementAccess;
+                  end else didSubstitution:=false;
+                end;
+              end else if (stack.topType=tt_literal) then begin
                 // <Lit> | <NewList> ...
                 stack.popLink(first); // -> | <Lit> <NewList> ...
-                newLit:=newListLiteral;
-                P_listLiteral(newLit)^
-                .append(first^.data,false)^
-                .appendAll(first^.next^.data);
-                disposeLiteral(first^.next^.data);
-                first^.tokType:=tt_intrinsicRule;
-                first^.data:=BUILTIN_GET;
-                first^.txt:='get';
-                first^.next^.tokType:=tt_parList;
-                first^.next^.data:=newLit;        // -> | get (<Lit>|<NewList>) ...
+                resolveElementAccess;
               end;
             end;
             COMMON_SEMICOLON_HANDLING;
@@ -1011,7 +1044,10 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_blockLocalVariable: begin
+        tt_blockLocalVariable: if cTokType[1]=tt_listBraceOpen then begin
+          stack.push(first);
+          didSubstitution:=true;
+        end else begin
           first^.data:=context.valueStore^.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
@@ -1077,6 +1113,13 @@ end}
 
         tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
+          tt_listBraceOpen: begin
+            if (cTokType[0] in [tt_localUserRule,tt_importedUserRule]) and
+               (P_rule(first^.data)^.getRuleType in [rt_datastore,rt_mutable]) then begin
+              stack.push(first);
+              didSubstitution:=true;
+            end else applyRule(nil,first^.next);
+          end;
           tt_parList: if cTokType[0]=tt_toId then begin
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
@@ -1092,7 +1135,7 @@ end}
             didSubstitution:=true;
           end else applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_ponFlipper, tt_each,tt_parallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
+          tt_ponFlipper, tt_each,tt_parallelEach: applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.recycler.disposeToken(first^.next);

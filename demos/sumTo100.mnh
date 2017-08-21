@@ -11,13 +11,6 @@ end;
 private op:=['','+','-'];
 private INPUT:=['1'..'9'];
 
-private range(i0:int,i1>=i0)->{begin
-  local next:=i0-1;
-  local maxVal:=i1;
-save;
-  next>=maxVal ? void : next+=1;
-end};
-
 //@demo_for=list processing, expressions
 //*See http://rosettacode.org/wiki/Sum_to_100
 main->begin
@@ -42,7 +35,7 @@ main->begin
   //      - Use a range generator here! Otherwise the list to iterate would require Gigabytes of RAM
   //      - Use early-abort aggregation here! Otherwise the iteration would take unneccessarily long.
   print("\nShow the lowest positive number that can't be expressed");
-  print('  ',range(0,123456789).each(i,i in VALUE ? void : i,orElse));
+  print('  ',rangeGenerator(0,123456789).each(i,i in VALUE ? void : i,orElse));
 
   //Idea: - drop negative/zero entries
   //      - unique (includes sorting)

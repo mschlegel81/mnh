@@ -1,0 +1,28 @@
+type Generator(e:expression(0))->e.isStateful;
+
+//*Wraps sourceGenerator so that it generates (at max) for the given period of time
+//@SuppressUnusedWarning
+timingOutGenerator(sourceGenerator:Generator,runForSeconds:numeric)->
+{begin
+   local gen:=sourceGenerator;
+   local timeout:=time+runForSeconds;
+ save;
+   time<timeout
+   ? gen()
+   : void;
+ end};
+
+//*Returns a list of all integer pairs [a,b] with initialSum<=(a+b)<=finalSum and a,b>=minElementValue, ordered by (a+b)
+//@SuppressUnusedWarning
+pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
+  local k:=initialSum;
+  local i:=minElementValue-1;
+save;
+  (k-i<=minElementValue) ? begin k+=1; i:=minElementValue-1; end : void;
+  k<=finalSum ? [i+=1,k-i] : void;
+end};
+
+//*Returns a list of all integer pairs [a,b] with initialSum<=(a+b) and a,b>=1, ordered by (a+b)
+//*Warning: (potentially) infinite generator!
+//@SuppressUnusedWarning
+pairGenerator(initialSum)->pairGenerator(initialSum,2^63-1,1);

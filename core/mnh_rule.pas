@@ -90,6 +90,7 @@ TYPE
       FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
+      PROPERTY value:T_namedVariable read namedValue;
   end;
 
   P_datastoreRule=^T_datastoreRule;
