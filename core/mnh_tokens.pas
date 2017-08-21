@@ -67,6 +67,7 @@ TYPE
     FUNCTION getRawToken:T_rawToken;
     {$endif}
     PROCEDURE setSingleLocationForExpression(CONST loc:T_tokenLocation);
+    PROCEDURE injectAfter(CONST newToken:P_token);
   end;
 
   P_tokenRecycler=^T_tokenRecycler;
@@ -420,6 +421,12 @@ PROCEDURE T_token.setSingleLocationForExpression(CONST loc:T_tokenLocation);
       t^.location:=loc;
       t:=t^.next;
     end;
+  end;
+
+PROCEDURE T_token.injectAfter(CONST newToken:P_token);
+  begin
+    newToken^.next:=next;
+    next:=newToken;
   end;
 
 CONSTRUCTOR T_tokenRecycler.create;

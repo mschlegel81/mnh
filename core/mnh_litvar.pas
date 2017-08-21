@@ -174,6 +174,7 @@ TYPE
            keyHash:T_hashInt;
            value:VALUE_TYPE;
          end;
+         P_CACHE_ENTRY=^CACHE_ENTRY;
          KEY_VALUE_LIST=array of CACHE_ENTRY;
          MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
     VAR dat:array of KEY_VALUE_LIST;
@@ -187,6 +188,7 @@ TYPE
     FUNCTION putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
+    FUNCTION getEntry(CONST key:P_literal):P_CACHE_ENTRY;
     FUNCTION drop(CONST key:P_literal):CACHE_ENTRY;
     FUNCTION keyValueList:KEY_VALUE_LIST;
     FUNCTION keySet:T_arrayOfLiteral;
@@ -202,6 +204,7 @@ TYPE
   T_compoundLiteral=object(T_literal)
     private
       PROCEDURE modifyType(CONST L:P_literal); inline;
+      PROCEDURE retype;
     public
     containsError:boolean;
     FUNCTION toSet :P_setLiteral;
@@ -222,7 +225,7 @@ TYPE
     FUNCTION isKeyValueCollection:boolean; virtual; abstract;
     FUNCTION newOfSameType:P_collectionLiteral; virtual; abstract;
     FUNCTION appendAll   (CONST L:P_compoundLiteral                ):P_collectionLiteral; virtual;
-    FUNCTION append      (CONST L:P_literal; CONST incRefs: boolean):P_collectionLiteral; virtual; abstract;
+    FUNCTION append      (CONST L:P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual; abstract;
     FUNCTION appendString(CONST s:ansistring):P_collectionLiteral;
     FUNCTION appendBool  (CONST b:boolean   ):P_collectionLiteral;
     FUNCTION appendInt   (CONST i:int64     ):P_collectionLiteral;
@@ -252,7 +255,7 @@ TYPE
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
       FUNCTION appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST doRangeAppend:boolean):P_compoundLiteral;
-      FUNCTION append(CONST L: P_literal; CONST incRefs: boolean):P_collectionLiteral; virtual;
+      FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
 
@@ -286,7 +289,7 @@ TYPE
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
-      FUNCTION append(CONST L: P_literal; CONST incRefs: boolean):P_collectionLiteral; virtual;
+      FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION appendAll(CONST L:P_compoundLiteral              ):P_collectionLiteral; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
@@ -309,7 +312,7 @@ TYPE
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
 
-      PROCEDURE drop(CONST L:P_scalarLiteral);
+      PROCEDURE drop(CONST L:P_literal);
       FUNCTION put(CONST key,                  newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
       FUNCTION put(CONST key,                  newValue:ansistring                      ):P_mapLiteral;
       FUNCTION put(CONST key:ansistring; CONST newValue:int64                           ):P_mapLiteral;
@@ -357,6 +360,8 @@ FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
+FUNCTION mutateVariablePut (VAR toMutate:P_literal; CONST accessor:P_listLiteral; CONST newValue:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):boolean;
+FUNCTION mutateVariableDrop(VAR toMutate:P_literal; CONST accessor:P_listLiteral;                           CONST location:T_tokenLocation; VAR adapters:T_adapters):boolean;
 VAR emptyStringSingleton: T_stringLiteral;
 IMPLEMENTATION
 VAR
@@ -691,6 +696,17 @@ FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE
     binIdx:=hash and (length(dat)-1);
     result:=fallbackIfNotFound;
     for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and (dat[binIdx,j].key^.equals(key)) then exit(dat[binIdx,j].value);
+  end;
+
+FUNCTION G_literalKeyMap.getEntry(CONST key:P_literal):P_CACHE_ENTRY;
+  VAR hash:T_hashInt;
+      binIdx:longint;
+      j:longint;
+  begin
+    hash:=key^.hash;
+    binIdx:=hash and (length(dat)-1);
+    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and (dat[binIdx,j].key^.equals(key)) then exit(@(dat[binIdx,j]));
+    result:=nil;
   end;
 
 FUNCTION G_literalKeyMap.drop(CONST key:P_literal):CACHE_ENTRY;
@@ -1755,6 +1771,15 @@ PROCEDURE T_compoundLiteral.modifyType(CONST L: P_literal);
     containsError:=containsError or (L^.literalType in C_compoundTypes) and (P_compoundLiteral(L)^.containsError);
   end;
 
+PROCEDURE T_compoundLiteral.retype;
+  VAR iter:T_arrayOfLiteral;
+      L:P_literal;
+  begin
+    iter:=iteratableList;
+    for L in iter do modifyType(L);
+    disposeLiteral(iter);
+  end;
+
 FUNCTION T_compoundLiteral.toSet: P_setLiteral;
   begin
     if literalType in C_setTypes then exit(P_setLiteral(rereferenced));
@@ -1835,10 +1860,10 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
     end;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_collectionLiteral;
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
   begin
     result:=@self;
-    if (L=nil) or (L^.literalType=lt_void) then exit;
+    if (L=nil) or ((L^.literalType=lt_void) and not(forceVoidAppend)) then exit;
     if length(dat)<=fill then setLength(dat,round(fill*1.1)+1);
     dat[fill]:=L;
     inc(fill);
@@ -1846,11 +1871,11 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_col
     modifyType(L);
   end;
 
-FUNCTION T_setLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_collectionLiteral;
+FUNCTION T_setLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_collectionLiteral;
   VAR prevBool:boolean;
   begin
     result:=@self;
-    if (L=nil) or (L^.literalType=lt_void) then exit;
+    if (L=nil) or ((L^.literalType=lt_void) and not(forceVoidAppend)) then exit;
     if dat.putNew(L,true,prevBool) then begin
       if incRefs then L^.rereference;
       modifyType(L);
@@ -1904,7 +1929,7 @@ FUNCTION T_mapLiteral.putAll(CONST map:P_mapLiteral):P_mapLiteral;
     result:=@self;
   end;
 
-PROCEDURE T_mapLiteral.drop(CONST L: P_scalarLiteral);
+PROCEDURE T_mapLiteral.drop(CONST L: P_literal);
   VAR dropped:T_literalKeyLiteralValueMap.CACHE_ENTRY;
   begin
     dropped:=dat.drop(L);
@@ -2772,6 +2797,29 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       result:=defaultErrorLiteral;
     end;
 
+  FUNCTION perform_concatAlt(CONST LHS:P_literal; CONST RHS:P_literal):P_literal;
+    begin
+      case LHS^.literalType of
+        defaultLHScases;
+        lt_list..lt_emptyList: case RHS^.literalType of
+          lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,threadContext));
+          lt_error:      exit(RHS^.rereferenced)
+          else
+          exit(newListLiteral(P_listLiteral(LHS)^.size+1)^
+               .appendAll(P_listLiteral(LHS))^
+               .append(RHS,true,true));
+        end;
+        lt_set ..lt_emptySet : case RHS^.literalType of
+          lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,threadContext));
+          lt_error:      exit(RHS^.rereferenced)
+          else exit(newSetLiteral^
+               .appendAll(P_setLiteral(LHS))^
+               .append(RHS,true,true));
+        end;
+      end;
+      result:=defaultErrorLiteral;
+    end;
+
   begin
     case op of
       tt_comparatorEq,
@@ -2796,6 +2844,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       tt_operatorPot:      result:=perform_pot      (LHS,RHS);
       tt_operatorStrConcat:result:=perform_strConcat(LHS,RHS);
       tt_operatorConcat:   result:=perform_concat   (LHS,RHS);
+      tt_operatorConcatAlt:result:=perform_concatAlt(LHS,RHS);
       tt_operatorOrElse:   if LHS^.literalType=lt_void
                            then exit(RHS^.rereferenced)
                            else exit(LHS^.rereferenced);
@@ -2910,6 +2959,140 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
         result^.dat.putNew(entry.key,M,L);
       end;
     end;
+  end;
+
+FUNCTION mutateVariablePut(VAR toMutate:P_literal; CONST accessor:P_listLiteral; CONST newValue:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):boolean;
+  VAR old:P_compoundLiteral;
+      acc:P_literal;
+      accTail:P_listLiteral;
+      mapEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
+  begin
+    if not(toMutate^.literalType in C_compoundTypes) then begin
+      adapters.raiseError('Cannot put/drop with non-compound modification target',location);
+      exit;
+    end;
+    if newValue^.literalType=lt_void then begin
+      mutateVariableDrop(toMutate,accessor,location,adapters);
+      exit;
+    end;
+    if (accessor=nil) or (accessor^.size<=0) then begin
+      adapters.raiseError('Cannot mutate variable without accessor.',location);
+      exit;
+    end else acc:=accessor^[0];
+    if accessor^.size>1 then begin
+      if (toMutate^.literalType in C_listTypes) and
+         (acc^.literalType=lt_int) and (P_intLiteral(acc)^.val>=0) and (P_intLiteral(acc)^.val<P_listLiteral(toMutate)^.fill) then begin
+        accTail:=accessor^.tail;
+        if mutateVariablePut(P_compoundLiteral(P_listLiteral(toMutate)^.dat[P_intLiteral(acc)^.val]),accTail,newValue,location,adapters)
+        then begin
+          toMutate^.literalType:=lt_emptyList;
+          P_listLiteral(toMutate)^.retype;
+          result:=false;
+        end;
+        disposeLiteral(accTail);
+        exit;
+      end;
+      if (toMutate^.literalType in C_mapTypes) then begin
+        mapEntry:=P_mapLiteral(toMutate)^.dat.getEntry(acc);
+        if (mapEntry<>nil) then begin
+          accTail:=accessor^.tail;
+          mutateVariablePut(P_compoundLiteral(mapEntry^.value),accTail,newValue,location,adapters);
+          disposeLiteral(accTail);
+          exit;
+        end;
+      end;
+    end;
+    //accessor.size=1
+    if toMutate^.numberOfReferences>1 then begin
+      old:=P_compoundLiteral(toMutate);
+      toMutate:=old^.clone;
+      disposeLiteral(old);
+    end;
+    if (toMutate^.literalType in C_listTypes) and (acc^.literalType=lt_int) then begin
+      if (P_intLiteral(acc)^.val>=0) and (P_intLiteral(acc)^.val<P_listLiteral(toMutate)^.fill) then begin
+        result:=P_listLiteral(toMutate)^[P_intLiteral(acc)^.val]^.literalType<>newValue^.literalType;
+        disposeLiteral(P_listLiteral(toMutate)^.dat[P_intLiteral(acc)^.val]);
+        P_listLiteral(toMutate)^.dat[P_intLiteral(acc)^.val]:=newValue^.rereferenced;
+        if result then begin
+          toMutate^.literalType:=lt_list;
+          P_listLiteral(toMutate)^.retype;
+        end;
+        exit(result);
+      end else if (P_intLiteral(acc)^.val=P_listLiteral(toMutate)^.fill) then begin
+        P_listLiteral(toMutate)^.append(newValue,true);
+        exit(true);
+      end;
+    end;
+    if (toMutate^.literalType in C_mapTypes) then begin
+      result:=toMutate^.literalType=lt_emptyMap;
+      P_mapLiteral(toMutate)^.put(acc,newValue,true);
+      if result then toMutate^.literalType:=lt_map;
+      exit(result);
+    end;
+    adapters.raiseError('Unimplemented mutation',location);
+  end;
+
+FUNCTION mutateVariableDrop(VAR toMutate:P_literal; CONST accessor:P_listLiteral; CONST location:T_tokenLocation; VAR adapters:T_adapters):boolean;
+  VAR old:P_compoundLiteral;
+      acc:P_literal;
+      accTail:P_listLiteral;
+      mapEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
+      droppedSetEntry:T_literalKeyBooleanValueMap.CACHE_ENTRY;
+  begin
+    if (accessor=nil) or (accessor^.size<=0) then begin
+      adapters.raiseError('Cannot mutate variable without accessor.',location);
+      exit;
+    end else acc:=accessor^[0];
+    if not(toMutate^.literalType in C_compoundTypes) then begin
+      adapters.raiseError('Cannot put/drop with non-compound modification target',location);
+      exit;
+    end;
+    if accessor^.size>1 then begin
+      if (toMutate^.literalType in C_listTypes) and
+         (acc^.literalType=lt_int) and (P_intLiteral(acc)^.val>=0) and (P_intLiteral(acc)^.val<P_listLiteral(toMutate)^.fill) then begin
+        accTail:=accessor^.tail;
+        if mutateVariableDrop(P_compoundLiteral(P_listLiteral(toMutate)^.dat[P_intLiteral(acc)^.val]),accTail,location,adapters)
+        then begin
+          toMutate^.literalType:=lt_emptyList;
+          P_listLiteral(toMutate)^.retype;
+          result:=false;
+        end;
+        disposeLiteral(accTail);
+        exit;
+      end;
+      if (toMutate^.literalType in C_mapTypes) then begin
+        mapEntry:=P_mapLiteral(toMutate)^.dat.getEntry(acc);
+        if (mapEntry<>nil) then begin
+          accTail:=accessor^.tail;
+          mutateVariableDrop(P_compoundLiteral(mapEntry^.value),accTail,location,adapters);
+          disposeLiteral(accTail);
+          exit;
+        end;
+      end;
+    end;
+    //accessor.size=1
+    if toMutate^.numberOfReferences>1 then begin
+      old:=P_compoundLiteral(toMutate);
+      toMutate:=old^.clone;
+      disposeLiteral(old);
+    end;
+    if (toMutate^.literalType in C_setTypes) then begin
+      droppedSetEntry:=P_setLiteral(toMutate)^.dat.drop(acc);
+      if droppedSetEntry.key<>nil then begin
+        result:=true;
+        disposeLiteral(droppedSetEntry.key);
+        P_setLiteral(toMutate)^.literalType:=lt_emptySet;
+        P_setLiteral(toMutate)^.retype;
+      end else result:=false;
+      exit;
+    end;
+    if (toMutate^.literalType in C_mapTypes) then begin
+      P_mapLiteral(toMutate)^.drop(acc);
+      if P_mapLiteral(toMutate)^.size=0 then toMutate^.literalType:=lt_emptyMap;
+      exit(false);
+    end;
+    adapters.raiseError('Unimplemented mutation',location);
+
   end;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;

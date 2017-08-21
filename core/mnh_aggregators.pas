@@ -34,6 +34,11 @@ TYPE
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
+  T_concatAltAggregator=object(T_aggregatorWithResultLiteral)
+    CONSTRUCTOR create;
+    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+  end;
+
   T_headAggregator=object(T_aggregatorWithResultLiteral)
     CONSTRUCTOR create;
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
@@ -109,6 +114,7 @@ TYPE
   P_aggregator            =^T_aggregator;
   P_listAggregator        =^T_listAggregator;
   P_concatAggregator      =^T_concatAggregator;
+  P_concatAltAggregator   =^T_concatAltAggregator;
   P_headAggregator        =^T_headAggregator;
   P_minAggregator         =^T_minAggregator;
   P_maxAggregator         =^T_maxAggregator;
@@ -133,6 +139,7 @@ FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
   begin
     case op of
       tt_operatorConcat   : new(P_concatAggregator      (result),create);
+      tt_operatorConcatAlt: new(P_concatAltAggregator   (result),create);
       tt_operatorStrConcat: new(P_stringConcatAggregator(result),create);
       tt_operatorLazyAnd  : new(P_andAggregator         (result),create);
       tt_operatorLazyOr   : new(P_orAggregator          (result),create);
@@ -154,13 +161,14 @@ FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:
   end;
 
 CONSTRUCTOR T_aggregatorWithResultLiteral.create(CONST initialValue:P_literal); begin resultLiteral:=initialValue; end;
-CONSTRUCTOR T_listAggregator    .create; begin inherited create(newListLiteral); end;
-CONSTRUCTOR T_concatAggregator  .create; begin inherited create(newListLiteral); end;
-CONSTRUCTOR T_headAggregator    .create; begin inherited create(nil);            end;
-CONSTRUCTOR T_minAggregator     .create; begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_maxAggregator     .create; begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_setAggregator     .create; begin inherited create(newSetLiteral);  end;
-CONSTRUCTOR T_trailingAggregator.create; begin inherited create(newVoidLiteral); end;
+CONSTRUCTOR T_listAggregator     .create; begin inherited create(newListLiteral); end;
+CONSTRUCTOR T_concatAggregator   .create; begin inherited create(newListLiteral); end;
+CONSTRUCTOR T_concatAltAggregator.create; begin inherited create(newListLiteral); end;
+CONSTRUCTOR T_headAggregator     .create; begin inherited create(nil);            end;
+CONSTRUCTOR T_minAggregator      .create; begin inherited create(newVoidLiteral); end;
+CONSTRUCTOR T_maxAggregator      .create; begin inherited create(newVoidLiteral); end;
+CONSTRUCTOR T_setAggregator      .create; begin inherited create(newSetLiteral);  end;
+CONSTRUCTOR T_trailingAggregator .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_stringConcatAggregator.create; begin inherited create(newStringLiteral('',true)); end;
 CONSTRUCTOR T_andAggregator         .create; begin boolResult:=true;  end;
 CONSTRUCTOR T_orAggregator          .create; begin boolResult:=false; end;
@@ -199,6 +207,13 @@ PROCEDURE T_concatAggregator.addToAggregation(L: P_literal; CONST doDispose: boo
     if L^.literalType in C_compoundTypes
     then P_listLiteral(resultLiteral)^.appendAll(P_compoundLiteral(L))
     else P_listLiteral(resultLiteral)^.append(L,true);
+    if doDispose then disposeLiteral(L);
+  end;
+
+PROCEDURE T_concatAltAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context:P_threadContext);
+  begin
+    if L=nil then exit;
+    P_listLiteral(resultLiteral)^.append(L,true);
     if doDispose then disposeLiteral(L);
   end;
 

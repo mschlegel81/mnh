@@ -309,7 +309,9 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
       '@':                                            apply(tt_listToParameterList);
       ')':                                            apply(tt_braceClose);
       '(':                                            apply(tt_braceOpen);
-      '|': if startsWith(tt_cso_assignAppend)    then apply(tt_cso_assignAppend)
+      '|': if startsWith(tt_cso_assignAppend)    then apply(tt_cso_assignAppend) else
+           if startsWith(tt_cso_assignAppendAlt) then apply(tt_cso_assignAppendAlt) else
+           if startsWith(tt_operatorConcatAlt)   then apply(tt_operatorConcatAlt)
                                                  else apply(tt_operatorConcat);
       '+': if startsWith(tt_cso_assignPlus)      then apply(tt_cso_assignPlus)
                                                  else apply(tt_operatorPlus);

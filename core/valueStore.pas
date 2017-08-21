@@ -96,6 +96,8 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
 FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
   CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
   VAR oldValue:P_literal;
+      accessor:P_listLiteral;
+      newValue:P_literal;
   begin
     if readonly then begin
       adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
@@ -131,37 +133,23 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
         end;
       end;
       tt_cso_mapPut, tt_cso_mapDrop: begin
-        if value^.literalType=lt_void then begin
-          value:=newMapLiteral;
-          disposeLiteral(oldValue);
-        end;
-        if value^.literalType in C_scalarTypes then begin
-          adapters.raiseError('Operators << and >> expect a map variable (local or mutable) on the left-hand-side - cannot cast scalar to map',location);
-          exit(newVoidLiteral);
-        end;
-        if (value^.literalType in C_compoundTypes-C_mapTypes) then begin
-          value:=P_compoundLiteral(oldValue)^.toMap(location,adapters);
-          disposeLiteral(oldValue);
-          if P_compoundLiteral(value)^.containsError then begin
-            adapters.raiseError('Operators << and >> expect a map variable (local or mutable) on the left-hand-side - colt not cast collection to map',location);
+        if mutation=tt_cso_mapDrop then begin
+          if RHS^.literalType in C_listTypes
+          then accessor:=P_listLiteral(RHS^.rereferenced)
+          else accessor:=newListLiteral(RHS);
+          newValue:=nil;
+          mutateVariableDrop(value,accessor,location,adapters);
+        end else begin
+          if not(RHS^.literalType in C_listTypes) then begin
+            adapters.raiseError('Operator << expectes a list as right-hand-side',location);
             exit(newVoidLiteral);
           end;
+          accessor:=P_listLiteral(RHS)^.leading;
+          newValue:=P_listLiteral(RHS)^.trailing;
+          mutateVariablePut(value,accessor,newValue,location,adapters);
         end;
-        if (mutation=tt_cso_mapPut) and not((RHS^.literalType in C_mapTypes) or (RHS^.literalType in C_listTypes) and (P_listLiteral(RHS)^.isKeyValuePair)) then begin
-          adapters.raiseError('Operator << expect a map or key-value-pair on the right-hand-side',location);
-          exit(newVoidLiteral);
-        end;
-        if value^.getReferenceCount>1 then begin
-          value:=P_mapLiteral(oldValue)^.clone;
-          disposeLiteral(oldValue);
-        end;
-        if mutation=tt_cso_mapPut then begin
-          if RHS^.literalType in C_mapTypes
-          then P_mapLiteral(value)^.putAll(P_mapLiteral(RHS))
-          else P_mapLiteral(value)^.put(P_listLiteral(RHS)^[0],P_listLiteral(RHS)^[1],true);
-        end else if mutation=tt_cso_mapDrop then begin
-          P_mapLiteral(value)^.drop(P_scalarLiteral(RHS));
-        end;
+        disposeLiteral(accessor);
+        if newValue<>nil then disposeLiteral(newValue);
         exit(newVoidLiteral);
       end;
     end;

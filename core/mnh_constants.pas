@@ -130,13 +130,13 @@ TYPE
     //special: string concatenation
     tt_operatorStrConcat, tt_operatorOrElse,
     //list operators:
-    tt_operatorConcat, tt_operatorIn,
+    tt_operatorConcat, tt_operatorConcatAlt, tt_operatorIn,
     //inline if: (<condition>?<then>:<else>)
     tt_iifCheck, tt_iifElse,
     tt_listToParameterList,
     //assignment operators:
     tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
-    tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend, //+= -= *= /= &= |=
+    tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend,tt_cso_assignAppendAlt, //+= -= *= /= &= |= ||=
     tt_cso_mapPut,tt_cso_mapDrop, //<< >>
     //type checks:
     tt_typeCheckScalar,  tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
@@ -292,7 +292,7 @@ CONST
   C_mapTypes :    T_literalTypeSet=[lt_map..lt_emptyMap];
   C_emptyCompoundTypes:T_literalTypeSet=[lt_emptyMap,lt_emptySet,lt_emptyList];
   C_scalarTypes:  T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
-  C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
+  C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat,tt_operatorConcatAlt];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_patternElementComparators: T_tokenTypeSet=[tt_comparatorEq..tt_comparatorListEq,tt_operatorIn];
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckExpression];
@@ -322,7 +322,7 @@ CONST
     {tt_list_constructor}   tt_listBraceClose,
                             tt_listBraceClose,
     {tt_expBraceOpen}       tt_expBraceClose,
-    {tt_expBraceClose..tt_operatorIn} tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,
+    {tt_expBraceClose..tt_operatorIn} tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,
     {tt_iifCheck}           tt_iifElse);
 
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
@@ -332,7 +332,7 @@ CONST
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     8, 8,                //unaries
     5, 9,                //special: string concatenation
-    1, 7);   //list operators
+    1, 1, 7);            //list operators
 
   C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckExpression] of T_literalTypeSet =
     {tt_typeCheckScalar}          ([lt_boolean, lt_int, lt_real, lt_string],
@@ -436,6 +436,7 @@ CONST
 {tt_operatorStrConcat}          (defaultId:'&';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'String concatenation operator#Applies to all literals'),
 {tt_operatorOrElse}             (defaultId:'orElse';        defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Or-Else operator#Employed to provide a fallback to void literals'),
 {tt_operatorConcat}             (defaultId:'|';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List concatenation operator#Applies to all literals'),
+{tt_operatorConcatAlt}          (defaultId:'||';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List concatenation operator#Applies to all literals'),
 {tt_operatorIn}                 (defaultId:'in';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'In operator#Applies to all literals on the left hand side and lists on the right hand side.#Returns true if the RHS contains the LHS'),
 {tt_iifCheck}                   (defaultId:'?';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
 {tt_iifElse}                    (defaultId:':';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
@@ -451,6 +452,7 @@ CONST
 {tt_cso_assignDiv}              (defaultId:'/=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-divide operator'),
 {tt_cso_assignStrConcat}        (defaultId:'&=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-(string-)concatenate operator'),
 {tt_cso_assignAppend}           (defaultId:'|=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-(list-)concatenate operator'),
+{tt_cso_assignAppendAlt}        (defaultId:'||=';           defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-(list-)concatenate operator'),
 {tt_cso_mapPut}                 (defaultId:'<<';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Map put-assign operator'),
 {tt_cso_mapDrop}                (defaultId:'>>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Map drop-assign operator'),
 {tt_typeCheckScalar}            (defaultId:':scalar';       defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check scalar;#Matches on all non-lists'),
