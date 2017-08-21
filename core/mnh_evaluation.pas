@@ -930,21 +930,19 @@ end}
               if (stack.topType in [tt_blockLocalVariable,tt_localUserRule,tt_importedUserRule]) then begin
                 // x # [y]:=... -> x<<[y]|...;
                 stack.popLink(first);
+                if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
                 if cTokType[2]in [tt_assign,tt_mutate] then begin
                   //first=                   x
                   //first^.next=             [y]
                   //first^.next^.next=       :=
                   //first^.next^.next^.next= ... (some expression)
-                  first^.next^.tokType:=tt_cso_mapPut;
-                  first^.next^.next^.tokType:=tt_literal;
-                  first^.next^.next^.data:=first^.next^.data;
-                  first^.next^.next^.injectAfter(context.recycler.newToken(first^.next^.next^.location,'',tt_operatorConcatAlt));
-                  //first=                   x
-                  //first^.next=             <<
-                  //first^.next^.next=       [y]
-                  //first^.next^.next^.next= ... (some expression)
                   first^.tokType:=tt_cso_mapPut;
-                  first^.next:=context.recycler.disposeToken(first^.next);
+                  writeln('Mutated := to <<; has pointer: ',first^.data<>nil);
+                  first^.next^.next^.tokType:=tt_operatorConcatAlt;
+                  //first=                   x<<
+                  //first^.next=             [y]
+                  //first^.next^.next=       ||
+                  //first^.next^.next^.next= ... (some expression)
                   stack.push(first);
                 end else begin
                   if first^.tokType=tt_blockLocalVariable

@@ -2979,6 +2979,11 @@ FUNCTION mutateVariablePut(VAR toMutate:P_literal; CONST accessor:P_listLiteral;
       adapters.raiseError('Cannot mutate variable without accessor.',location);
       exit;
     end else acc:=accessor^[0];
+    if toMutate^.numberOfReferences>1 then begin
+      old:=P_compoundLiteral(toMutate);
+      toMutate:=old^.clone;
+      disposeLiteral(old);
+    end;
     if accessor^.size>1 then begin
       if (toMutate^.literalType in C_listTypes) and
          (acc^.literalType=lt_int) and (P_intLiteral(acc)^.val>=0) and (P_intLiteral(acc)^.val<P_listLiteral(toMutate)^.fill) then begin
@@ -3003,11 +3008,6 @@ FUNCTION mutateVariablePut(VAR toMutate:P_literal; CONST accessor:P_listLiteral;
       end;
     end;
     //accessor.size=1
-    if toMutate^.numberOfReferences>1 then begin
-      old:=P_compoundLiteral(toMutate);
-      toMutate:=old^.clone;
-      disposeLiteral(old);
-    end;
     if (toMutate^.literalType in C_listTypes) and (acc^.literalType=lt_int) then begin
       if (P_intLiteral(acc)^.val>=0) and (P_intLiteral(acc)^.val<P_listLiteral(toMutate)^.fill) then begin
         result:=P_listLiteral(toMutate)^[P_intLiteral(acc)^.val]^.literalType<>newValue^.literalType;
@@ -3030,6 +3030,11 @@ FUNCTION mutateVariablePut(VAR toMutate:P_literal; CONST accessor:P_listLiteral;
       exit(result);
     end;
     adapters.raiseError('Unimplemented mutation',location);
+    {$ifdef debugMode}
+    writeln('Unimplemented put: toMutate=',toMutate^.toString(50));
+    writeln('                   accessor=',accessor^.toString(50));
+    writeln('                   newValue=',newValue^.toString(50))
+    {$endif}
   end;
 
 FUNCTION mutateVariableDrop(VAR toMutate:P_literal; CONST accessor:P_listLiteral; CONST location:T_tokenLocation; VAR adapters:T_adapters):boolean;
@@ -3046,6 +3051,11 @@ FUNCTION mutateVariableDrop(VAR toMutate:P_literal; CONST accessor:P_listLiteral
     if not(toMutate^.literalType in C_compoundTypes) then begin
       adapters.raiseError('Cannot put/drop with non-compound modification target',location);
       exit;
+    end;
+    if (toMutate^.literalType in C_mapTypes) then begin
+      P_mapLiteral(toMutate)^.drop(acc);
+      if P_mapLiteral(toMutate)^.size=0 then toMutate^.literalType:=lt_emptyMap;
+      exit(false);
     end;
     if accessor^.size>1 then begin
       if (toMutate^.literalType in C_listTypes) and
@@ -3086,13 +3096,11 @@ FUNCTION mutateVariableDrop(VAR toMutate:P_literal; CONST accessor:P_listLiteral
       end else result:=false;
       exit;
     end;
-    if (toMutate^.literalType in C_mapTypes) then begin
-      P_mapLiteral(toMutate)^.drop(acc);
-      if P_mapLiteral(toMutate)^.size=0 then toMutate^.literalType:=lt_emptyMap;
-      exit(false);
-    end;
     adapters.raiseError('Unimplemented mutation',location);
-
+    {$ifdef debugMode}
+    writeln('Unimplemented drop: toMutate=',toMutate^.toString(50));
+    writeln('                    accessor=',accessor^.toString(50));
+    {$endif}
   end;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;

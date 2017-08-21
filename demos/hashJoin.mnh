@@ -13,11 +13,11 @@ B:=[['Jonah','Whales'],
     ['Me'   ,'Things']];
 
 private TabToMap(Table:list,KeyIndex:int)->begin
-  local map:=[];
+  local map:=[].toMap;
   Table.each(row,begin
     local key:=row[KeyIndex];
     local value:=(map.get(key) orElse [])|[row];
-    map<<[key,value];
+    map[key]:=value;
     void;
   end);
   map;
