@@ -415,8 +415,8 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
   begin
-    if      tok^.tokType in C_operatorsForAggregators then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
-    else if tok^.tokType=tt_intrinsicRule             then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
+    if      tok^.tokType in [low(intFuncForOperator)..high(intFuncForOperator)] then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
+    else if tok^.tokType=tt_intrinsicRule                                       then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
     else begin
       result:=nil;
       raise Exception.create('Invalid argument for createPrimitiveAggregatorLiteral('+safeTokenToString(tok)+')');

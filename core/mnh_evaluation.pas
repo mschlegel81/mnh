@@ -1147,7 +1147,7 @@ end}
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
         tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
-          tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat..tt_operatorConcat: begin
+          low(intFuncForOperator)..high(intFuncForOperator): begin
             first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
             first^.tokType:=tt_literal;
             first^.next:=context.recycler.disposeToken(first^.next);
