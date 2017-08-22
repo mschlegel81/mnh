@@ -937,7 +937,6 @@ end}
                   //first^.next^.next=       :=
                   //first^.next^.next^.next= ... (some expression)
                   first^.tokType:=tt_cso_mapPut;
-                  writeln('Mutated := to <<; has pointer: ',first^.data<>nil);
                   first^.next^.next^.tokType:=tt_operatorConcatAlt;
                   //first=                   x<<
                   //first^.next=             [y]
@@ -947,7 +946,7 @@ end}
                 end else begin
                   if first^.tokType=tt_blockLocalVariable
                   then newLit:=context.valueStore^.getVariableValue(first^.txt)
-                  else newLit:=P_mutableRule(first^.data)^.value.getValue;
+                  else newLit:=P_mutableRule(first^.data)^.getValue(context);
                   if newLit<>nil then begin
                     first^.data:=newLit;
                     first^.tokType:=tt_literal;
