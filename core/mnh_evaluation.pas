@@ -937,7 +937,6 @@ end}
                   //first^.next^.next=       :=
                   //first^.next^.next^.next= ... (some expression)
                   first^.tokType:=tt_cso_mapPut;
-                  writeln('Mutated := to <<; has pointer: ',first^.data<>nil);
                   first^.next^.next^.tokType:=tt_operatorConcatAlt;
                   //first=                   x<<
                   //first^.next=             [y]
