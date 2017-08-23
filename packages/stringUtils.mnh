@@ -3,6 +3,7 @@
 //*.          stringList x string
 //*.          string     x stringList
 //*.          stringList x stringList
+//@SuppressUnusedWarning
 startsWith(fullString,prefix)->pos(prefix,fullString)=0;
 
 //*Returns true iff fullString ends with suffix
@@ -10,4 +11,5 @@ startsWith(fullString,prefix)->pos(prefix,fullString)=0;
 //*.          stringList x string
 //*.          string     x stringList
 //*.          stringList x stringList
+//@SuppressUnusedWarning
 endsWith(fullString,suffix)->copy(fullString,length(fullString)-length(suffix),length(suffix))=suffix;
