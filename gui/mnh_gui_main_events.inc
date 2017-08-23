@@ -210,7 +210,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            breakpointsImagesList,
                            assistanceSynEdit,
                            outlineSynEdit,
-                           errorWarningGroupBox,
+                           AssistanceTabSheet,
                            outputHighlighter,
                            miLanguageRoot,
                            @InputEditKeyDown,
@@ -253,10 +253,14 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
   end;
 
 PROCEDURE TMnhForm.miOpenSimpleMnhClick(Sender: TObject);
+  VAR prevWindowState:TWindowState;
   begin
     getSimpleMnh.SimpleMnhInputEdit .Font:=OutputEdit.Font;
     getSimpleMnh.SimpleMnhOutputEdit.Font:=OutputEdit.Font;
+    prevWindowState:=WindowState;
+    WindowState:=wsMinimized;
     getSimpleMnh.showModalFor(getEditor);
+    WindowState:=prevWindowState;
   end;
 
 PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);

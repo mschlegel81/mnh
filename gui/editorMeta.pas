@@ -161,7 +161,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_outlineSynEdit        :TSynEdit;
-                    CONST p_assistanceGroup       :TGroupBox;
+                    CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
@@ -198,7 +198,7 @@ VAR mainForm              :T_abstractMnhForm;
     EditProcessUserCommand:TProcessCommandEvent;
     assistanceSynEdit     :TSynEdit;
     outlineSynEdit        :TSynEdit;
-    assistanceGroup       :TGroupBox;
+    assistanceTabSheet    :TTabSheet;
     editorFont            :TFont;
 
 VAR fileTypeMeta:array[T_language] of record
@@ -217,7 +217,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_outlineSynEdit        :TSynEdit;
-                    CONST p_assistanceGroup       :TGroupBox;
+                    CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
@@ -391,7 +391,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
     outlineSynEdit        :=p_outlineSynEdit        ;
-    assistanceGroup       :=p_assistanceGroup       ;
+    assistanceTabSheet    :=p_assistanceTabSheet    ;
     initHighlighters;
     initFileTypes;
     completionLogic.create;
@@ -610,7 +610,8 @@ PROCEDURE T_editorMeta.activate;
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
       assistanceSynEdit.clearAll;
-      assistanceGroup.caption:='';
+      assistanceTabSheet.caption:='';
+      assistanceTabSheet.tabVisible:=false;
       dropAssistant;
       completionLogic.assignEditor(editor_,nil);
     end;
@@ -971,10 +972,10 @@ PROCEDURE T_editorMeta.repaintWithStateHash;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
       hints:=assistant^.getErrorHints(hasErrors,hasWarnings,assistanceSynEdit.charsInWindow);
-      if hasErrors then begin if hasWarnings then assistanceGroup.caption:='Errors + Warnings'
-                                             else assistanceGroup.caption:='Errors'; end
-                   else begin if hasWarnings then assistanceGroup.caption:='Warnings'
-                                             else assistanceGroup.caption:=''; end;
+      if hasErrors then begin if hasWarnings then assistanceTabSheet.caption:='Errors + Warnings'
+                                             else assistanceTabSheet.caption:='Errors'; end
+                   else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'
+                                             else assistanceTabSheet.caption:='(no warnings)'; end;
       for s in hints do assistanceSynEdit.lines.add(s);
     end;
     outlineSynEdit.clearAll;
