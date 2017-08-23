@@ -71,7 +71,7 @@ PROCEDURE processFontSettings;
       editorMeta.updateFonts(OutputEdit.Font);
       helpPopupMemo.Font:=OutputEdit.Font;
       helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
-      assistanceSynEdit.Font:=helpPopupMemo.Font;
+      assistanceSynEdit.Font:=OutputEdit.Font;
       outlineSynEdit.Font:=helpPopupMemo.Font;
       updateWordWrap;
     end;

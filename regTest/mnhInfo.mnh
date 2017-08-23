@@ -5,8 +5,6 @@ private memoized memExeInfo(exe,exeFileInfo)->
 
 private exeInfo(executable:string)->memExeInfo(executable,fileInfo(executable));
 
-isLinux->mnhInfo['targetOs']='Linux';
-isLinux(exe:string)->exe.exeInfo['targetOs']=='Linux';
 canPlot->executor.canPlot;
 canPlot(exe:string)->exe.exeInfo['isFullVersion'];
 //@SuppressUnusedWarning

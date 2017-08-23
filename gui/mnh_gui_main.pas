@@ -49,8 +49,7 @@ TYPE
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
-    GroupBox1,
-    errorWarningGroupBox:      TGroupBox;
+    GroupBox1:      TGroupBox;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
@@ -122,8 +121,7 @@ TYPE
     Splitter1,
     Splitter2,
     Splitter3,
-    Splitter4,
-    Splitter5:                 TSplitter;
+    Splitter4:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
     outlineSynEdit,
@@ -133,8 +131,9 @@ TYPE
     SynGutterMarks0:           TSynGutterMarks;
     helpPopupMemo,
     currentExpressionMemo:     TSynMemo;
-    debugTabSheet:             TTabSheet;
-    outputTabSheet:            TTabSheet;
+    debugTabSheet,
+    outputTabSheet,
+    AssistanceTabSheet:        TTabSheet;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,
