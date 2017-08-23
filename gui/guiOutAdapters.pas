@@ -173,9 +173,6 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     if result then outputLinesLimit:=settings.value^.outputLinesLimit;
     linesToWrite:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
-      {$ifdef debugMode}
-      writeln(stdErr,'        DEBUG: guiOutAdapter: Processing message ',i,'/',length(storedMessages),': ',messageType);
-      {$endif}
       case messageType of
         mt_clearConsole: clearSynAndBuffer;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
