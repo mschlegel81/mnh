@@ -35,6 +35,7 @@ TYPE
       FUNCTION getCmdLineHelpText:T_arrayOfString; virtual;
       {$ifdef fullVersion}
       PROCEDURE setIdResolved;
+      PROPERTY isIdResolved:boolean read idResolved;
       FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
       {$endif}
       PROCEDURE clearCache; virtual;

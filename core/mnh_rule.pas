@@ -396,7 +396,10 @@ FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
     result:=newMapLiteral^
       .put('type'    ,C_ruleTypeText[getRuleType])^
       .put('location',getLocation       )^
-      .put('subrules',subrulesList,false);
+      .put('subrules',subrulesList,false)
+      {$ifdef fullVersion}
+      ^.put('used',isIdResolved)
+      {$endif};
   end;
 
 FUNCTION T_mutableRule.inspect: P_mapLiteral;
@@ -426,7 +429,10 @@ FUNCTION T_mutableRule.inspect: P_mapLiteral;
     result:=newMapLiteral^
       .put('type'    ,C_ruleTypeText[getRuleType])^
       .put('location',getLocation        )^
-      .put('subrules',subrulesList,false      );
+      .put('subrules',subrulesList,false)
+      {$ifdef fullVersion}
+      ^.put('used',isIdResolved)
+      {$endif};
   end;
 
 FUNCTION T_ruleWithSubrules.getOutline(CONST includePrivate:boolean):T_outline;

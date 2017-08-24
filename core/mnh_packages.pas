@@ -94,6 +94,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
+      FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
   end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -187,18 +188,24 @@ DESTRUCTOR T_sandbox.destroy;
 
 FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword): T_storedMessages;
   begin
-    enterCriticalSection(cs);
-    busy:=true;
-    leaveCriticalSection(cs);
+    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
     evaluationContext.resetForEvaluation(@package,ect_silent);
     if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
-    enterCriticalSection(cs);
-    busy:=false;
-    leaveCriticalSection(cs);
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
+  begin
+    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
+    adapters.clearAll;
+    evaluationContext.resetForEvaluation(@package,ect_silent);
+    packageToInspect.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
+    result:=collector.storedMessages;
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
 FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
@@ -1221,7 +1228,6 @@ INITIALIZATION
 {$undef include_initialization}
 
 FINALIZATION
-
   doneSandboxes;
 {$define include_finalization}
 {$include mnh_funcs.inc}
