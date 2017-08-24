@@ -423,8 +423,7 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
     end;
   end;
 
-FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral;
-  CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token;
+FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token;
   VAR context: T_threadContext; CONST useUncurryingFallback: boolean): boolean;
   VAR i:longint;
   FUNCTION fallbackFeasible:boolean;
@@ -460,6 +459,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral;
         firstRelevantToken,lastRelevantToken:longint;
         blocking:boolean;
         L:P_literal;
+        allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
         previousValueStore:P_valueStore;
         firstCallOfResumable:boolean=false;
@@ -493,8 +493,14 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral;
 
       for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
         if parIdx>=0 then begin
-          if parIdx=ALL_PARAMETERS_PAR_IDX then L:=param
-          else if parIdx=REMAINING_PARAMETERS_IDX then begin
+          if parIdx=ALL_PARAMETERS_PAR_IDX then begin
+            if allParams=nil then begin
+              allParams:=newListLiteral;
+              if param<>nil then allParams^.appendAll(param);
+              allParams^.unreference;
+            end;
+            L:=allParams;
+          end else if parIdx=REMAINING_PARAMETERS_IDX then begin
             if remaining=nil then begin
               if param=nil
               then remaining:=newListLiteral
@@ -503,11 +509,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral;
             end;
             L:=remaining;
           end else L:=param^[parIdx];
-          {$ifdef debugMode}
-          if L=nil then raise Exception.create('Whoops! Unresolved parameter pointer. [prepareResult in T_subrule.replaces]');
-          {$endif}
-          lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L);
-          L^.rereference;
+          lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
         end else lastRep^.next:=context.recycler.newToken(token);
         lastRep:=lastRep^.next;
       end;

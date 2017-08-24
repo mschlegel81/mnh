@@ -14,7 +14,6 @@ TYPE
   end;
 
   P_cache = ^T_cache;
-
   T_cache = object
   private
     criticalSection:TRTLCriticalSection;
@@ -154,9 +153,9 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       then exit
       else setLength(data, i+1);
       inc(fill);
-      data[i].key     :=key;   key  ^.rereference;
+      data[i].key     :=P_listLiteral(key^.rereferenced);
       data[i].keyHash :=hash;
-      data[i].value   :=value; value^.rereference;
+      data[i].value   :=value^.rereferenced;
       data[i].useCount:= 0;
     end;
     inc(putCounter);

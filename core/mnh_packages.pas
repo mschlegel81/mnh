@@ -900,13 +900,13 @@ PROCEDURE T_package.finalize(VAR adapters: T_adapters);
 DESTRUCTOR T_package.destroy;
   {$ifdef fullVersion}VAR c:T_profileCategory;{$endif}
   begin
-    inherited destroy;
     clear(true);
     packageRules.destroy;
     importedRules.destroy;
     {$ifdef fullVersion}
     for c in T_profileCategory do if pseudoCallees[c]<>nil then dispose(pseudoCallees[c],destroy);
     {$endif}
+    inherited destroy;
   end;
 
 FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters): P_rule;
