@@ -83,6 +83,3 @@ main->begin
   ask('Press o.k. to shutdown server.',['o.k.']);
   stopAllHttpServers;
 end;
-
-req:='/page.html?f=sin%28x%5E2%29*s%5E2&x0=0&x1=10&samples=1000';
-pageSet(req.extractRawParameters,req.extractParameters);

@@ -1110,7 +1110,7 @@ end}
           end else applyRule(first^.next,first^.next^.next);
         end;
 
-        tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
+        tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_listBraceOpen: begin
             if (cTokType[0] in [tt_localUserRule,tt_importedUserRule]) and
@@ -1119,15 +1119,7 @@ end}
               didSubstitution:=true;
             end else applyRule(nil,first^.next);
           end;
-          tt_parList: if cTokType[0]=tt_toId then begin
-            if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^[0]^.literalType=lt_string) then begin
-              first^.tokType:=tt_identifier;
-              first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^[0])^.value;
-              P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters,true);
-              first^.next:=context.recycler.disposeToken(first^.next);
-              didSubstitution:=true;
-            end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
-          end else if (cTokType[2]=tt_listToParameterList) then begin
+          tt_parList: if (cTokType[2]=tt_listToParameterList) then begin
             stack.push(first);
             stack.push(first);
             stack.push(first);
