@@ -210,7 +210,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            breakpointsImagesList,
                            assistanceSynEdit,
                            outlineSynEdit,
-                           AssistanceTabSheet,
+                           assistanceTabSheet,
                            outputHighlighter,
                            miLanguageRoot,
                            @InputEditKeyDown,

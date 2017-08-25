@@ -133,7 +133,7 @@ TYPE
     currentExpressionMemo:     TSynMemo;
     debugTabSheet,
     outputTabSheet,
-    AssistanceTabSheet:        TTabSheet;
+    assistanceTabSheet:        TTabSheet;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,

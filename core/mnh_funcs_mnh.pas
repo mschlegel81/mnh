@@ -14,8 +14,6 @@ FUNCTION getMnhInfo:string;
 VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorIn] of P_intFuncCallback;
     BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
-VAR builtinLocation_try:T_identifiedInternalFunction;
-
 FUNCTION sleep_imp intFuncSignature;
   VAR sleepUntil:double;
       sleepInt:longint;
@@ -184,46 +182,6 @@ FUNCTION getMnhInfo:string;
     disposeLiteral(L);
   end;
 
-FUNCTION try_imp intFuncSignature;
-  VAR oldAdapters:P_adapters;
-      errorCase:boolean;
-      messages:P_literal=nil;
-  begin
-    result:=nil;
-    if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
-      ((params^.size=1) or (params^.size=2)) then begin
-      {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_try);
-      {$endif}
-      oldAdapters:=context.enterTryStatementReturningPreviousAdapters;
-      result:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,@context);
-      if context.adapters^.noErrors
-      then errorCase:=false
-      else begin
-        if result<>nil then disposeLiteral(result);
-        messages:=messagesToLiteralForSandbox(P_collectingOutAdapter(context.adapters^.getAdapter(0))^.storedMessages);
-        errorCase:=true;
-      end;
-      context.leaveTryStatementReassumingPreviousAdapters(oldAdapters,errorCase);
-      if errorCase then begin
-        if params^.size=2 then begin
-          if arg1^.literalType=lt_expression then begin
-            if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)
-            then result:=P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context,messages)
-            else result:=P_expressionLiteral(arg1)^.evaluateToLiteral(tokenLocation,@context);
-          end else begin
-            result:=arg1;
-            result^.rereference;
-          end;
-        end else result:=newVoidLiteral;
-        disposeLiteral(messages);
-      end;
-      {$ifdef fullVersion}
-      context.callStackPop();
-      {$endif}
-    end;
-  end;
-
 {$MACRO ON}
 {$define funcForOp:=begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^,@context) else result:=nil; end}
 {$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      intFuncSignature; funcForOp;
@@ -271,12 +229,6 @@ FUNCTION funcFor_operatorOrElse intFuncSignature;
 {$undef OP}
 {$undef funcForOp}
 INITIALIZATION
-  builtinLocation_try.create(SYSTEM_BUILTIN_NAMESPACE,'try');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,[],ak_variadic,
-               'try(E:expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
-               'try(E:expression(0),except(1):expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
-               'try(E:expression(0),except:expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
-               'try(E:expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_sleep],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,[se_sleep],ak_unary  ,'sleepUntil(wallClockSeconds:number);//Sleeps until the wallclock reaches the given value');
   BUILTIN_MYPATH:=
@@ -310,7 +262,5 @@ INITIALIZATION
   intFuncForOperator[tt_operatorOrElse   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_orElse'    ,@funcFor_operatorOrElse   ,[],ak_binary,'');
   intFuncForOperator[tt_operatorConcat   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_listConcat',@funcFor_operatorConcat   ,[],ak_binary,'');
   intFuncForOperator[tt_operatorIn       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'OP_in'        ,@funcFor_operatorIn       ,[],ak_binary,'');
-FINALIZATION
-  builtinLocation_try   .destroy;
 
 end.
