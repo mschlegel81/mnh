@@ -357,16 +357,10 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
     Canvas.Font.size:=absoluteFontSize(aimWidth,aimHeight);
     ticSampleText:='.0E12';
     updateBorders;
-    {$ifdef debugMode}
-    writeln('Borders (1): ',axisTrafo['x'].screenRange[0],', ',aimHeight-axisTrafo['y'].screenRange[0]);
-    {$endif}
     prepareRanges;
     for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
     ticSampleText:=longestTic;
     if updateBorders then begin
-      {$ifdef debugMode}
-      writeln('Borders (2): ',axisTrafo['x'].screenRange[0],', ',aimHeight-axisTrafo['y'].screenRange[0]);
-      {$endif}
       prepareRanges;
       for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
     end;

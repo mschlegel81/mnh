@@ -1,12 +1,16 @@
+//@SuppressUnusedWarning
 //@insertScript=Pick file or directory
 pickFile(s:string)->ask('Pick file or directory').escape;
 
+//@SuppressUnusedWarning
 //@editScript=Trim trailing spaces
 trimTrailingSpaces(s:stringList)->s.trimRight;
 
+//@SuppressUnusedWarning
 //@editScript=Remove double blank lines
 removeDoubleBlanks(s:stringList)->s.join("\n").replace("\n\n\n","\n\n").split("\n");
 
+//@SuppressUnusedWarning
 //@editScript=Sort lines and remove duplicates
 sortLines(s:stringList)->s.unique.sort;
 
@@ -34,9 +38,11 @@ editDiff(editorFile:string)->begin
   unifiedDiff(compareWith,editorFile,editorContent(compareWith),editorContent(editorFile),2);
 end;
 
+//@SuppressUnusedWarning
 //@utility=diff
 editDiffPrint(editorFile:string)->printf("%s",editDiff(editorFile));
 
+//@SuppressUnusedWarning
 //@utility=find in all open files
 findInAll(editorFile:string)->begin
   local searchRegex:=ask('Please enter regex for search.');
@@ -46,10 +52,12 @@ findInAll(editorFile:string)->begin
   void;
 end;
 
+//@SuppressUnusedWarning
 //@utility=open all imported files
 openImported(editorFile:string)->inspect(editorFile,editorFile.editorContent)['uses'].getInner(1).each(file,openInEditor(file));
 
 
+//@SuppressUnusedWarning
 //@utility=Compare folders (new editor)
 //@newEdit
 //@language=diff

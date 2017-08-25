@@ -110,5 +110,5 @@ main->randomRiddle.printBoard;
 main(count)->begin
   local iCount:=count.toInt;
   iCount<=0 ? fail('count must be >0') : void;
-  [1..iCount].each(i,print,main);
+  [1..iCount].pMap(::randomRiddle).each(r,print('============================='),r.printBoard);
 end;

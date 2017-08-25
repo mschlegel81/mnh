@@ -5,7 +5,7 @@ private mutable failedTests:=[];
 
 pipingBat(command:string)->begin
   local name:=tempFile('temp#.bat');
-  name.writeFileLines([command&' 2>> '&log]);
+  name.writeFileLines([command&' 2>> '&log,'echo. >> '&log]);
   local code:='cmd'.execPipeless(['/C',name]);
   code==0
   ? void

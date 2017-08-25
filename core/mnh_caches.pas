@@ -14,7 +14,6 @@ TYPE
   end;
 
   P_cache = ^T_cache;
-
   T_cache = object
   private
     criticalSection:TRTLCriticalSection;
@@ -44,14 +43,16 @@ VAR globalMemoryLimit:int64={$ifdef Windows}
                             1000000000;
                             {$endif}
     allCaches:T_arrayOfPointer;
-
+    allCacheCs:TRTLCriticalSection;
 PROCEDURE polishAllCaches;
   VAR i:longint;
   begin
+    enterCriticalSection(allCacheCs);
     for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.TryEnterCriticalsection(criticalSection)<>0 then begin
       polish;
       system.leaveCriticalSection(criticalSection);
     end;
+    leaveCriticalSection(allCacheCs);
   end;
 
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
@@ -60,7 +61,9 @@ CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
     {$ifdef fullVersion}globalMemoryLimit:=settings.value^.memoryLimit;{$endif}
     fill := 0;
     setLength(cached,MIN_BIN_COUNT);
-    append(allCaches,@self);
+    enterCriticalSection(allCacheCs);
+    append(allCaches,pointer(@self));
+    leaveCriticalSection(allCacheCs);
   end;
 
 DESTRUCTOR T_cache.destroy;
@@ -150,9 +153,9 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       then exit
       else setLength(data, i+1);
       inc(fill);
-      data[i].key     :=key;   key  ^.rereference;
+      data[i].key     :=P_listLiteral(key^.rereferenced);
       data[i].keyHash :=hash;
-      data[i].value   :=value; value^.rereference;
+      data[i].value   :=value^.rereferenced;
       data[i].useCount:= 0;
     end;
     inc(putCounter);
@@ -195,5 +198,8 @@ PROCEDURE T_cache.clear;
 
 INITIALIZATION
   allCaches:=C_EMPTY_POINTER_ARRAY;
+  initCriticalSection(allCacheCs);
+FINALIZATION
+  doneCriticalSection(allCacheCs);
 
 end.

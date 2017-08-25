@@ -51,7 +51,7 @@ pageSet(rawParameters,parameters)->begin
       //if there are no validation messages, add link to image and generate image
       htmlCode&='<img src="plotImg.png?'&rawParameters&'">';
       plot(f,x0,x1,sp,'1.5 red');
-      imageCode:=wrapTextInHttp(plot.renderToString(400,400,1),'image/png');
+      imageCode:=wrapTextInHttp(plot.renderToString(1000,500,1),'image/png');
     end
   : begin
       //if there are no validation messages, append them and return httpError(404) instead of image
@@ -78,11 +78,12 @@ end;
 
 //@demo_for=httpServer, plotting
 main->begin
-  startHttpServer('localhost:43210',::serve,0);
-  openUrl('http://localhost:43210/page.html');
+  local URL:='localhost:43210';
+  startHttpServer(URL,::serve,0);
+  URL:='http://'&URL&'/page.html';
+  ask('Open URL '&URL&' ?',['yes','no'])='yes'
+  ? openUrl(URL)
+  : void;
   ask('Press o.k. to shutdown server.',['o.k.']);
   stopAllHttpServers;
 end;
-
-req:='/page.html?f=sin%28x%5E2%29*s%5E2&x0=0&x1=10&samples=1000';
-pageSet(req.extractRawParameters,req.extractParameters);

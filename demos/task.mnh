@@ -1,12 +1,8 @@
 //@demo_for=datastores
 //*Format is [[name1,timeSpent1],[name2,timeSpent2],...]
-private datastore allTasks;
+private datastore allTasks:=[].toMap;
 //*Format is [name,startedAt]
-private datastore runningTask;
-private initHook:=begin
-  allTasks   :=allTasks    orElse [].toMap;
-  runningTask:=runningTask orElse [];
-end;
+private datastore runningTask:=[];
 
 private endTask->runningTask==[] ? void : //If there is no running task, there is nothing to do
 begin

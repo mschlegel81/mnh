@@ -1,4 +1,4 @@
-USE GUI,rk4;
+USE GUI,rungeKutta;
 
 private circlePoint(phi)->[cos(phi/180*4*arctan(1)),
                            sin(phi/180*4*arctan(1))];
@@ -41,6 +41,7 @@ private timeStepSize:=1E-2;
 main->begin
   plot.setOptions([['x0',-2],['y0',-2],['x1',2],['y1',2],['axisStyleX',3],['axisStyleY',3]]);
   local state:=initialState;
+  local i:=integrator(CASH_KARP,F,timeStepSize,1E-3);
   state.plotState;
-  while(not(plotClosed),plotState(state:=state.RK4(F,timeStepSize,1E-2)));
+  while(not(plotClosed),plotState(state:=state.i));
 end;

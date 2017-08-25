@@ -375,16 +375,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
       scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,sampleIndex);
-      {$ifdef debugMode}
-      writeln('Drawing row #',rowId,' with style: ',row[rowId].style.toString);
-      with scaleAndColor do writeln('Effective style; lineWidth=',lineWidth,
-                                                '; symbolRadius=',symbolRadius,
-                                                '; symbolWidth=',symbolWidth,
-                                                '; fontSize=',fontSize,
-                                                '; lineColor=',IntToHex(lineColor,8),
-                                                '; solidColor=',IntToHex(solidColor,8),
-                                                '; solidStyle=',solidStyle);
-      {$endif}
 
       if ps_straight in row[rowId].style.style then begin
         target.Pen.style:=psSolid;
@@ -565,9 +555,6 @@ PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,inten
       lines:T_arrayOfString;
   begin
     for rowId:=0 to length(row)-1 do if ps_textOut in row[rowId].style.style then begin
-      {$ifdef debugMode}
-      writeln('Drawing row #',rowId,' with style: ',row[rowId].style.toString);
-      {$endif}
       screenRow:=scalingOptions.transformRow(row[rowId].sample,1,0,0);
       scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth,intendedHeight,SINGLE_SAMPLE_INDEX);
       lines:=split(row[rowId].style.txt);

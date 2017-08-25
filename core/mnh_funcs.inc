@@ -41,47 +41,32 @@ FUNCTION runScript_imp intFuncSignature;
     end;
   end;
 
-FUNCTION obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext; OUT freshlyCreated:boolean):P_package;
-  VAR fileName:string='';
-      id      :string='';
-      p       :P_package;
-  begin
-    freshlyCreated:=false;
-    if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
-    then fileName:=expandFileName(filenameOrId)
-    else id      :=filenameOrId;
-    for p in callerPackage^.mainPackage^.secondaryPackages do
-      if ({$ifdef Windows}uppercase{$endif}(id      )={$ifdef Windows}uppercase{$endif}(p^.getCodeProvider^.id    ))
-      or ({$ifdef Windows}uppercase{$endif}(fileName)={$ifdef Windows}uppercase{$endif}(expandFileName(p^.getPath)))
-      then exit(p);
-    if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
-    if (fileName='') or not(fileExists(fileName)) then begin
-      context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
-      exit(nil);
-    end;
-    new(result,create(newFileCodeProvider(fileName),nil));
-    freshlyCreated:=true;
-  end;
-
 FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
       tempPackage:P_package;
       source:T_arrayOfString;
-      needDispose:boolean=false;
       loadMessages:P_collectionLiteral=nil;
 
+  PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext);
+      VAR fileName:string='';
+          id      :string='';
+      begin
+        if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
+        then fileName:=expandFileName(filenameOrId)
+        else id      :=filenameOrId;
+        if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
+        if (fileName='') or not(fileExists(fileName)) then begin
+          context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
+          tempPackage:=nil;
+          exit;
+        end;
+        new(tempPackage,create(newFileCodeProvider(fileName),nil));
+      end;
+
   PROCEDURE loadTemporaryPackage;
-    VAR prevAdapters:P_adapters;
-        collector   :P_collectingOutAdapter;
-        mt:T_messageType;
     begin
-      prevAdapters:=context.enterTryStatementReturningPreviousAdapters;
-      collector:=P_collectingOutAdapter(context.adapters^.getAdapter(at_sandboxAdapter));
-      for mt in T_messageType do collector^.enableMessageType(C_messageTypeMeta[mt].mClass in [mc_echo,mc_warning,mc_error],[mt]);
-      tempPackage^.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
-      loadMessages:=messagesToLiteralForSandbox(collector^.storedMessages);
-      context.leaveTryStatementReassumingPreviousAdapters(prevAdapters,true);
+      loadMessages:=messagesToLiteralForSandbox( sandbox^.loadForCodeAssistance(tempPackage^));
     end;
 
   begin
@@ -90,12 +75,12 @@ FUNCTION inspect_imp intFuncSignature;
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
-      tempPackage:=obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context,needDispose);
+      obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
       if tempPackage<>nil then begin
-        if needDispose then loadTemporaryPackage;
+        loadTemporaryPackage;
         result:=tempPackage^.inspect;
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
-        if needDispose then dispose(tempPackage,destroy);
+        dispose(tempPackage,destroy);
         exit(result);
       end;
       result:=newListLiteral;

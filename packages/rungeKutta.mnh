@@ -139,6 +139,7 @@ memoized CASH_KARP->embeddedRungeKuttaStepper(
  [2825/27648,   0   ,18575/48384,13525/55296 ,277/14336,  1/4   ]],5);
 
 //*Returns an integrator based on an explicit Runge-Kutta method
+//@SuppressUnusedWarning
 integrator(ERK :expression(3),df:expression(1),dt:numeric              )->{ERK($0,df,dt)};
 //*Returns an integrator based on an embedded explicit Runge-Kutta method
 integrator(EERK:expression(4),df:expression(1),dt:numeric,tolerance>0.0)->{EERK($0,df,dt,tolerance)};
