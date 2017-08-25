@@ -180,9 +180,6 @@ TYPE
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
       FUNCTION getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
 
-      FUNCTION collectingClone:P_adapters;
-      PROCEDURE copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean);
-
       PROCEDURE setExitCode;
       FUNCTION triggersBeep:boolean;
 
@@ -800,48 +797,6 @@ FUNCTION T_adapters.getAdapter(CONST adapterType:T_adapterType):P_abstractOutAda
   begin
     for a in adapter do if a^.adapterType=adapterType then exit(a);
     result:=nil;
-  end;
-
-FUNCTION T_adapters.collectingClone: P_adapters;
-  VAR collector:P_collectingOutAdapter;
-  begin
-    new(result,create);
-    new(collector,create(at_sandboxAdapter,''));
-    collector^.messageTypesToInclude:=[low(T_messageType)..high(T_messageType)];
-    result^.addOutAdapter(collector,true);
-    {$ifdef fullVersion}
-    if privatePlot<>nil then begin
-      new(result^.privatePlot,createWithDefaults);
-      result^.privatePlot^.CopyFrom(privatePlot^);
-    end;
-    {$endif}
-  end;
-
-PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; CONST errorCase:boolean);
-  VAR collector:P_collectingOutAdapter=nil;
-      i:longint;
-  begin
-    collector:=P_collectingOutAdapter(clone^.getAdapter(at_sandboxAdapter));
-    {$ifdef fullVersion}
-    if not(errorCase) and (clone^.privatePlot<>nil) and
-                          (clone^.hasMessageOfType[mt_plotFileCreated] or
-                           clone^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] or
-                           clone^.hasMessageOfType[mt_plotCreatedWithInstantDisplay] or
-                           clone^.hasMessageOfType[mt_plotSettingsChanged]) then begin
-      if privatePlot<>nil then dispose(privatePlot,destroy);
-      privatePlot:=clone^.privatePlot;
-      clone^.privatePlot:=nil;
-    end;
-    {$endif}
-    if (collector<>nil) then
-    for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
-      mt_el4_haltMessageReceived,
-      mt_endOfEvaluation: raiseCustomMessage(collector^.storedMessages[i]);
-      else begin
-        if not(errorCase) then raiseCustomMessage(collector^.storedMessages[i]);
-      end;
-    end;
-    dispose(clone,destroy);
   end;
 
 PROCEDURE T_adapters.setExitCode;

@@ -95,20 +95,21 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
+      FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal; CONST locationForErrorFeedback:T_tokenLocation; VAR callerContext:T_threadContext):P_literal;
   end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
 FUNCTION sandbox:P_sandbox;
 {$undef include_interface}
 IMPLEMENTATION
-VAR sandboxes:array[0..15] of P_sandbox;
+VAR sandboxes:array of P_sandbox;
     sbLock:TRTLCriticalSection;
 PROCEDURE setupSandboxes;
   VAR i:longint;
   begin
     initCriticalSection(sbLock);
     enterCriticalSection(sbLock);
-    for i:=0 to 15 do sandboxes[i]:=nil;
+    setLength(sandboxes,0);
     leaveCriticalSection(sbLock);
   end;
 
@@ -116,39 +117,44 @@ PROCEDURE doneSandboxes;
   VAR i:longint;
   begin
     enterCriticalSection(sbLock);
-    for i:=0 to 15 do if sandboxes[i]<>nil then dispose(sandboxes[i],destroy);
+    for i:=0 to length(sandboxes)-1 do dispose(sandboxes[i],destroy);
+    setLength(sandboxes,0);
     leaveCriticalSection(sbLock);
     doneCriticalSection(sbLock);
   end;
 
 FUNCTION sandbox:P_sandbox;
   VAR i:longint;
+      firstTry:boolean=false;
   begin
     result:=nil;
     enterCriticalSection(sbLock);
     repeat
-      for i:=0 to 15 do if result=nil then begin
-        if (sandboxes[i]=nil) then begin
-          new(sandboxes[i],create);
+      firstTry:=not(firstTry);
+      for i:=0 to length(sandboxes)-1 do if result=nil then begin
+        enterCriticalSection(sandboxes[i]^.cs);
+        if not(sandboxes[i]^.busy) then begin
           sandboxes[i]^.busy:=true;
           result:=sandboxes[i];
         end;
-        if (sandboxes[i]<>nil) then begin
-          enterCriticalSection(sandboxes[i]^.cs);
-          if not(sandboxes[i]^.busy) then begin
-            sandboxes[i]^.busy:=true;
-            result:=sandboxes[i];
-          end;
-          leaveCriticalSection(sandboxes[i]^.cs);
-        end;
+        leaveCriticalSection(sandboxes[i]^.cs);
       end;
-      if result=nil then begin
+      if (result=nil) and firstTry then begin
         leaveCriticalSection(sbLock);
         sleep(1);
         ThreadSwitch;
         enterCriticalSection(sbLock);
       end;
-    until result<>nil;
+    until (result<>nil) or not(firstTry);
+    if result=nil then begin
+      i:=length(sandboxes);
+      setLength(sandboxes,i+1);
+      new(sandboxes[i],create);
+      result:=sandboxes[i];
+      enterCriticalSection(result^.cs);
+      result^.busy:=true;
+      leaveCriticalSection(result^.cs);
+    end;
     leaveCriticalSection(sbLock);
   end;
 
@@ -205,6 +211,35 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     evaluationContext.resetForEvaluation(@package,ect_silent);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_sandbox.performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal; CONST locationForErrorFeedback:T_tokenLocation; VAR callerContext:T_threadContext):P_literal;
+  VAR messagesLiteral:P_literal;
+  begin
+    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
+    adapters.clearAll;
+    evaluationContext.resetForEvaluation(@package,ect_normal);
+    evaluationContext.threadContext^.setAllowedSideEffectsReturningPrevious(callerContext.sideEffectWhitelist-[se_alterPlotState]);
+    result:=toTry^.evaluateToLiteral(locationForErrorFeedback,evaluationContext.threadContext);
+    if (result=nil) or not(adapters.noErrors) then begin
+      if (result<>nil) then disposeLiteral(result);
+      //Error handling
+      if inCaseOfFailure=nil then result:=newVoidLiteral
+      else if inCaseOfFailure^.literalType=lt_expression then begin
+        if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
+          messagesLiteral:=messagesToLiteralForSandbox(collector.storedMessages);
+          result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(locationForErrorFeedback,@callerContext,messagesLiteral);
+          disposeLiteral(messagesLiteral);
+        end else begin
+          result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(locationForErrorFeedback,@callerContext);
+        end;
+      end else result:=inCaseOfFailure^.rereferenced;
+    end else begin
+      //Success handling
+      callerContext.adapters^.raiseStoredMessages(collector.storedMessages);
+      collector.clear;
+    end;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 

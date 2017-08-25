@@ -131,9 +131,6 @@ TYPE
       PROCEDURE attachWorkerContext(CONST environment:T_futureTaskEnvironment);
       PROCEDURE detachWorkerContext;
 
-      FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
-      PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
-
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
       PROCEDURE raiseSideEffectError(CONST id:string; CONST location:T_tokenLocation; CONST violations:T_sideEffects);
       {$ifdef fullVersion}
@@ -337,7 +334,8 @@ PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath;
     //set options
     options:=C_evaluationContextOptions[evaluationContextType];
     if adapters^.doShowTimingInfo then options:=options+[eco_timing];
-    if evaluationContextType=ect_silent then allowedSideEffects:=allowedSideEffects-[se_inputViaAsk];
+    if evaluationContextType=ect_silent then allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
+                                        else allowedSideEffects:=C_allSideEffects;
     {$ifdef fullVersion}
     //prepare or dispose profiler:
     if eco_profiling in options then begin
@@ -539,18 +537,6 @@ PROCEDURE T_threadContext.detachWorkerContext;
     {$ifdef fullVersion}
     callStack.clear;
     {$endif}
-  end;
-
-FUNCTION T_threadContext.enterTryStatementReturningPreviousAdapters: P_adapters;
-  begin
-    result:=adapters;
-    adapters:=result^.collectingClone;
-  end;
-
-PROCEDURE T_threadContext.leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters: P_adapters; CONST tryBodyFailed: boolean);
-  begin
-    previousAdapters^.copyDataFromCollectingCloneDisposing(adapters,tryBodyFailed);
-    adapters:=previousAdapters;
   end;
 
 {$ifdef fullVersion}
