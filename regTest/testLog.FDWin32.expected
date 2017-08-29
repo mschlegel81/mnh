@@ -1620,6 +1620,9 @@ The longest common subsequence
 of  'thisisatest'
 and 'testing123testing'
 is  'tsitest'
+***** longestIncreasingSubseq *****
+[3,4,5]
+[0,4,6,9,13,15]
 ***** ludic *****
 Ludic Numbers
   The first 25 are: [1,2,3,5,7,11,13,17,23,25,29,37,41,43,47,53,61,67,71,77,83,89,91,97,107].

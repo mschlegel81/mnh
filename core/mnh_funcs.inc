@@ -19,11 +19,13 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
 FUNCTION try_imp intFuncSignature;
   FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
     VAR prevAdapters:P_adapters;
+        oldWhitelist:T_sideEffects;
         interceptor:P_errorInterceptor;
         messagesLiteral:P_literal;
     begin
       prevAdapters:=context.adapters;
       context.adapters:=prevAdapters^.getAdaptersForTry(interceptor);
+      oldWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist-[se_alterPlotState]);
       result:=toTry^.evaluateToLiteral(tokenLocation,@context);
       if (result=nil) or (interceptor^.hasError) then begin
         if (result<>nil) then disposeLiteral(result);
@@ -39,6 +41,7 @@ FUNCTION try_imp intFuncSignature;
           end;
         end else result:=inCaseOfFailure^.rereferenced;
       end;
+      context.setAllowedSideEffectsReturningPrevious(oldWhitelist);
       dispose(context.adapters,destroy);
       context.adapters:=prevAdapters;
     end;
