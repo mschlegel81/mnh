@@ -113,13 +113,13 @@ TYPE
       {$endif}
       allowedSideEffects:T_sideEffects;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
-      CONSTRUCTOR createWorkerContext;
     public
       regexCache:P_regexMap;
       recycler  :T_tokenRecycler;
       valueStore:P_valueStore;
       adapters  :P_adapters;
       callDepth:longint;
+      CONSTRUCTOR createWorkerContext(CONST adapters_:P_adapters);
       DESTRUCTOR destroy;
 
       FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
@@ -207,7 +207,7 @@ TYPE
       taskCs:TRTLCriticalSection;
       nextToEvaluate:P_futureTask;
       PROCEDURE dropEachParameter;
-      PROCEDURE evaluate(VAR context:T_threadContext; CONST calledFromWorkerThread:boolean);
+      PROCEDURE evaluate(VAR context:T_threadContext);
     public
       nextToAggregate:P_futureTask;
       CONSTRUCTOR create;
@@ -263,7 +263,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     if adapters=nil then adapters:=parent^.adapters;
   end;
 
-CONSTRUCTOR T_threadContext.createWorkerContext;
+CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
   begin
     recycler  .create;
     new(valueStore,create);
@@ -273,7 +273,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext;
     allowedSideEffects:=C_allSideEffects;
     regexCache    :=nil;
     parent        :=nil;
-    adapters      :=nil;
+    adapters      :=adapters_;
     callingContext:=nil;
   end;
 
@@ -654,9 +654,8 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
       tempcontext:T_threadContext;
   begin
     sleepTime:=0;
-    tempcontext.createWorkerContext;
+    tempcontext.createWorkerContext(P_evaluationContext(p)^.adapters);
     with P_evaluationContext(p)^ do begin
-      tempcontext.adapters:=adapters;
       repeat
         currentTask:=taskQueue^.dequeue;
         if currentTask=nil then begin
@@ -664,7 +663,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           ThreadSwitch;
           sleep(sleepTime div 5);
         end else begin
-          currentTask^.evaluate(tempcontext,true);
+          currentTask^.evaluate(tempcontext);
           sleepTime:=0;
         end;
       until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue^.destructionPending) or not(adapters^.noErrors);
@@ -708,7 +707,7 @@ PROCEDURE T_futureTask.dropEachParameter;
     end;
   end;
 
-PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWorkerThread:boolean);
+PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext);
   VAR idxLit:P_intLiteral;
   begin
     enterCriticalSection(taskCs);
@@ -716,7 +715,7 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWo
     leaveCriticalSection(taskCs);
     try
       if context.adapters^.noErrors then with payload do begin
-        if calledFromWorkerThread then context.attachWorkerContext(env);
+        context.attachWorkerContext(env);
         if (eachIndex>=0) then begin
           context.valueStore^.scopePush(false);
           idxLit:=newIntLiteral(eachIndex);
@@ -725,7 +724,7 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext; CONST calledFromWo
         end;
         evaluationResult:=eachRule^.evaluateToLiteral(eachLocation,@context,eachParameter);
         if (eachIndex>=0) then context.valueStore^.scopePop;
-        if calledFromWorkerThread then context.detachWorkerContext;
+        context.detachWorkerContext;
       end;
     finally
       enterCriticalSection(taskCs);
@@ -821,7 +820,7 @@ PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(context,false);
+    if task<>nil then task^.evaluate(context);
   end;
 
 INITIALIZATION

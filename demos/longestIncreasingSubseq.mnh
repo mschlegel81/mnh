@@ -1,0 +1,14 @@
+private longestIncreasingSubsequence(prev,rest)->begin
+  local gRest:=rest.filter({$x>prev});
+  local longestRest:=gRest==[] ? [] :
+  [0..gRest.size-1].pEach(tailLength,begin
+    local T:=gRest.tail(tailLength);
+    longestIncreasingSubsequence(T.head,T.tail);
+  end,aggregator({$x.size>=$y.size?$x:$y}));
+  prev|longestRest;
+end;
+
+longestIncreasingSubsequence(list)->longestIncreasingSubsequence(list.min-1,list).tail;
+
+main->[3,2,6,4,5,1].longestIncreasingSubsequence.print orElse
+      [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15].longestIncreasingSubsequence.print;

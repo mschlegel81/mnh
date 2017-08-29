@@ -90,6 +90,14 @@ TYPE
   end;
 
   P_adapters=^T_adapters;
+  P_errorInterceptor = ^T_errorInterceptor;
+
+  T_errorInterceptor = object(T_collectingOutAdapter)
+    parentAdapters:P_adapters;
+    CONSTRUCTOR create(CONST parent:P_adapters);
+    FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
+    FUNCTION hasError:boolean;
+  end;
 
   P_connectorAdapter=^T_connectorAdapter;
   T_connectorAdapter = object(T_abstractOutAdapter)
@@ -201,6 +209,7 @@ TYPE
       PROCEDURE addSubAdapters(CONST sub:P_adapters);
       PROCEDURE remSubAdapters(CONST sub:P_adapters);
       FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+      FUNCTION getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
   end;
 
 CONST
@@ -306,6 +315,27 @@ OPERATOR :=(s:string):T_messageTypeSet;
         end;
       end;
     end;
+  end;
+
+CONSTRUCTOR T_errorInterceptor.create(CONST parent: P_adapters);
+  begin
+    inherited create(at_unknown,[low(T_messageType)..high(T_messageType)]);
+    parentAdapters:=parent;
+  end;
+
+FUNCTION T_errorInterceptor.append(CONST message: T_storedMessage): boolean;
+  begin
+    if C_messageTypeMeta[message.messageType].level=3
+    then result:=inherited append(message)
+    else begin
+      result:=true;
+      parentAdapters^.raiseCustomMessage(message);
+    end;
+  end;
+
+FUNCTION T_errorInterceptor.hasError: boolean;
+  begin
+    result:=length(storedMessages)>0;
   end;
 
 CONSTRUCTOR T_connectorAdapter.create(CONST connected: P_adapters; CONST includePrint,includeWarnings,includeErrors: boolean);
@@ -888,6 +918,13 @@ PROCEDURE T_adapters.remSubAdapters(CONST sub:P_adapters);
 
 FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
   begin new(result,create(@self,includePrint,includeWarnings,includeErrors)); end;
+
+FUNCTION T_adapters.getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
+  begin
+    new(result,create);
+    new(errorInterceptor,create(@self));
+    result^.addOutAdapter(errorInterceptor,true);
+  end;
 //===================================================================:T_adapters
 
 INITIALIZATION

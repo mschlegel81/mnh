@@ -17,13 +17,42 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
   end;
 
 FUNCTION try_imp intFuncSignature;
+  FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
+    VAR prevAdapters:P_adapters;
+        oldWhitelist:T_sideEffects;
+        interceptor:P_errorInterceptor;
+        messagesLiteral:P_literal;
+    begin
+      prevAdapters:=context.adapters;
+      context.adapters:=prevAdapters^.getAdaptersForTry(interceptor);
+      oldWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist-[se_alterPlotState]);
+      result:=toTry^.evaluateToLiteral(tokenLocation,@context);
+      if (result=nil) or (interceptor^.hasError) then begin
+        if (result<>nil) then disposeLiteral(result);
+        //Error handling
+        if inCaseOfFailure=nil then result:=newVoidLiteral
+        else if inCaseOfFailure^.literalType=lt_expression then begin
+          if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
+            messagesLiteral:=messagesToLiteralForSandbox(interceptor^.storedMessages);
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral);
+            disposeLiteral(messagesLiteral);
+          end else begin
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context);
+          end;
+        end else result:=inCaseOfFailure^.rereferenced;
+      end;
+      context.setAllowedSideEffectsReturningPrevious(oldWhitelist);
+      dispose(context.adapters,destroy);
+      context.adapters:=prevAdapters;
+    end;
+
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) then begin
       if (params^.size=1) then begin
-        result:=sandbox^.performTry(P_expressionLiteral(arg0),nil,tokenLocation,context);
+        result:=performTry(P_expressionLiteral(arg0),nil );
       end else if (params^.size=2) then begin
-        result:=sandbox^.performTry(P_expressionLiteral(arg0),arg1,tokenLocation,context);
+        result:=performTry(P_expressionLiteral(arg0),arg1);
       end;
     end;
   end;
