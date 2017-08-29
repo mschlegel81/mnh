@@ -104,7 +104,6 @@ IMPLEMENTATION
 VAR sandboxes:array of P_sandbox;
     sbLock:TRTLCriticalSection;
 PROCEDURE setupSandboxes;
-  VAR i:longint;
   begin
     initCriticalSection(sbLock);
     enterCriticalSection(sbLock);

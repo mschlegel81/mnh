@@ -17,12 +17,15 @@ plotters:=demosRoot&[
 
 testParameters((demosRoot&'24.mnh'            ))->['demo'];
 testParameters((demosRoot&'clock.mnh'         ))->['once'];
+testParameters((demosRoot&'combinations.mnh'  ))->['3','5'];
+testParameters((demosRoot&'countInFactors.mnh'))->['25'];
 testParameters((demosRoot&'diff.mnh'          ))->[dict,editedDict];
 testParameters((demosRoot&'emptyFolders.mnh'  ))->['.'];
 testParameters((demosRoot&'fannkuch.mnh'      ))->['7'];
 testParameters((demosRoot&'findDuplicates.mnh'))->['.'];
 testParameters((demosRoot&'gol.mnh'           ))->['40','40','9'];
 testParameters((demosRoot&'pascal.mnh'        ))->['12'];
+testParameters((demosRoot&'pangrams.mnh'      ))->['check','The quick brown fox jumps over the lazy dog.'];
 testParameters((demosRoot&'oeis.mnh'          ))->['A000002','50'];
 testParameters(scriptFileName:string)->[];
 

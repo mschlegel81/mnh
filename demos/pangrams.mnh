@@ -1,0 +1,67 @@
+USE inputs;
+private missingLetters(s:string)->['A'..'Z'].minus(s.charSet.upper);
+
+private memoized dictionary->dict.fileLines.trim;
+private memoized letterMap->begin
+  local X:=dictionary.pMap({[$x.upper.charSet,$x]});
+  ['A'..'Z'].pEach(char,[char,X.filter({char in $x[0]}).getInner(1)]).toMap;
+end;
+
+private randomWord->dictionary[dictionary.size.intRandom];
+private randomWord(missingLetters:stringCollection)->begin
+  //Find all words containing at least one of the missing letters
+  local l:=letterMap.getAll(missingLetters).flatten.elementFrequency;
+  //The best words are the ones occurring the most times (once for each missing letter)
+  local best:=l.getInner(1).max;
+  //Filter the best ones and transform to list with length
+  l:=l.filter({$x[1]=best}).map({[$x[0],length($x[0])]});
+  //The best words are the shortest ones
+  best:=l.getInner(1).min;
+  //Filter the best ones
+  l:=l.filter({$x[1]=best}).getInner(0);
+  //Return a random element of the remaining list
+  l[l.size.intRandom];
+end;
+
+randomPangram->begin
+  local s:=randomWord;
+  local missing:=s.missingLetters;
+  while(missing.size>0,begin
+    s&=' '&randomWord(missing);
+    missing:=s.missingLetters;
+  end);
+  s;
+end;
+
+private mutable lookForRandomPangram:=true;
+findShortRandomPangram->begin
+  local shortestLength:=2^63-1;
+  async({begin
+           ask('Press enter to stop.');
+           lookForRandomPangram:=false;
+         end});
+  while(lookForRandomPangram,begin
+    local p:=randomPangram;
+    p.length<shortestLength
+    ? begin
+        print('Length: ',shortestLength:=p.length);
+        print('String: ',p);
+      end
+    : void;
+  end);
+end;
+
+checkForPangram(s:string)->begin
+  local missing:=s.missingLetters;
+  missing.size=0
+  ? print(escape(s),' is a pangram')
+  : print(escape(s),' is not a pangram. Missing letters are ',missing.join(","));
+end;
+
+//*Checks if the given input is pangram
+//*See http://rosettacode.org/wiki/Pangram_checker
+main('check',...)->checkForPangram(join(...,' '));
+//*Generates n random pangrams from a dictionary
+main('generate',count)->rangeGenerator(1,count.toInt).pMap(::randomPangram).print;
+//*Tries to find a short random pangram
+main('find')->findShortRandomPangram;

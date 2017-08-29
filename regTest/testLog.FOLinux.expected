@@ -707,6 +707,17 @@ N=   3 ε=0.1
 N=  48 ε=0.01
 N= 498 ε=0.001
 N=4998 ε=0.0001
+***** combinations *****
+[1,2,3]
+[1,2,4]
+[1,2,5]
+[1,3,4]
+[1,3,5]
+[1,4,5]
+[2,3,4]
+[2,3,5]
+[2,4,5]
+[3,4,5]
 ***** commaQuibble *****
 {}
 {ABC}
@@ -785,9 +796,41 @@ in> f(3, 4);
 out> 67
 in> f;
 Error Cannot apply user defined rule f to parameter list ():  ()
+***** countInFactors *****
+1
+2
+3
+2*2
+5
+2*3
+7
+2*2*2
+3*3
+2*5
+11
+2*2*3
+13
+2*7
+3*5
+2*2*2*2
+17
+2*3*3
+19
+2*2*5
+3*7
+2*11
+23
+2*2*2*3
+5*5
 ***** countTheCoins *****
 There are 293 ways to make a dollar from coins
   and 4563 ways to make a euro from coins.
+***** departmentNumbers *****
+[2,4,6]
+[6,1,5]
+[4,3,5]
+[4,1,7]
+[2,3,7]
 ***** dice7fromDice5 *****
 Distribution of seven sided dice (100000 samples): 
 0.14186999999999999611
@@ -1785,6 +1828,8 @@ true xor false = true
 [7,Nan]!=Nan = [false,false]
 [7,Nan]>=Nan = [false,false]
 [7,Nan]<=Nan = [false,false]
+***** pangrams *****
+'The quick brown fox jumps over the lazy dog.' is a pangram
 ***** pascal *****
                                 1
                              2      2

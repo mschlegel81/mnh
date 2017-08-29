@@ -1,0 +1,2 @@
+//*See http://rosettacode.org/wiki/Count_in_factors
+main(countUpTo)->rangeGenerator(1,countUpTo.toInt).pMap({$x.factorize.join("*")}).map(::print);
