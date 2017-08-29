@@ -1,0 +1,2 @@
+//*See  http://rosettacode.org/wiki/Combinations
+main(groupSize,integersToSampleFrom)->[1..integersToSampleFrom.toInt].subSets(groupSize.toInt).sort.map(::print);
