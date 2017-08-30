@@ -136,8 +136,15 @@ TYPE
     tt_listToParameterList,
     //assignment operators:
     tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
-    tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend,tt_cso_assignAppendAlt, //+= -= *= /= &= |= ||=
-    tt_cso_mapPut,tt_cso_mapDrop, //<< >>
+                            tt_mut_nested_assign,
+    tt_mut_assignPlus,      tt_mut_nestedPlus,      //+=
+    tt_mut_assignMinus,     tt_mut_nestedMinus,     //-=
+    tt_mut_assignMult,      tt_mut_nestedMult,      //*=
+    tt_mut_assignDiv,       tt_mut_nestedDiv,       ///=
+    tt_mut_assignStrConcat, tt_mut_nestedStrConcat, //&=
+    tt_mut_assignAppend,    tt_mut_nestedAppend,    //|=
+    tt_mut_assignAppendAlt, tt_mut_nestedAppendAlt, //||=
+    tt_mut_assignDrop,      tt_mut_nestedDrop,      //>>
     //type checks:
     tt_typeCheckScalar,  tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
     tt_typeCheckBoolean, tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
@@ -168,7 +175,6 @@ TYPE
 
   T_tokenTypeSet  =set of T_tokenType;
   T_modifier      =tt_modifier_private..tt_modifier_customType;
-  T_cStyleOperator=tt_cso_assignPlus..tt_cso_mapDrop;
 CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized,tt_modifier_customType];
 TYPE
   T_modifierSet=set of T_modifier;
@@ -444,15 +450,25 @@ CONST
 {tt_mutate}                     (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Mutate-assign operator'),
 {tt_assignNewBlockLocal}        (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assign new block local operator'),
 {tt_assignExistingBlockLocal}   (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assign existing block local operator'),
-{tt_cso_assignPlus}             (defaultId:'+=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-increment operator'),
-{tt_cso_assignMinus}            (defaultId:'-=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-decrement operator'),
-{tt_cso_assignMult}             (defaultId:'*=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-multiply operator'),
-{tt_cso_assignDiv}              (defaultId:'/=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-divide operator'),
-{tt_cso_assignStrConcat}        (defaultId:'&=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-(string-)concatenate operator'),
-{tt_cso_assignAppend}           (defaultId:'|=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-(list-)concatenate operator'),
-{tt_cso_assignAppendAlt}        (defaultId:'||=';           defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'C-Style assign-(list-)concatenate operator'),
-{tt_cso_mapPut}                 (defaultId:'<<';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Map put-assign operator'),
-{tt_cso_mapDrop}                (defaultId:'>>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Map drop-assign operator'),
+
+{tt_mut_nested_assign}          (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignPlus}             (defaultId:'+=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Incrementation operator'),
+{tt_mut_nestedPlus}             (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignMinus}            (defaultId:'-=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Decrementation operator'),
+{tt_mut_nestedMinus}            (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignMult}             (defaultId:'*=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Multipliy/assign operator'),
+{tt_mut_nestedMult}             (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignDiv}              (defaultId:'/=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Divide/assign operator'),
+{tt_mut_nestedDiv}              (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignStrConcat}        (defaultId:'&=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'String-concatenate/assign operator'),
+{tt_mut_nestedStrConcat}        (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignAppend}           (defaultId:'|=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List-concatenate/assign operator'),
+{tt_mut_nestedAppend}           (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignAppendAlt}        (defaultId:'||=';           defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Alt-List-concatenate/assign operator'),
+{tt_mut_nestedAppendAlt}        (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+{tt_mut_assignDrop}             (defaultId:'>>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Drop operator'),
+{tt_mut_nestedDrop}             (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
+
 {tt_typeCheckScalar}            (defaultId:':scalar';       defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check scalar;#Matches on all non-lists'),
 {tt_typeCheckList}              (defaultId:':list';         defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check list;#Matches on all lists#Can be modified to match only lists of a given size'),
 {tt_typeCheckSet}               (defaultId:':set';          defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check set;#Matches on all sets#Can be modified to match only sets of a given size'),

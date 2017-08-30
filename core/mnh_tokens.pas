@@ -279,7 +279,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
       tt_endRule  ,tt_endExpression  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
-      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_mapDrop: result:=txt+C_tokenInfo[tokType].defaultId;
+      tt_mutate, tt_assignExistingBlockLocal..tt_mut_nestedDrop: result:=txt+C_tokenInfo[tokType].defaultId;
       tt_identifier,
       tt_localUserRule,
       tt_importedUserRule,
@@ -305,7 +305,7 @@ FUNCTION T_token.hash:T_hashInt;
     result:=T_hashInt(tokType);
     if tokType in [tt_intrinsicRule,tt_localUserRule,tt_importedUserRule,tt_rulePutCacheValue,tt_customTypeRule] then result:=result*31+T_hashInt(data);
     if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,
-                    tt_mutate,tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend,
+                    tt_mutate,tt_assignExistingBlockLocal..tt_mut_nestedDrop,
                     tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blank])
     then result:=result*37+hashOfAnsiString(txt);
     if (tokType in [tt_each, tt_parallelEach,tt_aggregatorExpressionLiteral,tt_literal,
@@ -327,7 +327,7 @@ FUNCTION T_token.equals(CONST other:T_token):boolean;
     if tokType<>other.tokType then exit(false);
     if tokType in [tt_intrinsicRule,tt_localUserRule,tt_importedUserRule,tt_rulePutCacheValue,tt_customTypeRule] then exit(data=other.data);
     if (tokType in [tt_each,tt_parallelEach,tt_customTypeCheck,tt_assignNewBlockLocal,
-                    tt_mutate,tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend,
+                    tt_mutate,tt_assignExistingBlockLocal..tt_mut_nestedDrop,
                     tt_identifier,tt_parameterIdentifier,tt_blockLocalVariable,tt_blank])
        and (txt<>other.txt) then exit(false);
     if (tokType in [tt_each, tt_parallelEach,tt_aggregatorExpressionLiteral,tt_literal,
