@@ -3,8 +3,9 @@ private missingLetters(s:string)->['A'..'Z'].minus(s.charSet.upper);
 
 private memoized dictionary->dict.fileLines.trim;
 private memoized letterMap->begin
-  local X:=dictionary.pMap({[$x.upper.charSet,$x]});
-  ['A'..'Z'].pEach(char,[char,X.filter({char in $x[0]}).getInner(1)]).toMap;
+  local result:=[].toMap;
+  dictionary.each(word,word.upper.charSet.each(key,result[key]|=word));
+  result;
 end;
 
 private randomWord->dictionary[dictionary.size.intRandom];
@@ -62,6 +63,6 @@ end;
 //*See http://rosettacode.org/wiki/Pangram_checker
 main('check',...)->checkForPangram(join(...,' '));
 //*Generates n random pangrams from a dictionary
-main('generate',count)->rangeGenerator(1,count.toInt).pMap(::randomPangram).print;
+main('generate',count)->rangeGenerator(1,count.toInt).pMap(::randomPangram).map(::print);
 //*Tries to find a short random pangram
 main('find')->findShortRandomPangram;

@@ -112,7 +112,7 @@ testAll(logging:boolean)->
 
 main->testAlreadyPassed
       ? print('Tests skipped. They have already been passed.')
-      : testAll(true) orElse ;
+      : testAll(true);
 
 //*Test again, even if all tests have been passed
 main('retest')->testAll(true);
