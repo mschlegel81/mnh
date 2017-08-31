@@ -61,6 +61,7 @@ FUNCTION validateWorkflow_imp intFuncSignature;
   end;
 
 FUNCTION executeWorkflow_imp intFuncSignature;
+  CONST aditionalOutputInterval=1/(24*60); //one minute
   VAR isValid:boolean=true;
       source:string='';
       dest:string='';
@@ -69,6 +70,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       sizeLimit:longint=-1;
       i:longint;
 
+      lastOutput:double;
       progressLog:T_progressLog;
       logLinesDisplayed:longint=0;
       outputMethod:P_expressionLiteral=nil;
@@ -143,11 +145,17 @@ FUNCTION executeWorkflow_imp intFuncSignature;
                              doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"');
                              workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
                            end;
+        lastOutput:=now;
         while progressQueue.calculating and (context.adapters^.noErrors) do begin
           progressLog:=progressQueue.log;
           for i:=logLinesDisplayed to length(progressLog)-1 do begin
             doOutput(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message);
             logLinesDisplayed:=i+1;
+            lastOutput:=now;
+          end;
+          if (now-lastOutput>aditionalOutputInterval) then begin
+            doOutput(progressQueue.getProgressString(true));
+            lastOutput:=now;
           end;
           ThreadSwitch;
           sleep(1000);
