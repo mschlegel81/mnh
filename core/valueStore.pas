@@ -99,8 +99,8 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal;
       adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
       exit(newVoidLiteral);
     end;
-    mutateVariable(value,mutation,RHS,location,adapters,threadContext);
-    result:=value^.rereferenced;
+    result:=mutateVariable(value,mutation,RHS,location,adapters,threadContext);
+    if result=nil then result:=newVoidLiteral;
   end;
 
 FUNCTION T_namedVariable.getId:T_idString;

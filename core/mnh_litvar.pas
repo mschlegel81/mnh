@@ -362,7 +362,7 @@ FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
-PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer);
+FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
 
 VAR emptyStringSingleton: T_stringLiteral;
 IMPLEMENTATION
@@ -2985,7 +2985,14 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
     end;
   end;
 
-PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer);
+FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
+  VAR returnValue:P_literal=nil;
+  PROCEDURE return(CONST L:P_literal); inline;
+    begin
+      if returnValue<>nil then disposeLiteral(returnValue);
+      returnValue:=L;
+    end;
+
   FUNCTION simpleMutate(VAR toMutate:P_literal; CONST op:T_tokenType; CONST RHS:P_literal):boolean;
     VAR newValue:P_literal;
     begin
@@ -2994,6 +3001,7 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
         result:=newValue^.literalType<>toMutate^.literalType;
         disposeLiteral(toMutate);
         toMutate:=newValue;
+        return(toMutate^.rereferenced);
       end else result:=false;
     end;
 
@@ -3002,6 +3010,7 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
       result:=newValue^.literalType<>toMutate^.literalType;
       disposeLiteral(toMutate);
       toMutate:=newValue^.rereferenced;
+      return(toMutate^.rereferenced);
     end;
 
   FUNCTION mutateStringAppend(VAR toMutate:P_literal; CONST RHS:P_literal):boolean;
@@ -3010,6 +3019,7 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
         P_stringLiteral(toMutate)^.append(P_scalarLiteral(RHS)^.stringForm);
         result:=false;
       end else result:=simpleMutate(toMutate,tt_operatorStrConcat,RHS);
+      return(toMutate^.rereferenced);
     end;
 
   FUNCTION mutateListAppend(VAR toMutate:P_literal; CONST RHS:P_literal; CONST alt:boolean):boolean;
@@ -3021,12 +3031,16 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
         result:=false;
       end else if alt then result:=simpleMutate(toMutate,tt_operatorConcatAlt,RHS)
                       else result:=simpleMutate(toMutate,tt_operatorConcat   ,RHS);
+      return(newVoidLiteral);
     end;
 
   PROCEDURE ensureExclusiveAccess(VAR toMutate:P_compoundLiteral); inline;
     VAR old:P_compoundLiteral;
     begin
       if toMutate^.numberOfReferences<=1 then exit;
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: cloning for mutation ',toMutate^.typeString);
+      {$endif}
       old:=toMutate;
       toMutate:=old^.clone;
       old^.unreference;
@@ -3045,6 +3059,7 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
         ensureExclusiveAccess(P_listLiteral(toMutate));
         P_listLiteral(toMutate)^.removeElement(P_intLiteral(RHS)^.val);
       end else adapters.raiseError('Cannot drop from literal of type '+toMutate^.typeString,location);
+      return(newVoidLiteral);
     end;
 
   FUNCTION mutateNested(VAR toMutate:P_literal; CONST nestedMutation:T_tokenType; accessor:P_listLiteral; RHS:P_literal):boolean;
@@ -3053,12 +3068,12 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
         accessorTail:P_listLiteral;
         mapEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
     begin
-      {$ifdef debugMode}
-      writeln(stdErr,'        DEBUG: mutate nested LHS=',toMutate^.toString(50));
-      writeln(stdErr,'        DEBUG:               MUT=',nestedMutation);
-      writeln(stdErr,'        DEBUG:               ACC=',accessor^.toString(50));
-      writeln(stdErr,'        DEBUG:               RHS=',RHS^.toString(50));
-      {$endif}
+      //{$ifdef debugMode}
+      //writeln(stdErr,'        DEBUG: mutate nested LHS=',toMutate^.toString(50));
+      //writeln(stdErr,'        DEBUG:               MUT=',nestedMutation);
+      //writeln(stdErr,'        DEBUG:               ACC=',accessor^.toString(50));
+      //writeln(stdErr,'        DEBUG:               RHS=',RHS^.toString(50));
+      //{$endif}
       if accessor^.size=0 then case mutation of
         tt_mut_nested_assign  : exit(assign            (toMutate,                   RHS));
         tt_mut_nestedPlus     : exit(simpleMutate      (toMutate,tt_operatorPlus   ,RHS));
@@ -3164,6 +3179,7 @@ PROCEDURE mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CON
         adapters.raiseError('Unimplemented mutation '+C_tokenInfo[mutation].defaultId,location);
       end;
     end;
+    result:=returnValue;
   end;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
