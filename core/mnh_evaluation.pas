@@ -435,7 +435,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
           first:=context.recycler.disposeToken(first);
         end;
-        tt_cso_assignPlus..tt_cso_mapDrop: if first^.data=nil then begin
+        tt_mut_nested_assign..tt_mut_nestedDrop: if first^.data=nil then begin
           newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters,@context);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
@@ -931,12 +931,30 @@ end}
                 // x # [y]:=... -> x<<[y]|...;
                 stack.popLink(first);
                 if first^.tokType=tt_blockLocalVariable then first^.data:=nil;
-                if cTokType[2]in [tt_assign,tt_mutate] then begin
+                if cTokType[2] in [tt_assign,tt_mutate,
+                                   tt_mut_assignPlus,
+                                   tt_mut_assignMinus,
+                                   tt_mut_assignMult,
+                                   tt_mut_assignDiv,
+                                   tt_mut_assignStrConcat,
+                                   tt_mut_assignAppend,
+                                   tt_mut_assignAppendAlt,
+                                   tt_mut_assignDrop] then begin
                   //first=                   x
                   //first^.next=             [y]
                   //first^.next^.next=       :=
                   //first^.next^.next^.next= ... (some expression)
-                  first^.tokType:=tt_cso_mapPut;
+                  case cTokType[2] of
+                    tt_assign,tt_mutate   : first^.tokType:=tt_mut_nested_assign;
+                    tt_mut_assignPlus     : first^.tokType:=tt_mut_nestedPlus     ;
+                    tt_mut_assignMinus    : first^.tokType:=tt_mut_nestedMinus    ;
+                    tt_mut_assignMult     : first^.tokType:=tt_mut_nestedMult     ;
+                    tt_mut_assignDiv      : first^.tokType:=tt_mut_nestedDiv      ;
+                    tt_mut_assignStrConcat: first^.tokType:=tt_mut_nestedStrConcat;
+                    tt_mut_assignAppend   : first^.tokType:=tt_mut_nestedAppend   ;
+                    tt_mut_assignAppendAlt: first^.tokType:=tt_mut_nestedAppendAlt;
+                    tt_mut_assignDrop     : first^.tokType:=tt_mut_nestedDrop     ;
+                  end;
                   first^.next^.next^.tokType:=tt_operatorConcatAlt;
                   //first=                   x<<
                   //first^.next=             [y]
@@ -1002,7 +1020,7 @@ end}
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: case cTokType[1] of
+          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.recycler.disposeToken(first);
               {$ifdef fullVersion}
@@ -1039,7 +1057,7 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_mapDrop: begin
+        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: begin
           stack.push(first);
           didSubstitution:=true;
         end;

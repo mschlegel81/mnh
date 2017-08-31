@@ -15,7 +15,7 @@ memoized getBuiltNumber(codeHash:string)->begin
 
   log[codeHash] orElse begin
     local nextNo:=maxLoggedBuildNumber+1;
-    log<<[codeHash,nextNo];
+    log[codeHash]:=nextNo;
     nextNo;
   end;
 end;

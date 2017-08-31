@@ -89,7 +89,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if t^.tokType=tt_identifier then inPackage^.resolveId(t^,nil,true);
-          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
                 rule:=t^.data;
@@ -115,7 +115,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
           t^.tokType:=tt_assignExistingBlockLocal;
           t^.data:=nil;
           t^.next:=recycler.disposeToken(t^.next);
-        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_mapDrop]) then begin
+        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
           t^.tokType:=t^.next^.tokType;
           t^.data:=nil;
           t^.next:=recycler.disposeToken(t^.next);
@@ -282,7 +282,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
             end else blob.closer:='''';
           end;
         end;
-      end else if startsWith(tt_cso_assignDiv) then apply(tt_cso_assignDiv)
+      end else if startsWith(tt_mut_assignDiv) then apply(tt_mut_assignDiv)
                                                else apply(tt_operatorDivReal);
       ':': if startsWith(tt_assign)            then apply(tt_assign)
       else if startsWith(tt_pseudoFuncPointer) then apply(tt_pseudoFuncPointer)
@@ -309,27 +309,26 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
       '@':                                            apply(tt_listToParameterList);
       ')':                                            apply(tt_braceClose);
       '(':                                            apply(tt_braceOpen);
-      '|': if startsWith(tt_cso_assignAppend)    then apply(tt_cso_assignAppend) else
-           if startsWith(tt_cso_assignAppendAlt) then apply(tt_cso_assignAppendAlt) else
+      '|': if startsWith(tt_mut_assignAppend)    then apply(tt_mut_assignAppend) else
+           if startsWith(tt_mut_assignAppendAlt) then apply(tt_mut_assignAppendAlt) else
            if startsWith(tt_operatorConcatAlt)   then apply(tt_operatorConcatAlt)
                                                  else apply(tt_operatorConcat);
-      '+': if startsWith(tt_cso_assignPlus)      then apply(tt_cso_assignPlus)
+      '+': if startsWith(tt_mut_assignPlus)      then apply(tt_mut_assignPlus)
                                                  else apply(tt_operatorPlus);
-      '&': if startsWith(tt_cso_assignStrConcat) then apply(tt_cso_assignStrConcat)
+      '&': if startsWith(tt_mut_assignStrConcat) then apply(tt_mut_assignStrConcat)
                                                  else apply(tt_operatorStrConcat);
       '-': if startsWith(tt_declare)             then apply(tt_declare) else
-           if startsWith(tt_cso_assignMinus)     then apply(tt_cso_assignMinus)
+           if startsWith(tt_mut_assignMinus)     then apply(tt_mut_assignMinus)
                                                  else apply(tt_operatorMinus);
       '*': if startsWith('**')                   then apply(2,tt_operatorPot) else
-           if startsWith(tt_cso_assignMult)      then apply(tt_cso_assignMult)
+           if startsWith(tt_mut_assignMult)      then apply(tt_mut_assignMult)
                                                  else apply(tt_operatorMult);
       '>': if startsWith(tt_comparatorGeq)       then apply(tt_comparatorGeq) else
-           if startsWith(tt_cso_mapDrop)         then apply(tt_cso_mapDrop)
+           if startsWith(tt_mut_assignDrop)      then apply(tt_mut_assignDrop)
                                                  else apply(tt_comparatorGrt);
       '=': if startsWith(tt_comparatorListEq)    then apply(tt_comparatorListEq)
                                                  else apply(tt_comparatorEq);
       '<': if startsWith(tt_comparatorNeq)       then apply(tt_comparatorNeq) else
-           if startsWith(tt_cso_mapPut)          then apply(tt_cso_mapPut) else
            if startsWith(tt_comparatorLeq)       then apply(tt_comparatorLeq)
                                                  else apply(tt_comparatorLss);
       '!': if startsWith('!=')                   then apply(2,tt_comparatorNeq)

@@ -16,7 +16,7 @@ TYPE
       CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
-      FUNCTION mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
+      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
@@ -93,67 +93,14 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
     value^.rereference;
   end;
 
-FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
-  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
-  VAR oldValue:P_literal;
-      accessor:P_listLiteral;
-      newValue:P_literal;
+FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
   begin
     if readonly then begin
       adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
       exit(newVoidLiteral);
     end;
-    oldValue:=value;
-    case mutation of
-      tt_cso_assignPlus..tt_cso_assignDiv: begin
-        value:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location,adapters,threadContext);
-        disposeLiteral(oldValue);
-        exit(value^.rereferenced);
-      end;
-      tt_cso_assignStrConcat: begin
-        if (oldValue^.literalType=lt_string) and (oldValue^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
-          P_stringLiteral(oldValue)^.append(P_scalarLiteral(RHS)^.stringForm);
-          exit(oldValue^.rereferenced);
-        end else begin
-          value:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location,adapters,threadContext);
-          disposeLiteral(oldValue);
-          exit(value^.rereferenced);
-        end;
-      end;
-      tt_cso_assignAppend: begin
-        if (oldValue^.literalType in C_setTypes+C_listTypes) and (oldValue^.getReferenceCount=1) then begin
-          if (RHS^.literalType in C_scalarTypes)
-          then P_collectionLiteral(oldValue)^.append(RHS, true)
-          else P_collectionLiteral(oldValue)^.appendAll(P_compoundLiteral(RHS));
-          exit(oldValue^.rereferenced);
-        end else begin
-          value:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location,adapters,threadContext);
-          disposeLiteral(oldValue);
-          exit(value^.rereferenced);
-        end;
-      end;
-      tt_cso_mapPut, tt_cso_mapDrop: begin
-        if mutation=tt_cso_mapDrop then begin
-          if RHS^.literalType in C_listTypes
-          then accessor:=P_listLiteral(RHS^.rereferenced)
-          else accessor:=newListLiteral(RHS);
-          newValue:=nil;
-          mutateVariableDrop(value,accessor,location,adapters);
-        end else begin
-          if not(RHS^.literalType in C_listTypes) then begin
-            adapters.raiseError('Operator << expectes a list as right-hand-side',location);
-            exit(newVoidLiteral);
-          end;
-          accessor:=P_listLiteral(RHS)^.leading;
-          newValue:=P_listLiteral(RHS)^.trailing;
-          mutateVariablePut(value,accessor,newValue,location,adapters);
-        end;
-        disposeLiteral(accessor);
-        if newValue<>nil then disposeLiteral(newValue);
-        exit(newVoidLiteral);
-      end;
-    end;
-    result:=newVoidLiteral;
+    mutateVariable(value,mutation,RHS,location,adapters,threadContext);
+    result:=value^.rereferenced;
   end;
 
 FUNCTION T_namedVariable.getId:T_idString;

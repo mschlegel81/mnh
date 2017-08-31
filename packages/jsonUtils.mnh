@@ -1,21 +1,3 @@
-json:=//!~{
-  "Herausgeber": "Xema",
-  "Nummer": "1234-5678-9012-3456",
-  "Deckung": 2e+6,
-  "Waehrung": "EURO",
-  "Inhaber":
-  {
-    "Name": "Mustermann",
-    "Vorname": "Max",
-    "maennlich": true,
-    "Hobbys": [ "Reiten", "Golfen", "Lesen"],
-    "Alter": 42,
-    "Kinder": [],
-    "Partner": null
-  }
-}~;
-
-
 private unescapeKey(s:string)->begin
   local result:=s.softCast;
   (result==s) OR not(result.isString)
@@ -78,7 +60,7 @@ private traverseObject(L:stringList,insteadOfNull:scalar)->begin
     end : begin
       value  :=value.castWarning(insteadOfNull);
     end;
-    parsed<<[key,value];
+    parsed[key]:=value;
     toParse.head=='}'
     ? objectFinished:=true
     : toParse.head==','
