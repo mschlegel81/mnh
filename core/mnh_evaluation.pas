@@ -1218,17 +1218,19 @@ TYPE P_asyncTask=^T_asyncTask;
          context:P_threadContext;
          resultValue:P_literal;
          evaluationFinished:boolean;
+         isBlocking:boolean;
        public
-         CONSTRUCTOR create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation);
+         CONSTRUCTOR create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
          DESTRUCTOR destroy; virtual;
          FUNCTION getId:T_idString; virtual;
          FUNCTION next(CONST location:T_tokenLocation; VAR context_:T_threadContext):P_literal; virtual;
      end;
 
-CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation);
+CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
   begin
     inherited create(loc);
     initCriticalSection(criticalSection);
+    isBlocking:=blocking;
     task:=task_;
     context:=context_;
     resultValue:=nil;
@@ -1261,7 +1263,7 @@ FUNCTION T_asyncTask.getId:T_idString;
 FUNCTION T_asyncTask.next(CONST location:T_tokenLocation; VAR context_:T_threadContext):P_literal;
   begin
     enterCriticalSection(criticalSection);
-    while not(evaluationFinished) do begin
+    if isBlocking then while not(evaluationFinished) do begin
       leaveCriticalSection(criticalSection);
       ThreadSwitch;
       sleep(1);
@@ -1281,6 +1283,9 @@ FUNCTION doAsync(p:pointer):ptrint;
       enterCriticalSection(criticalSection);
       evaluationFinished:=true;
       resultValue:=context^.cascadeDisposeToLiteral(task);
+      if isBlocking and (resultValue^.literalType=lt_void) then begin
+        context^.adapters^.raiseError('Non-blocking async tasks must not return void.',getLocation);
+      end;
       task:=nil;
       context^.doneEvaluating;
       dispose(context,destroy);
@@ -1291,7 +1296,7 @@ FUNCTION doAsync(p:pointer):ptrint;
   end;
 
 {$i mnh_func_defines.inc}
-FUNCTION async_imp intFuncSignature;
+FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST wantFuture:boolean):P_literal;
   VAR p:P_asyncTask;
       childContext:P_threadContext;
       parameters:P_listLiteral=nil;
@@ -1308,18 +1313,24 @@ FUNCTION async_imp intFuncSignature;
           dispose(childContext,destroy);
           exit(nil);
         end;
-        new(p,create(task,childContext,tokenLocation));
+        new(p,create(task,childContext,tokenLocation,wantFuture));
         beginThread(@doAsync,p);
         result:=p^.rereferenced;
       end else begin
-        context.adapters^.raiseError('Creation of asynchronous tasks is forbidden for the current context',tokenLocation);
+        context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
       end;
     end;
   end;
+
+FUNCTION async_imp intFuncSignature;  begin result:=asyncOrFuture(params,tokenLocation,context,false); end;
+FUNCTION future_imp intFuncSignature; begin result:=asyncOrFuture(params,tokenLocation,context,true);  end;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_detaching],ak_variadic_1,
                'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.');
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,[se_detaching],ak_variadic_1,
+               'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
+               'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.');
 end.
