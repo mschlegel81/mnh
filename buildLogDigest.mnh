@@ -11,24 +11,33 @@ ignoredPatterns:=['dev/3rd_party',
                   '/core/listProcessing\.pas.*\(5036\).*"lastToAggregate"',
                   '/core/mnh_subrules\.pas.*\(5024\).*"(intrinsicRuleId|lengthLimit|threadContext)"'];
 
-main->'build.log'.fileLines
-.pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
-.pEach(line,line.replace(['/media/','D:\'],'').replace('\','/'))
-.pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line)
-.pMap({[$line.matchComposite('\(....\)').trailing[0],$line]})
-.filter({$line.size=2})
-.elementFrequency
-.pMap({[$f[1],$f[0,0]]|($f[0,1].split($f[0,0]))})
-.sort(2)
-.sort(0)
-.pMap({"%{$0}sx\t%{$2}s\t%{$1}s\t%{$3}s".format@$x})
-.join("\n")
-.print;
+private currentViolations->'build.log'.fileLines
+  .pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
+  .pEach(line,line.replace(['/media/','D:\'],'').replace('\','/'))
+  .pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line)
+  .pMap({[$line.matchComposite('\(....\)').trailing[0],$line]})
+  .filter({$line.size=2})
+  .elementFrequency
+  .pMap({[$f[1],$f[0,0]]|($f[0,1].split($f[0,0]))});
+
+private datastore storedViolations:=[];
+
+//*Check for new violations
+main->currentViolations.minus(storedViolations)
+  .sort(2)
+  .sort(0)
+  .pMap({"%{$0}sx\t%{$2}s\t%{$1}s\t%{$3}s".format@$x})
+  .join("\n")
+  .print;
+
+//*Store current violations to be ignored in the next run
+main('store')->storedViolations:=currentViolations;
 
 private existing(f:string)->fileExists(f) ? f : void;
 
 
 USE make_config;
+//*Check file usage
 main('files')->begin
   local newList:='build.log'.fileLines
     .{$L[$L.matches('\(3104\)')]}
