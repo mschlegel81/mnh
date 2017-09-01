@@ -74,13 +74,13 @@ main->begin
   replot();
   local step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-4);
   local frameTime:=time;
-  state1:=async(step,[state1]);
-  state2:=async(step,[state2]);
+  state1:=future(step,[state1]);
+  state2:=future(step,[state2]);
   while(not(plotClosed),begin
     sleepUntil(frameTime+=secondsPerFrame);
     frameTime:=time;
-    p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=async(step,[state1]);
-    p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=async(step,[state2]);
+    p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=future(step,[state1]);
+    p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=future(step,[state2]);
     replot();
   end);
 
