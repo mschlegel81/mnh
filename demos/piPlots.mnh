@@ -1,9 +1,4 @@
-//Binominalkoeffizient über Pascalsches Dreieck:
-memoized
-private pascal(n)->pascal([1],n);
-private pascal(L,n>0)->pascal(L|0+0|L,n-1);
-private pascal(L,n)->L;
-
+USE pascal;
 //Summe und gleitende Summen:
 private sum(L)->L.agg(+);
 private rsum(L)->begin
@@ -11,7 +6,7 @@ private rsum(L)->begin
   L.each(x,S+=x).get([size(L)-1..0]);
 end;
 
-private weights(n)->rsum(pascal(n))/(2^n);
+private weights(n)->rsum(pascalTriangleRow(n))/(2^n);
 private arcTanSummand(i)->(-1)^i/(2*i+1);
 
 private summands(n)->arcTanSummand([0..n]);

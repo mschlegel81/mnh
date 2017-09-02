@@ -337,7 +337,7 @@ CONST
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     8, 8,                //unaries
     5, 9,                //special: string concatenation
-    1, 1, 7);            //list operators
+   10,10, 7);            //list operators
 
   C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckExpression] of T_literalTypeSet =
     {tt_typeCheckScalar}          ([lt_boolean, lt_int, lt_real, lt_string],
