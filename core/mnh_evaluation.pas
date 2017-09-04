@@ -95,9 +95,13 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         t:=bodyParts[lastPart].first;
         if (t^.tokType=tt_aggregatorConstructor) or (t^.tokType=tt_pseudoFuncPointer) and isPureAggregator then begin
           reduceExpression(bodyParts[lastPart].first,context);
-          bodyParts[lastPart].last:=bodyParts[lastPart].first^.last;
-          t:=bodyParts[lastPart].first;
+          //Handle error in evaluation of aggregator
+          if bodyParts[lastPart].first=nil then setLength(bodyParts,lastPart) else begin
+            bodyParts[lastPart].last:=bodyParts[lastPart].first^.last;
+            t:=bodyParts[lastPart].first;
+          end;
         end;
+        if t<>nil then
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
