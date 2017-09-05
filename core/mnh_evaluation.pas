@@ -144,7 +144,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         //---------------------------------------------process other body parts (if any)
       end;
 
-    VAR iterator:P_iterator;
+    VAR iterator:P_expressionLiteral;
         i:longint;
         eachLocation:T_tokenLocation;
 
@@ -192,7 +192,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       finalizeAggregation;
-      dispose(iterator,destroy);
+      disposeLiteral(iterator);
       for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
@@ -1219,7 +1219,7 @@ TYPE P_asyncTask=^T_asyncTask;
        private
          criticalSection:TRTLCriticalSection;
          task:P_token;
-         context:P_threadContext;
+         myContext:P_threadContext;
          resultValue:P_literal;
          evaluationFinished:boolean;
          isBlocking:boolean;
@@ -1227,7 +1227,7 @@ TYPE P_asyncTask=^T_asyncTask;
          CONSTRUCTOR create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
          DESTRUCTOR destroy; virtual;
          FUNCTION getId:T_idString; virtual;
-         FUNCTION next(CONST location:T_tokenLocation; VAR context_:T_threadContext):P_literal; virtual;
+         FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
      end;
 
 CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
@@ -1236,7 +1236,7 @@ CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadConte
     initCriticalSection(criticalSection);
     isBlocking:=blocking;
     task:=task_;
-    context:=context_;
+    myContext:=context_;
     resultValue:=nil;
     evaluationFinished:=false;
   end;
@@ -1244,17 +1244,17 @@ CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadConte
 DESTRUCTOR T_asyncTask.destroy;
   begin
     enterCriticalSection(criticalSection);
-    if context<>nil then begin
-      context^.adapters^.haltEvaluation;
+    if myContext<>nil then begin
+      myContext^.adapters^.haltEvaluation;
       while not(evaluationFinished) do begin
         leaveCriticalSection(criticalSection);
         ThreadSwitch;
         sleep(1);
         enterCriticalSection(criticalSection);
       end;
-      if task<>nil then context^.recycler.cascadeDisposeToken(task);
-      dispose(context,destroy);
-      context:=nil;
+      if task<>nil then myContext^.recycler.cascadeDisposeToken(task);
+      dispose(myContext,destroy);
+      myContext:=nil;
     end;
     if resultValue<>nil then disposeLiteral(resultValue);
     leaveCriticalSection(criticalSection);
@@ -1264,7 +1264,7 @@ DESTRUCTOR T_asyncTask.destroy;
 FUNCTION T_asyncTask.getId:T_idString;
   begin result:='async_task'; end;
 
-FUNCTION T_asyncTask.next(CONST location:T_tokenLocation; VAR context_:T_threadContext):P_literal;
+FUNCTION T_asyncTask.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   begin
     enterCriticalSection(criticalSection);
     if isBlocking then while not(evaluationFinished) do begin
@@ -1282,18 +1282,18 @@ FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      context^.reduceExpression(task);
+      myContext^.reduceExpression(task);
 
       enterCriticalSection(criticalSection);
       evaluationFinished:=true;
-      resultValue:=context^.cascadeDisposeToLiteral(task);
+      resultValue:=myContext^.cascadeDisposeToLiteral(task);
       if isBlocking and (resultValue^.literalType=lt_void) then begin
-        context^.adapters^.raiseError('Non-blocking async tasks must not return void.',getLocation);
+        myContext^.adapters^.raiseError('Non-blocking async tasks must not return void.',getLocation);
       end;
       task:=nil;
-      context^.doneEvaluating;
-      dispose(context,destroy);
-      context:=nil;
+      myContext^.doneEvaluating;
+      dispose(myContext,destroy);
+      myContext:=nil;
       leaveCriticalSection(criticalSection);
     end;
     disposeLiteral(P_asyncTask(p));

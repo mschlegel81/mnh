@@ -155,8 +155,6 @@ TYPE
       FUNCTION arity:longint; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION isStateful:boolean; virtual;
-      //Must implement:
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual; abstract;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
@@ -865,7 +863,7 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
   begin
     if (parameters<>nil) and (parameters^.size<>0) then exit(nil);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self); {$endif}
-    result:=next(location,P_threadContext(context)^);
+    result:=evaluateToLiteral(location,context);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
   end;
 

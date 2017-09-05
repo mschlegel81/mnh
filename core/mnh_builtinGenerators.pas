@@ -12,6 +12,82 @@ USES sysutils,
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 TYPE
+  P_listIterator=^T_listIterator;
+  T_listIterator=object(T_builtinGeneratorExpression)
+    index:longint;
+    values:T_arrayOfLiteral;
+    CONSTRUCTOR create(CONST v:P_compoundLiteral);
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+  P_singleValueIterator=^T_singleValueIterator;
+  T_singleValueIterator=object(T_builtinGeneratorExpression)
+    didDeliver:boolean;
+    value:P_literal;
+    CONSTRUCTOR create(CONST v:P_literal);
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
+  begin
+    index:=0;
+    values:=v^.iteratableList;
+  end;
+
+FUNCTION T_listIterator.getId:T_idString;
+  begin
+    result:='listIterator';
+  end;
+
+FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
+  begin
+    if index>=length(values)
+    then result:=nil
+    else result:=values[index]^.rereferenced;
+    inc(index);
+  end;
+
+DESTRUCTOR T_listIterator.destroy;
+  begin
+    disposeLiteral(values);
+  end;
+
+CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal);
+  begin
+    didDeliver:=false;
+    value:=v^.rereferenced;
+  end;
+
+FUNCTION T_singleValueIterator.getId:T_idString;
+  begin
+    result:='singleValueIterator';
+  end;
+
+FUNCTION T_singleValueIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
+  begin
+    if didDeliver then exit(nil);
+    result:=value^.rereferenced;
+    didDeliver:=true;
+  end;
+
+DESTRUCTOR T_singleValueIterator.destroy;
+  begin
+    disposeLiteral(value);
+  end;
+
+FUNCTION newIterator(CONST input:P_literal):P_expressionLiteral;
+  begin
+    if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input)))
+    else if (input^.literalType=lt_expression) and
+            (P_expressionLiteral(input)^.isGenerator) then result:=P_expressionLiteral(input^.rereferenced)
+    else new(P_singleValueIterator(result),create(input));
+  end;
+
+TYPE
   P_rangeGenerator=^T_rangeGenerator;
   T_rangeGenerator=object(T_builtinGeneratorExpression)
     private
@@ -19,7 +95,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST first,last:int64; CONST loc:T_tokenLocation);
       FUNCTION getId:T_idString; virtual;
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
   end;
 
 CONSTRUCTOR T_rangeGenerator.create(CONST first,last: int64; CONST loc: T_tokenLocation);
@@ -42,7 +118,7 @@ FUNCTION T_rangeGenerator.getId: T_idString;
     result:='rangeGenerator('+intToStr(minVal)+', '+intToStr(maxVal)+')';
   end;
 
-FUNCTION T_rangeGenerator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   begin
     if (minVal<=nextVal) and (nextVal<=maxVal) then begin
       result:=newIntLiteral(nextVal);
@@ -67,7 +143,7 @@ TYPE
       CONSTRUCTOR create(CONST i:int64; CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST arr:P_compoundLiteral; CONST loc:T_tokenLocation);
       FUNCTION getId:T_idString; virtual;
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -97,7 +173,7 @@ FUNCTION T_permutationIterator.getId: T_idString;
     result:='permutationIterator';
   end;
 
-FUNCTION T_permutationIterator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   VAR i,k,l:longint;
   begin
     if first then begin
@@ -156,19 +232,20 @@ TYPE
   P_filterGenerator=^T_filterGenerator;
   T_filterGenerator=object(T_builtinGeneratorExpression)
     private
-      sourceGenerator:P_iterator;
+      sourceGenerator:P_expressionLiteral;
       filterExpression:P_expressionLiteral;
     public
-      CONSTRUCTOR create(CONST source:P_iterator; CONST filter:P_expressionLiteral; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST source,filter:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION getId:T_idString; virtual;
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_filterGenerator.create(CONST source: P_iterator; CONST filter: P_expressionLiteral; CONST loc:T_tokenLocation);
+CONSTRUCTOR T_filterGenerator.create(CONST source,filter: P_expressionLiteral; CONST loc:T_tokenLocation);
   begin
     inherited create(loc);
     sourceGenerator:=source;
+    sourceGenerator^.rereference;
     filterExpression:=filter;
     filterExpression^.rereference;
   end;
@@ -178,21 +255,21 @@ FUNCTION T_filterGenerator.getId: T_idString;
     result:='filter/generator';
   end;
 
-FUNCTION T_filterGenerator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   VAR nextUnfiltered:P_literal;
   begin
     result:=nil;
     repeat
-      nextUnfiltered:=sourceGenerator^.next(@context);
+      nextUnfiltered:=sourceGenerator^.evaluateToLiteral(location,context);
       if (nextUnfiltered<>nil) and (nextUnfiltered^.literalType<>lt_void) then begin
-        if filterExpression^.evaluateToBoolean(location,@context,nextUnfiltered)
+        if filterExpression^.evaluateToBoolean(location,context,nextUnfiltered)
         then exit          (nextUnfiltered)
         else disposeLiteral(nextUnfiltered);
       end else begin
         if nextUnfiltered=nil then exit(newVoidLiteral)
                               else exit(nextUnfiltered);
       end;
-    until (result<>nil) or not(context.adapters^.noErrors);
+    until (result<>nil) or not(P_threadContext(context)^.adapters^.noErrors);
   end;
 
 DESTRUCTOR T_filterGenerator.destroy;
@@ -227,7 +304,7 @@ FUNCTION filter_imp intFuncSignature;
           disposeLiteral(iter);
         end;
         lt_expression: if (P_expressionLiteral(arg0)^.isGenerator) then begin
-          new(P_filterGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
+          new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
       end;
     end;
@@ -237,16 +314,16 @@ TYPE
   P_mapGenerator=^T_mapGenerator;
   T_mapGenerator=object(T_builtinGeneratorExpression)
     private
-      sourceGenerator:P_iterator;
+      sourceGenerator:P_expressionLiteral;
       mapExpression:P_expressionLiteral;
     public
-      CONSTRUCTOR create(CONST source:P_iterator; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION getId:T_idString; virtual;
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_mapGenerator.create(CONST source: P_iterator; CONST mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
     sourceGenerator:=source;
@@ -259,14 +336,14 @@ FUNCTION T_mapGenerator.getId: T_idString;
     result:='map/generator';
   end;
 
-FUNCTION T_mapGenerator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   VAR nextUnmapped:P_literal;
   begin
     result:=nil;
     repeat
-      nextUnmapped:=sourceGenerator^.next(@context);
+      nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context);
       if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
-        result:=mapExpression^.evaluateToLiteral(location,@context,nextUnmapped);
+        result:=mapExpression^.evaluateToLiteral(location,context,nextUnmapped);
         disposeLiteral(nextUnmapped);
         //error handling
         if result=nil then exit(newVoidLiteral);
@@ -275,7 +352,7 @@ FUNCTION T_mapGenerator.next(CONST location: T_tokenLocation; VAR context: T_thr
         if nextUnmapped=nil then exit(newVoidLiteral)
                             else exit(nextUnmapped);
       end;
-    until (result<>nil) or not(context.adapters^.noErrors);
+    until (result<>nil) or not(P_threadContext(context)^.adapters^.noErrors);
   end;
 
 DESTRUCTOR T_mapGenerator.destroy;
@@ -302,7 +379,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST fileName:string; CONST loc:T_tokenLocation; VAR context:T_threadContext);
       FUNCTION getId:T_idString; virtual;
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -324,7 +401,7 @@ FUNCTION T_fileLineIterator.getId: T_idString;
     result:='fileLineIterator';
   end;
 
-FUNCTION T_fileLineIterator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+FUNCTION T_fileLineIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   VAR l:string;
   begin
     if eof(fileHandle) then exit(newVoidLiteral);
@@ -361,7 +438,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST loc:T_tokenLocation);
       FUNCTION getId:T_idString; virtual;
-      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -389,7 +466,7 @@ FUNCTION T_primeGenerator.getId: T_idString;
     result:='primeGenerator';
   end;
 
-FUNCTION T_primeGenerator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   PROCEDURE extendTable;
     VAR offset,newMax:int64;
         k0,k:longint;
@@ -444,4 +521,5 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,[],ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,[se_readFile],ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,[],ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
+  listProcessing.newIterator:=@newIterator;
 end.
