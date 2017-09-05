@@ -30,21 +30,19 @@ end}
 FUNCTION head_imp intFuncSignature;
 {$define CALL_MACRO:=head}
 {$define SCALAR_FALLBACK:=result:=arg0^.rereferenced}
-VAR iterator:P_iterator;
-    i:longint;
+VAR i:longint;
+    iterator:P_expressionLiteral;
 begin
   if (params<>nil)
      and (params^.size=2)
      and (arg0^.literalType=lt_expression)
-     and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0))
-     and (P_expressionLiteral(arg0)^.isStateful)
+     and (P_expressionLiteral(arg0)^.isGenerator)
      and (arg1^.literalType=lt_int)
      and (int1^.value>=0) then begin
      if int1^.value=0 then exit(newListLiteral());
+     iterator:=P_expressionLiteral(arg0);
      result:=newListLiteral(int1^.value);
-     iterator:=newIterator(arg0);
-     for i:=1 to int1^.value do listResult^.append(iterator^.next(@context),false);
-     dispose(iterator,destroy);
+     for i:=1 to int1^.value do listResult^.append(iterator^.evaluateToLiteral(tokenLocation,@context),false);
      exit(result);
   end;
   SUB_LIST_IMPL;
@@ -466,20 +464,20 @@ FUNCTION group_imp intFuncSignature;
   end;
 
 FUNCTION map_imp intFuncSignature;
-  VAR iterator:P_iterator;
+  VAR iterator:P_expressionLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
-      result:=processMapSerial(iterator,P_expressionLiteral(arg1),context);
-      dispose(iterator,destroy);
+      result:=processMapSerial(iterator,P_expressionLiteral(arg1),tokenLocation,context);
+      disposeLiteral(iterator);
     end;
   end;
 
 FUNCTION pMap_imp intFuncSignature;
-  VAR iterator:P_iterator;
+  VAR iterator:P_expressionLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
@@ -487,9 +485,9 @@ FUNCTION pMap_imp intFuncSignature;
         P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       iterator:=newIterator(arg0);
       if tco_spawnWorker in context.threadOptions
-      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),context)
-      else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),context);
-      dispose(iterator,destroy);
+      then result:=processMapParallel(iterator,P_expressionLiteral(arg1),tokenLocation, context)
+      else result:=processMapSerial  (iterator,P_expressionLiteral(arg1),tokenLocation,context);
+      disposeLiteral(iterator);
     end;
   end;
 

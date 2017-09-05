@@ -4220,6 +4220,7 @@ out> -4
 in> [-1, 1,-1, 1,-2, 2].agg(+);
 out> 0
 in> permutationIterator([3, 1, 2]).map(:: print);
+[1,2,3]
 [1,3,2]
 [2,1,3]
 [2,3,1]
