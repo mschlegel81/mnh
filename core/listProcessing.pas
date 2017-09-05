@@ -109,8 +109,7 @@ FUNCTION newIterator(CONST input:P_literal):P_iterator;
   begin
     if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input)))
     else if (input^.literalType=lt_expression) and
-            (P_expressionLiteral(input)^.canApplyToNumberOfParameters(0)) and
-            (P_expressionLiteral(input)^.isStateful) then new(P_generator(result),create(P_expressionLiteral(input)))
+            (P_expressionLiteral(input)^.isGenerator) then new(P_generator(result),create(P_expressionLiteral(input)))
     else new(P_singleValueIterator(result),create(input));
   end;
 

@@ -35,8 +35,7 @@ begin
   if (params<>nil)
      and (params^.size=2)
      and (arg0^.literalType=lt_expression)
-     and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0))
-     and (P_expressionLiteral(arg0)^.isStateful)
+     and (P_expressionLiteral(arg0)^.isGenerator)
      and (arg1^.literalType=lt_int)
      and (int1^.value>=0) then begin
      if int1^.value=0 then exit(newListLiteral());

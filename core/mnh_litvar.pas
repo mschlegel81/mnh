@@ -160,6 +160,7 @@ TYPE
       FUNCTION arity:longint; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
       FUNCTION isStateful:boolean; virtual; abstract;
+      FUNCTION isGenerator:boolean;
       FUNCTION getParentId:T_idString; virtual; abstract;
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
       FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
@@ -817,6 +818,10 @@ CONSTRUCTOR T_mapLiteral.create;
     dat.create();
   end;
 //=================================================================:CONSTRUCTORS
+FUNCTION T_expressionLiteral.isGenerator: boolean;
+  begin
+    result:=isStateful and canApplyToNumberOfParameters(0);
+  end;
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
 DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;

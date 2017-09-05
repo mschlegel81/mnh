@@ -226,11 +226,70 @@ FUNCTION filter_imp intFuncSignature;
             collResult^.append(x,true);
           disposeLiteral(iter);
         end;
-        lt_expression: if (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(0)) and
-                          (P_expressionLiteral(arg0)^.isStateful) then begin
+        lt_expression: if (P_expressionLiteral(arg0)^.isGenerator) then begin
           new(P_filterGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
       end;
+    end;
+  end;
+
+TYPE
+  P_mapGenerator=^T_mapGenerator;
+  T_mapGenerator=object(T_builtinGeneratorExpression)
+    private
+      sourceGenerator:P_iterator;
+      mapExpression:P_expressionLiteral;
+    public
+      CONSTRUCTOR create(CONST source:P_iterator; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION next(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_mapGenerator.create(CONST source: P_iterator; CONST mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    sourceGenerator:=source;
+    mapExpression:=mapEx;
+    mapExpression^.rereference;
+  end;
+
+FUNCTION T_mapGenerator.getId: T_idString;
+  begin
+    result:='map/generator';
+  end;
+
+FUNCTION T_mapGenerator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
+  VAR nextUnmapped:P_literal;
+  begin
+    result:=nil;
+    repeat
+      nextUnmapped:=sourceGenerator^.next(@context);
+      if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
+        result:=mapExpression^.evaluateToLiteral(location,@context,nextUnmapped);
+        disposeLiteral(nextUnmapped);
+        //error handling
+        if result=nil then exit(newVoidLiteral);
+        if result^.literalType=lt_void then disposeLiteral(result);
+      end else begin
+        if nextUnmapped=nil then exit(newVoidLiteral)
+                            else exit(nextUnmapped);
+      end;
+    until (result<>nil) or not(context.adapters^.noErrors);
+  end;
+
+DESTRUCTOR T_mapGenerator.destroy;
+  begin
+    dispose(sourceGenerator,destroy);
+    disposeLiteral(mapExpression);
+  end;
+
+FUNCTION lazyMap_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.isGenerator)
+                                          and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      new(P_mapGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
     end;
   end;
 
@@ -382,6 +441,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,[],ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,[],ak_binary,'permutationIterator(i:int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true');
+  registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,[],ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
   registerRule(LIST_NAMESPACE,'fileLineIterator', @fileLineIterator,[se_readFile],ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,[],ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
 end.
