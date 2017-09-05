@@ -62,6 +62,7 @@ TYPE
   T_permutationIterator=object(T_builtinGeneratorExpression)
     private
       nextPermutation:T_arrayOfLiteral;
+      first:boolean;
     public
       CONSTRUCTOR create(CONST i:int64; CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST arr:P_compoundLiteral; CONST loc:T_tokenLocation);
@@ -74,6 +75,7 @@ CONSTRUCTOR T_permutationIterator.create(CONST i: int64; CONST loc: T_tokenLocat
   VAR k:longint;
   begin
     inherited create(loc);
+    first:=true;
     setLength(nextPermutation,i);
     for k:=0 to i-1 do nextPermutation[k]:=newIntLiteral(k);
   end;
@@ -82,6 +84,7 @@ CONSTRUCTOR T_permutationIterator.create(CONST arr: P_compoundLiteral; CONST loc
   VAR sorted:P_listLiteral;
   begin
     inherited create(loc);
+    first:=true;
     sorted:=newListLiteral();
     sorted^.appendAll(arr);
     sorted^.sort;
@@ -97,6 +100,12 @@ FUNCTION T_permutationIterator.getId: T_idString;
 FUNCTION T_permutationIterator.next(CONST location: T_tokenLocation; VAR context: T_threadContext): P_literal;
   VAR i,k,l:longint;
   begin
+    if first then begin
+      result:=newListLiteral(length(nextPermutation));
+      for i:=0 to length(nextPermutation)-1 do P_listLiteral(result)^.append(nextPermutation[i],true);
+      first:=false;
+      exit(result);
+    end;
     k:=-1;
     //find largest index k so that P[k]<P[k+1] <=> not(P[k+1]<=P[k]);
     for i:=0 to length(nextPermutation)-2 do if not(nextPermutation[i+1]^.leqForSorting(nextPermutation[i])) then k:=i;
