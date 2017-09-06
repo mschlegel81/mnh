@@ -5,6 +5,6 @@ private harshadGen(start:int)->rangeGenerator(start,start+10000).filter(::isHars
 //*See http://rosettacode.org/wiki/Harshad_or_Niven_series
 main->begin
   local gen:=harshadGen(1);
-  printf("%2d",[1..20].each(i, gen()));
+  printf("%2d",harshadGen(1).head(20));
   print("The first Harshad Number >1000 is ",harshadGen(1001)());
 end;

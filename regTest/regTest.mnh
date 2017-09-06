@@ -35,6 +35,7 @@ private skipFile((demosRoot&'simpleServer.mnh'       ))->true;
 private skipFile((demosRoot&'helloWorldHttp.mnh'     ))->true;
 private skipFile((demosRoot&'ipcDatastore.mnh'       ))->true;
 private skipFile((demosRoot&'doublePendulum.mnh'     ))->true;
+private skipFile((demosRoot&'galtonBox.mnh'          ))->true;
 private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
 private skipFile(scriptFileName:string)->false;
 

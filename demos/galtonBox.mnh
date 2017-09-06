@@ -1,0 +1,48 @@
+USE GUI;
+
+private newBall->[13,0,0];
+private dt:=0.2;
+private moveBall(ball:numericList(3))->
+  round(ball[0]+0.5)=round(ball[0]+0.5+dt)
+  ? [ball[0]-dt,ball[1]+ball[2]*dt,ball[2]]
+  : [ball[0]-dt,ball[1]+ball[2]*dt,ball[0]<6 ? 0 : random<0.5 ? -1 : 1];
+
+mutable collected:=[-4..4].map({[$x,0]}).toMap;
+mutable balls:=[newBall];
+
+private plotState->begin
+  [0..6].each(i,[0..i].each(j,[j*2-i,12-i]),|).plot('. 3 red');
+  local fillFactor:=5/max(50,collected.getInner(1).max);
+  collected.sort.each(i,[2*i[0],i[1]*fillFactor]).addPlot('bar fs blue');
+  balls.map({$x[[1,0]]}).addPlot('. 3 black');
+  display;
+end;
+
+private stepState->begin
+  balls:=balls.map(::moveBall).each(ball,ball[0]<=0 ? begin
+    collected[floor(ball[1]/2)]+=1;
+    newBall;
+  end : ball);
+
+  (balls.getInner(0).max<12.5)
+  ? balls||=newBall
+  : void;
+
+  void;
+end;
+
+//*See http://rosettacode.org/wiki/Galton_box_animation
+main->begin
+  setOptions([['autoscaleY',false],['axisStyleX',0],
+              ['autoscaleX',false],['axisStyleY',0],
+              ['y0',0],['y1',13],
+              ['x0',-8],['x1',8],
+              ['preserveAspect',true]]);
+  while(not(plotClosed),begin
+    stepState;
+    plotState;
+    sleep(0.01);
+  end);
+end;
+
+
