@@ -299,6 +299,8 @@ INITIALIZATION
     '#  plus; +;'+
     '#  cross; x;'+
     '#  impulse; i;'+
+    '#  text; t;'+
+    '#  polygon; p;'+
     '#Colors:'+'#  black;'+
     '#  red;'+'#  blue;'+'#  green;'+'#  purple;'+
     '#  orange;'+'#  RGB$,$,$; //With three real numbers in range [0,1]'+

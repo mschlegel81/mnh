@@ -5,7 +5,7 @@ private powerOfX(0)->"1";
 private powerOfX(1)->"x";
 private powerOfX(n)->"x^"&n;
 //Used in formatted print
-private AKSPolyToString(coeff:intList)->[0..size(coeff)-1].each(i,
+private AKSPolyToString(coeff:IntList)->[0..size(coeff)-1].each(i,
   coeff[i]>0 and i>0 ? "+" : "",
   coeff[i] = 1 ? "" : coeff[i] = -1 ? "-" : coeff[i],
   powerOfX(size(coeff)-i-1)).join;

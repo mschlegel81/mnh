@@ -1,5 +1,5 @@
-private shuffle(s:string)->s|shuffle(chars(s));
-private shuffle(s:stringList)->{$x.get(argMin($x.getInner(1)))}([0..size(s)^2].each(i,sortPerm(random(size(s)))).each(perm,[s.get(perm).join,trueCount(s.get(perm) = s)]));
+private shuffle(s:String)->s|shuffle(chars(s));
+private shuffle(s:StringList)->{$x.get(argMin($x.getInner(1)))}([0..size(s)^2].each(i,sortPerm(random(size(s)))).each(perm,[s.get(perm).join,trueCount(s.get(perm) = s)]));
 private inputs:=['abracadabra', 'seesaw', 'elk', 'grrrrrr', 'up', 'a'];
 //*See http://rosettacode.org/wiki/Best_shuffle
 main->inputs.each(i,printf@('%-11s, %-11s, (%d)'|shuffle(i)));

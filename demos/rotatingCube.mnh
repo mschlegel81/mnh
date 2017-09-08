@@ -1,6 +1,6 @@
 private project(x,y,z)->[x,y]/(z+2);
 
-private cubePoints(t:numeric)->
+private cubePoints(t:Numeric)->
   [0..7].each(i,begin
     local x:=      (i and 1)   -0.5;
     local y:=toInt((i and 2)=2)-0.5;

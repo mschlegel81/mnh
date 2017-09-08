@@ -6,10 +6,10 @@ private Ulam(n)->(n and 1)=0 ? [[n*n..n*(n-1)+1]] | [0..n-2].each(j,(Ulam(n-1).g
 private mark(i<=9)->" _"&i;
 private mark(i<=99)->" "&i;
 private mark(i    )->" XX";
-private UlamSpiral(n:int)->UlamSpiral(Ulam(n),primes(n*n));
+private UlamSpiral(n:Int)->UlamSpiral(Ulam(n),primes(n*n));
 private UlamSpiral(Lines,Primes)->printf("%s",Lines.each(l,l.each(n,n in Primes ? mark(n)  : "   ",&)));
 
 //*Displays a 40x40 Ulam-Spiral
 main->UlamSpiral(40);
 //*Displays a n x n Ulam-Spiral
-main(n:string)->UlamSpiral(softCast(n));
+main(n)->UlamSpiral(softCast(n));

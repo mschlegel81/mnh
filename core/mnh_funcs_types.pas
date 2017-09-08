@@ -156,39 +156,39 @@ FUNCTION isStateful intFuncSignature;
   begin
     result:=nil;              ;
     if (params<>nil) and (params^.size=1) then
-    result:=newBoolLiteral(arg0^.literalType in C_matchingTypes[TYPE_CHECK])
-    else if (TYPE_CHECK in C_modifieableTypeChecks) and (params^.size=2) and (arg1^.literalType=lt_int) then
-    result:=newBoolLiteral((arg0^.literalType in C_matchingTypes[TYPE_CHECK])
+    result:=newBoolLiteral(arg0^.literalType in C_typeInfo[TYPE_CHECK].matching)
+    else if (C_typeInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
+    result:=newBoolLiteral((arg0^.literalType in C_typeInfo[TYPE_CHECK].matching)
        and (   (arg0^.literalType<>lt_expression    ) or (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(int1^.value)))
        and (not(arg0^.literalType in C_compoundTypes) or (P_compoundLiteral  (arg0)^.size =int1^.value)));
   end}
 
-{$define TYPE_CHECK:=tt_typeCheckScalar          } {$define FUNC_ID:=isScalar           } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckList            } {$define FUNC_ID:=isList             } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckSet             } {$define FUNC_ID:=isSet              } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckCollection      } {$define FUNC_ID:=isCollection       } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckBoolean         } {$define FUNC_ID:=isBoolean          } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckBoolList        } {$define FUNC_ID:=isBooleanList      } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckBoolSet         } {$define FUNC_ID:=isBooleanSet       } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckBoolCollection  } {$define FUNC_ID:=isBooleanCollection} GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckInt             } {$define FUNC_ID:=isInt              } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckIntList         } {$define FUNC_ID:=isIntList          } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckIntSet          } {$define FUNC_ID:=isIntSet           } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckIntCollection   } {$define FUNC_ID:=isIntCollection    } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckReal            } {$define FUNC_ID:=isReal             } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckRealList        } {$define FUNC_ID:=isRealList         } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckRealSet         } {$define FUNC_ID:=isRealSet          } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckRealCollection  } {$define FUNC_ID:=isRealCollection   } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckString          } {$define FUNC_ID:=isString           } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckStringList      } {$define FUNC_ID:=isStringList       } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckStringSet       } {$define FUNC_ID:=isStringSet        } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckStringCollection} {$define FUNC_ID:=isStringCollection } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckNumeric         } {$define FUNC_ID:=isNumeric          } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckNumList         } {$define FUNC_ID:=isNumericList      } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckNumSet          } {$define FUNC_ID:=isNumericSet       } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckNumCollection   } {$define FUNC_ID:=isNumericCollection} GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckMap             } {$define FUNC_ID:=isMap              } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tt_typeCheckExpression      } {$define FUNC_ID:=isExpression       } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckScalar          } {$define FUNC_ID:=isScalar           } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckList            } {$define FUNC_ID:=isList             } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckSet             } {$define FUNC_ID:=isSet              } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckCollection      } {$define FUNC_ID:=isCollection       } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckBoolean         } {$define FUNC_ID:=isBoolean          } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckBoolList        } {$define FUNC_ID:=isBooleanList      } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckBoolSet         } {$define FUNC_ID:=isBooleanSet       } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckBoolCollection  } {$define FUNC_ID:=isBooleanCollection} GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckInt             } {$define FUNC_ID:=isInt              } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIntList         } {$define FUNC_ID:=isIntList          } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIntSet          } {$define FUNC_ID:=isIntSet           } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIntCollection   } {$define FUNC_ID:=isIntCollection    } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckReal            } {$define FUNC_ID:=isReal             } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckRealList        } {$define FUNC_ID:=isRealList         } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckRealSet         } {$define FUNC_ID:=isRealSet          } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckRealCollection  } {$define FUNC_ID:=isRealCollection   } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckString          } {$define FUNC_ID:=isString           } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStringList      } {$define FUNC_ID:=isStringList       } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStringSet       } {$define FUNC_ID:=isStringSet        } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStringCollection} {$define FUNC_ID:=isStringCollection } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckNumeric         } {$define FUNC_ID:=isNumeric          } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckNumList         } {$define FUNC_ID:=isNumericList      } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckNumSet          } {$define FUNC_ID:=isNumericSet       } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckNumCollection   } {$define FUNC_ID:=isNumericCollection} GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckMap             } {$define FUNC_ID:=isMap              } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckExpression      } {$define FUNC_ID:=isExpression       } GENERIC_TYPE_CHECK;
 
 FUNCTION isVoid intFuncSignature;
   begin

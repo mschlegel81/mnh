@@ -1,7 +1,7 @@
 private OPLIST:=['+','-','*','/'];
 private OP_TRIPLET:=cross(OPLIST,OPLIST,OPLIST);
-private testSolution(s:string)->interpret(s)=24 ? s : void;
-private testSolution(N:intList(4),O:stringList(3))->testSolution('((%{$0}s%{$4}s%{$1}s)%{$5}s%{$2}s)%{$6}s%{$3}s'.format@(N|O));
+private testSolution(s:String)->interpret(s)=24 ? s : void;
+private testSolution(N:IntList(4),O:StringList(3))->testSolution('((%{$0}s%{$4}s%{$1}s)%{$5}s%{$2}s)%{$6}s%{$3}s'.format@(N|O));
 
 private findSolution(set)->
   set.permutationIterator.each(N,

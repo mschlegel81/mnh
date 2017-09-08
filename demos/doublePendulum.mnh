@@ -25,9 +25,9 @@ private F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi
 private F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
 
 //*Overloaded for use in RK4
-private accel(state:numericList(4))->accel@state;
+private accel(state:NumericList(4))->accel@state;
 
-private quickRoot(F:expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
+private quickRoot(F:Expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
 
 //*Returns first derivative in time for given state
 private accel(phi1,phi2,phi1dt,phi2dt)->
@@ -39,7 +39,7 @@ private accel(phi1,phi2,phi1dt,phi2dt)->
   end;
 
 //*Transforms the state (by angles) to a list of points (Cartesian, 2D)
-private plottable(state:numericList(4))->begin
+private plottable(state:NumericList(4))->begin
   [[0,0],local d1:=[sin(state[0]),-cos(state[0])]*l1,
                d1+ [sin(state[1]),-cos(state[1])]*l2];
 end;

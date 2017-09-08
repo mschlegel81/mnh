@@ -1,5 +1,5 @@
 //@demo_for=stateful expressions
-foo(x:numeric)->{begin
+foo(x:Numeric)->{begin
   local sum:=x;
 save;
   sum+=$0;

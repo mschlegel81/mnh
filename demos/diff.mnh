@@ -1,7 +1,7 @@
 USE guiScripts;
 //*Shows the diff of two files
 //@demo_for=diff
-main(file1:string,file2:string)->
+main(file1:String,file2:String)->
   printf("%s",unifiedDiff(file1,
                           file2,
                           file1.fileLines,
@@ -9,7 +9,7 @@ main(file1:string,file2:string)->
                           2));
 
 //*Shows the diff of two files with customizable extra lines
-main(file1:string,file2:string,extraLines)->
+main(file1:String,file2:String,extraLines)->
   printf("%s",unifiedDiff(file1,
                           file2,
                           file1.fileLines,

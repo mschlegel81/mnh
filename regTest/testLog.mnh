@@ -8,11 +8,11 @@ private mnhRoot:=myPath.split(['\','/']).leading(2).{[$x.join('/'),$x.join('\')]
 testAlreadyPassed(exe)->[flavour(exe),codeVersion(exe)] in (log orElse []).getInner([0,1]);
 testAlreadyPassed->executor.testAlreadyPassed;
 
-timeForTest(exe:string)->timeForTest(flavour(exe),codeVersion(exe));
+timeForTest(exe:String)->timeForTest(flavour(exe),codeVersion(exe));
 timeForTest(flavour,codeVersion)->log[log.getInner(0)=flavour and log.getInner(1)=codeVersion][0,2];
 
 //@SuppressUnusedWarning
-validateCollectedOutput(doLog:boolean,output:stringList)->begin
+validateCollectedOutput(doLog:Boolean,output:StringList)->begin
   local printOut:=output.replace(mnhRoot,'');
   local expectedResultName:=myPath.changeFileExt('.'&flavour&'.expected');
   local lastResultName    :=myPath.changeFileExt('.'&flavour&'.last');

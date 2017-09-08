@@ -1,4 +1,4 @@
-thueMorseSequence(targetLength:int)->begin
+thueMorseSequence(targetLength:Int)->begin
   local result:=[false];
   while(result.size<targetLength,result|=not(result));
   head(result,targetLength);

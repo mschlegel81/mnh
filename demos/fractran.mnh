@@ -4,7 +4,7 @@ private POT2TAIL:=[0,0,0, 0, 0, 0, 0, 0, 0];
 private niceRational(L)->[0..size(L)-1].each(i,L.get(i)<>0 ? BASE.get(i)&"^"&L.get(i) : void).join("*")&" = "&(BASE^L).agg(*);
 
 //*This routine transforms a rational number to the corresponding prime factor powers
-private rational(enumerator:int,denominator:int)->begin
+private rational(enumerator:Int,denominator:Int)->begin
   local en:=enumerator;
   local de:=denominator;
   BASE.each(b,begin
@@ -16,17 +16,17 @@ private rational(enumerator:int,denominator:int)->begin
 end;
 
 //*A list of prime factor powers denotes an integer, if all powers are nonnegative
-private isInteger(L:intList)->min(L)>=0;
+private isInteger(L:IntList)->min(L)>=0;
 
 //*Turns an input string first into a list of tuples (denoting rational numbers) then to lists of prime factor powers
-private parseFractions(s:string)->
+private parseFractions(s:String)->
   toExpression('[['&
              replace(s,[' ', ',' ,'/'],
                        ['' ,'],[',','])&
              ']]')().each(tuple,rational@tuple);
 
 //*The core algorithm;
-private Fractran(out:expression,fractions,k,steplimit)->begin
+private Fractran(out:Expression,fractions,k,steplimit)->begin
   local state:=k;
   local terminated:=false;
   out(0,state);

@@ -1,7 +1,7 @@
-type Matrix(M:list)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
-type SquareMatrix(M:list)->M.each(row,row.isNumericList(M.size),AND);
+type Matrix(M:List)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
+type SquareMatrix(M:List)->M.each(row,row.isNumericList(M.size),AND);
 
-private subMatrix(M:list,skipRow,skipCol)->
+private subMatrix(M:List,skipRow,skipCol)->
   M.each(row,index=skipRow
              ? void
              : row.each(cell,index=skipCol ? void : cell));
@@ -17,34 +17,37 @@ mult(x:Matrix,y:Matrix)->begin
                      : fail('Matrices must have compatible sizes for multiplication.');
 end;
 //*Matrix+vector multiplication
-mult(x:Matrix,vec:numericList)->x.mult(vec.each(c,[c]));
+mult(x:Matrix,vec:NumericList)->x.mult(vec.each(c,[c]));
 //*Vector+matrix multiplication
-mult(vec:numericList,y:Matrix)->[vec].mult(y);
+mult(vec:NumericList,y:Matrix)->[vec].mult(y);
 
 determinant(M:SquareMatrix)->
   M.size=1 ? M[0,0] :
   M.size=2 ? M[0,0]*M[1,1]-M[1,0]*M[0,1] :
              [0..M.size-1].each(i,-1^(i)*M[i,0]*M.subMatrix(i,0).determinant,+);
 
-cross(x:numericList(3),y:numericList(3))->[x[1]*y[2]-y[1]*x[2],
+crossProd(x:NumericList(3),y:NumericList(3))->[x[1]*y[2]-y[1]*x[2],
                                            x[2]*y[0]-y[2]*x[0],
                                            x[0]*y[1]-y[0]*x[1]];
-euclidNorm(x:numericList)->x.sqr.agg(+).sqrt;
+euclidNorm(x:NumericList)->x.sqr.agg(+).sqrt;
 randomVec3OnSphere->begin
   local x:=random(3)-0.5;
   x/euclidNorm(x);
 end;
 
+//@SuppressUnusedWarning
 randomOrthoMatrix->begin
   local x:=randomVec3OnSphere;
-  local y:=x.cross(randomVec3OnSphere);
+  local y:=x.crossProd(randomVec3OnSphere);
         y:=y/euclidNorm(y);
-  local z:=x.cross(y);
+  local z:=x.crossProd(y);
   [x,y,z];
 end;
 
+//@SuppressUnusedWarning
 printMatrix(M)->M.each(row,row.join("\t")).join("\n").print;
 
+//@SuppressUnusedWarning
 invert(M:SquareMatrix)->begin
   //Gauss-Jordan Algorithm
   local aid:=M.each(row,begin local i:=index; row|(row.each(i,index=i ? 1 : 0)); end);
@@ -62,14 +65,18 @@ invert(M:SquareMatrix)->begin
   aid.each(row,row.tail(M.size));
 end;
 
+//@SuppressUnusedWarning
 isUnitMatrix(M:SquareMatrix)->M.each(row,begin local rowIndex:=index; row.each(x,index=rowIndex ? x=1 : x=0,AND); end,AND);
 
+//@SuppressUnusedWarning
 rotZ(angle)->[[ cos(angle),sin(angle),0],
               [-sin(angle),cos(angle),0],
               [         0 ,        0 ,1]];
+//@SuppressUnusedWarning
 rotY(angle)->[[ cos(angle),0,sin(angle)],
               [         0 ,1,        0 ],
               [-sin(angle),0,cos(angle)]];
+//@SuppressUnusedWarning
 rotX(angle)->[[1,         0 ,        0 ],
               [0, cos(angle),sin(angle)],
               [0,-sin(angle),cos(angle)]];

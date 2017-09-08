@@ -1,38 +1,38 @@
 //@SuppressUnusedWarning
 //*Returns the real part of a complex number x
-Re(x:numericList(2))->x[0];
+Re(x:NumericList(2))->x[0];
 //@SuppressUnusedWarning
 //*Returns the imaginary part of a complex number x
-Im(x:numericList(2))->x[1];
+Im(x:NumericList(2))->x[1];
 //@SuppressUnusedWarning
 //*Returns the absolute value of a complex number
-Abs(x:numericList(2))->x.sqr.agg(+).sqrt;
+Abs(x:NumericList(2))->x.sqr.agg(+).sqrt;
 //*Returns the argument of x
-arg(x:numericList(2))->arctan2(x[1],x[0]);
+arg(x:NumericList(2))->arctan2(x[1],x[0]);
 //*Returns the product complex numbers x and y
-cMult(x:numericList(2),y:numericList(2))->[x[0]*y[0]-x[1]*y[1],x[0]*y[1]+x[1]*y[0]];
+cMult(x:NumericList(2),y:NumericList(2))->[x[0]*y[0]-x[1]*y[1],x[0]*y[1]+x[1]*y[0]];
 //*Returns the square of complex number x
-cSqr(x:numericList(2))->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]];
+cSqr(x:NumericList(2))->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]];
 //*Returns 1/x for a complex number x
-cInv(x:numericList(2))->[x[0],-x[1]]/(sqr(x[0])+sqr(x[1]));
+cInv(x:NumericList(2))->[x[0],-x[1]]/(sqr(x[0])+sqr(x[1]));
 //@SuppressUnusedWarning
 //*Returns x/y for complex numbers x and y
-cDiv(x:numericList(2),y:numericList(2))->x.cMult(y.cInv);
+cDiv(x:NumericList(2),y:NumericList(2))->x.cMult(y.cInv);
 //*Returns exponential of complex x
-cExp(x:numericList(2))->exp(x[0])*[cos(x[1]),sin(x[1])];
+cExp(x:NumericList(2))->exp(x[0])*[cos(x[1]),sin(x[1])];
 //*Returns the natural logarithm of complex x
-cLn(x:numericList(2))->[0.5*(x.sqr.agg(+)).ln,arg(x)];
+cLn(x:NumericList(2))->[0.5*(x.sqr.agg(+)).ln,arg(x)];
 //*Returns the k-th power of complex x
-cPot(x:numericList(2),k<0  )->x.cInv.cPot(-k);
-cPot(x:numericList(2),k=0  )->[1,0];
-cPot(x:numericList(2),k:int)->(k and 1)=1 ? x.cPot(k-1).cMult(x)
+cPot(x:NumericList(2),k<0  )->x.cInv.cPot(-k);
+cPot(x:NumericList(2),k=0  )->[1,0];
+cPot(x:NumericList(2),k:Int)->(k and 1)=1 ? x.cPot(k-1).cMult(x)
                                           : x.cSqr.cPot(k div 2);
-cPot(x:numericList(2),k:real)->k=0 ? [1,0] : (x.cLn*k).cExp;
-cPot(x:numericList(2),k:numericList(2))->k=0 ? [1,0] : (x.cLn.cMult(k)).cExp;
+cPot(x:NumericList(2),k:Real)->k=0 ? [1,0] : (x.cLn*k).cExp;
+cPot(x:NumericList(2),k:NumericList(2))->k=0 ? [1,0] : (x.cLn.cMult(k)).cExp;
 
 //@SuppressUnusedWarning
 //*Returns cosinus of complex x
-cCos(x:numericList(2))->begin
+cCos(x:NumericList(2))->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
   local result:=cExp([0, 1].cMult(x));
   (result+cInv(result))*0.5;
@@ -40,7 +40,7 @@ end;
 
 //@SuppressUnusedWarning
 //*Returns sinus of complex x
-cSin(x:numericList(2))->begin
+cSin(x:NumericList(2))->begin
   //sin(x)=(e^(ix)-e^(-ix))/2
   local result:=cExp([0, 1].cMult(x));
   (result-cInv(result))*0.5;

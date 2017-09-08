@@ -171,6 +171,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
   VAR id:ansistring='';
       stringValue:ansistring='';
       tt:T_tokenType;
+      tc:T_typeCheck;
   begin
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
@@ -255,6 +256,10 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
+            for tc in T_typeCheck do if result^.txt=C_typeInfo[tc].name then begin
+              result^.tokType:=tt_type;
+              result^.data:=pointer(ptrint(tc));
+            end;
           end;
         end;
       end;
@@ -286,12 +291,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
                                                else apply(tt_operatorDivReal);
       ':': if startsWith(tt_assign)            then apply(tt_assign)
       else if startsWith(tt_pseudoFuncPointer) then apply(tt_pseudoFuncPointer)
-      else if (length(line)>=inputLocation.column+3) and (line[inputLocation.column+1] in ['b','c','e','i','l','n','s','r','k','f','m']) then begin
-        id:=leadingId;
-        result^.tokType:=tt_iifElse;
-        for tt in C_typeChecks do if id=C_tokenInfo[tt].defaultId then result^.tokType:=tt;
-        if result^.tokType=tt_iifElse then parsedLength:=1;
-      end else apply(tt_iifElse);
+      else apply(tt_iifElse);
       '.': if startsWith(tt_each)                then apply(tt_each) else
            if startsWith(tt_parallelEach)        then apply(tt_parallelEach) else
            if startsWith(tt_agg)                 then apply(tt_agg) else

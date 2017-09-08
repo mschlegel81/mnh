@@ -1,20 +1,20 @@
 //@SuppressUnusedWarning
 //@insertScript=Pick file or directory
-pickFile(s:string)->ask('Pick file or directory').escape;
+pickFile(s:String)->ask('Pick file or directory').escape;
 
 //@SuppressUnusedWarning
 //@editScript=Trim trailing spaces
-trimTrailingSpaces(s:stringList)->s.trimRight;
+trimTrailingSpaces(s:StringList)->s.trimRight;
 
 //@SuppressUnusedWarning
 //@editScript=Remove double blank lines
-removeDoubleBlanks(s:stringList)->s.join("\n").replace("\n\n\n","\n\n").split("\n");
+removeDoubleBlanks(s:StringList)->s.join("\n").replace("\n\n\n","\n\n").split("\n");
 
 //@SuppressUnusedWarning
 //@editScript=Sort lines and remove duplicates
-sortLines(s:stringList)->s.unique.sort;
+sortLines(s:StringList)->s.unique.sort;
 
-unifiedDiff(aName:string,bName:string,aLines:stringList,bLines:stringList,additionalLines>=0)->begin
+unifiedDiff(aName:String,bName:String,aLines:StringList,bLines:StringList,additionalLines>=0)->begin
   local edit:=diff(aLines,bLines,true)['edit'].each(e,e[0]='+' ? [e[0],e[1]+1,e[2]+1,bLines[e[2]]]
                                                                : [e[0],e[1]+1,e[2]+1,aLines[e[1]]]);
 
@@ -33,18 +33,18 @@ end;
 //@utility=diff (new editor)
 //@newEdit
 //@language=diff
-editDiff(editorFile:string)->begin
+editDiff(editorFile:String)->begin
   local compareWith:=ask("Pick tab to compare with",editors.each(e,e=editorFile ? void : e));
   unifiedDiff(compareWith,editorFile,editorContent(compareWith),editorContent(editorFile),2);
 end;
 
 //@SuppressUnusedWarning
 //@utility=diff
-editDiffPrint(editorFile:string)->printf("%s",editDiff(editorFile));
+editDiffPrint(editorFile:String)->printf("%s",editDiff(editorFile));
 
 //@SuppressUnusedWarning
 //@utility=find in all open files
-findInAll(editorFile:string)->begin
+findInAll(editorFile:String)->begin
   local searchRegex:=ask('Please enter regex for search.');
   searchRegex<>''
   ? editors.each(editor,editor.editorContent.each(line,line.matches(searchRegex) ? print('@',editor,':',index+1,',',1) : void))
@@ -54,14 +54,14 @@ end;
 
 //@SuppressUnusedWarning
 //@utility=open all imported files
-openImported(editorFile:string)->inspect(editorFile,editorFile.editorContent)['uses'].getInner(1).each(file,openInEditor(file));
+openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent)['uses'].getInner(1).each(file,openInEditor(file));
 
 
 //@SuppressUnusedWarning
 //@utility=Compare folders (new editor)
 //@newEdit
 //@language=diff
-compareFolders(editorFile:string)->begin
+compareFolders(editorFile:String)->begin
   local folder1:=ask('Please enter folder 1').expandedFileName;
   local filesIn1:=folder1.allFiles.replaceOne(folder1,'');
   local folder2:=ask('Please enter folder 2').expandedFileName;

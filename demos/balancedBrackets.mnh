@@ -1,6 +1,6 @@
 //@demo_for=memoization
 //Note: Using memoization here is a hack to ensure that successive callls return the same string
-private memoized randomBrackets(n:int)->n<1 ? "" : [1..n].each(i,'[',']').get(sortPerm(random(2*n))).agg(&);
-private isOk(s:string)->replace(s,"[]","")="";
+private memoized randomBrackets(n:Int)->n<1 ? "" : [1..n].each(i,'[',']').get(sortPerm(random(2*n))).agg(&);
+private isOk(s:String)->replace(s,"[]","")="";
 //*See http://rosettacode.org/wiki/Balanced_brackets
 main->[1..8].each(i,printf('%-16s %s',randomBrackets(i),isOk(randomBrackets(i)) ? "o.k." : "NOT o.k."));

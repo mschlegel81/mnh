@@ -13,7 +13,7 @@ private barnsleyFern(sampleCount)->begin
   transpose([x,y]);
 end;
 
-private main_impl(filename:string,xRes:int,yRes:int)->begin
+private main_impl(filename:String,xRes:Int,yRes:Int)->begin
   plot.setOptions([['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]);
   plot.plot(barnsleyFern(100000),"0.2 . green");
   plot.renderToFile(filename,xRes,yRes,1);

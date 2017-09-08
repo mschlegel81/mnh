@@ -1,10 +1,10 @@
 private printSquare(S)->print(S.each(row,row.join("\t")).join("\n")) and
                         print("The magic number is ",S.get(0).agg(+));
-private set(S:list,I,J,k)->[0..size(S)-1].each(i,i=I ? [0..size(S)-1].each(j,j=J ? k : S.get(i).get(j)) : S.get(i));
+private set(S:List,I,J,k)->[0..size(S)-1].each(i,i=I ? [0..size(S)-1].each(j,j=J ? k : S.get(i).get(j)) : S.get(i));
 
-private makeSquare(n:int)->makeSquare_(n<1 ? 1 : (n and 1)=0 ? n+1 : n);
-private makeSquare_(n:int)->makeSquare_(n,[0..n-1].each(i,[0..n-1].each(j,i=0 and j=n div 2 ? 1 : 'x')),n-1,(n div 2)+1,2);
-private makeSquare_(n,S:list,i,j,k)->k<n*n ? makeSquare_(n,set(S,i,j,k),
+private makeSquare(n:Int)->makeSquare_(n<1 ? 1 : (n and 1)=0 ? n+1 : n);
+private makeSquare_(n:Int)->makeSquare_(n,[0..n-1].each(i,[0..n-1].each(j,i=0 and j=n div 2 ? 1 : 'x')),n-1,(n div 2)+1,2);
+private makeSquare_(n,S:List,i,j,k)->k<n*n ? makeSquare_(n,set(S,i,j,k),
                                                          k mod n=0 ? (i+1) mod n : (i+n-1) mod n,
                                                          k mod n=0 ? j           : (j+1)   mod n,
                                                          k+1)

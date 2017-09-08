@@ -29,19 +29,19 @@ digit(d in [0..9],fontStyle=0)->BIG[d];
 digit(d in [0..9],fontStyle=1)->BIG[d].each(L,index in [0,2,3,5,7] ? L : void)|['','',''];
 digit(d in [0..9],fontStyle=2)->['','','','','']|TINY[d];
 
-memoized printOnce(s:stringList)->clearPrint orElse printf('%s',s);
+memoized printOnce(s:StringList)->clearPrint orElse printf('%s',s);
 
-asciiArtTime(s:string)->begin
+asciiArtTime(s:String)->begin
   local result:=s.chars.each(n,digit(n.toInt,index div 2))
                   .transpose(' ').map({('%s %s %s %s              %s%s'.format@$s0).copy(0,43)});
   (repeat('-',length(result).max+1)&'+')|
   (result&' |')|
   (repeat('-',length(result).max+1)&'+');
 end;
-asciiArtTime(t:real)->asciiArtTime(formatTime('hhnnss',t));
+asciiArtTime(t:Real)->asciiArtTime(formatTime('hhnnss',t));
 
 
-guessTimeOrInterval(TimeOrIntervalString:string)->
+guessTimeOrInterval(TimeOrIntervalString:String)->
   begin
     local S:=TimeOrIntervalString.upper.clean(['0'..'9',':','H','M','S'],'');
     (pos(['H','M','S'],S)>=0).agg(OR)

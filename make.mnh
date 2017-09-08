@@ -73,7 +73,7 @@ private ensureBuiltNumber->begin
     end;
 end;
 
-private myMove(source,dest:string)->fileExists(source) ? begin
+private myMove(source,dest:String)->fileExists(source) ? begin
   local tries:=3;
   while(fileExists(dest) AND tries>0,
     deleteFile(dest) ? void : begin
@@ -148,13 +148,13 @@ end;
 testIsPassedAccordingToLog(B:BuildConfig)->
   testLog.log[testLog.log.getInner(0)=B[1] and testLog.log.getInner(1)=ensureCodeHash].size>0;
 
-private isSameFileName(filename1:string,filename2:string)->begin
+private isSameFileName(filename1:String,filename2:String)->begin
   local case:=isLinux ? {$x} : {$x.upper};
   (filename1.expandedFileName.case)==
   (filename2.expandedFileName.case);
 end;
 
-private isSimilarFile(filename1:string,filename2:string)->pos(filename2.upper,filename1.upper)>=0;
+private isSimilarFile(filename1:String,filename2:String)->pos(filename2.upper,filename1.upper)>=0;
 private acceptedMainParameters->inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p);
 main->main('build');
 //*Build all targets
@@ -188,7 +188,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
 end;
 
 //*Build one specific target
-main(target:string)->begin
+main(target:String)->begin
   local testAfterBuild:=false;
   local tgt:=target;
   target.copy(target.length-1,1)=='!'

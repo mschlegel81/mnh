@@ -14,7 +14,7 @@ memoized twoFifths->toSet([1..249]^5)+toSet([1..249]^5);
 //  the first with  S = twoFifths (numbers that can be expressed as sum of two powers of five)
 //  the second with S = fifthSet  (powers of five)
 
-splitL1(powerOfFive:int)->begin
+splitL1(powerOfFive:Int)->begin
   local R:=
   intersect(powerOfFive-twoFifths,twoFifths)
            .map({[powerOfFive-$q,$q].sort})
@@ -25,7 +25,7 @@ splitL1(powerOfFive:int)->begin
   : R.map({format('%s^5 = %s^5 + %s^5 + %s^5 + %s^5')@(round(powerOfFive^0.2)|round($x^0.2))});
 end;
 
-splitL2(sumOfP5:int)->
+splitL2(sumOfP5:Int)->
   intersect(sumOfP5-fifthSet,fifthSet)
            .map({[sumOfP5-$q,$q].sort})
            .toSet;

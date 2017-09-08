@@ -70,7 +70,7 @@ TYPE
                        rwc_specialLiteral,
                        rwc_specialConstruct,
                        rwc_operator,
-                       rwc_typeCheck,
+                       rwc_type,
                        rwc_modifier);
 
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
@@ -149,14 +149,8 @@ TYPE
     tt_mut_assignAppendAlt, tt_mut_nestedAppendAlt, //||=
     tt_mut_assignDrop,      tt_mut_nestedDrop,      //>>
     //type checks:
-    tt_typeCheckScalar,  tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
-    tt_typeCheckBoolean, tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
-    tt_typeCheckInt,     tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
-    tt_typeCheckReal,    tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
-    tt_typeCheckString,  tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
-    tt_typeCheckNumeric, tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
-    tt_typeCheckMap,
-    tt_typeCheckExpression,
+    tt_type,
+    tt_typeCheck,
     tt_customTypeCheck,
     tt_semicolon,
     tt_optionalParameters,
@@ -178,6 +172,15 @@ TYPE
 
   T_tokenTypeSet  =set of T_tokenType;
   T_modifier      =tt_modifier_private..tt_modifier_customType;
+  T_typeCheck     =(tc_typeCheckScalar,  tc_typeCheckList,       tc_typeCheckSet,       tc_typeCheckCollection,
+                    tc_typeCheckBoolean, tc_typeCheckBoolList,   tc_typeCheckBoolSet,   tc_typeCheckBoolCollection,
+                    tc_typeCheckInt,     tc_typeCheckIntList,    tc_typeCheckIntSet,    tc_typeCheckIntCollection,
+                    tc_typeCheckReal,    tc_typeCheckRealList,   tc_typeCheckRealSet,   tc_typeCheckRealCollection,
+                    tc_typeCheckString,  tc_typeCheckStringList, tc_typeCheckStringSet, tc_typeCheckStringCollection,
+                    tc_typeCheckNumeric, tc_typeCheckNumList,    tc_typeCheckNumSet,    tc_typeCheckNumCollection,
+                    tc_typeCheckMap,
+                    tc_typeCheckExpression);
+
 CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized,tt_modifier_customType];
 TYPE
   T_modifierSet=set of T_modifier;
@@ -282,7 +285,7 @@ CONST
   C_forbiddenTokenTypes: T_tokenTypeSet=[tt_rulePutCacheValue, tt_agg, tt_parList_constructor, tt_parList,
     tt_declare,
     //type checks:
-    tt_typeCheckScalar..tt_customTypeCheck,
+    tt_typeCheck..tt_customTypeCheck,
     //modifiers:
     tt_modifier_private,
     tt_modifier_memoized,
@@ -304,7 +307,6 @@ CONST
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat,tt_operatorConcatAlt];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_patternElementComparators: T_tokenTypeSet=[tt_comparatorEq..tt_comparatorListEq,tt_operatorIn];
-  C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckExpression];
   C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
@@ -341,43 +343,6 @@ CONST
     8, 8,                //unaries
     5, 9,                //special: string concatenation
    10,10, 7);            //list operators
-
-  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckExpression] of T_literalTypeSet =
-    {tt_typeCheckScalar}          ([lt_boolean, lt_int, lt_real, lt_string],
-    {tt_typeCheckList}             [lt_list..lt_emptyList],
-    {tt_typeCheckSet}              [lt_set..lt_emptySet],
-    {tt_typeCheckCollection}       [lt_list..lt_emptyList,lt_set..lt_emptySet],
-    {tt_typeCheckBoolean}          [lt_boolean],
-    {tt_typeCheckBoolList}         [lt_booleanList, lt_emptyList],
-    {tt_typeCheckBoolSet}          [lt_booleanSet, lt_emptySet],
-    {tt_typeCheckBoolCollection}   [lt_booleanList, lt_emptyList, lt_booleanSet, lt_emptySet],
-    {tt_typeCheckInt}              [lt_int],
-    {tt_typeCheckIntList}          [lt_intList, lt_emptyList],
-    {tt_typeCheckIntSet}           [lt_intSet, lt_emptySet],
-    {tt_typeCheckIntCollection}    [lt_intList, lt_emptyList, lt_intSet, lt_emptySet],
-    {tt_typeCheckReal}             [lt_real],
-    {tt_typeCheckRealList}         [lt_realList, lt_emptyList],
-    {tt_typeCheckRealSet}          [lt_realSet, lt_emptySet],
-    {tt_typeCheckRealCollection}   [lt_realList, lt_emptyList, lt_realSet, lt_emptySet],
-    {tt_typeCheckString}           [lt_string],
-    {tt_typeCheckStringList}       [lt_stringList, lt_emptyList],
-    {tt_typeCheckStringSet}        [lt_stringSet, lt_emptySet],
-    {tt_typeCheckStringCollection} [lt_stringList, lt_emptyList, lt_stringSet, lt_emptySet],
-    {tt_typeCheckNumeric}          [lt_int, lt_real],
-    {tt_typeCheckNumList}          [lt_intList, lt_realList, lt_numList, lt_emptyList],
-    {tt_typeCheckNumSet}           [lt_intSet, lt_realSet, lt_numSet, lt_emptySet],
-    {tt_typeCheckNumCollection}    [lt_intList, lt_realList, lt_numList, lt_emptyList, lt_intSet, lt_realSet, lt_numSet, lt_emptySet],
-    {tt_typeCheckMap}              [lt_emptyMap,lt_map],
-    {tt_typeCheckExpression}       [lt_expression]);
-  C_modifieableTypeChecks: T_tokenTypeSet=[
-    tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
-    tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
-    tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
-    tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
-    tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
-    tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
-    tt_typeCheckMap,
-    tt_typeCheckExpression];
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_tokenInfo:array[T_tokenType] of record
@@ -471,33 +436,8 @@ CONST
 {tt_mut_nestedAppendAlt}        (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
 {tt_mut_assignDrop}             (defaultId:'>>';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Drop operator'),
 {tt_mut_nestedDrop}             (defaultId:'';              defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:''),
-
-{tt_typeCheckScalar}            (defaultId:':scalar';       defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check scalar;#Matches on all non-lists'),
-{tt_typeCheckList}              (defaultId:':list';         defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check list;#Matches on all lists#Can be modified to match only lists of a given size'),
-{tt_typeCheckSet}               (defaultId:':set';          defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check set;#Matches on all sets#Can be modified to match only sets of a given size'),
-{tt_typeCheckCollection}        (defaultId:':collection';   defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check collection;#Matches on all lists and sets#Can be modified to match only colections of a given size'),
-{tt_typeCheckBoolean}           (defaultId:':boolean';      defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check boolean;#Matches on scalar booleans'),
-{tt_typeCheckBoolList}          (defaultId:':booleanList';  defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check boolean list;#Matches on lists of booleans and empty lists'),
-{tt_typeCheckBoolSet}           (defaultId:':booleanSet';   defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check boolean set;#Matches on sets of booleans and empty sets'),
-{tt_typeCheckBoolCollection}    (defaultId:':booleanCollection';defaultHtmlSpan:'builtin';reservedWordClass:rwc_typeCheck;        helpText:'Type check boolean collection;#Matches on collections of booleans and empty collections'),
-{tt_typeCheckInt}               (defaultId:':int';          defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check integer;#Matches on scalar integers'),
-{tt_typeCheckIntList}           (defaultId:':intList';      defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check integer list;#Matches on lists of integers and empty lists'),
-{tt_typeCheckIntSet}            (defaultId:':intSet';       defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check integer set;#Matches on sets of integers and empty sets'),
-{tt_typeCheckIntCollection}     (defaultId:':intCollection';defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check integer collection;#Matches on collections of integers and empty collections'),
-{tt_typeCheckReal}              (defaultId:':real';         defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check real;#Matches on scalar reals'),
-{tt_typeCheckRealList}          (defaultId:':realList';     defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check real list;#Matches on lists of reals and empty lists'),
-{tt_typeCheckRealSet}           (defaultId:':realSet';      defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check real set;#Matches on sets of reals and empty sets'),
-{tt_typeCheckRealCollection}    (defaultId:':realCollection';defaultHtmlSpan:'builtin';   reservedWordClass:rwc_typeCheck;        helpText:'Type check real collection;#Matches on collections of reals and empty collections'),
-{tt_typeCheckString}            (defaultId:':string';       defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check string;#Matches on scalar strings'),
-{tt_typeCheckStringList}        (defaultId:':stringList';   defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check string list;#Matches on lists of strings and empty lists'),
-{tt_typeCheckStringSet}         (defaultId:':stringSet';    defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check string set;#Matches on sets of strings and empty sets'),
-{tt_typeCheckStringCollection}  (defaultId:':stringCollection';defaultHtmlSpan:'builtin'; reservedWordClass:rwc_typeCheck;        helpText:'Type check string collection;#Matches on collections of strings and empty collections'),
-{tt_typeCheckNumeric}           (defaultId:':numeric';      defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check numeric;#Matches on scalar integers and reals'),
-{tt_typeCheckNumList}           (defaultId:':numericList';  defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check numeric list;#Matches on lists of integers and reals (mixing is allowed) and empty lists'),
-{tt_typeCheckNumSet}            (defaultId:':numericSet';   defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check numeric set;#Matches on sets of integers and reals (mixing is allowed) and empty sets'),
-{tt_typeCheckNumCollection}     (defaultId:':numericCollection';defaultHtmlSpan:'builtin';reservedWordClass:rwc_typeCheck;        helpText:'Type check numeric collection;#Matches on collections of integers and reals (mixing is allowed) and empty collections'),
-{tt_typeCheckMap}               (defaultId:':map';          defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check map;#Matches on maps'),
-{tt_typeCheckExpression}        (defaultId:':expression';   defaultHtmlSpan:'builtin';    reservedWordClass:rwc_typeCheck;        helpText:'Type check expression;#Matches on expressions#Can be modified to match only on expressions with a given arity'),
+{tt_type}                       (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'Type'),
+{tt_typeCheck}                  (defaultId:'';              defaultHtmlSpan:'builtin';    reservedWordClass:rwc_not_reserved;     helpText:'Type check'),
 {tt_customTypeCheck}            (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'Custom type check'),
 {tt_semicolon}                  (defaultId:';';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Semicolon#Ends a statement'),
 {tt_optionalParameters}         (defaultId:'...';           defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
@@ -515,6 +455,38 @@ CONST
 {tt_use}                        (defaultId:'USE';           defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: USE#Denotes the use clause#Followed by package paths (as string) or package ids'),
 {tt_include}                    (defaultId:'INCLUDE';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Marker: INCLUDE#Denotes the include clause#Followed by one package path (as string) or one package id'),
 {tt_blank}                      (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'));
+
+  C_typeInfo:array[T_typeCheck] of record
+    name:string;
+    modifiable:boolean;
+    matching:T_literalTypeSet;
+  end=(
+  {tc_typeCheckScalar}            (name:'Scalar';            modifiable:false; matching:[lt_boolean, lt_int, lt_real, lt_string]),
+  {tc_typeCheckList}              (name:'List';              modifiable:true;  matching:[lt_list..lt_emptyList]),
+  {tc_typeCheckSet}               (name:'Set';               modifiable:true;  matching:[lt_set..lt_emptySet]),
+  {tc_typeCheckCollection}        (name:'Collection';        modifiable:true;  matching:[lt_list..lt_emptyList,lt_set..lt_emptySet]),
+  {tc_typeCheckBoolean}           (name:'Boolean';           modifiable:false; matching:[lt_boolean]),
+  {tc_typeCheckBoolList}          (name:'BooleanList';       modifiable:true;  matching:[lt_booleanList, lt_emptyList]),
+  {tc_typeCheckBoolSet}           (name:'BooleanSet';        modifiable:true;  matching:[lt_booleanSet, lt_emptySet]),
+  {tc_typeCheckBoolCollection}    (name:'BooleanCollection'; modifiable:true;  matching:[lt_booleanList, lt_emptyList, lt_booleanSet, lt_emptySet]),
+  {tc_typeCheckInt}               (name:'Int';               modifiable:false; matching:[lt_int]),
+  {tc_typeCheckIntList}           (name:'IntList';           modifiable:true;  matching:[lt_intList, lt_emptyList]),
+  {tc_typeCheckIntSet}            (name:'IntSet';            modifiable:true;  matching:[lt_intSet, lt_emptySet]),
+  {tc_typeCheckIntCollection}     (name:'IntCollection';     modifiable:true;  matching:[lt_intList, lt_emptyList, lt_intSet, lt_emptySet]),
+  {tc_typeCheckReal}              (name:'Real';              modifiable:false; matching:[lt_real]),
+  {tc_typeCheckRealList}          (name:'RealList';          modifiable:true;  matching:[lt_realList, lt_emptyList]),
+  {tc_typeCheckRealSet}           (name:'RealSet';           modifiable:true;  matching:[lt_realSet, lt_emptySet]),
+  {tc_typeCheckRealCollection}    (name:'RealCollection';    modifiable:true;  matching:[lt_realList, lt_emptyList, lt_realSet, lt_emptySet]),
+  {tc_typeCheckString}            (name:'String';            modifiable:false; matching:[lt_string]),
+  {tc_typeCheckStringList}        (name:'StringList';        modifiable:true;  matching:[lt_stringList, lt_emptyList]),
+  {tc_typeCheckStringSet}         (name:'StringSet';         modifiable:true;  matching:[lt_stringSet, lt_emptySet]),
+  {tc_typeCheckStringCollection}  (name:'StringCollection';  modifiable:true;  matching:[lt_stringList, lt_emptyList, lt_stringSet, lt_emptySet]),
+  {tc_typeCheckNumeric}           (name:'Numeric';           modifiable:false; matching:[lt_int, lt_real]),
+  {tc_typeCheckNumList}           (name:'NumericList';       modifiable:true;  matching:[lt_intList, lt_realList, lt_numList, lt_emptyList]),
+  {tc_typeCheckNumSet}            (name:'NumericSet';        modifiable:true;  matching:[lt_intSet, lt_realSet, lt_numSet, lt_emptySet]),
+  {tc_typeCheckNumCollection}     (name:'NumericCollection'; modifiable:true;  matching:[lt_intList, lt_realList, lt_numList, lt_emptyList, lt_intSet, lt_realSet, lt_numSet, lt_emptySet]),
+  {tc_typeCheckMap}               (name:'Map';               modifiable:true;  matching:[lt_emptyMap,lt_map]),
+  {tc_typeCheckExpression}        (name:'Expression';        modifiable:true;  matching:[lt_expression]));
 
   C_specialWordInfo:array[0..5] of record
     txt:string;

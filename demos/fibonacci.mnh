@@ -13,7 +13,7 @@ save;
   : void;
 end};
 
-private produce(g:expression(0))->g.map({$0}).join("\t");
+private produce(g:Expression(0))->g.map({$0}).join("\t");
 
 //*Solves the "Fibonacci n-step" task from http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences
 main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and

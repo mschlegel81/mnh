@@ -13,7 +13,7 @@ projectSLOC->hashFiles
 
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 
-type BuildConfig(L:list(7))->L[0].isBoolean AND
+type BuildConfig(L:List(7))->L[0].isBoolean AND
                              L[1].isString AND
                              L[2].isString AND
                              L[3].isString AND
@@ -48,7 +48,7 @@ VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
 binName(B:BuildConfig)->B[2];
 
 //@SuppressUnusedWarning
-packSets(linuxBuiltsReady:boolean,builtNo)->
+packSets(linuxBuiltsReady:Boolean,builtNo)->
   [                  [[      'mnh.exe',      'mnh_light.exe'],'win64'],
                      [['bin32/mnh.exe','bin32/mnh_light.exe'],'win32'],
                      [[      'mnh.exe',      'mnh_light.exe',SSL_zip_64],'win64_openSsl'],

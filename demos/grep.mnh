@@ -1,5 +1,5 @@
-private showIndex(matchMask:booleanList, additional=0)->indexOf(matchMask).map({['',$x]});
-private showIndex(matchMask:booleanList, additional:int)->begin
+private showIndex(matchMask:BooleanList, additional=0)->indexOf(matchMask).map({['',$x]});
+private showIndex(matchMask:BooleanList, additional:Int)->begin
   local matchIndex:=indexOf(matchMask);
   matchIndex:=[-additional..additional].each(offset,matchIndex+offset).flatten.unique;
   local lastX:=-1;

@@ -3,21 +3,21 @@
 //the list indicates the row and the value represents the column
 
 //*Always true (first queen)
-isValid([],newQueen:int)->true;
+isValid([],newQueen:Int)->true;
 //*For n+1 Queens, test Queens [n-1..0] if they threaten Queen [n]
-isValid(oldQueens:intList,newQueen:int)->(abs(oldQueens-newQueen)!=[oldQueens.size..1]).agg(AND);
+isValid(oldQueens:IntList,newQueen:Int)->(abs(oldQueens-newQueen)!=[oldQueens.size..1]).agg(AND);
 
 //*No candiates left: return H
-queens(H:intList,[].toSet)->[H];
+queens(H:IntList,[].toSet)->[H];
 //*Try to elongate H by each element in C, testing if it is valid. Recurse.
-queens(H:intList,C:intCollection)->C.pEach(c,isValid(H,c)
+queens(H:IntList,C:IntCollection)->C.pEach(c,isValid(H,c)
                                              ? queens(H|c,C.minus([c]))
                                              : void,|);
 queens(numberOfQueens>1)->queens([],[1..numberOfQueens]) orElse [];
 
-fmtSolution(solution:intList)->solution.each(k,['A'..'Z'][index],k,' ',&);
+fmtSolution(solution:IntList)->solution.each(k,['A'..'Z'][index],k,' ',&);
 
-inform(numberOfQueens:int,allSolutions:boolean)->begin
+inform(numberOfQueens:Int,allSolutions:Boolean)->begin
   local solutions:=queens(numberOfQueens);
   print('The ',numberOfQueens,'-queens puzzle has ',solutions.size,' solutions');
   allSolutions

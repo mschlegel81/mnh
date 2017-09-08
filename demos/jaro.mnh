@@ -1,8 +1,9 @@
-private setFlag(B:booleanList,i:int,newValue:boolean)->0<=i<B.size ? B.each(b,index=i ? newValue : b) : fail;
-private setFlag(B:booleanList,i:int)->setFlag(B,i,true);
+private setFlag(B:BooleanList,i:Int,newValue:Boolean)->0<=i<B.size ? B.each(b,index=i ? newValue : b) : fail;
+private setFlag(B:BooleanList,i:Int)->setFlag(B,i,true);
 
+//@SuppressUnusedWarning
 jaroDistance("","")->1;
-jaroDistance(A:string,B:string)->begin
+jaroDistance(A:String,B:String)->begin
   local matchDistance:=max(A.length,B.length) div 2-1;
                    local aChars:=A.chars;
   local bMatches:=(local bChars:=B.chars).each(c,false);

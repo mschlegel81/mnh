@@ -292,35 +292,56 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
                                                 ( 0.24,-0.12),
                                                 (-0.24, 0.12),
                                                 (0,0));
-  VAR rowId, i, yBaseLine:longint;
+  VAR rowId, i,j, yBaseLine:longint;
       lastX: longint = 0;
       lastY: longint = 0;
       lastWasValid: boolean;
       scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
 
-  PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST solid:boolean);
-    VAR points:array[0..3] of TPoint;
+  PROCEDURE screenRowPoly(CONST i0,i1:longint; CONST solid,withBorder:boolean);
+    VAR points:array of TPoint;
+        i:longint;
     begin
+      if (i0<0) or (i1<i0+1) then exit;
+      target.Brush.color:=scaleAndColor.solidColor;
       if solid then target.Brush.style:=bsSolid
                else target.Brush.style:=scaleAndColor.solidStyle;
-      if target.Brush.style=bsClear then exit;
+      if (target.Brush.style=bsClear) and not(withBorder) then exit;
+
+      setLength(points,i1-i0+1);
+      for i:=0 to i1-i0 do begin
+        points[i].x:=screenRow[i0+i].x;
+        points[i].y:=screenRow[i0+i].y;
+      end;
+      if not(withBorder) then target.Pen.style:=psClear;
+      target.Polygon(points);
+      if not(withBorder) then target.Pen.style:=psSolid;
+    end;
+
+  PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST solid,withBorder:boolean);
+    VAR points:array[0..4] of TPoint;
+    begin
       target.Brush.color:=scaleAndColor.solidColor;
+      if solid then target.Brush.style:=bsSolid
+               else target.Brush.style:=scaleAndColor.solidStyle;
+      if (target.Brush.style=bsClear) and not(withBorder) then exit;
       points[0].x:=x0; points[0].y:=y0;
       points[1].x:=x1; points[1].y:=y1;
       points[2].x:=x2; points[2].y:=y2;
       points[3].x:=x3; points[3].y:=y3;
-      target.Pen.style:=psClear;
+      points[4].x:=x0; points[4].y:=y0;
+      if not(withBorder) then target.Pen.style:=psClear;
       target.Polygon(points);
-      target.Pen.style:=psSolid;
+      if not(withBorder) then target.Pen.style:=psSolid;
     end;
 
-  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST solid:boolean);
+  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST solid,withBorder:boolean);
     begin
       drawCustomQuad(x0,y0,
                      x0,yBaseLine,
                      x1,yBaseLine,
-                     x1,y1,solid);
+                     x1,y1,solid,withBorder);
     end;
 
   begin
@@ -375,7 +396,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
       scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,sampleIndex);
-
       if ps_straight in row[rowId].style.style then begin
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
@@ -386,8 +406,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
           if screenRow[i].valid then begin
             if lastWasValid then begin
               target.LineTo(screenRow[i].x, screenRow[i].y);
-              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,false);
-              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,true);
+              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,false,false);
+              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, screenRow[i].y,true ,false);
             end else
               target.MoveTo(screenRow[i].x, screenRow[i].y);
             lastX:=screenRow[i].x;
@@ -406,8 +426,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
             if lastWasValid then begin
               target.LineTo(lastX, screenRow[i].y);
               target.LineTo(screenRow[i].x, screenRow[i].y);
-              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,false);
-              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,true);
+              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,false,false);
+              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, screenRow[i].y, screenRow[i].x, screenRow[i].y,true ,false);
             end else target.MoveTo(screenRow[i].x, screenRow[i].y);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
@@ -425,8 +445,8 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
             if lastWasValid then begin
               target.LineTo(screenRow[i].x, lastY);
               target.LineTo(screenRow[i].x, screenRow[i].y);
-              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, lastY,false);
-              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, lastY,true);
+              if ps_filled    in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, lastY,false,false);
+              if ps_fillSolid in row[rowId].style.style then drawPatternRect(lastX, lastY, screenRow[i].x, lastY,true ,false);
             end else target.MoveTo(screenRow[i].x, screenRow[i].y);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
@@ -444,7 +464,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
           if screenRow[i].valid then begin
             if lastWasValid then
               drawPatternRect(round(lastX*0.95+screenRow[i].x*0.05), lastY,
-                              round(lastX*0.05+screenRow[i].x*0.95), lastY,ps_fillSolid in row[rowId].style.style);
+                              round(lastX*0.05+screenRow[i].x*0.95), lastY,ps_fillSolid in row[rowId].style.style,true);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
             lastWasValid:=screenRow[i].valid;
@@ -480,9 +500,22 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
           drawCustomQuad(screenRow[i  ].x,screenRow[i  ].y,
                          screenRow[i+2].x,screenRow[i+2].y,
                          screenRow[i+3].x,screenRow[i+3].y,
-                         screenRow[i+1].x,screenRow[i+1].y,ps_fillSolid in row[rowId].style.style);
+                         screenRow[i+1].x,screenRow[i+1].y,ps_fillSolid in row[rowId].style.style,false);
           inc(i,2);
         end;
+      end;
+      if ps_polygon in row[rowId].style.style then begin
+        target.Pen.style:=psSolid;
+        target.Pen.color:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
+        j:=-1;
+        for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
+          if j>=0 then screenRowPoly(j,i-1,ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>=1);
+          j:=-1;
+        end else if j<0 then j:=i;
+        i:=length(screenRow)-1;
+        if j>=0 then screenRowPoly(j,i,ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>=1);
       end;
       if ps_dot in row[rowId].style.style then begin
         target.Pen.style:=psClear;

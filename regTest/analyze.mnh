@@ -1,11 +1,11 @@
 USE GUI, mnhUtil;
 
 private avg([])->Nan;
-private avg(L:numericList)->L.agg(+)/L.size;
-private sigma(L:numericList)->sqrt(avg(sqr(L-L.avg)));
+private avg(L:NumericList)->L.agg(+)/L.size;
+private sigma(L:NumericList)->sqrt(avg(sqr(L-L.avg)));
 private quartiles([])->[Nan,Nan,Nan];
-private quartiles(L:numericList)->L.sort[(L.size*[1..3] div 4)];
-private quartiles(x:numeric)->[x,x,x];
+private quartiles(L:NumericList)->L.sort[(L.size*[1..3] div 4)];
+private quartiles(x:Numeric)->[x,x,x];
 
 private average(X)->X.agg(+)/X.size;
 private averageAndRelativeSigma(X)->begin
@@ -14,7 +14,7 @@ private averageAndRelativeSigma(X)->begin
   [avg,sqrt(variance)/avg];
 end;
 
-private doAnalysis(rt:list)->begin
+private doAnalysis(rt:List)->begin
   ([['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios']]|
   rt.getInner(0).unique.pEach(testCase,
     begin
@@ -67,7 +67,7 @@ private doAnalysis(rt:list)->begin
   end);
 end;
 
-private analyzeCase(data,testCase:string)->begin
+private analyzeCase(data,testCase:String)->begin
   local debugSamples:=[];
   local optSamples:=[];
   data[data.getInner(0)=testCase]
@@ -100,7 +100,7 @@ private analyzeCase(data,testCase:string)->begin
   plot.display;
 end;
 
-private analyzeFlavour(data,flavour:string)->begin
+private analyzeFlavour(data,flavour:String)->begin
   local groupedData:=
   data[data.getInner(1)=flavour] //filter by flavour
   .pEach(e,e[[0,2]]) //drop flavour info
@@ -128,7 +128,7 @@ private analyzeFlavour(data,flavour:string)->begin
   plot.display;
 end;
 
-private compareFlavours(data,flavour1:string,flavour2:string)->begin
+private compareFlavours(data,flavour1:String,flavour2:String)->begin
   local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local tableData:=dat1.getInner(0).union(dat2.getInner(0))
@@ -162,7 +162,7 @@ main('merge',fileA,fileB<>fileA,output)->begin
   print('Writing ',output)));
 end;
 
-main(inputFile:string)->doAnalysis(inputFile.loadAndFilterUnplausible);
+main(inputFile:String)->doAnalysis(inputFile.loadAndFilterUnplausible);
 bar(factor,q)->begin
   local a:=round(factor*q[0]);
   local b:=round(factor*q[1]);
@@ -172,7 +172,7 @@ bar(factor,q)->begin
   (b<c ? repeat('=',c-b-1)&'>' : '');
 end;
 
-main(inputFile:string,testCaseOrFlavour:string)->begin
+main(inputFile:String,testCaseOrFlavour:String)->begin
   local data:=inputFile.loadAndFilterUnplausible;
   testCaseOrFlavour in data.getInner(0)
   ? analyzeCase(data,testCaseOrFlavour)
@@ -185,7 +185,7 @@ main(inputFile:string,testCaseOrFlavour:string)->begin
       end;
 end;
 
-main(inputFile:string,flavour1:string,flavour2:string)->begin
+main(inputFile:String,flavour1:String,flavour2:String)->begin
   local data:=inputFile.loadAndFilterUnplausible;
   flavour1 in data.getInner(1) AND
   flavour2 in data.getInner(1)

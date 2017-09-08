@@ -1,7 +1,7 @@
 private lengthLimit:=18;
 
 //@demo_for=string arithmetics
-plus(x:string,y:string)->begin
+plus(x:String,y:String)->begin
   local result:='';
   local maxLen:=max(length(x),length(y));
   local X:=repeat('0',maxLen-length(x))&x;
@@ -22,7 +22,7 @@ plus(x:string,y:string)->begin
   result='' ? "0" : result;
 end;
 
-memoized stringFib(i:int)->i<=1 ? "1" : stringFib(i-1).plus(stringFib(i-2));
+memoized stringFib(i:Int)->i<=1 ? "1" : stringFib(i-1).plus(stringFib(i-2));
 
 //*Prints out the first 1000 Fibonacci-Numbers
 main->printf("%s\t",[1..1000].each(i,stringFib(i)));

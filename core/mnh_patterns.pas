@@ -16,6 +16,7 @@ TYPE
       restrictionIdx   :longint;
       typeWhitelist    :T_literalTypeSet;
       restrictionId    :T_idString;
+      builtinTypeCheck :T_typeCheck;
       customTypeCheck  :P_expressionLiteral;
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION acceptType(CONST literalType:T_literalType):boolean;
@@ -80,6 +81,8 @@ CONSTRUCTOR T_patternElement.createAnonymous;
     restrictionValue:=nil;
     restrictionIdx  :=-1;
     restrictionId   :='';
+    builtinTypeCheck:=tc_typeCheckScalar;
+    customTypeCheck :=nil;
     typeWhitelist   :=[lt_boolean..lt_emptyMap];
   end;
 
@@ -95,8 +98,11 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     L:=parameterList[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
     if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.evaluateToBoolean(location,@context,L));
-    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx));
-    if (restrictionIdx>=0) and (restrictionType in C_modifieableTypeChecks) and (P_collectionLiteral(L)^.size<>restrictionIdx) then exit(false);
+    if (restrictionIdx>=0) and (restrictionType=tt_typeCheck) then begin
+      if builtinTypeCheck=tc_typeCheckExpression
+      then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx))
+      else if P_compoundLiteral(L)^.size<>restrictionIdx then exit(false);
+    end;
     result:=true;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
@@ -116,22 +122,9 @@ FUNCTION T_patternElement.toString: ansistring;
     case restrictionType of
       tt_literal: result:=id;
       tt_customTypeCheck    : result:=id+':'+customTypeCheck^.getParentId;
-      tt_typeCheckScalar    ,
-      tt_typeCheckBoolean   ,
-      tt_typeCheckInt       ,
-      tt_typeCheckReal      ,
-      tt_typeCheckString    ,
-      tt_typeCheckNumeric   : result:=(id+C_tokenInfo[restrictionType].defaultId);
-      tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
-      tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
-      tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
-      tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
-      tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
-      tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
-      tt_typeCheckMap,
-      tt_typeCheckExpression  : if (restrictionIdx>=0) then result:=(id+C_tokenInfo[restrictionType].defaultId+'('+intToStr(restrictionIdx)+')')
-                                                       else result:=(id+C_tokenInfo[restrictionType].defaultId);
-      tt_comparatorEq,
+      tt_typeCheck: if C_typeInfo[builtinTypeCheck].modifiable and (restrictionIdx>=0)
+                    then result:=id+':'+C_typeInfo[builtinTypeCheck].name+'('+intToStr(restrictionIdx)+')'
+                    else result:=id+':'+C_typeInfo[builtinTypeCheck].name;
       tt_comparatorNeq,
       tt_comparatorLeq,
       tt_comparatorGeq,
@@ -174,6 +167,7 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
   begin
     result:=(restrictionType = pe.restrictionType)
         and (restrictionIdx  = pe.restrictionIdx )
+        and (builtinTypeCheck= pe.builtinTypeCheck)
         and ((restrictionValue =nil) and (pe.restrictionValue =nil)
           or (restrictionValue<>nil) and (pe.restrictionValue<>nil)
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
@@ -196,7 +190,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
     if restrictionType = tt_modifier_customType then exit;
-    if restrictionType in C_typeChecks then typeWhitelist:=C_matchingTypes[restrictionType];
+    if restrictionType = tt_typeCheck then typeWhitelist:=C_typeInfo[builtinTypeCheck].matching;
     if (restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
        and (restrictionValue<>nil)
     then begin
@@ -224,7 +218,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
   FUNCTION getValueRelation:T_valueRelation;
     begin
       if (restrictionIdx>=0) and (e.restrictionIdx=restrictionIdx) then exit(vr_equal);
-      if (restrictionIdx<0) and (e.restrictionIdx<0) and not(e.restrictionType in C_typeChecks) then begin
+      if (restrictionIdx<0) and (e.restrictionIdx<0) and (e.restrictionType<>tt_typeCheck) then begin
         if      restrictionValue^.isInRelationTo(tt_comparatorListEq,e.restrictionValue) then exit(vr_equal)
         else if restrictionValue^.isInRelationTo(tt_comparatorLss   ,e.restrictionValue) then exit(vr_lesser)
         else if restrictionValue^.isInRelationTo(tt_comparatorGrt   ,e.restrictionValue) then exit(vr_greater);
@@ -238,14 +232,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
     case restrictionType of
       tt_customTypeCheck:
         exit((e.restrictionType=tt_customTypeCheck) and (customTypeCheck=e.customTypeCheck));
-      tt_typeCheckExpression,
-      tt_typeCheckList,       tt_typeCheckSet,       tt_typeCheckCollection,
-      tt_typeCheckBoolList,   tt_typeCheckBoolSet,   tt_typeCheckBoolCollection,
-      tt_typeCheckIntList,    tt_typeCheckIntSet,    tt_typeCheckIntCollection,
-      tt_typeCheckRealList,   tt_typeCheckRealSet,   tt_typeCheckRealCollection,
-      tt_typeCheckStringList, tt_typeCheckStringSet, tt_typeCheckStringCollection,
-      tt_typeCheckNumList,    tt_typeCheckNumSet,    tt_typeCheckNumCollection,
-      tt_typeCheckMap:
+      tt_type:
         exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
       tt_comparatorListEq,
       tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (getValueRelation=vr_equal));
@@ -554,11 +541,12 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           rulePatternElement.create(parts[i].first^.txt);
           parts[i].first:=context.recycler.disposeToken(parts[i].first);
           if (parts[i].first<>nil) then begin
-            if (parts[i].first^.tokType in C_typeChecks) then begin
+            if (parts[i].first^.tokType=tt_typeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
+              rulePatternElement.builtinTypeCheck:=T_typeCheck(ptrint(parts[i].first^.data));
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
-              if rulePatternElement.restrictionType in C_modifieableTypeChecks then begin
+              if C_typeInfo[rulePatternElement.builtinTypeCheck].modifiable then begin
                 if (parts[i].first=nil) then begin end else
                 if (parts[i].first^.tokType=tt_braceOpen) and
                    (parts[i].first^.next<>nil) and

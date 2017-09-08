@@ -54,7 +54,7 @@ scSort(L)->begin
   result;
 end;
 
-private scSort_(ax:numeric,ay:numeric,bx:numeric,by:numeric,cx:numeric,cy:numeric,x:numericList,y:numericList)->
+private scSort_(ax:Numeric,ay:Numeric,bx:Numeric,by:Numeric,cx:Numeric,cy:Numeric,x:NumericList,y:NumericList)->
   size(x)>1
   ? (sqr(ax-cx)+sqr(ay-cy)>1E-12
     ? begin

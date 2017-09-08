@@ -630,12 +630,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           resolveId(t^.next^,nil,false);
           {$ifdef fullVersion} if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved; {$endif}
         end;
-        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
+        if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType in [tt_customTypeRule,tt_type]) then begin
           newNext:=t^.next^.next;
-          t^.tokType:=tt_customTypeCheck;
+          if t^.next^.tokType=tt_customTypeRule
+          then t^.tokType:=tt_customTypeCheck
+          else t^.tokType:=tt_typeCheck;
           t^.txt    :=t^.next^.txt;
           t^.data   :=t^.next^.data;
-          dispose(t^.next,destroy);
+          context.recycler.disposeToken(t^.next);
           t^.next:=newNext;
         end;
         if t^.tokType      in C_openingBrackets then inc(level)

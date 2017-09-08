@@ -1,6 +1,6 @@
 private areFangs(fangs,sortedDigits)->fangs.digits.flatten.sort == sortedDigits;
 
-private getFangs(i:int)->begin
+private getFangs(i:Int)->begin
   local iDigits:=i.digits.sort;
   local digitCount:=iDigits.size div 2;
   local toTest1:=10^(digitCount-1);
@@ -12,7 +12,7 @@ private getFangs(i:int)->begin
   toTest[i mod toTest=0].pMap({[i div $x,$x]}).filter({$f.areFangs(iDigits)});
 end;
 
-private printVampire(i:int)->begin
+private printVampire(i:Int)->begin
   local fangs:=getFangs(i);
   fangs==[]
   ? false
@@ -28,7 +28,7 @@ private step(99  ):=1000;
 private step(9999):=100000;
 private step(k)->k+1;
 
-private printFirstKVampires(k:int)->begin
+private printFirstKVampires(k:Int)->begin
   local found:=0;
   local toTest:=9;
   while(found<k,printVampire(toTest:=step(toTest)) ? found+=1 : void);

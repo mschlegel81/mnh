@@ -33,7 +33,7 @@ main->currentViolations.minus(storedViolations)
 //*Store current violations to be ignored in the next run
 main('store')->storedViolations:=currentViolations;
 
-private existing(f:string)->fileExists(f) ? f : void;
+private existing(f:String)->fileExists(f) ? f : void;
 
 
 USE make_config;

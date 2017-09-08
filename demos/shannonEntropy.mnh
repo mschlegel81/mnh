@@ -1,4 +1,4 @@
-shannonEntropy(s:string)->s.chars //split s in characters
+shannonEntropy(s:String)->s.chars //split s in characters
                            .elementFrequency //obtain element frequency
                            .getInner(1) //retain only frequencies
                            .{$L/($L.agg(+))} //average frequencies
