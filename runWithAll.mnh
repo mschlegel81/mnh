@@ -1,8 +1,8 @@
 USE make_config;
-barPlot(captions:list,samples:numericList,targetWidth>0)->
+barPlot(captions:List,samples:NumericList,targetWidth>0)->
 barPlot(captions     ,samples            ,targetWidth,'%s');
 
-barPlot(captions:list,samples:numericList,targetWidth>0,sampleFormat:string)->
+barPlot(captions:List,samples:NumericList,targetWidth>0,sampleFormat:String)->
   begin
     local factor:=targetWidth/samples.max;
     samples.each(s,
@@ -14,7 +14,7 @@ barPlot(captions:list,samples:numericList,targetWidth>0,sampleFormat:string)->
       "\n",&);
   end;
 
-timedExecute(exe:string,params)->begin
+timedExecute(exe:String,params)->begin
   local t0:=time;
   exe.execPipeless(params);
   time-t0;

@@ -1,5 +1,5 @@
 //*Helper function for enumerating formulas
-private dig3(i:int,digitCount>0)->begin
+private dig3(i:Int,digitCount>0)->begin
   local D:=digits(i,3);
   D.size=digitCount
   ? D

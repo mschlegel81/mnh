@@ -1,8 +1,8 @@
-type Generator(e:expression(0))->e.isStateful;
+type Generator(e:Expression(0))->e.isStateful;
 
 //*Wraps sourceGenerator so that it generates (at max) for the given period of time
 //@SuppressUnusedWarning
-timingOutGenerator(sourceGenerator:Generator,runForSeconds:numeric)->
+timingOutGenerator(sourceGenerator:Generator,runForSeconds:Numeric)->
 {begin
    local gen:=sourceGenerator;
    local timeout:=time+runForSeconds;

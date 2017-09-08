@@ -1,17 +1,17 @@
 //*Returns a list suitbable for input of rule folderChanged
-timedFolderContent(folderPath:string)->fileInfo(folderPath&'/*').each(info,[info['path'],info]).sort(0);
+timedFolderContent(folderPath:String)->fileInfo(folderPath&'/*').each(info,[info['path'],info]).sort(0);
 //*Returns the updated folder content or false if the content is unchanged
 //@SuppressUnusedWarning
-changedFolderContent(folderPath:string,previousContent:list)->begin
+changedFolderContent(folderPath:String,previousContent:List)->begin
   local currentContent:=timedFolderContent(folderPath);
   currentContent==previousContent
   ? false
   : currentContent;
 end;
 
-private changeToContent(L:list)->L.each(el,el[1]='deleted' ? void : el[[0,2]]).sort(0);
+private changeToContent(L:List)->L.each(el,el[1]='deleted' ? void : el[[0,2]]).sort(0);
 private
-waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSeconds:numeric,initialContent)->begin
+waitForFolderChange(folderPath:String,maxSleepTimeInSeconds:Numeric,timeoutInSeconds:Numeric,initialContent)->begin
   local scanInterval:=-1;
   local currentContent:=initialContent;
   local timeout:=time+timeoutInSeconds;
@@ -37,17 +37,17 @@ changeSymbol:=[['',''],['modified','*'],['deleted','-'],['new','+']];
 //*[[filename,changetype,fileInfo],...]
 //*where changetype is one of ['new','deleted','modified',''].
 //*If the file is deleted, fileInfo is the info of the old file
-waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,timeoutInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,timeoutInSeconds,timedFolderContent(folderPath));
+waitForFolderChange(folderPath:String,maxSleepTimeInSeconds:Numeric,timeoutInSeconds:Numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,timeoutInSeconds,timedFolderContent(folderPath));
 //*As above but without timeout
-waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,2^31);
+waitForFolderChange(folderPath:String,maxSleepTimeInSeconds:Numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,2^31);
 
 //*Returns a list as waitForFolderChange but without waiting
 //@SuppressUnusedWarning
-pseudoFolderChange(folderPath:string)->timedFolderContent(folderPath).each(e,[e[0],'',e[1]]);
+pseudoFolderChange(folderPath:String)->timedFolderContent(folderPath).each(e,[e[0],'',e[1]]);
 
 //*Waits for a folder change and calls onChange when the folder is changed
 //@SuppressUnusedWarning
-watchFolder(folderPath:string,onChange:expression,maxSleepTimeInSeconds:numeric)->
+watchFolder(folderPath:String,onChange:Expression(1),maxSleepTimeInSeconds:Numeric)->
   async({begin
     local contents:=timedFolderContent(folderPath);
     while(true,begin
@@ -60,7 +60,7 @@ watchFolder(folderPath:string,onChange:expression,maxSleepTimeInSeconds:numeric)
 //*Returns a temp file name by the specified pattern.
 //*pattern must contain exactly one "#" as placeholder
 //@SuppressUnusedWarning
-tempFile(pattern:string)->
+tempFile(pattern:String)->
   trueCount(pattern.chars='#')!=1
   ? fail('pattern must contain exactly one "#" as placeholder')
   : begin
@@ -82,7 +82,7 @@ isLinux:=mnhInfo['targetOs']='Linux' orElse false;
 
 //*Returns true if the file names indicate equal files
 //@SuppressUnusedWarning
-isSameFileName(filename1:string,filename2:string)->begin
+isSameFileName(filename1:String,filename2:String)->begin
   local case:=isLinux ? {$x} : {$x.upper};
   (filename1.expandedFileName.case)==
   (filename2.expandedFileName.case);

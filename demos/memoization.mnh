@@ -1,12 +1,12 @@
 //@demo_for=memoization
 mutable fibMCallCount:=0;
-memoized fibM(i:int)->begin
+memoized fibM(i:Int)->begin
   fibMCallCount+=1;
   i<=1 ? 1 : fibM(i-1)+fibM(i-2);
 end;
 
 mutable fibCallCount:=0;
-fib(i:int)->begin
+fib(i:Int)->begin
   fibCallCount+=1;
   i<=1 ? 1 : fib(i-1)+fib(i-2);
 end;

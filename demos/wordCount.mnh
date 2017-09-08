@@ -1,7 +1,7 @@
 USE inputs;
 
 private BASE_CHARSET:=['a'..'z'].toSet;
-private cleanSplitString(s:stringList)->begin
+private cleanSplitString(s:StringList)->begin
   local result:=join(s,' ')           //join lines -> processing one long string
                .lower                 //convert to lowercase
                .clean(BASE_CHARSET,' ',true) //retain only letters
@@ -9,14 +9,14 @@ private cleanSplitString(s:stringList)->begin
   result[result<>'']; //return those elements from the result list which are not empty strings
 end;
 
-private processLinesInChunks(lines:stringList,chunkSize)->
+private processLinesInChunks(lines:StringList,chunkSize)->
   group(lines,[0..size(lines)-1] div chunkSize)
   .pEach(chunk,cleanSplitString(chunk))
   .flatten
   .elementFrequency;
 
 //@demo_for=string processing, list processing, file processing
-private analyze(lines:stringList)->begin
+private analyze(lines:StringList)->begin
   local wordCount:=processLinesInChunks(lines,100).sort(1).reverseList;
   print('Words total:    ',local total:=wordCount.getInner(1).agg(+));
   print('Distinct words: ',size(wordCount));
@@ -33,4 +33,4 @@ private filesWords(pattern)->files(pattern).each(file,fileLines(file),|);
 //*Displays a short info on words in kjv.txt
 main->inputs.kjv.fileLines.analyze;
 //*Displays a short info on words in the given file or files matching a search pattern
-main(fileOrPattern:string)->filesWords(fileOrPattern).analyze;
+main(fileOrPattern:String)->filesWords(fileOrPattern).analyze;

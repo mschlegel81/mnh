@@ -1,6 +1,6 @@
 //@demo_for=fractal, formatting
 memoized
-carpet(x:int,y:int)->(x mod 3)<>1 OR (y mod 3)<>1
+carpet(x:Int,y:Int)->(x mod 3)<>1 OR (y mod 3)<>1
                       ? x>2<y
                         ? carpet(x div 3,y div 3)
                         : "[]"

@@ -1,6 +1,6 @@
 //*Reads a datastore, returning a list [id, contents]
 //*Results in an error if the datastore is malformed
-readDatastore(storeFileName:string)->
+readDatastore(storeFileName:String)->
   begin
     //Try to parse plain text datastore:
     local contents:=fileLines(storeFileName);
@@ -18,16 +18,16 @@ readDatastore(storeFileName:string)->
   end;
 
 //*Returns a list of integers to be formatted using formatTypeAnalysis
-typeAnalysis(x:boolean)->[1,0,0,0,0,0     ,0,0,0,0];
-typeAnalysis(x:int    )->[0,1,0,0,0,0     ,0,0,0,0];
-typeAnalysis(x:real   )->[0,0,1,0,0,0     ,0,0,0,0];
-typeAnalysis(x:string )->[0,0,0,1,0,0     ,0,0,0,0];
-typeAnalysis(x:list   )->[0,0,0,0,1,x.size,0,0,0,0]+x.pEach(y,y.typeAnalysis,+);
-typeAnalysis(x:set    )->[0,0,0,0,0,0,1,x.size,0,0]+x.pEach(y,y.typeAnalysis,+);
-typeAnalysis(x:map    )->[0,0,0,0,0,0,0,0,1,x.size]+x.pEach(y,y[0].typeAnalysis+y[1].typeAnalysis,+);
+typeAnalysis(x:Boolean)->[1,0,0,0,0,0     ,0,0,0,0];
+typeAnalysis(x:Int    )->[0,1,0,0,0,0     ,0,0,0,0];
+typeAnalysis(x:Real   )->[0,0,1,0,0,0     ,0,0,0,0];
+typeAnalysis(x:String )->[0,0,0,1,0,0     ,0,0,0,0];
+typeAnalysis(x:List   )->[0,0,0,0,1,x.size,0,0,0,0]+x.pEach(y,y.typeAnalysis,+);
+typeAnalysis(x:Set    )->[0,0,0,0,0,0,1,x.size,0,0]+x.pEach(y,y.typeAnalysis,+);
+typeAnalysis(x:Map    )->[0,0,0,0,0,0,0,0,1,x.size]+x.pEach(y,y[0].typeAnalysis+y[1].typeAnalysis,+);
 typeAnalysis(x        )->[0,0,0,0,0,0     ,0,0,0,0];
 
 //*Formats the output of typeAnalysis
-formatTypeAnalysis(al:intList(10))->
+formatTypeAnalysis(al:IntList(10))->
   ['booleans','integers','reals','strings','lists','list elements','sets','set elements','maps','map entries'].map({$x&"\t:\t%s\n"}).join
   .format@al;

@@ -1,4 +1,4 @@
-private unescapeKey(s:string)->begin
+private unescapeKey(s:String)->begin
   local result:=s.softCast;
   (result==s) OR not(result.isString)
   ? fail('Invalid json key ',escape(s))
@@ -6,9 +6,9 @@ private unescapeKey(s:string)->begin
   result;
 end;
 
-private castWarning(s:string,insteadOfNull:scalar)->(s=='null' ? warn("Mapping null JSON value to ",insteadOfNull) orElse '' : s.softCast);
+private castWarning(s:String,insteadOfNull:Scalar)->(s=='null' ? warn("Mapping null JSON value to ",insteadOfNull) orElse '' : s.softCast);
 
-private traverseList(L:stringList,insteadOfNull:scalar)->begin
+private traverseList(L:StringList,insteadOfNull:Scalar)->begin
   local parsed:=[];
   local toParse:=L;
   local listFinished:=false;
@@ -39,7 +39,7 @@ private traverseList(L:stringList,insteadOfNull:scalar)->begin
   [parsed,toParse];
 end;
 
-private traverseObject(L:stringList,insteadOfNull:scalar)->begin
+private traverseObject(L:StringList,insteadOfNull:Scalar)->begin
   local parsed:=[].toMap;
   local toParse:=L;
   local objectFinished:=false;
@@ -71,8 +71,8 @@ private traverseObject(L:stringList,insteadOfNull:scalar)->begin
   [parsed,toParse];
 end;
 
-parseJson(s:stringList,insteadOfNull:scalar)->parseJson(s.join);
-parseJson(s:string,insteadOfNull:scalar)->begin
+parseJson(s:StringList,insteadOfNull:Scalar)->parseJson(s.join);
+parseJson(s:String,insteadOfNull:Scalar)->begin
   local tokens:=s.tokenSplit("java").trim.each(t,t='' ? void : t);
   tokens.head=='{'
   ? void
@@ -84,7 +84,7 @@ parseJson(s:string,insteadOfNull:scalar)->begin
   resultPair.head;
 end;
 
-formatJson(s:string)->s.escapeJava;
-formatJson(s:scalar)->toString(s);
-formatJson(L:map)->'{'&L.each(pair,pair[0].escapeJava&':'&formatJson(pair[1])).join(",")&'}';
-formatJson(L:list)->'['&L.each(entry,entry.formatJson).join(',')&']';
+formatJson(s:String)->s.escapeJava;
+formatJson(s:Scalar)->toString(s);
+formatJson(L:Map)->'{'&L.each(pair,pair[0].escapeJava&':'&formatJson(pair[1])).join(",")&'}';
+formatJson(L:List)->'['&L.each(entry,entry.formatJson).join(',')&']';

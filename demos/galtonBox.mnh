@@ -2,7 +2,7 @@ USE GUI;
 
 private newBall->[13,0,0];
 private dt:=0.2;
-private moveBall(ball:numericList(3))->
+private moveBall(ball:NumericList(3))->
   round(ball[0]+0.5)=round(ball[0]+0.5+dt)
   ? [ball[0]-dt,ball[1]+ball[2]*dt,ball[2]]
   : [ball[0]-dt,ball[1]+ball[2]*dt,ball[0]<6 ? 0 : random<0.5 ? -1 : 1];

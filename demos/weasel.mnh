@@ -1,10 +1,10 @@
 private target:="METHINKS IT IS LIKE A WEASEL";
-private fitness(s:string)-> abs(ord(target.bytes)-
+private fitness(s:String)-> abs(ord(target.bytes)-
                                 ord(     s.bytes)).agg(+);
 private CHARSET:=['A'..'Z',' '];
 private randomCharacter->CHARSET.get(intRandom(size(CHARSET)));
 
-private multiplyAndSelect(parent:string,offspringCount, mutateProb)->
+private multiplyAndSelect(parent:String,offspringCount, mutateProb)->
    ([parent]|map([1..offspringCount],{parent.bytes.each(c,random<mutateProb ? randomCharacter : c).join}))
    .pMap({[$i,fitness($i)]})
    .sort(1)

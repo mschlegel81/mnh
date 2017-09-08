@@ -1,5 +1,5 @@
-private drop(list:intCollection,toDrop:int          )->list.minus([toDrop]);
-private drop(list:intCollection,toDrop:intCollection)->list.minus( toDrop );
+private drop(list:IntCollection,toDrop:Int          )->list.minus([toDrop]);
+private drop(list:IntCollection,toDrop:IntCollection)->list.minus( toDrop );
 
 //*The cells that are connected
 private
@@ -8,7 +8,7 @@ COMPONENTS:=[0..8].each(i,i+[0..8]*9)| //same row
             [0..8].each(i,[0..80].get(i=([0..80] div 27)*3+[0..80] mod 9 div 3))
                   .each(component,component.toSet); //same block
 //*Returns the unique indexes of all cells connected to i (excluding i)
-private memoized connectedIdx(i:int)->COMPONENTS.each(c,i in c ? drop(c,i) : void).flatten.sort;
+private memoized connectedIdx(i:Int)->COMPONENTS.each(c,i in c ? drop(c,i) : void).flatten.sort;
 //*Returns the components
 private memoized components(i)->COMPONENTS.each(c,i in c ? drop(c,i) : void);
 
@@ -70,7 +70,7 @@ solve(B)->begin
   Board;
 end;
 
-private randomFromSet(s:intCollection)->s.toList[intRandom(s.size)];
+private randomFromSet(s:IntCollection)->s.toList[intRandom(s.size)];
 
 private restrictRandom(B)->begin
   local listIndexes:=[0..80].each(i,B[i].isInt ? void : i);

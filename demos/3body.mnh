@@ -9,7 +9,7 @@ private initialState:=
    circlePoint(240),-3*circlePoint(90)];
 
 
-private force(delta:numericList(2))->delta*sqr(delta).agg(+)^(3/2);
+private force(delta:NumericList(2))->delta*sqr(delta).agg(+)^(3/2);
 
 private F:={[$x[1],
              force($x[2]-$x[0])+force($x[4]-$x[0]),

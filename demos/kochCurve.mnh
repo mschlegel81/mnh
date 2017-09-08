@@ -12,7 +12,7 @@ private kochCurve(depth>=0,LX,LY)->kochCurve(depth-1,
   (LY*0.333)|(LY*0.167+LX*0.288)|(LY*0.167-LX*0.288)|(LY*0.333));
 private kochCurve(depth,LX,LY)->transpose([runningSum(LX),runningSum(LY)]);
 
-private main_impl(filename:string,xRes:int,yRes:int)->
+private main_impl(filename:String,xRes:Int,yRes:Int)->
   plot.setOptions([['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]) and
   plot.plot(kochCurve(7),"0.5") and
   plot.renderToFile(filename,xRes,yRes,3);

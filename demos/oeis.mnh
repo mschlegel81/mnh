@@ -23,7 +23,7 @@ private EulerPhi(n>1)->factorize(n).elementFrequency.each(p,p[0]^(p[1]-1)*(p[0]-
 private EulerPhi(1)->1;
 
 //for A000213, A000288, A000032, A000032, A000045, A000073----
-private generalizedFibonacci(state:intList)->{begin
+private generalizedFibonacci(state:IntList)->{begin
   local L:=state;
 save;
   local result:=L[0];
@@ -47,7 +47,7 @@ end;
 private by2Squares(n=0):=[];
 
 //for A061358:-------------------------------------------------
-private by2Primes(n:int)->begin
+private by2Primes(n:Int)->begin
   local S:=primes(n);
   (n-S).intersect(S).filter({n-$s<=$s}).map({(n-$s)&'+'&$s});
 end;
@@ -57,11 +57,11 @@ private LazyCaterer(n)->(n+n^2+2) div 2;
 
 //for A000203:-------------------------------------------------
 private DivisorFunction(1)->1;
-private DivisorFunction(n:int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).agg(+);
+private DivisorFunction(n:Int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).agg(+);
 
 //for A003459:-------------------------------------------------
-private decimalFromDigits(d:intList)->(d*10^[0..d.size-1]).agg(+);
-private isPermutablePrime(p:int)->(p.digits).permutations.each(d,d.decimalFromDigits.factorize.size=1,AND);
+private decimalFromDigits(d:IntList)->(d*10^[0..d.size-1]).agg(+);
+private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.decimalFromDigits.factorize.size=1,AND);
 
 //-------------------------------------------------------------
 A000002(len      )->Kolakoski_1_2(len);
@@ -97,7 +97,7 @@ A005185(len      )->[1..len  ].map(::hofstadter_sequences.Q);
 A007947(len      )->[1..len  ].pMap({$n.factorize.unique.agg(*)});
 
 //@demo_for=httpGet
-queryOEISInfo(id:string)->begin
+queryOEISInfo(id:String)->begin
   local data:=httpGet('https://oeis.org/search?q=id:'&id&'&fmt=text')
               .split("\n")
               .filter({$line.matches('^%[N|S|T|U]')})
@@ -109,7 +109,7 @@ queryOEISInfo(id:string)->begin
    ['seq',seq]].toMap;
 end;
 
-type SequenceMeta(l:list(4))->l[0].isString AND
+type SequenceMeta(l:List(4))->l[0].isString AND
                               l[0].length=7 AND
                               l[1].isExpression(1) AND
                               l[2].isInt AND
@@ -162,10 +162,10 @@ testSequence(meta:SequenceMeta)->begin
                                           "\n  computed: ",computed);
 end;
 
-prettyPrint(m:map)->print("ID\v: ",m['id'] orElse 'A??????',"\nName\v: ",m['name'] orElse '-',"\nValues\v: ",m['seq'] orElse '-',"\n");
+prettyPrint(m:Map)->print("ID\v: ",m['id'] orElse 'A??????',"\nName\v: ",m['name'] orElse '-',"\nValues\v: ",m['seq'] orElse '-',"\n");
 
-obtainData(id:string)->obtainData(id,256);
-obtainData(id:string,n:int)->begin
+obtainData(id:String)->obtainData(id,256);
+obtainData(id:String,n:Int)->begin
   SequenceTable.each(meta,
     meta[0]==id
     ? [['id'  ,id],

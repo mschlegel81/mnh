@@ -2,7 +2,7 @@ private degToRad:=arctan(1)/45;
 private removeRedundantSequences(s,s)->s;
 private removeRedundantSequences(s,prev)->removeRedundantSequences(replace(s,['+-','-+','[]','[+]','[-]'],''),s);
 
-private cleanString(drawChars:string, input:string, allowShortening:boolean)->begin
+private cleanString(drawChars:String, input:String, allowShortening:Boolean)->begin
   local ignorables:=('~'|input.chars).minus(['+','-','F','[',']']);
   local clean:=replace(replace(input,
                                copy(drawChars,[0..length(drawChars)-1],1),
@@ -17,8 +17,8 @@ private cleanString(drawChars:string, input:string, allowShortening:boolean)->be
 end;
 
 
-turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->turtle(startAngle,rotAngleInDegrees,drawChars,s,true);
-turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,allowShortening:boolean)->begin
+turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String)->turtle(startAngle,rotAngleInDegrees,drawChars,s,true);
+turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String,allowShortening:Boolean)->begin
   local cleanInput:=cleanString(drawChars,s,allowShortening);
   //init State variables
   local turtlePos:=[0,0];

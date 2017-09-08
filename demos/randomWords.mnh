@@ -2,7 +2,7 @@ USE inputs;
 
 private memoized words->dict.fileLines.trim;
 
-private relativeFrequency(L:list)->begin
+private relativeFrequency(L:List)->begin
   local Freq:=L.elementFrequency.sort;
   local f:=1/Freq.getInner(1).max;
   Freq.each(t,[t[1]*f,t[0]]);
@@ -17,7 +17,7 @@ private memoized followerTable->words.each(word,word.length<2 ? void : word.copy
                                      .each(g,[g[0,0],g.getInner(1).relativeFrequency])
                                      .toMap;
 
-private randomFromTable(T:list)->begin
+private randomFromTable(T:List)->begin
   local index:=intRandom(T.size);
   while(T[index,0]<random,index:=intRandom(T.size));
   T[index,1];

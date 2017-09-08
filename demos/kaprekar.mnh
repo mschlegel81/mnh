@@ -1,6 +1,6 @@
 POWERS_OF_TEN:=10^[1..18];
 isKaprekar(i in POWERS_OF_TEN)->false;
-isKaprekar(i:int)->begin
+isKaprekar(i:Int)->begin
   local i2:=i.sqr;
   (i2 mod POWERS_OF_TEN+i2 div POWERS_OF_TEN=i).agg(OR);
 end;

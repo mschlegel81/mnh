@@ -1,5 +1,5 @@
 //@demo_for=time/date manipulation, time/date formatting
-private lastSundaysInYear(year:int)->begin
+private lastSundaysInYear(year:Int)->begin
   local lastDays:=floor(parseTime('yyyymmdd',format('%4.4d%2.2d01',year,[2..12])|format('%4.4d0101',year+1)))-1;
   local numberOfDaysAfterSuday:=(lastDays+6) mod 7;
   lastDays-numberOfDaysAfterSuday;
@@ -10,4 +10,4 @@ private DATE_FMT:='%{formatTime("dd.mm.yyyy",$0)}s';
 //*Print out the last sundays of each month in 2015
 main->printf(DATE_FMT,lastSundaysInYear(2015));
 //*Print out the last sundays of each month in given year
-main(year:string)->printf(DATE_FMT,lastSundaysInYear(softCast(year)));
+main(year)->printf(DATE_FMT,lastSundaysInYear(softCast(year)));

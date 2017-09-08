@@ -1,16 +1,16 @@
 USE formattingUtils;
 
-toGray(l:booleanList)->begin
+toGray(l:BooleanList)->begin
   local last:=false;
   l.each(b,last xor (last:=b));
 end;
 
-fromGray(l:booleanList)->begin
+fromGray(l:BooleanList)->begin
   local last:=false;
   l.each(g,last:=(g xor last));
 end;
 
-private testGray(i:int)->begin
+private testGray(i:Int)->begin
   local b :=digits(i,2)=1;
   local g :=b.toGray;
   local b2:=g.fromGray;

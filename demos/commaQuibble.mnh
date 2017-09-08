@@ -1,14 +1,14 @@
 //Implementation for string arguments
 //*One string is the string itself
-Comma_Quibble(a:string)->a;
+Comma_Quibble(a:String)->a;
 //*Two strings are concatenated via "and"
-Comma_Quibble(a:string,b)->a&' and '&b;
+Comma_Quibble(a:String,b)->a&' and '&b;
 //*More than two strings are recursively concatenated via ", "
-Comma_Quibble(a:string,...)->a&', '&Comma_Quibble@...;
+Comma_Quibble(a:String,...)->a&', '&Comma_Quibble@...;
 
 //Implementation for string list arguments
 Comma_Quibble([])->'{}';
-Comma_Quibble(L:stringList)->'{'&Comma_Quibble@L&'}';
+Comma_Quibble(L:StringList)->'{'&Comma_Quibble@L&'}';
 
 main->
 [[],

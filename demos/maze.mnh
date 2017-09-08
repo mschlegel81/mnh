@@ -1,4 +1,4 @@
-private randomListElement(L:set)->L.toList[intRandom(L.size)] orElse [];
+private randomListElement(L:Set)->L.toList[intRandom(L.size)] orElse [];
 
 private memoized neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
 private neighbors(width,height,x,y)->

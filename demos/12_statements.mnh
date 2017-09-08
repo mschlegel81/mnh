@@ -14,7 +14,7 @@ private txt:=split(
 12. "Exactly 4 of the preceding statements are true."~,"\n");
 
 private
-check(T:booleanList)->T==[false,
+check(T:BooleanList(13))->T==[false,
                           true,
                           trueCount(T[[7..12]])=3,
                           trueCount(T[[2,4,6,8,10,12]])=2,

@@ -1,5 +1,5 @@
 USE inputs;
-private missingLetters(s:string)->['A'..'Z'].minus(s.charSet.upper);
+private missingLetters(s:String)->['A'..'Z'].minus(s.charSet.upper);
 
 private memoized dictionary->dict.fileLines.trim;
 private memoized letterMap->begin
@@ -9,7 +9,7 @@ private memoized letterMap->begin
 end;
 
 private randomWord->dictionary[dictionary.size.intRandom];
-private randomWord(missingLetters:stringCollection)->begin
+private randomWord(missingLetters:StringCollection)->begin
   //Find all words containing at least one of the missing letters
   local l:=letterMap.getAll(missingLetters).flatten.elementFrequency;
   //The best words are the ones occurring the most times (once for each missing letter)
@@ -52,7 +52,7 @@ findShortRandomPangram->begin
   end);
 end;
 
-checkForPangram(s:string)->begin
+checkForPangram(s:String)->begin
   local missing:=s.missingLetters;
   missing.size=0
   ? print(escape(s),' is a pangram')

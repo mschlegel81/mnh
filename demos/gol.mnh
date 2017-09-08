@@ -1,9 +1,9 @@
-type WorldSize(i:intList(2))->i[0]>0<i[1];
+type WorldSize(i:IntList(2))->i[0]>0<i[1];
 //*Returns a random initial world
 private initWorld(s:WorldSize)->intRandom(2,s.agg(*));
 
 //*Prints out the given world (including a clearprint)
-private printWorld(w:intList,s:WorldSize)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
+private printWorld(w:IntList,s:WorldSize)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
 
 //*Shifts - this returns a list of intLists, indicating adjacent cells
 private memoized shifts(s:WorldSize)->
@@ -13,16 +13,16 @@ private memoized shifts(s:WorldSize)->
 
 
 //*Returns a list of integers with the number of living neighbors per cell
-private neighbors(w:intList,s:WorldSize)->shifts(s).each(sh,w[sh],+);
+private neighbors(w:IntList,s:WorldSize)->shifts(s).each(sh,w[sh],+);
 
 //*The Transision table
 private TRANSITION:=[0,0,0,1,0,0,0,0,0,
                      0,0,1,1,0,0,0,0,0];
 
 //*Computes the following generation based on current generation w
-private step(w:intList,s:WorldSize)->TRANSITION[w.neighbors(s)+9*w];
+private step(w:IntList,s:WorldSize)->TRANSITION[w.neighbors(s)+9*w];
 
-private playTheGame(S:WorldSize,delaySeconds:numeric,stepLimit:int,exitByKey=false)->
+private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=false)->
   begin
     local W:=initWorld(S);
     local stepCounter:=0;
@@ -34,7 +34,7 @@ private playTheGame(S:WorldSize,delaySeconds:numeric,stepLimit:int,exitByKey=fal
     end);
   end;
 
-private playTheGame(S:WorldSize,delaySeconds:numeric,stepLimit:int,exitByKey=true)->
+private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=true)->
   begin
     async({playTheGame(S,delaySeconds,stepLimit,false)});
     ask('Press enter to quit');

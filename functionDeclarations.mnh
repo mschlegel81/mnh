@@ -1,11 +1,11 @@
-firstString(c:string)->begin
+firstString(c:String)->begin
   local indexes:=indexOf(c.chars="'")+1;
   indexes.size<2
   ? ''
   : c.copy(indexes[0],indexes[1]-indexes[0]-1);
 end;
 
-namespacePart(c:string)->begin
+namespacePart(c:String)->begin
   local tok:=c.tokenSplit;
   local idx:=indexOf(tok.matches('NAMESPACE'));
   tok[idx[0] orElse -1] orElse '?';

@@ -11,7 +11,7 @@ private DELETE  :='DELETE';
 
 datastore store:=[];
 
-private synchronized persistStage(stage:list)->
+private synchronized persistStage(stage:List)->
   stage.each(stageElement,
     stageElement.head==INSERT
     ? begin
@@ -86,14 +86,18 @@ private sendRequest(data)->begin
   sendIpcRequest(IPC_ID,[PID,data]);
 end;
 
+ //@SuppressUnusedWarning
 //*Requests insert of the given data item; returns true on success
 //*Note that you have to call commit in order to persist this request
 insert(data)->sendRequest([INSERT,data]);
+ //@SuppressUnusedWarning
 //*Requests delete of the given data item; returns true on success
 //*Note that you have to call commit in order to persist this request
 delete(data)->sendRequest([DELETE,data]);
+ //@SuppressUnusedWarning
 //*Requests persisting of the stage for the curren PID; returns true on success
 commit->sendRequest(COMMIT);
+ //@SuppressUnusedWarning
 //*Requests rollback of the stage for the curren PID; returns true on success
 rollback->sendRequest(ROLLBACK);
 

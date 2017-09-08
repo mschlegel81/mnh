@@ -1,9 +1,9 @@
-private halve(i:int)->i div 2;
-private double(i:int)->i*2;
-private isEven(i:int)->(i and 1) = 0;
+private halve(i:Int)->i div 2;
+private double(i:Int)->i*2;
+private isEven(i:Int)->(i and 1) = 0;
 
 ethiopianMultiplication(a_>=1,b_>=1)->ethiopianMultiplication(a_,b_,false);
-ethiopianMultiplication(a_>=1,b_>=1,doPrint:boolean)->begin
+ethiopianMultiplication(a_>=1,b_>=1,doPrint:Boolean)->begin
   local a:=a_;
   local b:=b_;
   local aColumn:=[a];

@@ -1,28 +1,28 @@
 USE inputs;
 
-private huffman(L:list)->
+private huffman(L:List)->
   size(L)<=1
   ? traverseBinaryTree("",L[0,0]).sort({length($x[0])>=length($y[0])})
   : huffman(L,sortPerm(L.getInner(1))[[0,1]]);
 
-private huffman(L:list,mergeIdx:intList(2))->huffman(L.get(mergeIdx[0]<>[0..size(L)-1]<>mergeIdx[1]) | [mergeNodes@(L[mergeIdx])]);
+private huffman(L:List,mergeIdx:IntList(2))->huffman(L.get(mergeIdx[0]<>[0..size(L)-1]<>mergeIdx[1]) | [mergeNodes@(L[mergeIdx])]);
 
 private huffman(x)->huffman(x.toList);
 
 //*mergeNodes([txt0,count0],[txt1,count1])->[[txt0,txt1],[count0+count1]]
 private mergeNodes(n1,n2)->[[n1[0],n2[0]],n1[1]+n2[1]];
 
-private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
+private traverseBinaryTree(codePrefix,T:String)->[[codePrefix,T]];
 private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T[0])|
                                               traverseBinaryTree(codePrefix&1,T[1]) ;
 
-private charactersInFile(filename:string)->charactersInString(fileContents(filename));
-private charactersInString     (s:string)->s.chars.elementFrequency;
+private charactersInFile(filename:String)->charactersInString(fileContents(filename));
+private charactersInString     (s:String)->s.chars.elementFrequency;
 
 //*Solves the "Huffman coding" task from http://rosettacode.org/wiki/Huffman_coding
-main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
-                       print(" code\tchar\n "&
-                             huffman(charactersInFile(filename)).each(e,
-                                  e[0]&"\t"&e[1].escape).join("\n "));
+main(filename)->print('See http://rosettacode.org/wiki/Huffman_coding') and
+                print(" code\tchar\n "&
+                      huffman(charactersInFile(filename)).each(e,
+                           e[0]&"\t"&e[1].escape).join("\n "));
 //*Calls main with unixdict.txt as input
 main->main(inputs.dict);

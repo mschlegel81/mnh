@@ -1,5 +1,5 @@
 //Naive with inline-if
-fib0(x:int)->x<1 ? 1 : fib0(x-1)+fib0(x-2);
+fib0(x:Int)->x<1 ? 1 : fib0(x-1)+fib0(x-2);
 
 //Case distinction via pattern matching
 fib1(x<1)->1;
@@ -19,18 +19,18 @@ sineSum0(s<>[])->sin(s.head)+sineSum0(s.tail);
 sineSum0(s==[])->0;
 
 //List processing
-sineSum1(s:numericList)->s.each(x,sin(x),+);
+sineSum1(s:NumericList)->s.each(x,sin(x),+);
 
 //Parallel list processing
-sineSum2(s:numericList)->s.pEach(x,sin(x),+);
+sineSum2(s:NumericList)->s.pEach(x,sin(x),+);
 
 //Vectorized operation + Aggregation
-sineSum3(s:numericList)->sin(s).agg(+);
+sineSum3(s:NumericList)->sin(s).agg(+);
 
 //Map
-sineSum4(s:numericList)->s.map(::sin).agg(+);
+sineSum4(s:NumericList)->s.map(::sin).agg(+);
 
-test(f:expression(1),input)->time(f,[input])['time'];
+test(f:Expression(1),input)->time(f,[input])['time'];
 
 //@demo_for=list processing
 main->begin

@@ -4,7 +4,7 @@ pascalTriangleRow(n)->(pascalTriangleRow(n-1)|0)+(0|pascalTriangleRow(n-1));
 
 //@demo_for=memoization
 memoized
-private printTri(n:int)->printf("%s",[0..n-1].each(i,repeat("\v",n-i)&pascalTriangleRow(i).join("\v\v")));
+private printTri(n:Int)->printf("%s",[0..n-1].each(i,repeat("\v",n-i)&pascalTriangleRow(i).join("\v\v")));
 
 //*See http://rosettacode.org/wiki/Pascal%27s_triangle
 main(lineCount)->printTri(softCast(lineCount));

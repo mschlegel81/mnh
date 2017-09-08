@@ -1,5 +1,5 @@
 //*Returns a "broken" random number generator, returning deterministic (and easily predictable) values
-private myRandomGenerator(seed:int)->{
+private myRandomGenerator(seed:Int)->{
   begin
     local residue:=seed;
   save;
@@ -11,7 +11,7 @@ private myRandomGenerator(seed:int)->{
 //*Accepts an expression returning a pseudo random number
 //*Returns a booleanList(2): [win without switching, win with switching]
 //@demo_for=stateful expressions
-private montyHallCustomRun(rand:expression(1))->begin
+private montyHallCustomRun(rand:Expression(1))->begin
   local doors:=rand(3)=[0..2];
   local firstPick:=rand(3);
   local goatDoors:=indexOf(not(doors) and not([0..2]=firstPick));
@@ -21,9 +21,9 @@ private montyHallCustomRun(rand:expression(1))->begin
 end;
 
 private montyHallRandomRun                  ->montyHallCustomRun(::intRandom             );
-private montyHallDeterministicRun(index:int)->montyHallCustomRun(myRandomGenerator(index));
+private montyHallDeterministicRun(index:Int)->montyHallCustomRun(myRandomGenerator(index));
 
-private printResult(counts:intList(2))->printf("  Probability to win without switching doors\t%s\v%%\n"+
+private printResult(counts:IntList(2))->printf("  Probability to win without switching doors\t%s\v%%\n"+
                                                "  Probability to win with switching\t%s\v%%",
                                                counts[0]/counts.agg(+)*100,
                                                counts[1]/counts.agg(+)*100);

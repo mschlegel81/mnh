@@ -1,15 +1,15 @@
-iterate(x0,function:expression(1),stepCount>=1)->iterate(x0,function,stepCount,true);
-iterate(x0,function:expression(1),stepCount>=1,lastOnly=true )->iterate(x0,function,stepCount,false).trailing;
-iterate(x0,function:expression(1),stepCount>=1,lastOnly=false)->begin
+iterate(x0,function:Expression(1),stepCount>=1)->iterate(x0,function,stepCount,true);
+iterate(x0,function:Expression(1),stepCount>=1,lastOnly=true )->iterate(x0,function,stepCount,false).trailing;
+iterate(x0,function:Expression(1),stepCount>=1,lastOnly=false)->begin
   local x:=x0;
   [1..stepCount].each(step,x:=function(x));
 end;
 
 //@SuppressUnusedWarning
-sum(L:numericList)->L.agg(+) orElse 0;
+sum(L:NumericList)->L.agg(+) orElse 0;
 
 //@SuppressUnusedWarning
-prod(L:numericList)->L.agg(*) orElse 1;
+prod(L:NumericList)->L.agg(*) orElse 1;
 
 //@SuppressUnusedWarning
 factorial(i=0)->1;

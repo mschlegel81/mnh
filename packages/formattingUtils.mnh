@@ -1,5 +1,5 @@
 //*Formats a list as a table for printout. The result is a stringList
-formatTable(L:list)->begin
+formatTable(L:List)->begin
   local columnCount:=0;
   local txt:=L.each(row,begin
     columnCount:=max(columnCount,row.size);
@@ -15,4 +15,4 @@ formatTable(L:list)->begin
 end;
 
 //*Formats a list as a table for printout. The result is a stringList
-formatTable(L:list,header:stringList)->formatTable([header]|L);
+formatTable(L:List,header:StringList)->formatTable([header]|L);

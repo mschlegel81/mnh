@@ -1,10 +1,10 @@
 //*Butcher Tableau of an explicit Runge-Kutta method (ERK)
-type ERK_ButcherTableau(T:list)->T.each(row,row.isNumericList AND row.size<=index+1,AND);
+type ERK_ButcherTableau(T:List)->T.each(row,row.isNumericList AND row.size<=index+1,AND);
 
 //@SuppressUnusedWarning
-absNorm(x:numericList)->x.abs.agg(+)/x.size;
+absNorm(x:NumericList)->x.abs.agg(+)/x.size;
 //@SuppressUnusedWarning
-absNorm(l:list)->begin
+absNorm(l:List)->begin
   local f:=l.flatten;
   f.isNumericList ? absNorm(f) : fail;
 end;
@@ -18,7 +18,7 @@ private rkCodeStart(intermediate,y,dt,...)->[
                                         af[0]=1 ? void : '*',
                                         af[1],|),
                           ')',';',|);
-private summationStageCode(summationStage:numericList,intern:boolean)->
+private summationStageCode(summationStage:NumericList,intern:Boolean)->
   (intern ? 'y+=' :'$0')| summationStage.each(a ,a=0 ? void : [a,'F'&index])
                       .each(af,'+',
                             af[0]=1 ? void : af[0],
@@ -36,7 +36,7 @@ end;
 
 //*Constructs an embedded explicit Runge-Kutta method from its Butcher Tableau
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
-private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:int)->begin
+private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
   local intermediate   :=Tableau.leading(2);
   local summationStages:=Tableau.trailing(2);
   local code:=['begin'             ,rkCodeStart       (intermediate,'$0','$2','local'),
@@ -140,19 +140,19 @@ memoized CASH_KARP->embeddedRungeKuttaStepper(
 
 //*Returns an integrator based on an explicit Runge-Kutta method
 //@SuppressUnusedWarning
-integrator(ERK :expression(3),df:expression(1),dt:numeric              )->{ERK($0,df,dt)};
+integrator(ERK :Expression(3),df:Expression(1),dt:Numeric              )->{ERK($0,df,dt)};
 //*Returns an integrator based on an embedded explicit Runge-Kutta method
-integrator(EERK:expression(4),df:expression(1),dt:numeric,tolerance>0.0)->{EERK($0,df,dt,tolerance)};
+integrator(EERK:Expression(4),df:Expression(1),dt:Numeric,tolerance>0.0)->{EERK($0,df,dt,tolerance)};
 
 //@SuppressUnusedWarning
 //*Iterates, returning all results
-iterate(initialValue,f:expression(1),stepCount>=1)->begin
+iterate(initialValue,f:Expression(1),stepCount>=1)->begin
   [local y:=initialValue]| rangeGenerator(1,stepCount).each(step,y:=f(y));
 end;
 
 //*Iterates, returning only the last value
 //@SuppressUnusedWarning
-iterateLast(initialValue,f:expression(1),stepCount>=1)->begin
+iterateLast(initialValue,f:Expression(1),stepCount>=1)->begin
   local y:=initialValue;
   rangeGenerator(1,stepCount).each(step,y:=f(y),trailing);
 end;

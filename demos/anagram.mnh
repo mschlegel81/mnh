@@ -12,4 +12,4 @@ anagramsInDict(list)->fileLines(inputs.dict)
 main->main(inputs.dict);
 
 //*Finds anagrams in a custom dictionary, sort by anagrams per group and print them out (one line per group)
-main(filename:string)->printf("%{join($0,', ')}s",readDict(filename).anagramsInDict.trailing(10));
+main(filename)->printf("%{join($0,', ')}s",readDict(filename).anagramsInDict.trailing(10));

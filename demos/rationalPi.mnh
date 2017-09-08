@@ -1,5 +1,5 @@
 USE gcd;
-type Rational(l:intList(2))->true;
+type Rational(l:IntList(2))->true;
 
 shorten(r:Rational)->begin
   local val:=abs(r);
@@ -7,11 +7,11 @@ shorten(r:Rational)->begin
   val div gcd@val * [sig,1];
 end;
 
-ratInt(x:int)->[x,1];
+ratInt(x:Int)->[x,1];
 ratPlus (a:Rational,b:Rational)->shorten([a[0]*b[1]+b[0]*a[1],a[1]*b[1]]);
-ratPlus (a:int     ,b         )->ratPlus(ratInt(a),b);
-ratPlus (a:Rational,b:int     )->ratPlus(a,ratInt(b));
+ratPlus (a:Int     ,b         )->ratPlus(ratInt(a),b);
+ratPlus (a:Rational,b:Int     )->ratPlus(a,ratInt(b));
 
-private arctanSeries(n:int)->shorten([0..n].each(i,[(-1)^i,2*i+1],aggregator(::ratPlus))*ratInt(4));
+private arctanSeries(n:Int)->shorten([0..n].each(i,[(-1)^i,2*i+1],aggregator(::ratPlus))*ratInt(4));
 
 main->printf("%{$x.join('/')}s\t=\t%{$x.agg(/)}1.6d",[0..21].each(i,arctanSeries(i)));

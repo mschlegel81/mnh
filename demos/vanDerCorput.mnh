@@ -1,6 +1,6 @@
-recompose(Digits:intList,base:int)->composeDigits(Digits.reverseList,base,Digits.size);
-vanDerCorput(i:int,base:int)->digits(i,base).recompose(base);
-vanDerCorput(I:intList,base:int)->I.digits(base).pMap({recompose($digits,base)});
+recompose(Digits:IntList,base:Int)->composeDigits(Digits.reverseList,base,Digits.size);
+vanDerCorput(i:Int,base:Int)->digits(i,base).recompose(base);
+vanDerCorput(I:IntList,base:Int)->I.digits(base).pMap({recompose($digits,base)});
 
 plotIfPossible->mnhInfo['isFullVersion']
                 ? interpret("vanDerCorput([0..1000],2).plot('.')")

@@ -2,7 +2,7 @@ USE make_config, distroLog;
 
 DEFAULT_TARGET_FOLDER:='D:\dev\temp\';
 
-NeedLicense(filename:string)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
+NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
 License:=//!~
 //
 // This file is part of the MNH project.
@@ -46,7 +46,7 @@ Usage of make.bat/.sh/.mnh
 
 ~.format.split("\n");
 
-copyWithLicense(sourceName:string,targetName:string)->
+copyWithLicense(sourceName:String,targetName:String)->
   sourceName.NeedLicense
   ? targetName.writeFileLines(License|sourceName.fileLines)
   : copyFile(sourceName,targetName);

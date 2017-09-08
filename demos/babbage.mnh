@@ -1,4 +1,4 @@
-squareEndsWith269696(n:int)->n          //take the input
+squareEndsWith269696(n:Int)->n          //take the input
                             .sqr        //compute the square
                             mod 1000000 //take the last 6 digits
                             = 269696;

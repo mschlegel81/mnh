@@ -4,7 +4,7 @@ positiveOrVoid(i)->void;
 
 //@demo_for=stateful expressions
 //*Generates a series of powers
-powerGen(power:int)->{begin
+powerGen(power:Int)->{begin
   local p:=power;
   local i:=0;
 save;
@@ -28,7 +28,7 @@ save;
 end};
 
 //*Extracts elements with given indexes from a generator
-extract(generator:expression(0), indexes:intList)->
+extract(generator:Expression(0), indexes:IntList)->
   [0..max(indexes)].each(i,generator())[indexes];
 
 //*Solves the "Generator/Exponential" task from rosettacode.org (http://rosettacode.org/wiki/Generator/Exponential)

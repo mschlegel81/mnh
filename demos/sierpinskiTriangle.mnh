@@ -1,6 +1,6 @@
 //@demo_for=formatting, fractal
 //*Solves the "Sierpinski-Triangle" task from http://rosettacode.org/wiki/Sierpinski_triangle
-main(recursionDepth:string)->begin
+main(recursionDepth)->begin
   local n:=softCast(recursionDepth);
   printf("%{repeat(' ',$i)&[0..2^$n-1].each(j,trueCount(($i and 2^[$n-1..0])>0<(j and 2^[$n-1..0]))=0 ? 'A ' : '  ',&)}s",[2^n-1..0],n);
 end;
