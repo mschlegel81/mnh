@@ -249,6 +249,7 @@ upper('Test');
 
 upper(['Text','AbC']);
 
+//#plot
 t:=[0..1000]*2*pi/1000;
 plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300,3);
@@ -760,6 +761,70 @@ primeGenerator.head(10);
 
 permutationIterator([3,1,2]).map(::print);
 
+//#lists.lazyMap
+//The result is a new generator
+rangeGenerator(1,100).lazyMap({$x^2});
+
+//#lists.mergeMaps
+//Merge maps; resolve conflicts via ::+
+mergeMaps([['A',1],['B',2]].toMap,
+          [['A',7],['C',3]].toMap,::+);
+            
+//#system.try
+//Try without fallback (returns void)
+try({deserialize('x')});
+
+//#system.try
+//Try with fallback: print error messages, if any
+try({deserialize('x')},::print);
+
+//#system.try
+//Try with fallback: return default value
+try({deserialize('x')},0);
+
+//#system.try
+//Try with fallback: convert error to warning
+try({deserialize('x')},{warn($x.head.trailing)});
+
+//#isStateful
+isStateful(::print);
+
+//#isStateful
+isStateful(primeGenerator);
+
+interpret("3+4");
+
+//Compose binary digits
+composeDigits([1,0,1],2);
+
+//Compose in decimal
+composeDigits([1,0,2]);
+
+//Compose in decimal, shifted by 2
+composeDigits([1,0,2],10,2);
+
+sandBoxExecute("f(x)->3*x+1; f(f(f(1)))");
+
+//#system.async
+begin
+  local x:=async({print('start') orElse sleep(0.1) orElse 'end'});
+  print('1: ',x().isVoid); //still running, x() should display void
+  sleep(0.2);
+  print('2: ',x());
+end;
+
+//#system.future
+begin
+  local x:=future({print('start') orElse sleep(0.1) orElse 'end'});
+  print('1: ',x().isVoid); //x() should block until finished
+  sleep(0.2);
+  print('2: ',x());
+end;
+
+validateRegex('(3+.*');
+
+validateRegex('\(3+.*');
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');
@@ -780,7 +845,7 @@ getOptions;
 fileInfo(executor);
 
 //#getEnv
-getEnv.head;
+getEnv.toList.head;
 
 //#fileStats
 fileStats(executor);

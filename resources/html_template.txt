@@ -249,8 +249,7 @@ Attributes are also used to configure edit scripts, see <a href="gui.html">GUI f
 <tr><td><code>/=</code></td><td>n/a</td><td> assign-divide</td></tr>
 <tr><td><code>&=</code></td><td>n/a</td><td> assign-string-concat</td></tr>
 <tr><td><code>|=</code></td><td>n/a</td><td> append</td></tr>
-<tr><td><code><<</code></td><td>n/a</td><td> map put</td></tr>
-<tr><td><code>>></code></td><td>n/a</td><td> map drop</td></tr>
+<tr><td><code>>></code></td><td>n/a</td><td> map/set drop</td></tr>
 <tr><td><code>::</code></td><td>n/a</td><td> function-to-expression</td></tr>
 </table>
 
@@ -537,7 +536,7 @@ Examples:<code>
 <h4><br><a name="orElseOp">orElse</a></h4>
 The <code>orElse</code>-operator is intended for cases where the left-hand-side operand may be <code>void</code>, e.g. <code>
 <!--mnh-->
-   in> sum(L:numericList)->L.agg(+) orElse 0;
+   in> sum(L:NumericList)->L.agg(+) orElse 0;
    in> sum([1, 2, 3]);
   out> 6
    in> sum([]);
@@ -630,7 +629,20 @@ It can also be used to assign a value to a mutable rule or a block-local variabl
   f(x)->print('Last x was: ',last_x_in_f) and
         print('This x is : ',last_x_in_f:=x);
 <!--end-->
-</code> </td></tr>
+</code><br>
+This operator can also be employed to perform in-place modification of (potentially nested) lists and maps:<code>
+   begin
+     local x:=['a'..'f']; //returns x
+     print(x);    //prints ['a','b','c','d','e','f']
+     x[3]:='-';   //returns '-' after updating element No.3
+     print(x);    //prints ['a','b','c','-','e','f']
+     x[4]:=void;  //returns void after removing element No.4
+     print(x);    //prints ['a','b','c','-','f']
+     x[5]:='NEW'; //returns 'NEW' after adding a new element at index 5 (index 6 would result in an out-of-bounds error!)
+     print(x);    //returns ['a','b','c','-','f','NEW']
+   end;
+</code>
+</td></tr>
 </table>
 
 <h3><br><a name="cStyleOps"> C-Style operators</a></h3>
@@ -642,11 +654,11 @@ The following C-Style operators are supported: <ul>
   <li> <code>/=</code> Divides the right-hand-side by the left-hand-side and returns the new value. </li>
   <li> <code>&=</code> String-Concatenates the right-hand-side with the left-hand-side and returns the new value. </li>
   <li> <code>|=</code> Append the left-hand-side to the right-hand-side and returns the new value. </li>
-  <li> <code><<</code> Puts a key-value-pair (right-hand-side) to the map on the left-hand-side. The left-hand-side will be a map afterwards.</li>
-  <li> <code>>></code> Drops a key (right-hand-side) from the map on the left-hand-side. The left-hand-side will be a map afterwards.</li>
+  <li> <code>>></code> Drops a key (right-hand-side) from the map on the left-hand-side; drops a value from the set on the left-hand-side</li>
 </ul>
 While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
-the latter 4 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
+the latter 3 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).<br>
+As the assignment operator, the C-style operators can be employed for in-place modification.
 
 <h3><br><a name="funcToExp"> Function-to-Expression</a></h3>
 The <i>Function-to-Expression</i> operator "<code>::</code>" can be used to conveniently wrap a rule in an expression.<br>
@@ -771,7 +783,7 @@ If a function of the same name is defined in more than one used package, the def
 To access a "hidden" function, you can access it by fully qualifying it via <code><i>packageName</i>.<i>functionName</i></code>.<br>
 Example: Define a function returning the "square of a string", using the builtin function as a fallback:<code>
 <!--mnh-->
-  sqr(s:string):=string(math.sqr(softCast(s)));
+  sqr(s:String):=string(math.sqr(softCast(s)));
   sqr(x)->math.sqr(x);
 <!--end-->
 </code>
@@ -834,22 +846,22 @@ Parameter restrictions fall in three categories:<ul>
 </ul>
 <br>The following type checks are defined as unary (postfix) operator:<code>
 <!--mnh-->
-  :scalar    :list          :set           :collection
-  :boolean   :booleanList   :booleanSet    :booleanCollection
-  :int       :intList       :intSet        :intCollection
-  :real      :realList      :realSet       :realCollection
-  :string    :stringList    :stringSet     :stringCollection
-  :numeric   :numericList   :numericSet    :numericCollection
-             :map
-             :expression
+  :Scalar    :List          :Set           :Collection
+  :Boolean   :BooleanList   :BooleanSet    :BooleanCollection
+  :Int       :IntList       :IntSet        :IntCollection
+  :Real      :RealList      :RealSet       :RealCollection
+  :String    :StringList    :StringSet     :StringCollection
+  :Numeric   :NumericList   :NumericSet    :NumericCollection
+             :Map
+             :Expression
 <!--end-->
 </code><br>
 All typechecks in columns 2,3 and 4 can be modified to accept a compound type with a specified number of elements or an expression, which can be applied to
 a given number of parameters, e.g.: <code>
 <!--mnh-->
-  apply(f:expression(1),parameter)->f(parameter);
+  apply(f:Expression(1),parameter)->f(parameter);
   
-  cross(x:numericList(3),y:numericList(3))->
+  cross(x:NumericList(3),y:NumericList(3))->
     [x[1]*y[2]-y[1]*x[2],
      x[2]*y[0]-y[2]*x[0],
      x[0]*y[1]-y[0]*x[1]];
@@ -863,9 +875,9 @@ Apart from the type checks defined as unary operator there are two type checks w
 If a rule has several subrules (i.e. there are several declarations with the same ID), the subrules are tested in order of their declaration and the first matching subrule will be applied.<br>
 Example: <code>
 <!--mnh-->
-  fib(i<=1)->1;                      //recursion terminates
-  fib(i:int)->fib(i-1)+fib(i-2);     //recursion step
-  fib(I:intList)->I.each(i,fib(i));  //vectorization
+  fib(i<=1)->1;                  //recursion terminates
+  fib(i:Int)->fib(i-1)+fib(i-2); //recursion step
+  fib(I:IntList)->I.map(::fib);  //vectorization
 <!--end-->
 </code>
 There is a shorthand for tests on equality: the first comparand can be omitted. The following pairs of function heads are equivalent:<code>
@@ -905,7 +917,7 @@ have side effects. <br> Identifiers occuring as the left hand side of an assignm
 are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be found in any surrounding scope.
 <br>A neat example demonstrating the usefulnes of this feature is calculation of a running sum of a numeric list:<code>
 <!--mnh-->
-  runningSum(L:numericList)->begin
+  runningSum(L:NumericList)->begin
     local sum:=0;
     L.each(element,sum+=element);
   end;
@@ -915,7 +927,6 @@ Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End
 
 <h3><br><a name="beginEnd">Begin-Save-End-Blocks</a></h3>
 
-<span class="red"><b>Disclaimer: This is an experimental feature!</b></span><br>
 <i>Begin-Save-End-Blocks</i> are an extension to begin-end-blocks inspired by FORTRAN's "SAVE" keyword. <br>
 These blocks allow to store an internal state of an expression. The <code><span class="builtin">save</span></code> keyword is interpreted on the same level
 as the <code><span class="builtin">begin</span></code> or <code><span class="builtin">end</span></code> keywords.<br>
@@ -1038,7 +1049,7 @@ The following restrictions apply:<ul>
 For each type <code><b>T</b></code>, an additional rule <code>is<b>T</b></code> is automatically created.<br>
 It is recommended that type rules begin with an uppercase letter.<br><code>
 <!--mnh-->
-   in> type SquareMatrix(M:list)->M.each(row,row.isNumList(M.size),AND);
+   in> type SquareMatrix(M:List)->M.each(row,row.isNumList(M.size),AND);
    in> determinant(M:SquareMatrix)->
          M.size=1 ? M[0,0] :
          M.size=2 ? M[0,0]*M[1,1]-M[1,0]*M[0,1] :
@@ -1292,8 +1303,6 @@ For compound accesses there also is the getAll method, whose behavior is like th
 </ul>
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
-<li><h4><a href="#async">async</a></h4></li>
-<li><h4><a href="#toId">toId</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
@@ -1385,7 +1394,7 @@ This returns a nested list.<br><br>
 Compute Euler's number based on inverse factorials<code>
 <!--mnh-->
    in> fak(n<1)->1;
-   in> fak(n :int)->[1..n].agg(*);
+   in> fak(n :Int)->[1..n].agg(*);
    in> [0..20].each(n,1/fak(n),+);
   out> 2.71828182845905
 <!--end-->
@@ -1452,7 +1461,7 @@ The <code>while</code> construct can be used to construct head-controlled loops.
 </code>
 Where <code>condition</code> is an expression returning a boolean value and body is one expression.<code>
 <!--mnh-->
- in> greatestCommonDivisor(xIn:int,yIn:int)->
+ in> greatestCommonDivisor(xIn:Int,yIn:Int)->
        begin
          local x:=xIn;
          local y:=yIn;
@@ -1467,46 +1476,6 @@ out> 6
 <!--end-->
 </code>
 
-<h3><br><a name="async">async</a></h3>
-The <code>async</code> construct can be used for parallelization.<br>
-It accepts a nullary expression as input. This expression is then executed in a separate thread.<br>
-Note that you cannot access local variables defined in the calling procedure. Use mutable variables for inter-thread communication instead.<br>
-Example (1):<code>
-<!--mnh-->
-  mutable enterPressed:=false;
-
-  main->begin
-    async({begin
-             ask('Press enter to quit');
-             enterPressed:=true;
-           end});
-    while(not(enterPressed),begin
-      sleep(1);
-      print(round(time));
-    end);
-  end;
-<!--end-->
-</code>
-Asynchronous tasks are silently killed when the main evaluation task is finished. Making use of this property, you could simplify the above script (without changing its behavior) by printing asynchronusly and asking in the main thread:<br>
-Example (2):<code>
-<!--mnh-->
-  main->begin
-    async({while(true,begin
-             sleep(1);
-             print(round(time));
-           end)});
-    ask('Press enter to quit');
-  end;
-<!--end-->
-</code>
-
-<h3><br><a name="toId">toId</a></h3>
-<code>toId</code> converts a string to an identifier.<br>
-Example:<code>
-<!--mnh-->
-   in> toId('sqr')(2);
-  out> 4
-<!--end-->
 </div>
 </div>
 <!--commonFoot-->
