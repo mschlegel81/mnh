@@ -428,7 +428,7 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
         //This is a hack to ensure that "myPath" behaves nicely when including
         if (nextToken<>nil) and (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
       end;
-      tt_each,tt_parallelEach: if not(retainBlanks) then begin
+      tt_each,tt_parallelEach: begin
         n[1]:=fetch; n[2]:=fetch; n[3]:=fetch;
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) and
            (n[2]<>nil) and (n[2]^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
@@ -440,7 +440,7 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
         recycler.disposeToken(n[2]);
         recycler.disposeToken(n[3]);
       end;
-      tt_agg: if not(retainBlanks) then begin
+      tt_agg: begin
         n[1]:=fetch;
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) then begin
           nextToken^.tokType:=tt_each;

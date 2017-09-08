@@ -155,6 +155,8 @@ TYPE
       FUNCTION arity:longint; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION isStateful:boolean; virtual;
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
+      FUNCTION getId:T_idString; virtual;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
@@ -931,8 +933,16 @@ FUNCTION T_subruleExpression.getId: T_idString;
   end;
 
 FUNCTION T_builtinExpression.getId:T_idString;
+  VAR unqalified:string;
   begin
     result:=getMeta(func).qualifiedId;
+    unqalified:=unqualifiedId(result);
+    if startsWith(unqalified,'::') then result:=copy(unqalified,3,length(unqalified)-2);
+  end;
+
+FUNCTION T_builtinGeneratorExpression.getId:T_idString;
+  begin
+    result:=toString();
   end;
 
 FUNCTION T_inlineExpression .arity: longint; begin result:=pattern.arity; end;

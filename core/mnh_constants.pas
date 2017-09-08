@@ -646,6 +646,7 @@ CONST
     [mt_el4_systemError,mt_el4_haltMessageReceived,mt_el4_haltMessageQuiet]);
 
 FUNCTION isQualified(CONST s:string):boolean;
+FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
 
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
@@ -655,6 +656,14 @@ IMPLEMENTATION
 FUNCTION isQualified(CONST s:string):boolean;
   begin
     result:=pos(ID_QUALIFY_CHARACTER,s)>0;
+  end;
+
+FUNCTION unqualifiedId(CONST qualifiedId:string):string;
+  VAR idx:longint;
+  begin
+    idx:=pos(ID_QUALIFY_CHARACTER,qualifiedId);
+    if idx<=0 then result:=qualifiedId
+              else result:=copy(qualifiedId,idx+1,length(qualifiedId));
   end;
 
 FUNCTION getAppName: string;

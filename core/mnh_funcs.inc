@@ -18,15 +18,19 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
 
 FUNCTION try_imp intFuncSignature;
   FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
-    VAR prevAdapters:P_adapters;
+    VAR prevAdapters,
+        tryAdapters:P_adapters;
         oldWhitelist:T_sideEffects;
         interceptor:P_errorInterceptor;
         messagesLiteral:P_literal;
     begin
       prevAdapters:=context.adapters;
-      context.adapters:=prevAdapters^.getAdaptersForTry(interceptor);
+      tryAdapters:=prevAdapters^.getAdaptersForTry(interceptor);
+      context.adapters:=tryAdapters;
       oldWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist-[se_alterPlotState]);
       result:=toTry^.evaluateToLiteral(tokenLocation,@context);
+      context.setAllowedSideEffectsReturningPrevious(oldWhitelist);
+      context.adapters:=prevAdapters;
       if (result=nil) or (interceptor^.hasError) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
@@ -35,15 +39,15 @@ FUNCTION try_imp intFuncSignature;
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
             messagesLiteral:=messagesToLiteralForSandbox(interceptor^.storedMessages);
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral);
+            if result=nil then context.adapters^.raiseError('Error in catch block of try-statement.',tokenLocation);
             disposeLiteral(messagesLiteral);
           end else begin
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context);
+            if result=nil then context.adapters^.raiseError('Error in catch block of try-statement.',tokenLocation);
           end;
         end else result:=inCaseOfFailure^.rereferenced;
       end;
-      context.setAllowedSideEffectsReturningPrevious(oldWhitelist);
-      dispose(context.adapters,destroy);
-      context.adapters:=prevAdapters;
+      dispose(tryAdapters,destroy);
     end;
 
   begin

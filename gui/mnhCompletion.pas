@@ -35,6 +35,7 @@ PROCEDURE initIntrinsicRuleList;
   VAR id:string;
       i:longint;
       tt:T_tokenType;
+      tc:T_typeCheck;
   begin
     if intrinsicRulesForCompletion_ready then exit;
     intrinsicRulesForCompletion.create;
@@ -52,6 +53,8 @@ PROCEDURE initIntrinsicRuleList;
     end;
     for tt in T_tokenType do if isIdentifier(C_tokenInfo[tt].defaultId,true) then
       intrinsicRulesForCompletion.put(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
+    for tc in T_typeCheck do
+      intrinsicRulesForCompletion.put(C_typeInfo[tc].name);
     for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
       intrinsicRulesForCompletion.put(C_specialWordInfo[i].txt);
     intrinsicRulesForCompletion_ready:=true;

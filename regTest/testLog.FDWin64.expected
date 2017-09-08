@@ -4219,7 +4219,7 @@ out> true
 in> [1..20].filter({$x mod 2<>0<>$x mod 3});
 out> [1,5,7,11,13,17,19]
 in> rangeGenerator(1, 20).filter({$x mod 2<>0<>$x mod 3});
-out> ::filter/generator
+out> rangeGenerator(1,20).filter({$x mod 2<>0<>$x mod 3})
 in> ['a'..'f'].map(:: upper);
 out> ['A','B','C','D','E','F']
 in> ['a'..'f'].pMap(:: upper);
@@ -4250,3 +4250,45 @@ in> permutationIterator([3, 1, 2]).map(:: print);
 [3,1,2]
 [3,2,1]
 out> []
+in> rangeGenerator(1, 100).lazyMap({$x^2});
+out> rangeGenerator(1,100).lazyMap({$x^2})
+in> mergeMaps([['A', 1],['B', 2]].toMap,[['A', 7],['C', 3]].toMap, ::+);
+out> [['A',8],['B',2],['C',3]].toMap
+in> try({deserialize('x')});
+out> void
+in> try({deserialize('x')}, :: print);
+[['Error','@?:3,6','Invalid literal encoding type 120']]
+out> void
+in> try({deserialize('x')}, 0);
+out> 0
+in> try({deserialize('x')},{warn($x.head.trailing)});
+Warning Invalid literal encoding type 120
+out> void
+in> isStateful(:: print);
+out> false
+in> isStateful(primeGenerator);
+out> true
+in> interpret('3+4');
+out> 7
+in> composeDigits([1, 0, 1], 2);
+out> 5
+in> composeDigits([1, 0, 2]);
+out> 102
+in> composeDigits([1, 0, 2], 10, 2);
+out> 1.02
+in> sandBoxExecute('f(x)->3*x+1; f(f(f(1)))');
+out> [['in>','','f(x)->3*x+1;'],['in>','','f(f(f(1)));'],['out>','','40']]
+in> begin local x:=async({print('start') orElse sleep(0.1) orElse'end'}); print('1: ', x().isVoid); sleep(0.2); print('2: ', x()); end;
+1: true
+start
+2: end
+out> void
+in> begin local x:=future({print('start') orElse sleep(0.1) orElse'end'}); print('1: ', x().isVoid); sleep(0.2); print('2: ', x()); end;
+start
+1: false
+2: end
+out> void
+in> validateRegex('(3+.*');
+out> false
+in> validateRegex('\(3+.*');
+out> true
