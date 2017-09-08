@@ -90,12 +90,14 @@ FUNCTION listBuiltin_imp intFuncSignature;
 FUNCTION listKeywords_imp intFuncSignature;
   VAR i:longint;
       tt:T_tokenType;
+      tc:T_typeCheck;
       subList:array[T_reservedWordClass] of P_listLiteral;
       rc:T_reservedWordClass;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       for rc:=low(T_reservedWordClass) to high(T_reservedWordClass) do subList[rc]:=newListLiteral;
+      for tc in T_typeCheck do subList[rwc_type]^.appendString(C_typeInfo[tc].name);
       for tt:=low(T_tokenType) to high(T_tokenType) do
       if isIdentifier(C_tokenInfo[tt].defaultId,false) or
          ((copy(C_tokenInfo[tt].defaultId,1,1)='.') or (copy(C_tokenInfo[tt].defaultId,1,1)=':')) and
@@ -110,8 +112,8 @@ FUNCTION listKeywords_imp intFuncSignature;
                 .append(subList[rwc_specialConstruct],false),false)^
         .append(newListLiteral^.appendString('operators')^
                 .append(subList[rwc_operator],false),false)^
-        .append(newListLiteral^.appendString('typeChecks')^
-                .append(subList[rwc_typeCheck],false),false)^
+        .append(newListLiteral^.appendString('types')^
+                .append(subList[rwc_type],false),false)^
         .append(newListLiteral^.appendString('modifiers')^
                 .append(subList[rwc_modifier],false),false);
     end;

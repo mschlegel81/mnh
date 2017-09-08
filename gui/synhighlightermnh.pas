@@ -203,7 +203,6 @@ PROCEDURE TSynMnhSyn.next;
       i: longint;
       lc: T_messageClass;
       specialLineCase:T_messageClass;
-      tt: T_tokenType;
 
   FUNCTION continuesWith(CONST part:shortString; CONST offset:longint):boolean;
     VAR k:longint;
@@ -327,10 +326,6 @@ PROCEDURE TSynMnhSyn.next;
               inc(i);
             end;
             fTokenId := tkDefault;
-            for tt in C_typeChecks do if (fTokenId<>tkOperator) and (localId=C_tokenInfo[tt].defaultId) then begin
-              fTokenId := tkOperator;
-              run:=i;
-            end;
             if fTokenId<>tkOperator then begin
               fTokenId := tkOperator;
             end;
@@ -452,6 +447,7 @@ PROCEDURE initLists;
     end;
 
   VAR tt:T_tokenType;
+      tc:T_typeCheck;
       i:longint;
       builtin:T_arrayOfString;
   begin
@@ -459,7 +455,7 @@ PROCEDURE initLists;
     tokenTypeMap.create();
     for tt:=low(T_tokenType) to high(T_tokenType) do with C_tokenInfo[tt] do put(reservedWordClass,defaultId);
     for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
-
+    for tc in T_typeCheck do put(rwc_type,C_typeInfo[tc].name);;
     builtin:=intrinsicRuleMap.keySet;
     for i:=0 to length(builtin)-1 do put(rwc_not_reserved,builtin[i]);
     listsAreInitialized:=true;
