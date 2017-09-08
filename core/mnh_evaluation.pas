@@ -1219,6 +1219,7 @@ TYPE P_asyncTask=^T_asyncTask;
        private
          criticalSection:TRTLCriticalSection;
          task:P_token;
+         id:string;
          myContext:P_threadContext;
          resultValue:P_literal;
          evaluationFinished:boolean;
@@ -1226,7 +1227,7 @@ TYPE P_asyncTask=^T_asyncTask;
        public
          CONSTRUCTOR create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
          DESTRUCTOR destroy; virtual;
-         FUNCTION getId:T_idString; virtual;
+         FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
          FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
      end;
 
@@ -1236,6 +1237,8 @@ CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadConte
     initCriticalSection(criticalSection);
     isBlocking:=blocking;
     task:=task_;
+    if isBlocking then id:='future' else id:='async';
+    id:=id+'({'+tokensToString(task,30)+'})';
     myContext:=context_;
     resultValue:=nil;
     evaluationFinished:=false;
@@ -1261,8 +1264,10 @@ DESTRUCTOR T_asyncTask.destroy;
     doneCriticalSection(criticalSection);
   end;
 
-FUNCTION T_asyncTask.getId:T_idString;
-  begin result:='async_task'; end;
+FUNCTION T_asyncTask.toString(CONST lengthLimit:longint=maxLongint):string;
+  begin
+    result:=id;
+  end;
 
 FUNCTION T_asyncTask.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
   begin
