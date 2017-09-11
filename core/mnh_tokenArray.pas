@@ -258,7 +258,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
             result^.data:=associatedPackage;
             for tc in T_typeCheck do if result^.txt=C_typeInfo[tc].name then begin
               result^.tokType:=tt_type;
-              result^.data:=pointer(ptrint(tc));
+              result^.setTypeCheck(tc);
             end;
           end;
         end;

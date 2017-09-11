@@ -543,7 +543,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           if (parts[i].first<>nil) then begin
             if (parts[i].first^.tokType=tt_typeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
-              rulePatternElement.builtinTypeCheck:=T_typeCheck(ptrint(parts[i].first^.data));
+              rulePatternElement.builtinTypeCheck:=parts[i].first^.getTypeCheck;
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
               if C_typeInfo[rulePatternElement.builtinTypeCheck].modifiable then begin
