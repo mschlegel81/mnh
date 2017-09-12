@@ -954,7 +954,7 @@ FUNCTION T_inlineExpression.inspect: P_mapLiteral;
     begin
       case typ of
         et_normal_public : result:=PUBLIC_TEXT;
-        et_normal_private: result:=C_tokenInfo[tt_modifier_private].defaultId;
+        et_normal_private: result:=PRIVATE_TEXT;
         else result:=C_expressionTypeString[typ];
       end;
     end;

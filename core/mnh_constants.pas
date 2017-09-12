@@ -152,14 +152,7 @@ TYPE
     tt_semicolon,
     tt_optionalParameters,
     //modifiers:
-    tt_modifier_private,
-    tt_modifier_memoized,
-    tt_modifier_mutable,
-    tt_modifier_datastore,
-    tt_modifier_plain,
-    tt_modifier_synchronized,
-    tt_modifier_local,
-    tt_modifier_customType,
+    tt_modifier,
     //special: [E]nd [O]f [L]ine
     tt_EOL,
     tt_docComment,
@@ -175,25 +168,11 @@ TYPE
     info:ansistring;
   end;
 
-  T_modifier      =tt_modifier_private..tt_modifier_customType;
-CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized,tt_modifier_customType];
-TYPE
-  T_modifierSet=set of T_modifier;
 CONST
-
-
   C_forbiddenTokenTypes: T_tokenTypeSet=[tt_rulePutCacheValue, tt_agg, tt_parList_constructor, tt_parList,
     tt_declare,
     //type checks:
     tt_typeCheck..tt_customTypeCheck,
-    //modifiers:
-    tt_modifier_private,
-    tt_modifier_memoized,
-    tt_modifier_mutable,
-    tt_modifier_datastore,
-    tt_modifier_plain,
-    tt_modifier_synchronized,
-    tt_modifier_customType,
     //special: [E]nd [O]f [L]ine
     tt_EOL,
     tt_blank];
@@ -335,14 +314,7 @@ CONST
 {tt_customTypeCheck}            (defaultId:'';              defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'Custom type check'),
 {tt_semicolon}                  (defaultId:';';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Semicolon#Ends a statement'),
 {tt_optionalParameters}         (defaultId:'...';           defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
-{tt_modifier_private}           (defaultId:PRIVATE_TEXT;    defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
-{tt_modifier_memoized}          (defaultId:'memoized';      defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
-{tt_modifier_mutable}           (defaultId:'mutable';       defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
-{tt_modifier_datastore}         (defaultId:'datastore';     defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
-{tt_modifier_plain}             (defaultId:'plain';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier plain#Modifies a datastore to use plain text instead of default binary format'),
-{tt_modifier_synchronized}      (defaultId:'synchronized';  defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
-{tt_modifier_local}             (defaultId:'local';         defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier local#Used for declaring block-local variables'),
-{tt_modifier_customType}        (defaultId:'type';          defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier type#Used for declaring custom type checks'),
+{tt_modifier}                   (defaultId:'';              defaultHtmlSpan:'modifier';   reservedWordClass:rwc_modifier;         helpText:'Modifier'),
 {tt_EOL}                        (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'End-Of-Input#Helper token; May also indicate a comment'),
 {tt_docComment}                 (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Documentation comment'),
 {tt_attributeComment}           (defaultId:'';              defaultHtmlSpan:'comment';    reservedWordClass:rwc_not_reserved;     helpText:'Attribute comment'),
@@ -466,6 +438,30 @@ CONST
   {tc_typeCheckExpression}        (name:'Expression';        helpText:'Matches expressions#Can be modified to only match expressions accepting a given number of parameters';
                                    modifiable:true;  matching:[lt_expression]));
 
+TYPE
+  T_modifier=(
+    modifier_private,
+    modifier_memoized,
+    modifier_mutable,
+    modifier_datastore,
+    modifier_plain,
+    modifier_synchronized,
+    modifier_local,
+    modifier_customType);
+  T_modifierSet=set of T_modifier;
+CONST
+  C_modifierInfo:array[T_modifier] of record
+    name,helpText:string;
+    isRuleModifier:boolean;
+  end=((name:PRIVATE_TEXT;    helpText:'Limits visiblity of the declaration to the package it is declared in'           ; isRuleModifier:true ),
+       (name:'memoized';      helpText:'Makes the rule memoized, caching previously computed results'                   ; isRuleModifier:true ),
+       (name:'mutable';       helpText:'Makes the rule mutable, de facto changing the rule to a variable'               ; isRuleModifier:true ),
+       (name:'datastore';     helpText:'Makes the rule persistent in a separate file.#Persistent rules also are mutable'; isRuleModifier:true ),
+       (name:'plain';         helpText:'Modifies a datastore to use plain text instead of default binary format'        ; isRuleModifier:true ),
+       (name:'synchronized';  helpText:'Protects the rule from concurrent execution.'                                   ; isRuleModifier:true ),
+       (name:'local';         helpText:'Used for declaring block-local variables'                                       ; isRuleModifier:false),
+       (name:'type';          helpText:'Used for declaring custom type checks'                                          ; isRuleModifier:true ));
+
   C_specialWordInfo:array[0..5] of record
     txt:string;
     reservedWordClass:T_reservedWordClass;
@@ -503,22 +499,22 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
       C_validModifierCombinations:array[0..15] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
-      end=((modifiers:[];                                             ruleType:rt_normal),
-           (modifiers:[                         tt_modifier_private]; ruleType:rt_normal),
-           (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
-           (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
-           (modifiers:[tt_modifier_mutable];                          ruleType:rt_mutable),
-           (modifiers:[tt_modifier_mutable     ,tt_modifier_private]; ruleType:rt_mutable),
-           (modifiers:[tt_modifier_datastore];                        ruleType:rt_datastore),
-           (modifiers:[tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore),
-           (modifiers:[tt_modifier_plain,tt_modifier_datastore];                        ruleType:rt_datastore),
-           (modifiers:[tt_modifier_plain,tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore),
-           (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
-           (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
-           (modifiers:[tt_modifier_synchronized];                     ruleType:rt_synchronized),
-           (modifiers:[tt_modifier_synchronized,tt_modifier_private]; ruleType:rt_synchronized),
-           (modifiers:[tt_modifier_customType];                       ruleType:rt_customTypeCheck),
-           (modifiers:[tt_modifier_customType,tt_modifier_private];   ruleType:rt_customTypeCheck));
+      end=((modifiers:[];                                                   ruleType:rt_normal),
+           (modifiers:[modifier_private];                                   ruleType:rt_normal),
+           (modifiers:[modifier_memoized];                                  ruleType:rt_memoized),
+           (modifiers:[modifier_memoized,modifier_private];                 ruleType:rt_memoized),
+           (modifiers:[modifier_mutable];                                   ruleType:rt_mutable),
+           (modifiers:[modifier_mutable,modifier_private];                  ruleType:rt_mutable),
+           (modifiers:[modifier_datastore];                                 ruleType:rt_datastore),
+           (modifiers:[modifier_datastore   ,modifier_private];             ruleType:rt_datastore),
+           (modifiers:[modifier_plain,modifier_datastore];                  ruleType:rt_datastore),
+           (modifiers:[modifier_plain,modifier_datastore,modifier_private]; ruleType:rt_datastore),
+           (modifiers:[modifier_memoized];                                  ruleType:rt_memoized),
+           (modifiers:[modifier_memoized,modifier_private];                 ruleType:rt_memoized),
+           (modifiers:[modifier_synchronized];                              ruleType:rt_synchronized),
+           (modifiers:[modifier_synchronized,modifier_private];             ruleType:rt_synchronized),
+           (modifiers:[modifier_customType];                                ruleType:rt_customTypeCheck),
+           (modifiers:[modifier_customType,modifier_private];               ruleType:rt_customTypeCheck));
 
 TYPE
   T_messageClass=(mc_echo   ,

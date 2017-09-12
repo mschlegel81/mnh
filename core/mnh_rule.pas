@@ -405,7 +405,7 @@ FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
 FUNCTION T_mutableRule.inspect: P_mapLiteral;
   FUNCTION privateOrPublic:string;
     begin
-      if privateRule then result:=C_tokenInfo[tt_modifier_private].defaultId
+      if privateRule then result:=PRIVATE_TEXT
                      else result:=PUBLIC_TEXT;
     end;
 
@@ -445,7 +445,7 @@ FUNCTION T_ruleWithSubrules.getOutline(CONST includePrivate:boolean):T_outline;
       result[j].isPublic:=subrules[i]^.typ=et_normal_public;
       result[j].id:=getId;
       result[j].info:=C_ruleTypeText[getRuleType];
-      if not(result[j].isPublic) then result[j].info:=result[j].info+C_tokenInfo[tt_modifier_private].defaultId+' ';
+      if not(result[j].isPublic) then result[j].info:=result[j].info+PRIVATE_TEXT+' ';
       result[j].info:=result[j].info+result[j].id+subrules[i]^.patternString;
       inc(j);
     end;
@@ -460,7 +460,7 @@ FUNCTION T_mutableRule.getOutline(CONST includePrivate:boolean):T_outline;
       result[0].isPublic:=not(privateRule);
       result[0].id:=getId;
       result[0].info:=C_ruleTypeText[getRuleType];
-      if privateRule then result[0].info:=result[0].info+C_tokenInfo[tt_modifier_private].defaultId+' ';
+      if privateRule then result[0].info:=result[0].info+PRIVATE_TEXT+' ';
       result[0].info:=result[0].info+result[0].id;
     end else setLength(result,0);
   end;

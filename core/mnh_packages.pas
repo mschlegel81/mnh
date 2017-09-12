@@ -509,12 +509,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;
-      while (statement.firstToken<>nil) and (statement.firstToken^.tokType in C_ruleModifiers) do begin
-        include(ruleModifiers,statement.firstToken^.tokType);
+      while (statement.firstToken<>nil) and (statement.firstToken^.tokType=tt_modifier) and (C_modifierInfo[statement.firstToken^.getModifier].isRuleModifier) do begin
+        include(ruleModifiers,statement.firstToken^.getModifier);
         statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
       end;
-      evaluateBody:=evaluateBody
-                 or (tt_modifier_mutable    in ruleModifiers);
+      evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
 
       if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
         context.adapters^.raiseError('Declaration does not start with an identifier.',statement.firstToken^.location);
@@ -559,7 +558,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
         then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
         if context.adapters^.noErrors then begin
-          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,context));
+          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,context));
           subRule^.metaData.setComment(join(statement.comments,C_lineBreakChar));
           subRule^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
           //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
@@ -576,7 +575,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
             {$ifdef fullVersion}
             if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
-              if (tt_modifier_private in ruleModifiers)
+              if (modifier_private in ruleModifiers)
               then context.adapters^.raiseWarning('Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules',ruleDeclarationStart)
               else ruleGroup^.setIdResolved;
             end;
@@ -603,8 +602,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;
-      while (statement.firstToken<>nil) and (statement.firstToken^.tokType in C_ruleModifiers) do begin
-        include(ruleModifiers,statement.firstToken^.tokType);
+      while (statement.firstToken<>nil) and (statement.firstToken^.tokType=tt_modifier) and (C_modifierInfo[statement.firstToken^.getModifier].isRuleModifier) do begin
+        include(ruleModifiers,statement.firstToken^.getModifier);
         loc:=statement.firstToken^.location;
         statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
       end;
@@ -690,7 +689,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       {$ifdef fullVersion}
       context.callStackPop();
       {$endif}
-    end else if statement.firstToken^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
+    end else if statement.firstToken^.tokType=tt_modifier then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.adapters^.raiseError('Datastore declaration is not allowed here',assignmentToken^.location);
         context.recycler.cascadeDisposeToken(statement.firstToken);
@@ -922,7 +921,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
     VAR m:T_modifier;
         s:string='';
     begin
-      for m:=low(T_modifier) to high(T_modifier) do if m in modifiers then s:=s+C_tokenInfo[m].defaultId+' ';
+      for m:=low(T_modifier) to high(T_modifier) do if m in modifiers then s:=s+C_modifierInfo[m].name+' ';
       adapters.raiseError('Invalid combination of modifiers: '+s,ruleDeclarationStart);
     end;
 
@@ -947,8 +946,8 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
         adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
       case ruleType of
         rt_memoized     : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
-        rt_mutable      : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      tt_modifier_private in modifiers));
-        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,tt_modifier_private in modifiers,tt_modifier_plain in modifiers));
+        rt_mutable      : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      modifier_private in modifiers));
+        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,modifier_private in modifiers,modifier_plain in modifiers));
         rt_synchronized : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
         else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;

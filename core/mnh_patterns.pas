@@ -189,7 +189,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
-    if restrictionType = tt_modifier_customType then exit;
+    if restrictionType = tt_customTypeCheck then exit;
     if restrictionType = tt_typeCheck then typeWhitelist:=C_typeCheckInfo[builtinTypeCheck].matching;
     if (restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
        and (restrictionValue<>nil)
@@ -232,7 +232,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
     case restrictionType of
       tt_customTypeCheck:
         exit((e.restrictionType=tt_customTypeCheck) and (customTypeCheck=e.customTypeCheck));
-      tt_type:
+      tt_type,tt_typeCheck:
         exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
       tt_comparatorListEq,
       tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (getValueRelation=vr_equal));

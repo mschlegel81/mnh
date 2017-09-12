@@ -460,6 +460,10 @@ PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST Ca
           if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
           info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
         end;
+        tt_modifier: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+        end;
       end;
     end else begin
       info.tokenExplanation:='';
