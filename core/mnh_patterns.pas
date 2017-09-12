@@ -19,7 +19,6 @@ TYPE
       builtinTypeCheck :T_typeCheck;
       customTypeCheck  :P_expressionLiteral;
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
-      FUNCTION acceptType(CONST literalType:T_literalType):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
@@ -109,11 +108,6 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
                                         L^.isInRelationTo(restrictionType, parameterList[restrictionIdx])
                            else result:=L^.isInRelationTo(restrictionType, restrictionValue             );
     end;
-  end;
-
-FUNCTION T_patternElement.acceptType(CONST literalType:T_literalType):boolean;
-  begin
-    result:=literalType in typeWhitelist;
   end;
 
 FUNCTION T_patternElement.toString: ansistring;
