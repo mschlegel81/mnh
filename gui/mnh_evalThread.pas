@@ -456,6 +456,10 @@ PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST Ca
           info.location:=P_rule(tokenToExplain^.data)^.getLocation;
           if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
         end;
+        tt_type,tt_typeCheck: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
+        end;
       end;
     end else begin
       info.tokenExplanation:='';
