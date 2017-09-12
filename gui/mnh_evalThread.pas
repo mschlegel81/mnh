@@ -456,6 +456,14 @@ PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST Ca
           info.location:=P_rule(tokenToExplain^.data)^.getLocation;
           if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
         end;
+        tt_type,tt_typeCheck: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
+        end;
+        tt_modifier: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+        end;
       end;
     end else begin
       info.tokenExplanation:='';
@@ -545,7 +553,7 @@ PROCEDURE T_editScriptTask.execute(VAR context:T_threadContext);
     output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@context,input);
     disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
-      context.adapters^.raiseError('Script failed due to invalid result type '+C_typeString[output^.literalType],script^.editRule^.getLocation);
+      context.adapters^.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
       disposeLiteral(output);
     end;
     done:=true;

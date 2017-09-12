@@ -122,9 +122,9 @@ FUNCTION T_patternElement.toString: ansistring;
     case restrictionType of
       tt_literal: result:=id;
       tt_customTypeCheck    : result:=id+':'+customTypeCheck^.getParentId;
-      tt_typeCheck: if C_typeInfo[builtinTypeCheck].modifiable and (restrictionIdx>=0)
-                    then result:=id+':'+C_typeInfo[builtinTypeCheck].name+'('+intToStr(restrictionIdx)+')'
-                    else result:=id+':'+C_typeInfo[builtinTypeCheck].name;
+      tt_typeCheck: if C_typeCheckInfo[builtinTypeCheck].modifiable and (restrictionIdx>=0)
+                    then result:=id+':'+C_typeCheckInfo[builtinTypeCheck].name+'('+intToStr(restrictionIdx)+')'
+                    else result:=id+':'+C_typeCheckInfo[builtinTypeCheck].name;
       tt_comparatorNeq,
       tt_comparatorLeq,
       tt_comparatorGeq,
@@ -189,8 +189,8 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
-    if restrictionType = tt_modifier_customType then exit;
-    if restrictionType = tt_typeCheck then typeWhitelist:=C_typeInfo[builtinTypeCheck].matching;
+    if restrictionType = tt_customTypeCheck then exit;
+    if restrictionType = tt_typeCheck then typeWhitelist:=C_typeCheckInfo[builtinTypeCheck].matching;
     if (restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
        and (restrictionValue<>nil)
     then begin
@@ -232,7 +232,7 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
     case restrictionType of
       tt_customTypeCheck:
         exit((e.restrictionType=tt_customTypeCheck) and (customTypeCheck=e.customTypeCheck));
-      tt_type:
+      tt_type,tt_typeCheck:
         exit((e.restrictionIdx=restrictionIdx) or (restrictionIdx<0) and (e.restrictionIdx>=0));
       tt_comparatorListEq,
       tt_comparatorEq    : exit((e.restrictionType in [tt_comparatorEq,tt_comparatorListEq]) and (getValueRelation=vr_equal));
@@ -543,10 +543,10 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           if (parts[i].first<>nil) then begin
             if (parts[i].first^.tokType=tt_typeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
-              rulePatternElement.builtinTypeCheck:=T_typeCheck(ptrint(parts[i].first^.data));
+              rulePatternElement.builtinTypeCheck:=parts[i].first^.getTypeCheck;
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
-              if C_typeInfo[rulePatternElement.builtinTypeCheck].modifiable then begin
+              if C_typeCheckInfo[rulePatternElement.builtinTypeCheck].modifiable then begin
                 if (parts[i].first=nil) then begin end else
                 if (parts[i].first^.tokType=tt_braceOpen) and
                    (parts[i].first^.next<>nil) and

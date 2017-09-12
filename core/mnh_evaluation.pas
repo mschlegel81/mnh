@@ -1157,7 +1157,7 @@ end}
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
-          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
+          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
         tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;

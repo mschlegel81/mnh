@@ -3995,11 +3995,11 @@ out> [7,11,13]
 in> formatTabs("\v-2\n3\t4.3");
 out> ['  -2','3  4.3']
 in> typeOf(3);
-out> 'int'
+out> 'Int'
 in> typeOf([1..5, 7.5]);
-out> 'numericList(6)'
+out> 'NumericList(6)'
 in> typeOf({$x^2+$y});
-out> 'expression(2)'
+out> 'Expression(2)'
 in> x :=transpose([1,[1, 2, 3],[1, 2]], 0);
 in> x;
 out> [[1,1,1],[0,2,2],[0,3,0]]

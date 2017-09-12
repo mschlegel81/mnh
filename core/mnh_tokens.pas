@@ -69,6 +69,11 @@ TYPE
     {$endif}
     PROCEDURE setSingleLocationForExpression(CONST loc:T_tokenLocation);
     PROCEDURE injectAfter(CONST newToken:P_token);
+
+    FUNCTION getTypeCheck:T_typeCheck;
+    PROCEDURE setTypeCheck(CONST check:T_typeCheck);
+    FUNCTION getModifier:T_modifier;
+    PROCEDURE setModifier(CONST modifier:T_modifier);
   end;
 
   P_tokenRecycler=^T_tokenRecycler;
@@ -276,12 +281,13 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_parList_constructor: result:=toParameterListString(P_listLiteral(data),false,limit);
       tt_parList            : result:=toParameterListString(P_listLiteral(data),true ,limit);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
-      tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
+      tt_assignNewBlockLocal: result:=C_modifierInfo[modifier_local].name+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
       tt_endRule  ,tt_endExpression  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
       tt_mutate, tt_assignExistingBlockLocal..tt_mut_nestedDrop: result:=txt+C_tokenInfo[tokType].defaultId;
-      tt_type:      result:=    C_typeInfo[T_typeCheck(ptrint(data))].name;
-      tt_typeCheck: result:=':'+C_typeInfo[T_typeCheck(ptrint(data))].name;
+      tt_type:      result:=    C_typeCheckInfo[getTypeCheck].name;
+      tt_typeCheck: result:=':'+C_typeCheckInfo[getTypeCheck].name;
+      tt_modifier : result:=C_modifierInfo[getModifier].name;
       tt_identifier,
       tt_localUserRule,
       tt_importedUserRule,
@@ -430,6 +436,36 @@ PROCEDURE T_token.injectAfter(CONST newToken:P_token);
   begin
     newToken^.next:=next;
     next:=newToken;
+  end;
+
+FUNCTION T_token.getTypeCheck: T_typeCheck;
+  begin
+    {$ifdef debugMode}
+    if not(tokType in [tt_type,tt_typeCheck]) then raise Exception.create('Call to getTypeCheck is invalid by tokenType');
+    {$endif}
+    result:=T_typeCheck(PtrUInt(data));
+  end;
+
+PROCEDURE T_token.setTypeCheck(CONST check:T_typeCheck);
+  begin
+    {$ifdef debugMode}
+    if not(tokType in [tt_type,tt_typeCheck]) then raise Exception.create('Call to setTypeCheck is invalid by tokenType');
+    {$endif}
+    data:=pointer(PtrUInt(check));
+  end;
+
+FUNCTION T_token.getModifier:T_modifier;
+  begin
+    {$ifdef debugMode}
+    if (tokType<>tt_modifier) then raise Exception.create('Call to getModifier is invalid by tokenType');
+    {$endif}
+    result:=T_modifier(PtrUInt(data));
+  end;
+
+PROCEDURE T_token.setModifier(CONST modifier:T_modifier);
+  begin
+    data:=pointer(PtrUInt(modifier));
+    tokType:=tt_modifier;
   end;
 
 CONSTRUCTOR T_tokenRecycler.create;

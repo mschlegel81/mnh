@@ -104,7 +104,10 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
             end else adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
-        tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+        tt_modifier:
+        if t^.getModifier<>modifier_local then adapters^.raiseError('Modifier '+safeTokenToString(t)+' is not allowed here',t^.location)
+        else
+        if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
           t^.tokType:=tt_assignNewBlockLocal;
           t^.data:=nil;
           t^.txt:=t^.next^.txt;
@@ -172,6 +175,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
       stringValue:ansistring='';
       tt:T_tokenType;
       tc:T_typeCheck;
+      md:T_modifier;
   begin
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
@@ -256,10 +260,11 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
-            for tc in T_typeCheck do if result^.txt=C_typeInfo[tc].name then begin
+            for tc in T_typeCheck do if result^.txt=C_typeCheckInfo[tc].name then begin
               result^.tokType:=tt_type;
-              result^.data:=pointer(ptrint(tc));
+              result^.setTypeCheck(tc);
             end;
+            if result^.tokType=tt_identifier then for md in T_modifier do if result^.txt=C_modifierInfo[md].name then result^.setModifier(md);
           end;
         end;
       end;
@@ -529,7 +534,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
               end else if (localIdStack.hasId(t^.txt)) then
                 t^.tokType:=tt_blockLocalVariable;
           end;
-          lastWasLocalModifier:=t^.tokType=tt_modifier_local;
+          lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
           t:=t^.next;
         end;
         if t<>nil then t:=t^.next;
@@ -560,7 +565,7 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
               end else if (localIdStack.hasId(lastTokenized^.txt)) then
                 lastTokenized^.tokType:=tt_blockLocalVariable;
           end;
-          lastWasLocalModifier:=lastTokenized^.tokType=tt_modifier_local;
+          lastWasLocalModifier:=(lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
         end;
       end;
       tt_semicolon: begin

@@ -402,7 +402,7 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType;
   VAR myTxt,otherTxt:ansistring;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_expression]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_expression].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     if other^.literalType<>lt_expression then exit(false);
@@ -954,7 +954,7 @@ FUNCTION T_inlineExpression.inspect: P_mapLiteral;
     begin
       case typ of
         et_normal_public : result:=PUBLIC_TEXT;
-        et_normal_private: result:=C_tokenInfo[tt_modifier_private].defaultId;
+        et_normal_private: result:=PRIVATE_TEXT;
         else result:=C_expressionTypeString[typ];
       end;
     end;
