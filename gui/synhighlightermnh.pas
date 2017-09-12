@@ -455,7 +455,7 @@ PROCEDURE initLists;
     tokenTypeMap.create();
     for tt:=low(T_tokenType) to high(T_tokenType) do with C_tokenInfo[tt] do put(reservedWordClass,defaultId);
     for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
-    for tc in T_typeCheck do put(rwc_type,C_typeInfo[tc].name);;
+    for tc in T_typeCheck do put(rwc_type,C_typeCheckInfo[tc].name);;
     builtin:=intrinsicRuleMap.keySet;
     for i:=0 to length(builtin)-1 do put(rwc_not_reserved,builtin[i]);
     listsAreInitialized:=true;

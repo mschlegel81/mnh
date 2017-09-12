@@ -283,8 +283,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
       tt_endRule  ,tt_endExpression  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
       tt_mutate, tt_assignExistingBlockLocal..tt_mut_nestedDrop: result:=txt+C_tokenInfo[tokType].defaultId;
-      tt_type:      result:=    C_typeInfo[getTypeCheck].name;
-      tt_typeCheck: result:=':'+C_typeInfo[getTypeCheck].name;
+      tt_type:      result:=    C_typeCheckInfo[getTypeCheck].name;
+      tt_typeCheck: result:=':'+C_typeCheckInfo[getTypeCheck].name;
       tt_identifier,
       tt_localUserRule,
       tt_importedUserRule,

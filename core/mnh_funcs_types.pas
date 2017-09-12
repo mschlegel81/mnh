@@ -156,9 +156,9 @@ FUNCTION isStateful intFuncSignature;
   begin
     result:=nil;              ;
     if (params<>nil) and (params^.size=1) then
-    result:=newBoolLiteral(arg0^.literalType in C_typeInfo[TYPE_CHECK].matching)
-    else if (C_typeInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
-    result:=newBoolLiteral((arg0^.literalType in C_typeInfo[TYPE_CHECK].matching)
+    result:=newBoolLiteral(arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching)
+    else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
+    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching)
        and (   (arg0^.literalType<>lt_expression    ) or (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(int1^.value)))
        and (not(arg0^.literalType in C_compoundTypes) or (P_compoundLiteral  (arg0)^.size =int1^.value)));
   end}

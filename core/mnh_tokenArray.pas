@@ -256,7 +256,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;
-            for tc in T_typeCheck do if result^.txt=C_typeInfo[tc].name then begin
+            for tc in T_typeCheck do if result^.txt=C_typeCheckInfo[tc].name then begin
               result^.tokType:=tt_type;
               result^.setTypeCheck(tc);
             end;

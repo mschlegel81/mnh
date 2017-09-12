@@ -1103,7 +1103,7 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
   VAR ovl: boolean;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_boolean]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_boolean].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     if other^.literalType<>lt_boolean then exit(false);
@@ -1118,7 +1118,7 @@ FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P
       ovr: T_myFloat;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_int]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_int].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
@@ -1143,7 +1143,7 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
       ovr: T_myFloat;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_real]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_real].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
@@ -1167,7 +1167,7 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
   VAR ovl: ansistring;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_containingTypes[lt_string]) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_string].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     if other^.literalType<>lt_string then exit(false);
@@ -1231,9 +1231,9 @@ FUNCTION T_setLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:
     result:=res;
   end;
 //=====================================================================:?.negate
-FUNCTION T_literal          .typeString:string; begin result:=C_typeString[literalType]; end;
-FUNCTION T_compoundLiteral  .typeString:string; begin result:=C_typeString[literalType]+'('+intToStr(size)+')';  end;
-FUNCTION T_expressionLiteral.typeString:string; begin result:=C_typeString[literalType]+'('+intToStr(arity)+')'; end;
+FUNCTION T_literal          .typeString:string; begin result:=C_typeInfo[literalType].name; end;
+FUNCTION T_compoundLiteral  .typeString:string; begin result:=C_typeInfo[literalType].name+'('+intToStr(size)+')';  end;
+FUNCTION T_expressionLiteral.typeString:string; begin result:=C_typeInfo[literalType].name+'('+intToStr(arity)+')'; end;
 
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
   VAR i:longint;
@@ -1371,21 +1371,21 @@ FUNCTION T_mapLiteral.equals(CONST other:P_literal):boolean;
 FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;
   VAR i:longint;
   begin
-    if not(literalType in C_containingTypes[other^.literalType]) then exit(false);
+    if not(literalType in C_typeInfo[other^.literalType].containedIn) then exit(false);
     for i:=0 to fill-1 do if dat[i]^.equals(other) then exit(true);
     result:=false;
   end;
 
 FUNCTION T_setLiteral.contains(CONST other: P_literal): boolean;
   begin
-    if not(literalType in C_containingTypes[other^.literalType]) then exit(false);
+    if not(literalType in C_typeInfo[other^.literalType].containedIn) then exit(false);
     result:=dat.get(other,false);
   end;
 
 FUNCTION T_mapLiteral.contains(CONST other: P_literal): boolean;
   VAR key,val,mapValue:P_literal;
   begin
-    if not(literalType in C_containingTypes[other^.literalType]) or
+    if not(literalType in C_typeInfo[other^.literalType].containedIn) or
        not((other^.literalType in C_listTypes) and (P_listLiteral(other)^.isKeyValuePair)) then exit(false);
     key:=P_listLiteral(other)^.dat[0];
     val:=P_listLiteral(other)^.dat[1];
@@ -2311,18 +2311,18 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         lhsIt,rhsIt:T_arrayOfLiteral;
         lhsX ,rhsX :P_literal;
     begin
-      if RHS^.literalType in C_comparableTypes[LHS^.literalType] then
+      if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then
       case LHS^.literalType of
         defaultLHScases;
         lt_boolean..lt_string: case RHS^.literalType of
           defaultRHSCases;
-          lt_boolean..lt_string: if RHS^.literalType in C_comparableTypes[LHS^.literalType] then exit(newBoolLiteral(LHS^.isInRelationTo(op,RHS)));
-          lt_list..lt_emptySet : if RHS^.literalType in C_comparableTypes[LHS^.literalType] then S_x_L_recursion;
+          lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then exit(newBoolLiteral(LHS^.isInRelationTo(op,RHS)));
+          lt_list..lt_emptySet : if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then S_x_L_recursion;
         end;
         lt_list..lt_emptySet: case RHS^.literalType of
           defaultRHSCases;
-          lt_boolean..lt_string: if RHS^.literalType in C_comparableTypes[LHS^.literalType] then L_x_S_recursion;
-          lt_list..lt_emptySet : if RHS^.literalType in C_comparableTypes[LHS^.literalType] then L_x_L_recursion;
+          lt_boolean..lt_string: if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then L_x_S_recursion;
+          lt_list..lt_emptySet : if RHS^.literalType in C_typeInfo[LHS^.literalType].comparableTo then L_x_L_recursion;
         end;
       end;
       result:=newErrorLiteral('Incompatible comparands '+LHS^.typeString+' and '+RHS^.typeString);
@@ -3199,7 +3199,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
 
   FUNCTION typeStringOrNone(CONST t:T_literalType):string;
     begin
-      if (t>=low(T_literalType)) and (t<=high(T_literalType)) then result:=C_typeString[t] else result:='';
+      if (t>=low(T_literalType)) and (t<=high(T_literalType)) then result:=C_typeInfo[t].name else result:='';
     end;
 
   FUNCTION literalFromStream255:P_literal;

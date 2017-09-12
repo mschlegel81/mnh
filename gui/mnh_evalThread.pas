@@ -545,7 +545,7 @@ PROCEDURE T_editScriptTask.execute(VAR context:T_threadContext);
     output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@context,input);
     disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
-      context.adapters^.raiseError('Script failed due to invalid result type '+C_typeString[output^.literalType],script^.editRule^.getLocation);
+      context.adapters^.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
       disposeLiteral(output);
     end;
     done:=true;
