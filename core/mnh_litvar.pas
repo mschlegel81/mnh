@@ -1177,8 +1177,7 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
          or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType;
-  CONST other: P_literal): boolean;
+FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   begin
     if not(other^.literalType in C_compoundTypes) then exit(false);
     case relation of
@@ -3152,7 +3151,6 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
 
   begin
     case mutation of
-      tt_declare,
       tt_assign,
       tt_mutate,
       tt_assignNewBlockLocal,

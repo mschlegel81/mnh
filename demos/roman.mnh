@@ -10,12 +10,12 @@ roman(i:Int)->i > 1000 ? "M" & roman(i-1000) :
               dig2.get(i div 10  mod 10) &
               dig1.get(i         mod 10);
 arabic(S:StringList)->S.each(s,arabic(s));
-arabic(s:String)->toExpression(replace(s,['CM','CD','M','D',
-                                          'XC','XL','C','L',
-                                          'IX','IV','X','V','I'],
-                                         ['+900','+400','+1000','+500',
-                                          '+90' ,'+40' ,'+100' ,'+50' ,
-                                          '+9'  ,'+4'  ,'+10'  ,'+5','+1']))();
+arabic(s:String)->interpret(replace(s,['CM'  ,'CD'  ,'M'    ,'D',
+                                       'XC'  ,'XL'  ,'C'    ,'L',
+                                       'IX'  ,'IV'  ,'X'    ,'V' ,'I'],
+                                      ['+900','+400','+1000','+500',
+                                       '+90' ,'+40' ,'+100' ,'+50' ,
+                                       '+9'  ,'+4'  ,'+10'  ,'+5','+1']));
 private roman_input:=['MMXV','MCMXC','MMVIII','MDCLXVI'];
 private arabic_input:=[2000,1989,23,1666];
 

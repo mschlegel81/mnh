@@ -297,8 +297,7 @@ CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring;
     resolveIds(nil);
   end;
 
-FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint
-  ): boolean;
+FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint): boolean;
   VAR i:longint;
       level:longint=0;
   begin
@@ -308,7 +307,7 @@ FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
       if tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in C_operatorsAndComparators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType]>outerPrecedence) then exit(true);
+      else if (tokType in C_operators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType]>outerPrecedence) then exit(true);
     end;
     result:=false;
   end;
@@ -397,8 +396,7 @@ FUNCTION T_subruleExpression.hasValidValidCustomTypeCheckPattern                
 FUNCTION T_subruleExpression.hasEquivalentPattern(CONST s:P_subruleExpression)   :boolean; begin result:=pattern.isEquivalent(s^.pattern);               end;
 FUNCTION T_subruleExpression.hidesSubrule        (CONST s:P_subruleExpression)   :boolean; begin result:=pattern.hides(s^.pattern);                      end;
 
-FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType;
-  CONST other: P_literal): boolean;
+FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR myTxt,otherTxt:ansistring;
   begin
     case relation of
@@ -415,8 +413,8 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
   begin
-    if      tok^.tokType in [low(intFuncForOperator)..high(intFuncForOperator)] then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
-    else if tok^.tokType=tt_intrinsicRule                                       then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
+    if      tok^.tokType in C_operators   then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
+    else if tok^.tokType=tt_intrinsicRule then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
     else begin
       result:=nil;
       raise Exception.create('Invalid argument for createPrimitiveAggregatorLiteral('+safeTokenToString(tok)+')');
