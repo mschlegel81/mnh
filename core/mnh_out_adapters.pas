@@ -164,7 +164,7 @@ TYPE
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE printDirect(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
-      PROCEDURE clearAll;
+      PROCEDURE clearAll(CONST includePlot:boolean=false);
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
       FUNCTION hasNonSilentError:boolean;
@@ -659,7 +659,7 @@ PROCEDURE T_adapters.logEndOfEditScript(CONST data: pointer; CONST success: bool
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$endif}
 
-PROCEDURE T_adapters.clearAll;
+PROCEDURE T_adapters.clearAll(CONST includePlot:boolean=false);
   VAR i:longint;
   begin
     clearErrors;
@@ -675,6 +675,9 @@ PROCEDURE T_adapters.clearAll;
       someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in adapter[i]^.messageTypesToInclude);
       someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in adapter[i]^.messageTypesToInclude);
     end;
+    {$ifdef fullVersion}
+    if includePlot and (privatePlot<>nil) then privatePlot^.setDefaults;
+    {$endif}
   end;
 
 PROCEDURE T_adapters.stopEvaluation;
