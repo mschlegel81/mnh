@@ -515,6 +515,7 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
   VAR i: longint;
       allZeroes:boolean=true;
+      atLeastOneDigit:boolean=false;
       intResult:int64;
   begin
     result:=nil;
@@ -522,11 +523,14 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     if (length(input)>=offset) and (input [offset] in ['0'..'9', '-', '+']) then begin
       i:=offset;
       allZeroes:=input[offset] in ['+','-','0'];
+      atLeastOneDigit:=input[offset] in ['0'..'9'];
       while (i<length(input)) and (input [i+1] in ['0'..'9']) do begin
         inc(i);
-        allZeroes:=allZeroes and (input[offset]='0');
+        atLeastOneDigit:=true;
+        allZeroes:=allZeroes and (input[i]='0');
       end;
-      parsedLength:=i+1-offset;
+      if atLeastOneDigit then parsedLength:=i+1-offset
+                         else exit;
       //Only digits on indexes [1..i]; accept decimal point and following digts
       if (i<length(input)) and (input [i+1] = '.') then begin
         inc(i);
