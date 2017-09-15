@@ -220,6 +220,9 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       enableDynamicItems;
       firstShow:=false;
       UpdateTimeTimer.enabled:=true;
+      setOutlineOptions(cbOutlineShowPrivate .Checked,
+                        cbOutlineShowImported.Checked,
+                        cbOutlineSortByName  .Checked);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - end of initialization block'); {$endif}
     end;
     if hasEditor then getEditor^.activate;
