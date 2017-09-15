@@ -555,7 +555,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                 end else fail(parts[i].first);
               end else assertNil(parts[i].first);
 
-            end else if (parts[i].first^.tokType in C_patternElementComparators) then begin
+            end else if (parts[i].first^.tokType in C_comparators) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 

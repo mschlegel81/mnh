@@ -104,7 +104,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         if t<>nil then
         if t^.next=nil then begin
           case t^.tokType of
-            tt_comparatorEq..tt_operatorIn: aggregator:=newAggregator(t^.tokType);
+            tt_comparatorEq..tt_operatorConcatAlt: aggregator:=newAggregator(t^.tokType);
             tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
               then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
@@ -498,7 +498,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
               ruleIdResolved:=true;
             end;
           end;
-        end else if tokType in [tt_comparatorEq..tt_operatorIn] then begin
+        end else if tokType in C_operators then begin
           txt:=C_tokenInfo[tokType].defaultId;
           data:=intFuncForOperator[tokType];
           tokType:=tt_intrinsicRule;
@@ -533,10 +533,10 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   PROCEDURE process_op_lit; {$ifndef DEBUGMODE} inline;{$endif}
     begin
       case cTokType[1] of
-        tt_comparatorEq..tt_operatorIn:
+        tt_comparatorEq..tt_operatorConcatAlt:
           if C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]] then begin
             newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    stack.topType,
+                                    cTokType[-1],
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
                                     context.adapters^,
@@ -555,7 +555,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
           begin
             newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    stack.topType,
+                                    cTokType[-1],
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
                                     context.adapters^,
@@ -798,7 +798,7 @@ tt_parList:  if (cTokType[2]=tt_listToParameterList) then begin
                stack.push(first);
                didSubstitution:=true;
              end else applyRule(first^.next,first^.next^.next);
-tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
+tt_comparatorEq..tt_operatorConcatAlt: operator_and_literal_push;
 tt_iifCheck: begin stack.push(first); didSubstitution:=true; end;
 tt_each,tt_parallelEach: resolveEach(cTokType[1])}
 
@@ -895,9 +895,7 @@ end}
               didSubstitution:=true;
             end else process_op_lit;
           end;
-          tt_operatorAnd, tt_operatorOr,
-          tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
-          tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorConcat, tt_operatorConcatAlt, tt_operatorIn: process_op_lit;
+          tt_operatorIn..tt_operatorConcatAlt: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack.popDestroy(context.recycler);
@@ -1056,16 +1054,16 @@ end}
             end;
           end;
         end;
-        tt_beginBlock,tt_beginRule,tt_beginExpression: begin
+{cT[0]=}tt_beginBlock,tt_beginRule,tt_beginExpression: begin
           context.valueStore^.scopePush(cTokType[0]=tt_beginRule);
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: begin
+{cT[0]=}tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: begin
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_blockLocalVariable: if cTokType[1]=tt_listBraceOpen then begin
+{cT[0]=}tt_blockLocalVariable: if cTokType[1]=tt_listBraceOpen then begin
           stack.push(first);
           didSubstitution:=true;
         end else begin
@@ -1075,24 +1073,25 @@ end}
             didSubstitution:=true;
           end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
         end;
-        tt_operatorPlus:                 begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
-        tt_operatorMinus:                begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
-        tt_unaryOpPlus, tt_unaryOpMinus: begin                                  stack.push(first); didSubstitution:=true; end;
-        tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
+{cT[0]=}tt_operatorPlus:                 begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_operatorMinus:                begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_unaryOpPlus, tt_unaryOpMinus: begin                                  stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_comparatorEq..tt_operatorLazyOr,
+        tt_operatorMult..tt_operatorConcatAlt:
           context.adapters^.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
-        tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
-        tt_expBraceOpen: begin
+{cT[0]=}tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_expBraceOpen: begin
           digestInlineExpression(first,context);
           didSubstitution:=true;
         end;
-        tt_braceClose: if cTokType[-1]=tt_parList_constructor then begin
+{cT[0]=}tt_braceClose: if cTokType[-1]=tt_parList_constructor then begin
           first:=context.recycler.disposeToken(first);
           stack.popLink(first);
           first^.tokType:=tt_parList;
           stack.popLink(first);
           didSubstitution:=true;
         end;
-        tt_listBraceOpen: if cTokType[1]=tt_listBraceClose then begin
+{cT[0]=}tt_listBraceOpen: if cTokType[1]=tt_listBraceClose then begin
           //empty list
           first^.data:=newListLiteral;
           first^.tokType:=tt_literal;
@@ -1104,13 +1103,13 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
-        tt_identifier: begin
+{cT[0]=}tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_identifier: begin
           P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters,true);
           didSubstitution:=true;
         end;
-        tt_mutate: begin stack.push(first); didSubstitution:=true; end;
-        tt_aggregatorConstructor: case cTokType[1] of
+{cT[0]=}tt_mutate: begin stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
             if ((cTokType[2] in C_operatorsForAggregators) or (cTokType[2]=tt_intrinsicRule)) and
                (first^.next^.next^.next<>nil) and
@@ -1132,7 +1131,7 @@ end}
           end else applyRule(first^.next,first^.next^.next);
         end;
 
-        tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue: case cTokType[1] of
+{cT[0]=}tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_listBraceOpen: begin
             if (cTokType[0] in [tt_localUserRule,tt_importedUserRule]) and
@@ -1147,14 +1146,14 @@ end}
             stack.push(first);
             didSubstitution:=true;
           end else applyRule(first^.next,first^.next^.next);
-          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
+          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorConcatAlt,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
           tt_ponFlipper, tt_each,tt_parallelEach: applyRule(nil,first^.next);
         end;
-        tt_while: if (cTokType[1]=tt_braceOpen) then begin
+{cT[0]=}tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.recycler.disposeToken(first^.next);
           resolveWhile;
         end;
-        tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
+{cT[0]=}tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
@@ -1168,12 +1167,12 @@ end}
             didSubstitution:=true;
           end;
         end;
-        tt_save: if cTokType[1]=tt_semicolon then begin
+{cT[0]=}tt_save: if cTokType[1]=tt_semicolon then begin
           first:=context.recycler.disposeToken(first);
           first:=context.recycler.disposeToken(first);
           didSubstitution:=true;
         end;
-        tt_return: begin
+{cT[0]=}tt_return: begin
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1292,7 +1291,7 @@ FUNCTION doAsync(p:pointer):ptrint;
       enterCriticalSection(criticalSection);
       evaluationFinished:=true;
       resultValue:=myContext^.cascadeDisposeToLiteral(task);
-      if isBlocking and (resultValue^.literalType=lt_void) then begin
+      if isBlocking and (resultValue<>nil) and (resultValue^.literalType=lt_void) then begin
         myContext^.adapters^.raiseError('Non-blocking async tasks must not return void.',getLocation);
       end;
       task:=nil;

@@ -48,6 +48,7 @@ TYPE
     private
       cs:TRTLCriticalSection;
       scopeStack:array of T_scope;
+      scopeTopIndex:longint;
       PROCEDURE copyDataAsReadOnly(VAR original:T_valueStore);
       FUNCTION getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
     public
@@ -129,6 +130,7 @@ CONSTRUCTOR T_valueStore.create;
     parentStore:=nil;
     system.initCriticalSection(cs);
     setLength(scopeStack,0);
+    scopeTopIndex:=-1;
   end;
 
 PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
@@ -144,12 +146,13 @@ PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
   begin
     clear;
     //find first entry to be copied
-    i0:=length(original.scopeStack)-1;
+    i0:=original.scopeTopIndex;
     if i0<0 then i0:=0;
     while (i0>0) and not(original.scopeStack[i0].blockingScope) do dec(i0);
     //copy entries
-    setLength(scopeStack,length(original.scopeStack)-i0);
-    for i:=i0 to length(original.scopeStack)-1 do copyScope(original.scopeStack[i],scopeStack[i-i0]);
+    scopeTopIndex:=original.scopeTopIndex-i0;
+    setLength(scopeStack,scopeTopIndex+1);
+    for i:=i0 to original.scopeTopIndex do copyScope(original.scopeStack[i],scopeStack[i-i0]);
   end;
 
 FUNCTION T_valueStore.readOnlyClone:P_valueStore;
@@ -177,36 +180,33 @@ PROCEDURE T_valueStore.clear;
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(scopeStack)-1 do clearScope(scopeStack[i]);
-    setLength(scopeStack,0);
+    for i:=0 to scopeTopIndex do clearScope(scopeStack[i]);
+    scopeTopIndex:=-1;
     system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_valueStore.isEmpty:boolean;
   begin
     system.enterCriticalSection(cs);
-    result:=length(scopeStack)=0;
+    result:=scopeTopIndex<=0;
     system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
-  VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    i:=length(scopeStack);
-    setLength(scopeStack,i+1);
-    scopeStack[i].blockingScope:=blocking;
-    setLength(scopeStack[i].v,0);
+    inc(scopeTopIndex);
+    if scopeTopIndex>=length(scopeStack) then setLength(scopeStack,scopeTopIndex+1);
+    scopeStack[scopeTopIndex].blockingScope:=blocking;
+    setLength(scopeStack[scopeTopIndex].v,0);
     system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.scopePop;
-  VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    i:=length(scopeStack)-1;
-    clearScope(scopeStack[i]);
-    setLength(scopeStack,i);
+    clearScope(scopeStack[scopeTopIndex]);
+    dec(scopeTopIndex);
     system.leaveCriticalSection(cs);
   end;
 
@@ -215,7 +215,7 @@ FUNCTION T_valueStore.getVariable(CONST id:T_idString; OUT blockEncountered:bool
   begin
     blockEncountered:=false;
     result:=nil;
-    for i:=length(scopeStack)-1 downto 0 do with scopeStack[i] do begin
+    for i:=scopeTopIndex downto 0 do with scopeStack[i] do begin
       for k:=length(v)-1 downto 0 do if v[k]^.getId=id then exit(v[k]);
       if blockingScope then begin
         blockEncountered:=true;
@@ -229,7 +229,7 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal
   VAR k:longint;
   begin
     system.enterCriticalSection(cs);
-    with scopeStack[length(scopeStack)-1] do begin
+    with scopeStack[scopeTopIndex] do begin
       {$ifdef debugMode}
       for k:=0 to length(v)-1 do if v[k]^.id=id then raise Exception.create('Re-Creating variable with ID "'+id+'"');
       {$endif}
@@ -292,12 +292,12 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
       named:P_namedVariable;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(scopeStack)-1 do
+    for i:=0 to scopeTopIndex do
     if scopeStack[i].blockingScope then begin up:=1; i0:=i; end
                                    else   inc(up);
 
     if (i0>0) and (parentStore<>nil) then parentStore^.reportVariables(variableReport);
-    for i:=i0 to length(scopeStack)-1 do with scopeStack[i] do begin
+    for i:=i0 to scopeTopIndex do with scopeStack[i] do begin
       dec(up);
       for named in v do begin
         if up=0 then variableReport.addVariable(named,'local')

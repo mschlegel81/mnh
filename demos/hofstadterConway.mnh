@@ -20,7 +20,7 @@ end;
 main_(powerOfTwo:Int)->begin
   local ratios:=getRatios(2^powerOfTwo.toInt);
   [0..powerOfTwo-1].each(i,printf("range 2^%2d..2^%2d max. a(n)/n=%s",i,i+1,maxBetween(2^i,2^(i+1),ratios)));
-  print("Mallows Number: ",[1..2^powerOfTwo].pEach(i,ratios[i]>0.55 ? i : void,max));
+  print("Mallows Number: ",indexOf(ratios>0.55).max);
 end;
 
 //*This solves the task: http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence

@@ -1,38 +1,32 @@
 private areFangs(fangs,sortedDigits)->fangs.digits.flatten.sort == sortedDigits;
 
+private testRange(digitCount,mid)->testRange(10^(digitCount-1),mid,10^digitCount-1);
+private testRange(t0,t1,t2)->abs(t2-t1)<abs(t1-t0) ? [t1..t2]
+                                                   : [t0..t1];
 private getFangs(i:Int)->begin
   local iDigits:=i.digits.sort;
-  local digitCount:=iDigits.size div 2;
-  local toTest1:=10^(digitCount-1);
-  local toTest2:=round(sqrt(i));
-  local toTest3:=10^digitCount-1;
-  local toTest:=abs(toTest2-toTest1)<abs(toTest3-toTest2)
-                 ? [toTest1..toTest2]
-                 : [toTest3..toTest2];
-  toTest[i mod toTest=0].pMap({[i div $x,$x]}).filter({$f.areFangs(iDigits)});
+  local toTest:=testRange(iDigits.size div 2,round(sqrt(i)));
+  toTest:=toTest[i mod toTest=0];
+  [i div toTest,toTest].transpose.filter({$f.areFangs(iDigits)});
 end;
 
 private printVampire(i:Int)->begin
   local fangs:=getFangs(i);
   fangs==[]
-  ? false
-  : begin
-      print(i," is a vampire. It's fangs are: ",join(fangs," or "));
-      true;
-    end;
+  ? void
+  : print(i," is a vampire. It's fangs are: ",join(fangs," or ")) orElse true;
 end;
 
-private verbosePrintVampire(i)->printVampire(i) OR print(i,' is not a vampire.');
+private verbosePrintVampire(i)->printVampire(i) orElse print(i,' is not a vampire.');
 
-private step(99  ):=1000;
-private step(9999):=100000;
-private step(k)->k+1;
-
-private printFirstKVampires(k:Int)->begin
-  local found:=0;
-  local toTest:=9;
-  while(found<k,printVampire(toTest:=step(toTest)) ? found+=1 : void);
-end;
+private vampireCandidateGenerator->{
+begin
+  local next:=9;
+save;
+  (next+=1) in [100,10000,1000000]
+  ? next*=10
+  : next;
+end};
 
 //*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number
 main('rosetta')->begin
@@ -45,4 +39,4 @@ main('rosetta')->begin
 end;
 
 //*As above but abridged for regression test
-main->printFirstKVampires(25);
+main->vampireCandidateGenerator().lazyMap(::printVampire).head(25);

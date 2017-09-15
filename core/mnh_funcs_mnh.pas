@@ -11,7 +11,7 @@ USES sysutils,
      mnh_funcs;
 FUNCTION getMnhInfo:string;
 {$i mnh_func_defines.inc}
-VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorIn] of P_intFuncCallback;
+VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
     BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
 FUNCTION sleep_imp intFuncSignature;

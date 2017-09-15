@@ -95,6 +95,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
+      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -212,13 +213,10 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
-      context:T_evaluationContext;
-      package:T_package;
-      tempAdapters:T_adapters;
-      collector:T_collectingOutAdapter;
   begin
+    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
     else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
@@ -226,25 +224,18 @@ FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfStri
       callerAdapters^.raiseWarning('Cannot find script with id or path "'+filenameOrId+'"',locationForWarning);
       exit(nil);
     end;
-    {A} tempAdapters.create;
-        callerAdapters^.addSubAdapters(@tempAdapters);
-        if connectLevel>0 then tempAdapters.addOutAdapter(callerAdapters^.getConnector(connectLevel>=1,connectLevel>=2,connectLevel>=3),true);
-    {C} collector.create(at_unknown,C_collectAllOutputBehavior);
-        tempAdapters.addOutAdapter(@collector,false);
-    {X} context.create(@tempAdapters);
-    if enforceDeterminism then context.prng.resetSeed(0);
-    {P} package.create(newFileCodeProvider(filenameOrId),nil);
+    adapters.clearAll(true);
+    callerAdapters^.addSubAdapters(@adapters);
+    if connectLevel>0 then adapters.addOutAdapter(callerAdapters^.getConnector(connectLevel>=1,connectLevel>=2,connectLevel>=3),true);
+    if enforceDeterminism then evaluationContext.prng.resetSeed(0);
+    package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
-        context.resetForEvaluation(@package,ect_silent);
-        package.load(lu_forCallingMain,context.threadContext^,mainParameters);
-        context.afterEvaluation;
+      evaluationContext.resetForEvaluation(@package,ect_silent);
+      package.load(lu_forCallingMain,evaluationContext.threadContext^,mainParameters);
+      evaluationContext.afterEvaluation;
     finally
-    {P} package.destroy;
-    {X} context.destroy;
-        result:=messagesToLiteralForSandbox(collector.storedMessages);
-    {C} collector.destroy;
-        callerAdapters^.remSubAdapters(@tempAdapters);
-    {A} tempAdapters.destroy;
+      result:=messagesToLiteralForSandbox(collector.storedMessages);
+      enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
 
