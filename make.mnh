@@ -177,6 +177,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
   BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
   local linuxBuiltReady:=LINUX_BUILTS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
   packSets(linuxBuiltReady,getBuiltNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
+  writeAllDataStores;
   {fileExists($0)
    ? executor.execPipeless([$0])
    : void}('distro_hook.mnh');
