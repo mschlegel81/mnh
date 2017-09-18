@@ -128,8 +128,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
     end;
   end;
 
-FUNCTION T_lexer.getToken(CONST line: ansistring;
-  VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
+FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
   CONST retainBlanks: boolean): P_token;
   VAR parsedLength:longint=0;
 
@@ -290,6 +289,8 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
               blob.closer:=line[inputLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)];
               parsedLength:=length(SPECIAL_COMMENT_BLOB_BEGIN)+1;
             end else blob.closer:='''';
+          end else begin
+            adapters.raiseNote(copy(line,inputLocation.column+length(COMMENT_PREFIX),parsedLength),inputLocation);
           end;
         end;
       end else if startsWith(tt_mut_assignDiv) then apply(tt_mut_assignDiv)

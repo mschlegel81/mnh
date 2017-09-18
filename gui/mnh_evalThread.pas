@@ -313,7 +313,7 @@ PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOu
       setLength(externalErrors,0);
       with errorCollector do
       for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
-      if C_messageTypeMeta[messageType].level>=2 then begin
+      if C_messageTypeMeta[messageType].level>=1 then begin
         if location.fileName=package.getPath
         then begin
           setLength(localErrors,length(localErrors)+1);
