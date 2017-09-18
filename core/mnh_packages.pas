@@ -1189,7 +1189,9 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
       longestInfo:longint=0;
 
   PROCEDURE addInfo(CONST info:T_outlineEntry);
+    VAR dup:T_outlineEntry;
     begin
+      for dup in temp do if info=dup then exit;
       setLength(temp,length(temp)+1);
       temp[length(temp)-1]:=info;
       if length(info.info)>longestInfo then longestInfo:=length(info.info);
