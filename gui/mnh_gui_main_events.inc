@@ -406,6 +406,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
     end;
 
+  PROCEDURE pollAssistant;
+    VAR meta:P_editorMeta;
+    begin
+      meta:=getEditor;
+      if meta<>nil then meta^.pollAssistanceResult;
+    end;
+
   begin
     if processIpcMessages then exit;
     displayProgress;
@@ -423,6 +430,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       while guiTaskQueue.executeTask do;
       autosaveSettings;
       checkForFileChanges;
+      pollAssistant;
     end;
   end;
 

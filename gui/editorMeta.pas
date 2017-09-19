@@ -26,6 +26,7 @@ USES  //basic classes
   mnh_debugging,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
+  mnh_packages,
   mnhCompletion,
   guiOutAdapters;
 
@@ -60,7 +61,7 @@ T_editorMeta=object(T_codeProvider)
       isChanged:boolean;
       ignoreDeleted:boolean;
     end;
-    assistant:P_codeAssistant;
+    assistant:P_codeAssistanceData;
     language_:T_language;
     sheet       : TTabSheet;
     editor_     : TSynEdit;
@@ -105,10 +106,13 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
     PROCEDURE assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
+    PROCEDURE updateOutline;
+    PROCEDURE pollAssistanceResult;
   private
     PROCEDURE ensureAssistant;
     PROCEDURE dropAssistant;
-    PROCEDURE repaintWithStateHash;
+    PROCEDURE triggerCheck;
+
     PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
     PROCEDURE InputEditChange(Sender: TObject);
@@ -399,17 +403,16 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     restoreEditors;
   end;
 
-VAR outlineOptions:record
-      includePrivate,includeImported,sortByName:boolean;
-    end;
+VAR outlineOptions:T_outlineOptions=[];
 PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:boolean);
   VAR edit:P_editorMeta;
   begin
-    outlineOptions.includePrivate:=includePrivate;
-    outlineOptions.includeImported:=includeImported;
-    outlineOptions.sortByName:=sortByName;
+    outlineOptions:=[];
+    if includePrivate  then include(outlineOptions,mnh_packages.includePrivate );
+    if includeImported then include(outlineOptions,mnh_packages.includeImported);
+    if sortByName      then include(outlineOptions,mnh_packages.sortByName     );
     edit:=getEditor;
-    if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.repaintWithStateHash;
+    if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.updateOutline;
   end;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
@@ -605,8 +608,8 @@ PROCEDURE T_editorMeta.activate;
     then begin
       editor.highlighter:=highlighter;
       paintedWithStateHash:=0;
-      repaintWithStateHash;
-      completionLogic.assignEditor(editor_,assistant^.getPackage);
+      triggerCheck;
+      completionLogic.assignEditor(editor_,assistant);
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
       assistanceSynEdit.clearAll;
@@ -625,7 +628,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
     if not(enabled) then exit;
-    if language_=LANG_MNH then repaintWithStateHash;
+    if language_=LANG_MNH then triggerCheck;
     mainForm.caption:=updateSheetCaption;
   end;
 
@@ -761,7 +764,7 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       editor.modified:=false;
       fileInfo.isChanged:=false;
       mainForm.caption:=updateSheetCaption;
-      if language_=LANG_MNH then repaintWithStateHash;
+      if language_=LANG_MNH then triggerCheck;
     end;
   end;
 
@@ -772,8 +775,7 @@ FUNCTION T_editorMeta.caretInMainFormCoordinates: TPoint;
     result:=editor.ClientToParent(result,mainForm);
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
-  forHelpOrJump: boolean; CONST caret: TPoint);
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret: TPoint);
   VAR m:P_editorMeta;
       wordUnderCursor:string;
   begin
@@ -789,8 +791,7 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
     end;
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
-  );
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
   begin
     setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
   end;
@@ -943,7 +944,7 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
 
 PROCEDURE T_editorMeta.ensureAssistant;
   begin
-    if assistant=nil then new(assistant,create(@self));
+    if assistant=nil then new(assistant,create);
     highlighter.codeAssistant:=assistant;
   end;
 
@@ -959,15 +960,30 @@ PROCEDURE T_editorMeta.dropAssistant;
     assistant:=nil;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateHash;
+PROCEDURE T_editorMeta.updateOutline;
+  VAR s:string;
+  begin
+    outlineSynEdit.clearAll;
+    if assistant<>nil then for s in assistant^.getOutline(outlineOptions) do outlineSynEdit.lines.add(s);
+    outlineSynEdit.highlighter:=highlighter;
+  end;
+
+PROCEDURE T_editorMeta.triggerCheck;
+  begin
+    ensureAssistant;
+    assistant^.triggerUpdate(@self);
+  end;
+
+PROCEDURE T_editorMeta.pollAssistanceResult;
   VAR s:string;
       hints:T_arrayOfString;
       hasErrors,hasWarnings:boolean;
   begin
-    ensureAssistant;
-    assistant^.check(outlineOptions.includePrivate,outlineOptions.includeImported,outlineOptions.sortByName);
+    if language_<>LANG_MNH then exit;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
+      highlighter.codeAssistant:=assistant;
+      editor.highlighter:=highlighter;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
@@ -977,10 +993,10 @@ PROCEDURE T_editorMeta.repaintWithStateHash;
                    else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'
                                              else assistanceTabSheet.caption:='(no warnings)'; end;
       for s in hints do assistanceSynEdit.lines.add(s);
+      updateOutline;
+      writeln('Done polling assistance result');
     end;
-    outlineSynEdit.clearAll;
-    for s in assistant^.outline do outlineSynEdit.lines.add(s);
-    outlineSynEdit.highlighter:=highlighter;
+    assistant^.triggerUpdate(nil);
   end;
 
 FUNCTION T_editorMeta.changed: boolean;

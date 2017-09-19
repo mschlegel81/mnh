@@ -18,7 +18,7 @@ TYPE
       codeProvider:P_codeProvider;
       readyForCodeState:T_hashInt;
     protected
-      PROCEDURE logReady;
+      PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
@@ -673,10 +673,10 @@ FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider
     result:=true;
   end;
 
-FUNCTION T_abstractPackage.codeChanged: boolean;  begin result:=readyForCodeState<>codeProvider^.stateHash; end;
-PROCEDURE T_abstractPackage.logReady;             begin         readyForCodeState:=codeProvider^.stateHash; end;
-FUNCTION T_abstractPackage.getId: T_idString;     begin result:=codeProvider^.id;                           end;
-FUNCTION T_abstractPackage.getPath: ansistring;   begin result:=codeProvider^.getPath;                      end;
+FUNCTION T_abstractPackage.codeChanged: boolean;                       begin result:=readyForCodeState<>codeProvider^.stateHash; end;
+PROCEDURE T_abstractPackage.logReady(CONST stateHashAtLoad:T_hashInt); begin readyForCodeState:=stateHashAtLoad;                 end;
+FUNCTION T_abstractPackage.getId: T_idString;                          begin result:=codeProvider^.id;                           end;
+FUNCTION T_abstractPackage.getPath: ansistring;                        begin result:=codeProvider^.getPath;                      end;
 
 {$ifdef fullVersion}
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;

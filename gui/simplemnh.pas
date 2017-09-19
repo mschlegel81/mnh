@@ -170,7 +170,6 @@ PROCEDURE TSimpleMnhForm.FormShow(Sender: TObject);
     end;
     SimpleMnhInputEdit.clear;
     SimpleMnhOutputEdit.clear;
-    completion.assignEditor(SimpleMnhInputEdit,package);
     caption:=package^.getId;
   end;
 
