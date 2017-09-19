@@ -49,6 +49,8 @@ TYPE T_language=(LANG_MNH   = 0,
                  LANG_XML   =16,
                  LANG_TXT   =17);
 
+CONST DETACHED_EDITOR_META_INDEX=-1;
+
 TYPE
 P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_codeProvider)
@@ -61,18 +63,19 @@ T_editorMeta=object(T_codeProvider)
       isChanged:boolean;
       ignoreDeleted:boolean;
     end;
-    assistant:P_codeAssistanceData;
-    language_:T_language;
-    sheet       : TTabSheet;
+    assistant   : P_codeAssistanceData;
+    language_   : T_language;
+    tabsheet    : TTabSheet;
     editor_     : TSynEdit;
     plugin      : TSynPluginMultiCaret;
     highlighter : TSynMnhSyn;
     PROCEDURE setLanguage(CONST languageIndex:T_language);
     PROCEDURE guessLanguage(CONST fallback:T_language);
-  public
-    FUNCTION enabled:boolean;
     CONSTRUCTOR create(CONST idx:longint);
     CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
+  public
+    CONSTRUCTOR createWithParent(CONST idx:longint; CONST parent:TWinControl);
+    FUNCTION enabled:boolean;
 
     DESTRUCTOR destroy; virtual;
     //T_codeProvider:
@@ -86,6 +89,7 @@ T_editorMeta=object(T_codeProvider)
 
     PROPERTY language:T_language read language_ write setLanguage;
     PROPERTY editor:TSynEdit read editor_;
+    PROPERTY getAssistant:P_codeAssistanceData read assistant;
     PROCEDURE activate;
     FUNCTION caretInMainFormCoordinates:TPoint;
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
@@ -415,7 +419,7 @@ PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:bool
     if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.updateOutline;
   end;
 
-CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
+CONSTRUCTOR T_editorMeta.createWithParent(CONST idx:longint; CONST parent:TWinControl);
   PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
@@ -428,11 +432,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   begin
     paintedWithStateHash:=0;
     index:=idx;
-    sheet:=TTabSheet.create(inputPageControl);
-    sheet.PageControl:=inputPageControl;
-
     editor_:=TSynEdit.create(mainForm);
-    editor_.parent:=sheet;
+    editor_.parent:=parent;
     editor_.Align:=alClient;
     editor_.ScrollBars:=ssAutoBoth;
     editor_.WantTabs:=false;
@@ -529,6 +530,15 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     initForNewFile;
   end;
 
+CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
+  begin
+    paintedWithStateHash:=0;
+    index:=idx;
+    tabsheet:=TTabSheet.create(inputPageControl);
+    tabsheet.PageControl:=inputPageControl;
+    createWithParent(idx,tabsheet);
+  end;
+
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
   begin
     create(idx);
@@ -538,7 +548,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
 PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
   VAR i:longint;
   begin
-    sheet.tabVisible:=true;
+    if index<>DETACHED_EDITOR_META_INDEX then tabsheet.tabVisible:=true;
     with fileInfo do begin
       isChanged    :=state.changed;
       fileAccessAge:=state.fileAccessAge;
@@ -626,10 +636,10 @@ PROCEDURE T_editorMeta.activate;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; language: ',language_); {$endif}
     if not(enabled) then exit;
     if language_=LANG_MNH then triggerCheck;
-    mainForm.caption:=updateSheetCaption;
+    if index<>DETACHED_EDITOR_META_INDEX then mainForm.caption:=updateSheetCaption;
   end;
 
 PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
@@ -663,7 +673,7 @@ FUNCTION T_editorMeta.saveWithDialog: boolean;
 
 PROCEDURE T_editorMeta.closeEditorQuietly;
   begin
-    sheet.tabVisible:=false;
+    if index<>DETACHED_EDITOR_META_INDEX then tabsheet.tabVisible:=false;
     editor.clearAll;
     with fileInfo do begin
       filePath:='';
@@ -671,7 +681,6 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
       ignoreDeleted:=false;
     end;
     editor.modified:=false;
-
   end;
 
 PROCEDURE T_editorMeta.closeEditorWithDialogs;
@@ -713,7 +722,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string;
 
 FUNCTION T_editorMeta.enabled:boolean;
   begin
-    result:=sheet.tabVisible;
+    result:=(index=DETACHED_EDITOR_META_INDEX) or (tabsheet.tabVisible);
   end;
 
 PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
@@ -723,7 +732,7 @@ PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
-    sheet.tabVisible:=true;
+    tabsheet.tabVisible:=true;
     fileInfo.filePath:=fileName;
     fileInfo.ignoreDeleted:=false;
     editor.clearAll;
@@ -743,7 +752,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
 
 PROCEDURE T_editorMeta.initForNewFile;
   begin
-    sheet.tabVisible:=true;
+    if (index<>DETACHED_EDITOR_META_INDEX) then tabsheet.tabVisible:=true;
     with fileInfo do begin
       isChanged       :=false;
       fileAccessAge:=0;
@@ -936,9 +945,10 @@ PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
 
 FUNCTION T_editorMeta.updateSheetCaption: ansistring;
   begin
+    if index=DETACHED_EDITOR_META_INDEX then exit('');
     if changed then result:=' *'
                else result:='';
-    sheet.caption:=pseudoName(true)+result;
+    tabsheet.caption:=pseudoName(true)+result;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 

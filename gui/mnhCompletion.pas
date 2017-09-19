@@ -97,6 +97,7 @@ DESTRUCTOR T_completionLogic.destroy;
 
 PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData);
   begin
+    if ad=nil then exit;
     editor:=edit;
     relatedAssistant:=ad;
     wordsInEditor.clear;

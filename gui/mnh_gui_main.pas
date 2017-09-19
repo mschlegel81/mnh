@@ -26,16 +26,18 @@ USES
   editorMeta,
   editPopupModel,
   searchModel,
+  mnhCompletion,
   ipcModel,
   mnh_constants, mnh_basicTypes,mnh_settings,
+  mnh_out_adapters,
   mnh_litVar,
   mnh_funcs, valueStore,
   mnh_debugging,
   mnh_contexts,
+  mnh_packages,
   mnh_doc,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
-  simpleMnh,
   guiOutAdapters;
 TYPE
   {$define includeInterface}
@@ -105,7 +107,6 @@ TYPE
     miUtilityScriptRoot,
     submenuEditorAppearance,
     miStackTracing,
-    miOpenSimpleMnh,
     miUserErrors,
     miFileHistoryRoot,
     miHtmlExport:              TMenuItem;
@@ -126,6 +127,7 @@ TYPE
     callStackInfoStringGrid:   TStringGrid;
     outlineSynEdit,
     OutputEdit,
+    QuickOutputEdit,
     assistanceSynEdit:         TSynEdit;
     SynExporterHTML:           TSynExporterHTML;
     SynGutterMarks0:           TSynGutterMarks;
@@ -133,7 +135,8 @@ TYPE
     currentExpressionMemo:     TSynMemo;
     debugTabSheet,
     outputTabSheet,
-    assistanceTabSheet:        TTabSheet;
+    assistanceTabSheet,
+    QuickTabSheet:             TTabSheet;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,
@@ -159,6 +162,11 @@ TYPE
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
+    quickMeta:T_editorMeta;
+    quickAdapters:P_adapters;
+    quickTask:T_postEvaluationData;
+    quickCompletion:T_completionLogic;
+    PROCEDURE QuickEditChange(Sender: TObject);
     FUNCTION focusedEditor:TSynEdit;
     PROCEDURE updateExpressionMemo;
   end;
@@ -432,6 +440,12 @@ PROCEDURE TMnhForm.updateFileHistory;
       historyMenuItems[i].OnClick:=@miFileHistory0Click;
       miFileHistoryRoot.add(historyMenuItems[i]);
     end;
+  end;
+
+PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
+  begin
+    quickCompletion.assignEditor(quickMeta.editor,getEditor^.getAssistant);
+    quickTask.triggerUpdate(runEvaluator.getPackageForPostEvaluation(getEditor));
   end;
 
 PROCEDURE TMnhForm.updateExpressionMemo;

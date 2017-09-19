@@ -115,6 +115,20 @@ TYPE
       FUNCTION resolveImport(CONST id:string):string;
   end;
 
+  P_postEvaluationData=^T_postEvaluationData;
+  T_postEvaluationData=object
+    private
+      editor:P_codeProvider;
+      packageForPostEval:P_package;
+      adapters:P_adapters;
+      checkPending,currentlyProcessing:boolean;
+      cs:TRTLCriticalSection;
+    public
+      CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters:P_adapters);
+      DESTRUCTOR destroy;
+      PROCEDURE triggerUpdate(CONST package:P_package);
+  end;
+
   P_sandbox=^T_sandbox;
   T_sandbox=object
     private
@@ -202,6 +216,75 @@ FUNCTION isTypeToType(CONST id:T_idString):T_idString;
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
   begin
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
+  end;
+
+CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST quickAdapters: P_adapters);
+  begin
+    editor:=quickEdit;
+    adapters:=quickAdapters;
+    packageForPostEval:=nil;
+    checkPending:=false;
+    currentlyProcessing:=false;
+    initCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_postEvaluationData.destroy;
+  begin
+    enterCriticalSection(cs);
+    while currentlyProcessing do begin
+      leaveCriticalSection(cs);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(cs);
+    end;
+    leaveCriticalSection(cs);
+    doneCriticalSection(cs);
+  end;
+
+FUNCTION postEvalThread(p:pointer):ptrint;
+  VAR evaluationContext:T_evaluationContext;
+      sleepCount:longint=0;
+  begin
+    with P_postEvaluationData(p)^ do begin
+      enterCriticalSection(cs);
+      currentlyProcessing:=true;
+      evaluationContext.create(adapters);
+      while sleepCount<100 do begin
+        while checkPending do begin
+          sleepCount:=0;
+          checkPending:=false;
+          leaveCriticalSection(cs);
+          adapters^.clearAll();
+          evaluationContext.resetForEvaluation(packageForPostEval,ect_normal);
+          adapters^.clearPrint;
+          packageForPostEval^.interpretInPackage(editor^.getLines,evaluationContext.threadContext^);
+          enterCriticalSection(cs);
+        end;
+        leaveCriticalSection(cs);
+        sleep(10);
+        inc(sleepCount);
+        enterCriticalSection(cs);
+      end;
+      evaluationContext.destroy;
+      currentlyProcessing:=false;
+      leaveCriticalSection(cs);
+    end;
+    result:=0;
+  end;
+
+PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
+  begin
+    enterCriticalSection(cs);
+    packageForPostEval:=package;
+    if currentlyProcessing then begin
+      checkPending:=true;
+      leaveCriticalSection(cs);
+      exit;
+    end;
+    checkPending:=true;
+    currentlyProcessing:=true;
+    beginThread(@postEvalThread,@self);
+    leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_codeAssistanceData.create;
@@ -538,7 +621,6 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     caData.stateHash:=caData.package^.getCodeState;
     leaveCriticalSection(caData.cs);
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
-
   end;
 
 {$ifdef fullVersion}

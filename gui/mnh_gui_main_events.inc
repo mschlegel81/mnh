@@ -12,7 +12,6 @@ PROCEDURE FormShow(Sender: TObject);
 //Jump to declaration:
 PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-PROCEDURE miOpenSimpleMnhClick(Sender: TObject);
 PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
 PROCEDURE assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
 PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -129,11 +128,13 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     helpHighlighter  :=TSynMnhSyn.create(self,msf_help  );
     debugHighlighter :=TSynMnhSyn.create(self,msf_input );
     OutputEdit           .highlighter:=outputHighlighter;
+    QuickOutputEdit      .highlighter:=outputHighlighter;
     assistanceSynEdit    .highlighter:=outputHighlighter;
     outlineSynEdit       .highlighter:=outputHighlighter;
     helpPopupMemo        .highlighter:=helpHighlighter  ;
     currentExpressionMemo.highlighter:=debugHighlighter ;
     OutputEdit       .clearAll;
+    QuickOutputEdit  .clearAll;
     assistanceSynEdit.clearAll;
     outlineSynEdit   .clearAll;
     //Initialize state:
@@ -147,6 +148,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     setupCallbacks;
 
     initGuiOutAdapters(MnhForm,true);
+    quickAdapters:=createSecondaryAdapters;
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
@@ -172,6 +174,10 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     completionLogic.destroy;
     guiTaskQueue.destroy;
     finalizeEditorMeta;
+    quickTask.destroy;
+    quickMeta.destroy;
+    quickCompletion.destroy;
+    dispose(quickAdapters,destroy);
   end;
 
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -202,7 +208,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
     if firstShow then begin
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
-      initializeSettings;
       editorMeta.setupUnit(self,
                            inputPageControl,
                            EditorPopupMenu,
@@ -216,6 +221,16 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
+
+      quickMeta.createWithParent(DETACHED_EDITOR_META_INDEX,QuickTabSheet);
+      quickMeta.editor.Align:=alTop;
+      quickMeta.editor.height:=80;
+      quickMeta.editor.OnChange:=@QuickEditChange;
+      quickCompletion.create;
+      QuickOutputEdit.Align:=alClient;
+      quickTask.create(@quickMeta,quickAdapters);
+
+      initializeSettings;
       processFontSettings;
       enableDynamicItems;
       firstShow:=false;
@@ -253,17 +268,6 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     getEditor^.setUnderCursor(mark,help or jump,point);
     if jump then openLocation(getHelpLocation);
     if help then positionHelpNotifier;
-  end;
-
-PROCEDURE TMnhForm.miOpenSimpleMnhClick(Sender: TObject);
-  VAR prevWindowState:TWindowState;
-  begin
-    getSimpleMnh.SimpleMnhInputEdit .Font:=OutputEdit.Font;
-    getSimpleMnh.SimpleMnhOutputEdit.Font:=OutputEdit.Font;
-    prevWindowState:=WindowState;
-    WindowState:=wsMinimized;
-    getSimpleMnh.showModalFor(getEditor);
-    WindowState:=prevWindowState;
   end;
 
 PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -423,15 +427,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
-    if isSimpleMnhShowing then begin
-      if not(delayFlush) then guiOutAdapter.flushToGui(getSimpleMnh.SimpleMnhOutputEdit);
-    end else begin
-      if guiOutAdapter.flushToGui(OutputEdit) then exit;
-      while guiTaskQueue.executeTask do;
-      autosaveSettings;
-      checkForFileChanges;
-      pollAssistant;
-    end;
+    if guiOutAdapter.flushToGui(OutputEdit) then exit;
+    if P_guiOutAdapter(quickAdapters^.getAdapter(0))^.flushToGui(QuickOutputEdit) then exit;
+    while guiTaskQueue.executeTask do;
+    autosaveSettings;
+    checkForFileChanges;
+    pollAssistant;
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);
