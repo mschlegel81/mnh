@@ -18,7 +18,7 @@ TYPE
       codeProvider:P_codeProvider;
       readyForCodeState:T_hashInt;
     protected
-      PROCEDURE logReady;
+      PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
@@ -128,8 +128,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
     end;
   end;
 
-FUNCTION T_lexer.getToken(CONST line: ansistring;
-  VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
+FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
   CONST retainBlanks: boolean): P_token;
   VAR parsedLength:longint=0;
 
@@ -290,6 +289,9 @@ FUNCTION T_lexer.getToken(CONST line: ansistring;
               blob.closer:=line[inputLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)];
               parsedLength:=length(SPECIAL_COMMENT_BLOB_BEGIN)+1;
             end else blob.closer:='''';
+          end else begin
+            id:=copy(line,inputLocation.column+length(COMMENT_PREFIX),parsedLength);
+            if pos('TODO',id)>0 then adapters.raiseNote(id,inputLocation);
           end;
         end;
       end else if startsWith(tt_mut_assignDiv) then apply(tt_mut_assignDiv)
@@ -672,10 +674,10 @@ FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider
     result:=true;
   end;
 
-FUNCTION T_abstractPackage.codeChanged: boolean;  begin result:=readyForCodeState<>codeProvider^.stateHash; end;
-PROCEDURE T_abstractPackage.logReady;             begin         readyForCodeState:=codeProvider^.stateHash; end;
-FUNCTION T_abstractPackage.getId: T_idString;     begin result:=codeProvider^.id;                           end;
-FUNCTION T_abstractPackage.getPath: ansistring;   begin result:=codeProvider^.getPath;                      end;
+FUNCTION T_abstractPackage.codeChanged: boolean;                       begin result:=readyForCodeState<>codeProvider^.stateHash; end;
+PROCEDURE T_abstractPackage.logReady(CONST stateHashAtLoad:T_hashInt); begin readyForCodeState:=stateHashAtLoad;                 end;
+FUNCTION T_abstractPackage.getId: T_idString;                          begin result:=codeProvider^.id;                           end;
+FUNCTION T_abstractPackage.getPath: ansistring;                        begin result:=codeProvider^.getPath;                      end;
 
 {$ifdef fullVersion}
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;

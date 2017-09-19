@@ -18,6 +18,7 @@ PROCEDURE initializeOutputSettings;
                             and (mt_el3_userDefined in settings.value^.outputBehaviour);
     end;
     guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour+C_guiOnlyMessages;
+    MnhForm.quickAdapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
   end;
 
@@ -44,12 +45,14 @@ PROCEDURE setVerbosity(level:byte);
     if level in [1..4] then for j:=1 to 4 do guiOutAdapter.enableMessageType(j>=level,C_errorMessageTypes[j]);
     if MnhForm.miUserErrors.Checked then guiOutAdapter.enableMessageType(true,[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined]);
     settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
+    MnhForm.quickAdapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
   end;
 
 PROCEDURE setSpecificMessageType(CONST enable:boolean; CONST messageType:T_messageType);
   begin
     guiOutAdapter.enableMessageType(enable,[messageType]);
     settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
+    MnhForm.quickAdapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
   end;
 
 PROCEDURE updateWordWrap;
@@ -67,6 +70,9 @@ PROCEDURE processFontSettings;
       if SettingsForm.AntialiasCheckbox.Checked
       then OutputEdit.Font.quality:=fqCleartypeNatural
       else OutputEdit.Font.quality:=fqNonAntialiased;
+
+      quickMeta.editor.Font:=OutputEdit.Font;
+      QuickOutputEdit.Font:=OutputEdit.Font;
       currentExpressionMemo.Font:=OutputEdit.Font;
       editorMeta.updateFonts(OutputEdit.Font);
       helpPopupMemo.Font:=OutputEdit.Font;

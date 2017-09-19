@@ -109,7 +109,12 @@ TYPE
       FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
   end;
 
+OPERATOR =(CONST x,y:T_outlineEntry):boolean;
 IMPLEMENTATION
+OPERATOR =(CONST x,y:T_outlineEntry):boolean;
+  begin
+    result:=(x.id=y.id) and (x.location=y.location);
+  end;
 
 CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin

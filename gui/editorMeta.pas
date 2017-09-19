@@ -26,6 +26,7 @@ USES  //basic classes
   mnh_debugging,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
+  mnh_packages,
   mnhCompletion,
   guiOutAdapters;
 
@@ -48,6 +49,8 @@ TYPE T_language=(LANG_MNH   = 0,
                  LANG_XML   =16,
                  LANG_TXT   =17);
 
+CONST DETACHED_EDITOR_META_INDEX=-1;
+
 TYPE
 P_editorMeta=^T_editorMeta;
 T_editorMeta=object(T_codeProvider)
@@ -60,18 +63,19 @@ T_editorMeta=object(T_codeProvider)
       isChanged:boolean;
       ignoreDeleted:boolean;
     end;
-    assistant:P_codeAssistant;
-    language_:T_language;
-    sheet       : TTabSheet;
+    assistant   : P_codeAssistanceData;
+    language_   : T_language;
+    tabsheet    : TTabSheet;
     editor_     : TSynEdit;
     plugin      : TSynPluginMultiCaret;
     highlighter : TSynMnhSyn;
     PROCEDURE setLanguage(CONST languageIndex:T_language);
     PROCEDURE guessLanguage(CONST fallback:T_language);
-  public
-    FUNCTION enabled:boolean;
     CONSTRUCTOR create(CONST idx:longint);
     CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
+  public
+    CONSTRUCTOR createWithParent(CONST idx:longint; CONST parent:TWinControl);
+    FUNCTION enabled:boolean;
 
     DESTRUCTOR destroy; virtual;
     //T_codeProvider:
@@ -85,6 +89,7 @@ T_editorMeta=object(T_codeProvider)
 
     PROPERTY language:T_language read language_ write setLanguage;
     PROPERTY editor:TSynEdit read editor_;
+    PROPERTY getAssistant:P_codeAssistanceData read assistant;
     PROCEDURE activate;
     FUNCTION caretInMainFormCoordinates:TPoint;
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
@@ -105,10 +110,13 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
     PROCEDURE assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
+    PROCEDURE updateOutline;
+    PROCEDURE pollAssistanceResult;
   private
     PROCEDURE ensureAssistant;
     PROCEDURE dropAssistant;
-    PROCEDURE repaintWithStateHash;
+    PROCEDURE triggerCheck;
+
     PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
     PROCEDURE InputEditChange(Sender: TObject);
@@ -399,20 +407,19 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     restoreEditors;
   end;
 
-VAR outlineOptions:record
-      includePrivate,includeImported,sortByName:boolean;
-    end;
+VAR outlineOptions:T_outlineOptions=[];
 PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:boolean);
   VAR edit:P_editorMeta;
   begin
-    outlineOptions.includePrivate:=includePrivate;
-    outlineOptions.includeImported:=includeImported;
-    outlineOptions.sortByName:=sortByName;
+    outlineOptions:=[];
+    if includePrivate  then include(outlineOptions,mnh_packages.includePrivate );
+    if includeImported then include(outlineOptions,mnh_packages.includeImported);
+    if sortByName      then include(outlineOptions,mnh_packages.sortByName     );
     edit:=getEditor;
-    if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.repaintWithStateHash;
+    if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.updateOutline;
   end;
 
-CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
+CONSTRUCTOR T_editorMeta.createWithParent(CONST idx:longint; CONST parent:TWinControl);
   PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
@@ -425,11 +432,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   begin
     paintedWithStateHash:=0;
     index:=idx;
-    sheet:=TTabSheet.create(inputPageControl);
-    sheet.PageControl:=inputPageControl;
-
     editor_:=TSynEdit.create(mainForm);
-    editor_.parent:=sheet;
+    editor_.parent:=parent;
     editor_.Align:=alClient;
     editor_.ScrollBars:=ssAutoBoth;
     editor_.WantTabs:=false;
@@ -526,6 +530,15 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     initForNewFile;
   end;
 
+CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
+  begin
+    paintedWithStateHash:=0;
+    index:=idx;
+    tabsheet:=TTabSheet.create(inputPageControl);
+    tabsheet.PageControl:=inputPageControl;
+    createWithParent(idx,tabsheet);
+  end;
+
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
   begin
     create(idx);
@@ -535,7 +548,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
 PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
   VAR i:longint;
   begin
-    sheet.tabVisible:=true;
+    if index<>DETACHED_EDITOR_META_INDEX then tabsheet.tabVisible:=true;
     with fileInfo do begin
       isChanged    :=state.changed;
       fileAccessAge:=state.fileAccessAge;
@@ -605,8 +618,8 @@ PROCEDURE T_editorMeta.activate;
     then begin
       editor.highlighter:=highlighter;
       paintedWithStateHash:=0;
-      repaintWithStateHash;
-      completionLogic.assignEditor(editor_,assistant^.getPackage);
+      triggerCheck;
+      completionLogic.assignEditor(editor_,assistant);
     end else begin
       editor.highlighter:=fileTypeMeta[language_].highlighter;
       assistanceSynEdit.clearAll;
@@ -623,10 +636,10 @@ PROCEDURE T_editorMeta.activate;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
   begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; visible: ',sheet.tabVisible,'; language: ',language_); {$endif}
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; language: ',language_); {$endif}
     if not(enabled) then exit;
-    if language_=LANG_MNH then repaintWithStateHash;
-    mainForm.caption:=updateSheetCaption;
+    if language_=LANG_MNH then triggerCheck;
+    if index<>DETACHED_EDITOR_META_INDEX then mainForm.caption:=updateSheetCaption;
   end;
 
 PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
@@ -660,7 +673,7 @@ FUNCTION T_editorMeta.saveWithDialog: boolean;
 
 PROCEDURE T_editorMeta.closeEditorQuietly;
   begin
-    sheet.tabVisible:=false;
+    if index<>DETACHED_EDITOR_META_INDEX then tabsheet.tabVisible:=false;
     editor.clearAll;
     with fileInfo do begin
       filePath:='';
@@ -668,7 +681,6 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
       ignoreDeleted:=false;
     end;
     editor.modified:=false;
-
   end;
 
 PROCEDURE T_editorMeta.closeEditorWithDialogs;
@@ -710,7 +722,7 @@ PROCEDURE T_editorMeta.setLanguage(CONST extensionWithoutDot: string;
 
 FUNCTION T_editorMeta.enabled:boolean;
   begin
-    result:=sheet.tabVisible;
+    result:=(index=DETACHED_EDITOR_META_INDEX) or (tabsheet.tabVisible);
   end;
 
 PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
@@ -720,7 +732,7 @@ PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
-    sheet.tabVisible:=true;
+    tabsheet.tabVisible:=true;
     fileInfo.filePath:=fileName;
     fileInfo.ignoreDeleted:=false;
     editor.clearAll;
@@ -740,7 +752,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
 
 PROCEDURE T_editorMeta.initForNewFile;
   begin
-    sheet.tabVisible:=true;
+    if (index<>DETACHED_EDITOR_META_INDEX) then tabsheet.tabVisible:=true;
     with fileInfo do begin
       isChanged       :=false;
       fileAccessAge:=0;
@@ -761,7 +773,7 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       editor.modified:=false;
       fileInfo.isChanged:=false;
       mainForm.caption:=updateSheetCaption;
-      if language_=LANG_MNH then repaintWithStateHash;
+      if language_=LANG_MNH then triggerCheck;
     end;
   end;
 
@@ -772,8 +784,7 @@ FUNCTION T_editorMeta.caretInMainFormCoordinates: TPoint;
     result:=editor.ClientToParent(result,mainForm);
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
-  forHelpOrJump: boolean; CONST caret: TPoint);
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret: TPoint);
   VAR m:P_editorMeta;
       wordUnderCursor:string;
   begin
@@ -789,8 +800,7 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,
     end;
   end;
 
-PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
-  );
+PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
   begin
     setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
   end;
@@ -935,15 +945,16 @@ PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
 
 FUNCTION T_editorMeta.updateSheetCaption: ansistring;
   begin
+    if index=DETACHED_EDITOR_META_INDEX then exit('');
     if changed then result:=' *'
                else result:='';
-    sheet.caption:=pseudoName(true)+result;
+    tabsheet.caption:=pseudoName(true)+result;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
 PROCEDURE T_editorMeta.ensureAssistant;
   begin
-    if assistant=nil then new(assistant,create(@self));
+    if assistant=nil then new(assistant,create);
     highlighter.codeAssistant:=assistant;
   end;
 
@@ -959,15 +970,30 @@ PROCEDURE T_editorMeta.dropAssistant;
     assistant:=nil;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateHash;
+PROCEDURE T_editorMeta.updateOutline;
+  VAR s:string;
+  begin
+    outlineSynEdit.clearAll;
+    if assistant<>nil then for s in assistant^.getOutline(outlineOptions) do outlineSynEdit.lines.add(s);
+    outlineSynEdit.highlighter:=highlighter;
+  end;
+
+PROCEDURE T_editorMeta.triggerCheck;
+  begin
+    ensureAssistant;
+    assistant^.triggerUpdate(@self);
+  end;
+
+PROCEDURE T_editorMeta.pollAssistanceResult;
   VAR s:string;
       hints:T_arrayOfString;
       hasErrors,hasWarnings:boolean;
   begin
-    ensureAssistant;
-    assistant^.check(outlineOptions.includePrivate,outlineOptions.includeImported,outlineOptions.sortByName);
+    if language_<>LANG_MNH then exit;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
+      highlighter.codeAssistant:=assistant;
+      editor.highlighter:=highlighter;
       editor.Repaint;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
@@ -977,10 +1003,10 @@ PROCEDURE T_editorMeta.repaintWithStateHash;
                    else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'
                                              else assistanceTabSheet.caption:='(no warnings)'; end;
       for s in hints do assistanceSynEdit.lines.add(s);
+      updateOutline;
+      writeln('Done polling assistance result');
     end;
-    outlineSynEdit.clearAll;
-    for s in assistant^.outline do outlineSynEdit.lines.add(s);
-    outlineSynEdit.highlighter:=highlighter;
+    assistant^.triggerUpdate(nil);
   end;
 
 FUNCTION T_editorMeta.changed: boolean;

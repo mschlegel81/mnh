@@ -15,6 +15,7 @@ TYPE
       PROCEDURE triggerFastPolling;                                           virtual; abstract;
   end;
 
+  P_guiOutAdapter=^T_guiOutAdapter;
   T_guiOutAdapter=object(T_collectingOutAdapter)
     flushing:boolean;
     parentForm:T_abstractMnhForm;
@@ -29,6 +30,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
 
 PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
+FUNCTION createSecondaryAdapters:P_adapters;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
 PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
@@ -45,6 +47,16 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     mnh_out_adapters.gui_started:=true;
     initializeDynamicPlotting;
     initializePlotForm;
+  end;
+
+FUNCTION createSecondaryAdapters:P_adapters;
+  VAR guiAd:P_guiOutAdapter;
+  begin
+    if not(unitIsInitialized) then exit;
+    new(guiAd,create(guiOutAdapter.parentForm,false));
+    new(result,create);
+    result^.addOutAdapter(guiAd,true);
+    result^.addConsoleOutAdapter('v');
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);

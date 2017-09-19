@@ -17,12 +17,12 @@ T_completionLogic=object
     editor:TSynEdit;
     lastWordsCaret:longint;
     SynCompletion:TSynCompletion;
-    package:P_package;
+    relatedAssistant:P_codeAssistanceData;
     PROCEDURE ensureWordsInEditorForCompletion;
   public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST pack:P_package);
+    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
@@ -63,16 +63,6 @@ PROCEDURE initIntrinsicRuleList;
 PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
       i:longint;
-  PROCEDURE updateCompletionListByPackage;
-    VAR s:string;
-        userRules:T_setOfString;
-    begin
-      userRules.create;
-      package^.updateLists(userRules);
-      wordsInEditor.put(userRules);
-      for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
-    end;
-
   begin
     caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
@@ -80,7 +70,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
     wordsInEditor.clear;
     initIntrinsicRuleList;
     wordsInEditor.put(intrinsicRulesForCompletion);
-    if package<>nil then updateCompletionListByPackage;
+    if relatedAssistant<>nil then relatedAssistant^.updateCompletionList(wordsInEditor);
     for i:=0 to editor.lines.count-1 do
       if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                      else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
@@ -89,7 +79,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
 CONSTRUCTOR T_completionLogic.create;
   begin
     editor:=nil;
-    package:=nil;
+    relatedAssistant:=nil;
     lastWordsCaret:=maxLongint;
     wordsInEditor.create;
     SynCompletion:=TSynCompletion.create(nil);
@@ -105,10 +95,11 @@ DESTRUCTOR T_completionLogic.destroy;
     SynCompletion.destroy;
   end;
 
-PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST pack:P_package);
+PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData);
   begin
+    if ad=nil then exit;
     editor:=edit;
-    package:=pack;
+    relatedAssistant:=ad;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
   end;

@@ -5,7 +5,7 @@ USES sysutils,Classes,
      mnh_constants,mnh_basicTypes,mnh_fileWrappers,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_tokens,valueStore,
+     valueStore,
      mnh_funcs,mnh_contexts,
      mnh_tokenArray,
      mnh_subrules,
@@ -28,12 +28,6 @@ TYPE
     state  :T_evaluationState;
     message:string;
     hasPendingEditResult:boolean;
-  end;
-
-  T_tokenInfo=record
-    tokenText, tokenExplanation:ansistring;
-    location,
-    startLoc,endLoc:T_searchTokenLocation;
   end;
 
   P_scriptMeta=^T_scriptMeta;
@@ -136,31 +130,6 @@ TYPE
       PROCEDURE freeCurrentEdit;
       PROCEDURE haltEvaluation; virtual;
       FUNCTION getScripts:T_scriptMetaArray;
-  end;
-
-  P_codeAssistant=^T_codeAssistant;
-  T_codeAssistant=object
-    private
-      context:T_evaluationContext;
-      errorCollector:T_collectingOutAdapter;
-      adapters:P_adapters;
-      package:T_package;
-      localErrors,externalErrors:T_storedMessages;
-      stateHash:T_hashInt;
-      userRules:T_setOfString;
-      outLineText:T_arrayOfString;
-    public
-      CONSTRUCTOR create(CONST provider:P_codeProvider);
-      DESTRUCTOR destroy;
-      PROCEDURE check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
-      FUNCTION getPackage:P_package;
-      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint):T_arrayOfString;
-      PROPERTY getStateHash:T_hashInt read stateHash;
-      PROPERTY outline:T_arrayOfString read outLineText;
-      FUNCTION isUserRule(CONST id:string):boolean;
-      FUNCTION resolveImport(CONST id:string):string;
-      PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
-      FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   end;
 
 VAR runEvaluator:T_runEvaluator;
@@ -278,213 +247,6 @@ FUNCTION main(p:pointer):ptrint;
     until (pendingRequest=er_die);
     threadStopped;
   end; end;
-
-CONSTRUCTOR T_codeAssistant.create(CONST provider: P_codeProvider);
-  begin
-    new(adapters,create);
-    errorCollector.create(at_unknown,C_collectAllOutputBehavior);
-    context.create(adapters);
-    adapters^.addOutAdapter(@errorCollector,false);
-    package.create(provider,nil);
-    stateHash:=0;
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    setLength(outLineText,0);
-    userRules.create;
-  end;
-
-DESTRUCTOR T_codeAssistant.destroy;
-  begin
-    package.destroy;
-    context.destroy;
-    dispose(adapters,destroy);
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    userRules.destroy;
-    errorCollector.destroy;
-  end;
-
-PROCEDURE T_codeAssistant.check(CONST includePrivateInOutline,incudeImportedInOutline,sortOutlineByName:boolean);
-
-  PROCEDURE updateErrors;
-    VAR i:longint;
-    begin
-      setLength(localErrors,0);
-      setLength(externalErrors,0);
-      with errorCollector do
-      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
-      if C_messageTypeMeta[messageType].level>=2 then begin
-        if location.fileName=package.getPath
-        then begin
-          setLength(localErrors,length(localErrors)+1);
-          localErrors[length(localErrors)-1]:=storedMessages[i];
-        end else begin
-          setLength(externalErrors,length(externalErrors)+1);
-          externalErrors[length(externalErrors)-1]:=storedMessages[i];
-        end;
-      end;
-    end;
-
-  begin
-    if package.getCodeProvider^.stateHash<>package.getCodeState then begin
-      adapters^.clearAll;
-      context.resetForEvaluation(@package,ect_silent);
-      package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
-      package.updateLists(userRules);
-      updateErrors;
-      context.afterEvaluation;
-    end;
-    stateHash:=package.getCodeState;
-    outLineText:=package.outline(includePrivateInOutline,incudeImportedInOutline,sortOutlineByName);
-  end;
-
-FUNCTION T_codeAssistant.getPackage:P_package;
-  begin
-    result:=@package;
-  end;
-
-FUNCTION T_codeAssistant.getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
-  VAR k:longint;
-  PROCEDURE resultAppend(CONST s:string);
-    begin
-      if k>=length(result) then setLength(result,round(k*1.1+1));
-      result[k]:=s;
-      inc(k);
-    end;
-
-  PROCEDURE splitAtSpace(VAR headOrAll:string; OUT tail:string; CONST dontSplitBefore,lengthLimit:longint);
-    VAR splitIndex:longint;
-    begin
-      if length(headOrAll)<lengthLimit then begin
-        tail:='';
-        exit;
-      end;
-      splitIndex:=lengthLimit;
-      while (splitIndex>dontSplitBefore) and (headOrAll[splitIndex]<>' ') do dec(splitIndex);
-      if splitIndex<=dontSplitBefore then begin
-        splitIndex:=lengthLimit;
-        while (splitIndex<=length(headOrAll)) and (headOrAll[splitIndex]<>' ') do inc(splitIndex);
-      end;
-      tail:=copy(headOrAll,splitIndex,length(headOrAll));
-      headOrAll:=copy(headOrAll,1,splitIndex-1);
-    end;
-
-  PROCEDURE addErrors(CONST list:T_storedMessages);
-    VAR i:longint;
-        s,head,rest:string;
-    begin
-      for i:=0 to length(list)-1 do with list[i] do begin
-        hasErrors  :=hasErrors   or (C_messageTypeMeta[messageType].level> 2);
-        hasWarnings:=hasWarnings or (C_messageTypeMeta[messageType].level<=2);
-        for s in messageText do begin
-          head:=ansistring(location);
-          if length(head)>=lengthLimit-3 then begin
-            resultAppend(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head);
-            head:='. '+s;
-          end else head:=head+' '+s;
-          repeat
-            splitAtSpace(head,rest,3,lengthLimit);
-            resultAppend(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head);
-            head:='. '+rest;
-          until rest='';
-        end;
-      end;
-    end;
-
-  begin
-    hasErrors:=false;
-    hasWarnings:=false;
-    setLength(result,length(localErrors)+length(externalErrors));
-    k:=0;
-    addErrors(localErrors);
-    addErrors(externalErrors);
-    setLength(result,k);
-  end;
-
-FUNCTION T_codeAssistant.isUserRule(CONST id: string): boolean;
-  begin
-    result:=userRules.contains(id);
-  end;
-
-FUNCTION T_codeAssistant.resolveImport(CONST id: string): string;
-  begin
-    result:=package.getSecondaryPackageById(id);
-  end;
-
-PROCEDURE T_codeAssistant.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
-  PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
-    VAR doc:P_intrinsicFunctionDocumentation;
-    begin
-      ensureBuiltinDocExamples;
-      if (length(info.tokenText)>1) and (info.tokenText[1]='.')
-      then doc:=functionDocMap.get(copy(info.tokenText,2,length(info.tokenText)-1))
-      else doc:= functionDocMap.get(info.tokenText);
-      if doc=nil then exit;
-      info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
-    end;
-
-  VAR lexer:T_lexer;
-      tokenToExplain:P_token;
-      loc:T_tokenLocation;
-      i:longint;
-  begin
-    if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
-    loc.line:=CaretY;
-    loc.column:=1;
-    loc.package:=@package;
-    lexer.create(fullLine,loc,@package);
-    tokenToExplain:=lexer.getTokenAtColumnOrNil(CaretX,i);
-    if tokenToExplain<>nil then begin
-      info.startLoc:=tokenToExplain^.location;
-      info.location:=tokenToExplain^.location;
-      info.endLoc  :=info.startLoc;
-      info.endLoc.column:=i;
-      info.tokenText:=safeTokenToString(tokenToExplain);
-      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
-      for i:=0 to length(C_specialWordInfo)-1 do
-        if C_specialWordInfo[i].txt=info.tokenText then
-        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
-
-      case tokenToExplain^.tokType of
-        tt_intrinsicRule: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          appendBuiltinRuleInfo;
-        end;
-        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
-          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
-          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
-        end;
-        tt_type,tt_typeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
-        end;
-        tt_modifier: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
-        end;
-      end;
-    end else begin
-      info.tokenExplanation:='';
-      info.tokenText:='';
-      info.startLoc.column:=CaretX;
-      info.startLoc.line:=CaretY;
-      info.location:=info.startLoc;
-      info.endLoc:=info.startLoc;
-    end;
-    lexer.destroy;
-  end;
-
-FUNCTION T_codeAssistant.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
-  VAR e:T_storedMessage;
-  begin
-    result:=0;
-    for e in localErrors do with e do
-    if (result=0) and (lineIndex=location.line-1) and ((location.column<0) or (tokenStart<=location.column-1) and (tokenEnd>location.column-1)) then begin
-      if C_messageTypeMeta[messageType].level>2 then exit(2) else exit(1);
-    end;
-  end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; VAR adapters:T_adapters);
   VAR t:T_scriptType;

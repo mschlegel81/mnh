@@ -3,7 +3,7 @@ INTERFACE
 
 USES
   sysutils, Classes, FileUtil, Controls, Graphics,mnh_funcs,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_constants,myGenerics,myStringUtil;
+  SynEditTypes, SynEditHighlighter, mnh_packages,mnh_constants,myGenerics,myStringUtil;
 
 TYPE
   T_tokenKind = (
@@ -64,7 +64,7 @@ TYPE
   public
     class FUNCTION GetLanguageName: ansistring; override;
   public
-    codeAssistant:P_codeAssistant;
+    codeAssistant:P_codeAssistanceData;
     CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour); reintroduce;
     DESTRUCTOR destroy; override;
     {$WARN 5024 OFF}

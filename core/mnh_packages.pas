@@ -39,6 +39,9 @@ TYPE
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
   end;
 
+  T_outlineOption=(includePrivate,includeImported,sortByName);
+  T_outlineOptions=set of T_outlineOption;
+
   T_package=object(T_abstractPackage)
     private
       mainPackage:P_package;
@@ -78,8 +81,55 @@ TYPE
       {$endif}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
-      FUNCTION outline(CONST includePrivate,includeImported,sortByName:boolean):T_arrayOfString;
+      FUNCTION outline(CONST options:T_outlineOptions):T_arrayOfString;
     end;
+
+  {$ifdef fullVersion}
+  T_tokenInfo=record
+    tokenText, tokenExplanation:ansistring;
+    location,
+    startLoc,endLoc:T_searchTokenLocation;
+  end;
+
+  P_codeAssistanceData=^T_codeAssistanceData;
+  T_codeAssistanceData=object
+    private
+      package:P_package;
+      localErrors,externalErrors:T_storedMessages;
+      stateHash:T_hashInt;
+      userRules:T_setOfString;
+
+      editorForUpdate:P_codeProvider;
+      checkPending,currentlyProcessing:boolean;
+      cs:TRTLCriticalSection;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
+      FUNCTION isUserRule(CONST id: string): boolean;
+      FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
+      PROCEDURE updateCompletionList(VAR wordsInEditor:T_setOfString);
+      PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
+      FUNCTION getStateHash:T_hashInt;
+      FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString;
+      PROCEDURE triggerUpdate(CONST editor:P_codeProvider);
+      FUNCTION resolveImport(CONST id:string):string;
+  end;
+
+  P_postEvaluationData=^T_postEvaluationData;
+  T_postEvaluationData=object
+    private
+      editor:P_codeProvider;
+      packageForPostEval:P_package;
+      adapters:P_adapters;
+      checkPending,currentlyProcessing:boolean;
+      cs:TRTLCriticalSection;
+    public
+      CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters:P_adapters);
+      DESTRUCTOR destroy;
+      PROCEDURE triggerUpdate(CONST package:P_package);
+  end;
+  {$endif}
 
   P_sandbox=^T_sandbox;
   T_sandbox=object
@@ -90,6 +140,9 @@ TYPE
       busy:boolean;
       package:T_package;
       cs:TRTLCriticalSection;
+      {$ifdef fullVersion}
+      PROCEDURE updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
+      {$endif}
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -169,6 +222,343 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
+{$ifdef fullVersion}
+CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST quickAdapters: P_adapters);
+  begin
+    editor:=quickEdit;
+    adapters:=quickAdapters;
+    packageForPostEval:=nil;
+    checkPending:=false;
+    currentlyProcessing:=false;
+    initCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_postEvaluationData.destroy;
+  begin
+    enterCriticalSection(cs);
+    while currentlyProcessing do begin
+      leaveCriticalSection(cs);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(cs);
+    end;
+    leaveCriticalSection(cs);
+    doneCriticalSection(cs);
+  end;
+
+FUNCTION postEvalThread(p:pointer):ptrint;
+  VAR evaluationContext:T_evaluationContext;
+      sleepCount:longint=0;
+  begin
+    with P_postEvaluationData(p)^ do begin
+      enterCriticalSection(cs);
+      currentlyProcessing:=true;
+      evaluationContext.create(adapters);
+      while sleepCount<100 do begin
+        while checkPending do begin
+          sleepCount:=0;
+          checkPending:=false;
+          leaveCriticalSection(cs);
+          adapters^.clearAll();
+          evaluationContext.resetForEvaluation(packageForPostEval,ect_normal);
+          adapters^.clearPrint;
+          packageForPostEval^.interpretInPackage(editor^.getLines,evaluationContext.threadContext^);
+          enterCriticalSection(cs);
+        end;
+        leaveCriticalSection(cs);
+        sleep(10);
+        inc(sleepCount);
+        enterCriticalSection(cs);
+      end;
+      evaluationContext.destroy;
+      currentlyProcessing:=false;
+      leaveCriticalSection(cs);
+    end;
+    result:=0;
+  end;
+
+PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
+  begin
+    enterCriticalSection(cs);
+    packageForPostEval:=package;
+    if currentlyProcessing then begin
+      checkPending:=true;
+      leaveCriticalSection(cs);
+      exit;
+    end;
+    checkPending:=true;
+    currentlyProcessing:=true;
+    beginThread(@postEvalThread,@self);
+    leaveCriticalSection(cs);
+  end;
+
+CONSTRUCTOR T_codeAssistanceData.create;
+  begin
+    package:=nil;
+    stateHash:=0;
+    userRules.create;
+    currentlyProcessing:=false;
+    checkPending:=false;
+    initCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_codeAssistanceData.destroy;
+  begin
+    enterCriticalSection(cs);
+    while currentlyProcessing do begin
+      leaveCriticalSection(cs);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(cs);
+    end;
+    if package<>nil then dispose(package,destroy);
+    userRules.destroy;
+    leaveCriticalSection(cs);
+    doneCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean; CONST lengthLimit: longint): T_arrayOfString;
+  VAR k:longint;
+  PROCEDURE resultAppend(CONST s:string);
+    begin
+      if k>=length(result) then setLength(result,round(k*1.1+1));
+      result[k]:=s;
+      inc(k);
+    end;
+
+  PROCEDURE splitAtSpace(VAR headOrAll:string; OUT tail:string; CONST dontSplitBefore,lengthLimit:longint);
+    VAR splitIndex:longint;
+    begin
+      if length(headOrAll)<lengthLimit then begin
+        tail:='';
+        exit;
+      end;
+      splitIndex:=lengthLimit;
+      while (splitIndex>dontSplitBefore) and (headOrAll[splitIndex]<>' ') do dec(splitIndex);
+      if splitIndex<=dontSplitBefore then begin
+        splitIndex:=lengthLimit;
+        while (splitIndex<=length(headOrAll)) and (headOrAll[splitIndex]<>' ') do inc(splitIndex);
+      end;
+      tail:=copy(headOrAll,splitIndex,length(headOrAll));
+      headOrAll:=copy(headOrAll,1,splitIndex-1);
+    end;
+
+  PROCEDURE addErrors(CONST list:T_storedMessages);
+    VAR i:longint;
+        s,head,rest:string;
+    begin
+      for i:=0 to length(list)-1 do with list[i] do begin
+        hasErrors  :=hasErrors   or (C_messageTypeMeta[messageType].level> 2);
+        hasWarnings:=hasWarnings or (C_messageTypeMeta[messageType].level<=2);
+        for s in messageText do begin
+          head:=ansistring(location);
+          if length(head)>=lengthLimit-3 then begin
+            resultAppend(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head);
+            head:='. '+s;
+          end else head:=head+' '+s;
+          repeat
+            splitAtSpace(head,rest,3,lengthLimit);
+            resultAppend(C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker+head);
+            head:='. '+rest;
+          until rest='';
+        end;
+      end;
+    end;
+
+  begin
+    enterCriticalSection(cs);
+    hasErrors:=false;
+    hasWarnings:=false;
+    setLength(result,length(localErrors)+length(externalErrors));
+    k:=0;
+    addErrors(localErrors);
+    addErrors(externalErrors);
+    setLength(result,k);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.isUserRule(CONST id: string): boolean;
+  begin
+    enterCriticalSection(cs);
+    result:=userRules.contains(id);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
+  VAR e:T_storedMessage;
+  begin
+    enterCriticalSection(cs);
+    result:=0;
+    for e in localErrors do with e do
+    if (result=0) and (lineIndex=location.line-1) and ((location.column<0) or (tokenStart<=location.column-1) and (tokenEnd>location.column-1)) then begin
+      if C_messageTypeMeta[messageType].level>2 then result:=2
+      else if result<1 then result:=1;
+    end;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString);
+  VAR s:string;
+  begin
+    enterCriticalSection(cs);
+    wordsInEditor.put(userRules);
+    for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
+  PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
+    VAR doc:P_intrinsicFunctionDocumentation;
+    begin
+      ensureBuiltinDocExamples;
+      if (length(info.tokenText)>1) and (info.tokenText[1]='.')
+      then doc:=functionDocMap.get(copy(info.tokenText,2,length(info.tokenText)-1))
+      else doc:= functionDocMap.get(info.tokenText);
+      if doc=nil then exit;
+      info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
+    end;
+
+  VAR lexer:T_lexer;
+      tokenToExplain:P_token;
+      loc:T_tokenLocation;
+      i:longint;
+  begin
+    if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
+    enterCriticalSection(cs);
+    loc.line:=CaretY;
+    loc.column:=1;
+    loc.package:=package;
+    lexer.create(fullLine,loc,package);
+    tokenToExplain:=lexer.getTokenAtColumnOrNil(CaretX,i);
+    if tokenToExplain<>nil then begin
+      info.startLoc:=tokenToExplain^.location;
+      info.location:=tokenToExplain^.location;
+      info.endLoc  :=info.startLoc;
+      info.endLoc.column:=i;
+      info.tokenText:=safeTokenToString(tokenToExplain);
+      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
+      for i:=0 to length(C_specialWordInfo)-1 do
+        if C_specialWordInfo[i].txt=info.tokenText then
+        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+
+      case tokenToExplain^.tokType of
+        tt_intrinsicRule: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          appendBuiltinRuleInfo;
+        end;
+        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
+          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
+          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
+        end;
+        tt_type,tt_typeCheck: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
+        end;
+        tt_modifier: begin
+          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+        end;
+      end;
+    end else begin
+      info.tokenExplanation:='';
+      info.tokenText:='';
+      info.startLoc.column:=CaretX;
+      info.startLoc.line:=CaretY;
+      info.location:=info.startLoc;
+      info.endLoc:=info.startLoc;
+    end;
+    lexer.destroy;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.getStateHash:T_hashInt;
+  begin
+    enterCriticalSection(cs); result:=stateHash; leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.getOutline(CONST options:T_outlineOptions):T_arrayOfString;
+  begin
+    enterCriticalSection(cs);
+    if package=nil then result:=C_EMPTY_STRING_ARRAY
+                   else result:=package^.outline(options);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
+  begin
+    enterCriticalSection(cs);
+    if package=nil then result:=''
+                   else result:=package^.getSecondaryPackageById(id);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
+  begin
+    sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
+    result:=0;
+  end;
+
+PROCEDURE T_codeAssistanceData.triggerUpdate(CONST editor:P_codeProvider);
+  begin
+    enterCriticalSection(cs);
+    if (editor=nil) then begin
+      if not(checkPending) then begin
+        leaveCriticalSection(cs);
+        exit;
+      end;
+    end else editorForUpdate:=editor;
+    if currentlyProcessing then begin
+      checkPending:=true;
+      leaveCriticalSection(cs);
+      exit;
+    end;
+    checkPending:=false;
+    currentlyProcessing:=true;
+    beginThread(@codeAssistantCheckThread,@self);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
+  VAR newPackage:P_package;
+  PROCEDURE updateErrors;
+    VAR i:longint;
+    begin
+      setLength(caData.localErrors,0);
+      setLength(caData.externalErrors,0);
+      with collector do
+      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
+      if C_messageTypeMeta[messageType].level>=1 then begin
+        if location.fileName=newPackage^.getPath
+        then begin
+          setLength(caData.localErrors,length(caData.localErrors)+1);
+          caData.localErrors[length(caData.localErrors)-1]:=storedMessages[i];
+        end else begin
+          setLength(caData.externalErrors,length(caData.externalErrors)+1);
+          caData.externalErrors[length(caData.externalErrors)-1]:=storedMessages[i];
+        end;
+      end;
+    end;
+
+  begin
+    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
+    new(newPackage,create(provider,nil));
+    adapters.clearAll;
+    evaluationContext.resetForEvaluation(newPackage,ect_silent);
+    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
+    enterCriticalSection(caData.cs);
+    if caData.package<>nil then dispose(caData.package,destroy);
+    caData.package:=newPackage;
+    caData.currentlyProcessing:=false;
+    caData.package^.updateLists(caData.userRules);
+    updateErrors;
+    caData.stateHash:=caData.package^.getCodeState;
+    leaveCriticalSection(caData.cs);
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+  end;
+{$endif}
+
 CONSTRUCTOR T_sandbox.create;
   begin
     initCriticalSection(cs);
@@ -238,7 +628,6 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
-
 {$ifdef fullVersion}
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   VAR messages:T_storedMessages;
@@ -787,6 +1176,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
 
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
+      newCodeHash:T_hashInt;
   begin
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
@@ -797,7 +1187,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
 
     if profile then context.timeBaseComponent(pc_tokenizing);
     lexer.create(@self);
-
+    newCodeHash:=getCodeProvider^.stateHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
     if profile then context.timeBaseComponent(pc_tokenizing);
@@ -811,7 +1201,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     lexer.destroy;
     if usecase=lu_forCodeAssistance then begin
       readyForUsecase:=usecase;
-      logReady;
+      logReady(newCodeHash);
       {$ifdef fullVersion}
       if gui_started then begin
         resolveRuleIds(context.adapters);
@@ -822,7 +1212,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     end;
     if context.adapters^.noErrors then begin
       readyForUsecase:=usecase;
-      logReady;
+      logReady(newCodeHash);
       if usecase=lu_forCallingMain then executeMain;
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
@@ -1181,7 +1571,7 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
   end;
 
-FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boolean):T_arrayOfString;
+FUNCTION T_package.outline(CONST options:T_outlineOptions):T_arrayOfString;
   VAR temp:T_outline;
       entry:T_outlineEntry;
       rule:P_rule;
@@ -1189,7 +1579,9 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
       longestInfo:longint=0;
 
   PROCEDURE addInfo(CONST info:T_outlineEntry);
+    VAR dup:T_outlineEntry;
     begin
+      for dup in temp do if info=dup then exit;
       setLength(temp,length(temp)+1);
       temp[length(temp)-1]:=info;
       if length(info.info)>longestInfo then longestInfo:=length(info.info);
@@ -1197,9 +1589,9 @@ FUNCTION T_package.outline(CONST includePrivate,includeImported,sortByName:boole
 
   begin
     setLength(temp,0);
-    for rule in packageRules.valueSet do for entry in rule^.getOutline(includePrivate) do addInfo(entry);
-    if includeImported then for rule in importedRules.valueSet do for entry in rule^.getOutline(false) do addInfo(entry);
-    if sortByName then begin
+    for rule in packageRules.valueSet do for entry in rule^.getOutline(includePrivate in options) do addInfo(entry);
+    if includeImported in options then for rule in importedRules.valueSet do for entry in rule^.getOutline(false) do addInfo(entry);
+    if sortByName in options then begin
       for i:=1 to length(temp)-1 do for j:=0 to i-1 do if (temp[i].id<temp[j].id) or (temp[i].id=temp[j].id) and (temp[i].location<temp[j].location) then begin
         entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
       end;
