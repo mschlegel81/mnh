@@ -290,7 +290,8 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
               parsedLength:=length(SPECIAL_COMMENT_BLOB_BEGIN)+1;
             end else blob.closer:='''';
           end else begin
-            adapters.raiseNote(copy(line,inputLocation.column+length(COMMENT_PREFIX),parsedLength),inputLocation);
+            id:=copy(line,inputLocation.column+length(COMMENT_PREFIX),parsedLength);
+            if pos('TODO',id)>0 then adapters.raiseNote(id,inputLocation);
           end;
         end;
       end else if startsWith(tt_mut_assignDiv) then apply(tt_mut_assignDiv)

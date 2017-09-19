@@ -84,6 +84,7 @@ TYPE
       FUNCTION outline(CONST options:T_outlineOptions):T_arrayOfString;
     end;
 
+  {$ifdef fullVersion}
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
     location,
@@ -128,6 +129,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE triggerUpdate(CONST package:P_package);
   end;
+  {$endif}
 
   P_sandbox=^T_sandbox;
   T_sandbox=object
@@ -138,7 +140,9 @@ TYPE
       busy:boolean;
       package:T_package;
       cs:TRTLCriticalSection;
+      {$ifdef fullVersion}
       PROCEDURE updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
+      {$endif}
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -218,6 +222,7 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
     new(result,create(newVirtualFileCodeProvider(nameOrPseudoName,code),nil));
   end;
 
+{$ifdef fullVersion}
 CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST quickAdapters: P_adapters);
   begin
     editor:=quickEdit;
@@ -489,6 +494,71 @@ FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
     leaveCriticalSection(cs);
   end;
 
+FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
+  begin
+    sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
+    result:=0;
+  end;
+
+PROCEDURE T_codeAssistanceData.triggerUpdate(CONST editor:P_codeProvider);
+  begin
+    enterCriticalSection(cs);
+    if (editor=nil) then begin
+      if not(checkPending) then begin
+        leaveCriticalSection(cs);
+        exit;
+      end;
+    end else editorForUpdate:=editor;
+    if currentlyProcessing then begin
+      checkPending:=true;
+      leaveCriticalSection(cs);
+      exit;
+    end;
+    checkPending:=false;
+    currentlyProcessing:=true;
+    beginThread(@codeAssistantCheckThread,@self);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
+  VAR newPackage:P_package;
+  PROCEDURE updateErrors;
+    VAR i:longint;
+    begin
+      setLength(caData.localErrors,0);
+      setLength(caData.externalErrors,0);
+      with collector do
+      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
+      if C_messageTypeMeta[messageType].level>=1 then begin
+        if location.fileName=newPackage^.getPath
+        then begin
+          setLength(caData.localErrors,length(caData.localErrors)+1);
+          caData.localErrors[length(caData.localErrors)-1]:=storedMessages[i];
+        end else begin
+          setLength(caData.externalErrors,length(caData.externalErrors)+1);
+          caData.externalErrors[length(caData.externalErrors)-1]:=storedMessages[i];
+        end;
+      end;
+    end;
+
+  begin
+    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
+    new(newPackage,create(provider,nil));
+    adapters.clearAll;
+    evaluationContext.resetForEvaluation(newPackage,ect_silent);
+    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
+    enterCriticalSection(caData.cs);
+    if caData.package<>nil then dispose(caData.package,destroy);
+    caData.package:=newPackage;
+    caData.currentlyProcessing:=false;
+    caData.package^.updateLists(caData.userRules);
+    updateErrors;
+    caData.stateHash:=caData.package^.getCodeState;
+    leaveCriticalSection(caData.cs);
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+  end;
+{$endif}
+
 CONSTRUCTOR T_sandbox.create;
   begin
     initCriticalSection(cs);
@@ -558,71 +628,6 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
-
-FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
-  begin
-    sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
-    result:=0;
-  end;
-
-PROCEDURE T_codeAssistanceData.triggerUpdate(CONST editor:P_codeProvider);
-  begin
-    enterCriticalSection(cs);
-    if (editor=nil) then begin
-      if not(checkPending) then begin
-        leaveCriticalSection(cs);
-        exit;
-      end;
-    end else editorForUpdate:=editor;
-    if currentlyProcessing then begin
-      checkPending:=true;
-      leaveCriticalSection(cs);
-      exit;
-    end;
-    checkPending:=false;
-    currentlyProcessing:=true;
-    beginThread(@codeAssistantCheckThread,@self);
-    leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
-  VAR newPackage:P_package;
-  PROCEDURE updateErrors;
-    VAR i:longint;
-    begin
-      setLength(caData.localErrors,0);
-      setLength(caData.externalErrors,0);
-      with collector do
-      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
-      if C_messageTypeMeta[messageType].level>=1 then begin
-        if location.fileName=newPackage^.getPath
-        then begin
-          setLength(caData.localErrors,length(caData.localErrors)+1);
-          caData.localErrors[length(caData.localErrors)-1]:=storedMessages[i];
-        end else begin
-          setLength(caData.externalErrors,length(caData.externalErrors)+1);
-          caData.externalErrors[length(caData.externalErrors)-1]:=storedMessages[i];
-        end;
-      end;
-    end;
-
-  begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
-    new(newPackage,create(provider,nil));
-    adapters.clearAll;
-    evaluationContext.resetForEvaluation(newPackage,ect_silent);
-    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
-    enterCriticalSection(caData.cs);
-    if caData.package<>nil then dispose(caData.package,destroy);
-    caData.package:=newPackage;
-    caData.currentlyProcessing:=false;
-    caData.package^.updateLists(caData.userRules);
-    updateErrors;
-    caData.stateHash:=caData.package^.getCodeState;
-    leaveCriticalSection(caData.cs);
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
-  end;
-
 {$ifdef fullVersion}
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   VAR messages:T_storedMessages;

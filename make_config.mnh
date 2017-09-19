@@ -152,5 +152,4 @@ hashFiles:=['../3rd_party/diff/diff.pas',
             'gui/openDemoDialog.pas',
             'gui/searchModel.pas',
             'gui/settingsLogic.inc',
-            'gui/simplemnh.pas',
             'gui/synhighlightermnh.pas'];
