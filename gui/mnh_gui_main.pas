@@ -47,11 +47,11 @@ TYPE
   TMnhForm = class(T_abstractMnhForm)
     cbOutlineSortByName,
     cbOutlineShowPrivate,
-    cbOutlineShowImported:       TCheckBox;
+    cbOutlineShowImported:     TCheckBox;
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
-    GroupBox1:      TGroupBox;
+    GroupBox1:                 TGroupBox;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
@@ -114,6 +114,7 @@ TYPE
     inputPageControl,
     outputPageControl:         TPageControl;
     leftHandSidePanel,
+    BottomPanel,
     Panel1,
     Panel2:                    TPanel;
     EditorPopupMenu:           TPopupMenu;
