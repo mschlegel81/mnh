@@ -10,10 +10,12 @@ USES sysutils, math, typinfo,
 
 TYPE
   P_literal = ^T_literal;
+  P_setOfPointer=^T_setOfPointer;
   T_arrayOfLiteral=array of P_literal;
   T_literal = object(T_objectWithIdAndLocation)
   private
     numberOfReferences: longint;
+    passedCustomTypeChecks:P_setOfPointer;
   public
     literalType:T_literalType;
     CONSTRUCTOR init(CONST lt:T_literalType);
@@ -33,6 +35,8 @@ TYPE
 
     FUNCTION getId:T_idString; virtual;
     FUNCTION getLocation:T_tokenLocation; virtual;
+    FUNCTION hasAlreadyPassedTypeCheck(CONST rulePointer:pointer):boolean;
+    PROCEDURE logTypeCheckAsPassed(CONST rulePointer:pointer);
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
@@ -368,6 +372,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
 VAR emptyStringSingleton: T_stringLiteral;
 IMPLEMENTATION
 VAR
+  globalLockCs  : TRTLCriticalSection;
   errLit        : T_literal;
   boolLit       : array[false..true] of T_boolLiteral;
   intLit        : array[-100..4000] of T_intLiteral;
@@ -763,7 +768,7 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
     end;
   end;
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init(CONST lt:T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
+CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; passedCustomTypeChecks:=nil; end;
 
 PROCEDURE T_literal.rereference;
   begin
@@ -789,6 +794,19 @@ FUNCTION T_literal.getReferenceCount: longint;
 
 FUNCTION T_literal.getId:T_idString;            begin result:=''; end;
 FUNCTION T_literal.getLocation:T_tokenLocation; begin result.package:=nil; result.column:=-1; result.line:=-1; end;
+FUNCTION T_literal.hasAlreadyPassedTypeCheck(CONST rulePointer: pointer): boolean;
+  begin
+    result:=(passedCustomTypeChecks<>nil) and (passedCustomTypeChecks^.contains(rulePointer));
+  end;
+
+PROCEDURE T_literal.logTypeCheckAsPassed(CONST rulePointer: pointer);
+  begin
+    enterCriticalSection(globalLockCs);
+    if (passedCustomTypeChecks=nil) then new(passedCustomTypeChecks,create);
+    passedCustomTypeChecks^.put(rulePointer);
+    leaveCriticalSection(globalLockCs);
+  end;
+
 FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declaredAt; end;
 //CONSTRUCTORS:=================================================================
 CONSTRUCTOR T_voidLiteral.create();                              begin inherited init(lt_void);                   end;
@@ -827,11 +845,18 @@ FUNCTION T_expressionLiteral.isGenerator: boolean;
     result:=isStateful and canApplyToNumberOfParameters(0);
   end;
 //DESTRUCTORS:==================================================================
-DESTRUCTOR T_literal.destroy; begin end;
-DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
+DESTRUCTOR T_literal.destroy;
+  begin
+    enterCriticalSection(globalLockCs);
+    if passedCustomTypeChecks<>nil then dispose(passedCustomTypeChecks,destroy);
+    leaveCriticalSection(globalLockCs);
+  end;
+
+DESTRUCTOR T_stringLiteral.destroy; begin inherited destroy; val:=''; end;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;
   begin
+    inherited destroy;
     for i:=0 to fill-1 do disposeLiteral(dat[i]);
     setLength(dat,0);
     fill:=0;
@@ -841,6 +866,7 @@ DESTRUCTOR T_setLiteral.destroy;
   VAR entries:T_arrayOfLiteral;
       i:longint;
   begin
+    inherited destroy;
     entries:=dat.keySet;
     for i:=0 to length(entries)-1 do disposeLiteral(entries[i]);
     dat.destroy;
@@ -850,6 +876,7 @@ DESTRUCTOR T_mapLiteral.destroy;
   VAR entries:T_literalKeyLiteralValueMap.KEY_VALUE_LIST;
       i:longint;
   begin
+    inherited destroy;
     entries:=dat.keyValueList;
     for i:=0 to length(entries)-1 do begin
       disposeLiteral(entries[i].key);
@@ -3555,6 +3582,7 @@ FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CO
 VAR i: longint;
 
 INITIALIZATION
+  initCriticalSection(globalLockCs);
   errLit.init(lt_error);
   initialize(boolLit);
   boolLit[false].create(false);
@@ -3574,4 +3602,5 @@ FINALIZATION
   emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
+  doneCriticalSection(globalLockCs);
 end.

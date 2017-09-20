@@ -96,7 +96,13 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
   begin
     L:=parameterList[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
-    if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.evaluateToBoolean(location,@context,L));
+    if restrictionType=tt_customTypeCheck then begin
+      if L^.hasAlreadyPassedTypeCheck(customTypeCheck) then exit(true);
+      if customTypeCheck^.evaluateToBoolean(location,@context,L) then begin
+        L^.logTypeCheckAsPassed(customTypeCheck);
+        exit(true);
+      end else exit(false);
+    end;
     if (restrictionIdx>=0) and (restrictionType=tt_typeCheck) then begin
       if builtinTypeCheck=tc_typeCheckExpression
       then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx))
@@ -340,7 +346,7 @@ FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
 FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString): longint;
   VAR i:longint;
   begin
-    if id=ALL_PARAMETERS_TOKEN_TEXT then begin hasOptionals       :=true; exit(ALL_PARAMETERS_PAR_IDX); end;
+    if id=ALL_PARAMETERS_TOKEN_TEXT then begin hasOptionals:=true; exit(ALL_PARAMETERS_PAR_IDX); end;
     result:=strToIntDef(copy(id,2,length(id)-1),-1);
     if (copy(id,1,1)='$') and (result>=0) then begin
       while length(sig)<result+1 do appendFreeId('');
