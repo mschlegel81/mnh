@@ -1189,7 +1189,7 @@ end}
     {$endif}
     dec(context.callDepth);
     if context.adapters^.noErrors then begin
-      if (stack.topIndex>=0) or (first^.next<>nil) then begin
+      if (stack.topIndex>=0) or (first<>nil) and (first^.next<>nil) then begin
         context.adapters^.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
         {$ifdef fullVersion}
         if not(context.adapters^.hasStackTrace) then context.callStackPrint;
