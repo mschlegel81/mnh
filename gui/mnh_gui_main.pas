@@ -444,9 +444,15 @@ PROCEDURE TMnhForm.updateFileHistory;
   end;
 
 PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
+  VAR edit:P_editorMeta;
   begin
-    quickCompletion.assignEditor(quickMeta.editor,getEditor^.getAssistant);
-    quickTask.triggerUpdate(runEvaluator.getPackageForPostEvaluation(getEditor));
+    edit:=getEditor;
+    if (edit=nil) or (edit^.language<>LANG_MNH) then exit;
+    quickCompletion.assignEditor(quickMeta.editor,edit^.getAssistant);
+    if runnerModel.canRun then begin
+      edit^.setWorkingDir;
+      quickTask.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit));
+    end;
   end;
 
 PROCEDURE TMnhForm.updateExpressionMemo;
