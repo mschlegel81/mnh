@@ -410,7 +410,9 @@ FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
+    enterCriticalSection(globalLockCs);
     if l^.unreference<=0 then dispose(l, destroy);
+    leaveCriticalSection(globalLockCs);
     l:=nil;
   end;
 
