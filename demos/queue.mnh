@@ -1,0 +1,27 @@
+//Definition
+type Queue(x:Expression(1))->x.isStateful AND x.toString==newQueue.toString;
+newQueue->{
+  begin
+    local q:=[];
+    local op:=[['empty',{q.size=0}],
+               ['push' ,{q|=$x}],
+               ['pop'  ,{begin local result:=q[0]; q.size>0 ? q[0]:=void : void; result; end}]].toMap;
+  save;
+    op[$p[0]]($p[1]);
+  end};
+
+pop  (queue:Queue      )->queue(['pop']);
+push (queue:Queue,value)->queue(['push',value]);
+empty(queue:Queue      )->queue(['empty']);
+
+dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end};
+enqueueConsumer(queue:Queue)->{begin local q:=queue; save; q.push($0); end};
+
+main->begin
+  local Q:=newQueue;
+  local deq:=dequeueIterator(Q);
+  local enq:=enqueueConsumer(Q);
+  [1..100].each(i,enq(i),(i and 1)=1 ? deq() : void);
+  print('The next element is ',Q.pop);
+  deq.map(::print);
+end;

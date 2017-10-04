@@ -1,0 +1,22 @@
+private integrate(f,x0,f0,x1,f1,tolerance)->begin
+  local fm:=f(local xm:=(x0+x1)*0.5);
+  local M:=(x1-x0)*fm;          //approximate integral by midpoint rule
+  local T:=(x1-x0)*0.5*(f0+f1); //approximate integral by trapezoidal rule
+  abs(M-T)>tolerance
+  ? integrate(f,x0,f0,xm,fm,tolerance)+ //refine
+    integrate(f,xm,fm,x1,f1,tolerance)
+  : (T+M*2)/3; //return approximate integral by Simpson's rule
+end;
+
+//*Recursively Integrates f in Range [x0,x1] until tolerance is reached
+integrate(f:Expression(1),x0:Numeric,x1<>x0,tolerance>0.0)->
+integrate(f,x0,f(x0),x1,f(x1),tolerance*100);
+
+main->
+  [[{$x^3},0,1  ,1E-5],
+   [{1/$x},1,100,1E-5],
+   [{$x},0,5000 ,1E-5],
+   [{$x},0,6000 ,1E-5]]
+  .each(task,['integral of ',task[0].toString.unbrace,' in [',task[1],',',task[2],']= ',integrate@task].join("\v"))
+  .join("\n")
+  .print;
