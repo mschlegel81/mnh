@@ -640,8 +640,8 @@ PROCEDURE T_threadContext.raiseSideEffectError(CONST id:string; CONST location:T
 {$ifdef fullVersion}
 FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; inline;
   begin
-    if parent^.debuggingStepper=nil then exit(false);
-    parent^.debuggingStepper^.stepping(first,stack,@callStack);
+    if (parent^.debuggingStepper=nil) then exit(false);
+    if first<>nil then parent^.debuggingStepper^.stepping(first,stack,@callStack);
     result:=true;
   end;
 {$endif}

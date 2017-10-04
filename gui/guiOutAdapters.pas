@@ -56,7 +56,6 @@ FUNCTION createSecondaryAdapters:P_adapters;
     new(guiAd,create(guiOutAdapter.parentForm,false));
     new(result,create);
     result^.addOutAdapter(guiAd,true);
-    result^.addConsoleOutAdapter('v');
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);

@@ -1536,11 +1536,9 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters;
   end;
 
 PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
-  CONST loadMode:array[false..true] of T_packageLoadUsecase=(lu_forCodeAssistance,lu_forDirectExecution);
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       oldSideEffects:T_sideEffects;
-      doExecute:boolean;
   begin
     if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
 
@@ -1559,15 +1557,13 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
      se_scriptDependent,
      se_executableDependent,
      se_versionDependent]);
-    for doExecute:=false to true do if context.adapters^.noErrors then begin
-      lexer.create(input,packageTokenLocation(@self),@self);
+    lexer.create(input,packageTokenLocation(@self),@self);
+    stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+    while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
+      interpret(stmt,lu_forDirectExecution,context);
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
-      while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
-        interpret(stmt,loadMode[doExecute],context);
-        stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
-      end;
-      lexer.destroy;
     end;
+    lexer.destroy;
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
   end;
 

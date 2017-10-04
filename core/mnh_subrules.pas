@@ -325,8 +325,7 @@ PROCEDURE T_inlineExpression.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token;
-  VAR context: T_threadContext);
+CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context: T_threadContext);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;

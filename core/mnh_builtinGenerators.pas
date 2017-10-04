@@ -35,6 +35,7 @@ TYPE
 
 CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
   begin
+    init(lt_expression);
     index:=0;
     id:='listIterator('+v^.toString(20)+')';
     values:=v^.iteratableList;
@@ -60,6 +61,7 @@ DESTRUCTOR T_listIterator.destroy;
 
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal);
   begin
+    init(lt_expression);
     didDeliver:=false;
     value:=v^.rereferenced;
   end;

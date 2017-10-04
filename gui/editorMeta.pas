@@ -1004,7 +1004,6 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
                                              else assistanceTabSheet.caption:='(no warnings)'; end;
       for s in hints do assistanceSynEdit.lines.add(s);
       updateOutline;
-      writeln('Done polling assistance result');
     end;
     assistant^.triggerUpdate(nil);
   end;

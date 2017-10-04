@@ -1,0 +1,14 @@
+//*Generates a list of perfect powers
+//*Perfect powers can be written as a^b with a and b integers
+//Simplification: only consider prime exponents b such that 2^b <= maxVal
+//                only consider bases a such that a^b <= maxVal
+perfectPowers(maxVal)->
+  primes(round(ln(maxVal)/ln(2)))
+  .pEach(power,([2..round(maxVal^(1/power))]^power)
+  .filter({$x<=maxVal}),|)
+  .|(1)
+  .unique;
+
+main->
+  print('The first perfect powers are ',perfectPowers(100)) orElse
+  printf('There are %{perfectPowers($0).size}s distinct perfect powers <=%{$0}s',1000000);

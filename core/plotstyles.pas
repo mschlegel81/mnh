@@ -283,7 +283,8 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
     if (sampleIndex<>SINGLE_SAMPLE_INDEX) or (ideal>0.9375) then begin
       result.lineWidth:=roundToInt(ideal);
     end else begin
-      result.lineWidth:=1;
+      if ideal=0 then result.lineWidth:=0
+                 else result.lineWidth:=1;
       result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
                     or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
                     or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);

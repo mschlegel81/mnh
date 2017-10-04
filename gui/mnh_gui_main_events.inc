@@ -377,7 +377,7 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
-    if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=outputPageControl.height/ClientHeight;
+    if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=BottomPanel.height/ClientHeight;
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);

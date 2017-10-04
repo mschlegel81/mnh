@@ -60,6 +60,7 @@ PROCEDURE updateWordWrap;
     if settings.value^.wordWrapEcho
     then guiAdapters.preferredEchoLineLength:=MnhForm.OutputEdit.charsInWindow-6
     else guiAdapters.preferredEchoLineLength:=-1;
+    MnhForm.quickAdapters^.preferredEchoLineLength:=guiAdapters.preferredEchoLineLength;
   end;
 
 PROCEDURE processFontSettings;
@@ -97,9 +98,9 @@ PROCEDURE initializeSettings;
       MnhForm.width :=formPosition.width;
       MnhForm.height:=formPosition.height;
       if formPosition.isFullscreen then MnhForm.WindowState:=wsMaximized;
-      MnhForm.outputPageControl.height:=round(MnhForm.ClientHeight*formPosition.relativeSplitterPosition);
-      MnhForm.StatusBar.top:=MnhForm.outputPageControl.top+MnhForm.outputPageControl.height;
-    end else settings.value^.mainForm.relativeSplitterPosition:=MnhForm.outputPageControl.height/MnhForm.ClientHeight;
+      MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*formPosition.relativeSplitterPosition);
+      MnhForm.StatusBar.top:=MnhForm.BottomPanel.top+MnhForm.BottomPanel.height;
+    end else settings.value^.mainForm.relativeSplitterPosition:=MnhForm.BottomPanel.height/MnhForm.ClientHeight;
     SettingsForm.ensureFont(MnhForm.OutputEdit.Font);
     initializeOutputSettings;
     processFontSettings;
@@ -113,7 +114,7 @@ PROCEDURE updateFormPositionInSettings;
       mainForm.width :=MnhForm.width;
       mainForm.height:=MnhForm.height;
       mainForm.isFullscreen:=(MnhForm.WindowState=wsMaximized);
-      MnhForm.outputPageControl.height:=round(MnhForm.ClientHeight*settings.value^.mainForm.relativeSplitterPosition);
+      MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*settings.value^.mainForm.relativeSplitterPosition);
       updateWordWrap;
     end;
   end;
