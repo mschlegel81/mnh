@@ -14,7 +14,7 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     begin
       if pathOrPathList^.literalType=lt_string
       then result:=P_stringLiteral(pathOrPathList)^.value
-      else result:=P_stringLiteral(P_listLiteral(pathOrPathList)^[index])^.value;
+      else result:=P_stringLiteral(P_listLiteral(pathOrPathList)^.value[index])^.value;
       if not(filesAndNotFolders) and recurseSubDirs and (pos('*',result)<=0) then result:=result+DirectorySeparator+'*';
     end;
 
@@ -28,8 +28,8 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(searchString(j),filesAndNotFolders,recurseSubDirs);
-        if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^[j])^.value)
-                                          then result^.append(P_listLiteral(pathOrPathList)^[j],true);
+        if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^.value[j])^.value)
+                                          then result^.append(P_listLiteral(pathOrPathList)^.value[j],true);
         for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
       end;
     end;
@@ -65,8 +65,8 @@ FUNCTION allFiles_impl intFuncSignature;
           lt_emptyList: begin end;
           lt_string: pattern:=str1^.value;
           lt_stringList: begin
-            pattern:=P_stringLiteral(list1^[0])^.value;
-            for i:=1 to list1^.size-1 do pattern:=pattern+';'+P_stringLiteral(list1^[i])^.value;
+            pattern:=P_stringLiteral(list1^.value[0])^.value;
+            for i:=1 to list1^.size-1 do pattern:=pattern+';'+P_stringLiteral(list1^.value[i])^.value;
           end;
           else exit(nil);
         end;
@@ -78,7 +78,7 @@ FUNCTION allFiles_impl intFuncSignature;
       result:=newListLiteral;
       if arg0^.literalType=lt_string
       then searchInRoot(str0^.value)
-      else for i:=0 to list0^.size-1 do searchInRoot(P_stringLiteral(list0^[i])^.value);
+      else for i:=0 to list0^.size-1 do searchInRoot(P_stringLiteral(list0^.value[i])^.value);
     end;
   end;
 
@@ -169,7 +169,7 @@ FUNCTION writeOrAppendFileLines(CONST params:P_listLiteral; CONST tokenLocation:
       if params^.size=3 then sep:=str2^.value
                         else sep:='';
       setLength(L,list1^.size);
-      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^[i])^.value;
+      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value[i])^.value;
       ok:=writeFileLines(str0^.value,L,sep,doAppend);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
@@ -255,7 +255,7 @@ FUNCTION execSync_impl intFuncSignature;
         if arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList] then begin
           setLength(cmdLinePar,list1^.size);
           for i:=0 to list1^.size-1 do begin
-            cmdLinePar[i]:=P_scalarLiteral(list1^[i])^.stringForm;
+            cmdLinePar[i]:=P_scalarLiteral(list1^.value[i])^.stringForm;
           end;
         end else if (arg1^.literalType=lt_boolean) then includeStdErr:=bool1^.value
         else exit(nil);
@@ -287,7 +287,7 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
       if params^.size=2 then begin
         setLength(cmdLinePar,list1^.size);
         for i:=0 to list1^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(list1^[i])^.stringForm;
+          cmdLinePar[i]:=P_scalarLiteral(list1^.value[i])^.stringForm;
       end;
       showConsole;
       processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch);
@@ -376,7 +376,7 @@ FUNCTION fileInfo_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
       lt_string: exit(infoForSearch(str0^.value));
       lt_stringList,lt_stringSet: begin
-        result:=collection0^.newOfSameType;
+        result:=collection0^.newOfSameType(true);
         iter  :=collection0^.iteratableList;
         for sub in iter do collResult^.append(infoForSearch(P_stringLiteral(sub)^.value),false);
         disposeLiteral(iter);
@@ -398,7 +398,7 @@ FUNCTION fileStats_imp intFuncSignature;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_stringList) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        fileStats(P_stringLiteral(list0^[i])^.value,lineCount,wordCount,byteCount,hash);
+        fileStats(P_stringLiteral(list0^.value[i])^.value,lineCount,wordCount,byteCount,hash);
         listResult^.append(newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash),false);
       end;
     end;
@@ -411,7 +411,7 @@ FUNCTION fileStats_imp intFuncSignature;
       if (arg0^.literalType=lt_string) then result:=newStringLiteral(internal(str0^.value))
       else if arg0^.literalType in [lt_stringList,lt_emptyList] then begin
         result:=newListLiteral(list0^.size);
-        for i:=0 to list0^.size-1 do listResult^.appendString(internal(P_stringLiteral(list0^[i])^.value));
+        for i:=0 to list0^.size-1 do listResult^.appendString(internal(P_stringLiteral(list0^.value[i])^.value));
       end;
     end;
   end}
@@ -469,7 +469,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
             listResult^.appendString(
             replaceAll(
             extractRelativePath(str0^.value+'/',
-                                P_stringLiteral(list1^[i])^.value),
+                                P_stringLiteral(list1^.value[i])^.value),
             '\','/'));
         end;
       end;
@@ -479,7 +479,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
           for i:=0 to list1^.size-1 do
             listResult^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(list0^[i])^.value+'/',
+            extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
                                 str1^.value),
             '\','/'));
         end;
@@ -488,8 +488,8 @@ FUNCTION relativeFilename_impl intFuncSignature;
           for i:=0 to list1^.size-1 do
             listResult^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(list0^[i])^.value+'/',
-                                P_stringLiteral(list1^[i])^.value),
+            extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
+                                P_stringLiteral(list1^.value[i])^.value),
             '\','/'));
         end;
       end;

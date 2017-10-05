@@ -299,12 +299,12 @@ FUNCTION filter_imp intFuncSignature;
           result:=newMapLiteral;
           iter:=map0^.iteratableList;
           for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,x) then
-            mapResult^.put(P_listLiteral(x)^[0],P_listLiteral(x)^[1],true);
+            mapResult^.put(P_listLiteral(x)^.value[0],P_listLiteral(x)^.value[1],true);
           disposeLiteral(iter);
         end;
         lt_list..lt_stringList,
         lt_set ..lt_stringSet: begin
-          result:=collection0^.newOfSameType;
+          result:=collection0^.newOfSameType(false);
           iter:=collection0^.iteratableList;
           for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,x) then
             collResult^.append(x,true);

@@ -285,8 +285,8 @@ FUNCTION encodeRequest_impl intFuncSignature;
           iter:=map2^.iteratableList;
           for i:=0 to length(iter)-1 do begin
             if i>0 then parameters:=parameters+'&';
-            parameters:=parameters+percentEncode(getString(P_listLiteral(iter[i])^[0]))
-                              +'='+percentEncode(getString(P_listLiteral(iter[i])^[1]));
+            parameters:=parameters+percentEncode(getString(P_listLiteral(iter[i])^.value[0]))
+                              +'='+percentEncode(getString(P_listLiteral(iter[i])^.value[1]));
           end;
           disposeLiteral(iter);
         end;

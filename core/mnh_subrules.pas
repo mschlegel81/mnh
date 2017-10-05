@@ -505,7 +505,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
               remaining^.unreference;
             end;
             L:=remaining;
-          end else L:=param^[parIdx];
+          end else L:=param^.value[parIdx];
           lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
         end else lastRep^.next:=context.recycler.newToken(token);
         lastRep:=lastRep^.next;
@@ -554,7 +554,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       prepareResult;
       result:=lastRep<>nil;
       tempInnerParam:=newListLiteral;
-      for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^[i],true);
+      for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^.value[i],true);
       lastRep^.next:=context.recycler.newToken(getLocation,'',tt_parList,tempInnerParam);
       lastRep:=lastRep^.next;
     end else begin
@@ -839,7 +839,8 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
   begin
     if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^,false)
     then begin
-      P_threadContext(context)^.reduceExpression(toReduce);
+      if (toReduce=nil) or (toReduce^.next<>nil) or (toReduce^.tokType<>tt_literal) then
+        P_threadContext(context)^.reduceExpression(toReduce);
       result:=P_threadContext(context)^.cascadeDisposeToLiteral(toReduce);
     end else result:=nil;
   end;
@@ -1381,11 +1382,11 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
   begin
     result:=nil;
     for i:=0 to L^.size-1 do begin
-      if L^[i]^.literalType=lt_string
-      then subTokens:=stringToTokens(P_stringLiteral(L^[i])^.value,location,package,context)
+      if L^.value[i]^.literalType=lt_string
+      then subTokens:=stringToTokens(P_stringLiteral(L^.value[i])^.value,location,package,context)
       else begin
-        subTokens:=context.recycler.newToken(location,'',tt_literal,L^[i]);
-        L^[i]^.rereference;
+        subTokens:=context.recycler.newToken(location,'',tt_literal,L^.value[i]);
+        L^.value[i]^.rereference;
       end;
       if subTokens=nil then begin
         if result<>nil then context.recycler.cascadeDisposeToken(result);

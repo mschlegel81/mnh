@@ -10,7 +10,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
       then src:=P_stringLiteral(arg0)^.value
       else begin
         setLength(src,0);
-        for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^[i])^.value);
+        for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value[i])^.value);
       end;
       result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getParent^.prng.XOS));
     end;
@@ -72,16 +72,16 @@ FUNCTION runScript_imp intFuncSignature;
        (arg0^.literalType=lt_string) and
        (arg1^.literalType in [lt_emptyList,lt_stringList])
     then begin
-      for i:=2 to params^.size-1 do case params^[i]^.literalType of
+      for i:=2 to params^.size-1 do case params^.value[i]^.literalType of
         lt_int: begin
-          connect:=P_intLiteral(params^[i])^.value;
+          connect:=P_intLiteral(params^.value[i])^.value;
           if (connect<0) or (connect>3) then exit(nil);
         end;
-        lt_boolean: enforceDeterminism:=P_boolLiteral(params^[i])^.value;
+        lt_boolean: enforceDeterminism:=P_boolLiteral(params^.value[i])^.value;
         else exit(nil);
       end;
       setLength(scriptParams,list1^.size);
-      for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^[i])^.value;
+      for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
       result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,context.adapters,byte(connect),enforceDeterminism);
     end;
   end;
@@ -131,7 +131,7 @@ FUNCTION inspect_imp intFuncSignature;
       result:=newListLiteral;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       setLength(source,list1^.size);
-      for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^[i])^.value;
+      for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage;
       result:=tempPackage^.inspect^.put('messages',loadMessages,false);

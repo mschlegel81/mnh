@@ -318,7 +318,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
-            then formats[i].formatAppend(result,p[k])
+            then formats[i].formatAppend(result,p.value[k])
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
@@ -334,7 +334,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       //prepare parameters
       fpar:=newListLiteral;
       for k:=1 to params^.size-1 do
-      if params^[k]^.literalType in C_compoundTypes
+      if params^.value[k]^.literalType in C_compoundTypes
       then fpar^.append(iter[k][index],true)
       else fpar^.append(iter[k][    0],true);
 
@@ -368,18 +368,18 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   VAR i:longint;
       listSize:longint=-1;
   begin
-    for i:=1 to params^.size-1 do if params^[i]^.literalType in C_compoundTypes then begin
-      if listSize=-1 then listSize:=P_compoundLiteral(params^[i])^.size
-                  else if listSize<>P_compoundLiteral(params^[i])^.size then begin
-        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^[i])^.size)+' for formatting.',tokenLocation);
+    for i:=1 to params^.size-1 do if params^.value[i]^.literalType in C_compoundTypes then begin
+      if listSize=-1 then listSize:=P_compoundLiteral(params^.value[i])^.size
+                  else if listSize<>P_compoundLiteral(params^.value[i])^.size then begin
+        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^.value[i])^.size)+' for formatting.',tokenLocation);
         exit(C_EMPTY_STRING_ARRAY);
       end;
     end;
     if listSize=-1 then listSize:=1;
     setLength(iter,params^.size);
-    for i:=1 to params^.size-1 do if params^[i]^.literalType in C_compoundTypes
-    then iter[i]:=P_compoundLiteral(params^[i])^.iteratableList
-    else begin setLength(iter[i],1); iter[i][0]:=params^[i]^.rereferenced; end;
+    for i:=1 to params^.size-1 do if params^.value[i]^.literalType in C_compoundTypes
+    then iter[i]:=P_compoundLiteral(params^.value[i])^.iteratableList
+    else begin setLength(iter[i],1); iter[i][0]:=params^.value[i]^.rereferenced; end;
 
     if formatSubrule=nil
     then i:=length(parts) shr 1
@@ -465,9 +465,9 @@ FUNCTION formatTime_imp intFuncSignature;
         lt_realList,lt_intList,lt_numList: begin
           result:=newListLiteral;
           L:=list1;
-          for i:=0 to L^.size-1 do case(L^[i]^.literalType) of
-            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^[i])^.value),false);
-            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^[i])^.value),false);
+          for i:=0 to L^.size-1 do case(L^.value[i]^.literalType) of
+            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value[i])^.value),false);
+            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value[i])^.value),false);
           end;
         end;
       end;
@@ -531,7 +531,7 @@ FUNCTION parseTime_imp intFuncSignature;
       else if (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
         result:=newListLiteral;
         for i:=0 to list1^.size-1 do
-          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^[i])^.value));
+          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^.value[i])^.value));
       end;
     end;
   end;

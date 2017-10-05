@@ -15,7 +15,7 @@ FUNCTION softCast_imp intFuncSignature;
       case x^.literalType of
         lt_string: result:=P_stringLiteral(x)^.softCast;
         lt_list..lt_emptySet: begin
-          result:=P_collectionLiteral(x)^.newOfSameType;
+          result:=P_collectionLiteral(x)^.newOfSameType(true);
           iter:=P_collectionLiteral(x)^.iteratableList;
           for sub in iter do collResult^.append(softCastRecurse(sub),false);
           disposeLiteral(iter);

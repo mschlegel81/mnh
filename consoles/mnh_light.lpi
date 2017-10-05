@@ -20,7 +20,7 @@
     <VersionInfo>
       <StringTable ProductVersion=""/>
     </VersionInfo>
-    <BuildModes Count="2">
+    <BuildModes Count="3">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="deployment">
         <CompilerOptions>
@@ -55,6 +55,35 @@
           </Linking>
         </CompilerOptions>
       </Item2>
+      <Item3 Name="profiling">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <PathDelim Value="\"/>
+          <Target>
+            <Filename Value="mnh_prof"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
+            <OtherUnitFiles Value="..\..\common;..\core;..\..\3rd_party\epikTimer;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\3rd_party"/>
+            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <CStyleOperator Value="False"/>
+              <AllowLabel Value="False"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <UseValgrind Value="True"/>
+            </Debugging>
+            <LinkSmart Value="True"/>
+          </Linking>
+        </CompilerOptions>
+      </Item3>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -106,7 +135,6 @@
         <OverflowChecks Value="True"/>
         <StackChecks Value="True"/>
       </Checks>
-      <VerifyObjMethodCallValidity Value="True"/>
     </CodeGeneration>
     <Other>
       <CustomOptions Value="-dDebugMode"/>

@@ -28,20 +28,20 @@ FUNCTION pos_imp intFuncSignature;
         end else begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            listResult^.append(posInt(arg0,list1^[i]),false);
+            listResult^.append(posInt(arg0,list1^.value[i]),false);
         end;
       end else begin
         if arg1^.literalType=lt_string then begin
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
-            listResult^.append(posInt(list0^[i],
+            listResult^.append(posInt(list0^.value[i],
                                                                arg1           ),false);
         end else begin
           if list0^.size=list1^.size then begin
             result:=newListLiteral;
             for i:=0 to list0^.size-1 do
-              listResult^.append(posInt(list0^[i],
-                                        list1^[i]),false);
+              listResult^.append(posInt(list0^.value[i],
+                                        list1^.value[i]),false);
           end else context.adapters^.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
@@ -66,14 +66,14 @@ FUNCTION copy_imp intFuncSignature;
     begin
       if arg0^.literalType=lt_string
         then result:=str0
-        else result:=P_stringLiteral(list0^[index]);
+        else result:=P_stringLiteral(list0^.value[index]);
     end;
 
   FUNCTION safeStart(CONST index:longint):longint; inline;
     begin
       if arg1^.literalType=lt_int
         then result:=int1^.value
-        else result:=P_intLiteral(list1^[index])^.value;
+        else result:=P_intLiteral(list1^.value[index])^.value;
       inc(result);
     end;
 
@@ -81,7 +81,7 @@ FUNCTION copy_imp intFuncSignature;
     begin
       if arg2^.literalType=lt_int
         then result:=int2^.value
-        else result:=P_intLiteral(list2^[index])^.value;
+        else result:=P_intLiteral(list2^.value[index])^.value;
     end;
 
   FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):string; inline;
@@ -153,7 +153,7 @@ FUNCTION chars_imp intFuncSignature;
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do listResult^.append(chars_internal(list0^[i]),false);
+      for i:=0 to list0^.size-1 do listResult^.append(chars_internal(list0^.value[i]),false);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
       for i:=0 to 255 do listResult^.appendString(chr(i));
@@ -201,7 +201,7 @@ FUNCTION charSet_imp intFuncSignature;
       result:=charset_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do listResult^.append(charset_internal(list0^[i]),false);
+      for i:=0 to list0^.size-1 do listResult^.append(charset_internal(list0^.value[i]),false);
     end;
   end;
 
@@ -214,7 +214,7 @@ FUNCTION bytes_imp intFuncSignature;
       result:=bytes_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do listResult^.append(bytes_internal(list0^[i]),false);
+      for i:=0 to list0^.size-1 do listResult^.append(bytes_internal(list0^.value[i]),false);
     end;
   end;
 
@@ -229,7 +229,7 @@ FUNCTION split_imp intFuncSignature;
       end else begin
         setLength(splitters,list1^.size);
         for i:=0 to length(splitters)-1 do
-          splitters[i]:=P_stringLiteral(list1^[i])^.value;
+          splitters[i]:=P_stringLiteral(list1^.value[i])^.value;
       end;
     end;
 
@@ -271,12 +271,12 @@ FUNCTION split_imp intFuncSignature;
         lt_string: result:=splitOneString(P_stringLiteral(p));
         lt_list,lt_stringList,lt_emptyList,
         lt_set ,lt_stringSet ,lt_emptySet: begin
-          result:=P_collectionLiteral(p)^.newOfSameType;
+          result:=P_collectionLiteral(p)^.newOfSameType(true);
           iter:=P_collectionLiteral(p)^.iteratableList;
           for sub in iter do collResult^.append(splitRecurse(sub),false);
           disposeLiteral(iter);
-          if collResult^.containsError then disposeLiteral(result);
         end;
+        else raiseNotApplicableError('split',p,tokenLocation,context.adapters^);
       end;
     end;
 
@@ -334,12 +334,12 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
       lt_list,lt_stringList,lt_emptyList,
       lt_set ,lt_stringSet ,lt_emptySet :  begin
-        result:=P_collectionLiteral(x)^.newOfSameType;
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter  :=P_collectionLiteral(x)^.iteratableList;
         for sub in iter do collResult^.append(recurse(sub),false);
         disposeLiteral(iter);
-        if collResult^.containsError then disposeLiteral(result);
       end;
+      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
     end;
   end;
 
@@ -424,6 +424,8 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
              else for i:=0 to length(lookFor)-1 do result:=replaceOne        (result,lookFor[i],replaceBy[i]);
     end;
 
+  VAR iter:T_arrayOfLiteral;
+      sub:P_literal;
   begin
     if not((params<>nil) and (params^.size=3) and
        (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet]) and
@@ -438,8 +440,10 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     initArrays;
     if arg0^.literalType=lt_string then result:=newStringLiteral(modify(str0^.value))
     else begin
-      result:=collection0^.newOfSameType;
-      for i:=0 to collection0^.size-1 do listResult^.appendString(modify(P_stringLiteral(list0^[i])^.value));
+      result:=collection0^.newOfSameType(true);
+      iter:=collection0^.iteratableList;
+      for sub in iter do listResult^.appendString(modify(P_stringLiteral(sub)^.value));
+      disposeLiteral(iter);
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
@@ -550,7 +554,7 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
         lt_string: result:=newStringLiteral(innerClean(str0^.value));
         lt_stringList,lt_emptyList: begin
           result:=newListLiteral(list0^.size);
-          for k:=0 to list0^.size-1 do listResult^.appendString(innerClean(P_stringLiteral(list0^[k])^.value));
+          for k:=0 to list0^.size-1 do listResult^.appendString(innerClean(P_stringLiteral(list0^.value[k])^.value));
         end;
         lt_stringSet,lt_emptySet: begin
           result:=newSetLiteral;
@@ -599,7 +603,7 @@ FUNCTION reverseString_impl intFuncSignature;
       lt_stringList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to list0^.size-1 do
-          listResult^.appendString(rev(list0^[i]));
+          listResult^.appendString(rev(list0^.value[i]));
       end;
     end;
   end;
@@ -831,12 +835,12 @@ FUNCTION formatTabs_impl intFuncSignature;
         lt_list,lt_stringList,lt_emptyList,
         lt_set,lt_stringSet,lt_emptySet:
         begin
-          result:=P_collectionLiteral(l)^.newOfSameType;
+          result:=P_collectionLiteral(l)^.newOfSameType(false);
           iter  :=P_collectionLiteral(l)^.iteratableList;
           for sub in iter do P_collectionLiteral(result)^.append(innerRec(sub),false);
           disposeLiteral(iter);
-          if P_collectionLiteral(result)^.containsError then disposeLiteral(result);
         end;
+        else raiseNotApplicableError(ID_MACRO,l,tokenLocation,context.adapters^);
       end;
     end;
 
@@ -845,8 +849,8 @@ FUNCTION formatTabs_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) then result:=innerRec(arg0);
   end}
 
-FUNCTION length_imp     {$define LENGTH_FUNC:=UTF8Length} LENGTH_MACRO;
-FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     LENGTH_MACRO;
+FUNCTION length_imp     {$define LENGTH_FUNC:=UTF8Length} {$define ID_MACRO:='length'}     LENGTH_MACRO;
+FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     {$define ID_MACRO:='byteLength'} LENGTH_MACRO;
 {$undef LENGTH_FUNC}
 {$undef LENGTH_MACRO}
 

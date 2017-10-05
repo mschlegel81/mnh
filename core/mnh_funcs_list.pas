@@ -123,10 +123,7 @@ FUNCTION transpose_imp intFuncSignature;
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes)
     then begin
       result:=list0^.transpose(nil);
-      if P_listLiteral(result)^.containsError then begin
-        disposeLiteral(result);
-        context.adapters^.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
-      end;
+      if result=nil then context.adapters^.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
     end;
   end;
 
@@ -201,7 +198,7 @@ FUNCTION trueCount_impl intFuncSignature;
         lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
         lt_booleanList: begin
           c:=0;
-          for i:=0 to list0^.size-1 do if P_boolLiteral(list0^[i])^.value then inc(c);
+          for i:=0 to list0^.size-1 do if P_boolLiteral(list0^.value[i])^.value then inc(c);
           exit(newIntLiteral(c));
         end;
         lt_booleanSet: begin
@@ -246,7 +243,7 @@ FUNCTION get_imp intFuncSignature;
       if (result=nil) or (result^.literalType=lt_void) then exit(result);
       tmpPar.create(params^.size-1);
       tmpPar.append(result,false);
-      for i:=2 to params^.size-1 do tmpPar.append(params^[i],true);
+      for i:=2 to params^.size-1 do tmpPar.append(params^.value[i],true);
       result:=get_imp(@tmpPar,tokenLocation,context);
       tmpPar.destroy;
     end
@@ -277,13 +274,13 @@ FUNCTION getAll_imp intFuncSignature;
     end else if (params<>nil) and (params^.size=3) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_listTypes) and (arg2^.literalType in C_listTypes) and (list1^.size=list2^.size) then begin
       result:=newListLiteral;
       for i:=0 to list1^.size-1 do if result<>nil then begin
-        got:=compound0^.get(list1^[i]);
+        got:=compound0^.get(list1^.value[i]);
         if got<>nil then begin
           if got^.literalType<>lt_void
           then collResult^.append(got,false)
           else begin
             disposeLiteral(got);
-            collResult^.append(list2^[i],true);
+            collResult^.append(list2^.value[i],true);
           end;
         end else disposeLiteral(result);
       end;
@@ -305,7 +302,7 @@ FUNCTION getInner_imp intFuncSignature;
       if result<>nil then begin
         tmpPar.create(params^.size-1);
         tmpPar.append(result,false);
-        for i:=2 to params^.size-1 do tmpPar.append(params^[i],true);
+        for i:=2 to params^.size-1 do tmpPar.append(params^.value[i],true);
         result:=getInner_imp(@tmpPar,tokenLocation,context);
         tmpPar.destroy;
       end;
@@ -319,7 +316,7 @@ FUNCTION indexOf_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_booleanList,lt_emptyList]) then begin
       result:=newListLiteral;
-      with list0^ do for i:=0 to size-1 do if P_boolLiteral(list0^[i])^.value then listResult^.appendInt(i);
+      with list0^ do for i:=0 to size-1 do if P_boolLiteral(list0^.value[i])^.value then listResult^.appendInt(i);
     end;
   end;
 
@@ -345,7 +342,7 @@ FUNCTION cross_impl intFuncSignature;
         for k:=0 to length(lit)-1 do subLit[k]:=lit[k];
         k:=length(lit);
 
-        iter:=P_compoundLiteral(params^[index])^.iteratableList;
+        iter:=P_compoundLiteral(params^.value[index])^.iteratableList;
         for l in iter do begin
           subLit[k]:=l;
           recurseBuild(index+1,subLit);
@@ -361,8 +358,8 @@ FUNCTION cross_impl intFuncSignature;
       if (params^.size=1) then exit(arg0^.rereferenced);
       resultSize:=compound0^.size;
       for i:=1 to params^.size-1 do
-        if (params^[i]^.literalType in C_compoundTypes)
-        then resultSize:=resultSize*P_compoundLiteral(params^[i])^.size
+        if (params^.value[i]^.literalType in C_compoundTypes)
+        then resultSize:=resultSize*P_compoundLiteral(params^.value[i])^.size
         else allCompound:=false;
       if not(allCompound) then exit(nil);
       resultList:=newListLiteral(resultSize);
@@ -386,16 +383,16 @@ FUNCTION group_imp intFuncSignature;
         dummy:P_literal;
         hasError:boolean=false;
     begin
-      dummy:=newErrorLiteral;
+      dummy:=newVoidLiteral;
       setLength(keyList,listToGroup^.size);
       for i:=0 to length(keyList)-1 do begin
-        if (listToGroup^[i]^.literalType in C_listTypes) and (P_listLiteral(listToGroup^[i])^.size>index)
-        then keyList[i]:=P_listLiteral(listToGroup^[i])^[index]^.rereferenced
+        if (listToGroup^.value[i]^.literalType in C_listTypes) and (P_listLiteral(listToGroup^.value[i])^.size>index)
+        then keyList[i]:=P_listLiteral(listToGroup^.value[i])^.value[index]^.rereferenced
         else begin
           keyList[i]:=dummy^.rereferenced;
           if not(hasError) then
           context.adapters^.raiseError('Grouping by sublist-index is not possible for this list. Problematic entry: '+
-                                       listToGroup^[i]^.toString(50)+' at index '+intToStr(i),tokenLocation);
+                                       listToGroup^.value[i]^.toString(50)+' at index '+intToStr(i),tokenLocation);
           hasError:=true;
         end;
       end;
@@ -449,7 +446,7 @@ FUNCTION group_imp intFuncSignature;
       {$endif}
       groupMap.create();
       for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then
-        addToAggregation(keyList[inputIndex],listToGroup^[inputIndex]);
+        addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       disposeLiteral(keyList);
 
       groupList:=groupMap.keyValueList;

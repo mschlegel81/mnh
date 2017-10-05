@@ -296,9 +296,9 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and
-           (parameterListLiteral^[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^[0])^.canApplyToNumberOfParameters(2))
+           (parameterListLiteral^.value[0]^.literalType=lt_expression) and (P_expressionLiteral(parameterListLiteral^.value[0])^.canApplyToNumberOfParameters(2))
         then begin
-          newLiteral:=parameterListLiteral^[0]^.rereferenced;
+          newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
           firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);

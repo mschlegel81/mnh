@@ -609,9 +609,9 @@ PROCEDURE T_memoizedRule.clearCache;
 FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral): P_literal;
   begin
     enterCriticalSection(rule_cs);
-    cache.put(P_listLiteral(param^[0]),
-                            param^[1] );
-    result:=param^[1]^.rereferenced;
+    cache.put(P_listLiteral(param^.value[0]),
+                            param^.value[1] );
+    result:=param^.value[1]^.rereferenced;
     leaveCriticalSection(rule_cs);
   end;
 

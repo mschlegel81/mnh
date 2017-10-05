@@ -20,10 +20,10 @@ TYPE
     literalType:T_literalType;
     CONSTRUCTOR init(CONST lt:T_literalType);
     DESTRUCTOR destroy; virtual;
-    PROCEDURE rereference;
-    FUNCTION rereferenced:P_literal;
-    FUNCTION unreference: longint;
-    FUNCTION getReferenceCount: longint;
+    PROCEDURE rereference; inline;
+    FUNCTION rereferenced:P_literal; inline;
+    FUNCTION unreference: longint; inline;
+    PROPERTY getReferenceCount: longint read numberOfReferences;
 
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
@@ -228,7 +228,7 @@ TYPE
   P_collectionLiteral=^T_collectionLiteral;
   T_collectionLiteral=object(T_compoundLiteral)
     FUNCTION isKeyValueCollection:boolean; virtual; abstract;
-    FUNCTION newOfSameType:P_collectionLiteral; virtual; abstract;
+    FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual; abstract;
     FUNCTION appendAll   (CONST L:P_compoundLiteral                ):P_collectionLiteral; virtual;
     FUNCTION append      (CONST L:P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual; abstract;
     FUNCTION appendString(CONST s:ansistring):P_collectionLiteral;
@@ -241,9 +241,8 @@ TYPE
     private
       dat:T_arrayOfLiteral;
       fill:longint;
-      FUNCTION getValue(CONST index:longint):P_literal;
     public
-      PROPERTY value[CONST index:longint]:P_literal read getValue; default;
+      PROPERTY value:T_arrayOfLiteral read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
       DESTRUCTOR destroy; virtual;
       FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -253,7 +252,7 @@ TYPE
       FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
       FUNCTION isKeyValuePair:boolean;
       FUNCTION isKeyValueCollection:boolean; virtual;
-      FUNCTION newOfSameType:P_collectionLiteral; virtual;
+      FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual;
       FUNCTION size:longint;        virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION listConstructorToString(CONST lengthLimit:longint=maxLongint):string;
@@ -290,7 +289,7 @@ TYPE
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
       FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
-      FUNCTION newOfSameType:P_collectionLiteral; virtual;
+      FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual;
       FUNCTION size:longint;        virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
@@ -335,7 +334,7 @@ VAR
 
 FUNCTION exp(CONST x:double):double; inline;
 
-PROCEDURE disposeLiteral(VAR l: P_literal); inline;
+PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef DEBUGMODE} inline; {$endif}
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
@@ -769,6 +768,84 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
       inc(k);
     end;
   end;
+
+//FUNCTION T_listLiteral.literalType:T_literalType;
+//  VAR L:P_literal;
+//  begin
+//    if length(dat)=0 then exit(lt_emptyList);
+//    if (length(dat)>0) and (dynLiteralType=lt_emptyList) then for L in dat do case L^.literalType of
+//      lt_void:begin end;
+//      lt_boolean: case dynLiteralType of
+//                    lt_emptyList,lt_booleanList: dynLiteralType:=lt_booleanList;
+//                    else begin
+//                      dynLiteralType:=lt_list;
+//                      exit(dynLiteralType);
+//                    end;
+//                  end;
+//      lt_int:     case dynLiteralType of
+//                    lt_emptyList,lt_intList: dynLiteralType:=lt_intList;
+//                    lt_numList,lt_realList : dynLiteralType:=lt_numList;
+//                    else begin
+//                      dynLiteralType:=lt_list;
+//                      exit(dynLiteralType);
+//                    end;
+//                  end;
+//      lt_real:    case dynLiteralType of
+//                    lt_emptyList,lt_realList: dynLiteralType:=lt_realList;
+//                    lt_numList,lt_intList   : dynLiteralType:=lt_numList;
+//                    else begin
+//                      dynLiteralType:=lt_list;
+//                      exit(dynLiteralType);
+//                    end;
+//                  end;
+//      lt_string:  case dynLiteralType of
+//                    lt_emptyList,lt_stringList: dynLiteralType:=lt_stringList;
+//                    else begin
+//                      dynLiteralType:=lt_list;
+//                      exit(dynLiteralType);
+//                    end;
+//                  end;
+//      else begin
+//        dynLiteralType:=lt_list;
+//        exit(dynLiteralType);
+//      end;
+//    end;
+//    result:=dynLiteralType;
+//  end;
+//
+//FUNCTION T_setLiteral.literalType:T_literalType;
+//  VAR L:P_literal;
+//      iter:T_arrayOfLiteral;
+//  begin
+//    if dat.fill=0 then exit(lt_emptySet);
+//    if (dat.fill>0) and (dynLiteralType=lt_emptySet) then begin
+//      iter:=iteratableList;
+//      for L in iter do if dynLiteralType<>lt_set then case L^.literalType of
+//        lt_void:begin end;
+//        lt_boolean: case dynLiteralType of
+//                      lt_emptySet,lt_booleanSet: dynLiteralType:=lt_booleanSet;
+//                      else dynLiteralType:=lt_set;
+//                    end;
+//        lt_int:     case dynLiteralType of
+//                      lt_emptySet,lt_intSet: dynLiteralType:=lt_intSet;
+//                      lt_numSet,lt_realSet : dynLiteralType:=lt_numSet;
+//                      else dynLiteralType:=lt_set;
+//                    end;
+//        lt_real:    case dynLiteralType of
+//                      lt_emptySet,lt_realSet: dynLiteralType:=lt_realSet;
+//                      lt_numSet,lt_intSet   : dynLiteralType:=lt_numSet;
+//                      else dynLiteralType:=lt_set;
+//                    end;
+//        lt_string:  case dynLiteralType of
+//                      lt_emptySet,lt_stringSet: dynLiteralType:=lt_stringSet;
+//                      else dynLiteralType:=lt_set;
+//                    end;
+//        else dynLiteralType:=lt_set;
+//      end;
+//      disposeLiteral(iter);
+//    end;
+//    result:=dynLiteralType;
+//  end;
 //=====================================================================================================================
 CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; passedCustomTypeChecks:=nil; end;
 
@@ -786,11 +863,6 @@ FUNCTION T_literal.rereferenced:P_literal;
 FUNCTION T_literal.unreference: longint;
   begin
     interlockedDecrement(numberOfReferences);
-    result:=numberOfReferences;
-  end;
-
-FUNCTION T_literal.getReferenceCount: longint;
-  begin
     result:=numberOfReferences;
   end;
 
@@ -887,11 +959,6 @@ DESTRUCTOR T_mapLiteral.destroy;
     dat.destroy;
   end;
 //==================================================================:DESTRUCTORS
-FUNCTION T_listLiteral.getValue(CONST index: longint): P_literal;
-  begin
-    result:=dat[index];
-  end;
-
 FUNCTION T_collectionLiteral.appendString(CONST s: ansistring): P_collectionLiteral; begin result:=P_collectionLiteral(append(newStringLiteral(s),false)); end;
 FUNCTION T_collectionLiteral.appendBool  (CONST b: boolean   ): P_collectionLiteral; begin result:=P_collectionLiteral(append(newBoolLiteral  (b),false)); end;
 FUNCTION T_collectionLiteral.appendInt   (CONST i: int64     ): P_collectionLiteral; begin result:=P_collectionLiteral(append(newIntLiteral   (i),false)); end;
@@ -1225,8 +1292,8 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST oth
     end;
   end;
 //=============================================================:?.isInRelationTo
-FUNCTION T_listLiteral.newOfSameType: P_collectionLiteral; begin result:=newListLiteral; end;
-FUNCTION T_setLiteral.newOfSameType: P_collectionLiteral; begin result:=newSetLiteral; end;
+FUNCTION T_listLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin result:=newListLiteral; if initSize then setLength(P_listLiteral(result)^.dat,fill); end;
+FUNCTION T_setLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin result:=newSetLiteral; if initSize then P_setLiteral(result)^.dat.rehashForExpectedSize(dat.fill); end;
 //?.negate:=====================================================================
 FUNCTION T_literal.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
   begin result:=@self; rereference; end;
@@ -1481,8 +1548,8 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
       end;
     end;
     if isKeyValueCollection then begin
-      for i:=0 to fill-1 do if accessor^.equals(P_listLiteral(dat[i])^[0])
-                                      then exit(P_listLiteral(dat[i])^[1]^.rereferenced);
+      for i:=0 to fill-1 do if accessor^.equals(P_listLiteral(dat[i])^.value[0])
+                                      then exit(P_listLiteral(dat[i])^.value[1]^.rereferenced);
       result:=newVoidLiteral;
     end;
   end;
@@ -1494,8 +1561,8 @@ FUNCTION T_setLiteral.get(CONST accessor:P_literal):P_literal;
     result:=nil;
     if isKeyValueCollection then begin
       iter:=iteratableList;
-      for x in iter do if (result=nil) and accessor^.equals(P_listLiteral(x)^[0])
-                                               then result:=P_listLiteral(x)^[1]^.rereferenced;
+      for x in iter do if (result=nil) and accessor^.equals(P_listLiteral(x)^.value[0])
+                                               then result:=P_listLiteral(x)^.value[1]^.rereferenced;
       if result=nil then result:=newVoidLiteral;
       disposeLiteral(iter);
     end else result:=nil;
@@ -1559,8 +1626,8 @@ FUNCTION T_mapLiteral.getInner(CONST accessor:P_literal):P_literal;
         subAsSet  :=accessor^.literalType in C_setTypes;
       end;
       lt_booleanList: if P_listLiteral(accessor)^.size=2 then begin
-        wantKeys  :=P_boolLiteral(P_listLiteral(accessor)^[0])^.val;
-        wantValues:=P_boolLiteral(P_listLiteral(accessor)^[1])^.val;
+        wantKeys  :=P_boolLiteral(P_listLiteral(accessor)^.value[0])^.val;
+        wantValues:=P_boolLiteral(P_listLiteral(accessor)^.value[1])^.val;
         validCase :=true;
       end;
     end;
@@ -1630,8 +1697,8 @@ FUNCTION T_listLiteral.leqForSorting(CONST other: P_literal): boolean;
     if (other^.literalType in C_listTypes) then begin
       if      size<P_compoundLiteral(other)^.size then exit(true)
       else if size>P_compoundLiteral(other)^.size then exit(false)
-      else for i:=0 to size-1 do if value[i]^.leqForSorting(P_listLiteral(other)^[i]) then begin
-        if not(P_listLiteral(other)^[i]^.leqForSorting(value[i])) then exit(true);
+      else for i:=0 to size-1 do if value[i]^.leqForSorting(P_listLiteral(other)^.value[i]) then begin
+        if not(P_listLiteral(other)^.value[i]^.leqForSorting(value[i])) then exit(true);
       end else exit(false);
       exit(true);
     end else result:=literalType<=other^.literalType;
@@ -1850,8 +1917,8 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; VAR adapters:T_
     iter:=iteratableList;
     result:=newMapLiteral;
     for pair in iter do if (pair^.literalType in C_listTypes) and (P_listLiteral(pair)^.isKeyValuePair) then begin
-      result^.put(P_listLiteral(pair)^[0],
-                  P_listLiteral(pair)^[1],true);
+      result^.put(P_listLiteral(pair)^.value[0],
+                  P_listLiteral(pair)^.value[1],true);
     end else begin
       result^.containsError:=true;
       adapters.raiseError('Literal of type '+pair^.typeString+' cannot be interpreted as key-value-pair',location);
@@ -2306,7 +2373,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     lt_error:      exit(RHS^.rereferenced)}
   {$define S_x_L_recursion:=
     begin
-      result:=P_collectionLiteral(RHS)^.newOfSameType;
+      result:=P_collectionLiteral(RHS)^.newOfSameType(true);
       rhsIt:=P_collectionLiteral(RHS)^.iteratableList;
       for rhsX in rhsIt do P_collectionLiteral(result)^.append(function_id(LHS,rhsX),false);
       disposeLiteral(rhsIt);
@@ -2314,7 +2381,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     end}
   {$define L_x_S_recursion:=
     begin
-      result:=P_collectionLiteral(LHS)^.newOfSameType;
+      result:=P_collectionLiteral(LHS)^.newOfSameType(true);
       lhsIt:=P_collectionLiteral(LHS)^.iteratableList;
       for lhsX in lhsIt do P_collectionLiteral(result)^.append(function_id(lhsX,RHS),false);
       disposeLiteral(lhsIt);
@@ -2850,7 +2917,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           lt_map..lt_emptyMap:  exit(newMapLiteral^
                                      .putAll(P_mapLiteral(LHS))^
                                      .putAll(P_mapLiteral(RHS)));
-          lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType^
+          lt_list..lt_emptySet: exit(P_collectionLiteral(RHS)^.newOfSameType(true)^
                                      .appendAll(P_mapLiteral(LHS))^
                                      .appendAll(P_setLiteral(RHS)));
         end;
@@ -2924,10 +2991,10 @@ FUNCTION setUnion(CONST params:P_listLiteral):P_setLiteral;
   VAR i:longint;
   begin
     if not((params<>nil) and (params^.size>=1)) then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^[i]^.literalType in C_compoundTypes) then exit(nil);
-    if params^.size=1 then exit(P_compoundLiteral(params^[0])^.toSet());
-    result:=newSetLiteral(P_compoundLiteral(params^[0])^.size);
-    for i:=0 to params^.size-1 do result^.appendAll(P_compoundLiteral(params^[i]));
+    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil);
+    if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet());
+    result:=newSetLiteral(P_compoundLiteral(params^.value[0])^.size);
+    for i:=0 to params^.size-1 do result^.appendAll(P_compoundLiteral(params^.value[i]));
   end;
 
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
@@ -2942,12 +3009,12 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       acceptMask:word=0;
   begin
     if not((params<>nil) and (params^.size>=1)) or (params^.size>16) then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^[i]^.literalType in C_compoundTypes) then exit(nil);
-    if params^.size=1 then exit(P_compoundLiteral(params^[0])^.toSet());
+    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil);
+    if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet());
 
     counterSet.create;
     for i:=0 to params^.size-1 do begin//with P_compoundLiteral(params^[i])^ do
-      iter:=P_compoundLiteral(params^[i])^.iteratableList;
+      iter:=P_compoundLiteral(params^.value[i])^.iteratableList;
       for x in iter do counterSet.putNew(x,counterSet.get(x,0) or bit[i],prevMask);
       disposeLiteral(iter);
       inc(acceptMask,bit[i]);
@@ -2963,14 +3030,14 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
   begin
     if not((params<>nil) and
            (params^.size=2) and
-           (params^[0]^.literalType in C_compoundTypes) and
-           (params^[1]^.literalType in C_compoundTypes))
+           (params^.value[0]^.literalType in C_compoundTypes) and
+           (params^.value[1]^.literalType in C_compoundTypes))
     then exit(nil);
     result:=newSetLiteral;
-    iter:=P_compoundLiteral(params^[0])^.iteratableList;
+    iter:=P_compoundLiteral(params^.value[0])^.iteratableList;
     for L in iter do result^.dat.put(L,true);
     disposeLiteral(iter);
-    iter:=P_compoundLiteral(params^[1])^.iteratableList;
+    iter:=P_compoundLiteral(params^.value[1])^.iteratableList;
     for L in iter do result^.dat.drop(L);
     disposeLiteral(iter);
     for L in result^.dat.keySet do begin
@@ -2986,19 +3053,19 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
       L,M:P_literal;
   begin
     if (params=nil) or (params^.size<>3) or
-       not(params^[0]^.literalType in [lt_map,lt_emptyMap]) or
-       not(params^[1]^.literalType in [lt_map,lt_emptyMap]) or
-       (params^[2]^.literalType<>lt_expression) then exit(nil);
-    if P_mapLiteral(params^[0])^.size>=
-       P_mapLiteral(params^[1])^.size
+       not(params^.value[0]^.literalType in [lt_map,lt_emptyMap]) or
+       not(params^.value[1]^.literalType in [lt_map,lt_emptyMap]) or
+       (params^.value[2]^.literalType<>lt_expression) then exit(nil);
+    if P_mapLiteral(params^.value[0])^.size>=
+       P_mapLiteral(params^.value[1])^.size
     then begin
-      map1:=P_mapLiteral(params^[0]);
-      map2:=P_mapLiteral(params^[1]);
+      map1:=P_mapLiteral(params^.value[0]);
+      map2:=P_mapLiteral(params^.value[1]);
     end else begin
-      map1:=P_mapLiteral(params^[1]);
-      map2:=P_mapLiteral(params^[0]);
+      map1:=P_mapLiteral(params^.value[1]);
+      map2:=P_mapLiteral(params^.value[0]);
     end;
-    merger:=P_expressionLiteral(params^[2]);
+    merger:=P_expressionLiteral(params^.value[2]);
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
 
     if map2^.size=0 then exit(P_mapLiteral(map1^.rereferenced));
@@ -3125,8 +3192,8 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
       accessorTail:=accessor^.tail;
       result:=false;
       if toMutate^.literalType in C_listTypes then begin
-        if accessor^[0]^.literalType=lt_int then begin
-          listIndex:=P_intLiteral(accessor^[0])^.val;
+        if accessor^.value[0]^.literalType=lt_int then begin
+          listIndex:=P_intLiteral(accessor^.value[0])^.val;
           if (listIndex>=0) and (listIndex<P_listLiteral(toMutate)^.fill) then begin
             ensureExclusiveAccess(P_listLiteral(toMutate));
             if mutateNested(P_listLiteral(toMutate)^.dat[listIndex],nestedMutation,accessorTail,RHS) then begin
@@ -3142,13 +3209,13 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         end else adapters.raiseError('List elements must be qualified by their index',location);
       end else if toMutate^.literalType in C_mapTypes then begin
         ensureExclusiveAccess(P_mapLiteral(toMutate));
-        mapEntry:=P_mapLiteral(toMutate)^.dat.getEntry(accessor^[0]);
+        mapEntry:=P_mapLiteral(toMutate)^.dat.getEntry(accessor^.value[0]);
         if (mapEntry<>nil) then begin
           mutateNested(mapEntry^.value,nestedMutation,accessorTail,RHS);
         end else begin
           elementToMutate:=newVoidLiteral;
           mutateNested(elementToMutate,nestedMutation,accessorTail,RHS);
-          P_mapLiteral(toMutate)^.put(accessor^[0]^.rereferenced,elementToMutate,false);
+          P_mapLiteral(toMutate)^.put(accessor^.value[0]^.rereferenced,elementToMutate,false);
         end;
       end else adapters.raiseError('Cannot apply nested mutation to literal of type '+toMutate^.typeString,location);
       disposeLiteral(accessorTail);
@@ -3166,7 +3233,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
           // M[]:=void -> M:=void;
           if (accessor^.size=0) then assign(toMutate,RHS)
           // M[key  ]:=void -> M >> key
-          else if (accessor^.size=1) then mutateDrop(toMutate,accessor^[0])
+          else if (accessor^.size=1) then mutateDrop(toMutate,accessor^.value[0])
           // M[k1,k2]:=void -> M[k1] >> k2
           else begin
             disposeLiteral(RHS);

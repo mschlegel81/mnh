@@ -631,8 +631,8 @@ PROCEDURE addChildren(node2:TTreeNode);
     if rootValue^.literalType in C_mapTypes then begin
       iter:=rootValue^.iteratableList;
       for sub in iter do begin
-        key:=P_listLiteral(sub)^[0];
-        val:=P_listLiteral(sub)^[1];
+        key:=P_listLiteral(sub)^.value[0];
+        val:=P_listLiteral(sub)^.value[1];
         MnhForm.variablesTreeView.items.AddChild(node2,key^.toString()+' => '+treeLit_toString(val)).data:=val;
       end;
       disposeLiteral(iter);
