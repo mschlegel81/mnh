@@ -33,11 +33,17 @@ BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.e
          [false,'LDWin32','bin32/mnh_light_debug.exe',Lazarus32Path&'\lazbuild.exe',['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug.exe',true],
          [false,'FDWin32','bin32/mnh_debug.exe'      ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
          [true ,'LDLinux','./mnh_light_debug'        ,               'lazbuild'    ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
+         [true ,'LPLinux','./mnh_prof'               ,               'lazbuild'    ,['-B','--bm=profiling' ,'consoles/mnh_light.lpi'],'consoles/mnh_prof'           ,true],
          [true ,'FDLinux','./mnh_debug'              ,               'lazbuild'    ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]];
+
 //@SuppressUnusedWarning
 LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
 
 canBuild(B:BuildConfig)->B[0]=isLinux;
+
+//@SuppressUnusedWarning
+buildBlindly(B:BuildConfig)->B[1]=='LPLinux';
+
 //@SuppressUnusedWarning
 VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
 //@SuppressUnusedWarning

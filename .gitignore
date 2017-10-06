@@ -26,3 +26,4 @@ mnh_light
 mnh_light_debug
 versions/*.7z
 buildLogDigest.datastore0
+mnh_prof
