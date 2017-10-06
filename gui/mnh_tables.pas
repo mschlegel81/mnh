@@ -105,16 +105,16 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
   begin
     if (params<>nil) and
        (params^.size>0) and
-       (params^[0]^.literalType in C_listTypes) then begin
+       (params^.value[0]^.literalType in C_listTypes) then begin
       for i:=1 to 2 do if params^.size>i then begin
-        case params^[i]^.literalType of
-          lt_string : caption:=P_stringLiteral(params^[i])^.value;
-          lt_boolean: header :=P_boolLiteral  (params^[i])^.value;
+        case params^.value[i]^.literalType of
+          lt_string : caption:=P_stringLiteral(params^.value[i])^.value;
+          lt_boolean: header :=P_boolLiteral  (params^.value[i])^.value;
           else exit(nil);
         end;
       end;
       enterCriticalSection(tableFormCs);
-      newTableForm.initWithLiteral(P_listLiteral(params^[0]),caption,header);
+      newTableForm.initWithLiteral(P_listLiteral(params^.value[0]),caption,header);
       context.adapters^.logDisplayTable;
       leaveCriticalSection(tableFormCs);
       if gui_started then result:=newVoidLiteral else result:=nil;
@@ -232,7 +232,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
 
       newLiteral:=newListLiteral(literal^.size);
       for i:=literal^.size-1 downto 0 do
-      newLiteral^.append(literal^[i],true);
+      newLiteral^.append(literal^.value[i],true);
       disposeLiteral(literal);
       literal:=newLiteral;
     end else begin
@@ -260,12 +260,12 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
       byColumn:=-1;
     end;
     firstIsHeader:=firstIsHeader_;
-    if firstIsHeader and (L^.size>0) and (L^[0]^.literalType in C_listTypes) then begin
-      headerLiteral:=P_listLiteral(L^[0]);
+    if firstIsHeader and (L^.size>0) and (L^.value[0]^.literalType in C_listTypes) then begin
+      headerLiteral:=P_listLiteral(L^.value[0]);
       setLength(headerData,headerLiteral^.size);
-      for i:=0 to headerLiteral^.size-1 do case headerLiteral^[i]^.literalType of
-        lt_string: headerData[i]:=P_stringLiteral(headerLiteral^[i])^.value
-        else       headerData[i]:=                headerLiteral^[i]^.toString;
+      for i:=0 to headerLiteral^.size-1 do case headerLiteral^.value[i]^.literalType of
+        lt_string: headerData[i]:=P_stringLiteral(headerLiteral^.value[i])^.value
+        else       headerData[i]:=                headerLiteral^.value[i]^.toString;
       end;
       literal:=P_listLiteral(L)^.tail;
     end else begin
@@ -309,12 +309,12 @@ PROCEDURE TtableForm.fillTable;
     setLength(cellContents,dataRows);
     if literal^.literalType=lt_stringList then begin
       for i:=0 to literal^.size-1 do begin
-        cellContents[i]:=split(P_stringLiteral(literal^[i])^.value,C_tabChar);
+        cellContents[i]:=split(P_stringLiteral(literal^.value[i])^.value,C_tabChar);
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
       end;
     end else begin
       for i:=0 to literal^.size-1 do begin
-        rowLit:=literal^[i];
+        rowLit:=literal^.value[i];
         if rowLit^.literalType in C_compoundTypes then begin
           iter:=P_compoundLiteral(rowLit)^.iteratableList;
           setLength(cellContents[i],length(iter));

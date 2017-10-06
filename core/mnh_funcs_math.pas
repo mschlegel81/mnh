@@ -17,7 +17,7 @@ IMPLEMENTATION
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
       lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType;
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter  :=P_collectionLiteral(x)^.iteratableList;
         for y in iter do collResult^.append(recurse(y),false);
         disposeLiteral(iter);
@@ -95,7 +95,7 @@ FUNCTION not_imp intFuncSignature;
         lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
         lt_list,lt_booleanList,lt_intList,lt_emptyList,
         lt_set ,lt_booleanSet ,lt_intSet ,lt_emptySet: begin
-          result:=P_collectionLiteral(x)^.newOfSameType;
+          result:=P_collectionLiteral(x)^.newOfSameType(true);
           iter:=P_collectionLiteral(x)^.iteratableList;
           for y in iter do P_collectionLiteral(result)^.append(not_rec(y),false);
           disposeLiteral(iter);
@@ -127,7 +127,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
       lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType;
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter  :=P_collectionLiteral(x)^.iteratableList;
         for sub in iter do collResult^.append(recurse(sub),false);
         disposeLiteral(iter);
@@ -169,7 +169,7 @@ UNARY_NUM_TO_SAME;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
-          result:=P_collectionLiteral(x)^.newOfSameType;
+          result:=P_collectionLiteral(x)^.newOfSameType(true);
           iter  :=P_collectionLiteral(x)^.iteratableList;
           for sub in iter do collResult^.append(recurse1(sub),false);
           disposeLiteral(iter);
@@ -217,7 +217,7 @@ UNARY_NUM_TO_SAME;
           lt_int: result:=myRound(P_intLiteral(x),P_intLiteral(y)^.value);
           lt_list,lt_intList,lt_emptyList,
           lt_set ,lt_intSet ,lt_emptySet: begin
-            result:=P_collectionLiteral(y)^.newOfSameType;
+            result:=P_collectionLiteral(y)^.newOfSameType(true);
             yIter :=P_collectionLiteral(y)^.iteratableList;
             for sub in yIter do collResult^.append(recurse2(x,sub),false);
             disposeLiteral(yIter);
@@ -233,7 +233,7 @@ UNARY_NUM_TO_SAME;
           lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
           lt_list,lt_intList,lt_emptyList,
           lt_set ,lt_intSet ,lt_emptySet: begin
-            result:=P_collectionLiteral(y)^.newOfSameType;
+            result:=P_collectionLiteral(y)^.newOfSameType(true);
             yIter :=P_collectionLiteral(y)^.iteratableList;
             for sub in yIter do collResult^.append(recurse2(x,sub),false);
             disposeLiteral(yIter);
@@ -258,7 +258,7 @@ UNARY_NUM_TO_SAME;
           end;
           lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do listResult^.append(recurse2(P_listLiteral(x)^[i],P_listLiteral(y)^[i]),false);
+            for i:=0 to P_listLiteral(x)^.size-1 do listResult^.append(recurse2(P_listLiteral(x)^.value[i],P_listLiteral(y)^.value[i]),false);
           end else context.adapters^.raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
           else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
         end;
@@ -330,7 +330,7 @@ FUNCTION sign_imp intFuncSignature;
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
-          result:=P_collectionLiteral(x)^.newOfSameType;
+          result:=P_collectionLiteral(x)^.newOfSameType(true);
           iter:=P_collectionLiteral(x)^.iteratableList;
           for sub in iter do collResult^.append(sign_rec(sub),false);
           disposeLiteral(iter);
@@ -399,9 +399,9 @@ FUNCTION argMax_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in C_listTypes) then begin
       L:=list0;
       imax:=0;
-      xMax:=L^[0];
+      xMax:=L^.value[0];
       for i:=1 to L^.size-1 do begin
-        x:=L^[i];
+        x:=L^.value[i];
         if not(x^.leqForSorting(xMax)) then begin
           imax:=i;
           xMax:=x;
@@ -452,7 +452,7 @@ FUNCTION argMin_imp intFuncSignature;
         end;
         lt_intSet: exit(newSetLiteral^.appendBool(false));
         else begin
-          result:=collection0^.newOfSameType;
+          result:=collection0^.newOfSameType(true);
           iter:=collection0^.iteratableList;
           for x in iter do collResult^.appendBool((x^.literalType=lt_real) and PREDICATE(P_realLiteral(x)^.value));
           disposeLiteral(iter);
@@ -487,7 +487,7 @@ FUNCTION subSets_impl intFuncSignature;
         setLength(newMight,0);
       end else begin
         if (acceptOnlySetsOfSize<>-1) and (acceptOnlySetsOfSize<>length(mustContain)) then exit;
-        newSet:=collection0^.newOfSameType;
+        newSet:=collection0^.newOfSameType(false);
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
         if newSet^.literalType in C_listTypes then P_listLiteral(newSet)^.sort;
         if sets.get(newSet,0)=0 then sets.put(newSet,1)
@@ -649,7 +649,7 @@ FUNCTION digits_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
-      (arg0^.literalType in [lt_int,lt_emptyList,lt_intList,lt_emptySet,lt_intSet]) and
+      (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
       if params^.size=2 then base:=int1^.value;
       if base<=1 then begin
@@ -657,7 +657,7 @@ FUNCTION digits_impl intFuncSignature;
         exit(nil);
       end;
       if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
-      result:=collection0^.newOfSameType;
+      result:=collection0^.newOfSameType(true);
       for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
     end;
   end;
@@ -689,7 +689,7 @@ FUNCTION composeDigits_imp intFuncSignature;
 
       {$Q-}{$R-}
       for k:=0 to list0^.size-1 do begin
-        dig:=P_intLiteral(list0^[k])^.value;
+        dig:=P_intLiteral(list0^.value[k])^.value;
         if (dig>=base) or (dig<0) then context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
         ir:=ir*base+dig;
         fr:=fr*base+dig;

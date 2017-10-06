@@ -1055,7 +1055,7 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(
     if stringListLiteral^.literalType<>lt_stringList then exit;
     for i:=0 to stringListLiteral^.size-1 do begin
       if i>0 then concatenatedText:=concatenatedText+LineEnding;
-      concatenatedText:=concatenatedText+P_stringLiteral(stringListLiteral^[i])^.value;
+      concatenatedText:=concatenatedText+P_stringLiteral(stringListLiteral^.value[i])^.value;
     end;
     editor.BeginUndoBlock;
     editor.SelectAll;

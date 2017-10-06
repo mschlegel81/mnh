@@ -94,7 +94,7 @@ CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
 FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
   VAR L:P_literal;
   begin
-    L:=parameterList[ownIndex];
+    L:=parameterList.value[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
     if restrictionType=tt_customTypeCheck then begin
       if L^.hasAlreadyPassedTypeCheck(customTypeCheck) then exit(true);
@@ -111,7 +111,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     result:=true;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
-                                        L^.isInRelationTo(restrictionType, parameterList[restrictionIdx])
+                                        L^.isInRelationTo(restrictionType, parameterList.value[restrictionIdx])
                            else result:=L^.isInRelationTo(restrictionType, restrictionValue             );
     end;
   end;

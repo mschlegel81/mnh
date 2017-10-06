@@ -29,8 +29,8 @@ FUNCTION obtainXmlData(VAR FDoc: TXMLDocument):P_literal;
         subTree^.appendString(UTF16ToUTF8(node.ChildNodes[i].NodeName))
                ^.append(newListLiteral(),false)
                ^.append(newListLiteral(),false);
-        readAttributes(P_listLiteral(subTree^[1]),node.ChildNodes[i]);
-        readChildren  (P_listLiteral(subTree^[2]),node.ChildNodes[i]);
+        readAttributes(P_listLiteral(subTree^.value[1]),node.ChildNodes[i]);
+        readChildren  (P_listLiteral(subTree^.value[2]),node.ChildNodes[i]);
         owner^.append(subTree,false);
       end;
     end;

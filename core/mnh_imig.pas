@@ -39,9 +39,9 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
     isValid:=(tmpSteps^.literalType=lt_stringList) and (tmpSteps^.size>=1);
     if isValid then begin
       for i:=0 to tmpSteps^.size-1 do begin
-        cmd:=P_stringLiteral(tmpSteps^[i])^.value;
+        cmd:=P_stringLiteral(tmpSteps^.value[i])^.value;
         if not(result.addStep(cmd))
-        then warn('Invalid workflow step: '+tmpSteps^[i]^.toString);
+        then warn('Invalid workflow step: '+tmpSteps^.value[i]^.toString);
       end;
     end;
     if steps<>tmpSteps then disposeLiteral(tmpSteps);
@@ -95,20 +95,20 @@ FUNCTION executeWorkflow_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_stringList,lt_list]) then begin
       for i:=1 to params^.size-1 do begin
-        case params^[i]^.literalType of
+        case params^.value[i]^.literalType of
           lt_int: begin
-            if P_intLiteral(params^[i])^.value<=0 then exit(nil);
-            if      xRes=0 then xRes:=P_intLiteral(params^[i])^.value
-            else if yRes=0 then yRes:=P_intLiteral(params^[i])^.value
-            else if sizeLimit<=-1 then sizeLimit:=P_intLiteral(params^[i])^.value
+            if P_intLiteral(params^.value[i])^.value<=0 then exit(nil);
+            if      xRes=0 then xRes:=P_intLiteral(params^.value[i])^.value
+            else if yRes=0 then yRes:=P_intLiteral(params^.value[i])^.value
+            else if sizeLimit<=-1 then sizeLimit:=P_intLiteral(params^.value[i])^.value
             else exit(nil);
           end;
           lt_string: begin
-            if source=''  then source:=P_stringLiteral(params^[i])^.value
-            else if dest='' then dest:=P_stringLiteral(params^[i])^.value
+            if source=''  then source:=P_stringLiteral(params^.value[i])^.value
+            else if dest='' then dest:=P_stringLiteral(params^.value[i])^.value
             else exit(nil);
           end;
-          lt_expression: if outputMethod=nil then outputMethod:=P_expressionLiteral(params^[i]) else exit(nil);
+          lt_expression: if outputMethod=nil then outputMethod:=P_expressionLiteral(params^.value[i]) else exit(nil);
           else exit(nil);
         end;
       end;

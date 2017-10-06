@@ -245,7 +245,7 @@ FUNCTION ask_impl intFuncSignature;
       system.enterCriticalSection(cs);
       setLength(opt, list1^.size);
       for i := 0 to length(opt)-1 do
-        opt[i] := P_stringLiteral(list1^[i])^.value;
+        opt[i] := P_stringLiteral(list1^.value[i])^.value;
       askForm.initWithQuestionAndOptions(str0^.value, opt);
       result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
       system.leaveCriticalSection(cs);

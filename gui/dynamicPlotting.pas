@@ -239,14 +239,14 @@ FUNCTION dynamicPlot_impl intFuncSignature;
       for pair in iter do
       if (pair^.literalType<>lt_list) or
          (P_listLiteral(pair)^.size<>2) or
-         (P_listLiteral(pair)^[0]^.literalType<>lt_string) or
-         (P_listLiteral(pair)^[1]^.literalType<>lt_expression) then begin
+         (P_listLiteral(pair)^.value[0]^.literalType<>lt_string) or
+         (P_listLiteral(pair)^.value[1]^.literalType<>lt_expression) then begin
         disposeLiteral(iter);
         exit(nil);
       end;
       enterCriticalSection(setupCs);
       events:=blankEvents;
-      for pair in iter do matchKey(P_stringLiteral(P_listLiteral(pair)^[0])^.value,P_expressionLiteral(P_listLiteral(pair)^[1]));
+      for pair in iter do matchKey(P_stringLiteral(P_listLiteral(pair)^.value[0])^.value,P_expressionLiteral(P_listLiteral(pair)^.value[1]));
       disposeLiteral(iter);
       if allOkay and applyParameters then doInteractiveLoop;
       result:=newBoolLiteral(allOkay);
