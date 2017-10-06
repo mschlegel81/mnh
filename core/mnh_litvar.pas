@@ -12,6 +12,7 @@ CONST HASH_GROW_THRESHOLD_FACTOR=2;
       HASH_SHRINK_THRESHOLD_FACTOR=1.5;
 TYPE
   P_literal = ^T_literal;
+  PP_literal = ^P_literal;
   P_setOfPointer=^T_setOfPointer;
   T_arrayOfLiteral=array of P_literal;
   T_literal = object(T_objectWithIdAndLocation)
@@ -238,10 +239,10 @@ TYPE
 
   T_listLiteral=object(T_collectionLiteral)
     private
-      dat:T_arrayOfLiteral;
-      fill:longint;
+      dat:PP_literal;
+      alloc,fill:longint;
     public
-      PROPERTY value:T_arrayOfLiteral read dat;
+      PROPERTY value:PP_literal read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
       DESTRUCTOR destroy; virtual;
       FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -770,85 +771,6 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
     end;
   end;
 
-//FUNCTION T_listLiteral.literalType:T_literalType;
-//  VAR L:P_literal;
-//  begin
-//    if length(dat)=0 then exit(lt_emptyList);
-//    if (length(dat)>0) and (dynLiteralType=lt_emptyList) then for L in dat do case L^.literalType of
-//      lt_void:begin end;
-//      lt_boolean: case dynLiteralType of
-//                    lt_emptyList,lt_booleanList: dynLiteralType:=lt_booleanList;
-//                    else begin
-//                      dynLiteralType:=lt_list;
-//                      exit(dynLiteralType);
-//                    end;
-//                  end;
-//      lt_int:     case dynLiteralType of
-//                    lt_emptyList,lt_intList: dynLiteralType:=lt_intList;
-//                    lt_numList,lt_realList : dynLiteralType:=lt_numList;
-//                    else begin
-//                      dynLiteralType:=lt_list;
-//                      exit(dynLiteralType);
-//                    end;
-//                  end;
-//      lt_real:    case dynLiteralType of
-//                    lt_emptyList,lt_realList: dynLiteralType:=lt_realList;
-//                    lt_numList,lt_intList   : dynLiteralType:=lt_numList;
-//                    else begin
-//                      dynLiteralType:=lt_list;
-//                      exit(dynLiteralType);
-//                    end;
-//                  end;
-//      lt_string:  case dynLiteralType of
-//                    lt_emptyList,lt_stringList: dynLiteralType:=lt_stringList;
-//                    else begin
-//                      dynLiteralType:=lt_list;
-//                      exit(dynLiteralType);
-//                    end;
-//                  end;
-//      else begin
-//        dynLiteralType:=lt_list;
-//        exit(dynLiteralType);
-//      end;
-//    end;
-//    result:=dynLiteralType;
-//  end;
-//
-//FUNCTION T_setLiteral.literalType:T_literalType;
-//  VAR L:P_literal;
-//      iter:T_arrayOfLiteral;
-//  begin
-//    if dat.fill=0 then exit(lt_emptySet);
-//    if (dat.fill>0) and (dynLiteralType=lt_emptySet) then begin
-//      iter:=iteratableList;
-//      for L in iter do if dynLiteralType<>lt_set then case L^.literalType of
-//        lt_void:begin end;
-//        lt_boolean: case dynLiteralType of
-//                      lt_emptySet,lt_booleanSet: dynLiteralType:=lt_booleanSet;
-//                      else dynLiteralType:=lt_set;
-//                    end;
-//        lt_int:     case dynLiteralType of
-//                      lt_emptySet,lt_intSet: dynLiteralType:=lt_intSet;
-//                      lt_numSet,lt_realSet : dynLiteralType:=lt_numSet;
-//                      else dynLiteralType:=lt_set;
-//                    end;
-//        lt_real:    case dynLiteralType of
-//                      lt_emptySet,lt_realSet: dynLiteralType:=lt_realSet;
-//                      lt_numSet,lt_intSet   : dynLiteralType:=lt_numSet;
-//                      else dynLiteralType:=lt_set;
-//                    end;
-//        lt_string:  case dynLiteralType of
-//                      lt_emptySet,lt_stringSet: dynLiteralType:=lt_stringSet;
-//                      else dynLiteralType:=lt_set;
-//                    end;
-//        else dynLiteralType:=lt_set;
-//      end;
-//      disposeLiteral(iter);
-//    end;
-//    result:=dynLiteralType;
-//  end;
-//=====================================================================================================================
-
 PROCEDURE T_literal.rereference;
   begin
     interLockedIncrement(numberOfReferences);
@@ -888,7 +810,8 @@ CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST loca
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
   begin
     inherited init(lt_emptyList);
-    setLength(dat, initialSize);
+    getMem(dat,sizeOf(P_literal)*initialSize);
+    alloc:=initialSize;
     fill:=0;
   end;
 
@@ -915,7 +838,8 @@ DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;
   begin
     for i:=0 to fill-1 do disposeLiteral(dat[i]);
-    setLength(dat,0);
+    freeMem(dat,sizeOf(P_literal)*alloc);
+    alloc:=0;
     fill:=0;
   end;
 
@@ -984,8 +908,7 @@ FUNCTION T_listLiteral.head(CONST headSize: longint): P_listLiteral;
     imax:=headSize;
     if imax>fill then imax:=fill;
     if imax<0 then imax:=0;
-    result:=newListLiteral;
-    setLength(result^.dat,imax);
+    result:=newListLiteral(imax);
     for i:=0 to imax-1 do result^.append(dat[i],true);
   end;
 
@@ -998,8 +921,7 @@ FUNCTION T_listLiteral.tail(CONST headSize: longint): P_listLiteral;
     iMin:=headSize;
     if iMin>fill then iMin:=fill
     else if iMin<0 then iMin:=0;
-    result:=newListLiteral;
-    setLength(result^.dat,fill-iMin);
+    result:=newListLiteral(fill-iMin);
     for i:=iMin to fill-1 do result^.append(dat[i],true);
   end;
 
@@ -1273,7 +1195,7 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST oth
     end;
   end;
 //=============================================================:?.isInRelationTo
-FUNCTION T_listLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin result:=newListLiteral; if initSize then setLength(P_listLiteral(result)^.dat,fill); end;
+FUNCTION T_listLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin if initSize then result:=newListLiteral(fill) else result:=newListLiteral(); end;
 FUNCTION T_setLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin result:=newSetLiteral; if initSize then P_setLiteral(result)^.dat.rehashForExpectedSize(dat.fill); end;
 //?.negate:=====================================================================
 FUNCTION T_literal.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
@@ -1927,7 +1849,10 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       i0:=P_intLiteral(last)^.val;
       i1:=P_intLiteral(L)^.val;
       newLen:=fill+abs(i1-i0)+1;
-      if newLen>length(dat) then setLength(dat,newLen);
+      if newLen>alloc then begin
+        ReAllocMem(dat,sizeOf(P_literal)*newLen);
+        alloc:=newLen;
+      end;
       while (i0<i1) and adapters^.noErrors do begin
         inc(i0);
         appendInt(i0);
@@ -1942,7 +1867,10 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       c0:=P_stringLiteral(last)^.val [1];
       c1:=P_stringLiteral(L)^.val [1];
       newLen:=fill+abs(ord(c1)-ord(c0))+1;
-      if newLen>length(dat) then setLength(dat,newLen);
+      if newLen>alloc then begin
+        ReAllocMem(dat,sizeOf(P_literal)*newLen);
+        alloc:=newLen;
+      end;
       while c0<c1 do begin
         inc(c0);
         appendString(c0);
@@ -1962,7 +1890,10 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
   begin
     result:=@self;
     if (L=nil) or ((L^.literalType=lt_void) and not(forceVoidAppend)) then exit;
-    if length(dat)>fill then begin end else setLength(dat,round(fill*1.25)+2);
+    if alloc>fill then begin end else begin
+      alloc:=round(fill*1.25)+2;
+      ReAllocMem(dat,sizeOf(P_literal)*alloc);
+    end;
     dat[fill]:=L;
     inc(fill);
     if incRefs then L^.rereference;
@@ -2238,8 +2169,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
       end else for k:=0 to length(temp1)-1 do temp1[k]:=temp2[k];
     end;
     setLength(temp2, 0);
-    result:=newListLiteral;
-    setLength(result^.dat,length(temp1));
+    result:=newListLiteral(length(temp1));
     for i:=0 to length(temp1)-1 do result^.appendInt(temp1[i].index);
     setLength(temp1, 0);
   end;
