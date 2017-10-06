@@ -8,8 +8,8 @@ USES sysutils, math, typinfo,
      mnh_basicTypes,
      mnh_out_adapters;
 
-CONST HASH_GROW_THRESHOLD_FACTOR=2;
-      HASH_SHRINK_THRESHOLD_FACTOR=1.5;
+CONST HASH_GROWTH_THRESHOLD_FACTOR=2;
+      HASH_SHRINK_THRESHOLD_FACTOR=0.5;
 TYPE
   P_literal = ^T_literal;
   PP_literal = ^P_literal;
@@ -643,7 +643,7 @@ PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
       inc(fill);
     end;
     dat[binIdx,j].value:=value;
-    if fill>length(dat)*HASH_GROW_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
@@ -651,9 +651,9 @@ PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
   begin
     if fill=0 then begin
       targetSize:=length(dat);
-      while expectedFill>=targetSize*HASH_GROW_THRESHOLD_FACTOR do inc(targetSize,targetSize);
+      while expectedFill>=targetSize*HASH_GROWTH_THRESHOLD_FACTOR do inc(targetSize,targetSize);
       setLength(dat,targetSize);
-    end else while expectedFill>length(dat)*HASH_GROW_THRESHOLD_FACTOR do rehash(true);
+    end else while expectedFill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
@@ -675,7 +675,7 @@ FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE
       previousValue:=dat[binIdx,j].value;
     end;
     dat[binIdx,j].value:=entry.value;
-    if fill>length(dat)*HASH_GROW_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
@@ -699,7 +699,7 @@ FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT
       previousValue:=dat[binIdx,j].value;
     end;
     dat[binIdx,j].value:=value;
-    if fill>length(dat)*HASH_GROW_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
@@ -1436,6 +1436,7 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
       end;
       lt_intSet, lt_emptySet: begin
         result:=newSetLiteral;
+        P_setLiteral(result)^.dat.rehashForExpectedSize(P_setLiteral(accessor)^.size);
         iter:=P_setLiteral(accessor)^.iteratableList;
         for idx in iter do begin
           i:=P_intLiteral(idx)^.val;
@@ -2971,6 +2972,7 @@ FUNCTION setMinus(CONST params:P_listLiteral):P_setLiteral;
     then exit(nil);
     result:=newSetLiteral;
     iter:=P_compoundLiteral(params^.value[0])^.iteratableList;
+    result^.dat.rehashForExpectedSize(length(iter));
     for L in iter do result^.dat.put(L,true);
     disposeLiteral(iter);
     iter:=P_compoundLiteral(params^.value[1])^.iteratableList;
