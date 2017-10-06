@@ -862,8 +862,7 @@ FUNCTION T_literal.rereferenced:P_literal;
 
 FUNCTION T_literal.unreference: longint;
   begin
-    interlockedDecrement(numberOfReferences);
-    result:=numberOfReferences;
+    result:=interlockedDecrement(numberOfReferences);
   end;
 
 FUNCTION T_literal.getId:T_idString;            begin result:=''; end;
@@ -910,18 +909,11 @@ FUNCTION T_expressionLiteral.isGenerator: boolean;
     result:=isStateful and canApplyToNumberOfParameters(0);
   end;
 //DESTRUCTORS:==================================================================
-DESTRUCTOR T_literal.destroy;
-  begin
-    enterCriticalSection(globalLockCs);
-    if passedCustomTypeChecks<>nil then dispose(passedCustomTypeChecks,destroy);
-    leaveCriticalSection(globalLockCs);
-  end;
-
-DESTRUCTOR T_stringLiteral.destroy; begin inherited destroy; val:=''; end;
+DESTRUCTOR T_literal.destroy; begin end;
+DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;
   begin
-    inherited destroy;
     for i:=0 to fill-1 do disposeLiteral(dat[i]);
     setLength(dat,0);
     fill:=0;
@@ -931,7 +923,6 @@ DESTRUCTOR T_setLiteral.destroy;
   VAR entries:T_arrayOfLiteral;
       i:longint;
   begin
-    inherited destroy;
     entries:=dat.keySet;
     for i:=0 to length(entries)-1 do disposeLiteral(entries[i]);
     dat.destroy;
@@ -941,7 +932,6 @@ DESTRUCTOR T_mapLiteral.destroy;
   VAR entries:T_literalKeyLiteralValueMap.KEY_VALUE_LIST;
       i:longint;
   begin
-    inherited destroy;
     entries:=dat.keyValueList;
     for i:=0 to length(entries)-1 do begin
       disposeLiteral(entries[i].key);
