@@ -1326,11 +1326,12 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
       if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
         adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
       case ruleType of
-        rt_memoized     : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
-        rt_mutable      : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      modifier_private in modifiers));
-        rt_datastore    : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,modifier_private in modifiers,modifier_plain in modifiers));
-        rt_synchronized : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
-        else              new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
+        rt_memoized,
+        rt_customTypeCheck: new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart,ruleType));
+        rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      modifier_private in modifiers));
+        rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,modifier_private in modifiers,modifier_plain in modifiers));
+        rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
+        else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
       packageRules.put(ruleId,result);
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);

@@ -14,7 +14,9 @@ TYPE
   T_rawTokenArray=array of T_rawToken;
   {$endif}
 
+  P_token=^T_token;
   P_abstractRule=^T_abstractRule;
+  P_tokenRecycler=^T_tokenRecycler;
   T_abstractRule=object(T_objectWithIdAndLocation)
     private
       {$ifdef fullVersion}
@@ -42,9 +44,10 @@ TYPE
       PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION inspect:P_mapLiteral; virtual; abstract;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST singleParameter:P_literal; CONST location:T_tokenLocation; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
   end;
 
-  P_token=^T_token;
   T_token=object
     next    :P_token;
     location:T_tokenLocation;
@@ -76,7 +79,6 @@ TYPE
     PROCEDURE setModifier(CONST modifier:T_modifier);
   end;
 
-  P_tokenRecycler=^T_tokenRecycler;
   T_tokenRecycler=object
     private
       dat:array[0..2047] of P_token;
@@ -203,6 +205,22 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
 
 PROCEDURE T_abstractRule.clearCache; begin end;
 PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_adapters); begin end;
+FUNCTION T_abstractRule.evaluateToBoolean(CONST singleParameter:P_literal; CONST location:T_tokenLocation; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
+  VAR parList:P_listLiteral;
+      firstRep,lastRep:P_token;
+  begin
+    new(parList,create(1));
+    parList^.append(singleParameter,true);
+    if replaces(parList,location,firstRep,lastRep,includePrivateRules,threadContextPointer)
+    then begin
+      result:=(firstRep<>     nil          ) and
+              (firstRep^.next=nil          ) and
+              (firstRep^.tokType=tt_literal) and
+              (firstRep^.data=@boolLit[true]);
+      recycler^.cascadeDisposeToken(firstRep);
+    end else result:=false;
+    disposeLiteral(parList);
+  end;
 
 CONSTRUCTOR T_token.create;
   begin

@@ -17,7 +17,6 @@ TYPE
   T_literal = object(T_objectWithIdAndLocation)
   private
     numberOfReferences: longint;
-    passedCustomTypeChecks:P_setOfPointer;
   public
     literalType:T_literalType;
     CONSTRUCTOR init(CONST lt:T_literalType);
@@ -37,8 +36,6 @@ TYPE
 
     FUNCTION getId:T_idString; virtual;
     FUNCTION getLocation:T_tokenLocation; virtual;
-    FUNCTION hasAlreadyPassedTypeCheck(CONST rulePointer:pointer):boolean;
-    PROCEDURE logTypeCheckAsPassed(CONST rulePointer:pointer);
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
@@ -371,11 +368,10 @@ FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation
 FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
 
 VAR emptyStringSingleton: T_stringLiteral;
+VAR boolLit       : array[false..true] of T_boolLiteral;
 IMPLEMENTATION
 VAR
-  globalLockCs  : TRTLCriticalSection;
   errLit        : T_literal;
-  boolLit       : array[false..true] of T_boolLiteral;
   intLit        : array[-100..4000] of T_intLiteral;
   charLit       : array[#0..#255] of T_stringLiteral;
   voidLit       : T_voidLiteral;
@@ -411,9 +407,7 @@ FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
-    enterCriticalSection(globalLockCs);
     if l^.unreference<=0 then dispose(l, destroy);
-    leaveCriticalSection(globalLockCs);
     l:=nil;
   end;
 
@@ -874,24 +868,12 @@ FUNCTION T_literal.unreference: longint;
 
 FUNCTION T_literal.getId:T_idString;            begin result:=''; end;
 FUNCTION T_literal.getLocation:T_tokenLocation; begin result.package:=nil; result.column:=-1; result.line:=-1; end;
-FUNCTION T_literal.hasAlreadyPassedTypeCheck(CONST rulePointer: pointer): boolean;
-  begin
-    result:=(passedCustomTypeChecks<>nil) and (passedCustomTypeChecks^.contains(rulePointer));
-  end;
-
-PROCEDURE T_literal.logTypeCheckAsPassed(CONST rulePointer: pointer);
-  begin
-    enterCriticalSection(globalLockCs);
-    if (passedCustomTypeChecks=nil) then new(passedCustomTypeChecks,create);
-    passedCustomTypeChecks^.put(rulePointer);
-    leaveCriticalSection(globalLockCs);
-  end;
 
 FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declaredAt; end;
 //CONSTRUCTORS:=================================================================
 {$MACRO ON}
-{$define inline_init:=numberOfReferences:=1; passedCustomTypeChecks:=nil; literalType:=}
-CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; passedCustomTypeChecks:=nil; end;
+{$define inline_init:=numberOfReferences:=1; literalType:=}
+CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                   end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
 CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherited init}inline_init(lt_int);     val:=value; end;
@@ -3685,7 +3667,6 @@ FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CO
 VAR i: longint;
 
 INITIALIZATION
-  initCriticalSection(globalLockCs);
   errLit.init(lt_error);
   initialize(boolLit);
   boolLit[false].create(false);
@@ -3705,5 +3686,4 @@ FINALIZATION
   emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
-  doneCriticalSection(globalLockCs);
 end.
