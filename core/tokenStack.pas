@@ -145,7 +145,7 @@ PROCEDURE T_TokenStack.popDestroy(VAR recycler:T_tokenRecycler);
   begin
     recycler.disposeToken(dat[topIndex]);
     dec(topIndex);
-    if topIndex<length(dat)-100 then setLength(dat,topIndex+1);
+    if topIndex<length(dat)-256 then setLength(dat,topIndex+128);
   end;
 
 PROCEDURE T_TokenStack.popLink(VAR first: P_token);
@@ -153,13 +153,13 @@ PROCEDURE T_TokenStack.popLink(VAR first: P_token);
     dat[topIndex]^.next:=first;
     first:=dat[topIndex];
     dec(topIndex);
-    if topIndex<length(dat)-100 then setLength(dat,topIndex+1);
+    if topIndex<length(dat)-256 then setLength(dat,topIndex+128);
   end;
 
 PROCEDURE T_TokenStack.push(VAR first: P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+10);
+    if topIndex>=length(dat) then setLength(dat,topIndex+256);
     dat[topIndex]:=first;
     first:=first^.next;
   end;
@@ -167,7 +167,7 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
 PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,round(length(dat)*1.1)+10);
+    if topIndex>=length(dat) then setLength(dat,topIndex+256);
     dat[topIndex]:=first;
   end;
 

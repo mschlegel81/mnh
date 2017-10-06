@@ -3,14 +3,13 @@ INTERFACE
 USES mnh_basicTypes, myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys{$ifdef fullVersion},mnh_settings{$endif};
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=1;
-      POLISH_FREQUENCY=32;
 
 TYPE
   T_cacheEntry = record
     key: P_listLiteral;
     keyHash: T_hashInt;
     value: P_literal;
-    useCount: longint;
+    lastUse: longint;
   end;
 
   P_cache = ^T_cache;
@@ -18,7 +17,7 @@ TYPE
   private
     criticalSection:TRTLCriticalSection;
     fill: longint;
-    putCounter:longint;
+    useCounter:longint;
     cached: array of record
       data:array of T_cacheEntry;
     end;
@@ -60,6 +59,7 @@ CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
     criticalSection:=ruleCS;
     {$ifdef fullVersion}globalMemoryLimit:=settings.value^.memoryLimit;{$endif}
     fill := 0;
+    useCounter:=0;
     setLength(cached,MIN_BIN_COUNT);
     enterCriticalSection(allCacheCs);
     append(allCaches,pointer(@self));
@@ -78,7 +78,7 @@ PROCEDURE T_cache.resortBin(CONST binIdx:longint);
   begin
     with cached[binIdx] do
     for i:=1 to length(data)-1 do for j:=0 to i-1 do
-    if data[i].useCount>data[j].useCount then begin
+    if data[i].lastUse>data[j].lastUse then begin
       swapTmp:=data[i];
       data[i]:=data[j];
       data[j]:=swapTmp;
@@ -87,14 +87,15 @@ PROCEDURE T_cache.resortBin(CONST binIdx:longint);
 
 PROCEDURE T_cache.polish;
   VAR binIdx,i,j: longint;
+      dropThreshold:longint;
   begin
+    dropThreshold:=useCounter - fill shr 1;
     for binIdx:=0 to length(cached)-1 do
     with cached[binIdx] do begin
       j:=0;
       for i := 0 to length(data)-1 do
-      if (data[i].useCount>0) then begin
+      if (data[i].lastUse>dropThreshold) then begin
         data[j] := data[i];
-        data[j].useCount := data[j].useCount shr 1;
         inc(j);
       end else begin
         disposeLiteral(data[i].key);
@@ -104,7 +105,6 @@ PROCEDURE T_cache.polish;
       setLength(data, j);
       resortBin(binIdx);
     end;
-    putCounter:=0;
   end;
 
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
@@ -156,9 +156,9 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       data[i].key     :=P_listLiteral(key^.rereferenced);
       data[i].keyHash :=hash;
       data[i].value   :=value^.rereferenced;
-      data[i].useCount:= 0;
+      data[i].lastUse :=useCounter;
     end;
-    inc(putCounter);
+    inc(useCounter);
     if (MemoryUsed>globalMemoryLimit) then polishAllCaches
     else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
@@ -175,7 +175,8 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
       while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
       if i>=length(data) then result:=nil
       else begin
-        inc(data[i].useCount);
+        inc(useCounter);
+        data[i].lastUse:=useCounter;
         result:=data[i].value;
       end;
     end;
@@ -193,7 +194,7 @@ PROCEDURE T_cache.clear;
     end;
     setLength(cached,MIN_BIN_COUNT);
     fill := 0;
-    putCounter:=0;
+    useCounter:=0;
   end;
 
 INITIALIZATION

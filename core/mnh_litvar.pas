@@ -8,6 +8,8 @@ USES sysutils, math, typinfo,
      mnh_basicTypes,
      mnh_out_adapters;
 
+CONST HASH_GROW_THRESHOLD_FACTOR=2;
+      HASH_SHRINK_THRESHOLD_FACTOR=1.5;
 TYPE
   P_literal = ^T_literal;
   P_setOfPointer=^T_setOfPointer;
@@ -340,7 +342,7 @@ FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inl
 FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
 FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
-FUNCTION newListLiteral  (CONST initialSize:longint=0): P_listLiteral;       inline;
+FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral;       inline;
 FUNCTION newListLiteral  (CONST a:P_literal;
                           CONST b:P_literal=nil)      : P_listLiteral; inline;
 FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;        inline;
@@ -443,7 +445,7 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;       begin new(result,create(value));       end;
-FUNCTION newListLiteral(CONST initialSize:longint=0): P_listLiteral;       begin new(result,create(initialSize)); end;
+FUNCTION newListLiteral(CONST initialSize:longint=2): P_listLiteral;       begin new(result,create(initialSize)); end;
 FUNCTION newListLiteral(CONST a:P_literal; CONST b:P_literal=nil): P_listLiteral;
   VAR initialSize:longint=2;
   begin
@@ -646,12 +648,17 @@ PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
       inc(fill);
     end;
     dat[binIdx,j].value:=value;
-    if fill>length(dat)*4 then rehash(true);
+    if fill>length(dat)*HASH_GROW_THRESHOLD_FACTOR then rehash(true);
   end;
 
 PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
+  VAR targetSize:longint;
   begin
-    while expectedFill>length(dat)*4 do rehash(true);
+    if fill=0 then begin
+      targetSize:=length(dat);
+      while expectedFill>=targetSize*HASH_GROW_THRESHOLD_FACTOR do inc(targetSize,targetSize);
+      setLength(dat,targetSize);
+    end else while expectedFill>length(dat)*HASH_GROW_THRESHOLD_FACTOR do rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
@@ -673,7 +680,7 @@ FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE
       previousValue:=dat[binIdx,j].value;
     end;
     dat[binIdx,j].value:=entry.value;
-    if fill>length(dat)*4 then rehash(true);
+    if fill>length(dat)*HASH_GROW_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
@@ -697,7 +704,7 @@ FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT
       previousValue:=dat[binIdx,j].value;
     end;
     dat[binIdx,j].value:=value;
-    if fill>length(dat)*4 then rehash(true);
+    if fill>length(dat)*HASH_GROW_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
@@ -736,7 +743,7 @@ FUNCTION G_literalKeyMap.drop(CONST key:P_literal):CACHE_ENTRY;
       if (j<i) then dat[binIdx,j]:=dat[binIdx,i];
       setLength(dat[binIdx],i);
       dec(fill);
-      if fill<length(dat)*3 then rehash(false);
+      if fill<length(dat)*HASH_SHRINK_THRESHOLD_FACTOR then rehash(false);
       exit(result);
     end;
   end;
@@ -847,7 +854,6 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
 //    result:=dynLiteralType;
 //  end;
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; passedCustomTypeChecks:=nil; end;
 
 PROCEDURE T_literal.rereference;
   begin
@@ -883,14 +889,17 @@ PROCEDURE T_literal.logTypeCheckAsPassed(CONST rulePointer: pointer);
 
 FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declaredAt; end;
 //CONSTRUCTORS:=================================================================
-CONSTRUCTOR T_voidLiteral.create();                              begin inherited init(lt_void);                   end;
-CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init(lt_boolean); val:=value; end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init(lt_int);     val:=value; end;
-CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init(lt_real);    val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string);  val:=value; enc:=se_testPending; end;
+{$MACRO ON}
+{$define inline_init:=numberOfReferences:=1; passedCustomTypeChecks:=nil; literalType:=}
+CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; passedCustomTypeChecks:=nil; end;
+CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                   end;
+CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
+CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherited init}inline_init(lt_int);     val:=value; end;
+CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherited init}inline_init(lt_real);    val:=value; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
   begin
-    inherited init(lt_expression);
+    {inherited init}inline_init(lt_expression);
     expressionType:=eType;
     declaredAt:=location;
   end;
@@ -1981,7 +1990,7 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
   begin
     result:=@self;
     if (L=nil) or ((L^.literalType=lt_void) and not(forceVoidAppend)) then exit;
-    if length(dat)<=fill then setLength(dat,round(fill*1.1)+1);
+    if length(dat)>fill then begin end else setLength(dat,round(fill*1.25)+2);
     dat[fill]:=L;
     inc(fill);
     if incRefs then L^.rereference;
@@ -2362,7 +2371,6 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       adapters.raiseError('Operator '+C_tokenInfo[op].defaultId+' cannot be applied to operands of type '+LHS^.typeString+' and '+RHS^.typeString,tokenLocation);
     end;
 
-  {$MACRO ON}
   {$define defaultLHScases:=
     lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,threadContext));
     lt_void:       exit(RHS^.rereferenced);
@@ -3003,23 +3011,49 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
   VAR counterSet:T_occurenceCount;
       prevMask:word; //dummy
       i:longint;
+      maxSubsetSize:longint=0;
       entry:T_occurenceCount.CACHE_ENTRY;
       iter:T_arrayOfLiteral;
       x:P_literal;
       acceptMask:word=0;
+
+  FUNCTION resultByRecursion:P_setLiteral;
+    VAR innerCallParam,outerCallParam:P_listLiteral;
+        i:longint;
+    begin
+      outerCallParam:=newListLiteral();
+      innerCallParam:=newListLiteral(16);
+      for i:=0 to params^.size-1 do begin
+        innerCallParam^.append(params^.dat[i],true);
+        if innerCallParam^.size>=16 then begin
+          outerCallParam^.append(setIntersect(innerCallParam),false);
+          disposeLiteral(innerCallParam);
+          innerCallParam:=newListLiteral(16);
+        end;
+      end;
+      if innerCallParam^.size>=1 then outerCallParam^.append(setIntersect(innerCallParam),false);
+      disposeLiteral(innerCallParam);
+      result:=setIntersect(outerCallParam);
+      disposeLiteral(outerCallParam);
+    end;
+
   begin
-    if not((params<>nil) and (params^.size>=1)) or (params^.size>16) then exit(nil);
+    if not((params<>nil) and (params^.size>=1))                                            then exit(nil);
     for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil);
-    if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet());
+    if params^.size>16 then exit(resultByRecursion);
+    if params^.size=1  then exit(P_compoundLiteral(params^.value[0])^.toSet());
 
     counterSet.create;
-    for i:=0 to params^.size-1 do begin//with P_compoundLiteral(params^[i])^ do
+    for i:=0 to params^.size-1 do if P_compoundLiteral(params^.value[i])^.size>maxSubsetSize then maxSubsetSize:=P_compoundLiteral(params^.value[i])^.size;
+    counterSet.rehashForExpectedSize(maxSubsetSize);
+    for i:=0 to params^.size-1 do begin
       iter:=P_compoundLiteral(params^.value[i])^.iteratableList;
       for x in iter do counterSet.putNew(x,counterSet.get(x,0) or bit[i],prevMask);
       disposeLiteral(iter);
       inc(acceptMask,bit[i]);
     end;
     result:=newSetLiteral;
+    result^.dat.rehashForExpectedSize(maxSubsetSize);
     for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(entry.key,true);
     counterSet.destroy;
   end;
