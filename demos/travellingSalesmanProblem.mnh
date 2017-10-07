@@ -71,23 +71,25 @@ private scSort_(ax:Numeric,ay:Numeric,bx:Numeric,by:Numeric,cx:Numeric,cy:Numeri
       end)
   : size(x)=1 ? [x|y] : [];
 
+private SWAP:=[0,2,1,3];
 //*Tries to reduce path length by swapping adjacent nodes
 polish(L)->begin
   local result:=L;
   local changing:=true;
   while(changing,begin
     changing:=false;
-    [0..size(result)-1].each(i,begin
-      local beforeSwapping:=len4@(result.get([i,i+1,i+2,i+3] mod size(result)));
-      local afterSwapping :=len4@(result.get([i,i+2,i+1,i+3] mod size(result)));
-      afterSwapping<beforeSwapping ? begin
-        changing:=true;
-        local j0:=(i+1) mod size(result);
-        local j1:=(i+2) mod size(result);
-        result:=result.get([0..size(result)-1].each(j,j=j0 ? j1 :
-                                                      j=j1 ? j0 : j));
-        void;
-      end : void;
+    random(size(result)).sortPerm.each(i,begin
+      local J:=[i..i+3] mod size(result);
+      len4@(result.get(J[SWAP]))<
+      len4@(result.get(J))
+      ? begin
+          changing:=true;
+          local tmp   :=result[J[1]];
+          result[J[1]]:=result[J[2]];
+          result[J[2]]:=tmp;
+          void;
+        end
+      : void;
     end);
   end);
   print('Path length after polishing is    ',round(pathLength(result),3));

@@ -15,6 +15,7 @@ TYPE
   {$endif}
 
   P_token=^T_token;
+  PP_token=^P_token;
   P_abstractRule=^T_abstractRule;
   P_tokenRecycler=^T_tokenRecycler;
   T_abstractRule=object(T_objectWithIdAndLocation)
