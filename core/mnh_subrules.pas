@@ -364,7 +364,6 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
 DESTRUCTOR T_inlineExpression.destroy;
   VAR i:longint;
   begin
-    inherited destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);

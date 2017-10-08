@@ -10,8 +10,9 @@ USES //MNH:
 TYPE
   P_tokenStack=^T_TokenStack;
   T_TokenStack=object
+    alloc,
     topIndex:longint;
-    dat:array of P_token;
+    dat:PP_token;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE popDestroy(VAR recycler:T_tokenRecycler);
@@ -67,9 +68,6 @@ TYPE
   end;
 
 IMPLEMENTATION
-
-{ T_callStack }
-
 CONSTRUCTOR T_callStack.create;
   begin
     setLength(dat,0);
@@ -132,20 +130,20 @@ FUNCTION T_callStack.getEntry(CONST index:longint):T_callStackEntry;
 
 CONSTRUCTOR T_TokenStack.create;
   begin
-    setLength(dat,0);
+    alloc:=8;
+    getMem(dat,alloc*sizeOf(P_token));
     topIndex:=-1;
   end;
 
 DESTRUCTOR T_TokenStack.destroy;
   begin
-    setLength(dat,0);
+    freeMem(dat,alloc*sizeOf(P_token));
   end;
 
 PROCEDURE T_TokenStack.popDestroy(VAR recycler:T_tokenRecycler);
   begin
     recycler.disposeToken(dat[topIndex]);
     dec(topIndex);
-    if topIndex<length(dat)-256 then setLength(dat,topIndex+128);
   end;
 
 PROCEDURE T_TokenStack.popLink(VAR first: P_token);
@@ -153,13 +151,15 @@ PROCEDURE T_TokenStack.popLink(VAR first: P_token);
     dat[topIndex]^.next:=first;
     first:=dat[topIndex];
     dec(topIndex);
-    if topIndex<length(dat)-256 then setLength(dat,topIndex+128);
   end;
 
 PROCEDURE T_TokenStack.push(VAR first: P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,topIndex+256);
+    if topIndex>=alloc then begin
+      inc(alloc,alloc);
+      ReAllocMem(dat,alloc*sizeOf(P_token));
+    end;
     dat[topIndex]:=first;
     first:=first^.next;
   end;
@@ -167,7 +167,10 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
 PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
   begin
     inc(topIndex);
-    if topIndex>=length(dat) then setLength(dat,topIndex+256);
+    if topIndex>=alloc then begin
+      inc(alloc,alloc);
+      ReAllocMem(dat,alloc*sizeOf(P_token));
+    end;
     dat[topIndex]:=first;
   end;
 

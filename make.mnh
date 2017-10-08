@@ -86,7 +86,7 @@ end : fail('File  '+source+' does not exist');
 
 private BUILD_LOG:='build.log';
 private buildExe(B:BuildConfig)->
-  B.needBuilt
+  B.needBuilt OR (B.buildBlindly AND B.canBuild)
   ? begin
       ensureCodeHash;
       ensureBuiltNumber;
@@ -99,14 +99,16 @@ private buildExe(B:BuildConfig)->
                       compilerOutput;
       BUILD_LOG.appendFileLines(compilerOutput);
       myMove(B[5],B[2]);
-      local ok:=not(B.needBuilt);
-      ok ? tprint('Built successful')
-         : fail('Built failed - see '&BUILD_LOG&' for details');
+      B.buildBlindly
+      ? print('Unchecked build. Look at the output file ',B[2])
+      : B.needBuilt
+        ? fail('Built failed - see '&BUILD_LOG&' for details')
+        : tprint('Built successful');
     end
   : void;
 
 testExe(B:BuildConfig,...)->
-  not(B.canBuild)
+  not(B.canBuild) OR B.buildBlindly
   ? void
   : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuilt(B)
     ? void

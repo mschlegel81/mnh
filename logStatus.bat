@@ -1,1 +1,0 @@
-mnh.exe +out status.log make.mnh status

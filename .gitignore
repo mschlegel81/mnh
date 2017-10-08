@@ -27,5 +27,6 @@ mnh_light_debug
 versions/*.7z
 *.bak
 buildLogDigest.datastore0
+mnh_prof
 mnhi
 mnhi_debug

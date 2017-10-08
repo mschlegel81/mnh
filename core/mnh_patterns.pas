@@ -17,7 +17,7 @@ TYPE
       typeWhitelist    :T_literalTypeSet;
       restrictionId    :T_idString;
       builtinTypeCheck :T_typeCheck;
-      customTypeCheck  :P_expressionLiteral;
+      customTypeCheck  :P_abstractRule;
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
@@ -69,9 +69,6 @@ TYPE
       PROCEDURE toParameterIds(CONST tok:P_token);
   end;
 
-  T_customTypeCheckToExpressionCallback=FUNCTION(CONST rule:pointer):P_expressionLiteral;
-
-VAR customTypeCheckToExpressionCallback:T_customTypeCheckToExpressionCallback;
 IMPLEMENTATION
 CONSTRUCTOR T_patternElement.createAnonymous;
   begin
@@ -97,11 +94,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     L:=parameterList.value[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
     if restrictionType=tt_customTypeCheck then begin
-      if L^.hasAlreadyPassedTypeCheck(customTypeCheck) then exit(true);
-      if customTypeCheck^.evaluateToBoolean(location,@context,L) then begin
-        L^.logTypeCheckAsPassed(customTypeCheck);
-        exit(true);
-      end else exit(false);
+      exit(customTypeCheck^.evaluateToBoolean(L,location,true,@context,@context.recycler));
     end;
     if (restrictionIdx>=0) and (restrictionType=tt_typeCheck) then begin
       if builtinTypeCheck=tc_typeCheckExpression
@@ -121,7 +114,7 @@ FUNCTION T_patternElement.toString: ansistring;
     result:='';
     case restrictionType of
       tt_literal: result:=id;
-      tt_customTypeCheck    : result:=id+':'+customTypeCheck^.getParentId;
+      tt_customTypeCheck    : result:=id+':'+customTypeCheck^.getId;
       tt_typeCheck: if C_typeCheckInfo[builtinTypeCheck].modifiable and (restrictionIdx>=0)
                     then result:=id+':'+C_typeCheckInfo[builtinTypeCheck].name+'('+intToStr(restrictionIdx)+')'
                     else result:=id+':'+C_typeCheckInfo[builtinTypeCheck].name;
@@ -582,7 +575,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
 
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
-              rulePatternElement.customTypeCheck:=customTypeCheckToExpressionCallback(parts[i].first^.data);
+              rulePatternElement.customTypeCheck:=parts[i].first^.data;
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
               assertNil(parts[i].first);
