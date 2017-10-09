@@ -1071,7 +1071,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       {$endif}
     end else if statement.firstToken^.tokType=tt_modifier then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
-        context.adapters^.raiseError('Datastore declaration is not allowed here',assignmentToken^.location);
+        context.adapters^.raiseError('Datastore declaration is not allowed here',statement.firstToken^.location);
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;

@@ -161,6 +161,7 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
     result:=(restrictionType = pe.restrictionType)
         and (restrictionIdx  = pe.restrictionIdx )
         and (builtinTypeCheck= pe.builtinTypeCheck)
+        and (customTypeCheck = pe.customTypeCheck)
         and ((restrictionValue =nil) and (pe.restrictionValue =nil)
           or (restrictionValue<>nil) and (pe.restrictionValue<>nil)
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
