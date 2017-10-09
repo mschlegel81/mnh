@@ -74,10 +74,11 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       progressLog:T_progressLog;
       logLinesDisplayed:longint=0;
       outputMethod:P_expressionLiteral=nil;
+      thisWorkflow:T_imageManipulationWorkflow;
 
   FUNCTION newFromWorkflowImage:P_rawImage;
     begin
-      new(result,create(workflowImage));
+      new(result,create(thisWorkflow.workflowImage));
     end;
 
   PROCEDURE doOutput(CONST s:string);
@@ -123,15 +124,15 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         context.adapters^.raiseError('No output file given',tokenLocation);
         isValid:=false;
       end;
-      enterCriticalSection(imigCS);
-      workflow:=createWorkflow(list0,false,isValid,tokenLocation,context);
+      if (source=C_nullSourceOrTargetFileName) or (dest=C_nullSourceOrTargetFileName) then enterCriticalSection(imigCS);
+      thisWorkflow:=createWorkflow(list0,false,isValid,tokenLocation,context);
       if isValid and (source=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then begin
           context.adapters^.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
           isValid:=false;
         end else begin
-          workflowImage.copyFromPixMap(value^);
+          thisWorkflow.workflowImage.copyFromPixMap(value^);
           doOutput('Input for workflow copied from current image');
         end;
         unlock;
@@ -139,46 +140,44 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       if isValid then begin
         if source<>'' then begin
                              doOutput('Executing workflow with input="'+source+'", output="'+dest+'"');
-                             workflow.executeForTarget(source,sizeLimit,dest);
+                             thisWorkflow.executeForTarget(source,sizeLimit,dest);
                            end
                       else begin
                              doOutput('Executing workflow with xRes='+intToStr(xRes)+', yRes='+intToStr(yRes)+' output="'+dest+'"');
-                             workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
+                             thisWorkflow.executeForTarget(xRes,yRes,sizeLimit,dest);
                            end;
         lastOutput:=now;
-        while progressQueue.calculating and (context.adapters^.noErrors) do begin
-          progressLog:=progressQueue.log;
+        while thisWorkflow.progressQueue.calculating and (context.adapters^.noErrors) do begin
+          progressLog:=thisWorkflow.progressQueue.log;
           for i:=logLinesDisplayed to length(progressLog)-1 do begin
-            doOutput(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message);
+            doOutput(intToStr(i+1)+'/'+intToStr(thisWorkflow.stepCount)+': '+progressLog[i].message);
             logLinesDisplayed:=i+1;
             lastOutput:=now;
           end;
           if (now-lastOutput>aditionalOutputInterval) then begin
-            doOutput(progressQueue.getProgressString(true));
+            doOutput(thisWorkflow.progressQueue.getProgressString(true));
             lastOutput:=now;
           end;
           ThreadSwitch;
           sleep(1000);
         end;
-        progressLog:=progressQueue.log;
+        progressLog:=thisWorkflow.progressQueue.log;
         for i:=logLinesDisplayed to length(progressLog)-1 do begin
-          doOutput(intToStr(i+1)+'/'+intToStr(workflow.stepCount)+': '+progressLog[i].message);
+          doOutput(intToStr(i+1)+'/'+intToStr(thisWorkflow.stepCount)+': '+progressLog[i].message);
           logLinesDisplayed:=i+1;
         end;
         if not(context.adapters^.noErrors) then context.adapters^.raiseWarning('Image calculation incomplete',tokenLocation);
-        progressQueue.cancelCalculation(true);
+        thisWorkflow.progressQueue.cancelCalculation(true);
       end;
-      workflow.destroy;
       if (context.adapters^.noErrors) and (dest=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then value:=newFromWorkflowImage
-                     else value^.copyFromPixMap(workflowImage);
+                     else value^.copyFromPixMap(thisWorkflow.workflowImage);
         unlock;
         doOutput('Output of workflow copied to current image');
       end;
-      workflowImage.clear;
-
-      leaveCriticalSection(imigCS);
+      thisWorkflow.destroy;
+      if (source=C_nullSourceOrTargetFileName) or (dest=C_nullSourceOrTargetFileName) then leaveCriticalSection(imigCS);
       if isValid then exit(newVoidLiteral) else exit(nil);
     end else result:=nil;
   end;
