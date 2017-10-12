@@ -64,7 +64,7 @@ private ensureBuiltNumber->begin
   ? void
   : begin
       writeFile('core/built_number.inc',expectedContents);
-      tprint('core/built_number.inc updated with current hash ',getBuiltNumber(ensureCodeHash));
+      tprint('core/built_number.inc updated with current build number ',getBuiltNumber(ensureCodeHash));
     end;
 end;
 
