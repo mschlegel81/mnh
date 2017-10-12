@@ -387,11 +387,15 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     end;
     //-------------------------------------------------------------:major grid
     //========================================================:coordinate grid
-    if scalingOptions.axisTrafo['y'].logscale
-    then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin
-    else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0)*scalingFactor);
-    if      yBaseLine<0 then yBaseLine:=0
-    else if yBaseLine>=intendedHeight*scalingFactor then yBaseLine:=intendedHeight*scalingFactor-1;
+    try
+      if scalingOptions.axisTrafo['y'].logscale
+      then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin
+      else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0)*scalingFactor);
+      if      yBaseLine<0 then yBaseLine:=0
+      else if yBaseLine>=intendedHeight*scalingFactor then yBaseLine:=intendedHeight*scalingFactor-1;
+    except
+      yBaseLine:=0;
+    end;
     //row data:===============================================================
     for rowId:=0 to length(row)-1 do begin
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);

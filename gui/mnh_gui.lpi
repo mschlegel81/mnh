@@ -141,6 +141,7 @@
               <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
             </Verbosity>
             <CustomOptions Value="-ddebugMode
+-ddebug
 -dfullVersion
 -dimig"/>
           </Other>

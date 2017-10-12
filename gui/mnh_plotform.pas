@@ -435,6 +435,16 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
 
     VAR i:byte;
         buttonCaption:string;
+        hMax:longint=0;
+    PROCEDURE adaptHeight(CONST component:TControl);
+      VAR h:longint;
+      begin
+        if component.visible then begin
+          h:=component.top+component.height;
+          if h>hMax then hMax:=h;
+        end;
+      end;
+
     begin
       InteractionPanel.visible:=(isPlotInteractive or (animation.frameCount>0));
       if not(InteractionPanel.visible) then begin
@@ -443,17 +453,27 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
       end;
       AnimationGroupBox.visible:=(animation.frameCount>0);
       AnimationGroupBox.enabled:=(animation.frameCount>0);
+      adaptHeight(AnimationGroupBox);
+
       ButtonLeaveInteractiveMode.visible:=isPlotInteractive;
       ButtonLeaveInteractiveMode.enabled:=isPlotInteractive;
+      adaptHeight(ButtonLeaveInteractiveMode);
+
       InteractiveLabel.visible:=isPlotInteractive;
       InteractiveLabel.caption:=dynamicPlotLabelText.value;
+      InteractiveLabel.height:=0;
+      InteractiveLabel.Constraints.MinHeight:=0;
+      adaptHeight(InteractiveLabel);
+
       for i:=0 to 7 do begin
         CustomEventButton(i).visible:=isCustomEventEnabled(i,buttonCaption);
         CustomEventButton(i).enabled:=CustomEventButton(i).visible;
         CustomEventButton(i).caption:=buttonCaption;
+        adaptHeight(CustomEventButton(i));
       end;
-      InteractiveLabel.height:=0;
-      InteractiveLabel.Constraints.MinHeight:=0;
+
+      InteractionPanel.AutoSize:=false;
+      InteractionPanel.height:=hMax;
     end;
 
   begin
