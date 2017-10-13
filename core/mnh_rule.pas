@@ -484,7 +484,7 @@ FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CON
     end;
     tempToken      :=context.recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
-    new(P_inlineExpression(result),createFromInline(tempToken,context));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
 
 FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
@@ -500,7 +500,7 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadCon
     end;
     tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
-    new(P_inlineExpression(result),createFromInline(tempToken,context));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
 
 FUNCTION T_mutableRule.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
@@ -509,7 +509,7 @@ FUNCTION T_mutableRule.getFunctionPointer(VAR context: T_threadContext; CONST ru
     tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=context.recycler.newToken(location,'',tt_braceOpen );
     tempToken^.next^.next:=context.recycler.newToken(location,'',tt_braceClose);
-    new(P_inlineExpression(result),createFromInline(tempToken,context));
+    new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
 
 FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;

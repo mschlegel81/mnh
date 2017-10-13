@@ -48,6 +48,7 @@ TYPE
       functionIdsReady:boolean;
       pattern:T_pattern;
       preparedBody:array of T_preparedToken;
+      customId:T_idString;
 
       //save related:
       indexOfSave:longint;
@@ -64,7 +65,7 @@ TYPE
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_threadContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
-      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext);
+      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext; CONST customId_:T_idString='');
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
@@ -259,6 +260,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
 CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
   begin
     inherited create(srt,location);
+    customId:='';
     initCriticalSection(subruleCallCs);
     functionIdsReady:=false;
     setLength(preparedBody,0);
@@ -325,13 +327,14 @@ PROCEDURE T_inlineExpression.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context: T_threadContext);
+CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context: T_threadContext; CONST customId_:T_idString);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
       subExpressionLevel:longint=0;
   begin
     init(et_inline_for_literal,rep^.location);
+    customId:=customId_;
     pattern.create;
     t:=rep;
     i:=0;
@@ -919,11 +922,12 @@ FUNCTION T_subruleExpression.getDocTxt: ansistring;
 
 FUNCTION T_inlineExpression.getId: T_idString;
   begin
-    result:=toString(50);
+    if customId='' then result:='inline_expression' else result:=customId;
   end;
 
 FUNCTION T_subruleExpression.getId: T_idString;
   begin
+    if customId<>'' then exit(customId);
     if parent=nil then result:='?'
                   else result:=parent^.getId;
     result:=result+pattern.toString;
