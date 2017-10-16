@@ -221,7 +221,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             for j:=0 to length(messageText)-1 do processDirectPrint(messageText[j]);
           end;
         mt_endOfEvaluation: begin
-          if plotForm.InteractionPanel.Visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+          if plotForm.InteractionPanel.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
           parentForm.onEndOfEvaluation;
         end;
         mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
