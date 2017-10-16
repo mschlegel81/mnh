@@ -98,6 +98,7 @@ object plotForm: TplotForm
       end>
     FlowStyle = fsLeftRightTopBottom
     TabOrder = 1
+    Visible = False
     object ButtonLeaveInteractiveMode: TButton
       Left = 1
       Height = 25
