@@ -468,7 +468,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
           if screenRow[i].valid then begin
             if lastWasValid then
               drawPatternRect(round(lastX*0.95+screenRow[i].x*0.05), lastY,
-                              round(lastX*0.05+screenRow[i].x*0.95), lastY,ps_fillSolid in row[rowId].style.style,true);
+                              round(lastX*0.05+screenRow[i].x*0.95), lastY,ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>0);
             lastX:=screenRow[i].x;
             lastY:=screenRow[i].y;
             lastWasValid:=screenRow[i].valid;
