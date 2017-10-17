@@ -515,7 +515,7 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_futureTaskEnvi
     callingContext:=environment.callingContext;
     parent        :=callingContext^.parent;
     adapters      :=callingContext^.adapters;
-    options       :=callingContext^.options;
+    options       :=callingContext^.options-[tco_spawnWorker];
     allowedSideEffects:=environment.initialAllow;
     valueStore^.clear;
     valueStore^.parentStore:=environment.values;
@@ -817,7 +817,7 @@ FUNCTION T_taskQueue.dequeue: P_futureTask;
   end;
 
 PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
-  VAR task:P_futureTask;
+  VAR task:P_futureTask=nil;
   begin
     task:=dequeue;
     if task<>nil then task^.evaluate(context);

@@ -8,7 +8,7 @@ USES sysutils,math,
      mnh_funcs,
      mnh_tokens,
      mnh_contexts,
-     mnh_datastores, mnh_caches, mnh_patterns, mnh_subrules;
+     mnh_datastores, mnh_caches, mnh_subrules;
 TYPE
   T_subruleArray=array of P_subruleExpression;
   T_outlineEntry=record location:T_tokenLocation; isPublic:boolean; id:string; info:string; end;
