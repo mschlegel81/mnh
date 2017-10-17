@@ -843,7 +843,12 @@ PROCEDURE T_adapters.setExitCode;
 FUNCTION T_adapters.triggersBeep:boolean;
   VAR mt:T_messageType;
   begin
-    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>0) then exit(true);
+    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>0) then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: Beep triggered by message type ',mt);
+      {$endif}
+      exit(true);
+    end;
     result:=false;
   end;
 

@@ -3080,9 +3080,6 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
     VAR old:P_compoundLiteral;
     begin
       if toMutate^.numberOfReferences<=1 then exit;
-      {$ifdef debugMode}
-      writeln(stdErr,'        DEBUG: cloning for mutation ',toMutate^.typeString);
-      {$endif}
       old:=toMutate;
       toMutate:=old^.clone;
       old^.unreference;
