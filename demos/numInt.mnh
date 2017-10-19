@@ -12,6 +12,15 @@ end;
 integrate(f:Expression(1),x0:Numeric,x1<>x0,tolerance>0.0)->
 integrate(f,x0,f(x0),x1,f(x1),tolerance*100);
 
+//*As above but with a minimum number of intervals
+integrate(f:Expression(1),x0:Numeric,x1<>x0,tolerance>0.0,minIntervals>=1)->
+begin
+  local X:=[0..minIntervals]/minIntervals*(x1-x0)+x0;
+  local Y:=X.map(f);
+  [0..minIntervals-1].each(i,
+    integrate(f,X[i],Y[i],X[i+1],Y[i+1],tolerance*100),+);
+end;
+
 main->
   [[{$x^3},0,1  ,1E-5],
    [{1/$x},1,100,1E-5],
