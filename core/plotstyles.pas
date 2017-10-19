@@ -54,7 +54,7 @@ TYPE
 
   T_style = object
     private
-      originalIndex:byte;
+      transparentIndex:byte;
     public
     txt:string;
     style: T_plotStyles;
@@ -62,7 +62,7 @@ TYPE
     styleModifier: double;
     CONSTRUCTOR create(CONST index: longint);
     DESTRUCTOR destroy;
-    PROCEDURE parseStyle(CONST styleString: ansistring);
+    PROCEDURE parseStyle(CONST styleString: ansistring; VAR transparentCount:longint);
     FUNCTION toString:ansistring;
     FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex:byte):T_scaleAndColor;
   end;
@@ -103,7 +103,7 @@ CONST C_defaultColor: array[0..7] of record
 
 CONSTRUCTOR T_style.create(CONST index: longint);
   begin
-    originalIndex:=index and 255;
+    transparentIndex:=index and 255;
     style:=[ps_straight];
     color:=C_defaultColor[index mod length(C_defaultColor)].color;
     txt:='';
@@ -114,7 +114,7 @@ DESTRUCTOR T_style.destroy;
   begin
   end;
 
-PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
+PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount:longint);
   FUNCTION parseColorOption(colorOption: shortString; OUT r, g, b: byte): boolean;
     PROCEDURE HSV2RGB(H,S,V: single; OUT r,g,b: byte);
       VAR hi,p,q,t: byte;
@@ -233,6 +233,14 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
       if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
     until options = '';
     if (style-[ps_filled,ps_fillSolid])=[] then include(style,ps_straight);
+
+    if ((ps_filled  in style) or
+        (ps_bar     in style) or
+        (ps_tube    in style) or
+        (ps_polygon in style)) and not(ps_fillSolid in style) then begin
+      transparentIndex:=transparentCount and 255;
+      inc(transparentCount);
+    end;
   end;
 
 FUNCTION T_style.toString:ansistring;
@@ -267,13 +275,13 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
   VAR scalingFactor,ideal:double;
   begin
     result.solidColor:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
-    if sampleIndex=SINGLE_SAMPLE_INDEX then case originalIndex and 3 of
+    if sampleIndex=SINGLE_SAMPLE_INDEX then case transparentIndex and 3 of
       0: result.solidStyle:=bsFDiagonal ;
       1: result.solidStyle:=bsBDiagonal ;
       2: result.solidStyle:=bsHorizontal;
       3: result.solidStyle:=bsVertical  ;
     end else begin
-      if (sampleIndex-originalIndex) and 3=0
+      if (sampleIndex-transparentIndex) and 3=0
       then result.solidStyle:=bsSolid
       else result.solidStyle:=bsClear;
     end;
