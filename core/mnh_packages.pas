@@ -735,6 +735,7 @@ DESTRUCTOR T_packageReference.destroy;
 PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
   VAR extendsLevel:byte=0;
       profile:boolean=false;
+
   PROCEDURE interpretIncludeClause;
     VAR locationForErrorFeedback:T_tokenLocation;
         newId:string;

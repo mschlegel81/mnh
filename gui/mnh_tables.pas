@@ -11,9 +11,6 @@ USES
   myGenerics,myStringUtil,mnh_fileWrappers,mnh_profiling;
 
 TYPE
-
-  { TtableForm }
-
   TtableForm = class(TForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
