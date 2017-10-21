@@ -1,0 +1,34 @@
+memoized private
+rd(P:List(0))->0;
+rd(P:List(1))->P[0,1];
+rd(P:List(2))->P.agg(-).agg(/);
+rd(P:List)->(P.head[0]-P.trailing[0])/(rd(P.leading)-rd(P.tail))+rd(P.tail.leading);
+
+//@demo_for=expressions
+//*Returns an expression representing the Thiele interpolation throught the given points
+ThieleInterpolation(points:List)->begin
+  local result:=({$x}-points.trailing[0])*(1/(points.rd-points.tail(2).rd));
+  [points.size-2..0].each(i,
+    result:=({$x}-points[i,0])/(points.head(i+2).rd-points.head(i).rd+result)
+  );
+  points[0,1]+result;
+end;
+
+//*Samples function f between points x0 and x1 using sampleCount samples
+sample(f:Expression(1),x0,x1,sampleCount>=2)->sample(f,([0..sampleCount-1]/(sampleCount-1)*(x1-x0)+x0));
+//*Samples function f using x as samples
+sample(f:Expression(1),x:NumericList)->x.map({[$x,f($x)]});
+//*Converts a a list of [x,y]-samples to a list of [y,x]-samples (ordered by ascending y)
+inverse(sampleList:List)->sampleList.map(::reverseList).sort(0);
+
+//*See: http://rosettacode.org/wiki/Thiele%27s_interpolation_formula
+main->begin
+  local invSample:={sample($0,0.05*[0..31]).inverse.ThieleInterpolation};
+  local aSin:=invSample(::sin);
+  local aCos:=invSample(::cos);
+  local aTan:=invSample(::tan);
+  print('Internal pi         : ',pi);
+  print('Thiele 6*InvSin(0.5): ',6*aSin(0.5));
+  print('Thiele 3*InvCos(0.5): ',3*aCos(0.5));
+  print('Thiele 4*InvTan(1)  : ',4*aTan(1));
+end;
