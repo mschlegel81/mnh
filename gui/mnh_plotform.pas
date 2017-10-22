@@ -86,6 +86,7 @@ TYPE
   private
     animationFrameIndex:longint;
     tempPlot:T_plot;
+    tempPlotShown:boolean;
     animation:T_plotSeries;
     fpsSamplingStart:double;
     framesSampled:longint;
@@ -152,6 +153,7 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
     tempPlot.createWithDefaults;
+    tempPlotShown:=false;
     animation.create;
     fpsSamplingStart:=now;
     framesSampled:=0;
@@ -323,7 +325,8 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
   begin
     if (animationFrameIndex>=0) and (animationFrameIndex<animation.frameCount)
     then p:=animation.options[animationFrameIndex].screenToReal(x,y)
-    else p:=guiAdapters^.plot^.options.screenToReal(x,y);
+    else if tempPlotShown then p:=tempPlot.options.screenToReal(x,y)
+                else p:=guiAdapters^.plot^.options.screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
       if (x<>lastMouseX) or (y<>lastMouseY) then begin
@@ -406,6 +409,11 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     currentScalingOptions:=guiAdapters^.plot^.options;
     updateCurrent;
     guiAdapters^.plot^.options:=currentScalingOptions;
+    if tempPlotShown then begin
+      currentScalingOptions:=tempPlot.options;
+      updateCurrent;
+      tempPlot.options:=currentScalingOptions;
+    end;
     pullPlotSettingsToGui();
     if animation.frameCount<=0 then doOrPostPlot();
     i:=0;
@@ -486,9 +494,11 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
     end;
     if useTemporary then begin
       tempPlot.renderPlot(plotImage,getPlotQuality);
+      tempPlotShown:=true;
       guiAdapters^.resetFlagsAfterPlotDone;
     end else begin
       guiAdapters^.plot^.renderPlot(plotImage,getPlotQuality);
+      tempPlotShown:=false;
       guiAdapters^.resetFlagsAfterPlotDone;
     end;
   end;
@@ -496,8 +506,10 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
 PROCEDURE TplotForm.doOrPostPlot;
   begin
     if runEvaluator.evaluationRunning
-    then guiAdapters^.logDeferredPlot
-    else doPlot();
+    then begin
+      if tempPlotShown then doPlot(true);
+      guiAdapters^.logDeferredPlot;
+    end else doPlot();
   end;
 
 FUNCTION TplotForm.timerTick:boolean;

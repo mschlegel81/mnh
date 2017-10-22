@@ -22,7 +22,7 @@ TYPE
       cs: TRTLCriticalSection;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
-
+      transparentCount:longint;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
       PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
@@ -202,6 +202,7 @@ PROCEDURE T_plot.clear;
     system.enterCriticalSection(cs);
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row, 0);
+    transparentCount:=0;
     system.leaveCriticalSection(cs);
   end;
 
@@ -212,7 +213,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     index:=length(row);
     setLength(row, index+1);
     row[index].create(index,rowData);
-    if trim(styleOptions)<>'' then row[index].style.parseStyle(styleOptions);
+    if trim(styleOptions)<>'' then row[index].style.parseStyle(styleOptions,transparentCount);
     system.leaveCriticalSection(cs);
   end;
 
@@ -754,6 +755,7 @@ PROCEDURE T_plot.CopyFrom(VAR p:T_plot);
   begin
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
+    transparentCount:=p.transparentCount;
     scalingOptions:=p.scalingOptions;
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row,length(p.row));
