@@ -114,6 +114,7 @@ TYPE
       FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString;
       PROCEDURE triggerUpdate(CONST editor:P_codeProvider);
       FUNCTION resolveImport(CONST id:string):string;
+      FUNCTION getImportablePackages:T_arrayOfString;
   end;
 
   P_postEvaluationData=^T_postEvaluationData;
@@ -492,6 +493,11 @@ FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
     if package=nil then result:=''
                    else result:=package^.getSecondaryPackageById(id);
     leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_codeAssistanceData.getImportablePackages:T_arrayOfString;
+  begin
+    result:=listScriptIds(extractFilePath(package^.getPath));
   end;
 
 FUNCTION codeAssistantCheckThread(p:pointer):ptrint;

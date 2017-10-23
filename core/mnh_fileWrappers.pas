@@ -61,6 +61,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
+FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
@@ -123,6 +124,31 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
                      and (extractFilePath(paramStr(0))<>configDir)
     then recursePath     (extractFilePath(paramStr(0)));
     if result<>'' then putFileCache(rootPath,id,result);
+  end;
+
+FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
+  PROCEDURE recursePath(CONST path: ansistring);
+    VAR info: TSearchRec;
+    begin
+      if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0)
+      then repeat
+        if ((info.Attr and faDirectory)<>faDirectory) then
+        appendIfNew(result,filenameToPackageId(info.name));
+      until (findNext(info)<>0) ;
+      sysutils.findClose(info);
+
+      if findFirst(path+'*', faAnyFile, info) = 0
+      then repeat
+        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..')
+        then recursePath(path+info.name+DirectorySeparator);
+      until (findNext(info)<>0);
+      sysutils.findClose(info);
+    end;
+  begin
+    setLength(result,0);
+    recursePath(rootPath);
+    recursePath(configDir);
+    recursePath(extractFilePath(paramStr(0)));
   end;
 
 FUNCTION newFileCodeProvider(CONST path: ansistring): P_fileCodeProvider;

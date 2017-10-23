@@ -63,17 +63,29 @@ PROCEDURE initIntrinsicRuleList;
 PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
       i:longint;
+      isUseClause:boolean;
   begin
     caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
+    isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.Lines[caret.y-1])>0)
+              or (pos(C_tokenInfo[tt_include].defaultId,editor.Lines[caret.y-1])>0);
     lastWordsCaret:=caret.y;
     wordsInEditor.clear;
-    initIntrinsicRuleList;
-    wordsInEditor.put(intrinsicRulesForCompletion);
-    if relatedAssistant<>nil then relatedAssistant^.updateCompletionList(wordsInEditor);
-    for i:=0 to editor.lines.count-1 do
-      if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
-                     else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+
+    if relatedAssistant<>nil then begin
+      //Completion for assistant...
+      if isUseClause then begin
+        wordsInEditor.put(relatedAssistant^.getImportablePackages);
+      end else begin
+        initIntrinsicRuleList;
+        wordsInEditor.put(intrinsicRulesForCompletion);
+        relatedAssistant^.updateCompletionList(wordsInEditor);
+      end;
+    end else begin
+      for i:=0 to editor.lines.count-1 do
+        if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
+                       else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+    end;
   end;
 
 CONSTRUCTOR T_completionLogic.create;
