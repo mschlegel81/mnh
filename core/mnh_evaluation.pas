@@ -1108,6 +1108,10 @@ end}
           P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters,true);
           didSubstitution:=true;
         end;
+        tt_parameterIdentifier: begin
+          context.resolveMainParameter(first);
+          didSubstitution:=true;
+        end;
 {cT[0]=}tt_mutate: begin stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin

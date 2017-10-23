@@ -150,6 +150,7 @@ TYPE
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
       FUNCTION getFutureEnvironment:T_futureTaskEnvironment;
+      PROCEDURE resolveMainParameter(VAR first:P_token);
   end;
 
   T_evaluationContext=object
@@ -170,13 +171,14 @@ TYPE
       primaryThreadContext:P_threadContext;
       taskQueue:P_taskQueue;
       allowedSideEffects:T_sideEffects;
+      mainParameters:T_arrayOfString;
       PROCEDURE setupThreadContext(CONST context:P_threadContext);
     public
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
-      CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
+      CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST enforceWallClock:boolean=false);
+      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
       PROCEDURE afterEvaluation;
       PROPERTY evaluationOptions:T_evaluationContextOptions read options;
       PROPERTY threadContext:P_threadContext read primaryThreadContext;
@@ -301,10 +303,11 @@ CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
     disposeAdaptersOnDestruction:=false;
     detachedAsyncChildCount:=0;
     allowedSideEffects:=C_allSideEffects;
+    mainParameters:=C_EMPTY_STRING_ARRAY;
     new(primaryThreadContext,createThreadContext(@self,adapters));
   end;
 
-CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_objectWithPath; CONST customSideEffecWhitelist:T_sideEffects);
+CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_objectWithPath; CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
   VAR tempAdapters:P_adapters;
   begin
     new(tempAdapters,create);
@@ -312,7 +315,8 @@ CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_obje
     taskQueue:=nil;
     disposeAdaptersOnDestruction:=true;
     allowedSideEffects:=customSideEffecWhitelist;
-    resetForEvaluation(package,ect_silent);
+    mainParameters:=C_EMPTY_STRING_ARRAY;
+    resetForEvaluation(package,ect_silent,mainParams);
   end;
 
 DESTRUCTOR T_evaluationContext.destroy;
@@ -328,9 +332,12 @@ DESTRUCTOR T_evaluationContext.destroy;
     if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
   end;
 
-PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST enforceWallClock:boolean=false);
+PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
   VAR pc:T_profileCategory;
+      i:longint;
   begin
+    setLength(mainParameters,length(mainParams));
+    for i:=0 to length(mainParams)-1 do mainParameters[i]:=mainParams[i];
     //set options
     options:=C_evaluationContextOptions[evaluationContextType];
     if adapters^.doShowTimingInfo then options:=options+[eco_timing];
@@ -593,6 +600,35 @@ FUNCTION T_threadContext.getFutureEnvironment:T_futureTaskEnvironment;
     result.taskQueue:=parent^.getTaskQueue;
     result.initialDepth:=callDepth;
     result.initialAllow:=sideEffectWhitelist;
+  end;
+
+PROCEDURE T_threadContext.resolveMainParameter(VAR first:P_token);
+  VAR parameterIndex:longint;
+      s:string;
+      newValue:P_literal=nil;
+  begin
+    if first^.tokType=tt_parameterIdentifier then begin
+      if copy(first^.txt,1,1)='$' then begin
+        parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
+        if parameterIndex<0 then begin
+          if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
+            newValue:=newListLiteral(length(parent^.mainParameters)+1);
+            P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
+            for s in parent^.mainParameters do P_listLiteral(newValue)^.appendString(s);
+          end else begin
+            adapters^.raiseError('Invalid parameter identifier',first^.location);
+            exit;
+          end;
+        end else if parameterIndex=0 then
+          newValue:=newStringLiteral(first^.location.package^.getPath)
+        else if parameterIndex<=length(parent^.mainParameters) then
+          newValue:=newStringLiteral(parent^.mainParameters[parameterIndex-1])
+        else
+          newValue:=newVoidLiteral;
+        first^.data:=newValue;
+        first^.tokType:=tt_literal;
+      end else adapters^.raiseError('Invalid parameter identifier',first^.location);
+    end;
   end;
 
 {$ifdef fullVersion}

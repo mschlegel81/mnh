@@ -66,7 +66,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
-      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
+      PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
       DESTRUCTOR destroy; virtual;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
@@ -261,7 +261,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
           checkPending:=false;
           leaveCriticalSection(cs);
           adapters^.clearAll();
-          evaluationContext.resetForEvaluation(packageForPostEval,ect_normal);
+          evaluationContext.resetForEvaluation(packageForPostEval,ect_normal,C_EMPTY_STRING_ARRAY);
           adapters^.clearPrint;
           packageForPostEval^.interpretInPackage(editor^.getLines,evaluationContext.threadContext^);
           enterCriticalSection(cs);
@@ -551,7 +551,7 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     new(newPackage,create(provider,nil));
     adapters.clearAll;
-    evaluationContext.resetForEvaluation(newPackage,ect_silent);
+    evaluationContext.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
     newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     enterCriticalSection(caData.cs);
     if caData.package<>nil then dispose(caData.package,destroy);
@@ -592,7 +592,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    evaluationContext.resetForEvaluation(@package,ect_silent);
+    evaluationContext.resetForEvaluation(@package,ect_silent,C_EMPTY_STRING_ARRAY);
     if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
@@ -603,7 +603,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
   begin
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
-    evaluationContext.resetForEvaluation(@package,ect_silent);
+    evaluationContext.resetForEvaluation(@package,ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
@@ -626,7 +626,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     if enforceDeterminism then evaluationContext.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
-      evaluationContext.resetForEvaluation(@package,ect_silent);
+      evaluationContext.resetForEvaluation(@package,ect_silent,mainParameters);
       package.load(lu_forCallingMain,evaluationContext.threadContext^,mainParameters);
       evaluationContext.afterEvaluation;
     finally
@@ -1136,7 +1136,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     statement.firstToken:=nil;
   end;
 
-PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
+PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
   VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
@@ -1184,6 +1184,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       newCodeHash:T_hashInt;
+
+  FUNCTION isPlainScriptStatement:boolean;
+    begin
+      result:=(stmt.firstToken<>nil) and
+              (stmt.firstToken^.txt='plain') and
+              (stmt.firstToken^.next<>nil) and
+              (stmt.firstToken^.next^.txt='script') and
+              (stmt.firstToken^.next^.next=nil);
+    end;
+
   begin
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
@@ -1197,6 +1207,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_threa
     newCodeHash:=getCodeProvider^.stateHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+    if isPlainScriptStatement then begin
+      case usecase of
+        lu_forImport         : context.adapters^.raiseError('Cannot import package declared as "plain script"',stmt.firstToken^.location);
+        lu_forCallingMain    : usecase:=lu_forDirectExecution;
+      end;
+      context.recycler.cascadeDisposeToken(stmt.firstToken);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+    end;
     if profile then context.timeBaseComponent(pc_tokenizing);
 
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
