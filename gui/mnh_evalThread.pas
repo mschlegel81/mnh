@@ -162,7 +162,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       P_runEvaluator(p)^.editAdapters^.clearAll;
       context.create(P_runEvaluator(p)^.editAdapters);
-      context.resetForEvaluation(nil,ect_normal);
+      context.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY);
     end;
 
   PROCEDURE doneEdit(VAR context:T_evaluationContext);
@@ -607,7 +607,7 @@ PROCEDURE T_runEvaluator.preEval;
     system.enterCriticalSection(cs);
     inherited preEval;
     startOfEvaluation:=now;
-    context.resetForEvaluation(@package,requestedContextType);
+    context.resetForEvaluation(@package,requestedContextType,mainParameters);
     system.leaveCriticalSection(cs);
   end;
 

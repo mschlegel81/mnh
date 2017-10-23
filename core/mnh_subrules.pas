@@ -1280,7 +1280,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     end;
 
   begin
-    tempcontext.createAndResetSilentContext(nil,[]);
+    tempcontext.createAndResetSilentContext(nil,C_EMPTY_STRING_ARRAY,[]);
     collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
     tempcontext.adapters^.addOutAdapter(@collector,false);
     constructInitialTList;
