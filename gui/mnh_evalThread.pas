@@ -9,7 +9,6 @@ USES sysutils,Classes,
      mnh_funcs,mnh_contexts,
      mnh_tokenArray,
      mnh_subrules,
-     mnh_rule,
      mnh_packages,mnh_doc,
      mnh_cmdLineInterpretation;
 TYPE
