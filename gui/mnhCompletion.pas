@@ -67,8 +67,8 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   begin
     caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
-    isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.Lines[caret.y-1])>0)
-              or (pos(C_tokenInfo[tt_include].defaultId,editor.Lines[caret.y-1])>0);
+    isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
+              or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
     lastWordsCaret:=caret.y;
     wordsInEditor.clear;
 
