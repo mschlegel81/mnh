@@ -537,7 +537,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
           if context.adapters^.noErrors then begin
             updateBody;
           end else begin
-            Dispose(saveValueStore,destroy);
+            dispose(saveValueStore,destroy);
             saveValueStore:=nil;
           end;
         end;
