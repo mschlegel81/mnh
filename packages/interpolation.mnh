@@ -1,0 +1,67 @@
+USE linAlg;
+//@SuppressUnusedWarning
+//*Returns a polynomial function in x, interpolating the given points
+interpolatePolynomial(X:NumericList,Y:NumericList)->
+X.size<>Y.size ? fail('X and Y must have the same number of elements') :
+begin
+  local M:=X.map({$x^[0..X.size-1]});
+  M.invert.mult(Y).flatten.each(f,f=0 ? void : begin
+    local e:=index=0 ? f :
+             index=1 ? (f=1 ? {$x} : f*{$x}) :
+                       (f=1 ? {$x}^index : f*{$x}^index);
+  end,+);
+end;
+
+//@SuppressUnusedWarning
+//*Returns a piecewise function expression in x, interpolating the given points
+interpolatePiecewise(X:NumericList,Y:NumericList)->
+X.size<>Y.size ? fail('X and Y must have the same number of elements') :
+begin
+  local coeff:=[
+    [[1,X[0]],[0,1]].invert.mult([Y[0],(Y[1]-Y[0])/(X[1]-X[0])])|[0,0], //Left out of bounds - linear
+    [[1,X[0],  X[0]^2,  X[0]^3],
+     [1,X[1],  X[1]^2,  X[1]^3],
+     [0,  1 ,2*X[0]  ,3*X[0]^2],
+     [0,  1 ,2*X[1]  ,3*X[1]^2]].invert.mult(
+     [ Y[0],
+       Y[1],
+      (Y[1]-Y[0])/(X[1]-X[0]),
+      (Y[2]-Y[0])/(X[2]-X[0])])]|
+  ([1..X.size-3].each(i,
+      [[1,X[i  ],  X[i  ]^2,  X[i  ]^3],
+       [1,X[i+1],  X[i+1]^2,  X[i+1]^3],
+       [0,  1   ,2*X[i  ]  ,3*X[i  ]^2],
+       [0,  1   ,2*X[i+1]  ,3*X[i+1]^2]].invert.mult(
+       [ Y[i],
+         Y[i+1],
+        (Y[i+1]-Y[i-1])/(X[i+1]-X[i-1]),
+        (Y[i+2]-Y[i  ])/(X[i+2]-X[i  ])])));
+  local i:=X.size-2;
+  coeff|=[
+      [[1,X[i  ],  X[i  ]^2,  X[i  ]^3],
+       [1,X[i+1],  X[i+1]^2,  X[i+1]^3],
+       [0,  1   ,2*X[i  ]  ,3*X[i  ]^2],
+       [0,  1   ,2*X[i+1]  ,3*X[i+1]^2]].invert.mult(
+       [ Y[i],
+         Y[i+1],
+        (Y[i+1]-Y[i-1])/(X[i+1]-X[i-1]),
+        (Y[i+1]-Y[i  ])/(X[i+1]-X[i  ])])];
+  i:=X.size-1;
+  coeff|=[[[1,X[i]],[0,1]].invert.mult([Y[i],(Y[i]-Y[i-1])/(X[i]-X[i-1])])|[0,0]];
+  coeff.map(::print);
+  IPgen((-Inf)|X,coeff);
+end;
+
+private IPgen(thresholds:NumericList,coefficients:List)->
+  {($x^[0..3]*coefficients[indexOf(thresholds<$x).trailing]).agg(+)};
+
+//@SuppressUnusedWarning
+//*Returns a piecewise linear function in x, interpolating the given points
+interpolateLineSegments(X:NumericList,Y:NumericList)->begin
+  local slopes:=(Y.tail-Y.leading)/(X.tail-X.leading);
+  local offsets:=Y.leading-X.leading*slopes;
+  ILSgen(X,X.size-2,[offsets,slopes].transpose);
+end;
+
+private ILSgen(X:NumericList,XSizeMinus2:Int,coeff:List)->
+  {([1,$x]*coeff[(0|indexOf(X<$x)).trailing.min(XSizeMinus2)]).agg(+)};
