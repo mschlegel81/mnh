@@ -80,6 +80,9 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
         initIntrinsicRuleList;
         wordsInEditor.put(intrinsicRulesForCompletion);
         relatedAssistant^.updateCompletionList(wordsInEditor);
+        for i:=0 to editor.lines.count-1 do
+          if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
+                         else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
       end;
     end else begin
       for i:=0 to editor.lines.count-1 do
@@ -109,7 +112,6 @@ DESTRUCTOR T_completionLogic.destroy;
 
 PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData);
   begin
-    if ad=nil then exit;
     editor:=edit;
     relatedAssistant:=ad;
     wordsInEditor.clear;
