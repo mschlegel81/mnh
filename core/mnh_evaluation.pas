@@ -841,6 +841,9 @@ end}
       didSubstitution:=false;
       initTokTypes;
 
+      //writeln(cTokType[-1],' # ',cTokType[0],' ',cTokType[1],' ',cTokType[2]);
+      //writeln(stack.toString(first,20));
+
       {$ifdef fullVersion}
       debugRun:=debugRun and context.stepping(first,@stack);
       {$endif}
@@ -971,7 +974,10 @@ end}
                     first^.data:=newLit;
                     first^.tokType:=tt_literal;
                     resolveElementAccess;
-                  end else didSubstitution:=false;
+                  end else begin
+                    context.adapters^.raiseError('Cannot resolve variable '+first^.txt,first^.location);
+                    didSubstitution:=false;
+                  end;
                 end;
               end else if (stack.topType=tt_literal) then begin
                 // <Lit> | <NewList> ...

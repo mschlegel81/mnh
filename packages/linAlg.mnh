@@ -54,13 +54,15 @@ invert(M:SquareMatrix)->begin
   [0..M.size-1].each(rowIndex,
     begin
       //Pivot
-      aid:=aid.head(rowIndex) |
-           aid.tail(rowIndex).sort({$x[rowIndex]>=$y[rowIndex]});
+      aid:=aid.head(rowIndex) | //upper rows remain untouched
+           aid.tail(rowIndex).sort(rowIndex).reverseList;
       //Divide by diagonal element
-      aid:=aid.each(row,index=rowIndex ? row/row[rowIndex] : row);
+      aid[rowIndex]:=aid[rowIndex]/aid[rowIndex,rowIndex];
       //Subtract
       local x:=aid[rowIndex];
-      aid:=aid.each(row,index=rowIndex ? row : row-row[rowIndex]*x);
+      [0..M.size-1].each(i,i=rowIndex ? void :
+        aid[i]:=aid[i]-aid[i,rowIndex]*x);
+      void;
     end);
   aid.each(row,row.tail(M.size));
 end;

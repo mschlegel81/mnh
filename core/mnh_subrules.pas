@@ -533,8 +533,14 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         then lastRep:=nil
         else lastRep:=firstRep^.last;
         context.valueStore:=previousValueStore;
-
-        if firstCallOfResumable then updateBody;
+        if firstCallOfResumable then begin
+          if context.adapters^.noErrors then begin
+            updateBody;
+          end else begin
+            dispose(saveValueStore,destroy);
+            saveValueStore:=nil;
+          end;
+        end;
       end else begin
         lastRep^.next:=context.recycler.newToken(getLocation,'',tt_semicolon);
         lastRep:=lastRep^.next;
@@ -1287,7 +1293,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
     dataReadyVectorized:=evaluateVectorExpressionOk;
     if not(dataReadyVectorized) then dataReadyScalar:=evaluatePEachExpressionOk;
-
     if dataReadyScalar or dataReadyVectorized then begin
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
