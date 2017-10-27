@@ -124,15 +124,13 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
   end;
 
 PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
-  {$i res_ensureAssoc.inc}
   begin
-    sandbox^.execute(ensureAssoc_mnh);
+    sandbox^.runInstallScript;
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
-  {$i res_removeAssoc.inc}
   begin
-    sandbox^.execute(removeAssoc_mnh);
+    sandbox^.runUninstallScript;
   end;
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);

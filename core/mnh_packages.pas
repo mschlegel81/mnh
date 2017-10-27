@@ -150,6 +150,10 @@ TYPE
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      {$ifdef fullVersion}
+      PROCEDURE runInstallScript;
+      PROCEDURE runUninstallScript;
+      {$endif}
   end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -635,6 +639,18 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     end;
   end;
 {$ifdef fullVersion}
+PROCEDURE T_sandbox.runInstallScript;
+  {$i res_ensureAssoc.inc}
+  begin
+    execute(ensureAssoc_mnh);
+  end;
+
+PROCEDURE T_sandbox.runUninstallScript;
+  {$i res_removeAssoc.inc}
+  begin
+    execute(removeAssoc_mnh);
+  end;
+
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   VAR messages:T_storedMessages;
       i:longint;

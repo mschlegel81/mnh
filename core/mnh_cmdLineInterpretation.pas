@@ -101,6 +101,8 @@ PROCEDURE displayHelp;
     writeln('  -cmd              directly execute the following command');
     writeln('  -info             show info; same as -cmd mnhInfo.print');
     {$ifdef fullVersion}
+    writeln('  -install          update packes and demos, ensure installation directory and file associations');
+    writeln('  -uninstall        remove packes and demos, remove installation directory and file associations');
     writeln('  -profile          do a profiling run - implies +time');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
     {$endif}
@@ -199,8 +201,24 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
         {$ifdef fullVersion}
         else if (paramStr(i)='-install') then begin
+          writeln('Updating scripts and demos');
           ensureDemos;
+          {$ifdef Windows}
+          writeln('Updating file associations');
+          sandbox^.runInstallScript;
+          {$endif}
+          writeln('Saving settings');
           saveSettings;
+          halt(0);
+        end
+        else if (paramStr(i)='-uninstall') then begin
+          {$ifdef Windows}
+          writeln('Removing file associations');
+          sandbox^.runUninstallScript;
+          mySys.deleteMyselfOnExit;
+          {$endif}
+          writeln('Removing configuration directory');
+          RemoveDir(configDir);
           halt(0);
         end else if (paramStr(i)='-edit') then while i<paramCount do begin
           inc(i);
