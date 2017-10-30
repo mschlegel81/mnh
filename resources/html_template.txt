@@ -159,6 +159,10 @@ Executable packages can be executed from the command line. If called as<code>
   mnh </code><i>packageName</i><code>.mnh </code><i>parameter_1<code> </code> parameter_2</i><br>
 All input parameters will be passed as strings; consequently they must be converted to other types (e.g. using <code>softCast</code>) as needed.<br>
 <br>
+Alternatively a package can be made executable if its first statement reads <code>plain script;</code>. In this case the parameters can be accessed using
+parameter identifiers (e.g. <code>$0</code> for the script name, <code>$1</code> for the first command line argument etc.).<br>
+Plain scripts can not be imported by other scripts.
+<br>
 <h4><a name="comments">Comments</a></h4>
 A comment is any string starting with <code>//</code> and ending with the following line break.<br>
 A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments are always associated with the (sub-)rule following the comment.
