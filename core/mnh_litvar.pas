@@ -2206,6 +2206,7 @@ FUNCTION T_setLiteral.clone: P_compoundLiteral;
     result:=newSetLiteral;
     setLength(P_setLiteral(result)^.dat.dat,
                              length(dat.dat));
+    P_setLiteral(result)^.dat.fill:=dat.fill;
     for bin:=0 to length(dat.dat)-1 do begin
       setLength(P_setLiteral(result)^.dat.dat[bin],
                                length(dat.dat[bin]));
