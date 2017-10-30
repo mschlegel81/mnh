@@ -48,7 +48,6 @@ begin
         (Y[i+1]-Y[i  ])/(X[i+1]-X[i  ])])];
   i:=X.size-1;
   coeff|=[[[1,X[i]],[0,1]].invert.mult([Y[i],(Y[i]-Y[i-1])/(X[i]-X[i-1])])|[0,0]];
-  coeff.map(::print);
   IPgen((-Inf)|X,coeff);
 end;
 
