@@ -207,9 +207,6 @@ TYPE
   T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
 
   T_compoundLiteral=object(T_literal)
-    private
-      PROCEDURE modifyType(CONST L:P_literal); inline;
-      PROCEDURE retype;
     public
     containsError:boolean;
     FUNCTION toSet :P_setLiteral;
@@ -227,6 +224,9 @@ TYPE
 
   P_collectionLiteral=^T_collectionLiteral;
   T_collectionLiteral=object(T_compoundLiteral)
+    private
+      ints,reals,strings,booleans,others:longint;
+    public
     FUNCTION isKeyValueCollection:boolean; virtual; abstract;
     FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual; abstract;
     FUNCTION appendAll   (CONST L:P_compoundLiteral                ):P_collectionLiteral; virtual;
@@ -241,6 +241,8 @@ TYPE
     private
       dat:PP_literal;
       alloc,fill:longint;
+      PROCEDURE modifyType(CONST L:P_literal); inline;
+      PROCEDURE retype;
     public
       PROPERTY value:PP_literal read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
@@ -281,6 +283,7 @@ TYPE
     private
       dat:T_literalKeyBooleanValueMap;
       CONSTRUCTOR create;
+      PROCEDURE modifyType(CONST L:P_literal); inline;
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION isKeyValueCollection:boolean; virtual;
@@ -810,6 +813,11 @@ CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST loca
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
   begin
     inherited init(lt_emptyList);
+    ints    :=0;
+    reals   :=0;
+    strings :=0;
+    booleans:=0;
+    others  :=0;
     getMem(dat,sizeOf(P_literal)*initialSize);
     alloc:=initialSize;
     fill:=0;
@@ -818,6 +826,11 @@ CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
 CONSTRUCTOR T_setLiteral.create;
   begin
     inherited init(lt_emptySet);
+    ints    :=0;
+    reals   :=0;
+    strings :=0;
+    booleans:=0;
+    others  :=0;
     dat.create();
   end;
 
@@ -979,15 +992,33 @@ FUNCTION T_listLiteral.transpose(CONST filler: P_literal): P_listLiteral;
     end;
   end;
 
+CONST listType:array[false..true,false..true,false..true,false..true] of T_literalType=
+              ((((lt_emptyList  ,lt_stringList),    //                     + string?
+                 (lt_realList   ,lt_list      )),   //              + real + string?
+                ((lt_intList    ,lt_list      ),    //          int        + string?
+                 (lt_numList    ,lt_list      ))),  //          int + real + string?
+               (((lt_booleanList,lt_list      ),    //boolean              + string?
+                 (lt_list       ,lt_list      )),   //boolean       + real + string?
+                ((lt_list       ,lt_list      ),    //boolean + int        + string?
+                 (lt_list       ,lt_list      )))); //boolean + int + real + string?
+
 PROCEDURE T_listLiteral.removeElement(CONST index:longint);
   VAR i:longint;
   begin
     if (index<0) or (index>=fill) then exit;
+    case dat[index]^.literalType of
+      lt_boolean: dec(booleans);
+      lt_int    : dec(ints);
+      lt_real   : dec(reals);
+      lt_string : dec(strings);
+      else        dec(others);
+    end;
+    if fill=0 then literalType:=lt_emptyList
+    else if others>0 then literalType:=lt_list
+    else literalType:=listType[booleans>0,ints>0,reals>0,strings>0];
     disposeLiteral(dat[index]);
     for i:=index to fill-2 do dat[i]:=dat[i+1];
     dec(fill);
-    literalType:=lt_emptyList;
-    retype;
   end;
 
 //?.toString:===================================================================
@@ -1743,56 +1774,35 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     enc:=se_testPending;
   end;
 
-PROCEDURE T_compoundLiteral.modifyType(CONST L: P_literal);
+PROCEDURE T_listLiteral.modifyType(CONST L: P_literal);
   begin
-    case literalType of
-      lt_error        : containsError:=true;
-      lt_booleanList  : if L^.literalType<>lt_boolean then literalType:=lt_list;
-      lt_booleanSet   : if L^.literalType<>lt_boolean then literalType:=lt_set;
-      lt_intList      : case L^.literalType of
-                          lt_int: begin end;
-                          lt_real: literalType:=lt_numList;
-  			  else     literalType:=lt_list;
-  	                end;
-      lt_intSet       : case L^.literalType of
-                          lt_int: begin end;
-                          lt_real: literalType:=lt_numSet;
-  			  else     literalType:=lt_set;
-  	                end;
-      lt_realList     : case L^.literalType of
-  	                  lt_real: begin end;
-  	                  lt_int: literalType:=lt_numList;
-  			  else    literalType:=lt_list;
-                        end;
-      lt_realSet      : case L^.literalType of
-  	                  lt_real: begin end;
-  	                  lt_int: literalType:=lt_numSet;
-  			  else    literalType:=lt_set;
-                        end;
-      lt_numList      : if not(L^.literalType in [lt_int,lt_real]) then literalType:=lt_list;
-      lt_numSet       : if not(L^.literalType in [lt_int,lt_real]) then literalType:=lt_set;
-      lt_stringList   : if L^.literalType<>lt_string then literalType:=lt_list;
-      lt_stringSet    : if L^.literalType<>lt_string then literalType:=lt_set;
-      lt_emptyList    : case L^.literalType of
-                          lt_boolean:literalType:=lt_booleanList;
-                          lt_int:    literalType:=lt_intList;
-                          lt_real:   literalType:=lt_realList;
-                          lt_string: literalType:=lt_stringList;
-                          else       literalType:=lt_list;
-                        end;
-      lt_emptySet     : case L^.literalType of
-                          lt_boolean:literalType:=lt_booleanSet;
-                          lt_int:    literalType:=lt_intSet;
-                          lt_real:   literalType:=lt_realSet;
-                          lt_string: literalType:=lt_stringSet;
-                          else       literalType:=lt_set;
-                        end;
-      lt_emptyMap     : literalType:=lt_map;
+    case L^.literalType of
+      lt_error     : begin inc(others); containsError:=true; literalType:=lt_list; end;
+      lt_boolean   : begin inc(booleans); if literalType in [lt_emptyList,lt_booleanList] then literalType:=lt_booleanList                                      else literalType:=lt_list; end;
+      lt_int       : begin inc(ints);     case literalType of lt_emptyList,lt_intList: literalType:=lt_intList; lt_realList,lt_numList:literalType:=lt_numList; else literalType:=lt_list; end; end;
+      lt_real      : begin inc(reals);    case literalType of lt_emptyList,lt_realList:literalType:=lt_realList;lt_intList ,lt_numList:literalType:=lt_numList; else literalType:=lt_list; end; end;
+      lt_string    : begin inc(strings);  if literalType in [lt_emptyList,lt_stringList] then literalType:=lt_stringList                                        else literalType:=lt_list; end;
+      lt_expression,
+      lt_void      : begin inc(others); literalType:=lt_list; end;
+      else           begin inc(others); literalType:=lt_list; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
     end;
-    containsError:=containsError or (L^.literalType in C_compoundTypes) and (P_compoundLiteral(L)^.containsError);
   end;
 
-PROCEDURE T_compoundLiteral.retype;
+PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
+  begin
+    case L^.literalType of
+      lt_error     : begin inc(others); containsError:=true; literalType:=lt_set; end;
+      lt_boolean   : begin inc(booleans); if literalType in [lt_emptySet,lt_booleanSet] then literalType:=lt_booleanSet                                   else literalType:=lt_set; end;
+      lt_int       : begin inc(ints);     case literalType of lt_emptySet,lt_intSet: literalType:=lt_intSet; lt_realSet,lt_numSet:literalType:=lt_numSet; else literalType:=lt_set; end; end;
+      lt_real      : begin inc(reals);    case literalType of lt_emptySet,lt_realSet:literalType:=lt_realSet;lt_intSet ,lt_numSet:literalType:=lt_numSet; else literalType:=lt_set; end; end;
+      lt_string    : begin inc(strings);  if literalType in [lt_emptySet,lt_stringSet] then literalType:=lt_stringSet                                     else literalType:=lt_set; end;
+      lt_expression,
+      lt_void      : begin inc(others); literalType:=lt_set; end;
+      else           begin inc(others); literalType:=lt_set; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
+    end;
+  end;
+
+PROCEDURE T_listLiteral.retype;
   VAR iter:T_arrayOfLiteral;
       L:P_literal;
   begin
@@ -1971,12 +1981,29 @@ PROCEDURE T_mapLiteral.drop(CONST L: P_literal);
 
 PROCEDURE T_setLiteral.drop(CONST L:P_literal);
   VAR dropped:T_literalKeyBooleanValueMap.CACHE_ENTRY;
+  CONST setType:array[false..true,false..true,false..true,false..true] of T_literalType=
+                ((((lt_emptySet  ,lt_stringSet),    //                     + string?
+                   (lt_realSet   ,lt_set      )),   //              + real + string?
+                  ((lt_intSet    ,lt_set      ),    //          int        + string?
+                   (lt_numSet    ,lt_set      ))),  //          int + real + string?
+                 (((lt_booleanSet,lt_set      ),    //boolean              + string?
+                   (lt_set       ,lt_set      )),   //boolean       + real + string?
+                  ((lt_set       ,lt_set      ),    //boolean + int        + string?
+                   (lt_set       ,lt_set      )))); //boolean + int + real + string?
   begin
     dropped:=dat.drop(L);
     if dropped.key=nil then exit;
     disposeLiteral(dropped.key);
-    literalType:=lt_emptySet;
-    retype;
+    case L^.literalType of
+      lt_boolean: dec(booleans);
+      lt_int    : dec(ints);
+      lt_real   : dec(reals);
+      lt_string : dec(strings);
+      else        dec(others);
+    end;
+    if dat.fill=0 then literalType:=lt_emptySet
+    else if others>0 then literalType:=lt_set
+    else literalType:=setType[booleans>0,ints>0,reals>0,strings>0];
   end;
 
 PROCEDURE T_listLiteral.sort;
@@ -2206,6 +2233,7 @@ FUNCTION T_setLiteral.clone: P_compoundLiteral;
     result:=newSetLiteral;
     setLength(P_setLiteral(result)^.dat.dat,
                              length(dat.dat));
+    P_setLiteral(result)^.dat.fill:=dat.fill;
     for bin:=0 to length(dat.dat)-1 do begin
       setLength(P_setLiteral(result)^.dat.dat[bin],
                                length(dat.dat[bin]));
@@ -3106,6 +3134,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         listIndex:int64;
         accessorTail:P_listLiteral;
         mapEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
+        prevType:T_literalType;
     begin
       //{$ifdef debugMode}
       //writeln(stdErr,'        DEBUG: mutate nested LHS=',toMutate^.toString(50));
@@ -3131,9 +3160,27 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
           listIndex:=P_intLiteral(accessor^.value[0])^.val;
           if (listIndex>=0) and (listIndex<P_listLiteral(toMutate)^.fill) then begin
             ensureExclusiveAccess(P_listLiteral(toMutate));
+            prevType:=P_listLiteral(toMutate)^.dat[listIndex]^.literalType;
             if mutateNested(P_listLiteral(toMutate)^.dat[listIndex],nestedMutation,accessorTail,RHS) then begin
-              toMutate^.literalType:=lt_emptyList;
-              P_listLiteral(toMutate)^.retype;
+              if prevType<>P_listLiteral(toMutate)^.dat[listIndex]^.literalType then begin
+                case prevType of
+                  lt_boolean: dec(P_listLiteral(toMutate)^.booleans);
+                  lt_int:     dec(P_listLiteral(toMutate)^.ints);
+                  lt_real:    dec(P_listLiteral(toMutate)^.reals);
+                  lt_string:  dec(P_listLiteral(toMutate)^.strings);
+                  else        dec(P_listLiteral(toMutate)^.others);
+                end;
+                case P_listLiteral(toMutate)^.dat[listIndex]^.literalType of
+                  lt_boolean: inc(P_listLiteral(toMutate)^.booleans);
+                  lt_int:     inc(P_listLiteral(toMutate)^.ints);
+                  lt_real:    inc(P_listLiteral(toMutate)^.reals);
+                  lt_string:  inc(P_listLiteral(toMutate)^.strings);
+                  else        inc(P_listLiteral(toMutate)^.others);
+                end;
+                if P_listLiteral(toMutate)^.fill=0 then P_listLiteral(toMutate)^.literalType:=lt_emptyList
+                else if P_listLiteral(toMutate)^.others>0 then P_listLiteral(toMutate)^.literalType:=lt_list
+                else P_listLiteral(toMutate)^.literalType:=listType[P_listLiteral(toMutate)^.booleans>0,P_listLiteral(toMutate)^.ints>0,P_listLiteral(toMutate)^.reals>0,P_listLiteral(toMutate)^.strings>0];
+              end;
             end;
           end else if listIndex=P_listLiteral(toMutate)^.fill then begin
             ensureExclusiveAccess(P_listLiteral(toMutate));
