@@ -242,7 +242,6 @@ TYPE
       dat:PP_literal;
       alloc,fill:longint;
       PROCEDURE modifyType(CONST L:P_literal); inline;
-      PROCEDURE retype;
     public
       PROPERTY value:PP_literal read dat;
       CONSTRUCTOR create(CONST initialSize:longint);
@@ -1800,15 +1799,6 @@ PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
       lt_void      : begin inc(others); literalType:=lt_set; end;
       else           begin inc(others); literalType:=lt_set; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
     end;
-  end;
-
-PROCEDURE T_listLiteral.retype;
-  VAR iter:T_arrayOfLiteral;
-      L:P_literal;
-  begin
-    iter:=iteratableList;
-    for L in iter do modifyType(L);
-    disposeLiteral(iter);
   end;
 
 FUNCTION T_compoundLiteral.toSet: P_setLiteral;
