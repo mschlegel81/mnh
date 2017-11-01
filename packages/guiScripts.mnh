@@ -56,7 +56,6 @@ end;
 //@utility=open all imported files
 openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent)['uses'].getInner(1).each(file,openInEditor(file));
 
-
 //@SuppressUnusedWarning
 //@utility=Compare folders (new editor)
 //@newEdit
@@ -72,3 +71,26 @@ compareFolders(editorFile:String)->begin
                          filesIn2.minus(filesIn1));
   toCompare.each(file,unifiedDiff(folder1&file,folder2&file,fileLines(folder1&file),fileLines(folder2&file),2),' ',|);
 end;
+
+//@SuppressUnusedWarning
+//@utility=List demos by category
+demosByCategory(dummyParameter)->
+allFiles(mnhInfo['configDir'],'*.mnh')
+.each(file,file.inspect['declares']
+   .each(rule,rule[1,'subrules'].map({$sub.getAll(['location','attributes'])}),|),|)
+   .map({[$info[0],$info[1,'demo_for']]})
+   .each(entry,entry.size=2 ? entry[1].split(",").trim.map({[$d,entry[0]]}) : void,|)
+   .group(0,{[$x[0],$x[1]|$y[1]]})
+   .sort({$x[1].size>$y[1].size})
+   .each(demoGroup,
+     print('Demos for: ',demoGroup[0],"\n  ",demoGroup[1].join("\n  ")));
+
+//@SuppressUnusedWarning
+//@utility=file changes
+//@newEdit
+//@language=diff
+editDiff2(editorFile:String)->
+  unifiedDiff(editorFile&' (from disk)',
+              editorFile,
+              fileLines(editorFile),
+              editorContent(editorFile),2);
