@@ -665,7 +665,7 @@ FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE
     initialize(previousValue);
     binIdx:=entry.keyHash and (length(dat)-1);
     j:=0;
-    while (j<length(dat[binIdx])) and not(dat[binIdx,j].key^.equals(entry.key)) do inc(j);
+    while (j<length(dat[binIdx])) and not((entry.keyHash=dat[binIdx,j].keyHash) and dat[binIdx,j].key^.equals(entry.key)) do inc(j);
     if j>=length(dat[binIdx]) then begin
       setLength(dat[binIdx],j+1);
       dat[binIdx,j].key:=entry.key;
@@ -689,7 +689,7 @@ FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT
     hash:=key^.hash;
     binIdx:=hash and (length(dat)-1);
     j:=0;
-    while (j<length(dat[binIdx])) and not(dat[binIdx,j].key^.equals(key)) do inc(j);
+    while (j<length(dat[binIdx])) and not((hash=dat[binIdx,j].keyHash) and dat[binIdx,j].key^.equals(key)) do inc(j);
     if j>=length(dat[binIdx]) then begin
       setLength(dat[binIdx],j+1);
       dat[binIdx,j].key:=key;
@@ -764,11 +764,15 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
     setLength(result,fill);
     k:=0;
     for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
+      {$ifdef debugMode}
       try
+      {$endif}
         result[k]:=dat[i,j].key;
+      {$ifdef debugMode}
       except
         raise Exception.create('Trying to set result ['+intToStr(k)+'] in list of length '+intToStr(length(result)));
       end;
+      {$endif}
       inc(k);
     end;
   end;

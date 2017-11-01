@@ -15,3 +15,10 @@ prod(L:NumericList)->L.agg(*) orElse 1;
 factorial(i=0)->1;
 factorial(i>=21)->2.43290200817664E18*(1.0*[21..i]).agg(*);
 factorial(i in [1..20])->[1..i].agg(*);
+
+//@SuppressUnusedWarning
+//*An approximation to the Gamma function
+Gamma(x>50.0)->exp(0.5*ln(2*pi)+(x-0.5)*(ln(x-0.5)-1)-1/(24*(x-1/2)));
+Gamma(x>0.0)->Gamma(x+1)/x;
+Gamma(x:Int)->Gamma(x.toReal);
+Gamma(X:NumericList)->X.pMap(::Gamma);
