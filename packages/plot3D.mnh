@@ -132,28 +132,45 @@ contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:Num
   local nodes    :=geometry[0];
   local triangles:=geometry[1];
   //Convert geometry to a list of adjacent edges
+  plot();
+  triangles.pMap({nodes.getAll($tri)})
+           .pMap({[$tri.getInner([0,1]),(($tri.averageZ-contourLevels.min)*(1/(contourLevels.max-contourLevels.min))).max(0).min(1)]})
+           .map({addPlot($t[0],format("polygon 0 TI0 HUE%s",$t[1]))});
   local edgePairs:=[].toSet;
   local edgeList:=[].toSet;
   triangles.each(tri,begin
     local e:=tri.edges;
     e.subSets(2).each(pair,edgePairs|=[pair.sort]);
-    e.each(edge,edgeList|=[[edge,nodes.getAll(edge)]]);
+    e.each(edge,edgeList|=[edge]);
     void;
   end);
-  plot();
-  triangles.pMap({nodes.getAll($tri)})
-           .pMap({[$tri.getInner([0,1]),(($tri.averageZ-contourLevels.min)*(1/(contourLevels.max-contourLevels.min))).max(0).min(1)]})
-           .map({addPlot($t[0],format("polygon 0 TI0 HUE%s",$t[1]))});
+  edgeList:=edgeList.sort;
+  local edgeZ0:=nodes.getAll(edgeList.getInner(0));
+  local edgeZ1:=nodes.getAll(edgeList.getInner(1));
+  local edgeXY0:=edgeZ0.getInner([0,1]); edgeZ0:=edgeZ0.getInner(2);
+  local edgeXY1:=edgeZ1.getInner([0,1]); edgeZ1:=edgeZ1.getInner(2);
+  edgeList:=edgeList.pEach(e,[e,index]).toMap;
+  edgePairs:=edgePairs.pMap({edgeList.getAll($p)});
+
+  edgeZ1 :=1/(edgeZ1 -edgeZ0 );
+  edgeXY1:=  (edgeXY1-edgeXY0);
 
   contourLevels.pEach(level,begin
-    local cutPerEdge:=edgeList.pEach(edge,min(edge[1].getInner(2))<=level<=max(edge[1].getInner(2)) ? begin
-      local a:=edge[1,0];
-      local b:=edge[1,1];
-      local t:=(level-a[2])/(b[2]-a[2]);
-      [edge[0],a[[0,1]]*(1-t)+b[[0,1]]*t];
-    end : void).toMap;
-    edgePairs.pMap({cutPerEdge.getAll($p)})
-             .pEach(cut,cut.size=2 ? cut|[[Nan,Nan]] : void,|);
+    local t:=(level-edgeZ0)*edgeZ1;
+    local mask:=0<=t<=1;
+    local cut:=edgeXY0+edgeXY1*t;
+
+    edgePairs.pEach(p,mask[p[0]] AND mask[p[1]]
+                      ? [cut[p[0]],cut[p[1]],[Nan,Nan]]
+                      : void,|);
+    //local cutPerEdge:=edgeList.pEach(edge,min(edge[1].getInner(2))<=level<=max(edge[1].getInner(2)) ? begin
+    //  local a:=edge[1,0];
+    //  local b:=edge[1,1];
+    //  local t:=(level-a[2])/(b[2]-a[2]);
+    //  [edge[0],a[[0,1]]*(1-t)+b[[0,1]]*t];
+    //end : void).toMap;
+    //edgePairs.pMap({cutPerEdge.getAll($p)})
+    //         .pEach(cut,cut.size=2 ? cut|[[Nan,Nan]] : void,|);
   end,|).addPlot('black');
 
 end;
