@@ -134,7 +134,7 @@ contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:Num
   //Convert geometry to a list of adjacent edges
   plot();
   triangles.pMap({nodes.getAll($tri)})
-           .pMap({[$tri.getInner([0,1]),(($tri.averageZ-contourLevels.min)*(1/(contourLevels.max-contourLevels.min))).max(0).min(1)]})
+           .pMap({[$tri.getInner([0,1]),(($tri.averageZ-contourLevels.min)*(1/(contourLevels.max-contourLevels.min))).max(0).min(1)*2/3]})
            .map({addPlot($t[0],format("polygon 0 TI0 HUE%s",$t[1]))});
   local edgePairs:=[].toSet;
   local edgeList:=[].toSet;
