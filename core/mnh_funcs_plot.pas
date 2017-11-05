@@ -306,7 +306,8 @@ INITIALIZATION
     '#  orange;'+'#  RGB$,$,$; //With three real numbers in range [0,1]'+
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+
     '#  HUE$; //With one real number '+
-    '#  GREY$; //With one real number in range [0,1]');
+    '#  GREY$; //With one real number in range [0,1]'+
+    '#Transparency Index:'+'  #  TI$;// with an integer $');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, [se_alterPlotState], ak_variadic_1,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+

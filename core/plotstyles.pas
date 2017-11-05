@@ -115,6 +115,7 @@ DESTRUCTOR T_style.destroy;
   end;
 
 PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount:longint);
+  VAR givenTransparentIndex:longint=-1;
   FUNCTION parseColorOption(colorOption: shortString; OUT r, g, b: byte): boolean;
     PROCEDURE HSV2RGB(H,S,V: single; OUT r,g,b: byte);
       VAR hi,p,q,t: byte;
@@ -192,6 +193,8 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount
         b:=r;
         result:=true;
       end;
+      if not(result) and (copy(colorOption,1,2)='TI') then
+        givenTransparentIndex:=strToIntDef(copy(colorOption,3,length(colorOption)-2),-1);
     end;
 
   VAR part, options: ansistring;
@@ -238,7 +241,9 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount
         (ps_bar     in style) or
         (ps_tube    in style) or
         (ps_polygon in style)) and not(ps_fillSolid in style) then begin
-      transparentIndex:=transparentCount and 255;
+      if givenTransparentIndex>=0
+      then transparentIndex:=givenTransparentIndex and 255
+      else transparentIndex:=transparentCount      and 255;
       inc(transparentCount);
     end;
   end;

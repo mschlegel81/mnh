@@ -1,0 +1,218 @@
+type Geometry(G:List(2))->
+  G[0].isList AND //G[0] is list of vertices
+  G[1].isList AND //G[1] is list of triangles
+  G[0].each(v,v.isNumericList(3),AND) AND
+  G[1].each(a,a.isIntList AND a.each(n,0<=n<G[0].size,AND),AND);
+
+private LIGHT:=sqrt([1,1,1]/3);
+USE linAlg;
+private colorOf(t: List)->t.size<3 ? 0 : begin
+  local n:=crossProd(t[2]-t[0],t[1]-t[0]);
+  (n/n.euclidNorm*LIGHT).agg(+).abs;
+end;
+
+private averageZ(poly:List)->poly.getInner(2).agg(+)/poly.size;
+
+private plotIlluminated(G:Geometry,alphaZ:Numeric,alphaX:Numeric,perspective:Boolean)->begin
+  local t0:=time;
+  local rot:=rotX(alphaX).mult(rotZ(alphaZ));
+  local samples:=G[0].pMap({rot.mult($p).flatten});
+  local triangles:=G[1].map({samples[$i]});
+  print('Triangles obtained in ',time-t0); t0:=time;
+  local greys:=triangles.pMap(::colorOf);
+  print('Triangles colored in ',time-t0); t0:=time;
+  local s:=triangles.pMap(::averageZ).sortPerm;
+  perspective
+  ? begin
+      //1<A*z+B<Q
+      //B=1-A*max(z)
+      //Q-B=A*min(z)
+      //(Q-1)/(min(z)-max(z))=A
+      local A:=(1.5-1)/(samples.getInner(2).min-samples.getInner(2).max);
+      local B:=1-A*samples.getInner(2).max;
+      triangles:=triangles.pMap({$triangle.map({[$node[0],$node[1]]/(A*$node[2]+B)})});
+    end
+  : void;
+  print('Plot prepared in ',time-t0); t0:=time;
+  plot();
+  s.each(idx,triangles[idx].size=2
+             ? addPlot(triangles[idx].getInner([0,1]),'black line')
+             : addPlot(triangles[idx].getInner([0,1]),'polygon 0 fs RGB1,'&greys[idx]&','&greys[idx]));
+  display;
+  print('Plotted in ',time-t0,'s');
+end;
+
+prepareGeometry(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2)->begin
+  local stretch:=0.5*sqrt(3);
+  local kx:=sqrt((x1-x0)/(y1-y0)*triangleCount/2*stretch).round.max(1);
+  local ky:=sqrt((y1-y0)/(x1-x0)*triangleCount/2/stretch).round.max(1);
+  local hx:=(x1-x0)/(kx-0.5);
+  local hy:=(y1-y0)/(ky-1);
+  local N:=[0..kx-1].each(ix,
+           [0..ky-1].each(iy,[x0+(ix+(iy and 1)*0.5)*hx,
+                              y0+ iy                *hy]),|);
+  local T:=cross([0..kx-2],[0..ky-2])
+           .each(i,(i[1] and 1)=0 ? [i      ,i+[0,1],i+[1,0]] :
+                                    [i      ,i+[0,1],i+[1,1]],
+                   (i[1] and 1)=0 ? [i+[1,0],i+[1,1],i+[0,1]] :
+                                    [i      ,i+[1,0],i+[1,1]])|
+   [1..ky-2].each(iy,(iy and 1)=1 ? [[0   ,iy-1],[0   ,iy],[0   ,iy+1]] :
+                                    [[kx-1,iy-1],[kx-1,iy],[kx-1,iy+1]]);
+  //Fill out gaps in the corners
+  T:=T.map({$tri.map({$i[0]*ky+$i[1]})});
+  N|=[[x1,y0]];
+  T|=[[size(N)-1,ky*(kx-1),ky*(kx-1)+1]];
+  (ky and 1)=1
+  ? begin
+      N|=[[x1,y1]];
+      T|=[[size(N)-1,kx*ky-1,kx*ky-2]];
+    end
+  : begin
+      N|=[[x0,y1]];
+      T|=[[size(N)-1,ky-1,ky-2]];
+    end;
+
+  local sample:=F((x0+x1)/2,(y0+y1)/2);
+  [sample.isNumeric        ? N.pMap({$x|F@$x}) :
+   sample.isNumericList(3) ? N.pMap({   F@$x}) :
+   fail("Invalid function ",F,"\nShould return Numeric or NumericList(3) but returns ",sample.typeOf),
+   T];
+end;
+
+//*Returns a list of edges in the polyon (in node index space)
+//*The returned edges are sorted
+private edges(poly:IntList)->transpose([[0..poly.size-1],[1..poly.size-1,0]]).map({poly.getAll($i).sort});
+private addEdges(G:Geometry)->[G[0],G[1]|(G[1].each(p,p.edges,|).unique)];
+//@SuppressUnusedWarning
+Tetrahedron:=[[[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]],
+              [[2,1,0],[3,1,2],[0,3,2],[0,1,3]]].addEdges;
+//@SuppressUnusedWarning
+Cube:=[[[1,1,1],[-1,1,1],[1,-1,1],[-1,-1,1],[1,1,-1],[-1,1,-1],[1,-1,-1],[-1,-1,-1]],
+       [[0,1,3,2],[6,7,5,4],[0,2,6,4],[5,7,3,1],[0,4,5,1],[3,7,6,2]]].addEdges;
+//@SuppressUnusedWarning
+Octahedron:=[[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]],
+             [[2,4,0],[0,4,3],[0,5,2],[3,5,0],[1,4,2],[3,4,1],[2,5,1],[1,5,3]]].addEdges;
+phi:=(sqrt(5)-1)/2;
+
+ //@SuppressUnusedWarning
+Dodecahedron:=[[[1,1, 1],[-1,1, 1],[1,-1, 1],[-1,-1, 1],
+                [1,1,-1],[-1,1,-1],[1,-1,-1],[-1,-1,-1],
+                [0,phi,1/phi],[0,-phi,1/phi],[0,phi,-1/phi],[0,-phi,-1/phi],
+                [phi,1/phi,0],[-phi,1/phi,0],[phi,-1/phi,0],[-phi,-1/phi,0],
+                [1/phi,0,phi],[-1/phi,0,phi],[1/phi,0,-phi],[-1/phi,0,-phi]],
+               [[12,13,1, 8, 0],[ 0,8,9, 2,16],[16,18, 4,12, 0],[17, 3,9, 8,1],
+                [ 1,13,5,19,17],[ 2,9,3,15,14],[ 2,14, 6,18,16],[17,19,7,15,3],
+                [ 4,10,5,13,12],[18,6,11,10,4],[ 5,10,11, 7,19],[14,15,7,11,6]]].addEdges;
+//@SuppressUnusedWarning
+Icosahedron:=[[[ 0, 1/phi,1],[1,0,1/phi],[1/phi,1,0],
+               [-1,  0,1/phi],[-1/phi,1,0],[0,-1/phi,1],
+               [ 1/phi,-1,0],[-1/phi,-1,0],[0,1/phi,-1],
+               [ 1    ,0,-1/phi],[-1,0,-1/phi],[0,-1/phi,-1]],
+              [[1, 2,0],[ 0, 4,3],[5, 6, 1],[3,7,5],[ 2, 9,8],
+               [8,10,4],[11, 9,6],[7,10,11],[0,3,1],[ 1, 3,5],
+               [9,10,8],[11,10,9],[2, 8, 0],[0,8,4],[ 5,11,6],
+               [7,11,5],[ 1, 6,2],[4, 7, 3],[2,6,9],[10, 7,4]]].addEdges;
+
+//@SuppressUnusedWarning
+mergeGeometries(A,B)->[A[0]|B[0],A[1]|(B[1]+A[0].size)];
+
+//@SuppressUnusedWarning
+rotating3DPlot(G:Geometry,rz:Numeric,perspective:Boolean)->begin
+  plot;
+  clearAnimation;
+  setOptions([['autoscaleY',false],['x0',-2],['x1',2],['axisStyleX',0],
+              ['autoscaleX',false],['y0',-2],['y1',2],['axisStyleY',0],
+              ['preserveAspect',true]]);
+  ([0..199]/200*2*pi).each(rx,G.plotIlluminated(rx,rz,perspective),addAnimationFrame);
+end;
+
+//@SuppressUnusedWarning
+contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList)->begin
+  local geometry:=prepareGeometry(F,x0,x1,y0,y1,triangleCount);
+  local nodes    :=geometry[0];
+  local triangles:=geometry[1];
+  //Convert geometry to a list of adjacent edges
+  plot();
+  triangles.pMap({nodes.getAll($tri)})
+           .pMap({[$tri.getInner([0,1]),(($tri.averageZ-contourLevels.min)*(1/(contourLevels.max-contourLevels.min))).max(0).min(1)*2/3]})
+           .map({addPlot($t[0],format("polygon 0 TI0 HUE%s",$t[1]))});
+  local edgePairs:=[].toSet;
+  local edgeList:=[].toSet;
+  triangles.each(tri,begin
+    local e:=tri.edges;
+    e.subSets(2).each(pair,edgePairs|=[pair.sort]);
+    e.each(edge,edgeList|=[edge]);
+    void;
+  end);
+  edgeList:=edgeList.sort;
+  local edgeZ0:=nodes.getAll(edgeList.getInner(0));
+  local edgeZ1:=nodes.getAll(edgeList.getInner(1));
+  local edgeXY0:=edgeZ0.getInner([0,1]); edgeZ0:=edgeZ0.getInner(2);
+  local edgeXY1:=edgeZ1.getInner([0,1]); edgeZ1:=edgeZ1.getInner(2);
+  edgeList:=edgeList.pEach(e,[e,index]).toMap;
+  edgePairs:=edgePairs.pMap({edgeList.getAll($p)});
+
+  edgeZ1 :=1/(edgeZ1 -edgeZ0 );
+  edgeXY1:=  (edgeXY1-edgeXY0);
+
+  contourLevels.pEach(level,begin
+    local t:=(level-edgeZ0)*edgeZ1;
+    local mask:=0<=t<=1;
+    local cut:=edgeXY0+edgeXY1*t;
+
+    edgePairs.pEach(p,mask[p[0]] AND mask[p[1]]
+                      ? [cut[p[0]],cut[p[1]],[Nan,Nan]]
+                      : void,|);
+    //local cutPerEdge:=edgeList.pEach(edge,min(edge[1].getInner(2))<=level<=max(edge[1].getInner(2)) ? begin
+    //  local a:=edge[1,0];
+    //  local b:=edge[1,1];
+    //  local t:=(level-a[2])/(b[2]-a[2]);
+    //  [edge[0],a[[0,1]]*(1-t)+b[[0,1]]*t];
+    //end : void).toMap;
+    //edgePairs.pMap({cutPerEdge.getAll($p)})
+    //         .pEach(cut,cut.size=2 ? cut|[[Nan,Nan]] : void,|);
+  end,|).addPlot('black');
+
+end;
+
+//@SuppressUnusedWarning
+interactive3DPlot(G:Geometry)->begin
+  G.plotIlluminated(local rx:=pi/4,
+                    local rz:=pi/4,
+                    local pers:=true);
+  plot.setOptions([['autoscaleX',true],
+                   ['autoscaleY',true],
+                   ['preserveAspect',true],
+                   ['logscaleX',false],
+                   ['logscaleY',false],
+                   ['axisStyleX',0],
+                   ['axisStyleY',0],
+                   ['autoscaleFactor',1.0]].toMap);
+  dynamicPlot([['Rx+',{G.plotIlluminated(rx+=pi/16,rz,pers)}],
+               ['Rx-',{G.plotIlluminated(rx-=pi/16,rz,pers)}],
+               ['Rz+',{G.plotIlluminated(rx,rz+=pi/16,pers)}],
+               ['Rz-',{G.plotIlluminated(rx,rz-=pi/16,pers)}],
+               ['Toggle perspective',{G.plotIlluminated(rx,rz,pers:=not(pers))}]]);
+end;
+
+densityPlot(f:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,styleTemplate:String)->begin
+  local xSamples:=sqrt((x1-x0)/(y1-y0)*sampleCount).round.max(1);
+  local ySamples:=sqrt((y1-y0)/(x1-x0)*sampleCount).round.max(1);
+  local hx:=(x1-x0)/xSamples;
+  local hy:=(y1-y0)/ySamples;
+  local samples:=cross(x0+hx*([0..xSamples-1]+0.5),
+                       y0+hy*([0..ySamples-1]+0.5)).pMap({$x||(f@$x)});
+  samples.getInner(2).isNumericList
+  ? void
+  : fail('f must return a numeric result');
+
+  local z0:=samples.getInner(2).min;
+  local z1:=samples.getInner(2).max;
+  local styleFunc:={styleTemplate.format(($x-z0)*(1/(z1-z0)))};
+  local h:=[hx,hy]/2;
+  plot();
+  samples.each(s,addPlot([s[[0,1]]-h,s[[0,1]]+h],styleFunc(s[2])));
+end;
+
+densityPlot(f:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4)->
+densityPlot(f              ,x0,x1   ,y0,y1   ,sampleCount,'box GREY%s');
