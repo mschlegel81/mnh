@@ -489,13 +489,74 @@ FUNCTION subSets_impl intFuncSignature;
         if (acceptOnlySetsOfSize<>-1) and (acceptOnlySetsOfSize<>length(mustContain)) then exit;
         newSet:=collection0^.newOfSameType(false);
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
-        if newSet^.literalType in C_listTypes then P_listLiteral(newSet)^.sort;
         if sets.get(newSet,0)=0 then sets.put(newSet,1)
                                 else disposeLiteral(newSet);
       end;
     end;
+
+  FUNCTION directBuildSets(mightContain:T_arrayOfLiteral):boolean;
+    VAR maxInt,prevInt,currInt:qword;
+        bits:bitpacked array [0..8*sizeOf(qword)-1] of boolean;
+        k,trueCount:longint;
+        newSet:P_collectionLiteral;
+        prevDummy:byte;
+
+    PROCEDURE next; inline;
+      VAR lo,lz:qword;
+      begin
+        lo:=currInt and -currInt;
+        lz:=(currInt+lo) and not(currInt);
+        currInt:=currInt or lz;
+        currInt:=currInt and not(lz-1);
+        currInt:=currInt or ((lz div lo) shr 1)-1;
+      end;
+
+    begin
+      if acceptOnlySetsOfSize=0 then begin
+        if collection0^.literalType in C_setTypes
+        then newSet:=newSetLiteral
+        else newSet:=newListLiteral;
+        sets.put(newSet,1);
+        exit(true);
+      end;
+      if (acceptOnlySetsOfSize>length(mightContain)) or (length(mightContain)=0) then exit(true);
+      if (length(mightContain)>=length(bits)-1)                                  then exit(false);
+
+      maxInt:=1;
+      for k:=1 to length(mightContain)-1 do maxInt:=maxInt+maxInt+1;
+      if (acceptOnlySetsOfSize>0) then begin
+        currInt:=qword(1) shl acceptOnlySetsOfSize-1;
+        prevInt:=0;
+        while (prevInt<currInt) and (currInt<=maxInt) do begin
+          move(currInt,bits,sizeOf(qword));
+          if collection0^.literalType in C_setTypes
+          then newSet:=newSetLiteral (acceptOnlySetsOfSize)
+          else newSet:=newListLiteral(acceptOnlySetsOfSize);
+          for k:=0 to length(bits)-1 do if bits[k] then newSet^.append(mightContain[k],true);
+          if not(sets.putNew(newSet,1,prevDummy)) then disposeLiteral(newSet);
+
+          prevInt:=currInt;
+          next;
+        end;
+      end else begin
+        currInt:=0;
+        while (currInt<=maxInt) do begin
+          trueCount:=PopCnt(currInt);
+          move(currInt,bits,sizeOf(qword));
+          if collection0^.literalType in C_setTypes
+          then newSet:=newSetLiteral (trueCount)
+          else newSet:=newListLiteral(trueCount);
+          for k:=0 to length(bits)-1 do if bits[k] then newSet^.append(mightContain[k],true);
+          if not(sets.putNew(newSet,1,prevDummy)) then disposeLiteral(newSet);
+          inc(currInt);
+        end;
+      end;
+      result:=true;
+    end;
+
   VAR mustContain,mightContain:T_arrayOfLiteral;
       i:longint;
+      tempList:P_listLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and ((params^.size=1) or (arg1^.literalType=lt_int)) then begin
@@ -503,8 +564,15 @@ FUNCTION subSets_impl intFuncSignature;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         sets.create;
         setLength(mustContain,0);
-        mightContain:=P_compoundLiteral(arg0)^.iteratableList;
-        recurseBuildSets(mustContain,mightContain);
+        if arg0^.literalType in C_listTypes then begin
+          tempList:=P_listLiteral(list0^.clone);
+          tempList^.sort;
+          mightContain:=tempList^.iteratableList;
+          disposeLiteral(tempList);
+        end else mightContain:=set0^.iteratableList;
+
+        if not(directBuildSets(            mightContain)) then
+              recurseBuildSets(mustContain,mightContain);
         disposeLiteral(mightContain);
         mustContain:=sets.keySet;
         result:=newListLiteral;
