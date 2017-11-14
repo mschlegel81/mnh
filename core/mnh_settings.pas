@@ -453,17 +453,16 @@ FUNCTION T_fileHistory.polishHistory: boolean;
   begin
     result := false;
     for i:=0 to length(items)-1 do
-      if not(fileExists(items[i])) then begin
-        items[i]:='';
-        result:=true;
-      end;
-    i:=0;
+    if not(fileExists(items[i])) then begin
+      items[i]:='';
+      result:=true;
+    end;
     for i:=1 to length(items)-1 do
-      if (items[i]<>'') then for j:=0 to i-1 do
-        if (expandFileName(items[i])=expandFileName(items[j])) then begin
-          items[j]:='';
-          result:=true;
-        end;
+    if (items[i]<>'') then for j:=0 to i-1 do
+    if (expandFileName(items[i])=expandFileName(items[j])) then begin
+      items[i]:='';
+      result:=true;
+    end;
     dropValues(items,'');
   end;
 
