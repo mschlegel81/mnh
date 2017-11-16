@@ -2,7 +2,7 @@ USE lindenmayer;
 //@demo_for=fractal, plotting
 //*Draws a fractal plant
 main->begin
-  setOptions([['axisStyleX',0],['axisStyleY',0]]);
-  plot(lindenmayerTurtle(PLANT,6));
+  setOptions([['axisStyleX',0],['axisStyleY',0]]); //Show no grid and no tics
+  plot(lindenmayerTurtle(PLANT,6));                //Calculate and plot turtle graphics
   renderToFile(replace(myPath,'.mnh','.png'),768,768,3);
 end;

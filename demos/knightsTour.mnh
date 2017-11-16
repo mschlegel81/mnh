@@ -1,0 +1,77 @@
+type CoordPair(P:NumericList(2))->true;
+type CoordCollection(C:Collection)->C.each(c,c.isCoordPair,AND);
+//*Returns all coordinates reachable from P (ignoring board boundaries)
+private memoized neighbors(P:CoordPair)->
+  [[2,1],[2,-1],[-2,1],[-2,-1],
+   [1,2],[-1,2],[1,-2],[-1,-2]].map({P+$x}).sort;
+
+//*Returns the open cells adjacent to P with a minimum number of adjacent open cells
+private nextMoves(open:CoordCollection,P:CoordPair)->begin
+  local nextWithNeighborCount:=open
+        .intersect(P.neighbors)                          //Only consider neighbors of P
+        .pMap({[$o,$o.neighbors.intersect(open).size]}); //Add data about neighbor count
+  local minNeighbors:=nextWithNeighborCount.getInner(1).min;
+  nextWithNeighborCount.each(q,q[1]==minNeighbors
+                               ? q[0]   //if it has minNeighbors, return q[0] (the coordinates) ...
+                               : void); //...else drop entry
+end;
+
+//*Termination: there are no more cells to visit
+private findTour([].toSet,position:CoordPair)->position;
+//*Recursively constructs a tour
+private findTour(rest:CoordCollection,position:CoordPair)->begin
+  local trail:=nextMoves(rest,position).each(q,findTour(rest.minus([q]),q),head);
+  trail.isVoid ? void :
+  trail.isIntList
+  ? [position]|[trail]
+  : [position]| trail;
+end;
+
+//*Find a tour: construct list of unvisited coordinates and call findTour
+findTour(boardSize>=1,position:CoordPair)->begin
+  local rest:=[0..boardSize-1];
+  //Fail if position is not on the board
+  position[0] in rest AND
+  position[1] in rest
+  ? void
+  : fail('Starting position ',position,' is out of bounds');
+  findTour(rest.cross(rest).minus([position]),position);
+end;
+
+plotTour(tour:CoordCollection)->begin
+  setOptions([['autoscaleX',true],
+              ['autoscaleY',true],
+              ['logscaleX',false],
+              ['logscaleY',false],
+              ['preserveAspect',true],
+              ['autoscaleFactor',0.95],
+              ['axisStyleX',0],
+              ['axisStyleY',0]].toMap);
+  local P:=//close the tour if possible:
+           tour[tour.size-1] in tour[0].neighbors
+           ? tour|[tour[0]]
+           : tour;
+  plot   ( P          ,'1.5 . l'); //plot tour
+  addPlot([P.trailing],'2   .  '); //mark end point
+  addPlot([P.head    ],'2   .  '); //mark starting point
+  tour;
+end;
+
+printTour(tour:CoordCollection)->begin
+  local digFmt:='%'&(tour.size.toString.length)&'d ';
+  local maxPos:=max(tour.getInner(0).max,
+                    tour.getInner(1).max);
+  local tourMap:=tour.each(coord,[coord,index+1]).toMap;
+  [maxPos..0].each(row,
+    digFmt.format([0..maxPos].each(col,tourMap[[col,row]]))
+          .join
+          .print);
+  tour;
+end;
+
+main(boardSize,startX,startY)->
+  findTour(boardSize.toInt,[startX.toInt,startY.toInt])
+  .printTour;
+
+main(boardSize,startX,startY,'plot')->
+  main(boardSize,startX,startY).plotTour;

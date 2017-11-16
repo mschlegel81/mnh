@@ -1,5 +1,0 @@
-hex(i)->format('%16x',i).replace(' ','0').copy(8,8);
-
-fileHash(filename:String)->fileExists(filename) ? fileContents(filename).hash.hex : '--file does not exist--';
-main->print(fileHash(myPath));
-main(...)->printf("%s\t%x",$params,$params.each(p,fileHash(p)));

@@ -3,5 +3,5 @@ memoized fannkuch(i:IntList)->i[0]=1 ? 0 : 1+fannkuch(i.head(i[0]).reverseList|i
 
 fannkuchRedux(i>=1)->permutationIterator([1..i]).pEach(permutation,fannkuch(permutation),max).print;
 
-//*Performs "fannkuch-redux" for things...
+//*Performs "fannkuch-redux" for all permutations of <parameter> elements
 main(parameter)->fannkuchRedux(parameter.toInt);

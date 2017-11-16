@@ -1,4 +1,4 @@
-private degToRad:=arctan(1)/45;
+private degToRad:=pi/180;
 private removeRedundantSequences(s,s)->s;
 private removeRedundantSequences(s,prev)->removeRedundantSequences(replace(s,['+-','-+','[]','[+]','[-]'],''),s);
 
@@ -15,7 +15,6 @@ private cleanString(drawChars:String, input:String, allowShortening:Boolean)->be
     allowShortening ? ['F','00','11','22','33','44','55','66','77','88'] : 'F',
     allowShortening ? ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9'] : '0');
 end;
-
 
 turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String)->turtle(startAngle,rotAngleInDegrees,drawChars,s,true);
 turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String,allowShortening:Boolean)->begin

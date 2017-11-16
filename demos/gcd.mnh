@@ -4,6 +4,4 @@ gcd(a,0)->a;
 gcd(a,b)->gcd(b, a mod b);
 gcd(a,b,...)->gcd@(gcd(a,b)|...);
 
-//*For regression test
-main->main(1238124,1236);
-main(x,y)->printf('The greatest common denominator of %{$0}s and %{$1}s is %{gcd($0,$1)}s',softCast(x),softCast(y));
+main(x,y)->printf('The greatest common divider of %{$0}s and %{$1}s is %{gcd($0,$1)}s',softCast(x),softCast(y));

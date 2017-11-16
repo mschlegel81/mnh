@@ -22,8 +22,6 @@ private classify(n:Int)->
   end;
 
 //*See http://rosettacode.org/wiki/Aliquot_sequence_classifications
-main->main(11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488);
-
 //*Return Aliquot sequence classifications for the given numbers
 main(...)->
   (...).pMap(::toInt)

@@ -5,6 +5,7 @@ datastore points;
 //*If necessary, the datastore is initialized first.
 private getPoints->points orElse (points :=
 begin
+  //Generate a list of points by dart-throwing
   local P:=[random(2)];
   local acceptAt:=1;
   local tries:=0;
@@ -64,9 +65,9 @@ private scSort_(ax:Numeric,ay:Numeric,bx:Numeric,by:Numeric,cx:Numeric,cy:Numeri
         scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x.get(not(mask)),y.get(not(mask)));
       end
     : begin
-        print('Aboring at ',ax,'  ',ay,' | ',
-                            bx,'  ',by,' | ',
-                            cx,'  ',cy,' with ',size(x),' points');
+        print('Aborting at ',ax,'  ',ay,' | ',
+                             bx,'  ',by,' | ',
+                             cx,'  ',cy,' with ',size(x),' points');
         [0..size(x)-1].each(i,[x.get(i),y.get(i)]);
       end)
   : size(x)=1 ? [x|y] : [];
@@ -95,7 +96,6 @@ polish(L)->begin
   print('Path length after polishing is    ',round(pathLength(result),3));
   result;
 end;
-
 
 //*Approximately solves the Travelling Salesman Problem using sorting by Sierpinski-Curve
 main->begin

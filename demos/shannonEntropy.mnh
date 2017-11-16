@@ -6,6 +6,5 @@ shannonEntropy(s:String)->s.chars //split s in characters
                            .agg(+)*-1;
 
 //*See http://rosettacode.org/wiki/Entropy
-main->main("1223334444");
 //*Print out the Shannon entropy of <code>s</code>
 main(s)->print(shannonEntropy(s));
