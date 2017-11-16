@@ -196,6 +196,7 @@ PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
 VAR runnerModel:T_runnerModel;
     completionLogic:T_completionLogic;
+    recentlyActivated:T_fileHistory;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
@@ -616,6 +617,7 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.Checked:=(l=language);
     end;
+    recentlyActivated.fileClosed(getPath);
     if language_=LANG_MNH
     then begin
       editor.highlighter:=highlighter;
@@ -1428,6 +1430,8 @@ PROCEDURE T_runnerModel.haltEvaluation;
 INITIALIZATION
   setLength(editorMetaData,0);
   doNotCheckFileBefore:=now;
+  recentlyActivated.create;
 FINALIZATION
   finalizeEditorMeta;
+  recentlyActivated.destroy;
 end.

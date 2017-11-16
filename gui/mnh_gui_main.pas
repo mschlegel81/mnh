@@ -109,7 +109,8 @@ TYPE
     miStackTracing,
     miUserErrors,
     miFileHistoryRoot,
-    miHtmlExport:              TMenuItem;
+    miHtmlExport,
+    miRecentFileRoot:          TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -163,6 +164,7 @@ TYPE
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
+    recentFileMenuItems:array of TMenuItem;
     quickMeta:T_editorMeta;
     quickAdapters:P_adapters;
     quickTask:T_postEvaluationData;
@@ -440,6 +442,22 @@ PROCEDURE TMnhForm.updateFileHistory;
       historyMenuItems[i].Tag:=i;
       historyMenuItems[i].OnClick:=@miFileHistory0Click;
       miFileHistoryRoot.add(historyMenuItems[i]);
+    end;
+    //-----------------------------------------------------------
+    for i:=0 to length(recentFileMenuItems)-1 do begin
+      miRecentFileRoot.remove(recentFileMenuItems[i]);
+      FreeAndNil(recentFileMenuItems[i]);
+    end;
+    recentlyActivated.polishHistory;
+    histItems:=recentlyActivated.items;
+    dropFirst(histItems,1);
+    setLength(recentFileMenuItems,length(histItems));
+    for i:=0 to length(histItems)-1 do begin
+      recentFileMenuItems[i]:=TMenuItem.create(MainMenu1);
+      recentFileMenuItems[i].caption:=intToStr(i)+': '+histItems[i];
+      recentFileMenuItems[i].Tag:=i;
+      recentFileMenuItems[i].OnClick:=@miRecentFileItemClick;
+      miRecentFileRoot.add(recentFileMenuItems[i]);
     end;
   end;
 
