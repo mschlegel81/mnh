@@ -449,13 +449,14 @@ PROCEDURE TMnhForm.updateFileHistory;
       FreeAndNil(recentFileMenuItems[i]);
     end;
     recentlyActivated.polishHistory;
-    histItems:=recentlyActivated.items;
-    dropFirst(histItems,1);
+    if length(recentlyActivated.items)<=1 then exit;
+    setLength(histItems,length(recentlyActivated.items)-1);
+    for i:=1 to length(recentlyActivated.items)-1 do histItems[i-1]:=recentlyActivated.items[i];
     setLength(recentFileMenuItems,length(histItems));
     for i:=0 to length(histItems)-1 do begin
       recentFileMenuItems[i]:=TMenuItem.create(MainMenu1);
       recentFileMenuItems[i].caption:=intToStr(i)+': '+histItems[i];
-      recentFileMenuItems[i].Tag:=i;
+      recentFileMenuItems[i].Tag:=i+1;
       recentFileMenuItems[i].OnClick:=@miRecentFileItemClick;
       miRecentFileRoot.add(recentFileMenuItems[i]);
     end;
