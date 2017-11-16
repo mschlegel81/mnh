@@ -307,6 +307,8 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
       runnerModel.debugMode:=true;
       onDebuggerEvent;
     end;
+    if command=ecUserDefinedFirst+4 then getEditor^.moveLine(true);
+    if command=ecUserDefinedFirst+5 then getEditor^.moveLine(false);
   end;
 
 PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
