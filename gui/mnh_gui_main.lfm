@@ -3356,6 +3356,9 @@ object MnhForm: TMnhForm
       object miFileHistoryRoot: TMenuItem
         Caption = '&History...'
       end
+      object miRecentFileRoot: TMenuItem
+        Caption = '&Recent...'
+      end
     end
     object subMenuSearch: TMenuItem
       Caption = '&Search'

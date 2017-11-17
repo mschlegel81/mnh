@@ -1,6 +1,7 @@
 //@demo_for=file processing
 main(rootFolder,...)->begin
   print('Root folder: ',rootFolder);
+  //First find all files to check
   local filesToCheck:=allFiles(rootFolder);
   print('Checking ',filesToCheck.size,' files');
   //group files by size

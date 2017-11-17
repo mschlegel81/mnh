@@ -40,5 +40,3 @@ main(count)->begin
   cnt<=0 ? fail('count must be >0') : void;
   [1..cnt].each(w,randomWord.print);
 end;
-
-main->main(16);

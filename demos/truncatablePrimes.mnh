@@ -1,21 +1,21 @@
 leftTruncatablePrimes(maxPrime>10)->
   begin
     local PRIME_SET:=primes(maxPrime);
-    local SUB:=primes(10);
+    local SUB:=primes(10); //SUB is the subset of 1-digit primes
     SUB|(
     [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
-      SUB:=PRIME_SET[10^k<=PRIME_SET<=10^(k+1)]
-           .filter({$x mod 10^k in SUB}),|));
+      SUB:=PRIME_SET[10^k<=PRIME_SET<10^(k+1)] //filter all primes with k+1 digits
+           .filter({$x mod 10^k in SUB}),|));  //filter all primes which left-truncated are in SUB
   end;
 
 rightTruncatablePrimes(maxPrime>10)->
   begin
     local PRIME_SET:=primes(maxPrime);
-    local SUB:=primes(10);
+    local SUB:=primes(10); //SUB is the subset of 1-digit primes
     SUB|(
     [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
-       SUB:=PRIME_SET[10^k<=PRIME_SET<=10^(k+1)]
-            .filter({$x div 10 in SUB}),|));
+       SUB:=PRIME_SET[10^k<=PRIME_SET<10^(k+1)] //filter all primes with k+1 digits
+            .filter({$x div 10 in SUB}),|));    //filter all primes which right-truncated are in SUB
   end;
 
 //@demo_for=list processing

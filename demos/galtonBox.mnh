@@ -1,9 +1,10 @@
-USE GUI;
+plain script; //implemented as a plain script - i.e. withtout an explicit main routine
+USE GUI;      //force GUI start (or crash on light flavors)
 
-private newBall->[13,0,0];
-private dt:=0.2;
+private newBall:=[13,0,0]; //new balls are created at y=13, x=0, dx=0
+private dt:=0.2;           //time step size
 private moveBall(ball:NumericList(3))->
-  round(ball[0]+0.5)=round(ball[0]+0.5+dt)
+  round(ball[0]+0.5)=round(ball[0]+0.5+dt)  //change direction at certain points
   ? [ball[0]-dt,ball[1]+ball[2]*dt,ball[2]]
   : [ball[0]-dt,ball[1]+ball[2]*dt,ball[0]<6 ? 0 : random<0.5 ? -1 : 1];
 
@@ -11,19 +12,25 @@ mutable collected:=[-4..4].map({[$x,0]}).toMap;
 mutable balls:=[newBall];
 
 private plotState->begin
+  //plot pins
   [0..6].each(i,[0..i].each(j,[j*2-i,12-i]),|).plot('. 3 red');
   local fillFactor:=5/max(50,collected.getInner(1).max);
+  //plot aggregation columns
   collected.sort.each(i,[2*i[0],i[1]*fillFactor]).addPlot('bar fs blue');
+  //plot balls
   balls.map({$x[[1,0]]}).addPlot('. 3 black');
+  //display immediate
   display;
 end;
 
 private stepState->begin
+  //move all balls and replace them when falling out
   balls:=balls.map(::moveBall).each(ball,ball[0]<=0 ? begin
     collected[floor(ball[1]/2)]+=1;
     newBall;
   end : ball);
 
+  //add a new ball if all balls are below y=12.5
   (balls.getInner(0).max<12.5)
   ? balls||=newBall
   : void;
@@ -31,16 +38,14 @@ private stepState->begin
   void;
 end;
 
-//*See http://rosettacode.org/wiki/Galton_box_animation
-main->begin
-  setOptions([['autoscaleY',false],['axisStyleX',0],
-              ['autoscaleX',false],['axisStyleY',0],
-              ['y0',0],['y1',13],
-              ['x0',-8],['x1',8],
-              ['preserveAspect',true]]);
-  while(not(plotClosed),begin
-    stepState;
-    plotState;
-    sleep(0.01);
-  end);
-end;
+setOptions([['autoscaleY',false],['axisStyleX',0],
+            ['autoscaleX',false],['axisStyleY',0],
+            ['y0',0],['y1',13],
+            ['x0',-8],['x1',8],
+            ['preserveAspect',true]]);
+
+while(not(plotClosed),begin
+  stepState;
+  plotState;
+  sleep(0.01);
+end);

@@ -1,7 +1,12 @@
-isPartialSolution(a,b,c,d      )-> a+b = b+c+d;
-isPartialSolution(a,b,c,d,e,f  )-> a+b = b+c+d = d+e+f;
-findG            (a,b,c,d,e,f  )-> a+b-f;
-isSolution       (a,b,c,d,e,f,g)-> a+b = b+c+d = d+e+f = f+g;
+//This program finds values a,b,c,d,e,f,g such that a+b = b+c+d = d+e+f = f+g
+//Instead of brute-forcing, we may employ a multi-step filtering process:
+//  - Iterate over the first 4 elements, check via isPartialSolution if we should continue
+//  - Iterate over the next 2 elements, check via isPartialSolution if we should continue
+//  - find the last element via findG and accept if it is in the allowed range
+private isPartialSolution(a,b,c,d      )-> a+b = b+c+d;
+private isPartialSolution(a,b,c,d,e,f  )-> a+b = b+c+d = d+e+f;
+private findG            (a,b,c,d,e,f  )-> a+b-f;
+private isSolution       (a,b,c,d,e,f,g)-> a+b = b+c+d = d+e+f = f+g;
 
 //*See: http://rosettacode.org/wiki/4-rings_or_4-squares_puzzle
 main->begin
@@ -13,9 +18,9 @@ main->begin
    \     X     X     X     /
     \___/ \___/ \___/ \___/~);
   print('The solutions for 1..7 (unique) are: ');
-  permutations([1..7]).pEach(p,isSolution@p ? p : void).each(s,print('  ',s));
+  permutationIterator([1..7]).filter({isSolution@$p}).map({print('  ',$s)});
   print('The solutions for 3..9 (unique) are: ');
-  permutations([3..9]).pEach(p,isSolution@p ? p : void).each(s,print('  ',s));
+  permutationIterator([3..9]).filter({isSolution@$p}).map({print('  ',$s)});
   print('The number of solutions for 0..9 (nonunique) is: ',
   cross([0..9],[0..9],[0..9],[0..9]).pEach(abcd,
     begin
@@ -23,10 +28,8 @@ main->begin
       ? cross([0..9],[0..9]).pEach(ef,
           begin
             local abcdef:=abcd|ef;
-            isPartialSolution@abcdef and (0<=(findG@abcdef)<=9)
-            ? 1
-            : 0;
-          end,+)
+            isPartialSolution@abcdef and (0<=(findG@abcdef)<=9);
+          end).trueCount
       : void;
     end,+));
 end;

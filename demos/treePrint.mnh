@@ -2,11 +2,12 @@
 private getName(s:Scalar,isMapEntry      )->s.toString;
 private getName(l       ,isMapEntry=false)->'\';
 private getName(l       ,isMapEntry=true )->l.head;
+//*Overloaded getChildren to work with any type:
 private getChildren(s:Scalar,isMapEntry      )->[];
 private getChildren(l       ,isMapEntry=false)->l;
 private getChildren(l       ,isMapEntry=true )->l.trailing;
 
-treePrint(Tree,indent,isMapEntry:Boolean,last:Boolean)->begin
+private treePrint(Tree,indent,isMapEntry:Boolean,last:Boolean)->begin
   print(indent,last ? '\--' : '+--',Tree.getName(isMapEntry));
   local newIndent:=last
                    ? indent+'   '

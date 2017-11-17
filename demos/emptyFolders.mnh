@@ -9,4 +9,4 @@ emptyFolders(root)->begin
 end;
 
 main('delete',root)->emptyFolders(root).each(f,deleteDir(f));
-main(root)->printf('%s',emptyFolders(root));
+main(         root)->printf('%s',emptyFolders(root));

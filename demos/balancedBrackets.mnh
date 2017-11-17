@@ -1,5 +1,5 @@
 //@demo_for=memoization
-//Note: Using memoization here is a hack to ensure that successive callls return the same string
+//Note: Using memoization here is a hack to ensure that successive calls return the same string
 private memoized randomBrackets(n:Int)->n<1 ? "" : [1..n].each(i,'[',']').get(sortPerm(random(2*n))).agg(&);
 private isOk(s:String)->replace(s,"[]","")="";
 //*See http://rosettacode.org/wiki/Balanced_brackets

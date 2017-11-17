@@ -1,6 +1,5 @@
 USE pascal;
-memoized
-private AKSPoly(n)->pascalTriangleRow(n)*(-1^[0..n]);
+memoized private AKSPoly(n)->pascalTriangleRow(n)*(-1^[0..n]);
 private powerOfX(0)->"1";
 private powerOfX(1)->"x";
 private powerOfX(n)->"x^"&n;

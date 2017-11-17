@@ -1,9 +1,17 @@
 //Rational numbers are handled as arrays of their prime factor powers.
-private BASE:=  [2,3,5,7,11,13,17,19,23,29];
+private BASE:=  [2,3,5,7,11,13,17,19,23,29]; //The first few prime numbers
 private POT2TAIL:=[0,0,0, 0, 0, 0, 0, 0, 0];
-private niceRational(L)->[0..size(L)-1].each(i,L.get(i)<>0 ? BASE.get(i)&"^"&L.get(i) : void).join("*")&" = "&(BASE^L).agg(*);
+
+private niceRational(L:IntList(BASE.size))->
+  (BASE[L!=0] & '^' & L[L!=0]) //filter elements with nonzero exponents and transform to list of powers
+  .join('*')                   //join the list ...
+  &" = "&(BASE^L).agg(*);      //... and append the numeric result
+
+//  [L,BASE].transpose.filter({$p[0]!=0}).transpose
+//[0..size(L)-1].each(i,L.get(i)<>0 ? BASE.get(i)&"^"&L.get(i) : void).join("*")&" = "&(BASE^L).agg(*);
 
 //*This routine transforms a rational number to the corresponding prime factor powers
+//*e.g. rational(15,4)->[-2,1,1,0,0,0,0,0,0,0] - read as 15/4 = 2^(-2)*3^1*5^1*7^0*...
 private rational(enumerator:Int,denominator:Int)->begin
   local en:=enumerator;
   local de:=denominator;
@@ -26,7 +34,7 @@ private parseFractions(s:String)->
              ']]')().each(tuple,rational@tuple);
 
 //*The core algorithm;
-private Fractran(out:Expression,fractions,k,steplimit)->begin
+private Fractran(out:Expression(2),fractions,k,steplimit)->begin
   local state:=k;
   local terminated:=false;
   out(0,state);
@@ -41,13 +49,15 @@ private Fractran(out:Expression,fractions,k,steplimit)->begin
 end;
 
 Conway_primes_algorithm:='17 / 91, 78 / 85, 19 / 51, 23 / 38, 29 / 33, 77 / 29, 95 / 23, 77 / 19, 1 / 17, 11 / 13, 13 / 11, 15 / 14, 15 / 2, 55 / 1';
-private printPowersOf2:={tail($params.get(1))==POT2TAIL ? print($step,': ',niceRational($state)) : void};
-private printAll      :={                                 print($step,': ',niceRational($state))       };
+private printPowersOf2(step,state)->tail(state)==POT2TAIL
+                                    ? printAll(step,state)
+                                    : void;
+private printAll      (step,state)->print(step,': ',niceRational(state));
 
-main(fractions,n)->Fractran(printAll      ,parseFractions(fractions),rational(softCast(n),1),30)|
+main(fractions,n)->Fractran(::printAll      ,parseFractions(fractions),rational(softCast(n),1),30)|
                    print('----------------------------------')|
-                   Fractran(printPowersOf2,parseFractions(fractions),rational(softCast(n),1),428553);
+                   Fractran(::printPowersOf2,parseFractions(fractions),rational(softCast(n),1),428553);
 //*See http://rosettacode.org/wiki/Fractran
 main('rosetta')->main(Conway_primes_algorithm,'2');
 //*As above but abridged for regression test
-main->Fractran(printAll,parseFractions(Conway_primes_algorithm),rational(2,1),30);
+main->Fractran(::printAll,parseFractions(Conway_primes_algorithm),rational(2,1),30);

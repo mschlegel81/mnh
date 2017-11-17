@@ -1,2 +1,5 @@
 //*See http://rosettacode.org/wiki/Department_Numbers
-main->subSets([1..7],3).filter({$x.agg(+)=12}).map({$x[sortPerm($x and 1)]}).map(::print);
+main->subSets([1..7],3)              //all 3-element subsets of [1..7]
+      .filter({$x.agg(+)=12})        //keep subsets which sum up to 12
+      .map({$x[sortPerm($x and 1)]}) //sort subsets so that first number is even
+      .map(::print);

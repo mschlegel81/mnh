@@ -1,22 +1,17 @@
+plain script;
 USE rungeKutta,GUI;
-private mutable l1:=1;
-private mutable l2:=1;
-private mutable m1:=1;
-private mutable m2:=1;
+//Animation parameters
+private secondsPerFrame:=1/40;
+private timeStepPerFrame:=0.02;
+//Physical parameters
+private l1:=($1 orElse 1).toReal; //Length of upper leg
+private l2:=($2 orElse 1).toReal; //Length of lower leg
+private m1:=($3 orElse 1).toReal; //Upper mass
+private m2:=($4 orElse 1).toReal; //Lower mass
 private g:=9.81;
-private mutable F1fak:=-m2/(m1+m2)*l2/l1;
-private mutable F2fak:=-l1/l2;
-
-private initialize(l1_,l2_,m1_,m2_)->begin
-  l1:=l1_.toReal;
-  l2:=l2_.toReal;
-  m1:=m1_.toReal;
-  m2:=m2_.toReal;
-  F1fak:=-m2/(m1+m2)*l2/l1;
-  F2fak:=-l1/l2;
-  void;
-end;
-
+//Helper variables
+private F1fak:=-m2/(m1+m2)*l2/l1;
+private F2fak:=-l1/l2;
 //*phi1'', dependent on phi2''
 private F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
 //*phi2'', dependent on phi1''
@@ -44,11 +39,7 @@ private plottable(state:NumericList(4))->begin
                d1+ [sin(state[1]),-cos(state[1])]*l2];
 end;
 
-private secondsPerFrame:=1/40;
-private timeStepPerFrame:=0.02;
-//*Animates a double pendulum with standard parameters (l1=l2=m1=m2=1)
-//*The animation will consist of two double pendulums with a tiny variation in the starting conditions
-main->begin
+begin
   setOptions([['autoscaleX',false],['autoscaleY',false],['preserveAspect',true],['x0',0],['x1',0],['y0',0],['y1',0],['axisStyleX',0],['axisStyleY',0]]);
   local state1:=[pi/2,-pi/2,0,0];
   local state2:=state1+(random(4)-0.5)*1E-6;
@@ -91,16 +82,5 @@ main->begin
   setOptions([['autoscaleX',true],['autoscaleY',true],['preserveAspect',false],['axisStyleX',3],['axisStyleY',3]]);
   plot   (t,[hist1[mask].getInner(0),hist2[mask].getInner(0)].transpose.flatten,'red 0.5 tube');
   addPlot(t,[hist1[mask].getInner(1),hist2[mask].getInner(1)].transpose.flatten,'blue 0.5 tube');
-
-//  addPlot(t,hist2.getInner(0),'black');
-//  addPlot(t,hist1.getInner(1),'red box');
-//  addPlot(t,hist2.getInner(1),'red');
   display;
 end;
-
-//*Animates a double pendulum with custom parameters
-//*Note that smaller lengths lead to faster pendulums
-//*but only the ratio of the lenghts changes the behavior qualitatively
-main(L1,L2,M1,M2)->initialize@$params orElse main;
-
-getOptions;

@@ -47,8 +47,5 @@ private printCalendar(year)->begin
   print(splitLine);
 end;
 
-//*Prints a calendar of 1966
-main->printCalendar(1966);
-
 //*Prints a calendar of the given year
 main(year)->printCalendar(year.softCast);

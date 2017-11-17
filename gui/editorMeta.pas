@@ -96,6 +96,7 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
     PROCEDURE setCaret(CONST location: T_searchTokenLocation);
     PROCEDURE toggleComment;
+    PROCEDURE moveLine(CONST up:boolean);
     PROCEDURE toggleBreakpoint;
     PROCEDURE setWorkingDir;
     PROCEDURE closeEditorWithDialogs;
@@ -195,6 +196,7 @@ PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
 VAR runnerModel:T_runnerModel;
     completionLogic:T_completionLogic;
+    recentlyActivated:T_fileHistory;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
@@ -523,7 +525,8 @@ CONSTRUCTOR T_editorMeta.createWithParent(CONST idx:longint; CONST parent:TWinCo
     addKeystroke(ecColSelEditorTop,57380);
     addKeystroke(ecColSelEditorBottom,57379);
     addKeystroke(ecBlockIndent,16457);
-
+    addKeystroke(ecUserDefinedFirst+4,32806);//Alt+Up
+    addKeystroke(ecUserDefinedFirst+5,32808);//Alt+Down
     highlighter:=TSynMnhSyn.create(mainForm,msf_input);
     editor_.highlighter:=highlighter;
     editor_.PopupMenu:=EditorPopupMenu;
@@ -614,6 +617,7 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.Checked:=(l=language);
     end;
+    recentlyActivated.fileClosed(getPath);
     if language_=LANG_MNH
     then begin
       editor.highlighter:=highlighter;
@@ -887,6 +891,65 @@ PROCEDURE T_editorMeta.toggleComment;
       for cy:=editor.BlockBegin.y to editor.BlockEnd.y do commented:=commented and lineIsCommented(cy);
       if commented then for cy:=editor.BlockBegin.y to editor.BlockEnd.y do uncommentLine(cy)
                    else for cy:=editor.BlockBegin.y to editor.BlockEnd.y do   commentLine(cy);
+    end;
+    editor.EndUndoBlock;
+  end;
+
+PROCEDURE T_editorMeta.moveLine(CONST up:boolean);
+  VAR first,last:longint;
+      oldBegin,oldEnd:TPoint;
+      blockDelta:longint=0;
+  PROCEDURE moveUp;
+    VAR oldLineText:string;
+        oldLineStart:TPoint;
+        oldLineEnd  :TPoint;
+        newLineStart:TPoint;
+    begin
+      if first-2<0 then exit;
+      oldLineText:=editor.lines[first-2];
+      oldLineStart.y:=first-1; oldLineStart.x:=0;
+      oldLineEnd  .y:=first  ; oldLineEnd  .x:=0;
+      editor.SetTextBetweenPoints(oldLineStart,oldLineEnd,'');
+      newLineStart.y:=last;
+      newLineStart.x:=0;
+      editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
+      blockDelta:=-1;
+    end;
+
+  PROCEDURE moveDown;
+    VAR oldLineText:string;
+        oldLineStart:TPoint;
+        oldLineEnd  :TPoint;
+        newLineStart:TPoint;
+    begin
+      if last>=editor.lines.count then exit;
+      oldLineText:=editor.lines[last];
+      oldLineStart.y:=last+1; oldLineStart.x:=0;
+      oldLineEnd  .y:=last+2; oldLineEnd  .x:=0;
+      editor.SetTextBetweenPoints(oldLineStart,oldLineEnd,'');
+      newLineStart.y:=first;
+      newLineStart.x:=0;
+      editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
+      blockDelta:=1;
+    end;
+
+  begin
+    if editor.readonly then exit;
+    oldBegin:=editor.BlockBegin;
+    oldEnd  :=editor.BlockEnd;
+    if editor.BlockBegin.y<1 then begin
+      first:=editor.CaretY;
+      last :=first;
+    end else begin
+      first:=editor.BlockBegin.y;
+      last :=editor.BlockEnd  .y;
+    end;
+    editor.BeginUndoBlock;
+    if up then moveUp else moveDown;
+    if (oldBegin.y>=1) then begin
+      inc(oldBegin.y,blockDelta); editor.BlockBegin:=oldBegin;
+      inc(oldEnd  .y,blockDelta); editor.BlockEnd  :=oldEnd;
+      editor.CaretY:=editor.CaretY+blockDelta;
     end;
     editor.EndUndoBlock;
   end;
@@ -1367,6 +1430,8 @@ PROCEDURE T_runnerModel.haltEvaluation;
 INITIALIZATION
   setLength(editorMetaData,0);
   doNotCheckFileBefore:=now;
+  recentlyActivated.create;
 FINALIZATION
   finalizeEditorMeta;
+  recentlyActivated.destroy;
 end.

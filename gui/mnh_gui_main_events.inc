@@ -70,6 +70,7 @@ PROCEDURE miFullscreenClick(Sender: TObject);
 
 PROCEDURE subMenuFileClick(Sender: TObject);
 PROCEDURE miFileHistory0Click(Sender: TObject);
+PROCEDURE miRecentFileItemClick(Sender: TObject);
 PROCEDURE miGotoClick(Sender: TObject);
 PROCEDURE miHelpClick(Sender: TObject);
 PROCEDURE miHelpExternallyClick(Sender: TObject);
@@ -124,6 +125,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     setLength(scriptMenuItems[st_insert],0);
     setLength(scriptMenuItems[st_util  ],0);
     setLength(historyMenuItems,0);
+    setLength(recentFileMenuItems,0);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     helpHighlighter  :=TSynMnhSyn.create(self,msf_help  );
     debugHighlighter :=TSynMnhSyn.create(self,msf_input );
@@ -307,6 +309,8 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
       runnerModel.debugMode:=true;
       onDebuggerEvent;
     end;
+    if command=ecUserDefinedFirst+4 then getEditor^.moveLine(true);
+    if command=ecUserDefinedFirst+5 then getEditor^.moveLine(false);
   end;
 
 PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
@@ -523,6 +527,17 @@ PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
   begin
     historyIdx:=TMenuItem(Sender).Tag;
     with settings.value^.workspace.fileHistory do begin
+      if fileExists(historyItem(historyIdx))
+      then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
+      else if polishHistory then updateFileHistory;
+    end;
+  end;
+
+PROCEDURE TMnhForm.miRecentFileItemClick(Sender: TObject);
+  VAR historyIdx:longint;
+  begin
+    historyIdx:=TMenuItem(Sender).Tag;
+    with recentlyActivated do begin
       if fileExists(historyItem(historyIdx))
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
       else if polishHistory then updateFileHistory;
