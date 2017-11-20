@@ -94,20 +94,21 @@ FUNCTION inspect_imp intFuncSignature;
       loadMessages:P_collectionLiteral=nil;
 
   PROCEDURE obtainPackage(CONST callerPackage:P_package; CONST locationForWarning:T_tokenLocation; CONST filenameOrId:string; VAR context:T_threadContext);
-      VAR fileName:string='';
-          id      :string='';
-      begin
-        if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
-        then fileName:=expandFileName(filenameOrId)
-        else id      :=filenameOrId;
-        if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
-        if (fileName='') or not(fileExists(fileName)) then begin
-          context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
-          tempPackage:=nil;
-          exit;
-        end;
-        new(tempPackage,create(newFileCodeProvider(fileName),nil));
+    VAR fileName:string='';
+        id      :string='';
+
+    begin
+      if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
+      then fileName:=expandFileName(filenameOrId)
+      else id      :=filenameOrId;
+      if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
+      if (fileName='') or not(fileExists(fileName)) then begin
+        context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
+        tempPackage:=nil;
+        exit;
       end;
+      new(tempPackage,create(newFileCodeProvider(fileName),nil));
+    end;
 
   PROCEDURE loadTemporaryPackage;
     begin
@@ -116,14 +117,14 @@ FUNCTION inspect_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
+    if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect(true,context)
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       id:=P_stringLiteral(arg0)^.value;
 
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id,context);
       if tempPackage<>nil then begin
         loadTemporaryPackage;
-        result:=tempPackage^.inspect;
+        result:=tempPackage^.inspect(false,context);
         if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         dispose(tempPackage,destroy);
         exit(result);
@@ -134,7 +135,7 @@ FUNCTION inspect_imp intFuncSignature;
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage;
-      result:=tempPackage^.inspect^.put('messages',loadMessages,false);
+      result:=tempPackage^.inspect(false,context)^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;

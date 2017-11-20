@@ -44,7 +44,6 @@ TYPE
       PROCEDURE clearCache; virtual;
       PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION inspect:P_mapLiteral; virtual; abstract;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST singleParameter:P_literal; CONST location:T_tokenLocation; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
   end;
