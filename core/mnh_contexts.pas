@@ -95,10 +95,10 @@ TYPE
 
   T_futureTaskEnvironment=record
     callingContext:P_threadContext;
-    values:P_valueStore;
-    taskQueue:P_taskQueue;
-    initialDepth:longint;
-    initialAllow:T_sideEffects;
+    values        :P_valueStore;
+    taskQueue     :P_taskQueue;
+    initialDepth  :longint;
+    initialAllow  :T_sideEffects;
   end;
 
   T_threadContext=object
@@ -112,6 +112,7 @@ TYPE
       callStack :T_callStack;
       {$endif}
       allowedSideEffects:T_sideEffects;
+      dequeueContext_:P_threadContext;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
     public
       regexCache:P_regexMap;
@@ -151,6 +152,7 @@ TYPE
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
       FUNCTION getFutureEnvironment:T_futureTaskEnvironment;
       PROCEDURE resolveMainParameter(VAR first:P_token);
+      FUNCTION dequeueContext:P_threadContext;
   end;
 
   T_evaluationContext=object
@@ -193,27 +195,19 @@ TYPE
   T_futureTaskState=(fts_pending, //set on construction
                      fts_evaluating, //set on dequeue
                      fts_ready); //set after evaluation
-
   P_futureTask=^T_futureTask;
   T_futureTask=object
-    private
-      payload:record
-        env:T_futureTaskEnvironment;
-        eachIndex:longint;
-        eachRule:P_expressionLiteral;
-        eachParameter:P_literal;
-        eachLocation:T_tokenLocation;
-        evaluationResult:P_literal;
-        state:T_futureTaskState;
-      end;
+    protected
       taskCs:TRTLCriticalSection;
-      nextToEvaluate:P_futureTask;
-      PROCEDURE dropEachParameter;
-      PROCEDURE evaluate(VAR context:T_threadContext);
+      env   :T_futureTaskEnvironment;
+      state :T_futureTaskState;
+      evaluationResult:P_literal;
+    private
+      nextToEvaluate  :P_futureTask;
     public
-      nextToAggregate:P_futureTask;
-      CONSTRUCTOR create;
-      PROCEDURE   define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST env_:T_futureTaskEnvironment);
+      PROCEDURE evaluate(VAR context:T_threadContext); virtual; abstract;
+      CONSTRUCTOR create(CONST environment:T_futureTaskEnvironment);
+      PROCEDURE reset;
       FUNCTION    canGetResult:boolean;
       FUNCTION    getResultAsLiteral:P_literal;
       DESTRUCTOR  destroy;
@@ -226,13 +220,13 @@ TYPE
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
       poolThreadsRunning:longint;
-      PROCEDURE enqueue(CONST task:P_futureTask; CONST context:P_threadContext);
     public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(VAR context:T_threadContext);
     PROPERTY getQueuedCount:longint read queuedCount;
+    PROCEDURE enqueue(CONST task:P_futureTask; CONST context:P_threadContext);
   end;
 
 VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; VAR context:T_threadContext);
@@ -263,6 +257,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     allowedSideEffects:=C_allSideEffects;
     callDepth:=0;
     if adapters=nil then adapters:=parent^.adapters;
+    dequeueContext_:=nil;
   end;
 
 CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
@@ -277,6 +272,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
     parent        :=nil;
     adapters      :=adapters_;
     callingContext:=nil;
+    dequeueContext_:=nil;
   end;
 
 DESTRUCTOR T_threadContext.destroy;
@@ -287,6 +283,7 @@ DESTRUCTOR T_threadContext.destroy;
     dispose(valueStore,destroy);
     recycler  .destroy;
     if regexCache<>nil then dispose(regexCache,destroy);
+    if dequeueContext_<>nil then dispose(dequeueContext_,destroy);
   end;
 
 CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
@@ -522,7 +519,7 @@ PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_futureTaskEnvi
     callingContext:=environment.callingContext;
     parent        :=callingContext^.parent;
     adapters      :=callingContext^.adapters;
-    options       :=callingContext^.options-[tco_spawnWorker];
+    options       :=callingContext^.options;//-[tco_spawnWorker];
     allowedSideEffects:=environment.initialAllow;
     valueStore^.clear;
     valueStore^.parentStore:=environment.values;
@@ -631,6 +628,12 @@ PROCEDURE T_threadContext.resolveMainParameter(VAR first:P_token);
     end;
   end;
 
+FUNCTION T_threadContext.dequeueContext:P_threadContext;
+  begin
+    if dequeueContext_=nil then new(dequeueContext_,createWorkerContext(adapters));
+    result:=dequeueContext_;
+  end;
+
 {$ifdef fullVersion}
 PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
   VAR p:P_threadContext;
@@ -709,71 +712,23 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     end;
   end;
 
-CONSTRUCTOR T_futureTask.create;
+CONSTRUCTOR T_futureTask.create(CONST environment:T_futureTaskEnvironment);
   begin;
     initCriticalSection(taskCs);
-    payload.eachParameter:=nil;
+    env   :=environment;
   end;
 
-PROCEDURE T_futureTask.define(CONST expr:P_expressionLiteral; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST env_:T_futureTaskEnvironment);
+PROCEDURE T_futureTask.reset;
   begin
-    enterCriticalSection(taskCs);
-    with payload do begin
-      env             :=env_;
-      eachIndex       :=idx;
-      eachRule        :=expr;
-      if x=nil
-      then eachParameter:=nil
-      else eachParameter:=x^.rereferenced;
-      eachLocation    :=location;
-      state           :=fts_pending;
-      evaluationResult:=nil;
-    end;
-    nextToAggregate:=nil;
-    nextToEvaluate:=nil;
-    env_.taskQueue^.enqueue(@self,env_.callingContext);
-    leaveCriticalSection(taskCs);
-  end;
-
-PROCEDURE T_futureTask.dropEachParameter;
-  begin
-    if payload.eachParameter<>nil then begin
-      disposeLiteral(payload.eachParameter);
-      payload.eachParameter:=nil;
-    end;
-  end;
-
-PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext);
-  VAR idxLit:P_intLiteral;
-  begin
-    enterCriticalSection(taskCs);
-    payload.state:=fts_evaluating;
-    leaveCriticalSection(taskCs);
-    try
-      if context.adapters^.noErrors then with payload do begin
-        context.attachWorkerContext(env);
-        if (eachIndex>=0) then begin
-          context.valueStore^.scopePush(false);
-          idxLit:=newIntLiteral(eachIndex);
-          context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
-          idxLit^.unreference;
-        end;
-        evaluationResult:=eachRule^.evaluateToLiteral(eachLocation,@context,eachParameter);
-        if (eachIndex>=0) then context.valueStore^.scopePop;
-        context.detachWorkerContext;
-      end;
-    finally
-      enterCriticalSection(taskCs);
-      dropEachParameter;
-      payload.state:=fts_ready;
-      leaveCriticalSection(taskCs);
-    end;
+    state :=fts_pending;
+    evaluationResult:=nil;
+    nextToEvaluate  :=nil;
   end;
 
 FUNCTION T_futureTask.canGetResult:boolean;
   begin
     enterCriticalSection(taskCs);
-    result:=payload.state=fts_ready;
+    result:=state=fts_ready;
     leaveCriticalSection(taskCs);
   end;
 
@@ -781,20 +736,19 @@ FUNCTION T_futureTask.getResultAsLiteral: P_literal;
   VAR sleepTime:longint=0;
   begin
     enterCriticalSection(taskCs);
-    while payload.state in [fts_pending,fts_evaluating] do begin
+    while state in [fts_pending,fts_evaluating] do begin
       leaveCriticalSection(taskCs);
       ThreadSwitch;
       sleep(sleepTime);
       if sleepTime<100 then inc(sleepTime);
       enterCriticalSection(taskCs);
     end;
-    result:=payload.evaluationResult;
+    result:=evaluationResult;
     leaveCriticalSection(taskCs);
   end;
 
 DESTRUCTOR T_futureTask.destroy;
   begin
-    dropEachParameter;
     doneCriticalSection(taskCs);
   end;
 
@@ -826,6 +780,12 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_futureTask; CONST context:P_threadCon
       end;
     end;
   begin
+    enterCriticalSection(task^.taskCs);
+    task^.nextToEvaluate:=nil;
+    task^.state:=fts_pending;
+    task^.evaluationResult:=nil;
+    leaveCriticalSection(task^.taskCs);
+
     system.enterCriticalSection(cs);
     if first=nil then begin
       queuedCount:=1;

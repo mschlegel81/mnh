@@ -52,10 +52,12 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
     settings.value^.doShowSplashScreen:=CheckBox1.Checked;
   end;
 
+VAR docThreadsRunning:longint=0;
 FUNCTION prepareDoc(p:pointer):ptrint;
   begin
     makeHtmlFromTemplate();
     result:=0;
+    interlockedDecrement(docThreadsRunning);
   end;
 
 PROCEDURE TSplashForm.FormShow(Sender: TObject);
@@ -68,6 +70,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
     Label2.caption:='build '+intToStr(BUILT_NUMBER)+' ['+CODE_HASH+']';
+    interLockedIncrement(docThreadsRunning);
     {$ifdef UNIX}
     prepareDoc(nil);
     {$else}
@@ -77,5 +80,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
 
 FINALIZATION
   if Assigned(mySplashForm) then FreeAndNil(mySplashForm);
+  while (docThreadsRunning>0) do sleep(1);
+
 end.
 

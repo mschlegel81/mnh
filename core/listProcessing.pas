@@ -21,6 +21,34 @@ PROCEDURE aggregate(CONST inputIterator:P_expressionLiteral; CONST aggregator:P_
 
 VAR newIterator:FUNCTION (CONST input:P_literal):P_expressionLiteral;
 IMPLEMENTATION
+TYPE
+  P_eachTask=^T_eachTask;
+  T_eachTask=object(T_futureTask)
+    eachPayload:record
+      eachIndex:longint;
+      eachRule:P_expressionLiteral;
+      eachParameter:P_literal;
+    end;
+    nextToAggregate:P_eachTask;
+    CONSTRUCTOR createEachTask(CONST environment:T_futureTaskEnvironment);
+    PROCEDURE dropEachParameter;
+    PROCEDURE define(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
+    PROCEDURE evaluate(VAR context:T_threadContext); virtual;
+    DESTRUCTOR destroy;
+  end;
+
+  P_mapTask=^T_mapTask;
+  T_mapTask=object(T_futureTask)
+    mapPayload:record
+      mapRule:P_expressionLiteral;
+      mapParameter:P_literal;
+    end;
+    nextToAggregate:P_mapTask;
+    CONSTRUCTOR createMapTask(CONST environment:T_futureTaskEnvironment; CONST expr:P_expressionLiteral);
+    PROCEDURE define(CONST x:P_literal);
+    PROCEDURE evaluate(VAR context:T_threadContext); virtual;
+    DESTRUCTOR destroy;
+  end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
@@ -54,10 +82,10 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
   CONST rulesList: T_expressionList; CONST aggregator: P_aggregator;
   CONST eachLocation: T_tokenLocation; VAR context: T_threadContext);
 
-  VAR firstToAggregate:P_futureTask=nil;
-      lastToAggregate:P_futureTask=nil;
+  VAR firstToAggregate:P_eachTask=nil;
+      lastToAggregate:P_eachTask=nil;
 
-  PROCEDURE enqueueForAggregation(CONST task:P_futureTask); inline;
+  PROCEDURE enqueueForAggregation(CONST task:P_eachTask); inline;
     begin
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
@@ -68,12 +96,12 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       end;
     end;
   VAR recycling:record
-        dat:array[0..31] of P_futureTask;
+        dat:array[0..31] of P_eachTask;
         fill:longint;
       end;
 
   FUNCTION canAggregate:boolean; inline;
-    VAR toAggregate:P_futureTask;
+    VAR toAggregate:P_eachTask;
     begin
       result:=false;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
@@ -90,13 +118,13 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
 
   VAR environment:T_futureTaskEnvironment;
 
-  FUNCTION createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal):P_futureTask; inline;
+  FUNCTION createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal):P_eachTask; inline;
     begin
       with recycling do if fill>0 then begin
         dec(fill);
         result:=dat[fill];
-      end else new(result,create);
-      result^.define(expr,expr^.getLocation,idx,x,environment);
+      end else new(result,create(environment));
+      result^.define(expr,idx,x);
     end;
 
   VAR rule:P_expressionLiteral;
@@ -104,9 +132,9 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       aimEnqueueCount:longint;
       x:P_literal;
       proceed:boolean=true;
-      dequeueContext:T_threadContext;
+      dequeueContext:P_threadContext;
   begin
-    dequeueContext.createWorkerContext(context.adapters);
+    dequeueContext:=context.dequeueContext;
     recycling.fill:=0;
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
@@ -116,7 +144,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       for rule in rulesList do if proceed then begin
         enqueueForAggregation(createTask(rule,eachIndex,x));
         if environment.taskQueue^.getQueuedCount>aimEnqueueCount then begin
-          if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+          if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
           //if there is not enough pending after dequeuing, increase aimEnqueueCount
           if environment.taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
         end;
@@ -129,13 +157,12 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     end;
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
     dispose(environment.values,destroy);
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
-    dequeueContext.destroy;
   end;
 
 FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
@@ -161,11 +188,11 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
                             CONST mapLocation:T_tokenLocation;
                             VAR context:T_threadContext):P_listLiteral;
 
-  VAR firstToAggregate:P_futureTask=nil;
-      lastToAggregate:P_futureTask=nil;
+  VAR firstToAggregate:P_mapTask=nil;
+      lastToAggregate:P_mapTask=nil;
       resultLiteral:P_listLiteral;
 
-  PROCEDURE enqueueForAggregation(CONST task:P_futureTask); inline;
+  PROCEDURE enqueueForAggregation(CONST task:P_mapTask); inline;
     begin
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
@@ -176,12 +203,12 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       end;
     end;
   VAR recycling:record
-        dat:array[0..31] of P_futureTask;
+        dat:array[0..31] of P_mapTask;
         fill:longint;
       end;
 
   FUNCTION canAggregate:boolean; inline;
-    VAR toAggregate:P_futureTask;
+    VAR toAggregate:P_mapTask;
     begin
       result:=false;
       while (firstToAggregate<>nil) and (firstToAggregate^.canGetResult) do begin
@@ -198,21 +225,21 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
 
   VAR environment:T_futureTaskEnvironment;
 
-  FUNCTION createTask(CONST x:P_literal):P_futureTask; inline;
+  FUNCTION createTask(CONST x:P_literal):P_mapTask; inline;
     begin
       with recycling do if fill>0 then begin
         dec(fill);
         result:=dat[fill];
-      end else new(result,create);
-      result^.define(expr,expr^.getLocation,-1,x,environment);
+      end else new(result,createMapTask(environment,expr));
+      result^.define(x);
     end;
 
   VAR x:P_literal;
       aimEnqueueCount:longint;
       isExpressionNullary:boolean;
-      dequeueContext:T_threadContext;
+      dequeueContext:P_threadContext;
   begin
-    dequeueContext.createWorkerContext(context.adapters);
+    dequeueContext:=context.dequeueContext;
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
@@ -224,7 +251,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       then enqueueForAggregation(createTask(nil))
       else enqueueForAggregation(createTask(x  ));
       if environment.taskQueue^.getQueuedCount>aimEnqueueCount then begin
-        if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+        if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
         //if there is not enough pending after dequeuing, increase aimEnqueueCount
         if environment.taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
       end;
@@ -233,14 +260,13 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     end;
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
     dispose(environment.values,destroy);
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
     result:=resultLiteral;
-    dequeueContext.destroy;
   end;
 
 PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext);
@@ -257,6 +283,107 @@ PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: 
       x:=inputIterator^.evaluateToLiteral(location,@context);
     end;
     if x<>nil then disposeLiteral(x);
+  end;
+
+CONSTRUCTOR T_mapTask.createMapTask(CONST environment: T_futureTaskEnvironment; CONST expr: P_expressionLiteral);
+  begin
+    create(environment);
+    mapPayload.mapRule:=expr;
+  end;
+
+PROCEDURE T_mapTask.define(CONST x: P_literal);
+  begin
+    enterCriticalSection(taskCs);
+    mapPayload.mapParameter:=x;
+    nextToAggregate:=nil;
+    env.taskQueue^.enqueue(@self,env.callingContext);
+    leaveCriticalSection(taskCs);
+  end;
+
+PROCEDURE T_mapTask.evaluate(VAR context: T_threadContext);
+  begin
+    enterCriticalSection(taskCs);
+    state:=fts_evaluating;
+    leaveCriticalSection(taskCs);
+    try
+      if context.adapters^.noErrors then with mapPayload do begin
+        context.attachWorkerContext(env);
+        evaluationResult:=mapRule^.evaluateToLiteral(mapRule^.getLocation,@context,mapParameter);
+        context.detachWorkerContext;
+      end;
+    finally
+      enterCriticalSection(taskCs);
+      state:=fts_ready;
+      leaveCriticalSection(taskCs);
+    end;
+  end;
+
+DESTRUCTOR T_mapTask.destroy;
+  begin
+    inherited destroy;
+  end;
+
+CONSTRUCTOR T_eachTask.createEachTask(CONST environment: T_futureTaskEnvironment);
+  begin
+    create(environment);
+  end;
+
+PROCEDURE T_eachTask.dropEachParameter;
+  begin
+    enterCriticalSection(taskCs);
+    if eachPayload.eachParameter<>nil then begin
+      disposeLiteral(eachPayload.eachParameter);
+      eachPayload.eachParameter:=nil;
+    end;
+    leaveCriticalSection(taskCs);
+  end;
+
+PROCEDURE T_eachTask.define(CONST expr: P_expressionLiteral; CONST idx: longint; CONST x: P_literal);
+  begin
+    enterCriticalSection(taskCs);
+    with eachPayload do begin
+      eachIndex       :=idx;
+      eachRule        :=expr;
+      if x=nil
+      then eachParameter:=nil
+      else eachParameter:=x^.rereferenced;
+      state           :=fts_pending;
+      evaluationResult:=nil;
+    end;
+    nextToAggregate:=nil;
+    env.taskQueue^.enqueue(@self,env.callingContext);
+    leaveCriticalSection(taskCs);
+  end;
+
+PROCEDURE T_eachTask.evaluate(VAR context: T_threadContext);
+  VAR idxLit:P_intLiteral;
+  begin
+    enterCriticalSection(taskCs);
+    state:=fts_evaluating;
+    leaveCriticalSection(taskCs);
+    try
+      if context.adapters^.noErrors then with eachPayload do begin
+        context.attachWorkerContext(env);
+        context.valueStore^.scopePush(false);
+        idxLit:=newIntLiteral(eachIndex);
+        context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
+        idxLit^.unreference;
+        evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,@context,eachParameter);
+        context.valueStore^.scopePop;
+        context.detachWorkerContext;
+      end;
+    finally
+      enterCriticalSection(taskCs);
+      dropEachParameter;
+      state:=fts_ready;
+      leaveCriticalSection(taskCs);
+    end;
+  end;
+
+DESTRUCTOR T_eachTask.destroy;
+  begin
+    dropEachParameter;
+    inherited destroy;
   end;
 
 end.

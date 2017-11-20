@@ -61,7 +61,7 @@ TYPE
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
-      FUNCTION inspect:P_mapLiteral;
+      FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
@@ -1474,7 +1474,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
   end;
 {$endif}
 
-FUNCTION T_package.inspect:P_mapLiteral;
+FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
@@ -1488,7 +1488,7 @@ FUNCTION T_package.inspect:P_mapLiteral;
     begin
       allRules:=packageRules.valueSet;
       result:=newMapLiteral();
-      for rule in allRules do result^.put(rule^.getId,rule^.inspect,false);
+      for rule in allRules do result^.put(rule^.getId,rule^.inspect(includeRulePointer,context),false);
     end;
 
   begin

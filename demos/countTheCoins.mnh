@@ -1,5 +1,5 @@
 //@demo_for=memoization
-private memoized change(amount,set<>[])->
+private memoized change(amount,set)->
 amount<=0 ? 1 : //there is only one way to give out 0 cents
 begin
   local restSet:=set.get(set<=amount); //only work with coins >= amount
@@ -8,6 +8,11 @@ begin
     ? (amount mod coin = 0 ? 1 : 0)
     : [amount div coin..0].each(i,change(amount-i*coin,tail(restSet)),+);
 end;
+
+//*Returns the number of ways <amount> can be represented as a sum of integers in <set>
+//@SuppressUnusedWarning
+countPartitions(amount:Int,set:IntCollection)->
+  set.size=0 ? 0 : change(amount,set.sort.reverseList);
 
 //*See  http://rosettacode.org/wiki/Count_the_coins
 main->printf("There are %d ways to make a dollar from coins\n"&

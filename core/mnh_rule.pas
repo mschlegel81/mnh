@@ -21,6 +21,7 @@ TYPE
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION getDocTxt: ansistring; virtual; abstract;
     FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual; abstract;
+    FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -38,7 +39,7 @@ TYPE
       FUNCTION getInlineValue:P_literal;
       PROPERTY getSubrules:T_subruleArray read subrules;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
-      FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
       FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
@@ -86,7 +87,7 @@ TYPE
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
-      FUNCTION inspect:P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
       FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
@@ -389,7 +390,7 @@ FUNCTION T_datastoreRule.getValue(VAR context:T_threadContext):P_literal;
     system.leaveCriticalSection(rule_cs);
   end;
 
-FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
+FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext): P_mapLiteral;
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
     begin
@@ -405,9 +406,11 @@ FUNCTION T_ruleWithSubrules.inspect: P_mapLiteral;
       {$ifdef fullVersion}
       ^.put('used',isIdResolved)
       {$endif};
+    if includeFunctionPointer then
+    result^.put('function',getFunctionPointer(context,tt_localUserRule,getLocation),false);
   end;
 
-FUNCTION T_mutableRule.inspect: P_mapLiteral;
+FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext): P_mapLiteral;
   FUNCTION privateOrPublic:string;
     begin
       if privateRule then result:=PRIVATE_TEXT
@@ -438,6 +441,11 @@ FUNCTION T_mutableRule.inspect: P_mapLiteral;
       {$ifdef fullVersion}
       ^.put('used',isIdResolved)
       {$endif};
+    if includeFunctionPointer then begin
+      if getRuleType=rt_customTypeCheck
+      then result^.put('function',getFunctionPointer(context,tt_customTypeRule,getLocation),false)
+      else result^.put('function',getFunctionPointer(context,tt_localUserRule ,getLocation),false);
+    end;
   end;
 
 FUNCTION T_ruleWithSubrules.getOutline(CONST includePrivate:boolean):T_outline;
