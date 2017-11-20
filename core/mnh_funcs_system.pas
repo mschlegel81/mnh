@@ -61,10 +61,12 @@ FUNCTION beep_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newVoidLiteral;
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: beep by function call'); {$endif}
       sysutils.beep;
     {$ifdef Windows}
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       result:=newVoidLiteral;
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: beep by function call'); {$endif}
       windows.beep(int0^.value,
                    int1^.value);
     {$endif}

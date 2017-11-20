@@ -1,9 +1,11 @@
 UNIT mnh_funcs_files;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
-     LazFileUtils,LazUTF8;
+USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}lclintf,LazFileUtils,LazUTF8,
+     myGenerics,mySys,myStringUtil,
+     mnh_constants,mnh_basicTypes,mnh_litVar,
+     mnh_funcs,mnh_out_adapters,mnh_fileWrappers,
+     mnh_contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -184,15 +186,13 @@ FUNCTION appendFileLines_impl intFuncSignature;
 
 FUNCTION execSync_impl intFuncSignature;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): int64;
-    CONST
-      READ_BYTES = 2048;
-    VAR
-      stdErrDummy:array[0..READ_BYTES-1] of byte;
-      memStream: TMemoryStream;
-      tempProcess: TProcessUTF8;
-      n: longint;
-      BytesRead: longint;
-      sleepTime: longint = 1;
+    CONST READ_BYTES = 2048;
+    VAR stdErrDummy:array[0..READ_BYTES-1] of byte;
+        memStream  : TMemoryStream;
+        tempProcess: TProcessUTF8;
+        n          : longint;
+        BytesRead  : longint;
+        sleepTime  : longint = 1;
     begin
       initialize(stdErrDummy);
       memStream := TMemoryStream.create;
