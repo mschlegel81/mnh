@@ -26,3 +26,10 @@ end};
 //*Warning: (potentially) infinite generator!
 //@SuppressUnusedWarning
 pairGenerator(initialSum)->pairGenerator(initialSum,2^63-1,1);
+
+//*Returns an iterator returning all elements of the input list
+//@SuppressUnusedWarning
+listIterator(l:List)->{begin
+  local index:=rangeGenerator(0,l.size);
+  local value:=l;
+save; value[index()]; end};
