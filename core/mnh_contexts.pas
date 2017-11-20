@@ -112,6 +112,7 @@ TYPE
       callStack :T_callStack;
       {$endif}
       allowedSideEffects:T_sideEffects;
+      dequeueContext_:P_threadContext;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
     public
       regexCache:P_regexMap;
@@ -151,6 +152,7 @@ TYPE
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
       FUNCTION getFutureEnvironment:T_futureTaskEnvironment;
       PROCEDURE resolveMainParameter(VAR first:P_token);
+      FUNCTION dequeueContext:P_threadContext;
   end;
 
   T_evaluationContext=object
@@ -255,6 +257,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     allowedSideEffects:=C_allSideEffects;
     callDepth:=0;
     if adapters=nil then adapters:=parent^.adapters;
+    dequeueContext_:=nil;
   end;
 
 CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
@@ -269,6 +272,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
     parent        :=nil;
     adapters      :=adapters_;
     callingContext:=nil;
+    dequeueContext_:=nil;
   end;
 
 DESTRUCTOR T_threadContext.destroy;
@@ -279,6 +283,7 @@ DESTRUCTOR T_threadContext.destroy;
     dispose(valueStore,destroy);
     recycler  .destroy;
     if regexCache<>nil then dispose(regexCache,destroy);
+    if dequeueContext_<>nil then dispose(dequeueContext_,destroy);
   end;
 
 CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
@@ -621,6 +626,12 @@ PROCEDURE T_threadContext.resolveMainParameter(VAR first:P_token);
         first^.tokType:=tt_literal;
       end else adapters^.raiseError('Invalid parameter identifier',first^.location);
     end;
+  end;
+
+FUNCTION T_threadContext.dequeueContext:P_threadContext;
+  begin
+    if dequeueContext_=nil then new(dequeueContext_,createWorkerContext(adapters));
+    result:=dequeueContext_;
   end;
 
 {$ifdef fullVersion}

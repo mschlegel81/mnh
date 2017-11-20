@@ -132,9 +132,9 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       aimEnqueueCount:longint;
       x:P_literal;
       proceed:boolean=true;
-      dequeueContext:T_threadContext;
+      dequeueContext:P_threadContext;
   begin
-    dequeueContext.createWorkerContext(context.adapters);
+    dequeueContext:=context.dequeueContext;
     recycling.fill:=0;
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
@@ -144,7 +144,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       for rule in rulesList do if proceed then begin
         enqueueForAggregation(createTask(rule,eachIndex,x));
         if environment.taskQueue^.getQueuedCount>aimEnqueueCount then begin
-          if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+          if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
           //if there is not enough pending after dequeuing, increase aimEnqueueCount
           if environment.taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
         end;
@@ -157,13 +157,12 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     end;
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
     dispose(environment.values,destroy);
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
-    dequeueContext.destroy;
   end;
 
 FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
@@ -238,9 +237,9 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
   VAR x:P_literal;
       aimEnqueueCount:longint;
       isExpressionNullary:boolean;
-      dequeueContext:T_threadContext;
+      dequeueContext:P_threadContext;
   begin
-    dequeueContext.createWorkerContext(context.adapters);
+    dequeueContext:=context.dequeueContext;
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
@@ -252,7 +251,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       then enqueueForAggregation(createTask(nil))
       else enqueueForAggregation(createTask(x  ));
       if environment.taskQueue^.getQueuedCount>aimEnqueueCount then begin
-        if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+        if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
         //if there is not enough pending after dequeuing, increase aimEnqueueCount
         if environment.taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
       end;
@@ -261,14 +260,13 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     end;
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext);
+    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
     dispose(environment.values,destroy);
     with recycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
     result:=resultLiteral;
-    dequeueContext.destroy;
   end;
 
 PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: P_aggregator; CONST location: T_tokenLocation; VAR context: T_threadContext);
