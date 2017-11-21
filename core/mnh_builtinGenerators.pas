@@ -317,6 +317,35 @@ FUNCTION filter_imp intFuncSignature;
     end;
   end;
 
+FUNCTION parllelFilter_imp intFuncSignature;
+  VAR iterator:P_expressionLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes+[lt_expression]) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+      case arg0^.literalType of
+        lt_emptyList,
+        lt_emptySet,
+        lt_emptyMap: result:=arg0^.rereferenced;
+        lt_map:begin
+          result:=newMapLiteral;
+          iterator:=newIterator(map0);
+          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_mapLiteral(result));
+          disposeLiteral(iterator);
+        end;
+        lt_list..lt_stringList,
+        lt_set ..lt_stringSet: begin
+          result:=collection0^.newOfSameType(false);
+          iterator:=newIterator(map0);
+          processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_collectionLiteral(result));
+          disposeLiteral(iterator);
+        end;
+        lt_expression: if (P_expressionLiteral(arg0)^.isGenerator) then begin
+          new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
+        end;
+      end;
+    end;
+  end;
+
 TYPE
   P_mapGenerator=^T_mapGenerator;
   T_mapGenerator=object(T_builtinGeneratorExpression)
@@ -527,6 +556,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,[],ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,[],ak_binary,'permutationIterator(i:int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true');
+  registerRule(LIST_NAMESPACE,'pFilter', @parllelFilter_imp,[],ak_binary,'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel');
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,[],ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,[se_readFile],ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,[],ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
