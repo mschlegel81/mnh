@@ -335,7 +335,7 @@ FUNCTION parllelFilter_imp intFuncSignature;
         lt_list..lt_stringList,
         lt_set ..lt_stringSet: begin
           result:=collection0^.newOfSameType(false);
-          iterator:=newIterator(map0);
+          iterator:=newIterator(collection0);
           processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_collectionLiteral(result));
           disposeLiteral(iterator);
         end;

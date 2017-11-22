@@ -315,7 +315,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
           if output^.literalType in C_mapTypes then begin
             P_mapLiteral(output)^.put(P_listLiteral(value)^.value[0],P_listLiteral(value)^.value[1],true);
           end else begin
-            P_collectionLiteral(output)^.append(value,false);
+            P_collectionLiteral(output)^.append(value,true);
           end;
         end;
         with recycling do if fill<length(dat) then begin
@@ -395,7 +395,7 @@ PROCEDURE T_filterTask.evaluate(VAR context: T_threadContext);
       if context.adapters^.noErrors then with mapPayload do begin
         context.attachWorkerContext(env);
         if mapRule^.evaluateToBoolean(mapRule^.getLocation,@context,mapParameter)
-        then evaluationResult:=mapParameter^.rereferenced
+        then evaluationResult:=mapParameter
         else evaluationResult:=nil;
         context.detachWorkerContext;
       end;
