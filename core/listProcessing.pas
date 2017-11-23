@@ -410,12 +410,14 @@ CONSTRUCTOR T_mapTask.createMapTask(CONST environment: T_futureTaskEnvironment; 
   begin
     create(environment);
     mapPayload.mapRule:=expr;
+    mapPayload.mapParameter:=nil;
   end;
 
 PROCEDURE T_mapTask.define(CONST x: P_literal);
   begin
     enterCriticalSection(taskCs);
-    mapPayload.mapParameter:=x;
+    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
+    mapPayload.mapParameter:=x^.rereferenced;
     nextToAggregate:=nil;
     env.taskQueue^.enqueue(@self,env.callingContext);
     leaveCriticalSection(taskCs);
@@ -441,6 +443,9 @@ PROCEDURE T_mapTask.evaluate(VAR context: T_threadContext);
 
 DESTRUCTOR T_mapTask.destroy;
   begin
+    enterCriticalSection(taskCs);
+    if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
+    leaveCriticalSection(taskCs);
     inherited destroy;
   end;
 
@@ -452,10 +457,7 @@ CONSTRUCTOR T_eachTask.createEachTask(CONST environment: T_futureTaskEnvironment
 PROCEDURE T_eachTask.dropEachParameter;
   begin
     enterCriticalSection(taskCs);
-    if eachPayload.eachParameter<>nil then begin
-      disposeLiteral(eachPayload.eachParameter);
-      eachPayload.eachParameter:=nil;
-    end;
+    if eachPayload.eachParameter<>nil then disposeLiteral(eachPayload.eachParameter);
     leaveCriticalSection(taskCs);
   end;
 
