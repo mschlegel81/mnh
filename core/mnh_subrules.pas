@@ -676,7 +676,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     end;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.isGenerator) and not(LHS^.literalType=lt_expression) then begin
       // 2^generator -> lazyMap(generator,{2^$x})
-      RHSinstead:=newIdentityRule(P_threadContext(threadContext)^,tokenLocation);;
+      RHSinstead:=newIdentityRule(P_threadContext(threadContext)^,tokenLocation);
       new(newRule,createFromOp(LHS,op,RHSinstead,tokenLocation));
       disposeLiteral(RHSinstead);
       LHSinstead:=newRule; //={2^$x}

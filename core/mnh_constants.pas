@@ -64,6 +64,7 @@ CONST
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
   SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
   {$endif}
+  EXECUTE_AFTER_ATTRIBUTE='after';
 
 TYPE
   T_reservedWordClass=(rwc_not_reserved,

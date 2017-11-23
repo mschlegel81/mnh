@@ -200,7 +200,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
       setLength(subrules,i+1);
       for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.adapters^.raiseWarning('Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation),rule^.getLocation);
     end else begin
-      dispose(subrules[i],destroy);
+      disposeLiteral(subrules[i]);
       context.adapters^.raiseWarning('Overriding rule '+rule^.getId,rule^.getLocation);
     end;
     subrules[i]:=rule;
@@ -211,6 +211,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
       then context.adapters^.raiseWarning('Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules',rule^.getLocation)
       else setIdResolved;
     end;
+    if rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
     {$endif}
     clearCache;
   end;
