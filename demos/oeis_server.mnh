@@ -1,0 +1,204 @@
+private datastore sequences:=[];
+private datastore names    :=[];
+private datastore foundImplementations:=[].toMap;
+ipcId:=myPath.extractFileNameOnly&format('%x',myPath.fileStats).join;
+
+memoized implementationOf(index:Int)->begin
+  local result:=implemented[index];
+  result.isVoid ? void : return result;
+  result:=foundImplementations[index];
+  result.isVoid ? void : return result.toExpression;
+  result:=sequences[index];
+  result.isVoid ? return void : void;
+  result:=guessImplementation(result);
+  result.isVoid ? return void : foundImplementations[index]:=result;
+  print('Found new implementation [',index,'] ',result);
+  result.toExpression;
+end;
+
+implementationOf(s:String)->begin
+  local id:=s.clean(['0'..'9'],'').softCast;
+  id.isInt ? implementationOf(id) : void;
+end;
+
+private memoized sevenZipExe->
+  ["c:/Program Files/7-Zip/7z.exe",
+   "c:/Program Files (x86)/7-Zip/7z.exe"]
+  .each(file,file.fileExists ? file : void,head)
+  orElse fail('7-Zip could not be located!');
+
+private IDFormat:='A%6.6d';
+USE oeis_sequences;
+
+private formatInfo(numericId:Int)->
+  formatTabs(
+    (0<=numericId<names.size)
+    ? format("ID\v:\t"&IDFormat&"\nName\v:\t%s\nSequence\v:\t%s",
+      numericId,
+      names[numericId] orElse '- not found -',
+      toString(sequences[numericId] orElse []))&(isVoid(implementationOf(numericId)) ? void : "\nImplementation\v:\tgen "&numericId&" <elements>\n\v\t"&toString(implementationOf(numericId)))
+    : format("ID\v:\t"&IDFormat&" - not found",numericId)).join("\n");
+private formatInfo([])->'No matches';
+private formatInfo(numericIds:IntList)->numericIds.pMap(::formatInfo).join("\n");
+
+private top10(L:List)->top10(L.elementFrequency);
+private top10(M:Map)->begin
+  local X:=M.sort(1).trailing(10).reverseList;
+  local factor:=50/X[0,1];
+  X.map({format("\t\t%s\t%s\t%s",$x[0].join(","),$x[1],repeat('*',round($x[1]*factor)))})
+   .join("\n")
+   .format;
+end;
+
+private D(x0,   x0):=[1,0,0];
+private D(x0,x1>x0):=[0,1,0];
+private D(x0,x1<x0):=[0,0,1];
+private CLASS(0,0,0)->'empty';
+private CLASS(e,0,0)->'constant';
+private CLASS(0,i,0)->'monotonically increasing';
+private CLASS(e,i,0)->'increasing';
+private CLASS(0,0,d)->'monotonically decreasing';
+private CLASS(e,0,d)->'decreasing';
+private CLASS(e,i,d)->'alternating';
+
+private classify(L:IntList)->begin
+  local last:=L[0];
+  CLASS@(L.tail.each(x,D(last,last:=x),+) orElse [0,0,0]);
+end;
+
+//*Updates datastores based on input files
+//*Obtain the files at https://oeis.org/names.gz and https://oeis.org/stripped.gz
+//*Unzip the files before using them as input
+private serve_('download',...)->begin
+  print('Updating data - old: ',typeOf(names));
+  local idAndRest  :={[$s.copy(1,6).softCast,$s.copy(8,$s.length)]};
+  local idAndSeries:={[$s.copy(1,6).softCast,$s.copy(8,$s.length).split(',').softCast.filter(::isInt)]};
+  local namesMap :=begin
+                     local namesData:=httpGet('https://oeis.org/names.gz');
+                     print('Names downloaded');
+                     (local namesFile:='names.gz').writeFile(namesData);
+                     local temp:=sevenZipExe.exec(['e','-so','-bd',namesFile])[0];
+                     print('Names decompressed');
+                     deleteFile(namesFile);
+                     temp;
+                   end
+                   .filter({$x.matches('^A\d{6} ')}).pMap(idAndRest  ).toMap;
+  print('Names file parsed - ',namesMap.size,' entries');
+  local seriesMap:=begin
+                     local strippedData:=httpGet('https://oeis.org/stripped.gz');
+                     print('Series downloaded');
+                     (local strippedFile:='names.gz').writeFile(strippedData);
+                     local temp:=sevenZipExe.exec(['e','-so','-bd',strippedFile])[0];
+                     print('Series decompressed');
+                     deleteFile(strippedFile);
+                     temp;
+                   end
+                   .filter({$x.matches('^A\d{6} ')}).pMap(idAndSeries).toMap;
+  print('Series file parsed - ',seriesMap.size,' entries');
+  local maxSeries:=max(namesMap.getInner(0).max,seriesMap.getInner(0).max);
+  names    :=rangeGenerator(0,maxSeries).pMap({namesMap [$i] orElse ''});
+  sequences:=rangeGenerator(0,maxSeries).pMap({seriesMap[$i] orElse []});
+  print(local msg:=('Datastores generated - '&(names.size)&' entries'));
+  msg;
+end; //downloadData
+
+private mutable serverKillPosted:=false;
+private serve_('id',...)->map(...,{$s.clean(['0'..'9'],'').softCast}).filter(::isInt).formatInfo;
+private serve_('name',...)->... .each(pattern,names.matches(pattern),or).indexOf.formatInfo;
+private serve_('part',part)->sequences.pMap({$s.toString.matches(part)}).indexOf.formatInfo;
+private serve_('continue',start:IntList,additional>0)->begin
+  local matching:=sequences.pEach(seq,
+    seq.head(start.size)==start
+    ? [index,seq.tail(start.size).head(additional)]
+    : void);
+  matching.size=0
+  ? 'No matches'
+  : begin
+      local parts:=[1..additional].pEach(s,matching.getInner(1).map({$seq.head(s)}).toSet.size);
+      local matching:=matching.group(1).pMap({[$g.size,
+                               $g.head(10).getInner(0).pMap({format(IDFormat,$id)}).join(", ")&($g.size<=10 ? '' : '...'),
+                               $g[0,1].join(",")]}).sort(0);
+     ((format("There are\t%s\tsequences starting with %s",matching.getInner(0).agg(+),start.join(","))|
+       format("\t%{$1}s\tdifferent options for the next %{$0}s digit%{$0=1?'':'s'}s",[1..additional],parts)).join("\n").formatTabs|
+       format("%{$x[0]}s\tentries (%{$x[1]}s)\n\tsay: %{$x[2]}s",matching.trailing(5).reverseList).join("\n").formatTabs).join("\n");
+    end;
+end;
+
+private serve_('validate')->
+implemented
+.mergeMaps(foundImplementations.map({[$x[0],$x[1].toExpression]}).toMap,{$0 orElse $1})
+.each(seq,sequences.size>seq[0]>0 ? begin
+  local tStart  :=time;
+  local id      :=seq[0];
+  local storeSeq:=sequences[id];
+  local gen     :=seq[1]();
+  local maxValidated:=-1;
+  local valid:=
+  storeSeq.each(n0,begin
+    local n1:=gen();
+    (index>0) AND isVoid(n1)
+    ? true
+    : begin
+        maxValidated:=index;
+        n1==n0;
+      end;
+  end,AND);
+  "Sequence "&(IDFormat.format(id))&
+   (valid ? ' is valid up to index %3d'.format(maxValidated)
+          : ' IS INVALID AT INDEX  %3d'.format(maxValidated));
+end : format('No sequence found for id '&IDFormat,seq[0]));
+
+private serve_('statistics')->begin
+ (sequences.size=0 ? 'No sequences' :
+  begin
+    local allNumbers:=sequences.flatten.toSet;
+    join(["Largest  integer                                       : ",allNumbers.max,
+        "\nSmallest positive integer not contained in any sequence: ",rangeGenerator(0,  2^60 ).filter({not($x in allNumbers)}).head(1).head,
+        "\nLargest  negative integer not contained in any sequence: ",rangeGenerator(0,-(2^60)).filter({not($x in allNumbers)}).head(1).head,
+        "\nSmallest integer                                       : ",allNumbers.min]);
+  end&
+  "\n\nMost frequent integers:\n"&(sequences.flatten.top10.formatTabs.join("\n"))&
+  "\n\nSequence classifications:\n"&(sequences.pMap(::classify).elementFrequency.sort(1).map({'  '&($x.join("\t"))}).join("\n").formatTabs.join("\n"))&
+  "\n\nMost frequent series lengths:\n"&
+  begin
+    local sizes:=sequences.pMap(::size);
+    sizes.top10.formatTabs.join("\n")&
+    "\nAverage series length: "&(sizes.agg(+)/sizes.size);
+  end)&
+  format("\n\nThere are implementations available for %s series ", implemented.mergeMaps(foundImplementations,{$0 orElse $1}).size);
+end;
+
+private serve_('gen',seriesId,count)->begin
+  local f:=implementationOf(seriesId.softCast);
+  isExpression(f)
+  ? void
+  : return 'No implementation found for id '&escape(seriesId);
+
+  local n:=count.softCast;
+  n.isInt AND n>0
+  ? void
+  : return 'Parameter '&escape(count)&' is no positive integer';
+
+  local seq:=f().head(n);
+end;
+
+private serve_(...)->'Unkown command: '&toString(...);
+private serve(['stop'])->serverKillPosted:=true;
+private serve(['download'])->serve_('download');
+private serve(parameters)->begin
+  local t0:=time;
+  printDirect("\r",repeat(' ',80),"\rLast request: ",parameters);
+  local result:=
+  parameters.isList
+    ? serve_@parameters
+    : serve_(parameters);
+  printDirect("\r",repeat(' ',80),"\rLast request: ",parameters,' answered in ',round(time-t0,3),'s');
+  result;
+end;
+
+main()->begin
+  startIpcServer(ipcId,::serve);
+  print('IPC Server started. ',ipcId);
+  while(not(serverKillPosted),sleep(1));
+  print("\nIPC Server stopped. ",ipcId);
+end;

@@ -1,0 +1,35 @@
+USE oeis_server;
+//@SuppressUnusedWarning
+initHook:=begin
+  isIpcServerRunning(oeis_server.ipcId) OR $1=='stopServer'
+  ? void
+  : begin
+      executor.execAsync([inspect['uses'].each(i,i[0].matches('(?i)oeis_server') ? i[1] : void,head)]);
+      sleep(1);
+    end;
+end;
+
+private getData(parameters)->sendIpcRequest(oeis_server.ipcId,parameters);
+private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape(s),'; ',$message)});
+
+//*Return info on a series by ID(s)
+main('id',...)->getData($params).print;
+//*Returns info on a series by name pattern(s)
+main('name',...)->map(...,::validateRegex_)[0] orElse getData($params).print;
+//*Returns info on a series by part; start with \[ to indicate sequence start
+main('part',part)->validateRegex_(part) orElse getData($params).print;
+//*Returns info on possible continuations
+main('continue',sequenceStart,additional)->getData(['continue',sequenceStart.split(",").softCast.filter(::isInt),toInt(additional)]).print;
+//*Returns statistics on the given input
+main('statistics')->getData($params).print;
+//*Validates implemented series
+main('validate')->getData($params).join("\n").print;
+//*Stops the IPC server (if running)
+main('stopServer')->begin
+  isIpcServerRunning(ipcId) AND sendIpcRequest(ipcId,['stop']);
+  while(isIpcServerRunning(ipcId),sleep(0.1));
+end;
+//*Updates OEIS data
+main('download')->getData($params).print;
+//*Generates values for given id
+main('gen',id,count)->getData($params).print;

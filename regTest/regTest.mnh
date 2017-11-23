@@ -29,6 +29,7 @@ testParameters((demosRoot&'gcd.mnh'            ))->['1238124','1236'];
 testParameters((demosRoot&'gol.mnh'            ))->['40','40','9'];
 testParameters((demosRoot&'josephus.mnh'       ))->['41','3','1'];
 testParameters((demosRoot&'knightsTour.mnh'    ))->['8','0','0'];
+testParameters((demosRoot&'oeis.mnh'           ))->['gen','A061358','100'];
 testParameters((demosRoot&'pascal.mnh'         ))->['12'];
 testParameters((demosRoot&'pangrams.mnh'       ))->['check','The quick brown fox jumps over the lazy dog.'];
 testParameters((demosRoot&'randomWords.mnh'    ))->["16"];
@@ -43,6 +44,8 @@ private skipFile((demosRoot&'helloWorldHttp.mnh'     ))->true;
 private skipFile((demosRoot&'ipcDatastore.mnh'       ))->true;
 private skipFile((demosRoot&'doublePendulum.mnh'     ))->true;
 private skipFile((demosRoot&'galtonBox.mnh'          ))->true;
+private skipFile((demosRoot&'oeis_sequences.mnh'     ))->true;
+private skipFile((demosRoot&'oeis_server.mnh'        ))->true;
 private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
 private skipFile(scriptFileName:String)->false;
 
