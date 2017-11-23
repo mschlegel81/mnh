@@ -155,6 +155,7 @@ FUNCTION isStateful intFuncSignature;
 {$define GENERIC_TYPE_CHECK:=FUNCTION FUNC_ID intFuncSignature;
   begin
     result:=nil;              ;
+    if (params=nil) or (params^.size=0) then exit(newBoolLiteral(false));
     if (params<>nil) and (params^.size=1) then
     result:=newBoolLiteral(arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching)
     else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
