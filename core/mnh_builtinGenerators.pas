@@ -352,6 +352,7 @@ TYPE
     private
       sourceGenerator:P_expressionLiteral;
       mapExpression:P_expressionLiteral;
+      isNullary:boolean;
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
@@ -365,6 +366,7 @@ CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST
     sourceGenerator:=source;
     mapExpression:=mapEx;
     mapExpression^.rereference;
+    isNullary:=mapEx^.canApplyToNumberOfParameters(0);
   end;
 
 FUNCTION T_mapGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
@@ -379,7 +381,8 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
     repeat
       nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context);
       if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
-        result:=mapExpression^.evaluateToLiteral(location,context,nextUnmapped);
+        if isNullary then result:=mapExpression^.evaluateToLiteral(location,context)
+                     else result:=mapExpression^.evaluateToLiteral(location,context,nextUnmapped);
         disposeLiteral(nextUnmapped);
         //error handling
         if result=nil then exit(newVoidLiteral);
@@ -406,7 +409,7 @@ FUNCTION lazyMap_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.isGenerator)
-                                          and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+                                          and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       new(P_mapGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
     end;
   end;
