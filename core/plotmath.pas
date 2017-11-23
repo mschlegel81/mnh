@@ -68,7 +68,6 @@ TYPE
 
   T_allSamples=array of T_sampleRow;
   T_scalingOptions=object
-    autoscale: array['x'..'y'] of boolean;
     preserveAspect  : boolean;
     relativeFontSize: double;
     autoscaleFactor : double;
@@ -82,9 +81,6 @@ TYPE
   end;
 
 IMPLEMENTATION
-
-{ T_scalingOptions }
-
 PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
   aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
 
@@ -96,7 +92,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         x,y:double;
     begin
       for axis:='x' to 'y' do
-      if autoscale[axis] then begin
+      if axisTrafo[axis].autoscale then begin
         result[axis,0]:= infinity;
         result[axis,1]:=-infinity;
       end else begin
@@ -106,8 +102,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
       for row in samples do for point in row.sample do begin
         x:=point[0]; if (x<MIN_VALUE_FOR[axisTrafo['x'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['x'].logs]) then continue;
         y:=point[1]; if (y<MIN_VALUE_FOR[axisTrafo['y'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['y'].logs]) then continue;
-        if not(autoscale['x']) and not(axisTrafo['x'].sampleIsInRange(x)) or
-           not(autoscale['y']) and not(axisTrafo['y'].sampleIsInRange(y)) then continue;
+        if not(axisTrafo['x'].autoscale) and not(axisTrafo['x'].sampleIsInRange(x)) or
+           not(axisTrafo['y'].autoscale) and not(axisTrafo['y'].sampleIsInRange(y)) then continue;
         if (x<result['x',0]) then result['x',0]:=x;
         if (x>result['x',1]) then result['x',1]:=x;
         if (y<result['y',0]) then result['y',0]:=y;
@@ -140,16 +136,16 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
         i:longint;
         tmp:double;
     begin
-      if autoscale['x'] or autoscale['y']
+      if axisTrafo['x'].autoscale or axisTrafo['y'].autoscale
       then boundingBox:=getSamplesBoundingBox
       else for axis:='x' to 'y' do for i:=0 to 1 do boundingBox[axis,i]:=axisTrafo[axis].rangeByUser[i];
       //Stretch bounding box, potentially transform to logscale:----------------------------------
-      if (validSampleCount>=1) then for axis:='x' to 'y' do begin
-        for i:=0 to 1 do begin
+      for axis:='x' to 'y' do begin
+        if (validSampleCount>=1) then for i:=0 to 1 do begin
           if isNan(boundingBox[axis,i]) or isInfinite(boundingBox[axis,i])
           then boundingBox[axis,i]:=axisTrafo[axis].rangeByUser[i];
-          if axisTrafo[axis].logs then boundingBox[axis,i]:=ln(boundingBox[axis,i]);
         end;
+        for i:=0 to 1 do if axisTrafo[axis].logs then boundingBox[axis,i]:=ln(boundingBox[axis,i]);
         tmp:=(boundingBox[axis,1]-boundingBox[axis,0])*(1-autoscaleFactor);
         boundingBox[axis,0]:=boundingBox[axis,0]-tmp;
         boundingBox[axis,1]:=boundingBox[axis,1]+tmp;
@@ -157,15 +153,15 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
       //----------------------------------:Stretch bounding box, potentially transform to logscale
       //Adapt bounding box to respect preservation of aspect ratio:-------------------------------
       if preserveAspect and (axisTrafo['x'].logscale = axisTrafo['y'].logscale) then begin
-        if (autoscale['x'] or autoscale['y']) then begin
-          if autoscale['x'] then begin
-            if autoscale['y'] then begin
+        if (axisTrafo['x'].autoscale or axisTrafo['y'].autoscale) then begin
+          if axisTrafo['x'].autoscale then begin
+            if axisTrafo['y'].autoscale then begin
               if (boundingBox['x',1]-boundingBox['x',0])/axisTrafo['x'].screenExtend>
                  (boundingBox['y',1]-boundingBox['y',0])/axisTrafo['y'].screenExtend
               then autoscaleByX(boundingBox)
               else autoscaleByY(boundingBox);
             end else autoscaleByX(boundingBox);
-          end else if autoscale['y'] then autoscaleByY(boundingBox);
+          end else if axisTrafo['y'].autoscale then autoscaleByY(boundingBox);
         end else begin
           if (boundingBox['x',1]-boundingBox['x',0])/axisTrafo['x'].screenExtend>
              (boundingBox['y',1]-boundingBox['y',0])/axisTrafo['y'].screenExtend
@@ -513,6 +509,7 @@ FUNCTION T_axisTrafo.isValidMaximum(CONST x: double): boolean;
 PROCEDURE T_axisTrafo.reset;
   begin
     logs:=false;
+    autoscale:=true;
     rangeByUser[0]:=-1;
     rangeByUser[1]:=1;
     rangeByAutosize:=rangeByUser;
@@ -541,39 +538,46 @@ FUNCTION T_axisTrafo.applyInverse(CONST x: double): double;
                 else result:=    (x-offset)/factor;
   end;
 
-PROCEDURE T_axisTrafo.zoom(CONST screenCoordinate: longint;
-  CONST zoomFactor: double);
+PROCEDURE T_axisTrafo.zoom(CONST screenCoordinate: longint; CONST zoomFactor: double);
   VAR hold:double;
   begin
+    if autoscale then begin
+      autoscale:=false;
+      rangeByUser:=rangeByAutosize;
+    end;
     hold:=applyInverse(screenCoordinate);
     if logscale then begin
       hold    :=ln(hold);
-      rangeByAutosize[0]:=ln(rangeByAutosize[0]);
-      rangeByAutosize[1]:=ln(rangeByAutosize[1]);
+      rangeByUser[0]:=ln(rangeByUser[0]);
+      rangeByUser[1]:=ln(rangeByUser[1]);
     end;
-    rangeByAutosize[0]:=(rangeByAutosize[0]-hold)*zoomFactor+hold;
-    rangeByAutosize[1]:=(rangeByAutosize[1]-hold)*zoomFactor+hold;
+    rangeByUser[0]:=(rangeByUser[0]-hold)*zoomFactor+hold;
+    rangeByUser[1]:=(rangeByUser[1]-hold)*zoomFactor+hold;
     if logscale then begin
-      rangeByAutosize[0]:=exp(rangeByAutosize[0]);
-      rangeByAutosize[1]:=exp(rangeByAutosize[1]);
+      rangeByUser[0]:=exp(rangeByUser[0]);
+      rangeByUser[1]:=exp(rangeByUser[1]);
     end;
-    rangeByUser:=rangeByAutosize;
+    rangeByAutosize:=rangeByUser;
     prepare;
   end;
 
 PROCEDURE T_axisTrafo.pan(CONST screenDelta: longint);
   VAR worldDelta:double;
   begin
+    if autoscale then begin
+      autoscale:=false;
+      rangeByUser:=rangeByAutosize;
+    end;
     worldDelta:=screenDelta/factor;
     if logscale then begin
       worldDelta:=exp(worldDelta);
-      rangeByAutosize[0]:=rangeByAutosize[0]*worldDelta;
-      rangeByAutosize[1]:=rangeByAutosize[1]*worldDelta;
+      rangeByUser[0]:=rangeByUser[0]*worldDelta;
+      rangeByUser[1]:=rangeByUser[1]*worldDelta;
     end else begin
-      rangeByAutosize[0]:=rangeByAutosize[0]+worldDelta;
-      rangeByAutosize[1]:=rangeByAutosize[1]+worldDelta;
+      rangeByUser[0]:=rangeByUser[0]+worldDelta;
+      rangeByUser[1]:=rangeByUser[1]+worldDelta;
     end;
-    rangeByUser:=rangeByAutosize;
+    rangeByAutosize:=rangeByUser;
     prepare;
   end;
 
