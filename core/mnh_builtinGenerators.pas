@@ -397,6 +397,11 @@ DESTRUCTOR T_mapGenerator.destroy;
     disposeLiteral(mapExpression);
   end;
 
+FUNCTION createLazyMapImpl(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+  begin
+    new(P_mapGenerator(result),create(newIterator(generator),mapping,tokenLocation));
+  end;
+
 FUNCTION lazyMap_imp intFuncSignature;
   begin
     result:=nil;
@@ -553,6 +558,7 @@ FUNCTION primeGenerator intFuncSignature;
   end;
 
 INITIALIZATION
+  createLazyMap:=@createLazyMapImpl;
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,[],ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,[],ak_binary,'permutationIterator(i:int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true');

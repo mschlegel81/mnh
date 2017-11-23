@@ -165,6 +165,7 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
+VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
 IMPLEMENTATION
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
   VAR t,prev,inlineRuleTokens:P_token;
@@ -651,11 +652,43 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
     end else appendToExpression(RHS);
   end;
 
+FUNCTION newIdentityRule(VAR context:T_threadContext; CONST location:T_tokenLocation):P_subruleExpression;
+  begin
+    new(result,
+        createFromInline(context.recycler.newToken(location,'$x',tt_parameterIdentifier,nil),
+                         context)); //={$x}
+  end;
+
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
   VAR newRule:P_subruleExpression;
       LHSinstead:P_literal=nil;
       RHSinstead:P_literal=nil;
   begin
+    if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.isGenerator) and not(RHS^.literalType=lt_expression) then begin
+      // generator+3 -> lazyMap(generator,{$x+3})
+      LHSinstead:=newIdentityRule(P_threadContext(threadContext)^,tokenLocation);
+      new(newRule,createFromOp(LHSinstead,op,RHS,tokenLocation));
+      disposeLiteral(LHSinstead);
+      RHSinstead:=newRule; //={$x+3}
+      result:=createLazyMap(P_expressionLiteral(LHS),P_expressionLiteral(RHSinstead),tokenLocation);
+      disposeLiteral(RHSinstead);
+      exit(result);
+    end;
+    if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.isGenerator) and not(LHS^.literalType=lt_expression) then begin
+      // 2^generator -> lazyMap(generator,{2^$x})
+      RHSinstead:=newIdentityRule(P_threadContext(threadContext)^,tokenLocation);;
+      new(newRule,createFromOp(LHS,op,RHSinstead,tokenLocation));
+      disposeLiteral(RHSinstead);
+      LHSinstead:=newRule; //={2^$x}
+      result:=createLazyMap(P_expressionLiteral(RHS),P_expressionLiteral(LHSinstead),tokenLocation);
+      disposeLiteral(LHSinstead);
+      exit(result);
+    end;
+    if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.isStateful) xor
+       (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.isStateful) then begin
+      P_threadContext(threadContext)^.adapters^.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
+      exit(newVoidLiteral);
+    end;
     if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.isStateful) or
        (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.isStateful) then begin
       P_threadContext(threadContext)^.adapters^.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
@@ -687,9 +720,15 @@ FUNCTION T_builtinExpression.applyBuiltinFunction(CONST intrinsicRuleId: string;
   end;
 
 FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext:pointer): P_expressionLiteral;
+  VAR identity:P_subruleExpression;
+      mapper  :P_expressionLiteral;
   begin
-    P_threadContext(threadContext)^.adapters^.raiseError('Cannot manipulate builtin iterator/generator '+getId,funcLocation);
-    result:=nil;
+    identity:=newIdentityRule(P_threadContext(threadContext)^,funcLocation);
+    mapper:=identity^.applyBuiltinFunction(intrinsicRuleId,funcLocation,threadContext);
+    disposeLiteral(identity);
+    if mapper=nil then exit(nil);
+    result:=createLazyMap(@self,mapper,funcLocation);
+    disposeLiteral(mapper);
   end;
 
 PROCEDURE T_inlineExpression.validateSerializability(CONST adapters: P_adapters);
