@@ -369,9 +369,8 @@ FUNCTION T_datastoreRule.replaces(CONST param:P_listLiteral; CONST location:T_to
       system.enterCriticalSection(rule_cs);
       readDataStore(P_threadContext(threadContextPointer)^);
       firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
-      system.leaveCriticalSection(rule_cs);
       lastRep:=firstRep;
-      called:=true;
+      system.leaveCriticalSection(rule_cs);
     end;
   end;
 
@@ -571,6 +570,7 @@ PROCEDURE T_datastoreRule.readDataStore(VAR context:T_threadContext);
       if lit<>nil then begin
         namedValue.setValue(lit);
         lit^.unreference;
+        called:=true;
       end;
     end;
   end;
