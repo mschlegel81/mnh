@@ -128,29 +128,31 @@ private serve_('continue',start:IntList,additional>0)->begin
     end;
 end;
 
-private serve_('validate')->
-implemented
-.mergeMaps(foundImplementations.map({[$x[0],$x[1].toExpression]}).toMap,{$0 orElse $1})
-.each(seq,sequences.size>seq[0]>0 ? begin
-  local tStart  :=time;
-  local id      :=seq[0];
-  local storeSeq:=sequences[id];
-  local gen     :=seq[1]();
-  local maxValidated:=-1;
-  local valid:=
-  storeSeq.each(n0,begin
-    local n1:=gen();
-    (index>0) AND isVoid(n1)
-    ? true
-    : begin
-        maxValidated:=index;
-        n1==n0;
-      end;
-  end,AND);
-  "Sequence "&(IDFormat.format(id))&
-   (valid ? ' is valid up to index %3d'.format(maxValidated)
-          : ' IS INVALID AT INDEX  %3d'.format(maxValidated));
-end : format('No sequence found for id '&IDFormat,seq[0]));
+private serve_('validate')->begin
+  local valids:=[];
+  implemented
+  .mergeMaps(foundImplementations.map({[$x[0],$x[1].toExpression]}).toMap,{$0 orElse $1})
+  .each(seq,sequences.size>seq[0]>0 ? begin
+    local tStart  :=time;
+    local id      :=seq[0];
+    local storeSeq:=sequences[id];
+    local gen     :=seq[1]();
+    local maxValidated:=-1;
+    local valid:=
+    storeSeq.each(n0,begin
+      local n1:=gen();
+      (index>0) AND isVoid(n1)
+      ? true
+      : begin
+          maxValidated:=index;
+          n1==n0;
+        end;
+    end,AND);
+     (valid ? valids|=id
+            : "Sequence "&(IDFormat.format(id))&' IS INVALID AT INDEX  %3d'.format(maxValidated));
+  end : format('No sequence found for id '&IDFormat,seq[0]))
+  | 'Valid:' & format(IDFormat,valids.sort).join(", ");
+end;
 
 private serve_('statistics')->begin
  (sequences.size=0 ? 'No sequences' :
