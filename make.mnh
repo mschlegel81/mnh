@@ -1,5 +1,5 @@
-USE testLog,mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis.mnh';
-
+USE testLog,mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis_server.mnh';
+initHook:=startIpcServer(ipcId,::serve);
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
 private needBuilt(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
@@ -211,6 +211,3 @@ main(...)->... .each(step,
   print('* ',step),
   print('******************************'),
   main(step));
-
-//@after
-shutdownOeisServer->oeis.main('stopServer');
