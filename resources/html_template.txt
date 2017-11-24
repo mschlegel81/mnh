@@ -180,6 +180,18 @@ Attributes are key-value pairs where the value can be omitted. They generally ta
 </code>
 Attributes are also used to configure edit scripts, see <a href="gui.html">GUI features</a>.
 <br>
+A special attribute is the <code>@after</code> attribute. A nullary subrule marked with this attribute will be executed after the script is finished without crashing.
+This works for imported packages as well. <br>
+The idea behind this is that you might want to define startup/shutdown hooks. A startup hook can be defined using a little hack (which starts with another annotation considered only by the code assistant):<code>
+<!--mnh-->
+  //@SuppressUnusedWarning
+  initHook:=begin
+    //Insert your initialization code here
+    void;
+  end;
+<!--end-->
+</code>
+<br>
 </div>
 <!--commonFoot-->
 <!--file operators.html-->
@@ -1621,12 +1633,16 @@ Most shortcuts are accessible via the menu. The exceptions are...<br>
 <table><tr class="ruleHead">
   <td>Shortcut</td><td>Meaning</td></tr>
   <tr><td>Ctrl+B</td><td>Toggle breakpoint</td></tr>
+  <tr><td>Ctrl+Y</td><td>Delete current line</td></tr>
   <tr><td>Ctrl+Shift+C</td><td>Toggle comment</td></tr>
   <tr><td>Ctrl+I</td><td>Indent selection</td></tr>
   <tr><td>Ctrl+Shift+I</td><td>Unindent selection</td></tr>
   <tr><td>Ctrl+Enter</td><td>Jump to declaration</td></tr>  
+  <tr><td>Alt+Enter</td><td>Highlight word under cursor</td></tr>  
   <tr><td>Ctrl+Z</td><td>Undo</td></tr>
   <tr><td>Ctrl+Shift+Z</td><td>Redo</td></tr>  
+  <tr><td>Alt+Up/Down</td><td>Move Line/Selection up/down</td></tr>
+  <tr><td>Alt+Shift+Up/Down/Left/Right</td><td>Block selection</td></tr>
 </table>
 <br>
 Apart from that there are of course the usual shortcuts for copy (Strg+C), paste (Strg+V), etc.
