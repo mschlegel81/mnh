@@ -203,6 +203,7 @@ VAR firstShow:boolean=true;
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if not(firstShow) then updateFormPositionInSettings;
+    updateWordWrap;
     if helpPopupMemo.visible then positionHelpNotifier;
   end;
 
@@ -321,6 +322,7 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceMode
 PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin
     if not(runnerModel.canRun) then exit;
+    updateWordWrap;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk
     then runnerModel.customRun(true,miProfile.Checked,askForm.getLastAnswerReleasing(nil))
@@ -329,6 +331,7 @@ PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
+    updateWordWrap;
     runnerModel.customRun(false,miProfile.Checked);
   end;
 
@@ -362,6 +365,7 @@ PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
+    updateWordWrap;
     if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
     else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
                                           else runnerModel.doDebuggerAction(breakSoonest);

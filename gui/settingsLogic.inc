@@ -115,6 +115,5 @@ PROCEDURE updateFormPositionInSettings;
       mainForm.height:=MnhForm.height;
       mainForm.isFullscreen:=(MnhForm.WindowState=wsMaximized);
       MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*settings.value^.mainForm.relativeSplitterPosition);
-      updateWordWrap;
     end;
   end;

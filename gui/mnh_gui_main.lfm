@@ -3423,28 +3423,28 @@ object MnhForm: TMnhForm
       Caption = '&Appearance'
       object miExpressionEcho: TMenuItem
         AutoCheck = True
-        Caption = 'Expression echo'
+        Caption = '&Expression echo'
         OnClick = miExpressionEchoClick
       end
       object miExpressionResult: TMenuItem
         AutoCheck = True
-        Caption = 'Expression result'
+        Caption = 'Expression &result'
         OnClick = miExpressionResultClick
       end
       object miDeclarationEcho: TMenuItem
         AutoCheck = True
-        Caption = 'Declaration echo'
+        Caption = '&Declaration echo'
         Checked = True
         OnClick = miDeclarationEchoClick
       end
       object miWrapEcho: TMenuItem
         AutoCheck = True
-        Caption = 'Wrap echo'
+        Caption = '&Wrap echo'
         OnClick = miWrapEchoClick
       end
       object miTimingInfo: TMenuItem
         AutoCheck = True
-        Caption = 'Show timing info'
+        Caption = 'Show &timing info'
         OnClick = miTimingInfoClick
       end
       object MenuItem4: TMenuItem
@@ -3493,7 +3493,7 @@ object MnhForm: TMnhForm
         OnClick = miFullscreenClick
       end
       object miLanguageRoot: TMenuItem
-        Caption = 'Language'
+        Caption = '&Language'
       end
     end
     object subMenuHelp: TMenuItem
