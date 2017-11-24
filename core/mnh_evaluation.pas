@@ -1227,27 +1227,26 @@ TYPE P_asyncTask=^T_asyncTask;
      T_asyncTask=object(T_builtinGeneratorExpression)
        private
          criticalSection:TRTLCriticalSection;
-         task:P_token;
-         id:string;
+         func:P_expressionLiteral;
+         param:P_listLiteral;
          myContext:P_threadContext;
          resultValue:P_literal;
          evaluationFinished:boolean;
          isBlocking:boolean;
        public
-         CONSTRUCTOR create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
+         CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
          DESTRUCTOR destroy; virtual;
          FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
          FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
      end;
 
-CONSTRUCTOR T_asyncTask.create(CONST task_:P_token; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
+CONSTRUCTOR T_asyncTask.create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
   begin
     inherited create(loc);
     initCriticalSection(criticalSection);
     isBlocking:=blocking;
-    task:=task_;
-    if isBlocking then id:='future' else id:='async';
-    id:=id+'({'+tokensToString(task,30)+'})';
+    func :=func_;                      func ^.rereference;
+    param:=param_;  if param<>nil then param^.rereference;
     myContext:=context_;
     resultValue:=nil;
     evaluationFinished:=false;
@@ -1264,18 +1263,24 @@ DESTRUCTOR T_asyncTask.destroy;
         sleep(1);
         enterCriticalSection(criticalSection);
       end;
-      if task<>nil then myContext^.recycler.cascadeDisposeToken(task);
       dispose(myContext,destroy);
       myContext:=nil;
     end;
+    disposeLiteral(func);
+    if param<>nil then disposeLiteral(param);
     if resultValue<>nil then disposeLiteral(resultValue);
     leaveCriticalSection(criticalSection);
     doneCriticalSection(criticalSection);
   end;
 
 FUNCTION T_asyncTask.toString(CONST lengthLimit:longint=maxLongint):string;
+  VAR remaining:longint;
   begin
-    result:=id;
+    if isBlocking then result:='future(' else result:='async(';
+    remaining:=lengthLimit-length(result)-1;
+    result:=result+func^.toString(remaining);
+    remaining:=lengthLimit-length(result)-1;
+    result:=result+toParameterListString(param,true,remaining)+')';
   end;
 
 FUNCTION T_asyncTask.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
@@ -1296,15 +1301,10 @@ FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      myContext^.reduceExpression(task);
-
+      resultValue:=func^.evaluate(getLocation,myContext,param);
+      if resultValue=nil then myContext^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation,C_EMPTY_STRING_ARRAY);
       enterCriticalSection(criticalSection);
       evaluationFinished:=true;
-      resultValue:=myContext^.cascadeDisposeToLiteral(task);
-      if isBlocking and (resultValue<>nil) and (resultValue^.literalType=lt_void) then begin
-        myContext^.adapters^.raiseError('Non-blocking async tasks must not return void.',getLocation);
-      end;
-      task:=nil;
       myContext^.doneEvaluating;
       dispose(myContext,destroy);
       myContext:=nil;
@@ -1318,7 +1318,6 @@ FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   VAR p:P_asyncTask;
       childContext:P_threadContext;
       parameters:P_listLiteral=nil;
-      task,dummy:P_token;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
@@ -1326,12 +1325,7 @@ FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         if params^.size=2 then parameters:=list1;
-        if not(subruleReplacesCallback(arg0,parameters,tokenLocation,task,dummy,context,false)) then begin
-          childContext^.doneEvaluating;
-          dispose(childContext,destroy);
-          exit(nil);
-        end;
-        new(p,create(task,childContext,tokenLocation,wantFuture));
+        new(p,create(P_expressionLiteral(arg0),parameters,childContext,tokenLocation,wantFuture));
         beginThread(@doAsync,p);
         result:=p^.rereferenced;
       end else begin

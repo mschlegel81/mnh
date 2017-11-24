@@ -31,6 +31,7 @@ FUNCTION head_imp intFuncSignature;
 {$define CALL_MACRO:=head}
 {$define SCALAR_FALLBACK:=result:=arg0^.rereferenced}
 VAR i:longint;
+    valueToAppend:P_literal;
     iterator:P_expressionLiteral;
 begin
   if (params<>nil)
@@ -42,7 +43,12 @@ begin
      if int1^.value=0 then exit(newListLiteral());
      iterator:=P_expressionLiteral(arg0);
      result:=newListLiteral(int1^.value);
-     for i:=1 to int1^.value do listResult^.append(iterator^.evaluateToLiteral(tokenLocation,@context),false);
+     for i:=1 to int1^.value do begin
+       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context);
+       if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
+       then break
+       else listResult^.append(valueToAppend,false);
+     end;
      exit(result);
   end;
   SUB_LIST_IMPL;

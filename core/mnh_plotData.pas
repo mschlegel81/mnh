@@ -177,7 +177,6 @@ PROCEDURE T_plot.setDefaults;
     with scalingOptions do begin
       for axis:='x' to 'y' do begin
         axisTrafo[axis].reset;
-        autoscale[axis]:=true;
         axisStyle[axis]:=[gse_tics,gse_coarseGrid,gse_fineGrid];
       end;
       preserveAspect:=true;
@@ -246,8 +245,6 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
-    autoscale['x']:=false;
-    autoscale['y']:=false;
     scalingOptions.axisTrafo['x'].zoom(pixelX,factor);
     scalingOptions.axisTrafo['y'].zoom(pixelY,factor);
 
@@ -269,8 +266,6 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
-    autoscale['x']:=false;
-    autoscale['y']:=false;
     scalingOptions.axisTrafo['x'].pan(pixelDX);
     scalingOptions.axisTrafo['y'].pan(pixelDY);
 
@@ -378,12 +373,16 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     target.Pen.width:=scaleAndColor.lineWidth;
     if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
+      {$Q-}
       lastY:=round(pos*scalingFactor);
+      {$Q+}
       target.line(0, lastY, intendedWidth*scalingFactor, lastY);
     end;
     if (gse_coarseGrid in scalingOptions.axisStyle['x']) then
     for i:=0 to length(gridTic['x'])-1 do with gridTic['x'][i] do if major then begin
+      {$Q-}
       lastX:=round(pos*scalingFactor);
+      {$Q+}
       target.line(lastX, 0, lastX, intendedHeight*scalingFactor);
     end;
     //-------------------------------------------------------------:major grid

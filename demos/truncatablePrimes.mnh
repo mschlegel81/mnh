@@ -5,7 +5,7 @@ leftTruncatablePrimes(maxPrime>10)->
     SUB|(
     [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
       SUB:=PRIME_SET[10^k<=PRIME_SET<10^(k+1)] //filter all primes with k+1 digits
-           .filter({$x mod 10^k in SUB}),|));  //filter all primes which left-truncated are in SUB
+           .pFilter({$x mod 10^k in SUB}),|)); //filter all primes which left-truncated are in SUB
   end;
 
 rightTruncatablePrimes(maxPrime>10)->
@@ -15,7 +15,7 @@ rightTruncatablePrimes(maxPrime>10)->
     SUB|(
     [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
        SUB:=PRIME_SET[10^k<=PRIME_SET<10^(k+1)] //filter all primes with k+1 digits
-            .filter({$x div 10 in SUB}),|));    //filter all primes which right-truncated are in SUB
+            .pFilter({$x div 10 in SUB}),|));   //filter all primes which right-truncated are in SUB
   end;
 
 //@demo_for=list processing

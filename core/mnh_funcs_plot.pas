@@ -122,8 +122,8 @@ FUNCTION getOptions intFuncSignature;
         .put('y1'             ,opt.axisTrafo['y'].worldMax)^
         .put('fontsize'       ,opt.relativeFontSize)^
         .put('preserveAspect' ,opt.preserveAspect  )^
-        .put('autoscaleX'     ,opt.autoscale['x']  )^
-        .put('autoscaleY'     ,opt.autoscale['y']  )^
+        .put('autoscaleX'     ,opt.axisTrafo['x'].autoscale)^
+        .put('autoscaleY'     ,opt.axisTrafo['y'].autoscale)^
         .put('autoscaleFactor',opt.autoscaleFactor )^
         .put('logscaleX'      ,opt.axisTrafo['x'].logscale)^
         .put('logscaleY'      ,opt.axisTrafo['y'].logscale)^
@@ -166,10 +166,10 @@ FUNCTION setOptions intFuncSignature;
         opt.preserveAspect:=P_boolLiteral(value)^.value;
       end else
       if (key='autoscaleX'    ) and (value^.literalType=lt_boolean) then begin
-        opt.autoscale['x']:=P_boolLiteral(value)^.value;
+        opt.axisTrafo['x'].autoscale:=P_boolLiteral(value)^.value;
       end else
       if (key='autoscaleY'    ) and (value^.literalType=lt_boolean) then begin
-        opt.autoscale['y']:=P_boolLiteral(value)^.value;
+        opt.axisTrafo['y'].autoscale:=P_boolLiteral(value)^.value;
       end else
       if (key='logscaleX'     ) and (value^.literalType=lt_boolean) then begin
         opt.axisTrafo['x'].logscale:=P_boolLiteral(value)^.value;

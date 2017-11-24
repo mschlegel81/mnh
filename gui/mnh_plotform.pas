@@ -379,8 +379,8 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
     miYGrid.Checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['y'];
     miYFinerGrid.Checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['y'];
     miPreserveAspect.Checked:=currentScalingOptions.preserveAspect;
-    miAutoscaleX.Checked    :=currentScalingOptions.autoscale['x'];
-    miAutoscaleY.Checked    :=currentScalingOptions.autoscale['y'];
+    miAutoscaleX.Checked    :=currentScalingOptions.axisTrafo['x'].autoscale;
+    miAutoscaleY.Checked    :=currentScalingOptions.axisTrafo['y'].autoscale;
     miLogscaleX.Checked     :=currentScalingOptions.axisTrafo['x'].logscale;
     miLogscaleY.Checked     :=currentScalingOptions.axisTrafo['y'].logscale;
   end;
@@ -401,8 +401,8 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
       currentScalingOptions.preserveAspect:=miPreserveAspect.Checked;
       currentScalingOptions.axisTrafo['x'].logscale:=miLogscaleX.Checked;
       currentScalingOptions.axisTrafo['y'].logscale:=miLogscaleY.Checked;
-      currentScalingOptions.autoscale['x']:=miAutoscaleX.Checked;
-      currentScalingOptions.autoscale['y']:=miAutoscaleY.Checked;
+      currentScalingOptions.axisTrafo['x'].autoscale:=miAutoscaleX.Checked;
+      currentScalingOptions.axisTrafo['y'].autoscale:=miAutoscaleY.Checked;
     end;
 
   begin

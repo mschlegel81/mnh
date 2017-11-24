@@ -1,0 +1,238 @@
+USE ludic,                //for A003309
+    pernicousNumbers,     //for A052294
+    semiprime,            //for A001358
+    sequenceOfNonSquares, //for A000037
+    smithNumbers,         //for A006753
+    thueMorseSequence,    //for A010060
+    truncatablePrimes,    //for A024785, A024770
+    hofstadter_sequences, //for A005228, A030124, A005206, A005374, A005378, A005379, A005185
+    generators;
+
+//for A000002:------------------------------------------------
+private listOf(value,count=0)->[];
+private listOf(value,count>=1)->[1..count].each(i,value);
+private Kolakoski_1_2(len)->begin
+  local K:=[1,2];
+  while(K.size<len,
+    K:=K.pEach(runLength,
+               listOf((index and 1)+1,runLength),|));
+  K.head(len);
+end;
+
+//for A000010:------------------------------------------------
+private EulerPhi(n>1)->factorize(n).elementFrequency.each(p,p[0]^(p[1]-1)*(p[0]-1),*);
+private EulerPhi(1)->1;
+
+generalizedFibonacci(state:IntList)->{begin
+  local L:=state;
+save;
+  local result:=L[0];
+  L:=L.tail|L.agg(+);
+  result<0 ? void : result;
+end};
+
+//for A000108:-------------------------------------------------
+private Catalan(n<=1)->1;
+private Catalan(n> 1)->(n+[2..n]).agg(*) div [2..n].agg(*);
+
+//for A025426:-------------------------------------------------
+private by2Squares(n>0)->begin
+  local S:=[1..n.sqrt.floor]^2;
+  (n-S).intersect(S).filter({n-$s<=$s}).map({round(sqrt(n-$s))&'^2+'&round(sqrt($s))&'^2'});
+end;
+private by2Squares(n=0):=[];
+
+//for A061358:-------------------------------------------------
+private by2Primes(n:Int)->begin
+  local S:=primes(n);
+  (n-S).intersect(S).filter({n-$s<=$s}).map({(n-$s)&'+'&$s});
+end;
+
+//for A000124:-------------------------------------------------
+private LazyCaterer(n)->(n+n^2+2) div 2;
+
+//for A000203:-------------------------------------------------
+private DivisorFunction(1)->1;
+private DivisorFunction(n:Int)->factorize(n).subSets.map({$0.agg(*) orElse 1}).agg(+);
+
+//for A003459:-------------------------------------------------
+private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits.factorize.size=1,AND);
+
+private naturalNumbers(lowerBound:Int)->rangeGenerator(lowerBound,2^63-1);
+//-------------------------------------------------------------
+//@SuppressUnusedWarning
+A000002->listIterator(Kolakoski_1_2(10000));
+//@SuppressUnusedWarning
+A000010->naturalNumbers(1).lazyMap(::EulerPhi);
+//@SuppressUnusedWarning
+A000027->naturalNumbers(1);
+//@SuppressUnusedWarning
+A000037->naturalNumbers(1).lazyMap(::nonSquares);
+//@SuppressUnusedWarning
+A000040->primeGenerator;
+//@SuppressUnusedWarning
+A000108->rangeGenerator(0,13).lazyMap(::Catalan);
+//@SuppressUnusedWarning
+A000124->naturalNumbers(0).lazyMap(::LazyCaterer);
+//@SuppressUnusedWarning
+A000203->naturalNumbers(1).lazyMap(::DivisorFunction);
+//@SuppressUnusedWarning
+A001358->naturalNumbers(1).filter(::isSemiprime);
+//@SuppressUnusedWarning
+A003459->listIterator(primes(991)).filter(::isPermutablePrime);
+//@SuppressUnusedWarning
+A025426->naturalNumbers(0).lazyMap({size(by2Squares($i))});
+//@SuppressUnusedWarning
+A061358->naturalNumbers(0).lazyMap({size(by2Primes($i))});
+//@SuppressUnusedWarning
+A003309->listIterator(LudicSieve);
+//@SuppressUnusedWarning
+A052294->naturalNumbers(1).filter(::isPernicious);
+//@SuppressUnusedWarning
+A006753->naturalNumbers(1).filter(::isSmithNumber);
+//@SuppressUnusedWarning
+A010060->listIterator(thueMorseSequence(10000).ord);
+//@SuppressUnusedWarning
+A024785->listIterator(leftTruncatablePrimes (100000));
+//@SuppressUnusedWarning
+A024770->listIterator(rightTruncatablePrimes(100000));
+//@SuppressUnusedWarning
+A005228->naturalNumbers(1).lazyMap(::hofstadter_sequences.R);
+//@SuppressUnusedWarning
+A030124->naturalNumbers(1).lazyMap(::hofstadter_sequences.S);
+//@SuppressUnusedWarning
+A005206->naturalNumbers(0).lazyMap(::hofstadter_sequences.G);
+//@SuppressUnusedWarning
+A005374->naturalNumbers(0).lazyMap(::hofstadter_sequences.H);
+//@SuppressUnusedWarning
+A005378->naturalNumbers(0).lazyMap(::hofstadter_sequences.F);
+//@SuppressUnusedWarning
+A005379->naturalNumbers(0).lazyMap(::hofstadter_sequences.M);
+//@SuppressUnusedWarning
+A005185->naturalNumbers(1).lazyMap(::hofstadter_sequences.Q);
+//@SuppressUnusedWarning
+A007947->naturalNumbers(1).lazyMap({$n.factorize.unique.agg(*)});
+
+USE countTheCoins;
+//@SuppressUnusedWarning
+A000041->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i])});
+//@SuppressUnusedWarning
+A001156->naturalNumbers(0).lazyMap({countPartitions($i,[1..ceil($i^(1/2))]^2)});
+//@SuppressUnusedWarning
+A003108->naturalNumbers(0).lazyMap({countPartitions($i,[1..ceil($i^(1/3))]^3)});
+//@SuppressUnusedWarning
+A018819->naturalNumbers(0).lazyMap({countPartitions($i,2^[0..20])});
+//@SuppressUnusedWarning
+A062051->naturalNumbers(0).lazyMap({countPartitions($i,3^[0..20])});
+//@SuppressUnusedWarning
+A001996->naturalNumbers(0).lazyMap({countPartitions($i,[2, 3, 4, 5, 6, 7])});
+//@SuppressUnusedWarning
+A000607->naturalNumbers(0).lazyMap({$i=0?1:countPartitions($i,primes($i))});
+//@SuppressUnusedWarning
+A002095->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i].minus(primes($i)))});
+//@SuppressUnusedWarning
+A000008->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10])});
+//@SuppressUnusedWarning
+A001299->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25])});
+//@SuppressUnusedWarning
+A001300->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50])});
+//@SuppressUnusedWarning
+A001301->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25])});
+//@SuppressUnusedWarning
+A001302->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25, 50])});
+//@SuppressUnusedWarning
+A001306->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 20, 50, 100])});
+//@SuppressUnusedWarning
+A001310->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 10, 20, 40, 100])});
+//@SuppressUnusedWarning
+A001312->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 50, 100])});
+//@SuppressUnusedWarning
+A001313->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 20, 50])});
+//@SuppressUnusedWarning
+A001362->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 10])});
+//@SuppressUnusedWarning
+A001364->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 12, 24, 48, 96, 120])});
+//@SuppressUnusedWarning
+A067996->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 50, 100])});
+//@SuppressUnusedWarning
+A169718->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
+//@SuppressUnusedWarning
+A187243->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10])});
+//@SuppressUnusedWarning
+memoized implemented->
+  inspect['declares']
+  .filter({$x[0].matches('^A\d{6}$')})
+  .map({[$x[0].copy(1,6).softCast,$x[1,'function']]})
+  .toMap;
+
+private findPolyParam(sequence:IntList)->sequence.size<6 ? void : begin
+  local c:=sequence[0];
+  local a:=(sequence[2]-sequence[0]) div 2-sequence[1]+sequence[0];
+  local b:=sequence[1]-c-a;
+  local n:=[0..sequence.size-1];
+  a*n^2+b*n+c==sequence
+  ? begin
+      local upperBound:=a=0
+            ? b=0
+              ? 2^63-1
+              : floor((2^63.0-1.0-c)/b)
+            : floor((-b+[-1,1]*sqrt(b^2-4*a*(c-2.0^63+1.0)))/(2*a)).max;
+      upperBound<0 ? void :
+      format('rangeGenerator(0,%s).lazyMap({%s%s%s})',
+            upperBound,
+            a=0 ? '' : a&'*$x^2+',
+            b=0 ? '' : b&'*$x+',
+            c);
+    end
+  : void;
+end;
+
+private findFibonacciParam(sequence:IntList)->sequence.size<4 ? void : begin
+  [2..min(16,sequence.size div 2)].each(k,
+    generalizedFibonacci(sequence.head(k)).head(sequence.size)==sequence
+    ? format('generalizedFibonacci(%s)',sequence.head(k).toString)
+    : void,head);
+end;
+
+private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
+  //zero based index
+  local base:=(ln(sequence)/ln([0..sequence.size-1])).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=(base.agg(+)/base.size);
+  sequence==          round([0..sequence.size-1]^base)
+  ? return format(sequence==[0..sequence.size-1]^round(base)
+           ?       'rangeGenerator(0,%s)^%{round($1)}s'
+           : 'round(rangeGenerator(0,%s)^%s)',floor((2.0^63-1.0)^(1/base)),base)
+  : void;
+
+  //one based index
+  base:=(ln(sequence)/ln([1..sequence.size])).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=(base.agg(+)/base.size);
+  sequence==          round([1..sequence.size]^base)
+  ? return format(sequence==[1..sequence.size]^round(base)
+           ?       'rangeGenerator(1,%s)^%{round($1)}s'
+           : 'round(rangeGenerator(1,%s)^%s)',floor((2.0^63-1.0)^(1/base)),base)
+  : void;
+
+  //zero based index
+  base:=(ln(sequence)/[0..sequence.size-1]).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=base.exp.sort[base.size div 2];
+
+  sequence==                round(base^ [0..sequence.size-1])
+  ? return format(sequence==round(base)^[0..sequence.size-1]
+           ? '%{round($0)}s^rangeGenerator(0,%s)'
+           : 'round(%s^rangeGenerator(0,%s))',base,floor(ln(2.0^63-1.0)/ln(base)))
+  : void;
+
+  //one based index
+  base:=(ln(sequence)/[1..sequence.size]).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=base.exp.sort[base.size div 2];
+
+  sequence==                round(base^ [1..sequence.size])
+  ? return format(sequence==round(base)^[1..sequence.size-1]
+           ? '%{round($0)}s^rangeGenerator(1,%s)'
+           : 'round(%s^rangeGenerator(1,%s))',base,floor(ln(2.0^63-1.0)/ln(base)))
+  : void;
+end;
+
+//@SuppressUnusedWarning
+guessImplementation(sequence:IntList)->findPolyParam(sequence) orElse findPowerParam(sequence) orElse findFibonacciParam(sequence);

@@ -1,4 +1,4 @@
-USE testLog,mnhInfo,formattingUtils,make_config,distroLog;
+USE testLog,mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis.mnh';
 
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
@@ -216,3 +216,6 @@ main(...)->... .each(step,
   print('* ',step),
   print('******************************'),
   main(step));
+
+//@after
+shutdownOeisServer->oeis.main('stopServer');

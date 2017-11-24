@@ -47,6 +47,7 @@ TYPE
       mainPackage:P_package;
       secondaryPackages:array of P_package;
       extendedPackages:array of P_extendedPackage;
+      runAfter:array of P_subruleExpression;
 
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
@@ -60,7 +61,7 @@ TYPE
       PROCEDURE clear(CONST includeSecondaries:boolean);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
-      PROCEDURE finalize(VAR adapters:T_adapters);
+      PROCEDURE finalize(VAR context:T_threadContext);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
     public
@@ -901,6 +902,17 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         subRule:P_subruleExpression;
         ruleGroup:P_rule;
         inlineValue:P_literal;
+    PROCEDURE addRuleToRunAfter(CONST ex:P_subruleExpression);
+      begin
+        if not(ex^.canApplyToNumberOfParameters(0)) then begin
+          context.adapters^.raiseError('Attribute //@'+EXECUTE_AFTER_ATTRIBUTE+' is only allowed for nullary functions',ex^.getLocation);
+          exit;
+        end;
+        setLength(runAfter,length(runAfter)+1);
+        runAfter[length(runAfter)-1]:=ex;
+        ex^.rereference;
+      end;
+
     begin
       ruleDeclarationStart:=statement.firstToken^.location;
       evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -984,7 +996,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             end;
             {$endif}
             dispose(subRule,destroy);
-          end else P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
+          end else begin
+            if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
+            P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
+          end;
           statement.firstToken:=nil;
         end else begin
           context.recycler.cascadeDisposeToken(statement.firstToken);
@@ -1257,7 +1272,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       if usecase=lu_forCallingMain then executeMain;
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
-    then finalize(context.adapters^);
+    then finalize(context);
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -1273,6 +1288,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_:
     setLength(secondaryPackages,0);
     setLength(extendedPackages,0);
     setLength(packageUses,0);
+    setLength(runAfter,0);
     packageRules.create(@disposeRule);
     importedRules.create;
     {$ifdef fullVersion}
@@ -1287,6 +1303,8 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     {$ifdef fullVersion}
     anyCalled:=false;
     {$endif}
+    for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
+    setLength(runAfter,0);
     if includeSecondaries then begin
       for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
       setLength(secondaryPackages,0);
@@ -1309,19 +1327,20 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boole
     if recurse then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.writeDataStores(adapters,recurse);
   end;
 
-PROCEDURE T_package.finalize(VAR adapters: T_adapters);
+PROCEDURE T_package.finalize(VAR context:T_threadContext);
   VAR ruleList:array of P_rule;
       i:longint;
   begin
+    for i:=0 to length(runAfter)-1 do runAfter[i]^.evaluate(packageTokenLocation(@self),@context,nil);
     mnh_funcs_server.onPackageFinalization(@self);
     mnh_funcs_ipc   .onPackageFinalization(@self);
     mnh_funcs_format.onPackageFinalization(@self);
-    adapters.updateErrorlevel;
+    context.adapters^.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do
-      if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(adapters);
+      if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(context.adapters^);
     setLength(ruleList,0);
-    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
+    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context);
   end;
 
 DESTRUCTOR T_package.destroy;
