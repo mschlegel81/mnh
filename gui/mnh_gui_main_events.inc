@@ -204,7 +204,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if not(firstShow) then updateFormPositionInSettings;
     updateWordWrap;
-    if helpPopupMemo.visible then positionHelpNotifier;
+    if miHelp.Checked and (outputPageControl.activePage=HelpSheet) then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
@@ -250,12 +250,12 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR help,jump,mark:boolean;
   begin
-    help:=helpPopupMemo.visible;
+    help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
     jump:=(key=13) and (ssCtrl in Shift);
     mark:=(key=13) and (ssAlt  in Shift);
     getEditor^.setUnderCursor(mark,help or jump);
     if jump then openLocation(getHelpLocation);
-    if help then positionHelpNotifier;
+    if help then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -266,11 +266,11 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     point.x:=x;
     point.y:=y;
     point:=getEditor^.editor.PixelsToRowColumn(point);
-    help:=helpPopupMemo.visible;
+    help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
     jump:=(ssCtrl in Shift);
     getEditor^.setUnderCursor(mark,help or jump,point);
     if jump then openLocation(getHelpLocation);
-    if help then positionHelpNotifier;
+    if help then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -384,7 +384,6 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
-    if helpPopupMemo.visible then positionHelpNotifier;
     if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=BottomPanel.height/ClientHeight;
   end;
 
@@ -566,12 +565,11 @@ PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
   begin
     miHelp.Checked:=not(miHelp.Checked);
-    if not(miHelp.Checked) then helpPopupMemo.visible:=false
-                           else begin
-                             helpPopupMemo.visible:=true;
-                             getEditor^.setUnderCursor(false,false);
-                             positionHelpNotifier;
-                           end;
+    if miHelp.Checked then begin
+      outputPageControl.activePage:=HelpSheet;
+      getEditor^.setUnderCursor(false,false);
+      helpPopupMemo.text:=getHelpPopupText;
+    end;
   end;
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
