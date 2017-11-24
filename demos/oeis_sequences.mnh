@@ -166,6 +166,28 @@ A023690->naturalNumbers(0).filter({$x.bits.trueCount=8});
 //@SuppressUnusedWarning
 A023691->naturalNumbers(0).filter({$x.bits.trueCount=9});
 
+USE multifactorial;
+//@SuppressUnusedWarning
+A000142->multifactorialGenerator(1);
+//@SuppressUnusedWarning
+A006882->multifactorialGenerator(2);
+//@SuppressUnusedWarning
+A007661->multifactorialGenerator(3);
+//@SuppressUnusedWarning
+A007662->multifactorialGenerator(4);
+//@SuppressUnusedWarning
+A085157->multifactorialGenerator(5);
+//@SuppressUnusedWarning
+A085158->multifactorialGenerator(6);
+//@SuppressUnusedWarning
+A114799->multifactorialGenerator(7);
+//@SuppressUnusedWarning
+A114800->multifactorialGenerator(8);
+//@SuppressUnusedWarning
+A114806->multifactorialGenerator(9);
+//@SuppressUnusedWarning
+A288327->multifactorialGenerator(10);
+
 USE sternBrocot;
 //@SuppressUnusedWarning
 A002487->sternBrocotGenerator;

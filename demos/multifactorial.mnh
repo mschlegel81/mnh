@@ -1,11 +1,19 @@
 USE formattingUtils;
 
 //*Returns an expression f($n), returning the Factorial of $n
-multifactorial(degree=1)->{[1.0,1..$n].agg(*)};
+multifactorial(degree=1)->{$n<=0 ? 1 : [1.0,1..$n].agg(*).round};
 //*Returns an expression f($n), returning the Multifactorial of given degree
-multifactorial(degree>1)->{(toReal($n)-degree*[0..($n-1) div degree]).agg(*)};
+multifactorial(degree>1)->{$n<=0 ? 1 : (toReal($n)-degree*[0..($n-1) div degree]).agg(*).round};
+
+//@SuppressUnusedWarning=Used in oeis_sequences
+multifactorialGenerator(degree)->{begin
+  local f:=multifactorial(degree);
+  local i:=-1;
+save;
+  (local fOfI:=f(i+=1))>=0 ? fOfI : void;
+end};
 
 //*See http://rosettacode.org/wiki/Multifactorial
 //@demo_for=formatting, expressions
-main->printf('%s',[1..5].each(degree,flatten(degree,[1..10].map(multifactorial(degree)).round))
+main->printf('%s',[1..5].each(degree,flatten(degree,[1..10].map(multifactorial(degree))))
 .formatTable('Degree'|('#'&[1..10])));
