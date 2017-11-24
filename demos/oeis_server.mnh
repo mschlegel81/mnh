@@ -3,6 +3,7 @@ private datastore names    :=[];
 private datastore foundImplementations:=[].toMap;
 ipcId:=myPath.extractFileNameOnly&format('%x',myPath.fileStats).join;
 
+USE oeis_sequences;
 memoized implementationOf(index:Int)->begin
   local result:=implemented[index];
   result.isVoid ? void : return result;
@@ -28,7 +29,6 @@ private memoized sevenZipExe->
   orElse fail('7-Zip could not be located!');
 
 private IDFormat:='A%6.6d';
-USE oeis_sequences;
 
 private formatInfo(numericId:Int)->
   formatTabs(
@@ -66,6 +66,26 @@ private classify(L:IntList)->begin
   CLASS@(L.tail.each(x,D(last,last:=x),+) orElse [0,0,0]);
 end;
 
+unzip(filename:String)->
+  mnhInfo['targetOs'].matches('(i?)Linux')
+  ? 'zcat'     .exec([filename])[0]
+  : sevenZipExe.exec(['e','-so','-bd',filename])[0];
+
+getData(URL:String)->begin
+  local filename:=URL.split('/').trailing;
+  fileExists(filename)
+  ? return unzip(filename)
+  : void;
+
+  local data:=httpGet(URL);
+  print(filename,' downloaded');
+  filename.writeFile(data);
+  local temp:=unzip(filename);
+  print(filename,' decompressed');
+  deleteFile(filename);
+  temp;
+end;
+
 //*Updates datastores based on input files
 //*Obtain the files at https://oeis.org/names.gz and https://oeis.org/stripped.gz
 //*Unzip the files before using them as input
@@ -73,30 +93,14 @@ private serve_('download',...)->begin
   print('Updating data - old: ',typeOf(names));
   local idAndRest  :={[$s.copy(1,6).softCast,$s.copy(8,$s.length)]};
   local idAndSeries:={[$s.copy(1,6).softCast,$s.copy(8,$s.length).split(',').softCast.filter(::isInt)]};
-  local namesMap :=begin
-                     local namesData:=httpGet('https://oeis.org/names.gz');
-                     print('Names downloaded');
-                     (local namesFile:='names.gz').writeFile(namesData);
-                     local temp:=sevenZipExe.exec(['e','-so','-bd',namesFile])[0];
-                     print('Names decompressed');
-                     deleteFile(namesFile);
-                     temp;
-                   end
-                   .filter({$x.matches('^A\d{6} ')}).pMap(idAndRest  ).toMap;
+  local namesMap :=getData('https://oeis.org/names.gz').filter({$x.matches('^A\d{6} ')}).pMap(idAndRest  ).toMap;
   print('Names file parsed - ',namesMap.size,' entries');
-  local seriesMap:=begin
-                     local strippedData:=httpGet('https://oeis.org/stripped.gz');
-                     print('Series downloaded');
-                     (local strippedFile:='names.gz').writeFile(strippedData);
-                     local temp:=sevenZipExe.exec(['e','-so','-bd',strippedFile])[0];
-                     print('Series decompressed');
-                     deleteFile(strippedFile);
-                     temp;
-                   end
-                   .filter({$x.matches('^A\d{6} ')}).pMap(idAndSeries).toMap;
+  local seriesMap:=getData('https://oeis.org/stripped.gz').filter({$x.matches('^A\d{6} ')}).pMap(idAndSeries).toMap;
   print('Series file parsed - ',seriesMap.size,' entries');
   local maxSeries:=max(namesMap.getInner(0).max,seriesMap.getInner(0).max);
+  print('Updating names list of ',maxSeries,' relevant entries');
   names    :=rangeGenerator(0,maxSeries).pMap({namesMap [$i] orElse ''});
+  print('Updating sequences list of ',maxSeries,' relevant entries');
   sequences:=rangeGenerator(0,maxSeries).pMap({seriesMap[$i] orElse []});
   print(local msg:=('Datastores generated - '&(names.size)&' entries'));
   msg;
