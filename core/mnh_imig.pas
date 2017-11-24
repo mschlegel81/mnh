@@ -13,6 +13,7 @@ USES sysutils,   //system
      ig_fractals,
      ig_epicycles,
      ig_ifs,
+     ig_ifs2,
      ig_bifurcation,
      ig_funcTrees,
      ig_expoClouds;
