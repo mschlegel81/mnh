@@ -187,9 +187,9 @@ private serve_('gen',seriesId,count)->begin
 end;
 
 private serve_(...)->'Unkown command: '&toString(...);
-private serve(['stop'])->serverKillPosted:=true;
-private serve(['download'])->serve_('download');
-private serve(parameters)->begin
+serve(['stop'])->serverKillPosted:=true;
+serve(['download'])->serve_('download');
+serve(parameters)->begin
   local t0:=time;
   printDirect("\r",repeat(' ',80),"\rLast request: ",parameters);
   local result:=
