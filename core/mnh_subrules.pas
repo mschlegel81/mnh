@@ -1119,7 +1119,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
-          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters,false);
+          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters);
       end;
       t:=t^.next;
     end;
@@ -1150,7 +1150,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          P_abstractPackage(token.location.package)^.resolveId(token,adapters,true);
+          P_abstractPackage(token.location.package)^.resolveId(token,adapters);
           functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
         end;
       end;

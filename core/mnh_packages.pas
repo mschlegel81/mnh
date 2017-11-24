@@ -75,7 +75,7 @@ TYPE
       {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters; CONST toBeCalled:boolean); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -1044,7 +1044,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       t:=statement.firstToken;
       while (t<>nil) do begin
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_identifier) then begin
-          resolveId(t^.next^,nil,false);
+          resolveId(t^.next^,nil);
           {$ifdef fullVersion} if t^.next^.tokType=tt_customTypeRule then P_rule(t^.next^.data)^.setIdResolved; {$endif}
         end;
         if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType in [tt_customTypeRule,tt_type]) then begin
@@ -1536,7 +1536,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     end;
   end;
 
-PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters; CONST toBeCalled:boolean);
+PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -1545,7 +1545,7 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters;
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      if toBeCalled then userRule^.setIdResolved;
+      userRule^.setIdResolved;
       {$endif}
     end;
 
@@ -1554,12 +1554,8 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters;
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      if toBeCalled then begin
-        userRule^.setIdResolved;
-        if (token.location.package=P_objectWithPath(mainPackage)) and
-           (userRule^.getLocation.package<>P_objectWithPath(mainPackage))
-        then P_package(userRule^.getLocation.package)^.anyCalled:=true;
-      end;
+      userRule^.setIdResolved;
+      P_package(userRule^.getLocation.package)^.anyCalled:=true;
       {$endif}
     end;
 
