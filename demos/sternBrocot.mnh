@@ -13,11 +13,11 @@ end};
 //*See http://rosettacode.org/wiki/Stern-Brocot_sequence
 main->begin
   print('Stern-Brocot seqence');
-  print('  First 15: ',sternBrocotGenerator.head(15));
+  print('  First 15: ',sternBrocotGenerator.head(16).tail);
   local seqStart:=sternBrocotGenerator.head(2500);
   printf("  %s\tfirst occurs at index\t%s",
     [1..10,100],
-  1+[1..10,100].each(k,indexOf(seqStart=k).head));
+    [1..10,100].each(k,indexOf(seqStart=k).head));
   [seqStart.head(1000).tail,seqStart.head(1000).leading].transpose.pEach(i,gcd@i=1,AND)
   ? print('Correct: The first 999 consecutive pairs are relative prime!')
   : fail('Unexpected function result');

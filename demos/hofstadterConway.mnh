@@ -14,7 +14,7 @@ private maxBetween(i0,i1,L)->begin
 end;
 
 private analyze(powerOfTwo:Int)->begin
-  local ratios:=hofstaderConwayGen.head(2^powerOfTwo)/[1,1..2^powerOfTwo-1];
+  local ratios:=1|hofstaderConwayGen.head(2^powerOfTwo)/[1..2^powerOfTwo];
   [0..powerOfTwo-1].each(i,printf("range 2^%2d..2^%2d max. a(n)/n=%s",i,i+1,maxBetween(2^i,2^(i+1),ratios)));
   print("Mallows Number: ",indexOf(ratios>0.55).max);
 end;
