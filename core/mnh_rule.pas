@@ -526,17 +526,13 @@ FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
     result:='';
     for s in subrules do result:=result+C_lineBreakChar+s^.getDocTxt();
     result:=join(formatTabs(split(result)),LineEnding);
-    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+
-            'in '+getLocation.package^.getPath+result;
+    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation)+result;
   end;
 
 FUNCTION T_mutableRule.getDocTxt: ansistring;
   begin
-    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+
-            'in '+getLocation.package^.getPath+C_lineBreakChar+
-            'declared '+ansistring(getLocation);
-    if meta.comment<>'' then result:=result+C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX);
-    result:=result+meta.getAttributesDocTxt;
+    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation)+result;
+    result:=result+meta.getDocTxt;
   end;
 
 FUNCTION T_mutableRule.hasPublicSubrule: boolean;

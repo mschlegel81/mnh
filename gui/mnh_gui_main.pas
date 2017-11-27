@@ -110,7 +110,10 @@ TYPE
     miUserErrors,
     miFileHistoryRoot,
     miHtmlExport,
-    miRecentFileRoot:          TMenuItem;
+    miRecentFileRoot,
+    miShowQuickEval,
+    miShowOutput,
+    miShowAssistance:          TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;

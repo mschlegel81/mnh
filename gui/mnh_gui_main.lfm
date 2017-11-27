@@ -688,11 +688,11 @@ object MnhForm: TMnhForm
       Top = 0
       Width = 717
       TabStop = False
-      ActivePage = outputTabSheet
+      ActivePage = QuickTabSheet
       Align = alClient
       Font.Color = clBlack
       ParentFont = False
-      TabIndex = 1
+      TabIndex = 3
       TabOrder = 0
       Options = [nboKeyboardTabSwitch]
       object AssistanceTabSheet: TTabSheet
@@ -2803,7 +2803,7 @@ object MnhForm: TMnhForm
           Top = 0
           Width = 709
           Align = alClient
-          Color = 16053492
+          Color = clNone
           Font.Height = -13
           Font.Name = 'Courier New'
           Font.Pitch = fpFixed
@@ -3251,7 +3251,7 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           ReadOnly = True
           RightEdge = -1
-          ScrollBars = ssNone
+          ScrollBars = ssAutoBoth
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -3502,6 +3502,21 @@ object MnhForm: TMnhForm
       end
       object miLanguageRoot: TMenuItem
         Caption = '&Language'
+      end
+      object miShowAssistance: TMenuItem
+        Caption = 'Show Code Assistance'
+        ShortCut = 113
+        OnClick = miShowAssistanceClick
+      end
+      object miShowOutput: TMenuItem
+        Caption = 'Show Output'
+        ShortCut = 8305
+        OnClick = miShowOutputClick
+      end
+      object miShowQuickEval: TMenuItem
+        Caption = 'Show Quick evaluation'
+        ShortCut = 115
+        OnClick = miShowQuickEvalClick
       end
     end
     object subMenuHelp: TMenuItem

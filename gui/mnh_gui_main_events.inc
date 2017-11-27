@@ -28,6 +28,9 @@ PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
+PROCEDURE miShowAssistanceClick(Sender: TObject);
+PROCEDURE miShowOutputClick(Sender: TObject);
+PROCEDURE miShowQuickEvalClick(Sender: TObject);
 PROCEDURE miStackTracingClick(Sender: TObject);
 PROCEDURE miHaltEvalutaionClick(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
@@ -349,6 +352,22 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     miDebug.Checked:=not(miDebug.Checked);
     runnerModel.debugMode:=miDebug.Checked;
     onDebuggerEvent;
+  end;
+
+PROCEDURE TMnhForm.miShowAssistanceClick(Sender: TObject);
+  begin
+    if hasEditor and (getEditor^.getAssistant<>nil) then outputPageControl.activePage:=assistanceTabSheet;
+  end;
+
+PROCEDURE TMnhForm.miShowOutputClick(Sender: TObject);
+  begin
+    outputPageControl.activePage:=outputTabSheet;
+  end;
+
+PROCEDURE TMnhForm.miShowQuickEvalClick(Sender: TObject);
+  begin
+    outputPageControl.activePage:=QuickTabSheet;
+    ActiveControl:=quickMeta.editor;
   end;
 
 PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
