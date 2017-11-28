@@ -3016,15 +3016,8 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
        not(params^.value[0]^.literalType in [lt_map,lt_emptyMap]) or
        not(params^.value[1]^.literalType in [lt_map,lt_emptyMap]) or
        (params^.value[2]^.literalType<>lt_expression) then exit(nil);
-    if P_mapLiteral(params^.value[0])^.size>=
-       P_mapLiteral(params^.value[1])^.size
-    then begin
-      map1:=P_mapLiteral(params^.value[0]);
-      map2:=P_mapLiteral(params^.value[1]);
-    end else begin
-      map1:=P_mapLiteral(params^.value[1]);
-      map2:=P_mapLiteral(params^.value[0]);
-    end;
+    map1:=P_mapLiteral(params^.value[0]);
+    map2:=P_mapLiteral(params^.value[1]);
     merger:=P_expressionLiteral(params^.value[2]);
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
 
