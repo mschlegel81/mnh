@@ -306,13 +306,11 @@ exit}
     end;
 
   FUNCTION enterCriticalSectionWithDeadlockDetection:boolean; inline;
-    CONST maxTryCount=1000;
-          millesecondsBeforeRetry=10;
-    VAR tryCount:longint=0;
+    CONST millesecondsBeforeRetry=10;
     begin
-      while TryEnterCriticalsection(rule_cs)=0 do begin
-        inc(tryCount);
-        if tryCount>maxTryCount then exit(false);
+      while (TryEnterCriticalsection(rule_cs)=0) do begin
+        if not(P_threadContext(threadContextPointer)^.adapters^.noErrors) then exit(false);
+        ThreadSwitch;
         sleep(millesecondsBeforeRetry);
       end;
       result:=true;
