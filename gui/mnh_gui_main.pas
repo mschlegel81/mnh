@@ -110,7 +110,10 @@ TYPE
     miUserErrors,
     miFileHistoryRoot,
     miHtmlExport,
-    miRecentFileRoot:          TMenuItem;
+    miRecentFileRoot,
+    miShowQuickEval,
+    miShowOutput,
+    miShowAssistance:          TMenuItem;
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
@@ -139,6 +142,7 @@ TYPE
     outputTabSheet,
     assistanceTabSheet,
     QuickTabSheet:             TTabSheet;
+    HelpSheet: TTabSheet;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,
@@ -154,7 +158,6 @@ TYPE
     PROCEDURE onDebuggerEvent;                                              override;
     PROCEDURE onEndOfEvaluation;                                            override;
     PROCEDURE triggerFastPolling;                                           override;
-    PROCEDURE positionHelpNotifier;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE enableDynamicItems;
     PROCEDURE updateScriptMenus;
@@ -303,28 +306,6 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
 PROCEDURE TMnhForm.triggerFastPolling;
   begin
     UpdateTimeTimer.interval:=1;
-  end;
-
-PROCEDURE TMnhForm.positionHelpNotifier;
-  VAR maxLineLength:longint=0;
-      i:longint;
-      p:TPoint;
-  begin
-    p:=getEditor^.caretInMainFormCoordinates;
-    helpPopupMemo.text:=getHelpPopupText;
-    helpPopupMemo.visible:=true;
-    helpPopupMemo.Left:=p.x;
-    helpPopupMemo.top :=p.y;
-    for i:=0 to helpPopupMemo.lines.count-1 do if length(helpPopupMemo.lines[i])>maxLineLength then maxLineLength:=length(helpPopupMemo.lines[i]);
-    if (maxLineLength=0) then begin
-      helpPopupMemo.width:=0;
-      helpPopupMemo.height:=0;
-    end else begin
-      helpPopupMemo.width:=helpPopupMemo.CharWidth*(maxLineLength+1);
-      helpPopupMemo.height:=helpPopupMemo.LineHeight*(helpPopupMemo.lines.count+1);
-    end;
-    if helpPopupMemo.Left>width-helpPopupMemo.width then helpPopupMemo.Left:=width-helpPopupMemo.width;
-    if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
 FUNCTION TMnhForm.openLocation(CONST location: T_searchTokenLocation): boolean;

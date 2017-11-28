@@ -1,13 +1,3 @@
-USE ludic,                //for A003309
-    pernicousNumbers,     //for A052294
-    semiprime,            //for A001358
-    sequenceOfNonSquares, //for A000037
-    smithNumbers,         //for A006753
-    thueMorseSequence,    //for A010060
-    truncatablePrimes,    //for A024785, A024770
-    hofstadter_sequences, //for A005228, A030124, A005206, A005374, A005378, A005379, A005185
-    generators;
-
 //for A000002:------------------------------------------------
 private listOf(value,count=0)->[];
 private listOf(value,count>=1)->[1..count].each(i,value);
@@ -22,14 +12,6 @@ end;
 //for A000010:------------------------------------------------
 private EulerPhi(n>1)->factorize(n).elementFrequency.each(p,p[0]^(p[1]-1)*(p[0]-1),*);
 private EulerPhi(1)->1;
-
-generalizedFibonacci(state:IntList)->{begin
-  local L:=state;
-save;
-  local result:=L[0];
-  L:=L.tail|L.agg(+);
-  result<0 ? void : result;
-end};
 
 //for A000108:-------------------------------------------------
 private Catalan(n<=1)->1;
@@ -66,6 +48,7 @@ A000002->listIterator(Kolakoski_1_2(10000));
 A000010->naturalNumbers(1).lazyMap(::EulerPhi);
 //@SuppressUnusedWarning
 A000027->naturalNumbers(1);
+USE sequenceOfNonSquares;
 //@SuppressUnusedWarning
 A000037->naturalNumbers(1).lazyMap(::nonSquares);
 //@SuppressUnusedWarning
@@ -76,6 +59,7 @@ A000108->rangeGenerator(0,13).lazyMap(::Catalan);
 A000124->naturalNumbers(0).lazyMap(::LazyCaterer);
 //@SuppressUnusedWarning
 A000203->naturalNumbers(1).lazyMap(::DivisorFunction);
+USE semiprime;
 //@SuppressUnusedWarning
 A001358->naturalNumbers(1).filter(::isSemiprime);
 //@SuppressUnusedWarning
@@ -84,18 +68,24 @@ A003459->listIterator(primes(991)).filter(::isPermutablePrime);
 A025426->naturalNumbers(0).lazyMap({size(by2Squares($i))});
 //@SuppressUnusedWarning
 A061358->naturalNumbers(0).lazyMap({size(by2Primes($i))});
+USE generators,ludic;
 //@SuppressUnusedWarning
 A003309->listIterator(LudicSieve);
+USE pernicousNumbers;
 //@SuppressUnusedWarning
 A052294->naturalNumbers(1).filter(::isPernicious);
+USE smithNumbers;
 //@SuppressUnusedWarning
 A006753->naturalNumbers(1).filter(::isSmithNumber);
+USE thueMorseSequence;
 //@SuppressUnusedWarning
 A010060->listIterator(thueMorseSequence(10000).ord);
+USE truncatablePrimes;
 //@SuppressUnusedWarning
 A024785->listIterator(leftTruncatablePrimes (100000));
 //@SuppressUnusedWarning
 A024770->listIterator(rightTruncatablePrimes(100000));
+USE hofstadter_sequences;
 //@SuppressUnusedWarning
 A005228->naturalNumbers(1).lazyMap(::hofstadter_sequences.R);
 //@SuppressUnusedWarning
@@ -158,6 +148,54 @@ A067996->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 
 A169718->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
 //@SuppressUnusedWarning
 A187243->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10])});
+
+//@SuppressUnusedWarning
+A018900->naturalNumbers(0).filter({$x.bits.trueCount=2});
+//@SuppressUnusedWarning
+A014311->naturalNumbers(0).filter({$x.bits.trueCount=3});
+//@SuppressUnusedWarning
+A014312->naturalNumbers(0).filter({$x.bits.trueCount=4});
+//@SuppressUnusedWarning
+A014313->naturalNumbers(0).filter({$x.bits.trueCount=5});
+//@SuppressUnusedWarning
+A023688->naturalNumbers(0).filter({$x.bits.trueCount=6});
+//@SuppressUnusedWarning
+A023689->naturalNumbers(0).filter({$x.bits.trueCount=7});
+//@SuppressUnusedWarning
+A023690->naturalNumbers(0).filter({$x.bits.trueCount=8});
+//@SuppressUnusedWarning
+A023691->naturalNumbers(0).filter({$x.bits.trueCount=9});
+
+USE multifactorial;
+//@SuppressUnusedWarning
+A000142->multifactorialGenerator(1);
+//@SuppressUnusedWarning
+A006882->multifactorialGenerator(2);
+//@SuppressUnusedWarning
+A007661->multifactorialGenerator(3);
+//@SuppressUnusedWarning
+A007662->multifactorialGenerator(4);
+//@SuppressUnusedWarning
+A085157->multifactorialGenerator(5);
+//@SuppressUnusedWarning
+A085158->multifactorialGenerator(6);
+//@SuppressUnusedWarning
+A114799->multifactorialGenerator(7);
+//@SuppressUnusedWarning
+A114800->multifactorialGenerator(8);
+//@SuppressUnusedWarning
+A114806->multifactorialGenerator(9);
+//@SuppressUnusedWarning
+A288327->multifactorialGenerator(10);
+
+USE sternBrocot;
+//@SuppressUnusedWarning
+A002487->sternBrocotGenerator;
+
+USE hofstadterConway;
+//@SuppressUnusedWarning
+A004001->hofstaderConwayGen;
+
 //@SuppressUnusedWarning
 memoized implemented->
   inspect['declares']
@@ -186,6 +224,14 @@ private findPolyParam(sequence:IntList)->sequence.size<6 ? void : begin
     end
   : void;
 end;
+
+generalizedFibonacci(state:IntList)->{begin
+  local L:=state;
+save;
+  local result:=L[0];
+  L:=L.tail|L.agg(+);
+  result<0 ? void : result;
+end};
 
 private findFibonacciParam(sequence:IntList)->sequence.size<4 ? void : begin
   [2..min(16,sequence.size div 2)].each(k,

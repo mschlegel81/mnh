@@ -101,7 +101,7 @@ TYPE
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
       FUNCTION getAttributesLiteral:P_mapLiteral;
-      FUNCTION getAttributesDocTxt:ansistring;
+      FUNCTION getDocTxt:ansistring;
       PROCEDURE setComment(CONST commentText:ansistring);
   end;
 
@@ -958,11 +958,9 @@ FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;
 
 FUNCTION T_subruleExpression.getDocTxt: ansistring;
   begin
-    result:=ECHO_MARKER+'@Line '+intToStr(getLocation.line)+': '+C_tabChar;
+    result:=meta.getDocTxt+ECHO_MARKER;
     if typ=et_normal_private then result:=result+'private ';
-    result:=result+getId+';';
-    if meta.comment<>'' then result:=result+C_tabChar+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+C_tabChar+C_tabChar+COMMENT_PREFIX);
-    result:=result+meta.getAttributesDocTxt;
+    result:=result+getId+';'+C_tabChar+COMMENT_PREFIX+ansistring(getLocation);
   end;
 
 FUNCTION T_inlineExpression.getId: T_idString;
@@ -1087,14 +1085,22 @@ FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
     for i:=0 to length(attributes)-1 do result^.put(attributes[i].key,attributes[i].value);
   end;
 
-FUNCTION T_ruleMetaData.getAttributesDocTxt:ansistring;
+FUNCTION T_ruleMetaData.getDocTxt:ansistring;
+  PROCEDURE addLine(CONST s:string);
+    begin
+      if result='' then result:=                       COMMENT_PREFIX+s
+                   else result:=result+C_lineBreakChar+COMMENT_PREFIX+s;
+    end;
+
   VAR att:T_subruleAttribute;
   begin
     result:='';
     for att in attributes do begin
-      result:=result+C_lineBreakChar+C_tabChar+'@'+att.key;
+      addLine('@'+att.key);
       if att.value<>'' then result:=result+'='+att.value;
     end;
+    if comment<>'' then addLine(comment);
+    if result<>'' then result:=result+C_lineBreakChar;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
@@ -1119,7 +1125,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
-          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters,false);
+          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters);
       end;
       t:=t^.next;
     end;
@@ -1150,7 +1156,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          P_abstractPackage(token.location.package)^.resolveId(token,adapters,true);
+          P_abstractPackage(token.location.package)^.resolveId(token,adapters);
           functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
         end;
       end;

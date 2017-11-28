@@ -306,13 +306,11 @@ exit}
     end;
 
   FUNCTION enterCriticalSectionWithDeadlockDetection:boolean; inline;
-    CONST maxTryCount=1000;
-          millesecondsBeforeRetry=10;
-    VAR tryCount:longint=0;
+    CONST millesecondsBeforeRetry=10;
     begin
-      while TryEnterCriticalsection(rule_cs)=0 do begin
-        inc(tryCount);
-        if tryCount>maxTryCount then exit(false);
+      while (TryEnterCriticalsection(rule_cs)=0) do begin
+        if not(P_threadContext(threadContextPointer)^.adapters^.noErrors) then exit(false);
+        ThreadSwitch;
         sleep(millesecondsBeforeRetry);
       end;
       result:=true;
@@ -526,17 +524,13 @@ FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
     result:='';
     for s in subrules do result:=result+C_lineBreakChar+s^.getDocTxt();
     result:=join(formatTabs(split(result)),LineEnding);
-    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+
-            'in '+getLocation.package^.getPath+result;
+    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation)+result;
   end;
 
 FUNCTION T_mutableRule.getDocTxt: ansistring;
   begin
-    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+C_lineBreakChar+
-            'in '+getLocation.package^.getPath+C_lineBreakChar+
-            'declared '+ansistring(getLocation);
-    if meta.comment<>'' then result:=result+C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX+replaceAll(meta.comment,C_lineBreakChar,C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX);
-    result:=result+meta.getAttributesDocTxt;
+    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation)+result;
+    result:=result+meta.getDocTxt;
   end;
 
 FUNCTION T_mutableRule.hasPublicSubrule: boolean;

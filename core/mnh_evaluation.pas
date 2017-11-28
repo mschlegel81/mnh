@@ -1111,7 +1111,7 @@ end}
         end;
 {cT[0]=}tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_identifier: begin
-          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters,true);
+          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
           didSubstitution:=true;
         end;
         tt_parameterIdentifier: begin

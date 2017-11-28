@@ -28,6 +28,9 @@ PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
+PROCEDURE miShowAssistanceClick(Sender: TObject);
+PROCEDURE miShowOutputClick(Sender: TObject);
+PROCEDURE miShowQuickEvalClick(Sender: TObject);
 PROCEDURE miStackTracingClick(Sender: TObject);
 PROCEDURE miHaltEvalutaionClick(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
@@ -203,7 +206,8 @@ VAR firstShow:boolean=true;
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if not(firstShow) then updateFormPositionInSettings;
-    if helpPopupMemo.visible then positionHelpNotifier;
+    updateWordWrap;
+    if miHelp.Checked and (outputPageControl.activePage=HelpSheet) then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
@@ -249,12 +253,12 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR help,jump,mark:boolean;
   begin
-    help:=helpPopupMemo.visible;
+    help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
     jump:=(key=13) and (ssCtrl in Shift);
     mark:=(key=13) and (ssAlt  in Shift);
     getEditor^.setUnderCursor(mark,help or jump);
     if jump then openLocation(getHelpLocation);
-    if help then positionHelpNotifier;
+    if help then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -265,11 +269,11 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     point.x:=x;
     point.y:=y;
     point:=getEditor^.editor.PixelsToRowColumn(point);
-    help:=helpPopupMemo.visible;
+    help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
     jump:=(ssCtrl in Shift);
     getEditor^.setUnderCursor(mark,help or jump,point);
     if jump then openLocation(getHelpLocation);
-    if help then positionHelpNotifier;
+    if help then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -321,6 +325,7 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceMode
 PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin
     if not(runnerModel.canRun) then exit;
+    updateWordWrap;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk
     then runnerModel.customRun(true,miProfile.Checked,askForm.getLastAnswerReleasing(nil))
@@ -329,6 +334,7 @@ PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
+    updateWordWrap;
     runnerModel.customRun(false,miProfile.Checked);
   end;
 
@@ -348,6 +354,22 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     onDebuggerEvent;
   end;
 
+PROCEDURE TMnhForm.miShowAssistanceClick(Sender: TObject);
+  begin
+    if hasEditor and (getEditor^.getAssistant<>nil) then outputPageControl.activePage:=assistanceTabSheet;
+  end;
+
+PROCEDURE TMnhForm.miShowOutputClick(Sender: TObject);
+  begin
+    outputPageControl.activePage:=outputTabSheet;
+  end;
+
+PROCEDURE TMnhForm.miShowQuickEvalClick(Sender: TObject);
+  begin
+    outputPageControl.activePage:=QuickTabSheet;
+    ActiveControl:=quickMeta.editor;
+  end;
+
 PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
   begin
     miStackTracing.Checked:=not(miStackTracing.Checked);
@@ -362,6 +384,7 @@ PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
+    updateWordWrap;
     if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
     else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
                                           else runnerModel.doDebuggerAction(breakSoonest);
@@ -380,7 +403,6 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
-    if helpPopupMemo.visible then positionHelpNotifier;
     if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=BottomPanel.height/ClientHeight;
   end;
 
@@ -562,12 +584,11 @@ PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
   begin
     miHelp.Checked:=not(miHelp.Checked);
-    if not(miHelp.Checked) then helpPopupMemo.visible:=false
-                           else begin
-                             helpPopupMemo.visible:=true;
-                             getEditor^.setUnderCursor(false,false);
-                             positionHelpNotifier;
-                           end;
+    if miHelp.Checked then begin
+      outputPageControl.activePage:=HelpSheet;
+      getEditor^.setUnderCursor(false,false);
+      helpPopupMemo.text:=getHelpPopupText;
+    end;
   end;
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);

@@ -4,7 +4,7 @@ private oyako(a,b,c,perimeter)->
   : [floor(perimeter/(a+b+c)),1]+
     [[ a-2*b+2*c, 2*a-b+2*c, 2*a-2*b+3*c, perimeter],
      [ a+2*b+2*c, 2*a+b+2*c, 2*a+2*b+3*c, perimeter],
-     [-a+2*b+2*c,-2*a+b+2*c,-2*a+2*b+3*c, perimeter]].pEach(abc,oyako@abc,+);
+     [-a+2*b+2*c,-2*a+b+2*c,-2*a+2*b+3*c, perimeter]].each(abc,oyako@abc,+);
 
 private oyako(perimeter)->format@("In perimeter <=%7d there are %6d pythagorean triplets, %5d of which are primitive"|perimeter|oyako(3,4,5,perimeter));
 
