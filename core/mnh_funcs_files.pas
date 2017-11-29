@@ -404,14 +404,16 @@ FUNCTION fileStats_imp intFuncSignature;
     end;
   end;
 
-{$define fileNameBody:=VAR i:longint;
+{$define fileNameBody:=VAR name:P_literal; iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if (arg0^.literalType=lt_string) then result:=newStringLiteral(internal(str0^.value))
-      else if arg0^.literalType in [lt_stringList,lt_emptyList] then begin
-        result:=newListLiteral(list0^.size);
-        for i:=0 to list0^.size-1 do listResult^.appendString(internal(P_stringLiteral(list0^.value[i])^.value));
+      else if arg0^.literalType in [lt_stringList,lt_emptyList,lt_stringSet,lt_emptySet] then begin
+        result:=collection0^.newOfSameType(true);
+        iter:=collection0^.iteratableList;
+        for name in iter do collResult^.appendString(internal(P_stringLiteral(name)^.value));
+        disposeLiteral(iter);
       end;
     end;
   end}
