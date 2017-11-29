@@ -157,11 +157,11 @@ PROCEDURE T_microserver.serve;
     lastActivity:=now;
     repeat
       request:=socket.getRequest(sleepTime);
-      if not(request.isBlank) then begin
+      if request.method<>htrm_no_request then begin
         sleepTime:=minSleepTime;
         lastActivity:=now;
         requestLiteral.create(3);
-        requestLiteral.appendString(request.method)^
+        requestLiteral.appendString(C_httpRequestMethodName[request.method])^
                       .appendString(request.request)^
                       .appendString(request.protocol);
         response:=servingExpression^.evaluate(feedbackLocation,context,@requestLiteral);
@@ -176,7 +176,6 @@ PROCEDURE T_microserver.serve;
           socket.SendString(HTTP_404_RESPONSE);
         end;
       end else begin
-        sleep(sleepTime);
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
