@@ -3040,6 +3040,8 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
         result^.dat.putNew(entry.key,M,L);
       end;
     end;
+    if result^.dat.fill>0 then result^.literalType:=lt_map
+                          else result^.literalType:=lt_emptyMap;
   end;
 
 FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
