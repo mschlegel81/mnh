@@ -617,25 +617,26 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
       fileTypeMeta[l].menuItem.Checked:=(l=language);
     end;
-    recentlyActivated.fileClosed(getPath);
-    if language_=LANG_MNH
-    then begin
-      editor.highlighter:=highlighter;
-      paintedWithStateHash:=0;
-      triggerCheck;
-      completionLogic.assignEditor(editor_,assistant);
-    end else begin
-      editor.highlighter:=fileTypeMeta[language_].highlighter;
-      assistanceSynEdit.clearAll;
-      assistanceTabSheet.caption:='';
-      assistanceTabSheet.tabVisible:=false;
-      dropAssistant;
-      completionLogic.assignEditor(editor_,nil);
-    end;
-    editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
-    editor.readonly                :=runnerModel.areEditorsLocked;
-    settings.value^.workspace.activePage:=index;
-    mainForm.onDebuggerEvent;
+    try
+      recentlyActivated.fileClosed(getPath);
+      if language_=LANG_MNH then begin
+        editor.highlighter:=highlighter;
+        paintedWithStateHash:=0;
+        triggerCheck;
+        completionLogic.assignEditor(editor_,assistant);
+      end else begin
+        editor.highlighter:=fileTypeMeta[language_].highlighter;
+        assistanceSynEdit.clearAll;
+        assistanceTabSheet.caption:='';
+        assistanceTabSheet.tabVisible:=false;
+        dropAssistant;
+        completionLogic.assignEditor(editor_,nil);
+      end;
+      editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
+      editor.readonly                :=runnerModel.areEditorsLocked;
+      settings.value^.workspace.activePage:=index;
+      mainForm.onDebuggerEvent;
+    except end; //catch and ignore all exceptions
   end;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
