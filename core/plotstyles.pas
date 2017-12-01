@@ -15,7 +15,6 @@ TYPE
                ps_plus,
                ps_cross,
                ps_impulse,
-               ps_textOut,
                ps_polygon);
   T_plotStyles=set of T_plotStyle;
   T_colorChannel = (cc_red, cc_green, cc_blue);
@@ -37,7 +36,6 @@ CONST
      {ps_plus      }   ('plus'     , '+'),
      {ps_cross     }   ('cross'    , 'x'),
      {ps_impulse   }   ('impulse'  , 'i'),
-     {ps_textOut   }   ('text'     , 't'),
      {ps_polygon   }   ('polygon'  , 'p'));
   SINGLE_SAMPLE_INDEX=4;
 
@@ -46,7 +44,6 @@ TYPE
     lineWidth   ,
     symbolRadius,
     symbolWidth ,
-    fontSize    ,
     lineColor   ,
     solidColor  :longint;
     solidStyle  :TFPBrushStyle;
@@ -72,6 +69,7 @@ TYPE
 
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
 OPERATOR :=(CONST b:byte):T_gridStyle;
+OPERATOR :=(CONST c:T_color):longint;
 IMPLEMENTATION
 CONST GSE_BYTE:array[T_gridStyleElement] of byte=(1,2,4);
 OPERATOR :=(CONST gridStyle:T_gridStyle):byte;
@@ -86,6 +84,13 @@ OPERATOR :=(CONST b:byte):T_gridStyle;
   begin
     result:=[];
     for se in T_gridStyleElement do if (GSE_BYTE[se] and b)>0 then include(result,se);
+  end;
+
+OPERATOR :=(CONST c:T_color):longint;
+  begin
+    result:=c[cc_red  ]
+        or (c[cc_green] shl  8)
+        or (c[cc_blue ] shl 16);
   end;
 
 CONST C_defaultColor: array[0..7] of record
@@ -227,10 +232,6 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount
         if ps in C_lineStyles
         then style:=style-C_lineStyles+[ps]
         else include(style,ps);
-        if ps=ps_textOut then begin
-          style:=[ps_textOut];
-          txt:=options;
-        end;
         mightBeColor:=false;
       end;
       if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
@@ -302,7 +303,6 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint; CONST sampleIndex
                     or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
                     or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
     end;
-    result.fontSize    :=round(scalingFactor          *styleModifier);
     result.symbolWidth :=round(scalingFactor*3        *styleModifier);
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
