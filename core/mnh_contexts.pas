@@ -231,6 +231,7 @@ TYPE
 
 VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; VAR context:T_threadContext);
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
+    suppressBeep:boolean=false;
 {$ifndef fullVersion}
 FUNCTION workerThreadCount:longint;
 {$endif}
@@ -430,7 +431,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
     {$ifdef fullVersion}
     if (eco_profiling in options) and (profiler<>nil) then profiler^.logInfo(adapters);
     {$endif}
-    if (eco_beepOnError in options) and adapters^.triggersBeep then beep;
+    if not(suppressBeep) and (eco_beepOnError in options) and adapters^.triggersBeep then beep;
   end;
 
 PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);

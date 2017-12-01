@@ -110,6 +110,7 @@ PROCEDURE displayHelp;
     writeln('     if no options are given, the global output settings will be used');
     writeln('  +out <filename>[(options)]  As -out but appending to the file if existing.');
     writeln('  -quiet            disable console output');
+    writeln('  -silent           suppress beeps');
   end;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
@@ -137,7 +138,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:P_package;
     begin
       context.create(@consoleAdapters);
-
+      if headless then context.threadContext^.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
       context.resetForEvaluation(package,{$ifdef fullVersion}contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
       package^.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
@@ -253,6 +254,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           addParameter(mnhParameters,i);
         end
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
+        else if startsWith(paramStr(i),'-silent') then suppressBeep:=true
         else if startsWith(paramStr(i),'-headless') then headless:=true
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
