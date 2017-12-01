@@ -28,8 +28,8 @@ TYPE
       PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
       PROCEDURE drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
       PROCEDURE drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
-      FUNCTION  obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
     public
+      FUNCTION  obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
       CONSTRUCTOR createWithDefaults;

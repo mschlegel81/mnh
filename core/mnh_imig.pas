@@ -1,10 +1,11 @@
 UNIT mnh_imig;
 INTERFACE
 USES sysutils,   //system
+     ExtCtrls,
      myGenerics,myTools, //common
      //mnh:
      mnh_constants, mnh_basicTypes,
-     mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,
+     mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,mnh_plotData,
      //imig:
      workflows, imageGeneration,mypics,
      ig_gradient,
@@ -168,7 +169,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
           logLinesDisplayed:=i+1;
         end;
         if not(context.adapters^.noErrors) then context.adapters^.raiseWarning('Image calculation incomplete',tokenLocation);
-        thisWorkflow.progressQueue.cancelCalculation(true);
+        thisWorkflow.progressQueue.ensureStop;
       end;
       if (context.adapters^.noErrors) and (dest=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
@@ -354,6 +355,41 @@ FUNCTION getThumbnail_imp intFuncSignature;
     end;
   end;
 
+FUNCTION renderPlotToCurrentImage intFuncSignature;
+  VAR width, height, quality: longint;
+      plotImage:TImage;
+      plotPic  :P_rawImage;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and
+      (arg0^.literalType = lt_int) and
+      (arg1^.literalType = lt_int) and
+      ((params^.size = 2) or (params^.size = 3) and
+      (arg2^.literalType = lt_int)) then begin
+      width:=int0^.value;
+      height:=int1^.value;
+      if params^.size>2 then quality:=int2^.value
+                        else quality:=0;
+      if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
+
+      plotImage:=context.adapters^.plot^.obtainPlot(width,height,quality);
+      new(plotPic,create(1,1));
+      plotPic^.copyFromImage(plotImage);
+      FreeAndNil(plotImage);
+
+      enterCriticalSection(imigCS);
+      result:=nil;
+      with context.adapters^.picture do begin
+        lock;
+        if value<>nil then dispose(value,destroy);
+        value:=plotPic;
+        unlock;
+      end;
+      leaveCriticalSection(imigCS);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 INITIALIZATION
   initialize(imigCS);
   initCriticalSection(imigCS);
@@ -372,6 +408,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,[],ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,[],ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
   registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,[se_readFile],ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
+  registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,[se_alterContextState],ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.
