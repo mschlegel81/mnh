@@ -1049,6 +1049,7 @@ PROCEDURE T_editorMeta.triggerCheck;
   end;
 
 PROCEDURE T_editorMeta.pollAssistanceResult;
+  CONST SHORTCUT_SUFFIX=' (F2)';
   VAR s:string;
       hints:T_arrayOfString;
       hasErrors,hasWarnings:boolean;
@@ -1062,10 +1063,10 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
       assistanceSynEdit.clearAll;
       assistanceSynEdit.lines.clear;
       hints:=assistant^.getErrorHints(hasErrors,hasWarnings,assistanceSynEdit.charsInWindow);
-      if hasErrors then begin if hasWarnings then assistanceTabSheet.caption:='Errors + Warnings'
-                                             else assistanceTabSheet.caption:='Errors'; end
-                   else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'
-                                             else assistanceTabSheet.caption:='(no warnings)'; end;
+      if hasErrors then begin if hasWarnings then assistanceTabSheet.caption:='Errors + Warnings'+SHORTCUT_SUFFIX
+                                             else assistanceTabSheet.caption:='Errors'+SHORTCUT_SUFFIX; end
+                   else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'+SHORTCUT_SUFFIX
+                                             else assistanceTabSheet.caption:='(no warnings)'+SHORTCUT_SUFFIX; end;
       for s in hints do assistanceSynEdit.lines.add(s);
       updateOutline;
     end;

@@ -28,5 +28,6 @@ versions/*.7z
 *.bak
 buildLogDigest.datastore0
 mnh_prof
+versions/*.zip
 mnhi
 mnhi_debug

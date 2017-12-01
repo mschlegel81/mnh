@@ -3,6 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,math,
      myGenerics,
+     myStringUtil,
      mnh_basicTypes,
      mnh_constants,
      mnh_out_adapters,
@@ -279,6 +280,60 @@ FUNCTION removePlot_imp intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST abspos:boolean):P_literal;
+  VAR txt:T_customText;
+      lines:T_arrayOfString;
+      i:longint;
+
+      hasCol   :boolean=false;
+      hasAnchor:boolean=false;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=3) and
+       (arg0^.literalType in [lt_int,lt_real]) and
+       (arg1^.literalType in [lt_int,lt_real]) and
+       (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      case arg2^.literalType of
+        lt_string: lines:=split(str2^.value,C_lineBreakChar);
+        lt_emptyList: lines:=C_EMPTY_STRING_ARRAY;
+        lt_stringList: begin
+          setLength(lines,0);
+          for i:=0 to list2^.size-1 do append(lines,P_stringLiteral(list2^.value[i])^.value);
+        end;
+      end;
+
+      txt.create(fReal(arg0),fReal(arg1),lines);
+      txt.absolutePosition:=abspos;
+      for i:=3 to params^.size-1 do begin
+        case params^.value[i]^.literalType of
+          lt_real,lt_int: txt.fontSize:=fReal(params^.value[i]);
+          lt_string: if hasAnchor then txt.fontName:=P_stringLiteral(params^.value[i])^.value
+                                  else begin
+                                    txt.setAnchor(P_stringLiteral(params^.value[i])^.value);
+                                    hasAnchor:=true;
+                                  end;
+          lt_intList,lt_realList,
+          lt_numList: if P_listLiteral(params^.value[i])^.size=3 then begin
+            if hasCol then txt.setBackground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                             fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                             fReal(P_listLiteral(params^.value[i])^.value[2]))
+                      else begin
+                        txt.setForeground(fReal(P_listLiteral(params^.value[i])^.value[0]),
+                                          fReal(P_listLiteral(params^.value[i])^.value[1]),
+                                          fReal(P_listLiteral(params^.value[i])^.value[2]));
+                        hasCol:=true;
+                      end;
+          end else exit(nil);
+        end;
+      end;
+      context.adapters^.plot^.addCustomText(txt);
+      result:=newVoidLiteral;
+    end;
+  end;
+
+FUNCTION drawText_imp    intFuncSignature; begin result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
+FUNCTION drawTextAbs_imp intFuncSignature; begin result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
+
 INITIALIZATION
   mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, [se_alterPlotState], ak_variadic,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
@@ -299,7 +354,6 @@ INITIALIZATION
     '#  plus; +;'+
     '#  cross; x;'+
     '#  impulse; i;'+
-    '#  text; t;'+
     '#  polygon; p;'+
     '#Colors:'+'#  black;'+
     '#  red;'+'#  blue;'+'#  green;'+'#  purple;'+
@@ -325,5 +379,10 @@ INITIALIZATION
     'renderToString(width,height,[quality in [0..3]]);//Renders the current plot to a string.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_alterPlotState], ak_nullary,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
-
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, [se_alterPlotState], ak_variadic_3,
+    'drawText(x,y,text);//Draws custom text#'+
+    'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, [se_alterPlotState], ak_variadic_3,
+    'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
+    'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional');
 end.

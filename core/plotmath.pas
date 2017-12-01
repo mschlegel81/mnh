@@ -2,6 +2,8 @@ UNIT plotMath;
 INTERFACE
 USES sysutils, math,
      Graphics,
+     myGenerics,
+     myStringUtil,
      plotstyles;
 CONST
   MIN_VALUE_FOR:array[false..true] of double=(-1E100, 1E-100);
@@ -80,9 +82,170 @@ TYPE
     FUNCTION absoluteFontSize(CONST xRes,yRes:longint):longint;
   end;
 
+  T_customTextAnchor=(cta_topLeft   ,cta_top   ,cta_topRight   ,
+                      cta_centerLeft,cta_center,cta_centerRight,
+                      cta_bottomLeft,cta_bottom,cta_bottomRight);
+
+  T_customText=object
+    text      :T_arrayOfString;
+    fontName  :string;
+    fontSize  :double;
+    p         :T_point;
+    anchor    :T_customTextAnchor;
+    foreground:T_color;
+    background:T_color;
+    transparentBackground:boolean;
+    absolutePosition:boolean;
+
+    CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
+    DESTRUCTOR destroy;
+    PROCEDURE renderText(CONST xRes,yRes:longint; CONST opt:T_scalingOptions; CONST target:TCanvas);
+    PROCEDURE setAnchor(CONST s:string);
+    PROCEDURE setForeground(CONST r,g,b:double);
+    PROCEDURE setBackground(CONST r,g,b:double);
+  end;
+
 IMPLEMENTATION
-PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,
-  aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
+CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
+  CONST BLACK:T_color=(0,0,0);
+        WHITE:T_color=(255,255,255);
+  begin
+    p[0]:=x;
+    p[1]:=y;
+    text:=txt;
+    fontName:='';
+    anchor:=cta_center;
+    fontSize:=Nan;
+    foreground:=BLACK;
+    background:=WHITE;
+    transparentBackground:=true;
+    absolutePosition:=false;
+  end;
+
+DESTRUCTOR T_customText.destroy; begin end;
+
+FUNCTION absFontSize(CONST xRes,yRes:longint; CONST relativeSize:double):longint;
+  begin
+    result:=round(relativeSize*sqrt(sqr(xRes)+sqr(yRes))/1000);
+  end;
+
+PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalingOptions; CONST target: TCanvas);
+  VAR tempRow:T_dataRow;
+      toPaint:T_rowToPaint;
+      x,y,
+      i,k,
+      TextWidth,TextHeight:longint;
+      oldFont:string;
+      oldFontSize:longint;
+      oldFontColor:longint;
+  begin
+    if length(text)=0 then exit;
+
+    if absolutePosition then begin
+      try
+        x:=     round(p[0]*xRes);
+        y:=yRes-round(p[1]*yRes);
+      except
+        exit;
+      end;
+    end else begin
+      setLength(tempRow,1);
+      tempRow[0]:=p;
+      toPaint:=opt.transformRow(tempRow,1,0,0);
+      x:=toPaint[0].x;
+      y:=toPaint[0].y;
+      if not(toPaint[0].valid) then exit;
+    end;
+
+    oldFont     :=target.Font.name ;
+    oldFontColor:=target.Font.color;
+    oldFontSize :=target.Font.size ;
+
+    if fontName<>'' then target.Font.name:=fontName;
+    if isNan(fontSize) then target.Font.size:=absFontSize(xRes,yRes,opt.relativeFontSize)
+                       else target.Font.size:=absFontSize(xRes,yRes,            fontSize);
+    target.Font.color:=foreground;
+    if transparentBackground then target.Brush.style:=bsClear
+    else begin
+      target.Brush.style:=bsSolid;
+      target.Brush.color:=background;
+    end;
+
+    TextWidth :=0;
+    TextHeight:=0;
+    for k:=0 to length(text)-1 do begin
+      i:=target.TextWidth (text[k]); if i>TextWidth then TextWidth:=i;
+      inc(TextHeight,target.TextHeight(text[k]));
+    end;
+
+    case anchor of
+      cta_bottomLeft,cta_bottom,cta_bottomRight:dec(y,TextHeight      );
+      cta_centerLeft,cta_center,cta_centerRight:dec(y,TextHeight shr 1);
+    end;
+    case anchor of
+      cta_topRight,cta_centerRight,cta_bottomRight:dec(x,TextWidth      );
+      cta_top     ,cta_center     ,cta_bottom     :dec(x,TextWidth shr 1);
+    end;
+    target.Pen.style:=psClear;
+    if (length(text)>1) and not(transparentBackground) then target.FillRect(x,y,x+TextWidth,y+TextHeight);
+    for k:=0 to length(text)-1 do begin
+      target.textOut(x,
+                     y,
+                     text[k]);
+      inc(y,target.TextHeight(text[k]));
+    end;
+    target.Font.name :=oldFont     ;
+    target.Font.color:=oldFontColor;
+    target.Font.size :=oldFontSize ;
+  end;
+
+PROCEDURE T_customText.setAnchor(CONST s: string);
+  VAR alX:(Left,center,Right)=center;
+      alY:(top,middle,Bottom)=middle;
+      cs:T_charSet=[];
+      c:char;
+  begin
+    for c in s do include(cs,upCase(c));
+    if ('T' in cs) then alY:=top;
+    if ('B' in cs) then alY:=Bottom;
+    if ('L' in cs) then alX:=Left;
+    if ('R' in cs) then alX:=Right;
+    case alY of
+      top: case alX of
+        Left  : anchor:=cta_topLeft;
+        center: anchor:=cta_top;
+        Right : anchor:=cta_topRight;
+      end;
+      middle: case alX of
+        Left  : anchor:=cta_centerLeft;
+        center: anchor:=cta_center;
+        Right : anchor:=cta_centerRight;
+      end;
+      Bottom: case alX of
+        Left  : anchor:=cta_bottomLeft;
+        center: anchor:=cta_bottom;
+        Right : anchor:=cta_bottomRight;
+      end;
+    end;
+  end;
+
+PROCEDURE T_customText.setForeground(CONST r, g, b: double);
+  begin
+    foreground[cc_red  ]:=round(255*max(0,min(1,r)));
+    foreground[cc_green]:=round(255*max(0,min(1,g)));
+    foreground[cc_blue ]:=round(255*max(0,min(1,b)));
+  end;
+
+PROCEDURE T_customText.setBackground(CONST r, g, b: double);
+  begin
+    writeln('Setting font background');
+    transparentBackground:=false;
+    background[cc_red  ]:=round(255*max(0,min(1,r)));
+    background[cc_green]:=round(255*max(0,min(1,g)));
+    background[cc_blue ]:=round(255*max(0,min(1,b)));
+  end;
+
+PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
 
   VAR validSampleCount:longint=0;
   FUNCTION getSamplesBoundingBox:T_boundingBox;
@@ -386,12 +549,8 @@ FUNCTION T_scalingOptions.screenToReal(CONST x, y: integer): T_point;
   end;
 
 FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
-  VAR tempStyle:T_style;
   begin
-    tempStyle.create(0);
-    tempStyle.styleModifier:=relativeFontSize;
-    result:=tempStyle.getLineScaleAndColor(xRes,yRes,0).fontSize;
-    tempStyle.destroy;
+    result:=absFontSize(xRes,yRes,relativeFontSize);
   end;
 
 CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row: T_dataRow);

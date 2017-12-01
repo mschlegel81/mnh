@@ -82,7 +82,7 @@ main(target)->begin
 
   changeDirectory(TargetFolder);
 
-  local packedFile:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.7z';
+  local packedFile:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
   sevenZipExe.execPipeless(['a','-r','-bd',packedFile,'*']);
   print('File ',packedFile,' created');
   print('Cleaning output folder');

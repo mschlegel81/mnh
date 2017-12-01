@@ -16,12 +16,14 @@ TYPE
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
   T_boundingBox = array['x'..'y', 0..1] of double;
+
   P_plot =^T_plot;
   T_plot = object
     private
       cs: TRTLCriticalSection;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
+      customText:array of T_customText;
       transparentCount:longint;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
@@ -38,6 +40,7 @@ TYPE
       PROCEDURE clear;
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
       PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
+      PROCEDURE addCustomText(CONST text:T_customText);
 
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
@@ -201,6 +204,7 @@ PROCEDURE T_plot.clear;
     system.enterCriticalSection(cs);
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row, 0);
+    setLength(customText,0);
     transparentCount:=0;
     system.leaveCriticalSection(cs);
   end;
@@ -224,6 +228,14 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove:longint);
     i0:=length(row)-numberOfRowsToRemove; if i0<0 then i0:=0;
     for i:=i0 to length(row)-1 do row[i].destroy;
     setLength(row,i0);
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plot.addCustomText(CONST text:T_customText);
+  begin
+    system.enterCriticalSection(cs);
+    setLength(customText,length(customText)+1);
+    customText[length(customText)-1]:=text;
     system.leaveCriticalSection(cs);
   end;
 
@@ -586,35 +598,9 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
   end;
 
 PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
-  VAR rowId, i, k,TextWidth,TextHeight:longint;
-      scaleAndColor:T_scaleAndColor;
-      screenRow:T_rowToPaint;
-      lines:T_arrayOfString;
+  VAR txt:T_customText;
   begin
-    for rowId:=0 to length(row)-1 do if ps_textOut in row[rowId].style.style then begin
-      screenRow:=scalingOptions.transformRow(row[rowId].sample,1,0,0);
-      scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth,intendedHeight,SINGLE_SAMPLE_INDEX);
-      lines:=split(row[rowId].style.txt);
-      TextWidth :=0;
-      TextHeight:=0;
-      for k:=0 to length(lines)-1 do begin
-        i:=target.TextWidth (lines[k]); if i>TextWidth then TextWidth:=i;
-        inc(TextHeight,target.TextHeight(lines[k]));
-      end;
-      target.Font.color:=scaleAndColor.solidColor;
-      target.Font.size:=scaleAndColor.fontSize;
-      target.Brush.style:=bsClear;
-      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-        dec(screenRow[i].x,TextWidth shr 1);
-        dec(screenRow[i].y,TextHeight shr 1);
-        for k:=0 to length(lines)-1 do begin
-          target.textOut(screenRow[i].x,
-                         screenRow[i].y,
-                         lines[k]);
-          inc(screenRow[i].y,target.TextHeight(lines[k]));
-        end;
-      end;
-    end;
+    for txt in customText do txt.renderText(intendedWidth,intendedHeight,scalingOptions,target);
   end;
 
 PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
