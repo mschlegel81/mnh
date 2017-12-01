@@ -263,16 +263,26 @@ FUNCTION closeImage_imp intFuncSignature;
   end;
 
 FUNCTION imageSize_imp intFuncSignature;
+  VAR tempImage:T_rawImage;
   begin
-    enterCriticalSection(imigCS);
     result:=nil;
     if (params=nil) or (params^.size=0) then with context.adapters^.picture do begin
+      enterCriticalSection(imigCS);
       lock;
       if value<>nil then result:=newListLiteral(2)^.appendInt(value^.dimensions.width)^.appendInt(value^.dimensions.height)
-                    else result:=newListLiteral();
+                    else result:=newListLiteral(0);
       unlock;
+      leaveCriticalSection(imigCS);
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      try
+      tempImage.create(str0^.value);
+      result:=newListLiteral(2)^.appendInt(tempImage.dimensions.width)^.appendInt(tempImage.dimensions.height)
+      except
+        if result<>nil then disposeLiteral(result);
+        result:=newListLiteral(0);
+      end;
+      tempImage.destroy;
     end;
-    leaveCriticalSection(imigCS);
   end;
 
 FUNCTION resizeImage_imp intFuncSignature;
@@ -402,7 +412,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,[se_alterContextState,se_readFile],ak_unary,'loadImage(filename:string);//Loads image from the given file');
   registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,[se_writeFile],ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
   registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,[se_alterContextState],ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
-  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,[],ak_nullary,'imageSize;//Returns the size as [width,height] of the current image.');
+  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,[],ak_nullary,'imageSize;//Returns the size as [width,height] of the current image.#imageSize(filename:String);//Returns the size of the given file');
   registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,[se_alterContextState],ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
   registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,[se_alterPlotState],ak_nullary,'displayImage;//Displays the current image.');
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,[],ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
