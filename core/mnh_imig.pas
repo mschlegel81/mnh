@@ -152,7 +152,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         while thisWorkflow.progressQueue.calculating and (context.adapters^.noErrors) do begin
           progressLog:=thisWorkflow.progressQueue.log;
           for i:=logLinesDisplayed to length(progressLog)-1 do begin
-            doOutput(intToStr(i+1)+'/'+intToStr(thisWorkflow.stepCount)+': '+progressLog[i].message);
+            doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
             logLinesDisplayed:=i+1;
             lastOutput:=now;
           end;
@@ -165,7 +165,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         progressLog:=thisWorkflow.progressQueue.log;
         for i:=logLinesDisplayed to length(progressLog)-1 do begin
-          doOutput(intToStr(i+1)+'/'+intToStr(thisWorkflow.stepCount)+': '+progressLog[i].message);
+          doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
           logLinesDisplayed:=i+1;
         end;
         if not(context.adapters^.noErrors) then context.adapters^.raiseWarning('Image calculation incomplete',tokenLocation);
