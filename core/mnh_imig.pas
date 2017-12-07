@@ -286,7 +286,7 @@ FUNCTION imageSize_imp intFuncSignature;
   end;
 
 FUNCTION resizeImage_imp intFuncSignature;
-  CONST styleString:array[res_exact..res_fit] of string=('exact','fill','fit');
+  CONST styleString:array[res_exact..res_fitRotate] of string=('exact','fill','rotFill','fit','fitExpand','rotFit');
   VAR xRes:longint=0;
       yRes:longint=0;
       style:string='exact';
@@ -413,7 +413,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,[se_writeFile],ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
   registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,[se_alterContextState],ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
   registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,[],ak_nullary,'imageSize;//Returns the size as [width,height] of the current image.#imageSize(filename:String);//Returns the size of the given file');
-  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,[se_alterContextState],ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
+  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,[se_alterContextState],ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["exact","fill","rotFill","fit","fitExpand","rotFit"]);//Resizes the current image with non-default scaling options');
   registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,[se_alterPlotState],ak_nullary,'displayImage;//Displays the current image.');
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,[],ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,[],ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
