@@ -172,13 +172,12 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
 
   PROCEDURE handleComment(CONST commentText:ansistring; CONST commentOpener:string);
     begin
-      writeln('Handling comment "',commentText,'"');
       result^.tokType:=tt_EOL;
       if copy(commentText,1,length(DOC_COMMENT_INFIX))=DOC_COMMENT_INFIX then begin
-        result^.txt:=commentText;
+        result^.txt:=trimRight(copy(commentText,length(DOC_COMMENT_INFIX)+1,length(commentText)));
         result^.tokType:=tt_docComment;
       end else if copy(commentText,1,length(ATTRIBUTE_COMMENT_INFIX))=ATTRIBUTE_COMMENT_INFIX then begin
-        result^.txt:=commentText;
+        result^.txt:=trimRight(copy(commentText,length(ATTRIBUTE_COMMENT_INFIX)+1,length(commentText)));
         result^.tokType:=tt_attributeComment;
       end else if copy(commentText,1,length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX))=SPECIAL_COMMENT_BLOB_BEGIN_INFIX then begin
         result^.txt:=SPECIAL_COMMENT_BLOB_BEGIN_INFIX;
@@ -256,7 +255,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
         if parsedLength=0 then begin
           parsedLength:=1;
           while (parsedLength+inputLocation.column<=length(line)) and not(line[parsedLength+inputLocation.column] in [C_lineBreakChar,C_carriageReturnChar,'#']) do inc(parsedLength);
-          id:=copy(line,inputLocation.column+Length(BLOCK_COMMENT_DELIMITER),parsedLength-1);
+          id:=copy(line,inputLocation.column+length(BLOCK_COMMENT_DELIMITER),parsedLength-1);
           if (length(line)>=parsedLength+inputLocation.column) and (line[parsedLength+inputLocation.column]='#') then inc(parsedLength);
           if retainBlanks then begin
             result^.tokType:=tt_blank;
