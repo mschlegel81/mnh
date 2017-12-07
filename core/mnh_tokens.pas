@@ -191,7 +191,7 @@ PROCEDURE T_abstractRule.setIdResolved;
   end;
 
 FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
-  CONST PUBLIC_MITIGATION=' (rule is public and might be used by importing packages) - you can suppress this warning with '+ATTRIBUTE_COMMENT_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE;
+  CONST PUBLIC_MITIGATION=' (rule is public and might be used by importing packages) - you can suppress this warning with '+COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE;
   FUNCTION mitigate:string;
     begin
       if hasPublicSubrule then result:=PUBLIC_MITIGATION else result:='';

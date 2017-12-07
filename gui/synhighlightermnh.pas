@@ -346,8 +346,14 @@ PROCEDURE TSynMnhSyn.next;
         fTokenId := tkString;
       end;
       '#': begin
-        fTokenId := tkDefault;
         inc(run);
+        if fLine[run] in ['0'..'9'] then begin
+          while (fLine[run] in ['0'..'9']) do inc(run);
+          fTokenId:=tkString;
+        end else begin
+          while not (fLine[run] in [#0,'#']) do inc(run);
+          fTokenId:=tkComment;
+        end;
       end
       else begin
         fTokenId := tkDefault;

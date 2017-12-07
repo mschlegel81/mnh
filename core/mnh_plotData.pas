@@ -650,7 +650,7 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
   begin
     X:=round(source.width*factor);
     Y:=round(source.height*factor);
-    ARect:=Rect(0, 0, X, Y);
+    ARect:=rect(0, 0, X, Y);
     dest.Canvas.AntialiasingMode:=amOn;
     dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
