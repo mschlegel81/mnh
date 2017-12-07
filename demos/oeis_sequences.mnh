@@ -45,6 +45,12 @@ private naturalNumbers(lowerBound:Int)->rangeGenerator(lowerBound,2^63-1);
 //@SuppressUnusedWarning
 A000002->listIterator(Kolakoski_1_2(10000));
 //@SuppressUnusedWarning
+A000005->naturalNumbers(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
+//@SuppressUnusedWarning
+A000006->primeGenerator.sqrt.floor;
+//@SuppressUnusedWarning
+A000007->ord(naturalNumbers(0)=0);
+//@SuppressUnusedWarning
 A000010->naturalNumbers(1).lazyMap(::EulerPhi);
 //@SuppressUnusedWarning
 A000027->naturalNumbers(1);
@@ -196,6 +202,21 @@ USE hofstadterConway;
 //@SuppressUnusedWarning
 A004001->hofstaderConwayGen;
 
+scanFiboMod(modulus>=1)->begin
+  local fiboMod:={[$state.trailing,(($state.head+$state.trailing) mod modulus)]};
+  local openStates:=cross([0..modulus-1],[0..modulus-1]).toSet;
+  local groupCount:=0;
+  while(openStates.size>0,begin
+    openStates>>(local s:=openStates.sort.head);
+    while((s:=fiboMod(s)) in openStates,openStates>>s);
+    groupCount+=1;
+  end);
+  groupCount;
+end;
+
+//@SuppressUnusedWarning
+A015134->naturalNumbers(1).lazyMap(::scanFiboMod);
+
 //@SuppressUnusedWarning
 memoized implemented->
   inspect['declares']
@@ -280,5 +301,24 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   : void;
 end;
 
+findPeriodicParam(L:IntList)->L.size<10 ? void :
+  indexOf(L[0]=L).filter({1<$x<=L.size div 2}).each(shift,
+    L.tail(shift)==L.leading(shift)
+    ? "rangeGenerator(0,"&(2^63-1)&").lazyMap({"&L.head(shift).toString&'[$i mod '&shift&']})'
+    : void,orElse);
+
 //@SuppressUnusedWarning
-guessImplementation(sequence:IntList)->findPolyParam(sequence) orElse findPowerParam(sequence) orElse findFibonacciParam(sequence);
+guessImplementation(sequence:IntList)->
+  findPolyParam(sequence) orElse
+  findPowerParam(sequence) orElse
+  findPeriodicParam(sequence) orElse
+  findFibonacciParam(sequence);
+
+//@SuppressUnusedWarning
+classifyImplementation(imp:String)->
+  imp.matches('\]\[\$i mod ') ? 'periodicSeries' :
+  imp.matches('^generalizedFibonacci') ? 'generalizedFibonacci' :
+  imp.matches('\^rangeGenerator\(') ? 'exponentialSeries' :
+  imp.matches('^rangeGenerator\(0,.*\)\^\d+$') ? 'powerSeries' :
+  imp.matches('^rangeGenerator\(0,.*\)\.lazyMap\({.*\*\$x') ? 'quadraticOrLinearSeries' :
+  imp.matches('^rangeGenerator\(0,.*\)\.lazyMap\({\d*}\)$') ? 'constantSeries' : imp;
