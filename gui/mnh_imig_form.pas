@@ -4,6 +4,9 @@ INTERFACE
 USES
   sysutils,
   Classes, Forms, Controls, ExtCtrls,
+  mnh_constants,mnh_basicTypes,
+  mnh_litVar,mnh_contexts,
+  mnh_funcs,
   mypics,
   mnhFormHandler,
   mnh_out_adapters, mnh_imig;
@@ -86,6 +89,16 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
       tryingToDisplayImage:=false;
     end;
   end;
+
+{$i mnh_func_defines.inc}
+FUNCTION getScreenSize_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then result:=newListLiteral(2)^.appendInt(screen.width)^.appendInt(screen.height);
+  end;
+
+INITIALIZATION
+  registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,[],ak_nullary,'Returns the current screen size');
 
 FINALIZATION
   if myDisplayImageForm<>nil then FreeAndNil(myDisplayImageForm);
