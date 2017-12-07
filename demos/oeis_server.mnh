@@ -189,6 +189,12 @@ private serve_('gen',seriesId,count)->begin
   local seq:=f().head(n);
 end;
 
+private serve_('class')->foundImplementations.getInner(1).pMap(::classifyImplementation).elementFrequency.map({$x.join("\t")}).join("\n");
+private serve_('class',className)->begin
+  foundImplementations.pEach(i,classifyImplementation(i[1])==className ? i[0] : void)
+                      .sort.formatInfo;
+end;
+
 private serve_(...)->'Unkown command: '&toString(...);
 serve(['stop'])->serverKillPosted:=true;
 serve(['download'])->serve_('download');
@@ -206,6 +212,21 @@ end;
 main()->begin
   startIpcServer(ipcId,::serve);
   print('IPC Server started. ',ipcId);
+  while(not(serverKillPosted),sleep(1));
+  print("\nIPC Server stopped. ",ipcId);
+end;
+
+main('scan')->begin
+  startIpcServer(ipcId,::serve);
+  print('IPC Server started. ',ipcId);
+  foundImplementations:=
+  sequences.pEach(seq,implemented[index].isVoid ? begin
+    local imp:=guessImplementation(seq);
+    imp.isVoid
+    ? void
+    : [index,imp,printf(IDFormat&'=%s',index,imp.toString)];
+    end : void).toMap;
+  print(foundImplementations.size,'Implementations found');
   while(not(serverKillPosted),sleep(1));
   print("\nIPC Server stopped. ",ipcId);
 end;

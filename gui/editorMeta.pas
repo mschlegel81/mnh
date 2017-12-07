@@ -1037,9 +1037,11 @@ PROCEDURE T_editorMeta.dropAssistant;
 PROCEDURE T_editorMeta.updateOutline;
   VAR s:string;
   begin
+    outlineSynEdit.BeginUpdate(false);
     outlineSynEdit.clearAll;
     if assistant<>nil then for s in assistant^.getOutline(outlineOptions) do outlineSynEdit.lines.add(s);
     outlineSynEdit.highlighter:=highlighter;
+    outlineSynEdit.EndUpdate;
   end;
 
 PROCEDURE T_editorMeta.triggerCheck;

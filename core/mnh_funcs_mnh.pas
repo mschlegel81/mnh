@@ -134,7 +134,8 @@ FUNCTION ord_imp intFuncSignature;
         lt_string : if length(P_stringLiteral(x)^.value)=1
                     then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(newIntLiteral(-1));
-        lt_error,lt_void, lt_real,lt_expression: begin
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context);
+        lt_error,lt_void, lt_real: begin
           context.adapters^.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
