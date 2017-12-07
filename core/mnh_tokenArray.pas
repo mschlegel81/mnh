@@ -170,6 +170,27 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
       parsedLength:=len;
     end;
 
+  PROCEDURE handleComment(CONST commentText:ansistring; CONST commentOpener:string);
+    begin
+      writeln('Handling comment "',commentText,'"');
+      result^.tokType:=tt_EOL;
+      if copy(commentText,1,length(DOC_COMMENT_INFIX))=DOC_COMMENT_INFIX then begin
+        result^.txt:=commentText;
+        result^.tokType:=tt_docComment;
+      end else if copy(commentText,1,length(ATTRIBUTE_COMMENT_INFIX))=ATTRIBUTE_COMMENT_INFIX then begin
+        result^.txt:=commentText;
+        result^.tokType:=tt_attributeComment;
+      end else if copy(commentText,1,length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX))=SPECIAL_COMMENT_BLOB_BEGIN_INFIX then begin
+        result^.txt:=SPECIAL_COMMENT_BLOB_BEGIN_INFIX;
+        blob.start:=inputLocation;
+        if length(commentText)>=1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)
+        then begin
+          blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
+          parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
+        end else if commentOpener='#' then blob.closer:='#' else blob.closer:='''';
+      end else if pos('TODO',commentText)>0 then adapters.raiseNote(commentText,inputLocation);
+    end;
+
   VAR id:ansistring='';
       stringValue:ansistring='';
       tt:T_tokenType;
@@ -233,9 +254,16 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
       '"','''','#': begin
         stringValue:=unescapeString(line,inputLocation.column,parsedLength);
         if parsedLength=0 then begin
-          fail('Cannot parse string literal '+line);
-          recycler.disposeToken(result);
-          exit(nil);
+          parsedLength:=1;
+          while (parsedLength+inputLocation.column<=length(line)) and not(line[parsedLength+inputLocation.column] in [C_lineBreakChar,C_carriageReturnChar,'#']) do inc(parsedLength);
+          id:=copy(line,inputLocation.column+Length(BLOCK_COMMENT_DELIMITER),parsedLength-1);
+          if (length(line)>=parsedLength+inputLocation.column) and (line[parsedLength+inputLocation.column]='#') then inc(parsedLength);
+          if retainBlanks then begin
+            result^.tokType:=tt_blank;
+            result^.txt:=copy(line,inputLocation.column,length(line));
+          end else begin
+            handleComment(id,BLOCK_COMMENT_DELIMITER);
+          end;
         end else begin
           result^.tokType:=tt_literal;
           result^.data:=newStringLiteral(stringValue);
@@ -274,25 +302,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
           result^.tokType:=tt_blank;
           result^.txt:=copy(line,inputLocation.column,length(line));
         end else begin
-          result^.tokType:=tt_EOL;
-          if startsWith(DOC_COMMENT_PREFIX) then begin
-            result^.txt:=trimRight(copy(line,length(DOC_COMMENT_PREFIX)+inputLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-inputLocation.column));
-            result^.tokType:=tt_docComment;
-          end else if startsWith(ATTRIBUTE_COMMENT_PREFIX) then begin
-            result^.txt:=trim(copy(line,length(ATTRIBUTE_COMMENT_PREFIX)+inputLocation.column,length(line)-length(ATTRIBUTE_COMMENT_PREFIX)+1-inputLocation.column));
-            result^.tokType:=tt_attributeComment;
-          end else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then begin
-            result^.txt:=SPECIAL_COMMENT_BLOB_BEGIN;
-            blob.start:=inputLocation;
-            if length(line)>=inputLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)
-            then begin
-              blob.closer:=line[inputLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)];
-              parsedLength:=length(SPECIAL_COMMENT_BLOB_BEGIN)+1;
-            end else blob.closer:='''';
-          end else begin
-            id:=copy(line,inputLocation.column+length(COMMENT_PREFIX),parsedLength);
-            if pos('TODO',id)>0 then adapters.raiseNote(id,inputLocation);
-          end;
+          handleComment(copy(line,inputLocation.column+length(COMMENT_PREFIX),parsedLength),COMMENT_PREFIX);
         end;
       end else if startsWith(tt_mut_assignDiv) then apply(tt_mut_assignDiv)
                                                else apply(tt_operatorDivReal);
