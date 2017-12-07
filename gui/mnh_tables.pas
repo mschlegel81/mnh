@@ -147,7 +147,7 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
-    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=Rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
+    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
