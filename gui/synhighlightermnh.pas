@@ -216,6 +216,26 @@ PROCEDURE TSynMnhSyn.next;
       result:=continuesWith(prefix,0);
     end;
 
+  PROCEDURE handleComment(endedBy:T_charSet);
+    begin
+      case fLine[run] of
+        SPECIAL_COMMENT_BLOB_BEGIN_INFIX: begin
+          fTokenId:=tkString;
+          blobEnder:=fLine[run+1];
+          if blobEnder=#0 then begin
+            blobEnder:='''';
+            inc(run);
+          end else inc(run,2);
+          exit;
+        end;
+        ATTRIBUTE_COMMENT_INFIX: fTokenId:=tkSpecialComment;
+        DOC_COMMENT_INFIX:       fTokenId:=tkDocComment;
+        else                     fTokenId:=tkComment;
+      end;
+      while not(fLine[run] in endedBy) do inc(run);
+      if fLine[run]<>#0 then inc(run);
+    end;
+
   begin
     isMarked:=false;
     fTokenId := tkDefault;
@@ -300,18 +320,7 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
         if fLine [run] = '/' then begin
           inc(run);
-          if fLine[run]='!' then begin
-            fTokenId:=tkSpecialComment;
-            blobEnder:=fLine[run+1];
-            if blobEnder=#0 then begin
-              blobEnder:='''';
-              inc(run);
-            end else inc(run,2);
-            exit;
-          end
-          else if fLine[run]='*' then fTokenId:=tkDocComment
-                                 else fTokenId:=tkComment;
-          while fLine [run]<>#0 do inc(run);
+          handleComment([#0]);
         end
         else fTokenId := tkOperator;
       end;
@@ -350,10 +359,7 @@ PROCEDURE TSynMnhSyn.next;
         if fLine[run] in ['0'..'9'] then begin
           while (fLine[run] in ['0'..'9']) do inc(run);
           fTokenId:=tkString;
-        end else begin
-          while not (fLine[run] in [#0,'#']) do inc(run);
-          fTokenId:=tkComment;
-        end;
+        end else handleComment(['#',#0]);
       end
       else begin
         fTokenId := tkDefault;
