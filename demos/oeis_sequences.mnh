@@ -202,12 +202,15 @@ USE hofstadterConway;
 //@SuppressUnusedWarning
 A004001->hofstaderConwayGen;
 
-scanFiboMod(modulus>=1)->begin
-  local fiboMod:={[$state.trailing,(($state.head+$state.trailing) mod modulus)]};
-  local openStates:=cross([0..modulus-1],[0..modulus-1]).toSet;
+scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
+  local fiboMod:={$state.tail|($state.agg(+) mod modulus)};
+  local openStates:=cross([0..modulus-1],[0..modulus-1],
+                          stepsBack>=3 ? [0..modulus-1] : void,
+                          stepsBack>=4 ? [0..modulus-1] : void,
+                          stepsBack>=5 ? [0..modulus-1] : void).toSet;
   local groupCount:=0;
   while(openStates.size>0,begin
-    openStates>>(local s:=openStates.sort.head);
+    openStates>>(local s:=openStates.min);
     while((s:=fiboMod(s)) in openStates,openStates>>s);
     groupCount+=1;
   end);
@@ -215,7 +218,13 @@ scanFiboMod(modulus>=1)->begin
 end;
 
 //@SuppressUnusedWarning
-A015134->naturalNumbers(1).lazyMap(::scanFiboMod);
+A015134->naturalNumbers(1).lazyMap({scanFiboMod(2,$n)});
+//@SuppressUnusedWarning
+A106285->naturalNumbers(1).lazyMap({scanFiboMod(3,$n)});
+//@SuppressUnusedWarning
+A106286->naturalNumbers(1).lazyMap({scanFiboMod(4,$n)});
+//@SuppressUnusedWarning
+A106287->naturalNumbers(1).lazyMap({scanFiboMod(5,$n)});
 
 //@SuppressUnusedWarning
 memoized implemented->
@@ -314,8 +323,13 @@ guessImplementation(sequence:IntList)->
   findPeriodicParam(sequence) orElse
   findFibonacciParam(sequence);
 
-//@SuppressUnusedWarning
+classifyImplementation(imp:Expression)->classifyImplementation(imp.toString);
 classifyImplementation(imp:String)->
+  imp.matches('multifactorialGenerator') ? 'multifactorialGenerator' :
+  imp.matches('{\$x\.bits\.trueCount=\d}') ? 'byHammingWeight' :
+  imp.matches('hofstadter_sequences') ? 'hofstadter_sequences' :
+  imp.matches('countPartitions') ? 'countPartitions' :
+  imp.matches('scanFiboMod\(\d,\$n\)') ? 'scanFiboMod' :
   imp.matches('\]\[\$i mod ') ? 'periodicSeries' :
   imp.matches('^generalizedFibonacci') ? 'generalizedFibonacci' :
   imp.matches('\^rangeGenerator\(') ? 'exponentialSeries' :

@@ -132,15 +132,15 @@ end;
 private serve_('validate')->begin
   local valids:=[];
   implemented
-  .mergeMaps(foundImplementations.map({[$x[0],$x[1].toExpression]}).toMap,{$0 orElse $1})
+  .mergeMaps(foundImplementations.map({[$x[0],$x[1].toExpression]}).toMap,::orElse)
   .each(seq,sequences.size>seq[0]>0 ? begin
-    local tStart  :=time;
+    local timeOut :=time+1;
     local id      :=seq[0];
     local storeSeq:=sequences[id];
     local gen     :=seq[1]();
     local maxValidated:=-1;
     local valid:=
-    storeSeq.each(n0,begin
+    storeSeq.each(n0,time>timeOut ? note('Validation for sequence ',id,' timed out') : begin
       local n1:=gen();
       (index>0) AND isVoid(n1)
       ? true
@@ -189,10 +189,11 @@ private serve_('gen',seriesId,count)->begin
   local seq:=f().head(n);
 end;
 
-private serve_('class')->foundImplementations.getInner(1).pMap(::classifyImplementation).elementFrequency.map({$x.join("\t")}).join("\n");
+private serve_('class')->foundImplementations.union(implemented).getInner(1).pMap(::classifyImplementation).elementFrequency.filter({$x[1]>1}).map({$x.join("\t")}).join("\n");
 private serve_('class',className)->begin
-  foundImplementations.pEach(i,classifyImplementation(i[1])==className ? i[0] : void)
-                      .sort.formatInfo;
+  foundImplementations.union(implemented)
+    .pEach(i,classifyImplementation(i[1])==className ? i[0] : void)
+    .sort.formatInfo;
 end;
 
 private serve_(...)->'Unkown command: '&toString(...);
@@ -200,12 +201,12 @@ serve(['stop'])->serverKillPosted:=true;
 serve(['download'])->serve_('download');
 serve(parameters)->begin
   local t0:=time;
-  printDirect("\r",repeat(' ',80),"\rLast request: ",parameters);
+  print("Last request: ",parameters);
   local result:=
   parameters.isList
     ? serve_@parameters
     : serve_(parameters);
-  printDirect("\r",repeat(' ',80),"\rLast request: ",parameters,' answered in ',round(time-t0,3),'s');
+  print('  answered in ',round(time-t0,3),'s');
   result;
 end;
 
