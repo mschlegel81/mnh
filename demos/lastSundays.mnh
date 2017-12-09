@@ -1,8 +1,10 @@
-//@demo_for=time/date manipulation, time/date formatting
+USE dateUtils;
 private lastSundaysInYear(year:Int)->begin
-  local lastDays:=floor(parseTime('yyyymmdd',format('%4.4d%2.2d01',year,[2..12])|format('%4.4d0101',year+1)))-1;
-  local numberOfDaysAfterSuday:=(lastDays+6) mod 7;
-  lastDays-numberOfDaysAfterSuday;
+  [dateOf(year,1,1)..dateOf(year,12,31)] //take all days in that year
+  .filter({dayOfWeek($d)=SUNDAY})        //take only sundays
+  .{$L.group($L.month)}                  //group by month
+  .map(::max)                            //take the maximum within each group
+  .sort;                                 //sort the result (because grouping may change the ordering)
 end;
 
 private DATE_FMT:='%{formatTime("dd.mm.yyyy",$0)}s';
