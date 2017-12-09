@@ -512,6 +512,7 @@ FUNCTION subSets_impl intFuncSignature;
       end;
 
     begin
+      initialize(bits);
       if acceptOnlySetsOfSize=0 then begin
         if collection0^.literalType in C_setTypes
         then newSet:=newSetLiteral
@@ -735,7 +736,7 @@ FUNCTION composeDigits_imp intFuncSignature;
       Shift:int64=0;
 
       k  :longint;
-      dig:int64;
+      dig:int64    =0;
       ir :int64    =0;
       fr :T_myFloat=0;
       invalidatedIntResult:boolean=false;

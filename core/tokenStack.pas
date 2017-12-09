@@ -46,7 +46,7 @@ TYPE
       DESTRUCTOR destroy;
       PROPERTY size:longint read fill;
       PROCEDURE clear;
-      PROCEDURE push(CONST wallclockTime:double;
+      PROCEDURE push({$ifdef fullVersion}CONST wallclockTime:double;{$endif}
                      CONST callerLocation: T_tokenLocation;
                      CONST callee: P_objectWithIdAndLocation);
       PROCEDURE pop({$ifdef fullVersion}CONST wallclockTime:double;CONST profiler:P_profiler{$endif});
@@ -84,7 +84,7 @@ PROCEDURE T_callStack.clear;
     while fill>0 do pop({$ifdef fullVersion}0,nil{$endif});
   end;
 
-PROCEDURE T_callStack.push(CONST wallclockTime: double;
+PROCEDURE T_callStack.push({$ifdef fullVersion}CONST wallclockTime:double;{$endif}
   CONST callerLocation: T_tokenLocation;
   CONST callee: P_objectWithIdAndLocation);
   begin

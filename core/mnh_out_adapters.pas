@@ -164,7 +164,7 @@ TYPE
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE printDirect(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
-      PROCEDURE clearAll(CONST includePlot:boolean=false);
+      PROCEDURE clearAll({$ifdef fullVersion}CONST includePlot:boolean=false{$endif});
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
       FUNCTION hasNonSilentError:boolean;
@@ -659,7 +659,7 @@ PROCEDURE T_adapters.logEndOfEditScript(CONST data: pointer; CONST success: bool
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$endif}
 
-PROCEDURE T_adapters.clearAll(CONST includePlot:boolean=false);
+PROCEDURE T_adapters.clearAll({$ifdef fullVersion}CONST includePlot:boolean=false{$endif});
   VAR i:longint;
   begin
     clearErrors;
@@ -903,6 +903,7 @@ FUNCTION T_adapters.getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+  initialize(globalLockCs);
   initCriticalSection(globalLockCs);
 
 FINALIZATION

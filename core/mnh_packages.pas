@@ -597,7 +597,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    evaluationContext.resetForEvaluation(@package,ect_silent,C_EMPTY_STRING_ARRAY);
+    evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
@@ -608,7 +608,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
   begin
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
-    evaluationContext.resetForEvaluation(@package,ect_silent,C_EMPTY_STRING_ARRAY);
+    evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
@@ -625,13 +625,13 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       callerAdapters^.raiseWarning('Cannot find script with id or path "'+filenameOrId+'"',locationForWarning);
       exit(nil);
     end;
-    adapters.clearAll(true);
+    adapters.clearAll({$ifdef fullVersion}true{$endif});
     callerAdapters^.addSubAdapters(@adapters);
     if connectLevel>0 then adapters.addOutAdapter(callerAdapters^.getConnector(connectLevel>=1,connectLevel>=2,connectLevel>=3),true);
     if enforceDeterminism then evaluationContext.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
-      evaluationContext.resetForEvaluation(@package,ect_silent,mainParameters);
+      evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
       package.load(lu_forCallingMain,evaluationContext.threadContext^,mainParameters);
       evaluationContext.afterEvaluation;
     finally

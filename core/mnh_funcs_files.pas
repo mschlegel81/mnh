@@ -363,6 +363,7 @@ FUNCTION fileInfo_imp intFuncSignature;
 
     VAR info:T_fileInfo;
     begin
+      result:=nil;
       if containsPlaceholder(s) then begin
         result:=newListLiteral(0);
         for info in findFileInfo(s) do listResult^.append(infoToLiteral(info),false);

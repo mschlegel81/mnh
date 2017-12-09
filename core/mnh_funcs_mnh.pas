@@ -181,6 +181,7 @@ FUNCTION getMnhInfo:string;
       pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
       dummyContext:T_threadContext;
   begin
+    initialize(dummyContext);
     L:=mnhInfo_imp(nil,pseudoLoc,dummyContext);
     result:=L^.toString();
     disposeLiteral(L);

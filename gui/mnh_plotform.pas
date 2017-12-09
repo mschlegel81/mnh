@@ -437,7 +437,7 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
           4: result:=CustomEventButton4;
           5: result:=CustomEventButton5;
           6: result:=CustomEventButton6;
-          7: result:=CustomEventButton7;
+        else result:=CustomEventButton7;
         end;
       end;
 
@@ -514,6 +514,7 @@ PROCEDURE TplotForm.doOrPostPlot;
 
 FUNCTION TplotForm.timerTick:boolean;
   begin
+    result:=false;
     if gui_started and (showing) and (animation.frameCount>0) then begin
       if animateCheckBox.Checked then begin
         animation.nextFrame(animationFrameIndex);

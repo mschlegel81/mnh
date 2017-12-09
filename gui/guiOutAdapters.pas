@@ -48,6 +48,7 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
 FUNCTION createSecondaryAdapters:P_adapters;
   VAR guiAd:P_guiOutAdapter;
   begin
+    result:=nil;
     if not(unitIsInitialized) then exit;
     new(guiAd,create(guiOutAdapter.parentForm,false));
     new(result,create);

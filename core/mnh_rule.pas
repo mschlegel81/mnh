@@ -529,7 +529,7 @@ FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
 
 FUNCTION T_mutableRule.getDocTxt: ansistring;
   begin
-    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation)+result;
+    result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation);
     result:=result+meta.getDocTxt;
   end;
 

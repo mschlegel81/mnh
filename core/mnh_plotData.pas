@@ -2,7 +2,6 @@ UNIT mnh_plotData;
 INTERFACE
 USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
-     myGenerics,myStringUtil,
      mnh_basicTypes, mnh_constants,
      plotstyles,plotMath,plotMaps;
 TYPE
