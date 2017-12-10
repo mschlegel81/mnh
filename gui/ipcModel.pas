@@ -19,7 +19,8 @@ PROCEDURE initIpcServer(CONST mainForm:TForm);
 FUNCTION getFilesToOpen:T_arrayOfString;
   begin
     if uniqueEditorInstanceIpcServer.PeekMessage(1,true)
-    then result:=split(uniqueEditorInstanceIpcServer.StringMessage,C_lineBreakChar);
+    then result:=split(uniqueEditorInstanceIpcServer.StringMessage,C_lineBreakChar)
+    else result:=C_EMPTY_STRING_ARRAY;
   end;
 
 FUNCTION sendParametersToOtherInstance(CONST parameters:T_arrayOfString):boolean;

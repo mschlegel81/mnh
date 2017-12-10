@@ -507,14 +507,16 @@ DESTRUCTOR T_tokenRecycler.destroy;
 
 FUNCTION T_tokenRecycler.disposeToken(p: P_token): P_token;
   begin
-    if p=nil then exit(nil);
-    result:=p^.next;
-    if (fill>=length(dat))
-    then dispose(p,destroy)
+    if p=nil then result:=nil
     else begin
-      p^.undefine;
-      dat[fill]:=p;
-      inc(fill);
+      result:=p^.next;
+      if (fill>=length(dat))
+      then dispose(p,destroy)
+      else begin
+        p^.undefine;
+        dat[fill]:=p;
+        inc(fill);
+      end;
     end;
   end;
 

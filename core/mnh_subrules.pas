@@ -1172,7 +1172,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       TList:P_listLiteral=nil;
       dataRow:T_dataRow;
 
-      resultLiteral:P_listLiteral;
+      resultLiteral:P_listLiteral=nil;
 
       tempcontext:T_evaluationContext;
       collector  :T_collectingOutAdapter;

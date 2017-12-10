@@ -293,6 +293,7 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
        (arg0^.literalType in [lt_int,lt_real]) and
        (arg1^.literalType in [lt_int,lt_real]) and
        (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      initialize(lines);
       case arg2^.literalType of
         lt_string: lines:=split(str2^.value,C_lineBreakChar);
         lt_emptyList: lines:=C_EMPTY_STRING_ARRAY;

@@ -199,6 +199,7 @@ PROCEDURE T_cache.clear;
 
 INITIALIZATION
   allCaches:=C_EMPTY_POINTER_ARRAY;
+  initialize(allCacheCs);
   initCriticalSection(allCacheCs);
 FINALIZATION
   doneCriticalSection(allCacheCs);

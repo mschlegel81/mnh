@@ -89,7 +89,7 @@ FUNCTION runScript_imp intFuncSignature;
 FUNCTION inspect_imp intFuncSignature;
   VAR i:longint;
       id:string;
-      tempPackage:P_package;
+      tempPackage:P_package=nil;
       source:T_arrayOfString;
       loadMessages:P_collectionLiteral=nil;
 

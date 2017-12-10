@@ -1569,27 +1569,26 @@ FUNCTION T_mapLiteral.getInner(CONST accessor:P_literal):P_literal;
         validCase :=true;
       end;
     end;
-    if not(validCase) then begin
-      result:=nil;
-      exit(result);
-    end;
-    if wantKeys then begin
-      if wantValues then for entry in dat.keyValueList do begin
+    result:=nil;
+    if validCase then begin
+      if wantKeys then begin
+        if wantValues then for entry in dat.keyValueList do begin
+          result:=newListLiteral(dat.fill);
+          if subAsSet then sub:=newSetLiteral(2)
+                      else sub:=newListLiteral(2);
+          sub^.append(entry.key  ,true);
+          sub^.append(entry.value,true);
+          P_listLiteral(result)^.append(sub,false);
+        end else begin
+          result:=newSetLiteral(dat.fill);
+          for entry in dat.keyValueList do P_setLiteral(result)^.append(entry.key,true);
+        end;
+      end else if wantValues then begin
         result:=newListLiteral(dat.fill);
-        if subAsSet then sub:=newSetLiteral(2)
-                    else sub:=newListLiteral(2);
-        sub^.append(entry.key  ,true);
-        sub^.append(entry.value,true);
-        P_listLiteral(result)^.append(sub,false);
-      end else begin
-        result:=newSetLiteral(dat.fill);
-        for entry in dat.keyValueList do P_setLiteral(result)^.append(entry.key,true);
-      end;
-    end else if wantValues then begin
-      result:=newListLiteral(dat.fill);
-      for entry in dat.keyValueList do
-      P_listLiteral(result)^.append(entry.value,true);
-    end else result:=newListLiteral();
+        for entry in dat.keyValueList do
+        P_listLiteral(result)^.append(entry.value,true);
+      end else result:=newListLiteral();
+    end;
   end;
 //?.leqForSorting:==============================================================
 FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
@@ -3247,7 +3246,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         adapters.raiseError('Nested mutation expects a compound literal on the left hand side and a list literal on the right hand side',location);
         adapters.raiseError('RHS: '+toMutate^.typeString+' '+toMutate^.toString(50),location);
         adapters.raiseError('LHS: '+parameters^.typeString+' '+parameters^.toString(50),location);
-        exit;
+        exit(nil);
       end else mutateNested;
       else begin
         adapters.raiseError('Unimplemented mutation '+C_tokenInfo[mutation].defaultId,location);

@@ -380,7 +380,7 @@ FUNCTION group_imp intFuncSignature;
   TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
   VAR listToGroup:P_listLiteral;
       keyList:T_arrayOfLiteral;
-      aggregator:P_expressionLiteral;
+      aggregator:P_expressionLiteral=nil;
       groupMap:T_groupMap;
       groupList :T_groupMap.KEY_VALUE_LIST;
       groupEntry:T_groupMap.CACHE_ENTRY;
@@ -443,8 +443,10 @@ FUNCTION group_imp intFuncSignature;
       listToGroup:=P_listLiteral(arg0);
 
       if arg1^.literalType=lt_int
-      then makeKeysByIndex(P_intLiteral(arg1)^.value)
-      else keyList:=list1^.iteratableList;
+      then begin
+        initialize(keyList);
+        makeKeysByIndex(P_intLiteral(arg1)^.value);
+      end else keyList:=list1^.iteratableList;
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
                           else aggregator:=nil;

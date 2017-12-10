@@ -140,7 +140,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       context.create(@consoleAdapters);
       if headless then context.threadContext^.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
-      context.resetForEvaluation(package,{$ifdef fullVersion}contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
+      context.resetForEvaluation({$ifdef fullVersion}package,contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
       package^.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
       dispose(package,destroy);
@@ -154,7 +154,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     begin
       package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
       context.create(@consoleAdapters);
-      context.resetForEvaluation(@package,{$ifdef fullVersion}contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
+      context.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
         package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
         writeln(package.getHelpOnMain);

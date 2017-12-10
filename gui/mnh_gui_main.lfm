@@ -119,7 +119,7 @@ object MnhForm: TMnhForm
     BevelOuter = bvNone
     ClientHeight = 363
     ClientWidth = 170
-    TabOrder = 4
+    TabOrder = 5
     object GroupBox1: TGroupBox
       Left = 0
       Height = 363
@@ -681,7 +681,7 @@ object MnhForm: TMnhForm
     BevelOuter = bvNone
     ClientHeight = 200
     ClientWidth = 717
-    TabOrder = 5
+    TabOrder = 4
     object outputPageControl: TPageControl
       Left = 0
       Height = 177

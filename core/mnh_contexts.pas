@@ -178,9 +178,9 @@ TYPE
     public
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_adapters);
-      CONSTRUCTOR createAndResetSilentContext(CONST package:P_objectWithPath; CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
+      CONSTRUCTOR createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath;{$endif} CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
-      PROCEDURE resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
       PROCEDURE afterEvaluation;
       PROPERTY evaluationOptions:T_evaluationContextOptions read options;
       PROPERTY threadContext:P_threadContext read primaryThreadContext;
@@ -305,7 +305,7 @@ CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
     new(primaryThreadContext,createThreadContext(@self,adapters));
   end;
 
-CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_objectWithPath; CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
+CONSTRUCTOR T_evaluationContext.createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
   VAR tempAdapters:P_adapters;
   begin
     new(tempAdapters,create);
@@ -314,7 +314,7 @@ CONSTRUCTOR T_evaluationContext.createAndResetSilentContext(CONST package:P_obje
     disposeAdaptersOnDestruction:=true;
     allowedSideEffects:=customSideEffecWhitelist;
     mainParameters:=C_EMPTY_STRING_ARRAY;
-    resetForEvaluation(package,ect_silent,mainParams);
+    resetForEvaluation({$ifdef fullVersion}package,{$endif}ect_silent,mainParams);
   end;
 
 DESTRUCTOR T_evaluationContext.destroy;
@@ -330,7 +330,7 @@ DESTRUCTOR T_evaluationContext.destroy;
     if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
   end;
 
-PROCEDURE T_evaluationContext.resetForEvaluation(CONST package:P_objectWithPath; CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+PROCEDURE T_evaluationContext.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
   VAR pc:T_profileCategory;
       i:longint;
   begin
