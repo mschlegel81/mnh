@@ -1,12 +1,14 @@
 UNIT mnhFormHandler;
 INTERFACE
 USES
-  Classes, sysutils,Forms;
+  Classes, sysutils,Forms,
+  mnh_constants,
+  mnh_basicTypes,
+  mnh_funcs,
+  mnh_litVar,
+  mnh_contexts;
 TYPE
   P_formMeta=^T_formMeta;
-
-  { T_formMeta }
-
   T_formMeta=object
     form:TForm;
     isMain:boolean;
@@ -85,8 +87,6 @@ PROCEDURE unregisterForm(CONST f: TForm);
     setLength(formMeta,length(formMeta)-1);
   end;
 
-{ T_formMeta }
-
 CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST isMain_,cyclable_: boolean);
   begin
     form:=form_;
@@ -102,6 +102,16 @@ FUNCTION T_formMeta.visible: boolean;
   begin
     result:=(form<>nil) and (form.visible) and (form.showing);
   end;
+
+{$i mnh_func_defines.inc}
+FUNCTION anyFormShowing_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then result:=newBoolLiteral(anyFormShowing);
+  end;
+
+INITIALIZATION
+  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,[se_readGuiState],ak_nullary,'anyFormShowing();//returns true if any form is showing');
 
 FINALIZATION
   finalizeUnit;
