@@ -34,10 +34,11 @@ private IDFormat:='A%6.6d';
 private formatInfo(numericId:Int)->
   formatTabs(
     (0<=numericId<names.size)
-    ? format("ID\v:\t"&IDFormat&"\nName\v:\t%s\nSequence\v:\t%s",
+    ? format("ID\v:\t"&IDFormat&"\nName\v:\t%s\nSequence\v:\t%s\nInfo\v:\t%s",
       numericId,
       names[numericId] orElse '- not found -',
-      sequencesAsString[numericId])&(isVoid(implementationOf(numericId)) ? void : "\nImplementation\v:\tgen "&numericId&" <elements>\n\v\t"&toString(implementationOf(numericId)))
+      sequencesAsString[numericId] orElse '- not found -',
+      classify(sequences[numericId] orElse [])&' series of '&size(sequences[numericId] orElse [])&' elements')&(isVoid(implementationOf(numericId)) ? void : "\nImpl.\v:\tgen "&numericId&" <elements>\n\v\t"&toString(implementationOf(numericId)))
     : format("ID\v:\t"&IDFormat&" - not found",numericId)).join("\n");
 private formatInfo([])->'No matches';
 private formatInfo(numericIds:IntList)->numericIds.pMap(::formatInfo).join("\n");
