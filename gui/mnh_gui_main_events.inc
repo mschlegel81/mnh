@@ -106,6 +106,7 @@ PROCEDURE TMnhForm.cbOutlineShowPrivateChange(Sender: TObject);
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
+    quickTask.ensureStop;
     storeEditorsToSettings;
   end;
 
@@ -433,7 +434,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       then aid:=''
       else aid:=C_tabChar+intToStr(meta^.editor.CaretY)+
                       ','+intToStr(meta^.editor.CaretX);
-      StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
+      if quickTask.processing
+      then StatusBar.SimpleText:='Processing quick task'+aid
+      else StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
     end;
 
   PROCEDURE pollAssistant;
