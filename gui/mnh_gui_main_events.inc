@@ -106,7 +106,7 @@ PROCEDURE TMnhForm.cbOutlineShowPrivateChange(Sender: TObject);
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
-    quickTask.ensureStop;
+    quick.task.ensureStop;
     storeEditorsToSettings;
   end;
 
@@ -154,7 +154,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     setupCallbacks;
 
     initGuiOutAdapters(MnhForm,true);
-    quickAdapters:=createSecondaryAdapters;
+    quick.adapters:=createSecondaryAdapters;
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
@@ -180,10 +180,10 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     completionLogic.destroy;
     guiTaskQueue.destroy;
     finalizeEditorMeta;
-    quickTask.destroy;
-    quickMeta.destroy;
-    quickCompletion.destroy;
-    dispose(quickAdapters,destroy);
+    quick.task.destroy;
+    quick.meta.destroy;
+    quick.completion.destroy;
+    dispose(quick.adapters,destroy);
   end;
 
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -229,14 +229,14 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand);
 
-      quickMeta.createWithParent(DETACHED_EDITOR_META_INDEX,QuickTabSheet);
-      quickMeta.editor.Align:=alTop;
-      quickMeta.editor.height:=80;
-      quickMeta.editor.OnChange:=@QuickEditChange;
-      quickCompletion.create;
+      quick.meta.createWithParent(DETACHED_EDITOR_META_INDEX,QuickTabSheet);
+      quick.meta.editor.Align:=alTop;
+      quick.meta.editor.height:=80;
+      quick.meta.editor.OnChange:=@QuickEditChange;
+      quick.completion.create;
       QuickOutputEdit.Align:=alClient;
-      quickTask.create(@quickMeta,quickAdapters);
-
+      quick.task.create(@quick.meta,quick.adapters);
+      quick.evaluationDeferred:=false;
       initializeSettings;
       processFontSettings;
       enableDynamicItems;
@@ -325,7 +325,7 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceMode
 
 PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin
-    if not(runnerModel.canRun) then exit;
+    if not(runnerModel.canRun) or quick.task.processing then exit;
     updateWordWrap;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk
@@ -335,6 +335,7 @@ PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
+    if not(runnerModel.canRun) or quick.task.processing then exit;
     updateWordWrap;
     runnerModel.customRun(false,miProfile.Checked);
   end;
@@ -368,7 +369,7 @@ PROCEDURE TMnhForm.miShowOutputClick(Sender: TObject);
 PROCEDURE TMnhForm.miShowQuickEvalClick(Sender: TObject);
   begin
     outputPageControl.activePage:=QuickTabSheet;
-    ActiveControl:=quickMeta.editor;
+    ActiveControl:=quick.meta.editor;
   end;
 
 PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
@@ -385,6 +386,7 @@ PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
+    if quick.task.processing then exit;
     updateWordWrap;
     if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
     else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
@@ -434,7 +436,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       then aid:=''
       else aid:=C_tabChar+intToStr(meta^.editor.CaretY)+
                       ','+intToStr(meta^.editor.CaretX);
-      if quickTask.processing
+      if quick.task.processing
       then StatusBar.SimpleText:='Processing quick task'+aid
       else StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
     end;
@@ -456,12 +458,19 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
-    if guiOutAdapter.flushToGui(OutputEdit) then exit;
-    if P_guiOutAdapter(quickAdapters^.getAdapter(0))^.flushToGui(QuickOutputEdit) then exit;
+    if guiOutAdapter.flushToGui(OutputEdit) then begin
+      outputPageControl.activePage:=outputTabSheet;
+      exit;
+    end;
+    if P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui(QuickOutputEdit) then begin
+      outputPageControl.activePage:=QuickTabSheet;
+      exit;
+    end;
     while guiTaskQueue.executeTask do;
     autosaveSettings;
     checkForFileChanges;
     pollAssistant;
+    if (quick.evaluationDeferred and not(quick.task.processing) and runnerModel.canRun) then QuickEditChange(Sender);
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);

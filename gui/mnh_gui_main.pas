@@ -168,10 +168,13 @@ TYPE
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
     recentFileMenuItems:array of TMenuItem;
-    quickMeta:T_editorMeta;
-    quickAdapters:P_adapters;
-    quickTask:T_postEvaluationData;
-    quickCompletion:T_completionLogic;
+    quick:record
+      meta:T_editorMeta;
+      adapters:P_adapters;
+      task:T_postEvaluationData;
+      completion:T_completionLogic;
+      evaluationDeferred:boolean;
+    end;
     PROCEDURE QuickEditChange(Sender: TObject);
     FUNCTION focusedEditor:TSynEdit;
     PROCEDURE updateExpressionMemo;
@@ -448,11 +451,12 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
   begin
     edit:=getEditor;
     if (edit=nil) or (edit^.language<>LANG_MNH) then exit;
-    quickCompletion.assignEditor(quickMeta.editor,edit^.getAssistant);
+    quick.completion.assignEditor(quick.meta.editor,edit^.getAssistant);
     if runnerModel.canRun then begin
       edit^.setWorkingDir;
-      quickTask.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit));
-    end;
+      quick.evaluationDeferred:=false;
+      quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit));
+    end else quick.evaluationDeferred:=true;
   end;
 
 PROCEDURE TMnhForm.updateExpressionMemo;
