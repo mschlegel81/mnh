@@ -88,10 +88,11 @@ private getData(URL:String)->begin
   temp;
 end;
 
+private mutable serverKillPosted:=false;
 //*Updates datastores based on input files
 //*Obtain the files at https://oeis.org/names.gz and https://oeis.org/stripped.gz
 //*Unzip the files before using them as input
-private serve_('download',...)->begin
+private memoized serve_('download',...)->begin
   print('Updating data - old: ',typeOf(names));
   local idAndRest  :={[$s.copy(1,6).softCast,$s.copy(8,$s.length)]};
   local idAndSeries:={[$s.copy(1,6).softCast,$s.copy(8,$s.length).split(',').softCast.filter(::isInt)]};
@@ -108,7 +109,6 @@ private serve_('download',...)->begin
   msg;
 end; //downloadData
 
-private mutable serverKillPosted:=false;
 private serve_('id',...)->map(...,{$s.clean(['0'..'9'],'').softCast}).filter(::isInt).formatInfo;
 private serve_('name',...)->... .each(pattern,names.matches(pattern),or).indexOf.formatInfo;
 private serve_('part',part)->sequencesAsString.matches(part).indexOf.formatInfo;
@@ -197,17 +197,19 @@ private serve_('class',className)->begin
     .sort.formatInfo;
 end;
 
+mutable quietMode:=false;
+
 private serve_(...)->'Unkown command: '&toString(...);
 serve(['stop'])->serverKillPosted:=true;
 serve(['download'])->serve_('download');
 serve(parameters)->begin
   local t0:=time;
-  print("Last request: ",parameters);
+  quietMode ? void : print("Last request: ",parameters);
   local result:=
   parameters.isList
     ? serve_@parameters
     : serve_(parameters);
-  print('  answered in ',round(time-t0,3),'s');
+  quietMode ? void : print('  answered in ',round(time-t0,3),'s');
   result;
 end;
 
