@@ -31,6 +31,8 @@ CONST
 TYPE
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
+    protected
+      cs:TRTLCriticalSection;
     private
       autodestruct:boolean;
       messageTypesToInclude:T_messageTypeSet;
@@ -40,7 +42,7 @@ TYPE
     adapterType:T_adapterType;
 
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
-    DESTRUCTOR destroy; virtual; abstract;
+    DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual; abstract;
     PROCEDURE clear; virtual;
     PROPERTY outputBehavior:T_messageTypeSet read getOutputBehavior write setOutputBehavior;
@@ -57,7 +59,6 @@ TYPE
   P_collectingOutAdapter = ^T_collectingOutAdapter;
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
-    cs:TRTLCriticalSection;
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
@@ -340,6 +341,7 @@ CONSTRUCTOR T_connectorAdapter.create(CONST connected: P_adapters; CONST include
 
 DESTRUCTOR T_connectorAdapter.destroy;
   begin
+    inherited destroy;
   end;
 
 FUNCTION T_connectorAdapter.append(CONST message: T_storedMessage): boolean;
@@ -350,27 +352,36 @@ FUNCTION T_connectorAdapter.append(CONST message: T_storedMessage): boolean;
   end;
 
 //T_abstractOutAdapter:=========================================================
-PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean; CONST mt: T_messageTypeSet);
+PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean;
+  CONST mt: T_messageTypeSet);
   begin
     if enabled
     then messageTypesToInclude:=(messageTypesToInclude+mt) * C_includableMessages[adapterType]
     else messageTypesToInclude:=(messageTypesToInclude-mt) * C_includableMessages[adapterType];
   end;
 
-CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
+CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType;
+  CONST messageTypesToInclude_: T_messageTypeSet);
   begin
     adapterType:=typ;
     setOutputBehavior(messageTypesToInclude_);
+    system.initCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_abstractOutAdapter.destroy;
+  begin
+    system.doneCriticalSection(cs);
   end;
 
 PROCEDURE T_abstractOutAdapter.clear; begin end;
 
-PROCEDURE T_abstractOutAdapter.setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
+PROCEDURE T_abstractOutAdapter.setOutputBehavior(
+  CONST messageTypesToInclude_: T_messageTypeSet);
   begin
      messageTypesToInclude:=C_includableMessages[adapterType]*messageTypesToInclude_;
   end;
 
-FUNCTION T_abstractOutAdapter.getOutputBehavior:T_messageTypeSet;
+FUNCTION T_abstractOutAdapter.getOutputBehavior: T_messageTypeSet;
   begin
     result:=messageTypesToInclude;
   end;
@@ -383,6 +394,7 @@ CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTyp
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
   begin
+    inherited destroy;
   end;
 
 FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
@@ -391,6 +403,7 @@ FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
   begin
     result:=message.messageType in messageTypesToInclude;
     if result then with message do begin
+      enterCriticalSection(cs);
       case messageType of
         mt_clearConsole: mySys.clearConsole;
         mt_printline: begin
@@ -407,6 +420,7 @@ FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
         end;
         else for s in defaultFormatting(message,false) do writeln(stdErr,s);
       end;
+      leaveCriticalSection(cs);
     end;
   end;
 //==========================================================:T_consoleOutAdapter
@@ -414,14 +428,13 @@ FUNCTION T_consoleOutAdapter.append(CONST message:T_storedMessage):boolean;
 CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST messageTypesToInclude_:T_messageTypeSet);
   begin
     inherited create(typ,messageTypesToInclude_);
-    system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
 
 DESTRUCTOR T_collectingOutAdapter.destroy;
   begin
     clear;
-    system.doneCriticalSection(cs);
+    inherited destroy;
   end;
 
 FUNCTION T_collectingOutAdapter.append(CONST message: T_storedMessage):boolean;
