@@ -130,6 +130,8 @@ TYPE
       CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters:P_adapters);
       DESTRUCTOR destroy;
       PROCEDURE triggerUpdate(CONST package:P_package);
+      PROCEDURE ensureStop;
+      FUNCTION processing:boolean;
   end;
   {$endif}
 
@@ -241,14 +243,7 @@ CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST q
 
 DESTRUCTOR T_postEvaluationData.destroy;
   begin
-    enterCriticalSection(cs);
-    while currentlyProcessing do begin
-      leaveCriticalSection(cs);
-      ThreadSwitch;
-      sleep(1);
-      enterCriticalSection(cs);
-    end;
-    leaveCriticalSection(cs);
+    ensureStop;
     doneCriticalSection(cs);
   end;
 
@@ -295,6 +290,25 @@ PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
     checkPending:=true;
     currentlyProcessing:=true;
     beginThread(@postEvalThread,@self);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_postEvaluationData.ensureStop;
+  begin
+    enterCriticalSection(cs);
+    while currentlyProcessing do begin
+      leaveCriticalSection(cs);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(cs);
+    end;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_postEvaluationData.processing:boolean;
+  begin
+    enterCriticalSection(cs);
+    result:=currentlyProcessing;
     leaveCriticalSection(cs);
   end;
 
