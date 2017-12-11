@@ -184,9 +184,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       system.leaveCriticalSection(cs);
       exit([]);
     end;
+    try
     flushing:=true;
     result:=[];
-     if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
+    if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
     linesToWrite:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       include(result,messageType);
@@ -230,7 +231,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
             for j:=0 to length(messageText)-1 do processDirectPrint(messageText[j]);
           end;
         mt_endOfEvaluation: begin
-          if plotForm.InteractionPanel.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+          if plotFormIsInitialized and plotForm.InteractionPanel.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
           parentForm.onEndOfEvaluation;
         end;
         mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
@@ -256,8 +257,11 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
-    flushing:=false;
-    system.leaveCriticalSection(cs);
+
+    finally
+      flushing:=false;
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_guiOutAdapter.flushClear;
