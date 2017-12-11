@@ -150,14 +150,30 @@ PROCEDURE T_microserver.serve;
       response:P_literal;
       requestLiteral:T_listLiteral;
       sleepTime:longint=minSleepTime;
-
+      start:double;
+      statistics:record
+        serveCount:longint;
+        serveTime:double;
+        socketTime:double;
+      end;
+      finalMessage:T_arrayOfString;
   begin
+    with statistics do begin
+      serveCount:=0;
+      serveTime:=0;
+      socketTime:=0;
+    end;
     context^.adapters^.raiseNote('http Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
     lastActivity:=now;
     repeat
+      start:=context^.wallclockTime(true);
       request:=socket.getRequest(sleepTime);
+      statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);
+
       if request.method<>htrm_no_request then begin
+        inc(statistics.serveCount);
+        start:=context^.wallclockTime;
         sleepTime:=minSleepTime;
         lastActivity:=now;
         requestLiteral.create(3);
@@ -166,6 +182,8 @@ PROCEDURE T_microserver.serve;
                       .appendString(request.protocol);
         response:=servingExpression^.evaluate(feedbackLocation,context,@requestLiteral);
         requestLiteral.destroy;
+        statistics.serveTime:=statistics.serveTime+(context^.wallclockTime-start);
+        start:=context^.wallclockTime;
         if (response<>nil) then begin
           if response^.literalType in C_scalarTypes
           then socket.SendString(P_scalarLiteral(response)^.stringForm)
@@ -175,12 +193,17 @@ PROCEDURE T_microserver.serve;
           context^.adapters^.raiseWarning('Microserver response is nil!', feedbackLocation);
           socket.SendString(HTTP_404_RESPONSE);
         end;
+        statistics.socketTime:=statistics.socketTime+(context^.wallclockTime-start);
       end else begin
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
     until timedOut or hasKillRequest or not(context^.adapters^.noErrors);
-    context^.adapters^.raiseNote('http Microserver stopped. '+socket.toString,feedbackLocation);
+    finalMessage:='http Microserver stopped. '+socket.toString;
+    append(finalMessage,'  served '+intToStr(statistics.serveCount)+' requests');
+    append(finalMessage,'  evaluation time '+floatToStr(statistics.serveTime)+' seconds');
+    append(finalMessage,'  socket time '+floatToStr(statistics.socketTime)+' seconds');
+    context^.adapters^.raiseNote(finalMessage,feedbackLocation);
     up:=false;
   end;
 
