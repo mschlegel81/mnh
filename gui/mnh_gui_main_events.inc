@@ -448,6 +448,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if meta<>nil then meta^.pollAssistanceResult;
     end;
 
+  VAR flushedMessages:T_messageTypeSet;
   begin
     if processIpcMessages then exit;
     displayProgress;
@@ -458,14 +459,15 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
-    if guiOutAdapter.flushToGui(OutputEdit) then begin
-      outputPageControl.activePage:=outputTabSheet;
-      exit;
-    end;
-    if P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui(QuickOutputEdit) then begin
-      outputPageControl.activePage:=QuickTabSheet;
-      exit;
-    end;
+    flushedMessages:=guiOutAdapter.flushToGui(OutputEdit);
+    if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
+    if (mt_gui_breakpointEncountered in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
+    if flushedMessages<>[] then exit;
+
+    flushedMessages:=P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui(QuickOutputEdit);
+    if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=QuickTabSheet;
+    if flushedMessages<>[] then exit;
+
     while guiTaskQueue.executeTask do;
     autosaveSettings;
     checkForFileChanges;
