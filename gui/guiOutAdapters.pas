@@ -22,7 +22,7 @@ TYPE
     lastWasDirectPrint:boolean;
     CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
     DESTRUCTOR destroy; virtual;
-    FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
+    FUNCTION flushToGui(VAR syn:TSynEdit):T_messageTypeSet;
     PROCEDURE flushClear;
   end;
 
@@ -82,7 +82,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
+FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
   VAR i,j:longint;
       outputLinesLimit:longint=0;
       wroteToSyn:boolean=false;
@@ -182,13 +182,14 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     if flushing then begin
       {$ifdef debugMode}writeln(stdErr,'        DEBUG: Already flushing!');{$endif}
       system.leaveCriticalSection(cs);
-      exit(false);
+      exit([]);
     end;
     flushing:=true;
-    result:=length(storedMessages)>0;
-    if result then outputLinesLimit:=settings.value^.outputLinesLimit;
+    result:=[];
+     if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
     linesToWrite:=C_EMPTY_STRING_ARRAY;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
+      include(result,messageType);
       case messageType of
         mt_clearConsole: clearSynAndBuffer;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
@@ -242,7 +243,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       end;
       if messageType in [mt_clearConsole..mt_timing_info] then lastWasDirectPrint:=messageType=mt_printdirect;
     end;
-    if result then clear;
+    if length(storedMessages)>0 then clear;
     if wroteToSyn then begin
       flushBuffer;
       if not(parentForm.showing) or not(parentForm.visible) then begin
