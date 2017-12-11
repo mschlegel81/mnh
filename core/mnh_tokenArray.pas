@@ -91,7 +91,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
           if t^.tokType=tt_identifier then inPackage^.resolveId(t^,nil);
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
-              if t^.tokType=tt_localUserRule then begin
+              if (t^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
                 rule:=t^.data;
                 if rule^.getRuleType in C_mutableRuleTypes then begin
                   t^.data:=rule;
