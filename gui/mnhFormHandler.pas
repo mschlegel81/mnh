@@ -100,7 +100,7 @@ DESTRUCTOR T_formMeta.destroy;
 
 FUNCTION T_formMeta.visible: boolean;
   begin
-    result:=(form<>nil) and (form.visible) and (form.showing);
+    result:=(form<>nil) and (form.visible);
   end;
 
 {$i mnh_func_defines.inc}

@@ -1,0 +1,33 @@
+plain script;
+USE GUI;
+
+//@demo_for=plotting, animation
+private rollAt(t:Numeric,doPlot:Boolean)->begin
+  local center:=[t,1];
+  local line:=[center,center+[-sin(t),-cos(t)]];
+  local circle:=center+{[sin($x),cos($x)]};
+  doPlot
+  ? begin
+      plot(line,'. l');
+      addPlot(circle,0,2*pi,100,'black');
+    end
+  : void;
+  [line[1]];
+end;
+
+begin
+  local curve:=([-200..-1]/200*2*pi).map({rollAt($t,false).head});
+  clearAnimation;
+  [['autoscaleX',false],['autoscaleY',false],
+   ['logscaleX',false],['logscaleY',false],
+   ['axisStyleX',3],
+   ['preserveAspect',true],['axisStyleY',3],
+   ['y0',0],['y1',2.0]].toMap.setOptions;
+  ([0..199]/200*2*pi).each(t,begin
+    [['x0',t-2*pi],['x1',t+1.0]].setOptions;
+    curve|=rollAt(t,true);
+    addPlot(curve,'red 0.5 . l');
+    addAnimationFrame;
+  end);
+  display;
+end;
