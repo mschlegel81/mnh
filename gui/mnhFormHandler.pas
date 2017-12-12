@@ -15,7 +15,7 @@ TYPE
     cyclable:boolean;
     name:string;
 
-    CONSTRUCTOR create(CONST form_:TForm; CONST name_:String; CONST isMain_,cyclable_:boolean);
+    CONSTRUCTOR create(CONST form_:TForm; CONST name_:string; CONST isMain_,cyclable_:boolean);
     DESTRUCTOR destroy;
     FUNCTION visible: boolean;
   end;
@@ -88,7 +88,7 @@ PROCEDURE unregisterForm(CONST f: TForm);
     setLength(formMeta,length(formMeta)-1);
   end;
 
-CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST name_:String; CONST isMain_,cyclable_: boolean);
+CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST name_:string; CONST isMain_,cyclable_: boolean);
   begin
     form:=form_;
     isMain:=isMain_;
@@ -103,8 +103,8 @@ DESTRUCTOR T_formMeta.destroy;
 FUNCTION T_formMeta.visible: boolean;
   begin
     result:=(form<>nil) and (form.visible);
-    {$ifdef DEBUGMODE}
-    writeln(stderr,'        DEBUG: Form ',name,' visible= ',result);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: Form ',name,' visible= ',result);
     {$endif}
   end;
 
