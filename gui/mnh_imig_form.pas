@@ -35,7 +35,7 @@ FUNCTION DisplayImageForm: TDisplayImageForm;
     if myDisplayImageForm=nil then begin
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: Creating new instance of TDisplayImageForm'); {$endif}
       myDisplayImageForm:=TDisplayImageForm.create(nil);
-      registerForm(myDisplayImageForm,false,true);
+      registerForm(myDisplayImageForm,'myDisplayImageForm',false,true);
     end;
     result:=myDisplayImageForm;
   end;
