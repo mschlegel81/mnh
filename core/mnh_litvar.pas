@@ -154,6 +154,7 @@ TYPE
     private
       expressionType:T_expressionType;
       declaredAt:T_tokenLocation;
+      myHash:T_hashInt;
     public
       CONSTRUCTOR create(CONST eType:T_expressionType; CONST location:T_tokenLocation);
       PROPERTY typ:T_expressionType read expressionType;
@@ -207,6 +208,8 @@ TYPE
   T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
 
   T_compoundLiteral=object(T_literal)
+    private
+      myHash:T_hashInt;
     public
     containsError:boolean;
     FUNCTION toSet :P_setLiteral;
@@ -808,14 +811,16 @@ CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherite
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
   begin
-    {inherited init}inline_init(lt_expression);
+    inline_init(lt_expression);
+    myHash:=0;
     expressionType:=eType;
     declaredAt:=location;
   end;
 
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
   begin
-    inherited init(lt_emptyList);
+    inline_init(lt_emptyList);
+    myHash  :=0;
     ints    :=0;
     reals   :=0;
     strings :=0;
@@ -828,7 +833,8 @@ CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
 
 CONSTRUCTOR T_setLiteral.create;
   begin
-    inherited init(lt_emptySet);
+    inline_init(lt_emptySet);
+    myHash  :=0;
     ints    :=0;
     reals   :=0;
     strings :=0;
@@ -839,7 +845,8 @@ CONSTRUCTOR T_setLiteral.create;
 
 CONSTRUCTOR T_mapLiteral.create;
   begin
-    inherited init(lt_emptyMap);
+    inline_init(lt_emptyMap);
+    myHash:=0;
     dat.create();
   end;
 //=================================================================:CONSTRUCTORS
@@ -1009,6 +1016,7 @@ PROCEDURE T_listLiteral.removeElement(CONST index:longint);
   VAR i:longint;
   begin
     if (index<0) or (index>=fill) then exit;
+    myHash:=0;
     case dat[index]^.literalType of
       lt_boolean: dec(booleans);
       lt_int    : dec(ints);
@@ -1308,40 +1316,52 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
   VAR i:longint;
       s:string;
   begin
+    if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     s:= toString;
     result:=T_hashInt(lt_expression)+T_hashInt(length(s));
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}{$R+}
+    if result=0 then result:=1;
+    myHash:=result;
   end;
 
 FUNCTION T_listLiteral.hash: T_hashInt;
   VAR i:longint;
   begin
+    if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     result:=T_hashInt(lt_list)+T_hashInt(fill);
     for i:=0 to fill-1 do result:=result*31+dat[i]^.hash;
     {$Q+}{$R+}
+    if result=0 then result:=1;
+    myHash:=result;
   end;
 
 FUNCTION T_setLiteral.hash: T_hashInt;
   VAR entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
   begin
+    if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     result:=T_hashInt(lt_set)+T_hashInt(dat.fill);
     result:=result*31;
     for entry in dat.keyValueList do result:=result+entry.keyHash;
     {$Q+}{$R+}
+    if result=0 then result:=1;
+    myHash:=result;
   end;
 
 FUNCTION T_mapLiteral.hash: T_hashInt;
   VAR entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
   begin
+    if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     result:=T_hashInt(lt_map)+T_hashInt(dat.fill);
     result:=result*31;
     for entry in dat.keyValueList do result:=result+entry.keyHash+entry.value^.hash*37;
     {$Q+}{$R+}
+    if result=0 then result:=1;
+    myHash:=result;
   end;
 
 //=======================================================================:?.hash
@@ -1788,6 +1808,7 @@ PROCEDURE T_listLiteral.modifyType(CONST L: P_literal);
       lt_void      : begin inc(others); literalType:=lt_list; end;
       else           begin inc(others); literalType:=lt_list; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
     end;
+    myHash:=0;
   end;
 
 PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
@@ -1802,6 +1823,7 @@ PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
       lt_void      : begin inc(others); literalType:=lt_set; end;
       else           begin inc(others); literalType:=lt_set; containsError:=containsError or P_compoundLiteral(L)^.containsError; end;
     end;
+    myHash:=0;
   end;
 
 FUNCTION T_compoundLiteral.toSet: P_setLiteral;
@@ -2005,6 +2027,7 @@ PROCEDURE T_listLiteral.sort;
       i, j0, j1, k: longint;
   begin
     if (fill<=1) then exit;
+    myHash:=0;
     scale:=1;
     setLength(temp, fill);
     while scale<fill do begin
@@ -2060,6 +2083,7 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint;
 
   begin
     if fill<=1 then exit;
+    myHash:=0;
     scale:=1;
     setLength(temp, fill);
     while (scale<fill) and adapters.noErrors do begin
@@ -2106,6 +2130,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
 
   begin
     if fill<=1 then exit;
+    myHash:=0;
     scale:=1;
     setLength(temp, fill);
     while (scale<fill) and adapters.noErrors do begin
@@ -2153,6 +2178,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
       i,j0,j1,k: longint;
   begin
     if fill = 0 then exit(newListLiteral);
+    myHash:=0;
     setLength(temp1, fill);
     setLength(temp2, fill);
     for i:=0 to fill-1 do with temp1[i] do begin
@@ -2199,6 +2225,7 @@ PROCEDURE T_listLiteral.unique;
   VAR i,j:longint;
   begin
     if fill<=0 then exit;
+    myHash:=0;
     sort;
     j:=0;
     for i:=1 to fill-1 do
@@ -3095,7 +3122,10 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
   PROCEDURE ensureExclusiveAccess(VAR toMutate:P_compoundLiteral); inline;
     VAR old:P_compoundLiteral;
     begin
-      if toMutate^.numberOfReferences<=1 then exit;
+      if toMutate^.numberOfReferences<=1 then begin
+        toMutate^.myHash:=0;
+        exit;
+      end;
       old:=toMutate;
       toMutate:=old^.clone;
       old^.unreference;

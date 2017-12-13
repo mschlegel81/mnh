@@ -941,7 +941,7 @@ FUNCTION T_expression.equals(CONST other:P_literal):boolean;
       et_normal_private,
       et_inline_for_literal,
       et_inline_for_each,
-      et_inline_for_while: result:=not(isStateful) and (other^.toString()=toString()) or (other=@self);
+      et_inline_for_while: result:=(other=@self) or not(isStateful) and (other^.toString()=toString());
       et_builtinPlain    : result:=other^.toString()=toString();
       et_builtinStateful : result:=other            =@self;
     end;
