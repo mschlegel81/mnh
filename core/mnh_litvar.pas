@@ -154,6 +154,7 @@ TYPE
     private
       expressionType:T_expressionType;
       declaredAt:T_tokenLocation;
+      myHash:T_hashInt;
     public
       CONSTRUCTOR create(CONST eType:T_expressionType; CONST location:T_tokenLocation);
       PROPERTY typ:T_expressionType read expressionType;
@@ -808,7 +809,8 @@ CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherite
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
   begin
-    {inherited init}inline_init(lt_expression);
+    inline_init(lt_expression);
+    myHash:=0;
     expressionType:=eType;
     declaredAt:=location;
   end;
@@ -1308,11 +1310,14 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
   VAR i:longint;
       s:string;
   begin
+    if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     s:= toString;
     result:=T_hashInt(lt_expression)+T_hashInt(length(s));
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}{$R+}
+    if result=0 then result:=1;
+    myHash:=result;
   end;
 
 FUNCTION T_listLiteral.hash: T_hashInt;
