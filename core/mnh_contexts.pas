@@ -93,7 +93,7 @@ TYPE
   P_threadContext=^T_threadContext;
   P_taskQueue=^T_taskQueue;
 
-  T_futureTaskEnvironment=record
+  T_queueTaskEnvironment=record
     callingContext:P_threadContext;
     values        :P_valueStore;
     taskQueue     :P_taskQueue;
@@ -129,7 +129,7 @@ TYPE
       PROCEDURE doneEvaluating;
       FUNCTION getNewAsyncContext:P_threadContext;
 
-      PROCEDURE attachWorkerContext(CONST environment:T_futureTaskEnvironment);
+      PROCEDURE attachWorkerContext(CONST environment:T_queueTaskEnvironment);
       PROCEDURE detachWorkerContext;
 
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
@@ -150,7 +150,7 @@ TYPE
       PROPERTY getParent:P_evaluationContext read parent;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-      FUNCTION getFutureEnvironment:T_futureTaskEnvironment;
+      FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
       PROCEDURE resolveMainParameter(VAR first:P_token);
       FUNCTION dequeueContext:P_threadContext;
   end;
@@ -192,30 +192,31 @@ TYPE
       FUNCTION getTaskQueue:P_taskQueue;
   end;
 
-  T_futureTaskState=(fts_pending, //set on construction
+  T_queueTaskState=(fts_pending, //set on construction
                      fts_evaluating, //set on dequeue
                      fts_ready); //set after evaluation
-  P_futureTask=^T_futureTask;
-  T_futureTask=object
+  P_queueTask=^T_queueTask;
+  T_queueTask=object
     protected
       taskCs:TRTLCriticalSection;
-      env   :T_futureTaskEnvironment;
-      state :T_futureTaskState;
+      env   :T_queueTaskEnvironment;
+      state :T_queueTaskState;
       evaluationResult:P_literal;
     private
-      nextToEvaluate  :P_futureTask;
+      nextToEvaluate  :P_queueTask;
     public
       PROCEDURE evaluate(VAR context:T_threadContext); virtual; abstract;
-      CONSTRUCTOR create(CONST environment:T_futureTaskEnvironment);
+      CONSTRUCTOR create(CONST environment:T_queueTaskEnvironment);
       PROCEDURE reset;
       FUNCTION    canGetResult:boolean;
       FUNCTION    getResultAsLiteral:P_literal;
-      DESTRUCTOR  destroy;
+      FUNCTION    isVolatile:boolean; virtual;
+      DESTRUCTOR  destroy; virtual;
   end;
 
   T_taskQueue=object
     private
-      first,last:P_futureTask;
+      first,last:P_queueTask;
       queuedCount:longint;
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
@@ -223,10 +224,10 @@ TYPE
     public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  dequeue:P_futureTask;
+    FUNCTION  dequeue:P_queueTask;
     PROCEDURE activeDeqeue(VAR context:T_threadContext);
     PROPERTY getQueuedCount:longint read queuedCount;
-    PROCEDURE enqueue(CONST task:P_futureTask; CONST context:P_threadContext);
+    PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   end;
 
 VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; VAR context:T_threadContext);
@@ -515,7 +516,7 @@ FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
   end;
 
-PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_futureTaskEnvironment);
+PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_queueTaskEnvironment);
   begin
     callingContext:=environment.callingContext;
     parent        :=callingContext^.parent;
@@ -591,7 +592,7 @@ FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se:T_sideE
     allowedSideEffects:=se;
   end;
 
-FUNCTION T_threadContext.getFutureEnvironment:T_futureTaskEnvironment;
+FUNCTION T_threadContext.getFutureEnvironment:T_queueTaskEnvironment;
   begin
     result.callingContext:=@self;
     result.values:=valueStore^.readOnlyClone;
@@ -690,7 +691,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
   //means that 0.511 seconds have passed since the last activity
   CONST SLEEP_TIME_TO_QUIT=73;
   VAR sleepTime:longint;
-      currentTask:P_futureTask;
+      currentTask:P_queueTask;
       tempcontext:T_threadContext;
   begin
     sleepTime:=0;
@@ -704,6 +705,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           sleep(sleepTime div 5);
         end else begin
           currentTask^.evaluate(tempcontext);
+          if currentTask^.isVolatile then dispose(currentTask,destroy);
           sleepTime:=0;
         end;
       until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue^.destructionPending) or not(adapters^.noErrors);
@@ -713,27 +715,27 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     end;
   end;
 
-CONSTRUCTOR T_futureTask.create(CONST environment:T_futureTaskEnvironment);
+CONSTRUCTOR T_queueTask.create(CONST environment:T_queueTaskEnvironment);
   begin;
     initCriticalSection(taskCs);
     env   :=environment;
   end;
 
-PROCEDURE T_futureTask.reset;
+PROCEDURE T_queueTask.reset;
   begin
     state :=fts_pending;
     evaluationResult:=nil;
     nextToEvaluate  :=nil;
   end;
 
-FUNCTION T_futureTask.canGetResult:boolean;
+FUNCTION T_queueTask.canGetResult:boolean;
   begin
     enterCriticalSection(taskCs);
     result:=state=fts_ready;
     leaveCriticalSection(taskCs);
   end;
 
-FUNCTION T_futureTask.getResultAsLiteral: P_literal;
+FUNCTION T_queueTask.getResultAsLiteral: P_literal;
   VAR sleepTime:longint=0;
   begin
     enterCriticalSection(taskCs);
@@ -748,7 +750,12 @@ FUNCTION T_futureTask.getResultAsLiteral: P_literal;
     leaveCriticalSection(taskCs);
   end;
 
-DESTRUCTOR T_futureTask.destroy;
+FUNCTION T_queueTask.isVolatile:boolean;
+  begin
+    result:=false;
+  end;
+
+DESTRUCTOR T_queueTask.destroy;
   begin
     doneCriticalSection(taskCs);
   end;
@@ -772,7 +779,7 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-PROCEDURE T_taskQueue.enqueue(CONST task:P_futureTask; CONST context:P_threadContext);
+PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   PROCEDURE ensurePoolThreads();
     begin
       if (poolThreadsRunning<workerThreadCount) then begin
@@ -801,7 +808,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_futureTask; CONST context:P_threadCon
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.dequeue: P_futureTask;
+FUNCTION T_taskQueue.dequeue: P_queueTask;
   begin
     system.enterCriticalSection(cs);
     if first=nil then result:=nil
@@ -814,7 +821,7 @@ FUNCTION T_taskQueue.dequeue: P_futureTask;
   end;
 
 PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
-  VAR task:P_futureTask=nil;
+  VAR task:P_queueTask=nil;
   begin
     task:=dequeue;
     if task<>nil then task^.evaluate(context);

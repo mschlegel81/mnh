@@ -1,9 +1,30 @@
 UNIT listProcessing;
 INTERFACE
-USES mnh_constants, mnh_basicTypes,
+USES sysutils,
+     myGenerics,
+     mnh_constants, mnh_basicTypes,
      {$ifdef fullVersion}mnh_settings,{$endif}
-     mnh_litVar,valueStore,
+     mnh_litVar,valueStore,mnh_subrules,
      mnh_aggregators,mnh_contexts;
+TYPE
+  T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
+
+  P_futureLiteral=^T_futureLiteral;
+  T_futureLiteral=object(T_builtinGeneratorExpression)
+    private
+      criticalSection:TRTLCriticalSection;
+      func:P_expressionLiteral;
+      param:P_listLiteral;
+      resultValue:P_literal;
+      state:T_futureLiteralState;
+      isBlocking:boolean;
+    public
+      CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      PROCEDURE executeInContext(CONST context:P_threadContext);
+  end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
                             CONST eachLocation:T_tokenLocation;
@@ -22,42 +43,52 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
                                 VAR context:T_threadContext;
                                 CONST output:P_compoundLiteral);
 PROCEDURE aggregate(CONST inputIterator:P_expressionLiteral; CONST aggregator:P_aggregator; CONST location:T_tokenLocation; VAR context:T_threadContext);
+PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_threadContext);
 
 VAR newIterator:FUNCTION (CONST input:P_literal):P_expressionLiteral;
 IMPLEMENTATION
 TYPE
   P_eachTask=^T_eachTask;
-  T_eachTask=object(T_futureTask)
+  T_eachTask=object(T_queueTask)
     eachPayload:record
       eachIndex:longint;
       eachRule:P_expressionLiteral;
       eachParameter:P_literal;
     end;
     nextToAggregate:P_eachTask;
-    CONSTRUCTOR createEachTask(CONST environment:T_futureTaskEnvironment);
+    CONSTRUCTOR createEachTask(CONST environment:T_queueTaskEnvironment);
     PROCEDURE dropEachParameter;
     PROCEDURE define(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal);
     PROCEDURE evaluate(VAR context:T_threadContext); virtual;
-    DESTRUCTOR destroy;
+    DESTRUCTOR destroy; virtual;
   end;
 
   P_mapTask=^T_mapTask;
-  T_mapTask=object(T_futureTask)
+  T_mapTask=object(T_queueTask)
     mapPayload:record
       mapRule:P_expressionLiteral;
       mapParameter:P_literal;
     end;
     nextToAggregate:P_mapTask;
-    CONSTRUCTOR createMapTask(CONST environment:T_futureTaskEnvironment; CONST expr:P_expressionLiteral);
+    CONSTRUCTOR createMapTask(CONST environment:T_queueTaskEnvironment; CONST expr:P_expressionLiteral);
     PROCEDURE define(CONST x:P_literal);
     PROCEDURE evaluate(VAR context:T_threadContext); virtual;
-    DESTRUCTOR destroy;
+    DESTRUCTOR destroy; virtual;
   end;
 
   P_filterTask=^T_filterTask;
   T_filterTask=object(T_mapTask)
-    CONSTRUCTOR createFilterTask(CONST environment:T_futureTaskEnvironment; CONST expr:P_expressionLiteral);
+    CONSTRUCTOR createFilterTask(CONST environment:T_queueTaskEnvironment; CONST expr:P_expressionLiteral);
     PROCEDURE evaluate(VAR context:T_threadContext); virtual;
+  end;
+
+  P_futureTask=^T_futureTask;
+  T_futureTask=object(T_queueTask)
+    payload:P_futureLiteral;
+    CONSTRUCTOR create(CONST environment:T_queueTaskEnvironment; CONST future:P_futureLiteral);
+    PROCEDURE   evaluate(VAR context:T_threadContext); virtual;
+    FUNCTION    isVolatile:boolean; virtual;
+    DESTRUCTOR  destroy; virtual;
   end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral;
@@ -126,7 +157,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       end;
     end;
 
-  VAR environment:T_futureTaskEnvironment;
+  VAR environment:T_queueTaskEnvironment;
 
   FUNCTION createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal):P_eachTask; inline;
     begin
@@ -233,7 +264,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       end;
     end;
 
-  VAR environment:T_futureTaskEnvironment;
+  VAR environment:T_queueTaskEnvironment;
 
   FUNCTION createTask(CONST x:P_literal):P_mapTask; inline;
     begin
@@ -325,7 +356,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       end;
     end;
 
-  VAR environment:T_futureTaskEnvironment;
+  VAR environment:T_queueTaskEnvironment;
 
   FUNCTION createTask(CONST x:P_literal):P_filterTask; inline;
     begin
@@ -381,7 +412,52 @@ PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: 
     if x<>nil then disposeLiteral(x);
   end;
 
-CONSTRUCTOR T_filterTask.createFilterTask(CONST environment: T_futureTaskEnvironment; CONST expr: P_expressionLiteral);
+PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_threadContext);
+  VAR env:T_queueTaskEnvironment;
+      task:P_futureTask;
+  begin
+    env:=context.getFutureEnvironment;
+    new(task,create(env,future));
+    env.taskQueue^.enqueue(task,@context);
+  end;
+
+CONSTRUCTOR T_futureTask.create(CONST environment: T_queueTaskEnvironment; CONST future: P_futureLiteral);
+  begin
+    inherited create(environment);
+    payload:=future;
+  end;
+
+PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext);
+  begin
+    enterCriticalSection(taskCs);
+    state:=fts_evaluating;
+    leaveCriticalSection(taskCs);
+    try
+      context.attachWorkerContext(env);
+      payload^.executeInContext(@context);
+      disposeLiteral(payload);
+      context.detachWorkerContext;
+    finally
+      enterCriticalSection(taskCs);
+      state:=fts_ready;
+      leaveCriticalSection(taskCs);
+    end;
+  end;
+
+FUNCTION T_futureTask.isVolatile: boolean;
+  begin
+    result:=true;
+  end;
+
+DESTRUCTOR T_futureTask.destroy;
+  begin
+    enterCriticalSection(taskCs);
+    dispose(env.values,destroy);
+    leaveCriticalSection(taskCs);
+    inherited destroy;
+  end;
+
+CONSTRUCTOR T_filterTask.createFilterTask(CONST environment: T_queueTaskEnvironment; CONST expr: P_expressionLiteral);
   begin
     createMapTask(environment,expr);
   end;
@@ -406,7 +482,7 @@ PROCEDURE T_filterTask.evaluate(VAR context: T_threadContext);
     end;
   end;
 
-CONSTRUCTOR T_mapTask.createMapTask(CONST environment: T_futureTaskEnvironment; CONST expr: P_expressionLiteral);
+CONSTRUCTOR T_mapTask.createMapTask(CONST environment: T_queueTaskEnvironment; CONST expr: P_expressionLiteral);
   begin
     create(environment);
     mapPayload.mapRule:=expr;
@@ -449,7 +525,7 @@ DESTRUCTOR T_mapTask.destroy;
     inherited destroy;
   end;
 
-CONSTRUCTOR T_eachTask.createEachTask(CONST environment: T_futureTaskEnvironment);
+CONSTRUCTOR T_eachTask.createEachTask(CONST environment: T_queueTaskEnvironment);
   begin
     create(environment);
   end;
@@ -507,6 +583,79 @@ DESTRUCTOR T_eachTask.destroy;
   begin
     dropEachParameter;
     inherited destroy;
+  end;
+
+CONSTRUCTOR T_futureLiteral.create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
+  begin
+    inherited create(loc);
+    initCriticalSection(criticalSection);
+    isBlocking:=blocking;
+    func :=func_;                      func ^.rereference;
+    param:=param_;  if param<>nil then param^.rereference;
+    resultValue:=nil;
+    state:=fls_pending;
+  end;
+
+DESTRUCTOR T_futureLiteral.destroy;
+  begin
+    enterCriticalSection(criticalSection);
+    while state=fls_evaluating do begin
+      leaveCriticalSection(criticalSection);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(criticalSection);
+    end;
+    disposeLiteral(func);
+    if param<>nil then disposeLiteral(param);
+    if resultValue<>nil then disposeLiteral(resultValue);
+    leaveCriticalSection(criticalSection);
+    doneCriticalSection(criticalSection);
+  end;
+
+FUNCTION T_futureLiteral.toString(CONST lengthLimit:longint=maxLongint):string;
+  VAR remaining:longint;
+  begin
+    if isBlocking then result:='future(' else result:='async(';
+    remaining:=lengthLimit-length(result)-1;
+    result:=result+func^.toString(remaining);
+    remaining:=lengthLimit-length(result)-1;
+    result:=result+toParameterListString(param,true,remaining)+')';
+  end;
+
+FUNCTION T_futureLiteral.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
+  begin
+    enterCriticalSection(criticalSection);
+    if isBlocking then begin
+      if state=fls_pending then executeInContext(context)
+      else while state<>fls_done do begin
+        leaveCriticalSection(criticalSection);
+        ThreadSwitch;
+        sleep(1);
+        enterCriticalSection(criticalSection);
+      end;
+    end;
+    if resultValue=nil then result:=newVoidLiteral
+                       else result:=resultValue^.rereferenced;
+    leaveCriticalSection(criticalSection);
+  end;
+
+PROCEDURE T_futureLiteral.executeInContext(CONST context:P_threadContext);
+  begin
+    enterCriticalSection(criticalSection);
+    if state=fls_pending then begin
+      state:=fls_evaluating;
+      leaveCriticalSection(criticalSection);
+    end else begin
+      leaveCriticalSection(criticalSection);
+      exit;
+    end;
+
+    resultValue:=func^.evaluate(getLocation,context,param);
+    if resultValue=nil then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation,C_EMPTY_STRING_ARRAY);
+
+    enterCriticalSection(criticalSection);
+    state:=fls_done;
+    leaveCriticalSection(criticalSection);
   end;
 
 end.
