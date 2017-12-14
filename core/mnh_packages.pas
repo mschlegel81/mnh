@@ -1610,8 +1610,12 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       oldSideEffects:T_sideEffects;
+      needAfterEval:boolean=false;
   begin
-    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then begin
+      load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+      needAfterEval:=true;
+    end;
 
     oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*
     [se_inputViaAsk,
@@ -1636,6 +1640,7 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
     end;
     lexer.destroy;
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
+    if needAfterEval then context.getParent^.afterEvaluation;
   end;
 
 FUNCTION T_package.outline(CONST options:T_outlineOptions):T_arrayOfString;
