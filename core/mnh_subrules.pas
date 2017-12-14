@@ -127,6 +127,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
+      PROCEDURE checkParameters(VAR context:T_threadContext);
   end;
 
   P_builtinExpression=^T_builtinExpression;
@@ -290,12 +291,11 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
     meta.create;
   end;
 
-CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring;
-  CONST rep: P_token; VAR context: T_threadContext);
+CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; VAR context: T_threadContext);
   begin
     init(et_inline_for_each,rep^.location);
     pattern.create;
-    pattern.appendFreeId(parameterId);
+    pattern.appendFreeId(parameterId,rep^.location);
     constructExpression(rep,context);
     resolveIds(nil);
   end;
@@ -321,7 +321,7 @@ PROCEDURE T_inlineExpression.updatePatternForInline;
     pattern.clear;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do
     if token.tokType=tt_parameterIdentifier then begin
-      parIdx:=pattern.indexOfIdForInline(token.txt);
+      parIdx:=pattern.indexOfIdForInline(token.txt,getLocation);
     end else if token.tokType=tt_optionalParameters then begin
       parIdx:=REMAINING_PARAMETERS_IDX;
       pattern.appendOptional;
@@ -628,7 +628,8 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
     if LHS^.literalType=lt_expression then begin
       if RHS^.literalType=lt_expression
       then pattern.combineForInline(P_subruleExpression(LHS)^.pattern,
-                                    P_subruleExpression(RHS)^.pattern)
+                                    P_subruleExpression(RHS)^.pattern,
+                                    P_subruleExpression(LHS)^.getLocation)
       else pattern.clone(P_subruleExpression(LHS)^.pattern);
     end else begin
       if RHS^.literalType=lt_expression
@@ -1076,6 +1077,15 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
 FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
   begin
     result:=pattern.acceptsSingleLiteral(literalTypeToAccept);
+  end;
+
+PROCEDURE T_subruleExpression.checkParameters(VAR context:T_threadContext);
+  VAR t:T_preparedToken;
+      used:T_arrayOfLongint;
+  begin
+    setLength(used,0);
+    for t in preparedBody do with t do if (parIdx>=0) then append(used,parIdx);
+    pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
 
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;

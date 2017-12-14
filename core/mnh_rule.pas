@@ -16,12 +16,15 @@ TYPE
 
   P_rule=^T_rule;
 
+  { T_rule }
+
   T_rule=object(T_abstractRule)
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION getDocTxt: ansistring; virtual; abstract;
     FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
+    PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -43,6 +46,7 @@ TYPE
       FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
+      PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
   end;
 
   P_protectedRuleWithSubrules=^T_protectedRuleWithSubrules;
@@ -115,6 +119,15 @@ IMPLEMENTATION
 OPERATOR =(CONST x,y:T_outlineEntry):boolean;
   begin
     result:=(x.id=y.id) and (x.location=y.location);
+  end;
+
+PROCEDURE T_rule.checkParameters(VAR context:T_threadContext);
+  begin end;
+
+PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_threadContext);
+  VAR s:P_subruleExpression;
+  begin
+    for s in subrules do s^.checkParameters(context);
   end;
 
 CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);

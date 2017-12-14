@@ -1226,6 +1226,14 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       end;
     end;
 
+  PROCEDURE checkParameters;
+    VAR rule:P_rule;
+        pack:P_package;
+    begin
+      for pack in secondaryPackages do for rule in pack^.packageRules.valueSet do rule^.checkParameters(context);
+      for rule in packageRules.valueSet do rule^.checkParameters(context);
+    end;
+
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       newCodeHash:T_hashInt;
@@ -1276,6 +1284,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       if gui_started then begin
         resolveRuleIds(context.adapters);
         complainAboutUnused(context.adapters^);
+        checkParameters;
       end;
       {$endif}
       exit;
