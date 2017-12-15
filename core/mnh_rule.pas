@@ -15,9 +15,6 @@ TYPE
   T_outline=array of T_outlineEntry;
 
   P_rule=^T_rule;
-
-  { T_rule }
-
   T_rule=object(T_abstractRule)
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
@@ -127,6 +124,7 @@ PROCEDURE T_rule.checkParameters(VAR context:T_threadContext);
 PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_threadContext);
   VAR s:P_subruleExpression;
   begin
+    if length(subrules)=1 then
     for s in subrules do s^.checkParameters(context);
   end;
 
