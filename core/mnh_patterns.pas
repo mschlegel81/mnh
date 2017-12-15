@@ -60,6 +60,7 @@ TYPE
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
       FUNCTION getParameterNames:P_listLiteral;
+      FUNCTION getParameterNamesAsString:T_arrayOfString;
       FUNCTION matchesNilPattern:boolean;
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
@@ -68,7 +69,6 @@ TYPE
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
-
       PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
   end;
 
@@ -488,6 +488,13 @@ FUNCTION T_pattern.getParameterNames:P_listLiteral;
   begin
     result:=newListLiteral(length(sig));
     for el in sig do result^.appendString(el.getId);
+  end;
+
+FUNCTION T_pattern.getParameterNamesAsString:T_arrayOfString;
+  VAR el:T_patternElement;
+  begin
+    setLength(result,0);
+    for el in sig do if el.id<>'' then myGenerics.append(result,ansistring(el.id));
   end;
 
 PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);

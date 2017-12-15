@@ -15,6 +15,7 @@ TYPE
     tkUserRule,
     tkBultinRule,
     tkSpecialRule,
+    tkLocalVar,
     tkOperator,
     tkNonStringLiteral,
     tkString,
@@ -105,6 +106,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkUserRule        ,s]:=TSynHighlighterAttributes.create('UserRule');
       styleTable[tkBultinRule      ,s]:=TSynHighlighterAttributes.create('BultinRule');
       styleTable[tkSpecialRule     ,s]:=TSynHighlighterAttributes.create('SpecialRule');
+      styleTable[tkLocalVar        ,s]:=TSynHighlighterAttributes.create('LocalVar');
       styleTable[tkOperator        ,s]:=TSynHighlighterAttributes.create('Operator');
       styleTable[tkNonStringLiteral,s]:=TSynHighlighterAttributes.create('NonStringLiteral');
       styleTable[tkString          ,s]:=TSynHighlighterAttributes.create('String');
@@ -135,6 +137,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkDefault         ,s].foreground:=$00000000;
       styleTable[tkDollarIdentifier,s].foreground:=$00000000;
       styleTable[tkUserRule        ,s].foreground:=$00FF0000;
+      styleTable[tkLocalVar        ,s].foreground:=$00880000;
       styleTable[tkBultinRule      ,s].foreground:=$00FF0000;
       styleTable[tkSpecialRule     ,s].foreground:=$00FF0000;
       styleTable[tkOperator        ,s].foreground:=$00880000;
@@ -304,7 +307,8 @@ PROCEDURE TSynMnhSyn.next;
           inc(run);
         end;
         if tokenTypeMap.containsKey(localId,fTokenId) then begin end
-        else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId) then fTokenId := tkUserRule
+        else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId)                then fTokenId:=tkUserRule
+        else if (codeAssistant<>nil) and codeAssistant^.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
       end;

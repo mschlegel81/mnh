@@ -1427,7 +1427,7 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.recycler,context.adapters^);
+    statement:=lexer.getNextStatement(context.recycler,context.adapters^,nil);
     lexer.destroy;
     if statement.firstToken=nil then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);
@@ -1459,7 +1459,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
                     else last^.next:=subTokens;
       last:=subTokens^.last;
     end;
-    preprocessStatement(result,context.adapters^);
+    preprocessStatement(result,context.adapters^,nil);
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;

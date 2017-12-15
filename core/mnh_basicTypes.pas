@@ -37,6 +37,8 @@ OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
 OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
 OPERATOR < (CONST x,y:T_tokenLocation):boolean;
+FUNCTION positionIsBeforeOrAtLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
+FUNCTION positionIsBeforeLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
 IMPLEMENTATION
 FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
@@ -88,6 +90,20 @@ OPERATOR < (CONST x,y:T_tokenLocation):boolean;
     if (x.line            <y.line            ) then exit(true);
     if (x.line            >y.line            ) then exit(false);
     result:=x.column      <y.column;
+  end;
+
+FUNCTION positionIsBeforeOrAtLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
+  begin
+    if (posLine      <=location.line) then exit(true);
+    if (posLine      >=location.line) then exit(false);
+    result:=posColumn<=location.column;
+  end;
+
+FUNCTION positionIsBeforeLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
+  begin
+    if (posLine      <location.line) then exit(true);
+    if (posLine      >location.line) then exit(false);
+    result:=posColumn<location.column;
   end;
 
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
