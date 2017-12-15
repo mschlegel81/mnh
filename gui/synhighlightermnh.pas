@@ -254,7 +254,6 @@ PROCEDURE TSynMnhSyn.next;
       if run>0 then exit;
     end;
     if (flavour<>msf_debug) and (blobEnder<>#0) then begin
-      writeln('Skipping highlighting in blob...');
       if fLine[run]=#0 then begin
         fTokenId := tkNull;
         exit;
