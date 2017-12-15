@@ -71,11 +71,11 @@ TYPE
       CONSTRUCTOR create(CONST sourcePackage:P_abstractPackage; CONST inPackage:P_abstractPackage);
       CONSTRUCTOR create(CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
-      FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters; CONST localIdInfos:P_localIdInfos):T_enhancedStatement;
+      FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}):T_enhancedStatement;
       FUNCTION getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint):P_token;
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters; CONST localIdInfos:P_localIdInfos);
+PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
 IMPLEMENTATION
@@ -521,13 +521,13 @@ DESTRUCTOR T_lexer.destroy;
     end;
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters; CONST localIdInfos:P_localIdInfos);
+PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR t:P_token;
       localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
       lastLocation:T_tokenLocation;
   begin
-    localIdStack.create(localIdInfos);
+    localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
     while (t<>nil) do case t^.tokType of
       tt_beginBlock: begin
@@ -561,12 +561,12 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters; CON
     localIdStack.destroy;
   end;
 
-FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters; CONST localIdInfos:P_localIdInfos): T_enhancedStatement;
+FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
       lastLocation:T_tokenLocation;
   begin
-    localIdStack.create(localIdInfos);
+    localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     while fetchNext(recycler,adapters) and (lastTokenized<>nil) do case lastTokenized^.tokType of
       tt_beginBlock: begin
         localIdStack.clear;

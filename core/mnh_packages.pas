@@ -10,7 +10,7 @@ USES //basic classes
      mnh_caches,
      mnh_tokens, mnh_contexts,
      mnh_profiling,
-     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
+     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore, tokenStack,{$else}mySys,{$endif}
      mnh_funcs,
 
      mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
@@ -21,7 +21,6 @@ USES //basic classes
      mnh_patterns,
      mnh_subrules,
      mnh_rule,
-     tokenStack,
      mnh_tokenArray;
 
 {$define include_interface}
@@ -65,11 +64,11 @@ TYPE
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR context:T_threadContext);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
-      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST localIdInfos:P_localIdInfos=nil);
+      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
-      PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString; CONST localIdInfos:P_localIdInfos=nil);
+      PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
@@ -875,13 +874,15 @@ DESTRUCTOR T_packageReference.destroy;
     pack:=nil;
   end;
 
-PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST localIdInfos:P_localIdInfos=nil);
+PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
   VAR extendsLevel:byte=0;
       profile:boolean=false;
 
   PROCEDURE interpretIncludeClause;
     VAR locationForErrorFeedback:T_tokenLocation;
+        {$ifdef fullVersion}
         clauseEnd:T_tokenLocation;
+        {$endif}
         newId:string;
         first:P_token;
         helperUse:T_packageReference;
@@ -896,11 +897,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       first:=statement.firstToken;
       locationForErrorFeedback:=first^.location;
+      {$ifdef fullVersion}
       if (localIdInfos<>nil) and (first^.next<>nil) then begin
         clauseEnd:=first^.last^.location;
         inc(clauseEnd.column);
         localIdInfos^.add(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include);
       end;
+      {$endif}
       if extendsLevel>=32 then begin
         context.adapters^.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
@@ -923,11 +926,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
       helperUse.destroy;
       lexer.create(importWrapper,@self);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^,localIdInfos);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
       inc(extendsLevel);
       while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
         interpret(stmt,usecase,context);
-        stmt:=lexer.getNextStatement(context.recycler,context.adapters^,localIdInfos);
+        stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
       end;
       dec(extendsLevel);
       lexer.destroy;
@@ -936,7 +939,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
   PROCEDURE interpretUseClause;
     VAR i,j:longint;
         locationForErrorFeedback:T_tokenLocation;
+        {$ifdef fullVersion}
         clauseEnd:T_tokenLocation;
+        {$endif}
         newId:string;
         first:P_token;
 
@@ -979,10 +984,12 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       initialize(newId);
       first:=statement.firstToken;
+      {$ifdef fullVersion}
       if (localIdInfos<>nil) then begin
         clauseEnd:=first^.last^.location;
         inc(clauseEnd.column);
       end;
+      {$endif}
       locationForErrorFeedback:=first^.location;
       first:=context.recycler.disposeToken(first);
       while first<>nil do begin
@@ -1001,7 +1008,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+          {$ifdef fullVersion}
           if localIdInfos<>nil then localIdInfos^.add(first^.singleTokenToString,first^.location,clauseEnd,tt_use);
+          {$endif}
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
           setLength(packageUses,j+1);
@@ -1025,11 +1034,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
   PROCEDURE parseRule;
     VAR p:P_token; //iterator
-        ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation;
+        ruleDeclarationStart:T_tokenLocation;
+        {$ifdef fullVersion}
+        ruleDeclarationEnd:T_tokenLocation;
+        parameterId:T_patternElementLocation;
+        {$endif}
         //rule meta data
         ruleModifiers:T_modifierSet=[];
         ruleId:T_idString='';
-        parameterId:T_patternElementLocation;
         evaluateBody:boolean;
         rulePattern:T_pattern;
         ruleBody:P_token;
@@ -1091,11 +1103,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       rulePattern.create;
       if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,context);
+      {$ifdef fullVersion}
       if (localIdInfos<>nil) and (ruleBody<>nil) then begin
         ruleDeclarationEnd:=ruleBody^.last^.location;
         for parameterId in rulePattern.getNamedParameters do
           localIdInfos^.add(parameterId.id,parameterId.location,ruleDeclarationEnd,tt_parameterIdentifier);
       end;
+      {$endif}
 
       if statement.firstToken<>nil then begin
         statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
@@ -1308,7 +1322,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     statement.firstToken:=nil;
   end;
 
-PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString; CONST localIdInfos:P_localIdInfos);
+PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
@@ -1386,21 +1400,21 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
     lexer.create(@self);
     newCodeHash:=getCodeProvider^.stateHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(context.recycler,context.adapters^,localIdInfos);
+    stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
     if isPlainScriptStatement then begin
       case usecase of
         lu_forImport         : context.adapters^.raiseError('Cannot import package declared as "plain script"',stmt.firstToken^.location);
         lu_forCallingMain    : usecase:=lu_forDirectExecution;
       end;
       context.recycler.cascadeDisposeToken(stmt.firstToken);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^,localIdInfos);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
     end;
     if profile then context.timeBaseComponent(pc_tokenizing);
 
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
-      interpret(stmt,usecase,context,localIdInfos);
+      interpret(stmt,usecase,context{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^,localIdInfos);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
     end;
     lexer.destroy;
@@ -1769,10 +1783,10 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
      se_executableDependent,
      se_versionDependent]);
     lexer.create(input,packageTokenLocation(@self),@self);
-    stmt:=lexer.getNextStatement(context.recycler,context.adapters^,nil);
+    stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
       interpret(stmt,lu_forDirectExecution,context);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^,nil);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
     end;
     lexer.destroy;
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);

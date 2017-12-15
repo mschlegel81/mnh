@@ -55,6 +55,7 @@ TYPE
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
 
+  {$ifdef fullVersion}
   T_localIdInfo=record
                   name:string;
                   validFrom,validUntil:T_tokenLocation;
@@ -73,11 +74,15 @@ TYPE
       PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
       PROCEDURE clear;
   end;
+  {$endif}
 
   T_idStack=object
     ids:array of array of record name:T_idString; used:boolean; location:T_tokenLocation end;
+    {$ifdef fullVersion}
     localIdInfos:P_localIdInfos;
-    CONSTRUCTOR create(CONST info:P_localIdInfos);
+    {$endif}
+
+    CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
     DESTRUCTOR destroy;
     PROCEDURE clear;
     PROCEDURE scopePush;
@@ -89,6 +94,7 @@ TYPE
   end;
 
 IMPLEMENTATION
+{$ifdef fullVersion}
 CONSTRUCTOR T_localIdInfos.create;
   begin clear; end;
 
@@ -134,6 +140,7 @@ PROCEDURE T_localIdInfos.clear;
   begin
     setLength(infos,0);
   end;
+{$endif}
 
 CONSTRUCTOR T_callStack.create;
   begin
@@ -278,10 +285,12 @@ FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint)
     result:=result+' § '+tokensToString(first,lengthLimit);
   end;
 
-CONSTRUCTOR T_idStack.create(CONST info:P_localIdInfos);
+CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
   begin
     setLength(ids,0);
+    {$ifdef fullVersion}
     localIdInfos:=info;
+    {$endif}
   end;
 
 DESTRUCTOR T_idStack.destroy;
@@ -308,7 +317,9 @@ PROCEDURE T_idStack.scopePop(VAR adapters:T_adapters; CONST location:T_tokenLoca
     topIdx:=length(ids)-1;
     for i:=0 to length(ids[topIdx])-1 do begin
       if not(ids[topIdx,i].used) then adapters.raiseWarning('Unused local variable '+ids[topIdx,i].name,ids[topIdx,i].location);
+      {$ifdef fullVersion}
       if localIdInfos<>nil then localIdInfos^.add(ids[topIdx,i].name,ids[topIdx,i].location,location,tt_blockLocalVariable);
+      {$endif}
     end;
     setLength(ids,topIdx);
   end;
