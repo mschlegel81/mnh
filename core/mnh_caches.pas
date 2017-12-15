@@ -68,7 +68,9 @@ CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
 
 DESTRUCTOR T_cache.destroy;
   begin
+    enterCriticalSection(allCacheCs);
     dropValues(allCaches,@self);
+    leaveCriticalSection(allCacheCs);
     clear;
   end;
 
