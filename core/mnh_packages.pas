@@ -36,6 +36,7 @@ TYPE
     locationOfDeclaration:T_tokenLocation;
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    FUNCTION hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
     DESTRUCTOR destroy;
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
   end;
@@ -450,10 +451,36 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
 
+  FUNCTION hasImport(CONST idOrPath:string):boolean;
+    VAR ref:T_packageReference;
+    begin
+      for ref in package^.packageUses do if ref.hasIdOrPath(idOrPath,package) then begin
+        info.location.column:=1;
+        info.location.line  :=1;
+        info.location.fileName:=ref.path;
+        exit(true);
+      end;
+      result:=false;
+    end;
+
+  FUNCTION hasInclude(CONST idOrPath:string):boolean;
+    VAR e:P_extendedPackage;
+        dummy:longint;
+    begin
+      for e in package^.extendedPackages do if (e^.getId=idOrPath) or (e^.getPath=unescapeString(idOrPath,1,dummy)) then begin
+        info.location.column:=1;
+        info.location.line  :=1;
+        info.location.fileName:=e^.getPath;
+        exit(true);
+      end;
+      result:=false;
+    end;
+
   VAR lexer:T_lexer;
       tokenToExplain:P_token;
       loc:T_tokenLocation;
       i:longint;
+      isLinkToPackage:boolean=false;
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     enterCriticalSection(cs);
@@ -468,8 +495,8 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       info.endLoc  :=info.startLoc;
       info.endLoc.column:=i;
       info.tokenText:=safeTokenToString(tokenToExplain);
-      if (tokenToExplain^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier]) then
-      case localIdInfos^.localTypeOf(tokenToExplain^.txt,CaretY,CaretX,loc) of
+      if (tokenToExplain^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier,tt_literal]) then
+      case localIdInfos^.localTypeOf(info.tokenText,CaretY,CaretX,loc) of
         tt_blockLocalVariable: begin
           tokenToExplain^.tokType:=tt_blockLocalVariable;
           loc.package:=package;
@@ -478,34 +505,59 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
           tokenToExplain^.tokType:=tt_parameterIdentifier;
           loc.package:=package;
         end;
+        tt_use: begin
+          tokenToExplain^.tokType:=tt_use;
+          info.tokenExplanation:='Imported package';
+          loc.package:=package;
+          info.location:=loc;
+          isLinkToPackage:=true;
+          if hasImport(info.tokenText) then
+            info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+ansistring(info.location)
+          else
+            info.tokenExplanation:=info.tokenExplanation+' (erroneous)';
+        end;
+        tt_include:begin
+          tokenToExplain^.tokType:=tt_include;
+          info.tokenExplanation:='Included package';
+          loc.package:=package;
+          info.location:=loc;
+          isLinkToPackage:=true;
+          if hasInclude(info.tokenText) then
+            info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+ansistring(info.location)
+          else
+            info.tokenExplanation:=info.tokenExplanation+' (erroneous)';
+
+        end;
       end;
 
-      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
-      for i:=0 to length(C_specialWordInfo)-1 do
-        if C_specialWordInfo[i].txt=info.tokenText then
-        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+      if not(isLinkToPackage) then begin
+        info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
+        for i:=0 to length(C_specialWordInfo)-1 do
+          if C_specialWordInfo[i].txt=info.tokenText then
+          info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
 
-      case tokenToExplain^.tokType of
-        tt_intrinsicRule: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          appendBuiltinRuleInfo;
-        end;
-        tt_blockLocalVariable, tt_parameterIdentifier: begin
-           info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+'Declared '+ansistring(loc);
-        end;
-        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
-          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
-          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
-        end;
-        tt_type,tt_typeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
-        end;
-        tt_modifier: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+        case tokenToExplain^.tokType of
+          tt_intrinsicRule: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            appendBuiltinRuleInfo;
+          end;
+          tt_blockLocalVariable, tt_parameterIdentifier: begin
+             info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+'Declared '+ansistring(loc);
+          end;
+          tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
+            info.location:=P_rule(tokenToExplain^.data)^.getLocation;
+            if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
+          end;
+          tt_type,tt_typeCheck: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
+          end;
+          tt_modifier: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+          end;
         end;
       end;
     end else begin
@@ -802,6 +854,20 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     pack:=nil;
   end;
 
+FUNCTION T_packageReference.hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
+  VAR p:string;
+      dummy:longint;
+  begin
+    result:=false;
+    if id  =idOrPath then exit(true);
+    p:=unescapeString(idOrPath,1,dummy);
+    if (              path =               p ) or
+      (expandFileName(path)=expandFileName(p)) then exit(true);
+    p:=extractFilePath(importingPackage^.getPath)+p;
+    result:=(         path =               p ) or
+      (expandFileName(path)=expandFileName(p));
+  end;
+
 DESTRUCTOR T_packageReference.destroy;
   begin
     id:='';
@@ -815,6 +881,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
   PROCEDURE interpretIncludeClause;
     VAR locationForErrorFeedback:T_tokenLocation;
+        clauseEnd:T_tokenLocation;
         newId:string;
         first:P_token;
         helperUse:T_packageReference;
@@ -829,6 +896,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       first:=statement.firstToken;
       locationForErrorFeedback:=first^.location;
+      if (localIdInfos<>nil) and (first^.next<>nil) then begin
+        clauseEnd:=first^.last^.location;
+        inc(clauseEnd.column);
+        localIdInfos^.add(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include);
+      end;
       if extendsLevel>=32 then begin
         context.adapters^.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
@@ -864,6 +936,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
   PROCEDURE interpretUseClause;
     VAR i,j:longint;
         locationForErrorFeedback:T_tokenLocation;
+        clauseEnd:T_tokenLocation;
         newId:string;
         first:P_token;
 
@@ -906,6 +979,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       initialize(newId);
       first:=statement.firstToken;
+      if (localIdInfos<>nil) then begin
+        clauseEnd:=first^.last^.location;
+        inc(clauseEnd.column);
+      end;
       locationForErrorFeedback:=first^.location;
       first:=context.recycler.disposeToken(first);
       while first<>nil do begin
@@ -913,6 +990,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
           newId:=first^.txt;
           {$ifdef fullVersion}
+          if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
             if not(gui_started) and (usecase<>lu_forCodeAssistance) then context.adapters^.logGuiNeeded;
           end else
@@ -923,6 +1001,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+          if localIdInfos<>nil then localIdInfos^.add(first^.singleTokenToString,first^.location,clauseEnd,tt_use);
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
           setLength(packageUses,j+1);
