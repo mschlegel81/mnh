@@ -288,7 +288,7 @@ FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint)
       prevWasIdLike:=false;
       for i:=i0 to topIndex do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
     end else result:='';
-    result:=result+' # '+tokensToString(first,lengthLimit);
+    result:=result+' § '+tokensToString(first,lengthLimit);
   end;
 
 CONSTRUCTOR T_idStack.create(CONST info:P_localIdInfos);

@@ -27,7 +27,7 @@ TYPE
     tkTimingNote,
     tkHighlightedItem);
   T_tokenSubKind =(skNormal,skWarn,skError);
-  T_mnhSynFlavour=(msf_input,msf_output,msf_help);
+  T_mnhSynFlavour=(msf_input,msf_output,msf_help,msf_debug);
 
 CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
 {mc_echo   }tkDefault,
@@ -53,11 +53,6 @@ TYPE
     fTokenId: T_tokenKind;
     fTokenSubId: T_tokenSubKind;
     fLineNumber: integer;
-
-    markedToken:record
-                  line,column:longint;
-                end;
-
     markedWord:string;
 
   protected
@@ -82,7 +77,6 @@ TYPE
     PROCEDURE setRange(value: pointer); override;
     PROCEDURE SetLine(CONST newValue: ansistring; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
-    PROCEDURE setMarkedToken(CONST line,column:longint);
     FUNCTION getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
   end;
 
@@ -151,12 +145,13 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
     end;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
-      styleTable[t,skWarn].style:=styleTable[t,skWarn].style+[fsUnderline];
+      if flavour=msf_debug
+      then styleTable[t,skWarn].background:=$00EEEEEE
+      else styleTable[t,skWarn].style:=styleTable[t,skWarn].style+[fsUnderline];
       styleTable[t,skError].style:=styleTable[t,skError].style+[fsUnderline];
       styleTable[t,skError].background:=$0000FFFF;
     end;
     markedWord:='';
-    setMarkedToken(-1,-1);
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
@@ -187,12 +182,6 @@ FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
   begin
     result:=(s<>markedWord);
     markedWord:=s;
-  end;
-
-PROCEDURE TSynMnhSyn.setMarkedToken(CONST line,column:longint);
-  begin
-    markedToken.line:=line;
-    markedToken.column:=column;
   end;
 
 FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
@@ -264,7 +253,8 @@ PROCEDURE TSynMnhSyn.next;
       end else while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
-    if blobEnder<>#0 then begin
+    if (flavour<>msf_debug) and (blobEnder<>#0) then begin
+      writeln('Skipping highlighting in blob...');
       if fLine[run]=#0 then begin
         fTokenId := tkNull;
         exit;
@@ -293,6 +283,13 @@ PROCEDURE TSynMnhSyn.next;
           while fLine[run] in ['0'..'9'] do inc(run);
         end;
         fTokenId := tkNonStringLiteral;
+      end;
+      #194: begin
+        fTokenId   :=tkError;
+        fTokenSubId:=skError;
+        inc(run);
+        if (fLine[run]=#167) and (flavour=msf_debug) then blobEnder:=#194;
+        if fLine[run]<>#0 then inc(run);
       end;
       '$': begin
         inc(run);
@@ -370,10 +367,12 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
       end;
     end;
-    if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
     if (flavour=msf_input) and (codeAssistant<>nil) then case codeAssistant^.isErrorLocation(fLineNumber,fTokenPos,run) of
       2: fTokenSubId:=skError;
       1: fTokenSubId:=skWarn;
+    end;
+    if (flavour=msf_debug) and (blobEnder=#0) then begin
+      fTokenSubId:=skWarn;
     end;
   end;
 
@@ -408,7 +407,7 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
     if isMarked then result.FrameColor:=$000000ff
                 else begin
                   result.FrameColor:=clNone;
-                  if (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
+                  if (flavour<>msf_debug) and (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
                 end;
   end;
 
