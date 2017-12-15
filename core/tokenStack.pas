@@ -1,6 +1,7 @@
 UNIT tokenStack;
 INTERFACE
-USES //MNH:
+USES myGenerics,
+     //MNH:
      mnh_constants,
      mnh_basicTypes,
      mnh_out_adapters,
@@ -55,15 +56,15 @@ TYPE
   end;
 
   T_idStack=object
-    ids:array of array of ansistring;
+    ids:array of array of record name:ansistring; used:boolean; location:T_tokenLocation end;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE clear;
+    PROCEDURE clear(VAR adapters:T_adapters);
     PROCEDURE scopePush;
-    PROCEDURE scopePop;
+    PROCEDURE scopePop(VAR adapters:T_adapters);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
-    FUNCTION addId(CONST id:ansistring):boolean;
+    FUNCTION addId(CONST id:ansistring; CONST location:T_tokenLocation):boolean;
     FUNCTION hasId(CONST id:ansistring):boolean;
   end;
 
@@ -217,11 +218,15 @@ CONSTRUCTOR T_idStack.create;
   end;
 
 DESTRUCTOR T_idStack.destroy;
-  begin clear;  end;
-
-PROCEDURE T_idStack.clear;
+  VAR i:longint;
   begin
-    while not(scopeBottom) do scopePop;
+    for i:=0 to length(ids)-1 do setLength(ids[i],0);
+    setLength(ids,0);
+  end;
+
+PROCEDURE T_idStack.clear(VAR adapters:T_adapters);
+  begin
+    while not(scopeBottom) do scopePop(adapters);
   end;
 
 PROCEDURE T_idStack.scopePush;
@@ -229,9 +234,13 @@ PROCEDURE T_idStack.scopePush;
     setLength(ids,length(ids)+1);
   end;
 
-PROCEDURE T_idStack.scopePop;
+PROCEDURE T_idStack.scopePop(VAR adapters:T_adapters);
+  VAR topIdx:longint;
+      i:longint;
   begin
-    setLength(ids,length(ids)-1);
+    topIdx:=length(ids)-1;
+    for i:=0 to length(ids[topIdx])-1 do if not(ids[topIdx,i].used) then adapters.raiseWarning('Unused local variable '+ids[topIdx,i].name,ids[topIdx,i].location);
+    setLength(ids,topIdx);
   end;
 
 FUNCTION T_idStack.oneAboveBottom:boolean;
@@ -244,14 +253,16 @@ FUNCTION T_idStack.scopeBottom:boolean;
     result:=length(ids)=0;
   end;
 
-FUNCTION T_idStack.addId(CONST id:ansistring):boolean;
+FUNCTION T_idStack.addId(CONST id:ansistring; CONST location:T_tokenLocation):boolean;
   VAR i,j:longint;
   begin
     i:=length(ids)-1;
-    for j:=0 to length(ids[i])-1 do if ids[i,j]=id then exit(false);
+    for j:=0 to length(ids[i])-1 do if ids[i,j].name=id then exit(false);
     j:=length(ids[i]);
     setLength(ids[i],j+1);
-    ids[i,j]:=id;
+    ids[i,j].name:=id;
+    ids[i,j].used:=false;
+    ids[i,j].location:=location;
     result:=true;
   end;
 
@@ -259,7 +270,10 @@ FUNCTION T_idStack.hasId(CONST id:ansistring):boolean;
   VAR i,j:longint;
   begin
     result:=false;
-    for i:=length(ids)-1 downto 0 do for j:=0 to length(ids[i])-1 do if ids[i,j]=id then exit(true);
+    for i:=length(ids)-1 downto 0 do for j:=0 to length(ids[i])-1 do if ids[i,j].name=id then begin
+      ids[i,j].used:=true;
+      exit(true);
+    end;
   end;
 
 end.

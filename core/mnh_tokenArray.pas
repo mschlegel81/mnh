@@ -530,18 +530,18 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
     t:=token;
     while (t<>nil) do case t^.tokType of
       tt_beginBlock: begin
-        localIdStack.clear;
+        localIdStack.clear(adapters);
         localIdStack.scopePush;
         lastWasLocalModifier:=false;
         t:=t^.next;
         while (t<>nil) and not((t^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
           case t^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
-            tt_endBlock      : localIdStack.scopePop;
+            tt_endBlock      : localIdStack.scopePop(adapters);
             tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
               if lastWasLocalModifier then begin
                 t^.tokType:=tt_blockLocalVariable;
-                if not(localIdStack.addId(t^.txt)) then adapters.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+                if not(localIdStack.addId(t^.txt,t^.location)) then adapters.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
               end else if (localIdStack.hasId(t^.txt)) then
                 t^.tokType:=tt_blockLocalVariable;
           end;
@@ -549,6 +549,7 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
           t:=t^.next;
         end;
         if t<>nil then t:=t^.next;
+        localIdStack.scopePop(adapters);
       end;
       else t:=t^.next;
     end;
@@ -562,22 +563,23 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
     localIdStack.create;
     while fetchNext(recycler,adapters) and (lastTokenized<>nil) do case lastTokenized^.tokType of
       tt_beginBlock: begin
-        localIdStack.clear;
+        localIdStack.clear(adapters);
         localIdStack.scopePush;
         lastWasLocalModifier:=false;
         while fetchNext(recycler,adapters) and (lastTokenized<>nil) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
           case lastTokenized^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
-            tt_endBlock      : localIdStack.scopePop;
+            tt_endBlock      : localIdStack.scopePop(adapters);
             tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
               if lastWasLocalModifier then begin
                 lastTokenized^.tokType:=tt_blockLocalVariable;
-                if not(localIdStack.addId(lastTokenized^.txt)) then adapters.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
+                if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location)) then adapters.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
               end else if (localIdStack.hasId(lastTokenized^.txt)) then
                 lastTokenized^.tokType:=tt_blockLocalVariable;
           end;
           lastWasLocalModifier:=(lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
         end;
+        localIdStack.scopePop(adapters);
       end;
       tt_semicolon: begin
         if beforeLastTokenized<>nil then begin;
