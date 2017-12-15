@@ -104,7 +104,7 @@ TYPE
       editorForUpdate:P_codeProvider;
       checkPending,currentlyProcessing:boolean;
       cs:TRTLCriticalSection;
-      localIdInfos:T_localIdInfos;
+      localIdInfos:P_localIdInfos;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -322,7 +322,7 @@ CONSTRUCTOR T_codeAssistanceData.create;
     userRules.create;
     currentlyProcessing:=false;
     checkPending:=false;
-    localIdInfos.create;
+    new(localIdInfos,create);
     initCriticalSection(cs);
   end;
 
@@ -337,7 +337,7 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     end;
     if package<>nil then dispose(package,destroy);
     userRules.destroy;
-    localIdInfos.destroy;
+    if localIdInfos<>nil then dispose(localIdInfos,destroy);
     leaveCriticalSection(cs);
     doneCriticalSection(cs);
   end;
@@ -425,9 +425,7 @@ FUNCTION T_codeAssistanceData.isErrorLocation(CONST lineIndex, tokenStart, token
 FUNCTION T_codeAssistanceData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
   VAR dummyLocation:T_tokenLocation;
   begin
-    enterCriticalSection(cs);
-    result:=localIdInfos.isLocalId(id,lineIndex,colIdx,dummyLocation);
-    leaveCriticalSection(cs);
+    result:=localIdInfos^.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
   end;
 
 PROCEDURE T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint);
@@ -436,7 +434,7 @@ PROCEDURE T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfStr
     enterCriticalSection(cs);
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
-    for s in localIdInfos.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
+    for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
     leaveCriticalSection(cs);
   end;
 
@@ -470,10 +468,16 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       info.endLoc  :=info.startLoc;
       info.endLoc.column:=i;
       info.tokenText:=safeTokenToString(tokenToExplain);
-      if (tokenToExplain^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier]) and
-         localIdInfos.isLocalId(tokenToExplain^.txt,CaretY,CaretX,loc) then begin
-        tokenToExplain^.tokType:=tt_blockLocalVariable;
-        loc.package:=package;
+      if (tokenToExplain^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier]) then
+      case localIdInfos^.localTypeOf(tokenToExplain^.txt,CaretY,CaretX,loc) of
+        tt_blockLocalVariable: begin
+          tokenToExplain^.tokType:=tt_blockLocalVariable;
+          loc.package:=package;
+        end;
+        tt_parameterIdentifier: begin
+          tokenToExplain^.tokType:=tt_parameterIdentifier;
+          loc.package:=package;
+        end;
       end;
 
       info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
@@ -486,7 +490,7 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
           if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
           appendBuiltinRuleInfo;
         end;
-        tt_blockLocalVariable: begin
+        tt_blockLocalVariable, tt_parameterIdentifier: begin
            info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+'Declared '+ansistring(loc);
         end;
         tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
@@ -588,23 +592,35 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
         end;
       end;
     end;
-
+  VAR newLocalIdInfos:P_localIdInfos;
   begin
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - reset');
+    {$endif}
     new(newPackage,create(provider,nil));
     adapters.clearAll;
     evaluationContext.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
-    caData.localIdInfos.clear;
-    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY,@caData.localIdInfos);
+    new(newLocalIdInfos,create);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - load');
+    {$endif}
+    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
     enterCriticalSection(caData.cs);
-    if caData.package<>nil then dispose(caData.package,destroy);
-    caData.package:=newPackage;
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - copy package');
+    {$endif}
+    if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
+    if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
     caData.currentlyProcessing:=false;
     caData.package^.updateLists(caData.userRules);
     updateErrors;
     caData.stateHash:=caData.package^.getCodeState;
     leaveCriticalSection(caData.cs);
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - done');
+    {$endif}
   end;
 {$endif}
 
@@ -934,7 +950,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         //rule meta data
         ruleModifiers:T_modifierSet=[];
         ruleId:T_idString='';
-        parameterId:ansistring;
+        parameterId:T_patternElementLocation;
         evaluateBody:boolean;
         rulePattern:T_pattern;
         ruleBody:P_token;
@@ -998,8 +1014,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,context);
       if (localIdInfos<>nil) and (ruleBody<>nil) then begin
         ruleDeclarationEnd:=ruleBody^.last^.location;
-        for parameterId in rulePattern.getParameterNamesAsString do
-          localIdInfos^.addParameter(parameterId,ruleDeclarationStart,ruleDeclarationEnd);
+        for parameterId in rulePattern.getNamedParameters do
+          localIdInfos^.add(parameterId.id,parameterId.location,ruleDeclarationEnd,tt_parameterIdentifier);
       end;
 
       if statement.firstToken<>nil then begin

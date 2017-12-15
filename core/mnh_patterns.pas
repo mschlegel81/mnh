@@ -33,6 +33,12 @@ TYPE
       DESTRUCTOR destroy;
   end;
 
+  T_patternElementLocation=object
+    id:T_idString;
+    location:T_tokenLocation;
+  end;
+  T_patternElementLocations=array of T_patternElementLocation;
+
   P_pattern=^T_pattern;
   T_pattern=object
     private
@@ -60,7 +66,7 @@ TYPE
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
       FUNCTION getParameterNames:P_listLiteral;
-      FUNCTION getParameterNamesAsString:T_arrayOfString;
+      FUNCTION getNamedParameters:T_patternElementLocations;
       FUNCTION matchesNilPattern:boolean;
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
@@ -490,11 +496,17 @@ FUNCTION T_pattern.getParameterNames:P_listLiteral;
     for el in sig do result^.appendString(el.getId);
   end;
 
-FUNCTION T_pattern.getParameterNamesAsString:T_arrayOfString;
+FUNCTION T_pattern.getNamedParameters:T_patternElementLocations;
   VAR el:T_patternElement;
+      i:longint=0;
   begin
-    setLength(result,0);
-    for el in sig do if el.id<>'' then myGenerics.append(result,ansistring(el.id));
+    setLength(result,length(sig));
+    for el in sig do if el.id<>'' then begin
+      result[i].location:=el.elementLocation;
+      result[i].id      :=el.id;
+      inc(i);
+    end;
+    setLength(result,i);
   end;
 
 PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);

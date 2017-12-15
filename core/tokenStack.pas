@@ -58,7 +58,7 @@ TYPE
   T_localIdInfo=record
                   name:string;
                   validFrom,validUntil:T_tokenLocation;
-                  isParameterName:boolean;
+                  tokenType:T_tokenType;
                 end;
 
   P_localIdInfos=^T_localIdInfos;
@@ -68,10 +68,9 @@ TYPE
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
-      FUNCTION isLocalId(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):boolean;
+      FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
-      PROCEDURE addLocalId(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation);
-      PROCEDURE addParameter(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation);
+      PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
       PROCEDURE clear;
   end;
 
@@ -96,17 +95,16 @@ CONSTRUCTOR T_localIdInfos.create;
 DESTRUCTOR T_localIdInfos.destroy;
   begin clear; end;
 
-FUNCTION T_localIdInfos.isLocalId(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): boolean;
+FUNCTION T_localIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): T_tokenType;
   VAR entry:T_localIdInfo;
   begin
-    result:=false;
+    result:=tt_literal;
     for entry in infos do
-      if not(entry.isParameterName) and
-         (entry.name=id) and
+      if (entry.name=id) and
          not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
              positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
         declaredAt:=entry.validFrom;
-        exit(true);
+        exit(entry.tokenType);
       end;
   end;
 
@@ -121,26 +119,15 @@ FUNCTION T_localIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       end;
   end;
 
-PROCEDURE T_localIdInfos.addLocalId(CONST id: T_idString; CONST validFrom, validUntil: T_tokenLocation);
+PROCEDURE T_localIdInfos.add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
   VAR i:longint;
   begin
     i:=length(infos);
     setLength(infos,i+1);
-    infos[i].name:=id;
-    infos[i].validFrom:=validFrom;
+    infos[i].name      :=id;
+    infos[i].validFrom :=validFrom;
     infos[i].validUntil:=validUntil;
-    infos[i].isParameterName:=false;
-  end;
-
-PROCEDURE T_localIdInfos.addParameter(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation);
-  VAR i:longint;
-  begin
-    i:=length(infos);
-    setLength(infos,i+1);
-    infos[i].name:=id;
-    infos[i].validFrom:=validFrom;
-    infos[i].validUntil:=validUntil;
-    infos[i].isParameterName:=true;
+    infos[i].tokenType :=typ;
   end;
 
 PROCEDURE T_localIdInfos.clear;
@@ -321,7 +308,7 @@ PROCEDURE T_idStack.scopePop(VAR adapters:T_adapters; CONST location:T_tokenLoca
     topIdx:=length(ids)-1;
     for i:=0 to length(ids[topIdx])-1 do begin
       if not(ids[topIdx,i].used) then adapters.raiseWarning('Unused local variable '+ids[topIdx,i].name,ids[topIdx,i].location);
-      if localIdInfos<>nil then localIdInfos^.addLocalId(ids[topIdx,i].name,ids[topIdx,i].location,location);
+      if localIdInfos<>nil then localIdInfos^.add(ids[topIdx,i].name,ids[topIdx,i].location,location,tt_blockLocalVariable);
     end;
     setLength(ids,topIdx);
   end;
