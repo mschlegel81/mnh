@@ -20,7 +20,6 @@ private getRiddle->rangeGenerator(0,1000).each(i,
 private errPrint(...)->print@(...) orElse false;
 
 private isCorrectSolution(set:IntList(4),text:String)->text.trim=="" ? false : begin
-  local result:=true;
   local valids:=((set&"") | OPLIST | ['','(',')']).toSet;
   local invalids:=text.tokenSplit.trim.each(tok,tok in valids ? void : tok);
   invalids==[]

@@ -36,4 +36,4 @@ dayOfYear(time:NumericOrList)->floor(time-dateOf(time.year,1,1));
 
 //@SuppressUnusedWarning
 //*Returns the calendar week (cf. ISO8601)
-calendarWeek(time:NumericOrList)->(dayOfYear-3) div 7+1;
+calendarWeek(time:NumericOrList)->(time.dayOfYear-3) div 7+1;

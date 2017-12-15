@@ -2,7 +2,7 @@ USE inputs;
 //@demo_for=file processing, string processing, list processing
 readDict(filename)->fileLines(filename).pEach(word,[join(word.chars.sort),word]);
 
-anagramsInDict(list)->fileLines(inputs.dict)
+anagramsInDict(list)->list
                      .pEach(word,[word.chars.sort.join,word])
                      .group(0)
                      .pEach(gr,size(gr)<=1 ? void : gr.getInner(1))
