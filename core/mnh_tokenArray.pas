@@ -71,11 +71,11 @@ TYPE
       CONSTRUCTOR create(CONST sourcePackage:P_abstractPackage; CONST inPackage:P_abstractPackage);
       CONSTRUCTOR create(CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
-      FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters):T_enhancedStatement;
+      FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}):T_enhancedStatement;
       FUNCTION getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint):P_token;
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
+PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters);
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
 IMPLEMENTATION
@@ -521,12 +521,13 @@ DESTRUCTOR T_lexer.destroy;
     end;
   end;
 
-PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
+PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR t:P_token;
       localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
+      lastLocation:T_tokenLocation;
   begin
-    localIdStack.create;
+    localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     t:=token;
     while (t<>nil) do case t^.tokType of
       tt_beginBlock: begin
@@ -535,49 +536,58 @@ PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters);
         lastWasLocalModifier:=false;
         t:=t^.next;
         while (t<>nil) and not((t^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
+          lastLocation:=t^.location;
           case t^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
-            tt_endBlock      : localIdStack.scopePop;
+            tt_endBlock      : localIdStack.scopePop(adapters,t^.location);
             tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
               if lastWasLocalModifier then begin
                 t^.tokType:=tt_blockLocalVariable;
-                if not(localIdStack.addId(t^.txt)) then adapters.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
+                if not(localIdStack.addId(t^.txt,t^.location)) then adapters.raiseError('Invalid re-introduction of local variable "'+t^.txt+'"',t^.location);
               end else if (localIdStack.hasId(t^.txt)) then
                 t^.tokType:=tt_blockLocalVariable;
           end;
           lastWasLocalModifier:=(t^.tokType=tt_modifier) and (t^.getModifier=modifier_local);
           t:=t^.next;
         end;
-        if t<>nil then t:=t^.next;
+
+        if t<>nil then begin
+          localIdStack.scopePop(adapters,t^.location);
+          t:=t^.next;
+        end else localIdStack.scopePop(adapters,lastLocation);
       end;
       else t:=t^.next;
     end;
     localIdStack.destroy;
   end;
 
-FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters): T_enhancedStatement;
+FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       lastWasLocalModifier:boolean=false;
+      lastLocation:T_tokenLocation;
   begin
-    localIdStack.create;
+    localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
     while fetchNext(recycler,adapters) and (lastTokenized<>nil) do case lastTokenized^.tokType of
       tt_beginBlock: begin
         localIdStack.clear;
         localIdStack.scopePush;
         lastWasLocalModifier:=false;
         while fetchNext(recycler,adapters) and (lastTokenized<>nil) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
+          lastLocation:=lastTokenized^.location;
           case lastTokenized^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
-            tt_endBlock      : localIdStack.scopePop;
+            tt_endBlock      : localIdStack.scopePop(adapters,lastLocation);
             tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule:
               if lastWasLocalModifier then begin
                 lastTokenized^.tokType:=tt_blockLocalVariable;
-                if not(localIdStack.addId(lastTokenized^.txt)) then adapters.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
+                if not(localIdStack.addId(lastTokenized^.txt,lastTokenized^.location)) then adapters.raiseError('Invalid re-introduction of local variable "'+lastTokenized^.txt+'"',lastTokenized^.location);
               end else if (localIdStack.hasId(lastTokenized^.txt)) then
                 lastTokenized^.tokType:=tt_blockLocalVariable;
           end;
           lastWasLocalModifier:=(lastTokenized^.tokType=tt_modifier) and (lastTokenized^.getModifier=modifier_local);
         end;
+        if (lastTokenized<>nil) then localIdStack.scopePop(adapters,lastTokenized^.location)
+                                else localIdStack.scopePop(adapters,lastLocation);
       end;
       tt_semicolon: begin
         if beforeLastTokenized<>nil then begin;

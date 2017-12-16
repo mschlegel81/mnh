@@ -1223,99 +1223,51 @@ end}
     stack.destroy;
   end;
 
-TYPE P_asyncTask=^T_asyncTask;
-     T_asyncTask=object(T_builtinGeneratorExpression)
-       private
-         criticalSection:TRTLCriticalSection;
-         func:P_expressionLiteral;
-         param:P_listLiteral;
-         myContext:P_threadContext;
-         resultValue:P_literal;
-         evaluationFinished:boolean;
-         isBlocking:boolean;
-       public
-         CONSTRUCTOR create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
-         DESTRUCTOR destroy; virtual;
-         FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-         FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
-     end;
-
-CONSTRUCTOR T_asyncTask.create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST context_:P_threadContext; CONST loc:T_tokenLocation; CONST blocking:boolean);
-  begin
-    inherited create(loc);
-    initCriticalSection(criticalSection);
-    isBlocking:=blocking;
-    func :=func_;                      func ^.rereference;
-    param:=param_;  if param<>nil then param^.rereference;
-    myContext:=context_;
-    resultValue:=nil;
-    evaluationFinished:=false;
-  end;
-
-DESTRUCTOR T_asyncTask.destroy;
-  begin
-    enterCriticalSection(criticalSection);
-    if myContext<>nil then begin
-      myContext^.adapters^.haltEvaluation;
-      while not(evaluationFinished) do begin
-        leaveCriticalSection(criticalSection);
-        ThreadSwitch;
-        sleep(1);
-        enterCriticalSection(criticalSection);
-      end;
-      dispose(myContext,destroy);
-      myContext:=nil;
-    end;
-    disposeLiteral(func);
-    if param<>nil then disposeLiteral(param);
-    if resultValue<>nil then disposeLiteral(resultValue);
-    leaveCriticalSection(criticalSection);
-    doneCriticalSection(criticalSection);
-  end;
-
-FUNCTION T_asyncTask.toString(CONST lengthLimit:longint=maxLongint):string;
-  VAR remaining:longint;
-  begin
-    if isBlocking then result:='future(' else result:='async(';
-    remaining:=lengthLimit-length(result)-1;
-    result:=result+func^.toString(remaining);
-    remaining:=lengthLimit-length(result)-1;
-    result:=result+toParameterListString(param,true,remaining)+')';
-  end;
-
-FUNCTION T_asyncTask.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
-  begin
-    enterCriticalSection(criticalSection);
-    if isBlocking then while not(evaluationFinished) do begin
-      leaveCriticalSection(criticalSection);
-      ThreadSwitch;
-      sleep(1);
-      enterCriticalSection(criticalSection);
-    end;
-    if resultValue=nil then result:=newVoidLiteral
-                       else result:=resultValue^.rereferenced;
-    leaveCriticalSection(criticalSection);
+TYPE
+  P_asyncTask=^T_asyncTask;
+  T_asyncTask=record
+    payload:P_futureLiteral;
+    myContext:P_threadContext;
   end;
 
 FUNCTION doAsync(p:pointer):ptrint;
   begin
     result:=0;
     with P_asyncTask(p)^ do begin
-      resultValue:=func^.evaluate(getLocation,myContext,param);
-      if resultValue=nil then myContext^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation,C_EMPTY_STRING_ARRAY);
-      enterCriticalSection(criticalSection);
-      evaluationFinished:=true;
+      payload^.executeInContext(myContext);
       myContext^.doneEvaluating;
+
+      disposeLiteral(payload);
       dispose(myContext,destroy);
       myContext:=nil;
-      leaveCriticalSection(criticalSection);
     end;
-    disposeLiteral(P_asyncTask(p));
+    freeMem(p,sizeOf(T_asyncTask));
   end;
 
 {$i mnh_func_defines.inc}
-FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST wantFuture:boolean):P_literal;
-  VAR p:P_asyncTask;
+//FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST wantFuture:boolean):P_literal;
+//  VAR p:P_futureLiteral;
+//      childContext:P_threadContext;
+//      parameters:P_listLiteral=nil;
+//  begin
+//    result:=nil;
+//    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+//       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
+//      childContext:=context.getNewAsyncContext;
+//      if childContext<>nil then begin
+//        if params^.size=2 then parameters:=list1;
+//        new(p,create(P_expressionLiteral(arg0),parameters,childContext,tokenLocation,wantFuture));
+//        beginThread(@doAsync,p);
+//        result:=p^.rereferenced;
+//      end else begin
+//        context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
+//      end;
+//    end;
+//  end;
+
+FUNCTION async_imp intFuncSignature;
+  VAR payload:P_futureLiteral;
+      task:P_asyncTask;
       childContext:P_threadContext;
       parameters:P_listLiteral=nil;
   begin
@@ -1325,17 +1277,34 @@ FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         if params^.size=2 then parameters:=list1;
-        new(p,create(P_expressionLiteral(arg0),parameters,childContext,tokenLocation,wantFuture));
-        beginThread(@doAsync,p);
-        result:=p^.rereferenced;
+        new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
+        getMem(task,sizeOf(T_asyncTask));
+        task^.myContext:=childContext;
+        task^.payload  :=payload;
+        beginThread(@doAsync,task);
+        result:=payload^.rereferenced;
       end else begin
         context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
       end;
     end;
   end;
 
-FUNCTION async_imp intFuncSignature;  begin result:=asyncOrFuture(params,tokenLocation,context,false); end;
-FUNCTION future_imp intFuncSignature; begin result:=asyncOrFuture(params,tokenLocation,context,true);  end;
+FUNCTION future_imp intFuncSignature;
+  VAR future:P_futureLiteral;
+      parameters:P_listLiteral=nil;
+  begin
+    result:=nil;
+    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
+       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
+      if params^.size=2 then parameters:=list1;
+      new(future,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}true));
+      if (tco_spawnWorker in context.threadOptions) then begin
+        future^.rereference;
+        enqueueFutureTask(future,context);
+      end;
+      result:=future;
+    end;
+  end;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;

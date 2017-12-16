@@ -10,7 +10,7 @@ USES //basic classes
      mnh_caches,
      mnh_tokens, mnh_contexts,
      mnh_profiling,
-     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore,{$else}mySys,{$endif}
+     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore, tokenStack,{$else}mySys,{$endif}
      mnh_funcs,
 
      mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
@@ -35,6 +35,7 @@ TYPE
     locationOfDeclaration:T_tokenLocation;
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    FUNCTION hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
     DESTRUCTOR destroy;
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
   end;
@@ -63,11 +64,11 @@ TYPE
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       PROCEDURE finalize(VAR context:T_threadContext);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
-      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
+      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
-      PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
+      PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       {$ifdef fullVersion}
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
@@ -103,13 +104,15 @@ TYPE
       editorForUpdate:P_codeProvider;
       checkPending,currentlyProcessing:boolean;
       cs:TRTLCriticalSection;
+      localIdInfos:P_localIdInfos;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
       FUNCTION isUserRule(CONST id: string): boolean;
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
-      PROCEDURE updateCompletionList(VAR wordsInEditor:T_setOfString);
+      FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+      PROCEDURE updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint);
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
       FUNCTION getStateHash:T_hashInt;
       FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString;
@@ -319,6 +322,7 @@ CONSTRUCTOR T_codeAssistanceData.create;
     userRules.create;
     currentlyProcessing:=false;
     checkPending:=false;
+    new(localIdInfos,create);
     initCriticalSection(cs);
   end;
 
@@ -333,6 +337,7 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     end;
     if package<>nil then dispose(package,destroy);
     userRules.destroy;
+    if localIdInfos<>nil then dispose(localIdInfos,destroy);
     leaveCriticalSection(cs);
     doneCriticalSection(cs);
   end;
@@ -417,12 +422,19 @@ FUNCTION T_codeAssistanceData.isErrorLocation(CONST lineIndex, tokenStart, token
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString);
+FUNCTION T_codeAssistanceData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+  VAR dummyLocation:T_tokenLocation;
+  begin
+    result:=localIdInfos^.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
+  end;
+
+PROCEDURE T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint);
   VAR s:string;
   begin
     enterCriticalSection(cs);
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
+    for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
     leaveCriticalSection(cs);
   end;
 
@@ -438,10 +450,36 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
 
+  FUNCTION hasImport(CONST idOrPath:string):boolean;
+    VAR ref:T_packageReference;
+    begin
+      for ref in package^.packageUses do if ref.hasIdOrPath(idOrPath,package) then begin
+        info.location.column:=1;
+        info.location.line  :=1;
+        info.location.fileName:=ref.path;
+        exit(true);
+      end;
+      result:=false;
+    end;
+
+  FUNCTION hasInclude(CONST idOrPath:string):boolean;
+    VAR e:P_extendedPackage;
+        dummy:longint;
+    begin
+      for e in package^.extendedPackages do if (e^.getId=idOrPath) or (e^.getPath=unescapeString(idOrPath,1,dummy)) then begin
+        info.location.column:=1;
+        info.location.line  :=1;
+        info.location.fileName:=e^.getPath;
+        exit(true);
+      end;
+      result:=false;
+    end;
+
   VAR lexer:T_lexer;
       tokenToExplain:P_token;
       loc:T_tokenLocation;
       i:longint;
+      isLinkToPackage:boolean=false;
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     enterCriticalSection(cs);
@@ -456,29 +494,69 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       info.endLoc  :=info.startLoc;
       info.endLoc.column:=i;
       info.tokenText:=safeTokenToString(tokenToExplain);
-      info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
-      for i:=0 to length(C_specialWordInfo)-1 do
-        if C_specialWordInfo[i].txt=info.tokenText then
-        info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+      if (tokenToExplain^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier,tt_literal]) then
+      case localIdInfos^.localTypeOf(info.tokenText,CaretY,CaretX,loc) of
+        tt_blockLocalVariable: begin
+          tokenToExplain^.tokType:=tt_blockLocalVariable;
+          loc.package:=package;
+        end;
+        tt_parameterIdentifier: begin
+          tokenToExplain^.tokType:=tt_parameterIdentifier;
+          loc.package:=package;
+        end;
+        tt_use: begin
+          tokenToExplain^.tokType:=tt_use;
+          info.tokenExplanation:='Imported package';
+          loc.package:=package;
+          info.location:=loc;
+          isLinkToPackage:=true;
+          if hasImport(info.tokenText) then
+            info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+ansistring(info.location)
+          else
+            info.tokenExplanation:=info.tokenExplanation+' (erroneous)';
+        end;
+        tt_include:begin
+          tokenToExplain^.tokType:=tt_include;
+          info.tokenExplanation:='Included package';
+          loc.package:=package;
+          info.location:=loc;
+          isLinkToPackage:=true;
+          if hasInclude(info.tokenText) then
+            info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+ansistring(info.location)
+          else
+            info.tokenExplanation:=info.tokenExplanation+' (erroneous)';
 
-      case tokenToExplain^.tokType of
-        tt_intrinsicRule: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          appendBuiltinRuleInfo;
         end;
-        tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
-          info.location:=P_rule(tokenToExplain^.data)^.getLocation;
-          if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
-        end;
-        tt_type,tt_typeCheck: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
-        end;
-        tt_modifier: begin
-          if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-          info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+      end;
+
+      if not(isLinkToPackage) then begin
+        info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain^.tokType].helpText,'#',C_lineBreakChar);
+        for i:=0 to length(C_specialWordInfo)-1 do
+          if C_specialWordInfo[i].txt=info.tokenText then
+          info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+
+        case tokenToExplain^.tokType of
+          tt_intrinsicRule: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            appendBuiltinRuleInfo;
+          end;
+          tt_blockLocalVariable, tt_parameterIdentifier: begin
+             info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+'Declared '+ansistring(loc);
+          end;
+          tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            info.tokenExplanation:=info.tokenExplanation+replaceAll(P_rule(tokenToExplain^.data)^.getDocTxt,C_tabChar,' ');
+            info.location:=P_rule(tokenToExplain^.data)^.getLocation;
+            if intrinsicRuleMap.containsKey(tokenToExplain^.txt) then appendBuiltinRuleInfo('hides ');
+          end;
+          tt_type,tt_typeCheck: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            info.tokenExplanation:=info.tokenExplanation+replaceAll(C_typeCheckInfo[tokenToExplain^.getTypeCheck].helpText,'#',C_lineBreakChar);
+          end;
+          tt_modifier: begin
+            if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+            info.tokenExplanation:=info.tokenExplanation+replaceAll(C_modifierInfo[tokenToExplain^.getModifier].helpText,'#',C_lineBreakChar);
+          end;
         end;
       end;
     end else begin
@@ -565,22 +643,35 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
         end;
       end;
     end;
-
+  VAR newLocalIdInfos:P_localIdInfos;
   begin
     enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - reset');
+    {$endif}
     new(newPackage,create(provider,nil));
     adapters.clearAll;
     evaluationContext.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
-    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
+    new(newLocalIdInfos,create);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - load');
+    {$endif}
+    newPackage^.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
     enterCriticalSection(caData.cs);
-    if caData.package<>nil then dispose(caData.package,destroy);
-    caData.package:=newPackage;
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - copy package');
+    {$endif}
+    if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
+    if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
     caData.currentlyProcessing:=false;
     caData.package^.updateLists(caData.userRules);
     updateErrors;
     caData.stateHash:=caData.package^.getCodeState;
     leaveCriticalSection(caData.cs);
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - done');
+    {$endif}
   end;
 {$endif}
 
@@ -762,6 +853,20 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     pack:=nil;
   end;
 
+FUNCTION T_packageReference.hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
+  VAR p:string;
+      dummy:longint;
+  begin
+    result:=false;
+    if id  =idOrPath then exit(true);
+    p:=unescapeString(idOrPath,1,dummy);
+    if (              path =               p ) or
+      (expandFileName(path)=expandFileName(p)) then exit(true);
+    p:=extractFilePath(importingPackage^.getPath)+p;
+    result:=(         path =               p ) or
+      (expandFileName(path)=expandFileName(p));
+  end;
+
 DESTRUCTOR T_packageReference.destroy;
   begin
     id:='';
@@ -769,12 +874,15 @@ DESTRUCTOR T_packageReference.destroy;
     pack:=nil;
   end;
 
-PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext);
+PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
   VAR extendsLevel:byte=0;
       profile:boolean=false;
 
   PROCEDURE interpretIncludeClause;
     VAR locationForErrorFeedback:T_tokenLocation;
+        {$ifdef fullVersion}
+        clauseEnd:T_tokenLocation;
+        {$endif}
         newId:string;
         first:P_token;
         helperUse:T_packageReference;
@@ -789,6 +897,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       first:=statement.firstToken;
       locationForErrorFeedback:=first^.location;
+      {$ifdef fullVersion}
+      if (localIdInfos<>nil) and (first^.next<>nil) then begin
+        clauseEnd:=first^.last^.location;
+        inc(clauseEnd.column);
+        localIdInfos^.add(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include);
+      end;
+      {$endif}
       if extendsLevel>=32 then begin
         context.adapters^.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
@@ -811,11 +926,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
       helperUse.destroy;
       lexer.create(importWrapper,@self);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
       inc(extendsLevel);
       while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
         interpret(stmt,usecase,context);
-        stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+        stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
       end;
       dec(extendsLevel);
       lexer.destroy;
@@ -824,6 +939,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
   PROCEDURE interpretUseClause;
     VAR i,j:longint;
         locationForErrorFeedback:T_tokenLocation;
+        {$ifdef fullVersion}
+        clauseEnd:T_tokenLocation;
+        {$endif}
         newId:string;
         first:P_token;
 
@@ -866,6 +984,12 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       initialize(newId);
       first:=statement.firstToken;
+      {$ifdef fullVersion}
+      if (localIdInfos<>nil) then begin
+        clauseEnd:=first^.last^.location;
+        inc(clauseEnd.column);
+      end;
+      {$endif}
       locationForErrorFeedback:=first^.location;
       first:=context.recycler.disposeToken(first);
       while first<>nil do begin
@@ -873,6 +997,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
           newId:=first^.txt;
           {$ifdef fullVersion}
+          if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
             if not(gui_started) and (usecase<>lu_forCodeAssistance) then context.adapters^.logGuiNeeded;
           end else
@@ -883,6 +1008,9 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,context.adapters);
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+          {$ifdef fullVersion}
+          if localIdInfos<>nil then localIdInfos^.add(first^.singleTokenToString,first^.location,clauseEnd,tt_use);
+          {$endif}
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
           setLength(packageUses,j+1);
@@ -903,10 +1031,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     end;
 
   VAR assignmentToken:P_token;
-      ruleDeclarationStart:T_tokenLocation;
 
   PROCEDURE parseRule;
     VAR p:P_token; //iterator
+        ruleDeclarationStart:T_tokenLocation;
+        {$ifdef fullVersion}
+        ruleDeclarationEnd:T_tokenLocation;
+        parameterId:T_patternElementLocation;
+        {$endif}
         //rule meta data
         ruleModifiers:T_modifierSet=[];
         ruleId:T_idString='';
@@ -971,6 +1103,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       rulePattern.create;
       if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,context);
+      {$ifdef fullVersion}
+      if (localIdInfos<>nil) and (ruleBody<>nil) then begin
+        ruleDeclarationEnd:=ruleBody^.last^.location;
+        for parameterId in rulePattern.getNamedParameters do
+          localIdInfos^.add(parameterId.id,parameterId.location,ruleDeclarationEnd,tt_parameterIdentifier);
+      end;
+      {$endif}
+
       if statement.firstToken<>nil then begin
         statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
       end else begin
@@ -979,6 +1119,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         exit;
       end;
       rulePattern.toParameterIds(ruleBody);
+
       //[marker 1]
       if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then context.reduceExpression(ruleBody);
 
@@ -1181,7 +1322,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     statement.firstToken:=nil;
   end;
 
-PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString);
+PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
@@ -1226,6 +1367,14 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       end;
     end;
 
+  PROCEDURE checkParameters;
+    VAR rule:P_rule;
+        pack:P_package;
+    begin
+      for pack in secondaryPackages do for rule in pack^.packageRules.valueSet do rule^.checkParameters(context);
+      for rule in packageRules.valueSet do rule^.checkParameters(context);
+    end;
+
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       newCodeHash:T_hashInt;
@@ -1251,21 +1400,21 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
     lexer.create(@self);
     newCodeHash:=getCodeProvider^.stateHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+    stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
     if isPlainScriptStatement then begin
       case usecase of
         lu_forImport         : context.adapters^.raiseError('Cannot import package declared as "plain script"',stmt.firstToken^.location);
         lu_forCallingMain    : usecase:=lu_forDirectExecution;
       end;
       context.recycler.cascadeDisposeToken(stmt.firstToken);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
     end;
     if profile then context.timeBaseComponent(pc_tokenizing);
 
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
-      interpret(stmt,usecase,context);
+      interpret(stmt,usecase,context{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
     end;
     lexer.destroy;
@@ -1276,6 +1425,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       if gui_started then begin
         resolveRuleIds(context.adapters);
         complainAboutUnused(context.adapters^);
+        checkParameters;
       end;
       {$endif}
       exit;
@@ -1610,8 +1760,12 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
       oldSideEffects:T_sideEffects;
+      needAfterEval:boolean=false;
   begin
-    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then begin
+      load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+      needAfterEval:=true;
+    end;
 
     oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*
     [se_inputViaAsk,
@@ -1629,13 +1783,14 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
      se_executableDependent,
      se_versionDependent]);
     lexer.create(input,packageTokenLocation(@self),@self);
-    stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+    stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
       interpret(stmt,lu_forDirectExecution,context);
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^);
+      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
     end;
     lexer.destroy;
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
+    if needAfterEval then context.getParent^.afterEvaluation;
   end;
 
 FUNCTION T_package.outline(CONST options:T_outlineOptions):T_arrayOfString;

@@ -1,6 +1,7 @@
 UNIT tokenStack;
 INTERFACE
-USES //MNH:
+USES myGenerics,
+     //MNH:
      mnh_constants,
      mnh_basicTypes,
      mnh_out_adapters,
@@ -54,20 +55,93 @@ TYPE
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
 
+  {$ifdef fullVersion}
+  T_localIdInfo=record
+                  name:string;
+                  validFrom,validUntil:T_tokenLocation;
+                  tokenType:T_tokenType;
+                end;
+
+  P_localIdInfos=^T_localIdInfos;
+  T_localIdInfos=object
+    private
+      infos: array of T_localIdInfo;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
+      FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
+      PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+      PROCEDURE clear;
+  end;
+  {$endif}
+
   T_idStack=object
-    ids:array of array of ansistring;
-    CONSTRUCTOR create;
+    ids:array of array of record name:T_idString; used:boolean; location:T_tokenLocation end;
+    {$ifdef fullVersion}
+    localIdInfos:P_localIdInfos;
+    {$endif}
+
+    CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
     DESTRUCTOR destroy;
     PROCEDURE clear;
     PROCEDURE scopePush;
-    PROCEDURE scopePop;
+    PROCEDURE scopePop(VAR adapters:T_adapters; CONST location:T_tokenLocation);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
-    FUNCTION addId(CONST id:ansistring):boolean;
-    FUNCTION hasId(CONST id:ansistring):boolean;
+    FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation):boolean;
+    FUNCTION hasId(CONST id:T_idString):boolean;
   end;
 
 IMPLEMENTATION
+{$ifdef fullVersion}
+CONSTRUCTOR T_localIdInfos.create;
+  begin clear; end;
+
+DESTRUCTOR T_localIdInfos.destroy;
+  begin clear; end;
+
+FUNCTION T_localIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): T_tokenType;
+  VAR entry:T_localIdInfo;
+  begin
+    result:=tt_literal;
+    for entry in infos do
+      if (entry.name=id) and
+         not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
+             positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
+        declaredAt:=entry.validFrom;
+        exit(entry.tokenType);
+      end;
+  end;
+
+FUNCTION T_localIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
+  VAR entry:T_localIdInfo;
+  begin
+    setLength(result,0);
+    for entry in infos do
+      if not(positionIsBeforeLocation    (line,col,entry.validFrom)) and
+             positionIsBeforeOrAtLocation(line,col,entry.validUntil) then begin
+        append(result,entry.name);
+      end;
+  end;
+
+PROCEDURE T_localIdInfos.add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+  VAR i:longint;
+  begin
+    i:=length(infos);
+    setLength(infos,i+1);
+    infos[i].name      :=id;
+    infos[i].validFrom :=validFrom;
+    infos[i].validUntil:=validUntil;
+    infos[i].tokenType :=typ;
+  end;
+
+PROCEDURE T_localIdInfos.clear;
+  begin
+    setLength(infos,0);
+  end;
+{$endif}
+
 CONSTRUCTOR T_callStack.create;
   begin
     setLength(dat,0);
@@ -208,20 +282,27 @@ FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint)
       prevWasIdLike:=false;
       for i:=i0 to topIndex do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
     end else result:='';
-    result:=result+' # '+tokensToString(first,lengthLimit);
+    result:=result+' § '+tokensToString(first,lengthLimit);
   end;
 
-CONSTRUCTOR T_idStack.create;
+CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
   begin
     setLength(ids,0);
+    {$ifdef fullVersion}
+    localIdInfos:=info;
+    {$endif}
   end;
 
 DESTRUCTOR T_idStack.destroy;
-  begin clear;  end;
+  begin
+    clear;
+  end;
 
 PROCEDURE T_idStack.clear;
+  VAR i:longint;
   begin
-    while not(scopeBottom) do scopePop;
+    for i:=0 to length(ids)-1 do setLength(ids[i],0);
+    setLength(ids,0);
   end;
 
 PROCEDURE T_idStack.scopePush;
@@ -229,9 +310,18 @@ PROCEDURE T_idStack.scopePush;
     setLength(ids,length(ids)+1);
   end;
 
-PROCEDURE T_idStack.scopePop;
+PROCEDURE T_idStack.scopePop(VAR adapters:T_adapters; CONST location:T_tokenLocation);
+  VAR topIdx:longint;
+      i:longint;
   begin
-    setLength(ids,length(ids)-1);
+    topIdx:=length(ids)-1;
+    for i:=0 to length(ids[topIdx])-1 do begin
+      if not(ids[topIdx,i].used) then adapters.raiseWarning('Unused local variable '+ids[topIdx,i].name,ids[topIdx,i].location);
+      {$ifdef fullVersion}
+      if localIdInfos<>nil then localIdInfos^.add(ids[topIdx,i].name,ids[topIdx,i].location,location,tt_blockLocalVariable);
+      {$endif}
+    end;
+    setLength(ids,topIdx);
   end;
 
 FUNCTION T_idStack.oneAboveBottom:boolean;
@@ -244,22 +334,27 @@ FUNCTION T_idStack.scopeBottom:boolean;
     result:=length(ids)=0;
   end;
 
-FUNCTION T_idStack.addId(CONST id:ansistring):boolean;
+FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation):boolean;
   VAR i,j:longint;
   begin
     i:=length(ids)-1;
-    for j:=0 to length(ids[i])-1 do if ids[i,j]=id then exit(false);
+    for j:=0 to length(ids[i])-1 do if ids[i,j].name=id then exit(false);
     j:=length(ids[i]);
     setLength(ids[i],j+1);
-    ids[i,j]:=id;
+    ids[i,j].name:=id;
+    ids[i,j].used:=false;
+    ids[i,j].location:=location;
     result:=true;
   end;
 
-FUNCTION T_idStack.hasId(CONST id:ansistring):boolean;
+FUNCTION T_idStack.hasId(CONST id:T_idString):boolean;
   VAR i,j:longint;
   begin
     result:=false;
-    for i:=length(ids)-1 downto 0 do for j:=0 to length(ids[i])-1 do if ids[i,j]=id then exit(true);
+    for i:=length(ids)-1 downto 0 do for j:=0 to length(ids[i])-1 do if ids[i,j].name=id then begin
+      ids[i,j].used:=true;
+      exit(true);
+    end;
   end;
 
 end.

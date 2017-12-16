@@ -132,7 +132,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     setLength(recentFileMenuItems,0);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     helpHighlighter  :=TSynMnhSyn.create(self,msf_help  );
-    debugHighlighter :=TSynMnhSyn.create(self,msf_input );
+    debugHighlighter :=TSynMnhSyn.create(self,msf_debug );
     OutputEdit           .highlighter:=outputHighlighter;
     QuickOutputEdit      .highlighter:=outputHighlighter;
     assistanceSynEdit    .highlighter:=outputHighlighter;

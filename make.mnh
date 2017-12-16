@@ -1,4 +1,5 @@
 USE testLog,mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis_server.mnh';
+//@SuppressUnusedWarning=hook
 initHook:=begin
   startIpcServer(ipcId,::serve);
   oeis_server.quietMode:=true;

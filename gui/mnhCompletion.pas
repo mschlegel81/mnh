@@ -82,10 +82,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
       end else begin
         initIntrinsicRuleList;
         wordsInEditor.put(intrinsicRulesForCompletion);
-        relatedAssistant^.updateCompletionList(wordsInEditor);
-        for i:=0 to editor.lines.count-1 do
-          if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
-                         else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+        relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x);
       end;
     end else begin
       for i:=0 to editor.lines.count-1 do

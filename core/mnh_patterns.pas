@@ -10,6 +10,7 @@ USES sysutils,
 TYPE
   T_patternElement=object
     private
+      elementLocation  :T_tokenLocation;
       id               :T_idString;
       restrictionType  :T_tokenType;
       restrictionValue :P_literal;
@@ -27,10 +28,16 @@ TYPE
       FUNCTION hides(CONST e:T_patternElement):boolean;
       PROPERTY getId:T_idString read id;
     public
-      CONSTRUCTOR createAnonymous;
-      CONSTRUCTOR create(CONST parameterId:T_idString);
+      CONSTRUCTOR createAnonymous(CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST parameterId:T_idString; CONST loc:T_tokenLocation);
       DESTRUCTOR destroy;
   end;
+
+  T_patternElementLocation=object
+    id:T_idString;
+    location:T_tokenLocation;
+  end;
+  T_patternElementLocations=array of T_patternElementLocation;
 
   P_pattern=^T_pattern;
   T_pattern=object
@@ -42,12 +49,12 @@ TYPE
     public
       CONSTRUCTOR create;
       CONSTRUCTOR clone(original:T_pattern);
-      CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
+      CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CONST fallbackLocation:T_tokenLocation);
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      FUNCTION appendFreeId(CONST parId:T_idString):longint;
+      FUNCTION appendFreeId(CONST parId:T_idString; CONST location:T_tokenLocation):longint;
       FUNCTION indexOfId(CONST id:T_idString):longint;
-      FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
+      FUNCTION indexOfIdForInline(CONST id:T_idString; CONST location:T_tokenLocation):longint;
       PROCEDURE appendOptional;
       FUNCTION arity:longint;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean;
@@ -59,6 +66,7 @@ TYPE
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
       FUNCTION getParameterNames:P_listLiteral;
+      FUNCTION getNamedParameters:T_patternElementLocations;
       FUNCTION matchesNilPattern:boolean;
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
@@ -67,10 +75,11 @@ TYPE
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
+      PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
   end;
 
 IMPLEMENTATION
-CONSTRUCTOR T_patternElement.createAnonymous;
+CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
   begin
     id:='';
     restrictionType :=tt_literal;
@@ -80,11 +89,12 @@ CONSTRUCTOR T_patternElement.createAnonymous;
     builtinTypeCheck:=tc_typeCheckScalar;
     customTypeCheck :=nil;
     typeWhitelist   :=[lt_boolean..lt_emptyMap];
+    elementLocation:=loc;
   end;
 
-CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
+CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString; CONST loc:T_tokenLocation);
   begin
-    createAnonymous;
+    createAnonymous(loc);
     id:=parameterId;
   end;
 
@@ -277,7 +287,7 @@ CONSTRUCTOR T_pattern.clone(original: T_pattern);
     end;
   end;
 
-CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
+CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CONST fallbackLocation:T_tokenLocation);
   VAR i:longint;
   begin
     hasOptionals:=LHSPattern.hasOptionals
@@ -286,7 +296,7 @@ CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
     for i:=0 to length(sig)-1 do begin
       if      (i<length(LHSPattern.sig)) and (LHSPattern.sig[i].id<>'') then sig[i]:=LHSPattern.sig[i]
       else if (i<length(RHSPattern.sig)) and (RHSPattern.sig[i].id<>'') then sig[i]:=RHSPattern.sig[i]
-      else sig[i].createAnonymous;
+      else sig[i].createAnonymous(fallbackLocation);
     end;
   end;
 
@@ -301,11 +311,11 @@ PROCEDURE T_pattern.clear;
 DESTRUCTOR T_pattern.destroy;
   begin clear; end;
 
-FUNCTION T_pattern.appendFreeId(CONST parId: T_idString): longint;
+FUNCTION T_pattern.appendFreeId(CONST parId: T_idString; CONST location:T_tokenLocation): longint;
   begin
     result:=length(sig);
     setLength(sig,result+1);
-    sig[result].create(parId);
+    sig[result].create(parId,location);
   end;
 
 PROCEDURE T_pattern.append(CONST el: T_patternElement);
@@ -337,19 +347,19 @@ FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
     result:=-1;
   end;
 
-FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString): longint;
+FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString; CONST location:T_tokenLocation): longint;
   VAR i:longint;
   begin
     if id=ALL_PARAMETERS_TOKEN_TEXT then begin hasOptionals:=true; exit(ALL_PARAMETERS_PAR_IDX); end;
     result:=strToIntDef(copy(id,2,length(id)-1),-1);
     if (copy(id,1,1)='$') and (result>=0) then begin
-      while length(sig)<result+1 do appendFreeId('');
+      while length(sig)<result+1 do appendFreeId('',location);
       exit(result);
     end;
     for i:=0 to length(sig)-1 do
     if sig[i].id=id then                      exit(i) else
     if sig[i].id='' then begin sig[i].id:=id; exit(i); end;
-    result:=appendFreeId(id);
+    result:=appendFreeId(id,location);
   end;
 
 FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
@@ -486,6 +496,19 @@ FUNCTION T_pattern.getParameterNames:P_listLiteral;
     for el in sig do result^.appendString(el.getId);
   end;
 
+FUNCTION T_pattern.getNamedParameters:T_patternElementLocations;
+  VAR el:T_patternElement;
+      i:longint=0;
+  begin
+    setLength(result,length(sig));
+    for el in sig do if el.id<>'' then begin
+      result[i].location:=el.elementLocation;
+      result[i].id      :=el.id;
+      inc(i);
+    end;
+    setLength(result,i);
+  end;
+
 PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; VAR context:T_threadContext);
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
@@ -532,7 +555,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           assertNil(parts[i].first);
         end else if (parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
           //Identified parameter: f(x)->
-          rulePatternElement.create(parts[i].first^.txt);
+          rulePatternElement.create(parts[i].first^.txt,parts[i].first^.location);
           parts[i].first:=context.recycler.disposeToken(parts[i].first);
           if (parts[i].first<>nil) then begin
             if (parts[i].first^.tokType=tt_typeCheck) then begin
@@ -599,7 +622,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           //Anonymous equals: f(1)->
           context.reduceExpression(parts[i].first);
           if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
-            rulePatternElement.createAnonymous;
+            rulePatternElement.createAnonymous(parts[i].first^.location);
             rulePatternElement.restrictionType:=tt_comparatorListEq;
             rulePatternElement.restrictionValue:=parts[i].first^.data;
             rulePatternElement.restrictionValue^.rereference;
@@ -614,6 +637,28 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     finalizeRefs(ruleDeclarationStart,context);
     context.recycler.disposeToken(first);
     first:=context.recycler.disposeToken(closingBracket);
+  end;
+
+PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
+  VAR i:longint;
+      unusedIds:T_arrayOfLongint;
+      allUsed:boolean=false;
+      optUsed:boolean=false;
+
+  begin
+    setLength(unusedIds,length(sig));
+    for i:=0 to length(unusedIds)-1 do unusedIds[i]:=i;
+    for i in usedIds do begin
+      dropValues(unusedIds,i);
+      allUsed:=allUsed or (i=ALL_PARAMETERS_PAR_IDX);
+      optUsed:=optUsed or (i=REMAINING_PARAMETERS_IDX);
+    end;
+    for i:=0 to length(sig)-1 do dropValues(unusedIds,sig[i].restrictionIdx);
+
+    if allUsed then exit;
+    for i in unusedIds do if sig[i].restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal] then
+      context.adapters^.raiseWarning('Parameter '+sig[i].toString+' not used',sig[i].elementLocation);
+    if hasOptionals and not(optUsed) then context.adapters^.raiseNote('Optional ... not used',subruleLocation);
   end;
 
 end.

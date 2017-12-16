@@ -15,13 +15,13 @@ TYPE
   T_outline=array of T_outlineEntry;
 
   P_rule=^T_rule;
-
   T_rule=object(T_abstractRule)
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION getDocTxt: ansistring; virtual; abstract;
     FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
+    PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -43,6 +43,7 @@ TYPE
       FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
+      PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
   end;
 
   P_protectedRuleWithSubrules=^T_protectedRuleWithSubrules;
@@ -115,6 +116,16 @@ IMPLEMENTATION
 OPERATOR =(CONST x,y:T_outlineEntry):boolean;
   begin
     result:=(x.id=y.id) and (x.location=y.location);
+  end;
+
+PROCEDURE T_rule.checkParameters(VAR context:T_threadContext);
+  begin end;
+
+PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_threadContext);
+  VAR s:P_subruleExpression;
+  begin
+    if length(subrules)=1 then
+    for s in subrules do s^.checkParameters(context);
   end;
 
 CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
@@ -206,12 +217,8 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
     {$ifdef fullVersion}
-    if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
-      if rule^.typ=et_normal_private
-      then context.adapters^.raiseWarning('Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules',rule^.getLocation)
-      else setIdResolved;
-    end;
-    if rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
+    if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) or
+       rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
     {$endif}
     clearCache;
   end;

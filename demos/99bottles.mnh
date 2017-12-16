@@ -1,8 +1,9 @@
-//@demo_for=formatting
 //Demonstrates use of printf with expressions and "here doc" strings
+//@SuppressUnusedWarning=Used in format string
 private B(0)->"no more bottles";
 private B(1)->"1 bottle";
 private B(n)->n&" bottles";
+//@demo_for=formatting
 //*Prints out the song "99 bottles of beer", see http://rosettacode.org/wiki/99_Bottles_of_Beer or http://www.99-bottles-of-beer.net/
 main(...)->printf(//!~
 %{B($n)}s of beer on the wall

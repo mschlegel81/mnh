@@ -16,7 +16,7 @@ USES //basic classes
      {$ifdef fullVersion}
      mnh_plotData,mnh_funcs_plot,plotMath,
      {$endif}
-     mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_list,mnh_funcs_strings,
+     mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
      mnh_patterns;
 TYPE
   T_subruleAttribute=record
@@ -127,6 +127,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
+      PROCEDURE checkParameters(VAR context:T_threadContext);
   end;
 
   P_builtinExpression=^T_builtinExpression;
@@ -290,12 +291,11 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
     meta.create;
   end;
 
-CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring;
-  CONST rep: P_token; VAR context: T_threadContext);
+CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; VAR context: T_threadContext);
   begin
     init(et_inline_for_each,rep^.location);
     pattern.create;
-    pattern.appendFreeId(parameterId);
+    pattern.appendFreeId(parameterId,rep^.location);
     constructExpression(rep,context);
     resolveIds(nil);
   end;
@@ -321,7 +321,7 @@ PROCEDURE T_inlineExpression.updatePatternForInline;
     pattern.clear;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do
     if token.tokType=tt_parameterIdentifier then begin
-      parIdx:=pattern.indexOfIdForInline(token.txt);
+      parIdx:=pattern.indexOfIdForInline(token.txt,getLocation);
     end else if token.tokType=tt_optionalParameters then begin
       parIdx:=REMAINING_PARAMETERS_IDX;
       pattern.appendOptional;
@@ -628,7 +628,8 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
     if LHS^.literalType=lt_expression then begin
       if RHS^.literalType=lt_expression
       then pattern.combineForInline(P_subruleExpression(LHS)^.pattern,
-                                    P_subruleExpression(RHS)^.pattern)
+                                    P_subruleExpression(RHS)^.pattern,
+                                    P_subruleExpression(LHS)^.getLocation)
       else pattern.clone(P_subruleExpression(LHS)^.pattern);
     end else begin
       if RHS^.literalType=lt_expression
@@ -1078,6 +1079,15 @@ FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_li
     result:=pattern.acceptsSingleLiteral(literalTypeToAccept);
   end;
 
+PROCEDURE T_subruleExpression.checkParameters(VAR context:T_threadContext);
+  VAR t:T_preparedToken;
+      used:T_arrayOfLongint;
+  begin
+    setLength(used,0);
+    for t in preparedBody do with t do if (parIdx>=0) then append(used,parIdx);
+    pattern.complainAboutUnusedParameters(used,context,getLocation);
+  end;
+
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
   VAR i:longint;
   begin
@@ -1417,7 +1427,7 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.recycler,context.adapters^);
+    statement:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
     lexer.destroy;
     if statement.firstToken=nil then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);
@@ -1449,7 +1459,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
                     else last^.next:=subTokens;
       last:=subTokens^.last;
     end;
-    preprocessStatement(result,context.adapters^);
+    preprocessStatement(result,context.adapters^{$ifdef fullVersion},nil{$endif});
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
