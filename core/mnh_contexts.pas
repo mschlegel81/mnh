@@ -423,7 +423,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
 
   begin
     adapters^.stopEvaluation;
-    while detachedAsyncChildCount>0 do begin
+    while (detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0) do begin
       ThreadSwitch;
       sleep(1);
     end;
