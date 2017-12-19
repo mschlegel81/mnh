@@ -9,6 +9,7 @@ jsTextInputField(id:String,initialValue:String,currentParameters:Map,size>0)->
 jsHiddenInputFields(currentParameters:Map)->begin
   local keys:=[];
   local values:=[];
-  currentParameters.each(par,keys|=par[0],values|=par[1]);
+  currentParameters.each(par,keys|=par[0].toString,values|=par[1].toString);
   format('<INPUT TYPE="hidden" NAME="%s" VALUE="%s">',keys,values);
 end;
+
