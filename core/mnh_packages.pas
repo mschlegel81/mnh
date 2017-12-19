@@ -97,6 +97,7 @@ TYPE
   T_codeAssistanceData=object
     private
       package:P_package;
+      packageIsValid:boolean;
       localErrors,externalErrors:T_storedMessages;
       stateHash:T_hashInt;
       userRules:T_setOfString;
@@ -112,7 +113,7 @@ TYPE
       FUNCTION isUserRule(CONST id: string): boolean;
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
-      PROCEDURE updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint);
+      FUNCTION updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
       FUNCTION getStateHash:T_hashInt;
       FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString;
@@ -318,6 +319,7 @@ FUNCTION T_postEvaluationData.processing:boolean;
 CONSTRUCTOR T_codeAssistanceData.create;
   begin
     package:=nil;
+    packageIsValid:=false;
     stateHash:=0;
     userRules.create;
     currentlyProcessing:=false;
@@ -428,13 +430,14 @@ FUNCTION T_codeAssistanceData.isLocalId(CONST id: string; CONST lineIndex, colId
     result:=localIdInfos^.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
   end;
 
-PROCEDURE T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint);
+FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
   VAR s:string;
   begin
     enterCriticalSection(cs);
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
+    result:=packageIsValid;
     leaveCriticalSection(cs);
   end;
 
@@ -663,6 +666,7 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     {$endif}
     if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
     if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
+    caData.packageIsValid:=evaluationContext.adapters^.noErrors;
     caData.currentlyProcessing:=false;
     caData.package^.updateLists(caData.userRules);
     updateErrors;

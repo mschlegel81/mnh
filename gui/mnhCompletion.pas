@@ -65,8 +65,15 @@ PROCEDURE initIntrinsicRuleList;
 
 PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
-      i:longint;
       isUseClause:boolean;
+  PROCEDURE collectAllIdentifiers;
+    VAR i:longint;
+    begin
+      for i:=0 to editor.lines.count-1 do
+        if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
+                       else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+    end;
+
   begin
     caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
@@ -82,13 +89,10 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
       end else begin
         initIntrinsicRuleList;
         wordsInEditor.put(intrinsicRulesForCompletion);
-        relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x);
+        if not(relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x))
+        then collectAllIdentifiers;
       end;
-    end else begin
-      for i:=0 to editor.lines.count-1 do
-        if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
-                       else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
-    end;
+    end else collectAllIdentifiers;
   end;
 
 CONSTRUCTOR T_completionLogic.create;
