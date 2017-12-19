@@ -4,6 +4,7 @@ object askForm: TaskForm
   Top = 194
   Width = 342
   AutoSize = True
+  BorderIcons = [biSystemMenu, biMaximize]
   BorderStyle = bsSingle
   Caption = 'askForm'
   ClientHeight = 445
