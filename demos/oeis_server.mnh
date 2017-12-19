@@ -187,7 +187,7 @@ private serve_('gen',seriesId,count)->begin
   ? void
   : return 'Parameter '&escape(count)&' is no positive integer';
 
-  local seq:=f().head(n);
+  f().head(n);
 end;
 
 private serve_('class')->foundImplementations.union(implemented).getInner(1).pMap(::classifyImplementation).elementFrequency.filter({$x[1]>1}).map({$x.join("\t")}).join("\n");
