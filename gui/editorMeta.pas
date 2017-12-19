@@ -622,6 +622,7 @@ PROCEDURE T_editorMeta.activate;
       if language_=LANG_MNH then begin
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
+        assistanceTabSheet.tabVisible:=true;
         triggerCheck;
         completionLogic.assignEditor(editor_,assistant);
       end else begin
