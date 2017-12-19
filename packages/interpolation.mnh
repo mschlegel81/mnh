@@ -6,9 +6,9 @@ X.size<>Y.size ? fail('X and Y must have the same number of elements') :
 begin
   local M:=X.map({$x^[0..X.size-1]});
   M.invert.mult(Y).flatten.each(f,f=0 ? void : begin
-    local e:=index=0 ? f :
-             index=1 ? (f=1 ? {$x} : f*{$x}) :
-                       (f=1 ? {$x}^index : f*{$x}^index);
+    index=0 ? f :
+    index=1 ? (f=1 ? {$x} : f*{$x}) :
+              (f=1 ? {$x}^index : f*{$x}^index);
   end,+);
 end;
 

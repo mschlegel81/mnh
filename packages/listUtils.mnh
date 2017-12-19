@@ -7,12 +7,14 @@ randomElementFromList(L!=[])->L[intRandom(L.size)];
 scramble(L:List)->L[random(L.size).sortPerm];
 
 //*Returns L without the k-th element
+//@SuppressUnusedWarning
 without(L:List,k:Int)->
   k>=0 AND k<=L.size
   ? L.each(element,index=k ? void : element)
   : L;
 
 //*Returns L without the k-th elements
+//@SuppressUnusedWarning
 without(L:List,k:IntList)->
   (k>=0 and k<L.size).agg(OR)
   ? L.each(element,index in k ? void : element)

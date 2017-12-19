@@ -1,0 +1,14 @@
+//@SuppressUnusedWarning
+jsTextInputField(id:String,initialValue:String,currentParameters:Map,size>0)->
+  format('<INPUT TYPE="text" NAME="%s" VALUE="%s" SIZE=%s onkeydown="if (event.keyCode == 13) ',
+         id,
+         currentParameters[id] orElse initialValue,
+         size)&'{ this.form.submit(); return false; }">';
+
+//@SuppressUnusedWarning
+jsHiddenInputFields(currentParameters:Map)->begin
+  local keys:=[];
+  local values:=[];
+  currentParameters.each(par,keys|=par[0],values|=par[1]);
+  format('<INPUT TYPE="hidden" NAME="%s" VALUE="%s">',keys,values);
+end;

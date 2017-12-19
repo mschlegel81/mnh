@@ -232,9 +232,11 @@ FUNCTION extractParameters_impl intFuncSignature;
     begin
       keyAndValue:=split(pair,'=');
       while length(keyAndValue)<2 do append(keyAndValue,'');
-      for i:=0 to length(keyAndValue)-1 do
-      for c:=0 to 255 do keyAndValue[i]:=replaceAll(keyAndValue[i],percentCode(c),chr(c));
-       value:=newStringLiteral(keyAndValue[1]);
+      for i:=0 to length(keyAndValue)-1 do begin
+        keyAndValue[i]:=replaceAll(keyAndValue[i],'+',' ');
+        for c:=0 to 255 do keyAndValue[i]:=replaceAll(keyAndValue[i],percentCode(c),chr(c));
+      end;
+      value:=newStringLiteral(keyAndValue[1]);
       castValue:=value^.softCast;
       disposeLiteral(value);
       parameters^.put(keyAndValue[0],castValue,false);

@@ -65,9 +65,9 @@ end;
 
 memoized unhandled(method,request,protocol)->begin
   print("Unhandled request.",
-        "\n  Method  : ",method .escape,
-        "\n  Request : ",request.escape,
-        "\n  Protocol: ",request.escape);
+        "\n  Method  : ",method  .escape,
+        "\n  Request : ",request .escape,
+        "\n  Protocol: ",protocol.escape);
   httpError;
 end;
 
