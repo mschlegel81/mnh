@@ -247,14 +247,16 @@ DESTRUCTOR T_myIpcServer.destroy;
 
 FUNCTION assertUniqueInstance_impl intFuncSignature;
   VAR markerServer:P_myIpcServer;
+      normalizedPath:string;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       registry.enterCs;
-      if isServerRunning(tokenLocation.package^.getPath)
+      normalizedPath:=expandFileName(tokenLocation.package^.getPath);
+      if isServerRunning(normalizedPath)
       then context.adapters^.raiseError('There already is an instance of this script running',tokenLocation)
       else begin
-        new(markerServer,create(tokenLocation.package^.getPath,tokenLocation,nil,nil));
+        new(markerServer,create(normalizedPath,tokenLocation,nil,nil));
         beginThread(@ipcServerThread,markerServer);
         result:=newVoidLiteral;
       end;
