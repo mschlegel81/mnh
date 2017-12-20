@@ -12,4 +12,3 @@ jsHiddenInputFields(currentParameters:Map)->begin
   currentParameters.each(par,keys|=par[0].toString,values|=par[1].toString);
   format('<INPUT TYPE="hidden" NAME="%s" VALUE="%s">',keys,values);
 end;
-

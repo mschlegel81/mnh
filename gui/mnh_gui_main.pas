@@ -303,7 +303,8 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
   begin
     enableDynamicItems;
     updateEditorsByGuiStatus;
-    outputPageControl.activePage:=outputTabSheet;
+    if   outputPageControl.activePage<>QuickTabSheet
+    then outputPageControl.activePage:=outputTabSheet;
   end;
 
 PROCEDURE TMnhForm.triggerFastPolling;
