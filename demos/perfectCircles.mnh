@@ -1,0 +1,65 @@
+private norm(x:NumericList(2))->sqr(x).agg(+).sqrt;
+private center(aPhi,k)->aPhi[0]^k*[cos(aPhi[1]*k),sin(aPhi[1]*k)];
+private memoized rad0(aPhi)->norm(center(aPhi,1)-[1,0])/(1+aPhi[0]);
+private radius(aPhi,k)->rad0(aPhi)*aPhi[0]^k;
+
+private errorFunc(k)->
+ {sqr(norm(center($aPhi,k  )-[1,0])-(rad0($aPhi)+radius($aPhi,k  )))
+ +sqr(norm(center($aPhi,k+1)-[1,0])-(rad0($aPhi)+radius($aPhi,k+1)))
+ +($aPhi[0]<1 ? 100 : 0)
+ +($aPhi[1]<0 ? 100 : 0)};
+
+USE downhillSimplex;
+private datastore CONFIG_OF_K:=[[2,downhillSimplex(errorFunc(2),[2,2],0.1,1E-28)[1]]].toMap;
+findSolution(forK>=2)->CONFIG_OF_K[forK] orElse begin
+  local maxK:=CONFIG_OF_K.getInner(0).max;
+  local par:=CONFIG_OF_K[maxK];
+  [maxK+1..forK].each(k,begin
+    (k-[99..1]/100).each(subK,par:=downhillSimplex(errorFunc(subK),par,0.001,1E-4 )[1]);
+                              par:=downhillSimplex(errorFunc(k   ),par,0.001,1E-28)[1];
+    note('New solution computed for k=',k,'; ',par);
+    CONFIG_OF_K[k]:=par;
+    void;
+  end);
+  CONFIG_OF_K[forK];
+end;
+
+plotCircles(k,circleStyle:String,gridStyle:String)->begin
+  setOptions([['x0',-1],['x1',1],['autoscaleX',false],['axisStyleX',0],['logscaleX',false],
+              ['y0',-1],['y1',1],['autoscaleY',false],['axisStyleY',0],['logscaleY',false],
+              ['preserveAspect',true]]);
+  local par:=findSolution(k);
+  par[0]<1 ? par[0]:=1/par[0] : void;
+  local i0:=floor(ln(1E-3)/ln(par[0]));
+  local i1:=ceil (ln(3)/ln(par[0]));
+  local unitCircle:=map([0..100]/100*2*pi,{[sin($t),cos($t)]});
+  plot();
+  circleStyle=='' ? void :
+  [i0..i1].pEach(i,[center(par,i),radius(par,i)])
+          .pEach(x,[map(unitCircle,{x[0]+x[1]*$p}),circleStyle])
+          .map({addPlot@$p});
+  gridStyle=='' ? void :
+  [i0..i1].each(i,center(par,i),center(par,i+1  ),[Nan,Nan],
+                  center(par,i),center(par,i+k  ),[Nan,Nan],
+                  center(par,i),center(par,i+k+1),[Nan,Nan]).addPlot(gridStyle);
+end;
+
+//*Creates and displays an animation
+main('animate')->begin
+  clearAnimation;
+  [2..50].each(k,plotCircles(k,'black polygon 0.5','red'),addAnimationFrame,index=0 ? display : void);
+  display;
+end;
+
+//*Creates a plot for value K in xRes x yRes
+main(K,xRes,yRes,style in ['grid','circles','both'])->begin
+  local xr:=xRes.toInt;
+  local yr:=yRes.toInt;
+  local k :=K   .toInt;
+  xr>=10 AND yr>=10 ? void : fail('Invalid resolution ',xRes,'x',yRes);
+  k >=2 ? void : fail('Invalid value for k ',k);
+  style=='grid'    ? plotCircles(k,'','black 0.5') :
+  style=='circles' ? plotCircles(k,'black polygon 0.5','') :
+                     plotCircles(k,'blue polygon 0.5','red 0.5');
+  renderToFile(changeFileExt(myPath,'_'&xRes&'x'&yRes&'.png'),xr,yr,3);
+end;

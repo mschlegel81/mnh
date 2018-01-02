@@ -1,0 +1,58 @@
+//*Returns downhill simplex options:
+//*alpha: Reflection factor (usually 1)
+//*beta : Contraction factor (usually 0.5);
+//*gamma: Expansion factor (usually 2)
+//*sigma: Compression factor (usually 0.5);
+downhillSimplexOptions(alpha,beta,gamma,sigma)->
+[['alpha',alpha],
+ ['beta ',beta ],
+ ['gamma',gamma],
+ ['sigma',sigma]].toMap;
+
+DEFAULT_DOWNHILL_SIMPLEX_OPTIONS:=downhillSimplexOptions(1,1/2,2,1/2);
+
+downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0,precision>0.0)->downhillSimplex(toMinimize,startVector,startSpread,precision,DEFAULT_DOWNHILL_SIMPLEX_OPTIONS);
+downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0,precision>0.0,options:Map)->begin
+  local simplex:=[0..startVector.size].each(i,([0..startVector.size-1]=i).ord*startSpread+startVector);
+  simplex:=simplex.map({[toMinimize($x),$x]}).sort;
+  simplex.each(i,i[0].isNumeric,AND) ? void : fail('Invalid function toMinimize; must return a numeric scalar');
+
+  local N:=startVector.size;
+  local alpha:=options['alpha'];
+  local beta :=options['beta' ];
+  local gamma:=options['gamma'];
+  local sigma:=options['sigma'];
+
+  while(simplex[0,0]>precision AND (simplex[0,1]-simplex[N,1]).sqr.agg(+)>precision^2,
+  begin
+    local xc:=simplex.leading.getInner(1).agg(+)/(simplex.size-1);
+    local xr:=(1+alpha)*xc-alpha*simplex.trailing[1];
+    local fr:=toMinimize(xr);
+    fr<simplex[0,0]
+    ? begin
+        local xe:=(1+gamma)*xc-gamma*(simplex.trailing[1]);
+        local fe:=toMinimize(xe);
+        simplex[N]:=(fe<fr
+                     ? [fe,xe]
+                     : [fr,xr]);
+      end
+    : fr<simplex[N-1,0]
+      ? simplex[N]:=[fr,xr]
+      : begin
+          local xe:=beta*xc+(1-beta)*(fr<simplex[N,0]
+                                      ? xr
+                                      : simplex[N,1]);
+          local fe:=toMinimize(xe);
+          fe<simplex[N,0]
+          ? simplex[N]:=[fe,xe]
+          : simplex:=simplex.each(S,index=0 ? S :
+              begin
+                local p:=simplex[0,1]*sigma+S[1]*(1-sigma);
+                [toMinimize(p),p];
+              end);
+        end;
+    simplex:=simplex.sort;
+    void;
+  end);
+  simplex[0];
+end;
