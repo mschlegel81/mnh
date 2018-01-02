@@ -170,7 +170,7 @@ contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:Num
   edgeZ1 :=1/(edgeZ1 -edgeZ0 );
   edgeXY1:=  (edgeXY1-edgeXY0);
 
-  contourLevels.sort.pEach(level,begin
+  contourLevels.sort.each(level,begin
     local t:=(level-edgeZ0)*edgeZ1;
     local mask:=0<=t<=1;
     local cut:=edgeXY0+edgeXY1*t;
