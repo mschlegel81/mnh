@@ -41,7 +41,7 @@ private formatInfo(numericId:Int)->
       classify(sequences[numericId] orElse [])&' series of '&size(sequences[numericId] orElse [])&' elements')&(isVoid(implementationOf(numericId)) ? void : "\nImpl.\v:\tgen "&numericId&" <elements>\n\v\t"&toString(implementationOf(numericId)))
     : format("ID\v:\t"&IDFormat&" - not found",numericId)).join("\n");
 private formatInfo([])->'No matches';
-private formatInfo(numericIds:IntList)->numericIds.pMap(::formatInfo).join("\n");
+private formatInfo(numericIds:IntList)->numericIds.pMap(::formatInfo).join("\n\n");
 
 private top10(L:List)->top10(L.elementFrequency);
 private top10(M:Map)->begin
