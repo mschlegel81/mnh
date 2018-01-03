@@ -3,6 +3,13 @@ private center(aPhi,k)->aPhi[0]^k*[cos(aPhi[1]*k),sin(aPhi[1]*k)];
 private memoized rad0(aPhi)->norm(center(aPhi,1)-[1,0])/(1+aPhi[0]);
 private radius(aPhi,k)->rad0(aPhi)*aPhi[0]^k;
 
+private zoomRotate(x:NumericList(2),zoom:Numeric,rotation:Numeric)->begin
+  local p0:=cos(rotation)*zoom;
+  local p1:=sin(rotation)*zoom;
+  [x[0]*p0+x[1]*p1,
+  -x[0]*p1+x[1]*p0];
+end;
+
 private errorFunc(k)->
  {sqr(norm(center($aPhi,k  )-[1,0])-(rad0($aPhi)+radius($aPhi,k  )))
  +sqr(norm(center($aPhi,k+1)-[1,0])-(rad0($aPhi)+radius($aPhi,k+1)))
@@ -24,42 +31,45 @@ findSolution(forK>=2)->CONFIG_OF_K[forK] orElse begin
   CONFIG_OF_K[forK];
 end;
 
-plotCircles(k,circleStyle:String,gridStyle:String)->begin
+plotCircles(k,circleStyle:String,gridStyle:String)->
+plotCircles(k,circleStyle       ,gridStyle       ,   1,     0);
+
+plotCircles(k,circleStyle:String,gridStyle:String,zoom,rotate)->begin
   setOptions([['x0',-1],['x1',1],['autoscaleX',false],['axisStyleX',0],['logscaleX',false],
               ['y0',-1],['y1',1],['autoscaleY',false],['axisStyleY',0],['logscaleY',false],
               ['preserveAspect',true]]);
   local par:=findSolution(k);
   par[0]<1 ? par[0]:=1/par[0] : void;
-  local i0:=floor(ln(1E-3)/ln(par[0]));
+  local i0:=floor(ln(1E-3/zoom)/ln(par[0]));
   local i1:=ceil (ln(3)/ln(par[0]));
   local unitCircle:=map([0..100]/100*2*pi,{[sin($t),cos($t)]});
   plot();
   circleStyle=='' ? void :
-  [i0..i1].pEach(i,[center(par,i),radius(par,i)])
+  [i0..i1].pEach(i,[center(par,i).zoomRotate(zoom,rotate),radius(par,i)*zoom])
           .pEach(x,[map(unitCircle,{x[0]+x[1]*$p}),circleStyle])
           .map({addPlot@$p});
   gridStyle=='' ? void :
-  [i0..i1].each(i,center(par,i),center(par,i+1  ),[Nan,Nan],
-                  center(par,i),center(par,i+k  ),[Nan,Nan],
-                  center(par,i),center(par,i+k+1),[Nan,Nan]).addPlot(gridStyle);
+  [i0..i1].each(i,center(par,i).zoomRotate(zoom,rotate),center(par,i+1  ).zoomRotate(zoom,rotate),[Nan,Nan],
+                  center(par,i).zoomRotate(zoom,rotate),center(par,i+k  ).zoomRotate(zoom,rotate),[Nan,Nan],
+                  center(par,i).zoomRotate(zoom,rotate),center(par,i+k+1).zoomRotate(zoom,rotate),[Nan,Nan]).addPlot(gridStyle);
 end;
 
 //*Creates and displays an animation
 main('animate')->begin
   clearAnimation;
-  [2..50].each(k,plotCircles(k,'black polygon 0.5','red'),addAnimationFrame,index=0 ? display : void);
+  [2..50].each(k,plotCircles(k,'black polygon 0.5','red'),
+                 addAnimationFrame,
+                 index=0 ? display : void);
   display;
 end;
 
-//*Creates a plot for value K in xRes x yRes
-main(K,xRes,yRes,style in ['grid','circles','both'])->begin
-  local xr:=xRes.toInt;
-  local yr:=yRes.toInt;
-  local k :=K   .toInt;
-  xr>=10 AND yr>=10 ? void : fail('Invalid resolution ',xRes,'x',yRes);
-  k >=2 ? void : fail('Invalid value for k ',k);
-  style=='grid'    ? plotCircles(k,'','black 0.5') :
-  style=='circles' ? plotCircles(k,'black polygon 0.5','') :
-                     plotCircles(k,'blue polygon 0.5','red 0.5');
-  renderToFile(changeFileExt(myPath,'_'&xRes&'x'&yRes&'.png'),xr,yr,3);
+main('zoomin',K)->
+begin
+  local k:=K.toInt;
+  clearAnimation;
+  local z:=      findSolution(k)[0]^((2*k+1) /50);
+  local p:=(pi*4-findSolution(k)[1]* (2*k+1))/50;
+  [0..49].each(i,plotCircles(k,'black polygon 0.5','red',z^i,p*i),
+                 addAnimationFrame,
+                 index=0 ? display : void);
 end;

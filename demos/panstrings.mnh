@@ -1,0 +1,55 @@
+//*Returns both possible continuations for prev
+private memoized next(prev:String)->copy(prev,1,prev.length-1)&[1,0];
+//*Returns the last char in String s
+private lastChar(s:String)->s.copy(s.length-1,1);
+//*Returns all binary strings of a given length
+private binaryStrings(len>=1)->rangeGenerator(0,2^len-1).pMap({bits($i).ord.head(len).join});
+//*Returns a\[b]
+private without(a:StringSet,b:String)->a.minus([b]);
+//*Returns s if it does not contain '!' or void otherwise
+private unfailed(s:String)->pos('!',s)<0 ? s : void;
+//*Successful terminator - nothing more to visit
+private construct(prev:String,[].toSet)->'';
+//*Recursively constructs the shortest string starting with prev and containg all strings in rest
+private construct(prev:String,rest:StringSet)->begin
+  local n:=prev.next.intersect(rest);
+  n.size=0 ? '!' :  //mark as failed
+  n.size=1 ? begin
+               n:=n.toList.head;
+                          n.lastChar&construct(n,rest.without(n));
+  end : n.each(N,unfailed(N.lastChar&construct(N,rest.without(N))),head);
+end;
+
+//*Constructs one shortest string, containing all binary strings of length partLength
+construct(partLength)->begin
+  local all:=binaryStrings(partLength);
+  all.head&construct(all.head,all.tail.toSet);
+end;
+
+//*Cycles s for a given partLength
+private cycle(s:String,partLength:Int)->begin
+  local L:=copy(s,[0..2^partLength-1],partLength); //reconstruct visit list
+  L.trailing&join(L.leading.map(::lastChar));      //combine to new string
+end;
+
+//*Negates s by replacing every 0 with a 1 and vice versa
+private negate(s:String)->s.replace(['0','1','-'],['-','0','1']);
+
+//*Constructs a set of shortest strings using symmetry operations:
+//*Cyclic permutation, negation and reversing
+ //@SuppressUnusedWarning
+constructSet(partLength)->begin
+  local base:=construct(partLength);
+  local result:=[base].toSet;
+  [1..partLength-1].each(i,result|=(base:=cycle(base,partLength)));
+  result.each(s,result|=s.negate);
+  result.each(s,result|=s.reverseString);
+  result;
+end;
+
+//*Valiates that s contains all binary strings of length partLength
+//@SuppressUnusedWarning
+validate(s:String,partLength:Int)->
+  binaryStrings(partLength).each(part,pos(part,s)>=0,AND);
+
+main->[1..7].each(i,print(construct(i)));
