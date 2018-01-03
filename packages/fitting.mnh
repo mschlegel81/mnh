@@ -1,0 +1,21 @@
+private average(L:NumericList)->L.agg(+)/L.size;
+
+private fitParameters(xy:List)->fitParameters(xy.getInner(0),xy.getInner(1));
+private fitParameters(x:NumericList,y:NumericList)->begin
+  local mx:=x.average;
+  local my:=y.average;
+  local linearTerm:=average((x-mx)*(y-my))/average(sqr(x-mx));
+  [my-linearTerm*mx,linearTerm];
+end;
+
+//@SuppressUnusedWarning
+linearFit(...)->begin
+  local p:=fitParameters@(...);
+  p[0]+{$x}*p[1];
+end;
+
+//@SuppressUnusedWarning
+exponentialFit(...)->begin
+  local p:=fitParameters@ln(...);
+  exp(p[0])*{$x}^p[1];
+end;

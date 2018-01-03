@@ -169,6 +169,7 @@ FUNCTION T_patternElement.toCmdLineHelpStringString:ansistring;
 FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
   begin
     result:=(restrictionType = pe.restrictionType)
+        and (typeWhitelist   = pe.typeWhitelist  )
         and (restrictionIdx  = pe.restrictionIdx )
         and (builtinTypeCheck= pe.builtinTypeCheck)
         and (customTypeCheck = pe.customTypeCheck)

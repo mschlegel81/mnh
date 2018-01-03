@@ -46,6 +46,7 @@ private skipFile((demosRoot&'doublePendulum.mnh'     ))->true;
 private skipFile((demosRoot&'galtonBox.mnh'          ))->true;
 private skipFile((demosRoot&'oeis_sequences.mnh'     ))->true;
 private skipFile((demosRoot&'oeis_server.mnh'        ))->true;
+private skipFile((demosRoot&'perfectCircles.mnh'     ))->true;
 private skipFile((demosRoot&'rollingCircle.mnh'      ))->true;
 private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
 private skipFile(scriptFileName:String)->false;
