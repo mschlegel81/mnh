@@ -126,15 +126,18 @@ PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAss
   end;
 
 PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
+  CONST delimiters:set of char=['(',')','[',']',',','{','}','+','-','*','/','&','^',':','?','<','>','=','@','.',' '];
+  VAR i:longint;
   begin
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: SynCompletionCodeCompletion value: ',value);
     writeln(stdErr,'        DEBUG:                       sourceValue: ',sourceValue);
     writeln(stdErr,'        DEBUG:                                  : ',StringOfChar(' ',completionStart-1),'^');
     {$endif}
-    SourceStart.x:=completionStart;
-    SourceEnd.x:=completionStart+1;
-    while (SourceEnd.x<=length(sourceValue)) and (sourceValue[SourceEnd.x]<>'.') do inc(SourceEnd.x);
+    i:=completionStart+1;
+    while (i<=length(sourceValue)) and not(sourceValue[i] in delimiters) do inc(i);
+    SourceEnd  .x:=i              -1+SourceStart.x;
+    SourceStart.x:=completionStart-1+SourceStart.x;
     wordsInEditor.clear;
   end;
 
