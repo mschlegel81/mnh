@@ -1,6 +1,5 @@
 
 *.exe
-3rd_party/*
 *.log
 *.o
 *.ppu

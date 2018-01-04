@@ -1,6 +1,10 @@
 USE make_config, distroLog;
 
 DEFAULT_TARGET_FOLDER:='D:\dev\temp\';
+PACKED_CODE_FILE:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
+ALL_PACKED_FILES:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.zip';
+WEB_PAGE_FOLDER :='D:\dev\web\page\mnh\';
+EDITOR_CALL     :='C:\Program Files (x86)\Notepad++\notepad++.exe';
 
 NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
 License:=//!~
@@ -51,6 +55,14 @@ copyWithLicense(sourceName:String,targetName:String)->
   ? targetName.writeFileLines(License|sourceName.fileLines)
   : copyFile(sourceName,targetName);
 
+private copyToWeb->begin
+  files(WEB_PAGE_FOLDER&'*.zip').map(::deleteFile);
+  files(ALL_PACKED_FILES)
+    .map({[$name,WEB_PAGE_FOLDER&extractFileName($name)]})
+    .map({copyFile@$p});
+  EDITOR_CALL.execAsync([WEB_PAGE_FOLDER&'downloads.html']);
+end;
+
 main->main(DEFAULT_TARGET_FOLDER);
 main(target)->begin
   local TargetFolder:=target.matches('/|\\$') ? target : target&'/';
@@ -82,9 +94,10 @@ main(target)->begin
 
   changeDirectory(TargetFolder);
 
-  local packedFile:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
-  sevenZipExe.execPipeless(['a','-r','-bd',packedFile,'*']);
-  print('File ',packedFile,' created');
+  sevenZipExe.execPipeless(['a','-r','-bd',PACKED_CODE_FILE,'*']);
+  print('File ',PACKED_CODE_FILE,' created');
   print('Cleaning output folder');
   allFiles(TargetFolder,'*').map(::deleteFile);
+
+  ask('Update web page ?',['Y','N'])=='Y' ? copyToWeb : void;
 end;

@@ -203,14 +203,14 @@ TYPE
       state :T_queueTaskState;
       evaluationResult:P_literal;
     private
-      nextToEvaluate  :P_queueTask;
+      nextToEvaluate:P_queueTask;
+      isVolatile    :boolean;
     public
       PROCEDURE evaluate(VAR context:T_threadContext); virtual; abstract;
-      CONSTRUCTOR create(CONST environment:T_queueTaskEnvironment);
+      CONSTRUCTOR create(CONST environment:T_queueTaskEnvironment; CONST volatile:boolean);
       PROCEDURE reset;
       FUNCTION    canGetResult:boolean;
       FUNCTION    getResultAsLiteral:P_literal;
-      FUNCTION    isVolatile:boolean; virtual;
       DESTRUCTOR  destroy; virtual;
   end;
 
@@ -715,10 +715,11 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     end;
   end;
 
-CONSTRUCTOR T_queueTask.create(CONST environment:T_queueTaskEnvironment);
+CONSTRUCTOR T_queueTask.create(CONST environment:T_queueTaskEnvironment; CONST volatile:boolean);
   begin;
     initCriticalSection(taskCs);
-    env   :=environment;
+    env       :=environment;
+    isVolatile:=volatile;
   end;
 
 PROCEDURE T_queueTask.reset;
@@ -748,11 +749,6 @@ FUNCTION T_queueTask.getResultAsLiteral: P_literal;
     end;
     result:=evaluationResult;
     leaveCriticalSection(taskCs);
-  end;
-
-FUNCTION T_queueTask.isVolatile:boolean;
-  begin
-    result:=false;
   end;
 
 DESTRUCTOR T_queueTask.destroy;
