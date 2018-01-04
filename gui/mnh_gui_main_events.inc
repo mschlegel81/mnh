@@ -253,11 +253,15 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR help,jump,mark:boolean;
+      editor:P_editorMeta;
   begin
     help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
     jump:=(key=13) and (ssCtrl in Shift);
     mark:=(key=13) and (ssAlt  in Shift);
-    getEditor^.setUnderCursor(mark,help or jump);
+    if not(jump or mark or help) then exit;
+    editor:=getEditor;
+    if editor=nil then exit;
+    editor^.setUnderCursor(mark,help or jump);
     if jump then openLocation(getHelpLocation);
     if help then helpPopupMemo.text:=getHelpPopupText;
   end;
@@ -358,7 +362,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miShowAssistanceClick(Sender: TObject);
   begin
-    if hasEditor and (getEditor^.getAssistant<>nil) then outputPageControl.activePage:=assistanceTabSheet;
+    if hasEditor and (getEditor^.language=LANG_MNH) then outputPageControl.activePage:=assistanceTabSheet;
   end;
 
 PROCEDURE TMnhForm.miShowOutputClick(Sender: TObject);

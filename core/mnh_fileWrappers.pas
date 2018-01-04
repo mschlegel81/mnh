@@ -363,7 +363,7 @@ FUNCTION T_blankCodeProvider.getLines: T_arrayOfString; begin result:=C_EMPTY_ST
 FUNCTION T_blankCodeProvider.getPath: ansistring; begin result:='-'; end;
 FUNCTION T_blankCodeProvider.stateHash: T_hashInt; begin result:=1; end;
 FUNCTION T_blankCodeProvider.isPseudoFile: boolean; begin result:=true; end;
-FUNCTION T_blankCodeProvider.disposeOnPackageDestruction: boolean; begin result:=false; end;
+FUNCTION T_blankCodeProvider.disposeOnPackageDestruction: boolean; begin result:=true; end;
 
 CONSTRUCTOR T_virtualFileCodeProvider.create(CONST path: ansistring; CONST lineData: T_arrayOfString);
   begin

@@ -690,6 +690,7 @@ FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider
     if (codeProvider<>nil) and (codeProvider^.disposeOnPackageDestruction) then dispose(codeProvider,destroy);
     codeProvider:=newProvider;
     readyForCodeState:=0;
+    if (codeProvider=nil) then new(P_blankCodeProvider(codeProvider),create);
     result:=true;
   end;
 
