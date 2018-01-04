@@ -6,7 +6,7 @@ initHook:=begin
 end;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
-private needBuilt(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
+private needBuild(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
 
 private delp->(isLinux ? 'delp' : DelpPath).execPipeless(
        ['gui/lib/i386-win32',
@@ -62,13 +62,13 @@ currentCodeHash:=begin
 end;
 private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
 
-private ensureBuiltNumber->begin
-  local expectedContents:=format("BUILT_NUMBER=%s;",getBuiltNumber(ensureCodeHash));
-  fileContents('core/built_number.inc')==expectedContents
+private ensureBuildNumber->begin
+  local expectedContents:=format("BUILD_NUMBER=%s;",getBuildNumber(ensureCodeHash));
+  fileContents('core/build_number.inc')==expectedContents
   ? void
   : begin
-      writeFile('core/built_number.inc',expectedContents);
-      tprint('core/built_number.inc updated with current build number ',getBuiltNumber(ensureCodeHash));
+      writeFile('core/build_number.inc',expectedContents);
+      tprint('core/build_number.inc updated with current build number ',getBuildNumber(ensureCodeHash));
     end;
 end;
 
@@ -85,10 +85,10 @@ end : fail('File  '+source+' does not exist');
 
 private BUILD_LOG:='build.log';
 private buildExe(B:BuildConfig)->
-  B.needBuilt OR (B.buildBlindly AND B.canBuild)
+  B.needBuild OR (B.buildBlindly AND B.canBuild)
   ? begin
       ensureCodeHash;
-      ensureBuiltNumber;
+      ensureBuildNumber;
       tprint('Building ',B[2]);
       local compilerOutput:=B[3].exec(B[4]).head;
       local sepLine:=repeat('-',compilerOutput.each(line,line.length,max) orElse 0);
@@ -100,16 +100,16 @@ private buildExe(B:BuildConfig)->
       myMove(B[5],B[2]);
       B.buildBlindly
       ? print('Unchecked build. Look at the output file ',B[2])
-      : B.needBuilt
-        ? fail('Built failed - see '&BUILD_LOG&' for details')
-        : tprint('Built successful');
+      : B.needBuild
+        ? fail('Build failed - see '&BUILD_LOG&' for details')
+        : tprint('Build successful');
     end
   : void;
 
 testExe(B:BuildConfig,...)->
   not(B.canBuild) OR B.buildBlindly
   ? void
-  : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuilt(B)
+  : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuild(B)
     ? void
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['regTest/regTest.mnh']|...)=0
@@ -120,9 +120,9 @@ private showStatus->
   print orElse
   tprint('Current code hash: ',ensureCodeHash,"\n") orElse
   ([['Flavour','Binary','CodeVersion','Compile time','Time for test']]|
-  (BUILTS.each(B,[B[1],
+  (BUILDS.each(B,[B[1],
                  B[2],
-                 canBuild(B) ? needBuilt(B) ? B[2].codeVersion : 'o.k.' : '?' ,
+                 canBuild(B) ? needBuild(B) ? B[2].codeVersion : 'o.k.' : '?' ,
                  canBuild(B) ? B[2].compileTime : '?',
                  (canBuild(B) ? timeForTest(B[2]) : timeForTest(B[1],ensureCodeHash)) orElse '.']))).formatTable.join("\n").print
   orElse print;
@@ -138,7 +138,7 @@ private cleanup->begin
    files(allFolders('..')&'/*.bak')|
    files('core/res_*.inc')|
    allFiles('versions','*.exe')|
-   files(BUILTS.getInner(5))|
+   files(BUILDS.getInner(5))|
    files('build.log'))
   .unique
   .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
@@ -159,11 +159,11 @@ private isSimilarFile(filename1:String,filename2:String)->pos(filename2.upper,fi
 private acceptedMainParameters->inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p);
 main->main('build');
 //*Build all targets
-main('build')->BUILTS.each(B,B.buildExe);
+main('build')->BUILDS.reverseList.each(B,B.buildExe);
 //*Test all targets - non-debug versions will be built if necessary
-main('test')->BUILTS.each(B,B.testExe);
+main('test')->BUILDS.reverseList.each(B,B.testExe);
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
-main('retest')->BUILTS.each(B,B.testExe('retest'));
+main('retest')->BUILDS.reverseList.each(B,B.testExe('retest'));
 //*Show the current built status
 main('status')->showStatus;
 //*Show the current built status
@@ -174,15 +174,15 @@ main('clean')->tprint('Cleaning') orElse cleanup;
 main('CLEAN')->begin
   tprint('Deep cleaning');
   cleanup;
-  files('versions/*').|(files(BUILTS.getInner(2))).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  files('versions/*').|(files(BUILDS.getInner(2))).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 end;
 //*Beep - just for notification purposes
 main('beep')->beep;
 
 main('distro')->isLinux ? fail('Must be executed in windows environment') : begin
-  BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
-  local linuxBuiltReady:=LINUX_BUILTS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
-  packSets(linuxBuiltReady,getBuiltNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
+  BUILDS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
+  local linuxBuiltReady:=LINUX_BUILDS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
+  packSets(linuxBuiltReady,getBuildNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
   writeAllDataStores;
   {fileExists($0)
    ? executor.execPipeless([$0])
@@ -203,15 +203,13 @@ main(target:String)->begin
     testAfterBuild ? {buildExe($B) orElse testExe($B) orElse true}
                    : {buildExe($B) orElse true};
 
-  BUILTS.each(B,isSameFileName(B[2],tgt) OR tgt=B[1] ? buildAndTest(B) orElse true : false,OR) OR
-  BUILTS.each(B,isSimilarFile (B[2],tgt)             ? buildAndTest(B) orElse true : false,or)
+  BUILDS.each(B,isSameFileName(B[2],tgt) OR tgt=B[1] ? buildAndTest(B) orElse true : false,OR) OR
+  BUILDS.each(B,isSimilarFile (B[2],tgt)             ? buildAndTest(B) orElse true : false,or)
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | VALID_TARGETS).join("\n"));
 end;
 
 //*Several steps in succession
 main(...)->... .each(step,
-  print('******************************'),
-  print('* ',step),
-  print('******************************'),
+  printf(SKEWED_FRAME_FMT,step),
   main(step));

@@ -69,7 +69,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);
     Label1.caption:=join(l,LineEnding);
-    Label2.caption:='build '+intToStr(BUILT_NUMBER)+' ['+CODE_HASH+']';
+    Label2.caption:='build '+intToStr(BUILD_NUMBER)+' ['+CODE_HASH+']';
     interLockedIncrement(docThreadsRunning);
     {$ifdef UNIX}
     prepareDoc(nil);

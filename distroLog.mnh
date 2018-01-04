@@ -1,12 +1,9 @@
 plain datastore log;
 
-private max([])->0;
-private max(...)->math.max@...;
-
-maxLoggedBuildNumber->log.getInner(1).max;
+private maxLoggedBuildNumber->try({max(log.getInner(1))},0);
 
 //@SuppressUnusedWarning
-memoized getBuiltNumber(codeHash:String)->begin
+memoized getBuildNumber(codeHash:String)->begin
   isVoid(log)
   ? begin
       log:=[].toMap;

@@ -22,7 +22,7 @@ type BuildConfig(L:List(7))->L[0].isBoolean AND
                              L[6].isBoolean;
 
 //BUILTS  linux, flavour , binary                    , compiler                  , compilerOptions                                 , compilerOutput
-BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
+BUILDS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
          [false,'FOWin64','./mnh.exe'                ,Lazarus64Path&'\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
          [false,'LOWin32','bin32/mnh_light.exe'      ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=deployment','consoles/mnh_light.lpi'],'consoles/mnh_light.exe'      ,false],
          [false,'FOWin32','bin32/mnh.exe'            ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh.exe'                 ,false],
@@ -37,7 +37,7 @@ BUILTS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.e
          [true ,'FDLinux','./mnh_debug'              ,               'lazbuild'    ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]];
 
 //@SuppressUnusedWarning
-LINUX_BUILTS:=BUILTS.each(b,b[0] AND not(b[6]) ? b : void);
+LINUX_BUILDS:=BUILDS.each(b,b[0] AND not(b[6]) ? b : void);
 
 canBuild(B:BuildConfig)->B[0]=isLinux;
 
@@ -45,17 +45,17 @@ canBuild(B:BuildConfig)->B[0]=isLinux;
 buildBlindly(B:BuildConfig)->B[1]=='LPLinux';
 
 //@SuppressUnusedWarning
-VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
+VALID_TARGETS:=BUILDS.each(B,B.canBuild ? B[2] : void);
 //@SuppressUnusedWarning
 binName(B:BuildConfig)->B[2];
 
 //@SuppressUnusedWarning
-packSets(linuxBuiltsReady:Boolean,builtNo)->
+packSets(linuxBuildsReady:Boolean,builtNo)->
   [                  [[      'mnh.exe',      'mnh_light.exe']      ,'win64'],
                      [['bin32/mnh.exe','bin32/mnh_light.exe']      ,'win32'],
                      [[      'mnh.exe',      'mnh_light.exe']|SSL64,'win64_openSsl'],
                      [['bin32/mnh.exe','bin32/mnh_light.exe']|SSL32,'win32_openSsl'],
-  linuxBuiltsReady ? [[      'mnh'    ,      'mnh_light'    ]      ,'linux'        ] : void]
+  linuxBuildsReady ? [[      'mnh'    ,      'mnh_light'    ]      ,'linux'        ] : void]
   .each(s,[expandedFileName(s[0]),builtNo,s[1]]);
 
 memoized sevenZipExe->
