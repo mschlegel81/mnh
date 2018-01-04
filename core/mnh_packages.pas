@@ -114,12 +114,22 @@ TYPE
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
       FUNCTION updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
-      PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
+      PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
       FUNCTION getStateHash:T_hashInt;
-      FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString;
-      PROCEDURE triggerUpdate(CONST editor:P_codeProvider);
-      FUNCTION resolveImport(CONST id:string):string;
-      FUNCTION getImportablePackages:T_arrayOfString;
+      FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString; virtual;
+      PROCEDURE triggerUpdate(CONST editor:P_codeProvider); virtual;
+      FUNCTION resolveImport(CONST id:string):string; virtual;
+      FUNCTION getImportablePackages:T_arrayOfString; virtual;
+  end;
+
+  P_blankCodeAssistanceData=^T_blankCodeAssistanceData;
+  T_blankCodeAssistanceData=object(T_codeAssistanceData)
+    CONSTRUCTOR createBlank;
+    PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
+    FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString; virtual;
+    PROCEDURE triggerUpdate(CONST editor:P_codeProvider); virtual;
+    FUNCTION resolveImport(CONST id:string):string; virtual;
+    FUNCTION getImportablePackages:T_arrayOfString; virtual;
   end;
 
   P_postEvaluationData=^T_postEvaluationData;
@@ -320,13 +330,19 @@ CONSTRUCTOR T_codeAssistanceData.create;
   begin
     package:=nil;
     packageIsValid:=false;
+    setLength(localErrors,0);
+    setLength(externalErrors,0);
     stateHash:=0;
     userRules.create;
+    editorForUpdate:=nil;
     currentlyProcessing:=false;
     checkPending:=false;
     new(localIdInfos,create);
     initCriticalSection(cs);
   end;
+
+CONSTRUCTOR T_blankCodeAssistanceData.createBlank;
+  begin inherited create; end;
 
 DESTRUCTOR T_codeAssistanceData.destroy;
   begin
@@ -441,6 +457,7 @@ FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfStri
     leaveCriticalSection(cs);
   end;
 
+PROCEDURE T_blankCodeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); begin end;
 PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
   PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
     VAR doc:P_intrinsicFunctionDocumentation;
@@ -579,6 +596,7 @@ FUNCTION T_codeAssistanceData.getStateHash:T_hashInt;
     enterCriticalSection(cs); result:=stateHash; leaveCriticalSection(cs);
   end;
 
+FUNCTION T_blankCodeAssistanceData.getOutline(CONST options:T_outlineOptions):T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
 FUNCTION T_codeAssistanceData.getOutline(CONST options:T_outlineOptions):T_arrayOfString;
   begin
     enterCriticalSection(cs);
@@ -587,6 +605,7 @@ FUNCTION T_codeAssistanceData.getOutline(CONST options:T_outlineOptions):T_array
     leaveCriticalSection(cs);
   end;
 
+FUNCTION T_blankCodeAssistanceData.resolveImport(CONST id:string):string; begin result:=''; end;
 FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
   begin
     enterCriticalSection(cs);
@@ -595,6 +614,7 @@ FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
     leaveCriticalSection(cs);
   end;
 
+FUNCTION T_blankCodeAssistanceData.getImportablePackages:T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
 FUNCTION T_codeAssistanceData.getImportablePackages:T_arrayOfString;
   begin
     result:=listScriptIds(extractFilePath(package^.getPath));
@@ -606,6 +626,7 @@ FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
     result:=0;
   end;
 
+PROCEDURE T_blankCodeAssistanceData.triggerUpdate(CONST editor:P_codeProvider); begin end;
 PROCEDURE T_codeAssistanceData.triggerUpdate(CONST editor:P_codeProvider);
   begin
     enterCriticalSection(cs);

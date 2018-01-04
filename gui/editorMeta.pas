@@ -89,7 +89,6 @@ T_editorMeta=object(T_codeProvider)
 
     PROPERTY language:T_language read language_ write setLanguage;
     PROPERTY editor:TSynEdit read editor_;
-    PROPERTY getAssistant:P_codeAssistanceData read assistant;
     PROCEDURE activate;
     FUNCTION caretInMainFormCoordinates:TPoint;
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
@@ -154,7 +153,7 @@ T_runnerModel=object
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
-    FUNCTION canRun:boolean;
+    FUNCTION canRun(CONST quickMode:boolean=false):boolean;
     PROCEDURE customRun(CONST mainCall,profiling:boolean; CONST mainParameters:string='');
     PROCEDURE rerun(CONST profiling:boolean);
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
@@ -192,8 +191,9 @@ PROCEDURE updateEditorsByGuiStatus;
 PROCEDURE closeAllEditorsButCurrent;
 PROCEDURE closeAllUnmodifiedEditors;
 PROCEDURE checkForFileChanges;
-
 PROCEDURE finalizeEditorMeta;
+
+FUNCTION getSafeAssistant(CONST editor:P_editorMeta):P_codeAssistanceData;
 VAR runnerModel:T_runnerModel;
     completionLogic:T_completionLogic;
     recentlyActivated:T_fileHistory;
@@ -210,6 +210,8 @@ VAR mainForm              :T_abstractMnhForm;
     outlineSynEdit        :TSynEdit;
     assistanceTabSheet    :TTabSheet;
     editorFont            :TFont;
+
+    fallbackCodeAssistant :P_blankCodeAssistanceData=nil;
 
 VAR fileTypeMeta:array[T_language] of record
       highlighter:TSynCustomHighlighter;
@@ -1362,9 +1364,10 @@ FUNCTION T_runnerModel.areEditorsLocked: boolean;
     result:=(debugMode_ and runEvaluator.evaluationRunning) or (runEvaluator.getRunnerStateInfo.state=es_editRunning);
   end;
 
-FUNCTION T_runnerModel.canRun: boolean;
+FUNCTION T_runnerModel.canRun(CONST quickMode:boolean=false): boolean;
   begin
-    result:=not(runEvaluator.evaluationRunningOrPending) and hasEditor and (getEditor^.language=LANG_MNH);
+    result:=not(runEvaluator.evaluationRunningOrPending) and
+            (quickMode or hasEditor and (getEditor^.language=LANG_MNH));
   end;
 
 PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST mainParameters: string);
@@ -1432,6 +1435,15 @@ PROCEDURE T_runnerModel.haltEvaluation;
     if debugMode_ then runEvaluator.context.stepper^.haltEvaluation;
   end;
 
+FUNCTION getSafeAssistant(CONST editor:P_editorMeta):P_codeAssistanceData;
+  begin
+    if editor=nil then result:=nil else result:=editor^.assistant;
+    if result=nil then begin
+      if fallbackCodeAssistant=nil then new(fallbackCodeAssistant,createBlank);
+      result:=fallbackCodeAssistant;
+    end;
+  end;
+
 INITIALIZATION
   setLength(editorMetaData,0);
   doNotCheckFileBefore:=now;
@@ -1439,4 +1451,5 @@ INITIALIZATION
 FINALIZATION
   finalizeEditorMeta;
   recentlyActivated.destroy;
+  if fallbackCodeAssistant<>nil then dispose(fallbackCodeAssistant,destroy);
 end.

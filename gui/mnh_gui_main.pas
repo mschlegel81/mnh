@@ -451,10 +451,9 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
   VAR edit:P_editorMeta;
   begin
     edit:=getEditor;
-    if (edit=nil) or (edit^.language<>LANG_MNH) then exit;
-    quick.completion.assignEditor(quick.meta.editor,edit^.getAssistant);
-    if runnerModel.canRun then begin
-      edit^.setWorkingDir;
+    quick.completion.assignEditor(quick.meta.editor,getSafeAssistant(edit));
+    if runnerModel.canRun(true) then begin
+      if edit<>nil then edit^.setWorkingDir;
       quick.evaluationDeferred:=false;
       quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit));
     end else quick.evaluationDeferred:=true;
