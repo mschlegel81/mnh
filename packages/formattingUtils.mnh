@@ -1,3 +1,12 @@
+#@SuppressUnusedWarning##*Format for a frame of ---; accepts one parameter
+MINUS_FRAME_FMT   :="+%{repeat('-',$0.length+2)}s+\n| %{$0}s |\n+%{repeat('-',$0.length+2)}s+";
+#@SuppressUnusedWarning##*Format for a frame of ===; accepts one parameter
+EQUALS_FRAME_FMT  :="#%{repeat('=',$0.length+2)}s#\n# %{$0}s #\n#%{repeat('=',$0.length+2)}s#";
+#@SuppressUnusedWarning##*Format for a frame of ***; accepts one parameter
+ASTERISK_FRAME_FMT:="*%{repeat('*',$0.length+2)}s*\n* %{$0}s *\n*%{repeat('*',$0.length+2)}s*";
+#@SuppressUnusedWarning##*Format for a pretty frame of diagonal outline; accepts one parameter
+SKEWED_FRAME_FMT:="   %{repeat('_',$0.length+3)}s\n  /%{repeat(' ',$0.length+2)}s/\n / %{$0}s /\n/%{repeat('_',$0.length+2)}s/";
+
 //*Formats a list as a table for printout. The result is a stringList
 formatTable(L:List)->begin
   local columnCount:=0;
