@@ -63,21 +63,18 @@ private copyToWeb->begin
   EDITOR_CALL.execAsync([WEB_PAGE_FOLDER&'downloads.html']);
 end;
 
-main->main(DEFAULT_TARGET_FOLDER);
-main(target)->begin
-  local TargetFolder:=target.matches('/|\\$') ? target : target&'/';
-
-  local CORE_TARGET_FOLDER:=TargetFolder&'core\';
-  local THIRD_TARGET_FOLDER:=TargetFolder&'3rd_party\';
+main->begin
+  local CORE_TARGET_FOLDER:=DEFAULT_TARGET_FOLDER&'core\';
+  local THIRD_TARGET_FOLDER:=DEFAULT_TARGET_FOLDER&'3rd_party\';
 
   print('Cleaning output folder');
-  allFiles(TargetFolder,'*').map(::deleteFile);
+  allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
 
   print('Copying MNH sources');
   allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh','*.expected'])
     .filter({not($0.matches('/lib/|core/res_.*inc$|core/built_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
-    .pMap({copyWithLicense($0,TargetFolder&$0)});
+    .pMap({copyWithLicense($0,DEFAULT_TARGET_FOLDER&$0)});
 
   print('Copying common sources');
   hashFiles
@@ -90,14 +87,14 @@ main(target)->begin
     .pMap({copyFile($0,THIRD_TARGET_FOLDER&extractFileName($0))}));
 
   print('Creating readme');
-  writeFileLines(TargetFolder&'readme.txt',Readme);
+  writeFileLines(DEFAULT_TARGET_FOLDER&'readme.txt',Readme);
 
-  changeDirectory(TargetFolder);
+  changeDirectory(DEFAULT_TARGET_FOLDER);
 
   sevenZipExe.execPipeless(['a','-r','-bd',PACKED_CODE_FILE,'*']);
   print('File ',PACKED_CODE_FILE,' created');
   print('Cleaning output folder');
-  allFiles(TargetFolder,'*').map(::deleteFile);
+  allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
 
   ask('Update web page ?',['Y','N'])=='Y' ? copyToWeb : void;
 end;
