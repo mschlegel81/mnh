@@ -17,6 +17,7 @@ T_completionLogic=object
     editor:TSynEdit;
     lastWordsCaret:longint;
     SynCompletion:TSynCompletion;
+    completionStart:longint;
     relatedAssistant:P_codeAssistanceData;
     PROCEDURE ensureWordsInEditorForCompletion;
   public
@@ -52,8 +53,10 @@ PROCEDURE initIntrinsicRuleList;
         intrinsicRulesForCompletion.put(ID_QUALIFY_CHARACTER+split(id,ID_QUALIFY_CHARACTER)[1]);
       end;
     end;
-    for tt in T_tokenType do if isIdentifier(C_tokenInfo[tt].defaultId,true) then
-      intrinsicRulesForCompletion.put(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
+    for tt in T_tokenType do if isIdentifier(C_tokenInfo[tt].defaultId,false) then
+      intrinsicRulesForCompletion.put(replaceAll(C_tokenInfo[tt].defaultId,'.',''))
+    else if (copy(C_tokenInfo[tt].defaultId,1,1)='.') and isIdentifier(copy(C_tokenInfo[tt].defaultId,2,1000),false) then
+      intrinsicRulesForCompletion.put(C_tokenInfo[tt].defaultId);
     for tc in T_typeCheck do
       intrinsicRulesForCompletion.put(C_typeCheckInfo[tc].name);
     for m in T_modifier do
@@ -124,34 +127,54 @@ PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAss
 
 PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
   begin
-    value:=copy(sourceValue,1,LastDelimiter('.',sourceValue)-1)+value;
+    {$ifdef debugMode}
+    writeln(stdErr,'        DEBUG: SynCompletionCodeCompletion value: ',value);
+    writeln(stdErr,'        DEBUG:                       sourceValue: ',sourceValue);
+    writeln(stdErr,'        DEBUG:                                  : ',StringOfChar(' ',completionStart-1),'^');
+    {$endif}
+    SourceStart.x:=completionStart;
+    SourceEnd.x:=completionStart+1;
+    while (SourceEnd.x<=length(sourceValue)) and (sourceValue[SourceEnd.x]<>'.') do inc(SourceEnd.x);
     wordsInEditor.clear;
   end;
 
 PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
   VAR s:string;
       w:string;
+      i:longint;
   begin
-    ensureWordsInEditorForCompletion;
-    SynCompletion.ItemList.clear;
-    s:=SynCompletion.CurrentString;
-    for w in wordsInEditor.values do if (s='') or (pos(s,w)=1) then SynCompletion.ItemList.add(w);
-  end;
-
-PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
-  VAR i:longint;
-      s:string;
-      w:string;
-  begin
-    ensureWordsInEditorForCompletion;
-    SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
     i:=LastDelimiter('.',s);
     if i>1 then begin
       s:=copy(s,i,length(s));
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: Last delimiter is @',i,'; currentString: ',SynCompletion.CurrentString,' -> ',s);
+      {$endif}
+      completionStart:=i;
       SynCompletion.CurrentString:=s;
+    end else begin
+      completionStart:=1;
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: Completion start reset "',s,'"')
+      {$endif}
     end;
+
+    ensureWordsInEditorForCompletion;
+    SynCompletion.ItemList.clear;
+    for w in wordsInEditor.values do if (s='') or (pos(s,w)=1) then SynCompletion.ItemList.add(w);
+
+  end;
+
+PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
+  VAR s:string;
+      w:string;
+  begin
+    s:=SynCompletion.CurrentString;
+
+    ensureWordsInEditorForCompletion;
+    SynCompletion.ItemList.clear;
     for w in wordsInEditor.values do if pos(s,w)=1 then SynCompletion.ItemList.add(w);
+
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
