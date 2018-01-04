@@ -1,4 +1,3 @@
-USE packCode;
 main->begin
   ['mnh.exe',
    'mnh_light.exe',
@@ -12,5 +11,4 @@ main->begin
       ? print('Copied ',$f[0],' -> C:\bin\',$f[1])
       : fail('Copy ',$f[0],' -> C:\bin\',$f[1],' failed');
     end});
-  packCode.main;
 end;
