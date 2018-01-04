@@ -41,7 +41,9 @@ BUILDS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.e
          [true ,'FIDLinux','./mnhi_debug'            ,               'lazbuild'    ,['-B','--bm=imig_debug','gui/mnh_gui.lpi']       ,'gui/mnhi_debug'              ,true]];
 
 //@SuppressUnusedWarning
-LINUX_BUILDS:=BUILDS.each(b,b[0] AND not(b[6]) ? b : void);
+DISTRO_BUILDS:=BUILDS.head(3);
+//@SuppressUnusedWarning
+LINUX_BUILDS:=DISTRO_BUILDS.filter({$b[0]});
 
 canBuild(B:BuildConfig)->B[0]=isLinux;
 
