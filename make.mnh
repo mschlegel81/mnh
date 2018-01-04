@@ -180,7 +180,7 @@ end;
 main('beep')->beep;
 
 main('distro')->isLinux ? fail('Must be executed in windows environment') : begin
-  BUILDS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
+  DISTRO_BUILDS.each(B,B.canBuild ? B.testExe : void);
   local linuxBuiltReady:=LINUX_BUILDS.each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND);
   packSets(linuxBuiltReady,getBuildNumber(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
   writeAllDataStores;
