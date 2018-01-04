@@ -87,7 +87,6 @@ TYPE
     payload:P_futureLiteral;
     CONSTRUCTOR create(CONST environment:T_queueTaskEnvironment; CONST future:P_futureLiteral);
     PROCEDURE   evaluate(VAR context:T_threadContext); virtual;
-    FUNCTION    isVolatile:boolean; virtual;
     DESTRUCTOR  destroy; virtual;
   end;
 
@@ -164,7 +163,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       with recycling do if fill>0 then begin
         dec(fill);
         result:=dat[fill];
-      end else new(result,create(environment));
+      end else new(result,createEachTask(environment));
       result^.define(expr,idx,x);
     end;
 
@@ -423,7 +422,7 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; VAR context:T_threadCo
 
 CONSTRUCTOR T_futureTask.create(CONST environment: T_queueTaskEnvironment; CONST future: P_futureLiteral);
   begin
-    inherited create(environment);
+    inherited create(environment,true);
     payload:=future;
   end;
 
@@ -442,11 +441,6 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext);
       state:=fts_ready;
       leaveCriticalSection(taskCs);
     end;
-  end;
-
-FUNCTION T_futureTask.isVolatile: boolean;
-  begin
-    result:=true;
   end;
 
 DESTRUCTOR T_futureTask.destroy;
@@ -484,7 +478,7 @@ PROCEDURE T_filterTask.evaluate(VAR context: T_threadContext);
 
 CONSTRUCTOR T_mapTask.createMapTask(CONST environment: T_queueTaskEnvironment; CONST expr: P_expressionLiteral);
   begin
-    create(environment);
+    create(environment,false);
     mapPayload.mapRule:=expr;
     mapPayload.mapParameter:=nil;
   end;
@@ -527,7 +521,7 @@ DESTRUCTOR T_mapTask.destroy;
 
 CONSTRUCTOR T_eachTask.createEachTask(CONST environment: T_queueTaskEnvironment);
   begin
-    create(environment);
+    create(environment,false);
   end;
 
 PROCEDURE T_eachTask.dropEachParameter;
