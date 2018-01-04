@@ -59,7 +59,7 @@ main('files')->begin
     .each(file,existing(file) orElse
                existing('gui/'&file) orElse
                existing('consoles/'&file))
-    .union(allFiles('','*.inc').minus(['core/code_hash.inc','core/built_number.inc']))
+    .union(allFiles('','*.inc').minus(['core/code_hash.inc','core/build_number.inc']))
     .sort;
 
   newList.escape

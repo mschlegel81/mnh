@@ -1,6 +1,6 @@
 plain datastore log;
 
-private maxLoggedBuildNumber->try({max(log.getInner(1))},0);
+maxLoggedBuildNumber->try({max(log.getInner(1))},0);
 
 //@SuppressUnusedWarning
 memoized getBuildNumber(codeHash:String)->begin
