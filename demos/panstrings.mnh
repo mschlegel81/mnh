@@ -14,14 +14,12 @@ private unfailed(s:String)->pos('!',s)<0 ? s : void;
 //*Successful terminator - nothing more to visit
 private construct(prev:String,[].toSet)->'';
 //*Recursively constructs the shortest string starting with prev and containg all strings in rest
-private construct(prev:String,rest:StringSet)->begin
-  local n:=prev.next.intersect(rest);
-  n.size=0 ? '!' :  //mark as failed
-  n.size=1 ? begin
-               n:=n.toList.head;
-                          n.lastChar&construct(n,rest.without(n));
-  end : n.each(N,unfailed(N.lastChar&construct(N,rest.without(N))),orElse);
-end;
+private construct(prev:String,rest:StringSet)->
+  prev.next
+      .intersect(rest) //all possible continuations
+      .each(N,
+         unfailed(N.lastChar&construct(N,rest.without(N))),
+         orElse) orElse '!'; //take first unfailed result or return fail-marker
 
 //*Constructs one shortest string, containing all binary strings of length partLength
 construct(partLength)->begin
