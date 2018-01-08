@@ -4151,8 +4151,6 @@ in> escapeJava('Test');
 out> '"Test"'
 in> extractFileNameOnly('/home/user/file.ext');
 out> 'file'
-in> expandedFileName('/home/user/file.ext');
-out> '/home/user/file.ext'
 in> extractFileDirectory('/home/user/file.ext');
 out> '/home/user'
 in> extractFileName('/home/user/file.ext');
