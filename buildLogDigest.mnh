@@ -19,7 +19,7 @@ ignoredPatterns:=['dev/3rd_party',
 
 private currentViolations->'build.log'.fileLines
   .pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
-  .pEach(line,line.replace(['/media/','D:\'],'').replace('\','/'))
+  .pEach(line,line.replace(['/media/',DEV_ROOT.extractFileDirectory.replace('/','\')],'').replace('\','/'))
   .pEach(line,line.matches(ignoredPatterns).agg(OR) ? void : line)
   .pMap({[$line.matchComposite('\(....\)').trailing[0],$line]})
   .filter({$line.size=2})
@@ -41,6 +41,7 @@ main('store')->storedViolations:=currentViolations;
 
 private existing(f:String)->fileExists(f) ? f : void;
 
+DEV_ROOT:=myPath.extractFileDirectory.extractFileDirectory.replace('/','\');
 
 USE make_config;
 //*Check file usage
@@ -51,8 +52,8 @@ main('files')->begin
     .replace('(3104) Compiling','')
     .replace('/media/dev/mnh5','')
     .replace('/media/dev/','../')
-    .replace('D:\dev\mnh5\','')
-    .replace('D:\dev\','..\')
+    .replace(DEV_ROOT&'\mnh5\','')
+    .replace(DEV_ROOT&'\','..\')
     .replace('\','/')
     .trim
     .unique

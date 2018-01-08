@@ -1,10 +1,11 @@
 USE make_config, distroLog;
 
-DEFAULT_TARGET_FOLDER:='D:\dev\temp\';
-PACKED_CODE_FILE:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
-ALL_PACKED_FILES:='D:\dev\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.zip';
-WEB_PAGE_FOLDER :='D:\dev\web\page\mnh\';
-EDITOR_CALL     :='C:\Program Files (x86)\Notepad++\notepad++.exe';
+DEV_ROOT:=myPath.extractFileDirectory.extractFileDirectory.replace('/','\');
+DEFAULT_TARGET_FOLDER:=DEV_ROOT&'\temp\';
+PACKED_CODE_FILE     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
+ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.zip';
+WEB_PAGE_FOLDER      :=DEV_ROOT&'\web\page\mnh\';
+EDITOR_CALL          :='C:\Program Files (x86)\Notepad++\notepad++.exe';
 
 NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
 License:=//!~
