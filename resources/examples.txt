@@ -627,8 +627,6 @@ escapeJava('Test');
 
 extractFileNameOnly('/home/user/file.ext');
 
-expandedFileName('/home/user/file.ext');
-
 extractFileDirectory('/home/user/file.ext');
 
 extractFileName('/home/user/file.ext');
@@ -878,3 +876,5 @@ mnhInfo;
 driveInfo;
 
 myPath;
+
+expandedFileName('/home/user/file.ext');

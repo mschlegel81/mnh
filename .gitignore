@@ -29,3 +29,4 @@ mnh_prof
 versions/*.zip
 mnhi
 mnhi_debug
+/core/build_number.inc
