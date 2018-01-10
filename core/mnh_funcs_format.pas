@@ -412,7 +412,7 @@ FUNCTION format_imp intFuncSignature;
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       {$ifdef fullVersion}
-      context.callStackPop();
+      context.callStackPop(nil);
       {$endif}
       if not(context.adapters^.noErrors) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
@@ -434,14 +434,14 @@ FUNCTION printf_imp intFuncSignature;
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.adapters^.noErrors) then begin
-        {$ifdef fullVersion}context.callStackPop();{$endif}
+        {$ifdef fullVersion}context.callStackPop(nil);{$endif}
         exit(nil);
       end;
       system.enterCriticalSection(print_cs);
       context.adapters^.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
-      {$ifdef fullVersion}context.callStackPop();{$endif}
+      {$ifdef fullVersion}context.callStackPop(nil);{$endif}
     end;
   end;
 

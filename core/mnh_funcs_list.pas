@@ -91,7 +91,7 @@ FUNCTION sort_imp intFuncSignature;
       {$endif}
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.adapters^);
       {$ifdef fullVersion}
-      context.callStackPop;
+      context.callStackPop(nil);
       {$endif}
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_compoundTypes)
@@ -462,7 +462,7 @@ FUNCTION group_imp intFuncSignature;
       for groupEntry in groupList do listResult^.append(groupEntry.value,false);
       groupMap.destroy;
       {$ifdef fullVersion}
-      if aggregator<>nil then context.callStackPop();
+      if aggregator<>nil then context.callStackPop(nil);
       {$endif}
     end;
   end;

@@ -982,7 +982,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context,usecase=lu_forCodeAssistance);
         if profile then context.timeBaseComponent(pc_importing);
         {$ifdef fullVersion}
-        context.callStackPop();
+        context.callStackPop(nil);
         {$endif}
         i:=0;
         while i<length(packageUses) do begin
@@ -1285,7 +1285,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       parseRule;
       if profile then context.timeBaseComponent(pc_declaration);
       {$ifdef fullVersion}
-      context.callStackPop();
+      context.callStackPop(nil);
       {$endif}
     end else if statement.firstToken^.tokType=tt_modifier then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
@@ -1301,7 +1301,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       parseDataStore;
       if profile then context.timeBaseComponent(pc_declaration);
       {$ifdef fullVersion}
-      context.callStackPop();
+      context.callStackPop(nil);
       {$endif}
     end else if context.adapters^.noErrors then begin
       case usecase of
@@ -1319,7 +1319,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           context.reduceExpression(statement.firstToken);
           if profile then context.timeBaseComponent(pc_interpretation);
           {$ifdef fullVersion}
-          context.callStackPop();
+          context.callStackPop(nil);
           {$endif}
           if (statement.firstToken<>nil) and context.adapters^.doShowExpressionOut then begin
             {$ifdef fullVersion}
@@ -1371,7 +1371,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
         context.reduceExpression(t);
         if profile then context.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
-        context.callStackPop();
+        context.callStackPop(nil);
         {$endif}
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin

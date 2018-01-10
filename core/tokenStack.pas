@@ -1,6 +1,7 @@
 UNIT tokenStack;
 INTERFACE
-USES myGenerics,
+USES sysutils,
+     myGenerics,
      //MNH:
      mnh_constants,
      mnh_basicTypes,
@@ -33,15 +34,14 @@ TYPE
     {$endif}
   end;
 
+  {$ifdef fullVersion}
   T_callStackEntry=record
     callLocation:T_tokenLocation;
     calleeId:ansistring;
     calleeLocation:T_tokenLocation;
-    {$ifdef fullVersion}
     timeForProfiling_inclusive,
     timeForProfiling_exclusive:double;
     parameters:P_variableTreeEntryCategoryNode;
-    {$endif}
   end;
 
   P_callStack=^T_callStack;
@@ -55,16 +55,15 @@ TYPE
       DESTRUCTOR destroy;
       PROPERTY size:longint read fill;
       PROCEDURE clear;
-      PROCEDURE push({$ifdef fullVersion}CONST wallclockTime:double;
-                                         CONST parameters:P_variableTreeEntryCategoryNode;{$endif}
+      PROCEDURE push(CONST wallclockTime:double;
+                     CONST parameters:P_variableTreeEntryCategoryNode;
                      CONST callerLocation: T_tokenLocation;
                      CONST callee: P_objectWithIdAndLocation);
-      PROCEDURE pop({$ifdef fullVersion}CONST wallclockTime:double;CONST profiler:P_profiler{$endif});
+      FUNCTION pop(CONST wallclockTime:double;CONST profiler:P_profiler):T_tokenLocation;
       PROCEDURE print(VAR adapters:T_adapters);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
 
-  {$ifdef fullVersion}
   T_localIdInfo=record
                   name:string;
                   validFrom,validUntil:T_tokenLocation;
@@ -149,7 +148,6 @@ PROCEDURE T_localIdInfos.clear;
   begin
     setLength(infos,0);
   end;
-{$endif}
 
 CONSTRUCTOR T_callStack.create;
   begin
@@ -164,10 +162,10 @@ DESTRUCTOR T_callStack.destroy;
 
 PROCEDURE T_callStack.clear;
   begin
-    while fill>0 do pop({$ifdef fullVersion}0,nil{$endif});
+    while fill>0 do pop(0,nil);
   end;
 
-PROCEDURE T_callStack.push({$ifdef fullVersion}CONST wallclockTime:double; CONST parameters:P_variableTreeEntryCategoryNode;{$endif}
+PROCEDURE T_callStack.push(CONST wallclockTime:double; CONST parameters:P_variableTreeEntryCategoryNode;
   CONST callerLocation: T_tokenLocation;
   CONST callee: P_objectWithIdAndLocation);
   begin
@@ -175,19 +173,24 @@ PROCEDURE T_callStack.push({$ifdef fullVersion}CONST wallclockTime:double; CONST
     dat[fill].callLocation:=callerLocation;
     dat[fill].calleeId:=callee^.getId;
     dat[fill].calleeLocation:=callee^.getLocation;
-    {$ifdef fullVersion}
+
     if fill>0 then with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     dat[fill].timeForProfiling_exclusive:=wallclockTime;
     dat[fill].timeForProfiling_inclusive:=wallclockTime;
     dat[fill].parameters:=parameters;
-    {$endif}
+
     inc(fill);
   end;
 
-PROCEDURE T_callStack.pop({$ifdef fullVersion}CONST wallclockTime: double;CONST profiler:P_profiler{$endif});
+FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):T_tokenLocation;
   begin
-    if fill<1 then exit;
-    {$ifdef fullVersion}
+    if fill<1 then begin
+      initialize(result);
+      result.package:=nil;
+      result.column:=-1;
+      result.line:=-1;
+      exit(result);
+    end;
     if profiler<>nil then begin
       with dat[fill-1] do begin
         timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
@@ -199,8 +202,8 @@ PROCEDURE T_callStack.pop({$ifdef fullVersion}CONST wallclockTime: double;CONST 
     if dat[fill-1].parameters<>nil then begin
       dispose(dat[fill-1].parameters,destroy);
       dat[fill-1].parameters:=nil;
+      result:=dat[fill-1].callLocation;
     end;
-    {$endif}
     dec(fill);
   end;
 
@@ -215,6 +218,7 @@ FUNCTION T_callStack.getEntry(CONST index:longint):T_callStackEntry;
   begin
     result:=dat[index];
   end;
+{$endif}
 
 CONSTRUCTOR T_TokenStack.create;
   begin

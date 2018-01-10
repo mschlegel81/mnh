@@ -102,32 +102,43 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
       snapshot.callStack:=callStack;
     end;
 
-  VAR lineChanged:boolean;
   begin
     if (state=dontBreakAtAll) then exit;
     system.enterCriticalSection(cs);
-    if callStack^.size<>lastBreakLevel then lastBreakLine.line:=-1;
-    if state=breakSoonest then state:=waitingForGUI
-    else begin
-      lineChanged:=not(isEqualLine(lastBreakLine,first^.location));
-      if (state=breakOnLineChange ) and ((callStack^.size< lastBreakLevel) or lineChanged) or
-         (state=breakOnStepOut    ) and  (callStack^.size< lastBreakLevel) or
-         (state=breakOnStepIn     ) and  (callStack^.size> lastBreakLevel) or
-         (state=runUntilBreakpoint) and ((callStack^.size<>lastBreakLevel) or lineChanged) and breakpointEncountered
-      then state:=waitingForGUI;
+    case state of
+      breakSoonest      : state:=waitingForGUI;
+      breakOnLineChange : if (callStack^.size<lastBreakLevel) or
+                             (callStack^.size=lastBreakLevel) and not(isEqualLine(lastBreakLine,first^.location)) then state:=waitingForGUI;
+      breakOnStepOut    : if (callStack^.size<lastBreakLevel) then state:=waitingForGUI;
+      breakOnStepIn     : if (callStack^.size>lastBreakLevel) then state:=waitingForGUI;
     end;
-
+    if (state<>waitingForGUI) and
+       ((callStack^.size<>lastBreakLevel) or not(isEqualLine(lastBreakLine,first^.location))) and
+       breakpointEncountered
+    then state:=waitingForGUI;
     if state=waitingForGUI then begin
+      {$ifdef debugMode}
+      writeln('+----------------- - - -');
+      writeln('| DEBUGGER HALTED');
+      writeln('+----------------- - - -');
+      writeln('| Level last ',lastBreakLevel);
+      writeln('|       curr ',callStack^.size);
+      writeln('| Line  last ',string(lastBreakLine));
+      writeln('|       curr ',string(first^.location));
+      writeln('| Breakpoint ',breakpointEncountered);
+      writeln('+----------------- - - -');
+      {$endif}
+
       lastBreakLine:=first^.location;
       lastBreakLevel:=callStack^.size;
       prepareSnapshot;
       adapters^.logBreakpointEncountered(@snapshot);
-    end;
-    while state=waitingForGUI do begin
-      system.leaveCriticalSection(cs);
-      ThreadSwitch;
-      sleep(1);
-      system.enterCriticalSection(cs);
+      while state=waitingForGUI do begin
+        system.leaveCriticalSection(cs);
+        ThreadSwitch;
+        sleep(1);
+        system.enterCriticalSection(cs);
+      end;
     end;
     system.leaveCriticalSection(cs);
   end;
