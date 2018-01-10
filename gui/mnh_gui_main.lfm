@@ -8,6 +8,7 @@ object MnhForm: TMnhForm
   ClientHeight = 601
   ClientWidth = 717
   Color = clWhite
+  DesignTimePPI = 144
   KeyPreview = True
   Menu = MainMenu1
   OnChangeBounds = FormResize
@@ -18,7 +19,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.6.4.0'
+  LCLVersion = '1.8.0.6'
   object inputPageControl: TPageControl
     Left = 175
     Height = 363
@@ -2293,10 +2294,10 @@ object MnhForm: TMnhForm
               Top = 76
               Width = 589
               Align = alClient
-              DefaultItemHeight = 18
               ExpandSignType = tvestPlusMinus
+              ReadOnly = True
               TabOrder = 1
-              OnExpanding = variablesTreeViewExpanding
+              Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
             end
           end
           object Splitter2: TSplitter

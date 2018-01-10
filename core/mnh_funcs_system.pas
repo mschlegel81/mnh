@@ -194,7 +194,7 @@ FUNCTION time_imp intFuncSignature;
       if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
                         else res:=evaluate(P_expressionLiteral(arg0));
       {$ifdef fullVersion}
-      context.callStackPop();
+      context.callStackPop(nil);
       {$endif}
       if res<>nil then begin
         result:=newMapLiteral

@@ -32,38 +32,42 @@ private doAnalysis(rt:List)->begin
     end)
   ).showTable('Test times',true);
 
-  [true,false].each(debugVersions,begin
+  [true,false].each(debugVersions,
+  begin
     local filteredTests:=rt[rt.getInner(1).matches('^[F|L]I?D')=debugVersions];
-    print("=====================================================================\n",
-          " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
-          "=====================================================================\n");
-    local flavors:=filteredTests.getInner(1).toSet;
-    local testsWithTime:=filteredTests.group(0).pMap({$x[0,0]|averageAndRelativeSigma($x.getInner(2))}).sort(1);
-    local totalTime:=testsWithTime.getInner(1).agg(+);
-    print("Fast tests: ");
-    print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
-    print("Slow tests: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
-    testsWithTime:=testsWithTime.sort(2);
-    print("Tests with big relative variance: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(100*t[2],3)&"%\n",&));
-    testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
-    print("Tests with big absolute variance: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(t[1]*t[2],6)&"s\n",&));
-    totalTime:=filteredTests.getInner(2).agg(+);
+    filteredTests.size=0 ? void :
+    begin
+      print("=====================================================================\n",
+            " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
+            "=====================================================================\n");
+      local flavors:=filteredTests.getInner(1).toSet;
+      local testsWithTime:=filteredTests.group(0).pMap({$x[0,0]|averageAndRelativeSigma($x.getInner(2))}).sort(1);
+      local totalTime:=testsWithTime.getInner(1).agg(+);
+      print("Fast tests: ");
+      print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
+      print("Slow tests: ");
+      print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
+      testsWithTime:=testsWithTime.sort(2);
+      print("Tests with big relative variance: ");
+      print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(100*t[2],3)&"%\n",&));
+      testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
+      print("Tests with big absolute variance: ");
+      print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(t[1]*t[2],6)&"s\n",&));
+      totalTime:=filteredTests.getInner(2).agg(+);
 
-    local quartileTimes:=filteredTests
-                       .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
-                       .each(entry,entry[[0,1]]|[quartiles(entry[2])]) //median time per test case
-                       .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
-                       .getInner([1,2]); //drop case
-    totalTime:=quartileTimes.getInner(1,1).agg(+);
-    local star:=80/quartileTimes.getInner(1,2).max;
-    print('Median test time by flavour: ');
-    print("  \vFlavour\t25%ile\v\t50%ile\v\t75%ile\v\trel.\t\vvisual\n",
-          flavors.each(f,"\v"&f&"\t"&round(quartileTimes[f,0],3)&"\vs\t"
-                                    &round(quartileTimes[f,1],3)&"\vs\t"
-                                    &round(quartileTimes[f,2],3)&"\vs\t"&round(100*quartileTimes[f,1]/totalTime,3)&"\v%\t"&bar(star,quartileTimes[f]) &"\n",&));
+      local quartileTimes:=filteredTests
+                         .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
+                         .each(entry,entry[[0,1]]|[quartiles(entry[2])]) //median time per test case
+                         .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
+                         .getInner([1,2]); //drop case
+      totalTime:=quartileTimes.getInner(1,1).agg(+);
+      local star:=80/quartileTimes.getInner(1,2).max;
+      print('Median test time by flavour: ');
+      print("  \vFlavour\t25%ile\v\t50%ile\v\t75%ile\v\trel.\t\vvisual\n",
+            flavors.each(f,"\v"&f&"\t"&round(quartileTimes[f,0],3)&"\vs\t"
+                                      &round(quartileTimes[f,1],3)&"\vs\t"
+                                      &round(quartileTimes[f,2],3)&"\vs\t"&round(100*quartileTimes[f,1]/totalTime,3)&"\v%\t"&bar(star,quartileTimes[f]) &"\n",&));
+    end;
   end);
 end;
 

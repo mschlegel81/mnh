@@ -137,7 +137,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
-      PROCEDURE callStackPop();
+      PROCEDURE callStackPop(CONST first:P_token);
       PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
       PROCEDURE callStackClear();
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
@@ -559,13 +559,14 @@ PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST ca
     callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
   end;
 
-PROCEDURE T_threadContext.callStackPop;
+PROCEDURE T_threadContext.callStackPop(CONST first:P_token);
+  VAR loc:T_tokenLocation;
   begin
     if not(tco_stackTrace in options) then exit;
-    callStack.pop(wallclockTime,parent^.profiler);
+    loc:=callStack.pop(wallclockTime,parent^.profiler);
+    if (loc.package<>nil) and (first<>nil) then first^.location:=loc;
   end;
-{$endif}
-{$ifdef fullVersion}
+
 PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
   begin
     if callingContext<>nil then callingContext^.reportVariables(variableReport);

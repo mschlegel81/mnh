@@ -497,6 +497,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         lastRelevantToken:=length(preparedBody)-1;
       end;
 
+      {$ifdef fullVersion}
+      if parametersNode<>nil then begin
+        for i:=0 to pattern.arity-1 do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
+      end;
+      {$endif}
+
       for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
         if parIdx>=0 then begin
           if parIdx=ALL_PARAMETERS_PAR_IDX then begin
@@ -522,9 +528,6 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
             L:=remaining;
           end else begin
             L:=param^.value[parIdx];
-            {$ifdef fullVersion}
-            if parametersNode<>nil then parametersNode^.addEntry(pattern.idForIndexInline(parIdx),L,true);
-            {$endif}
           end;
           lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
         end else lastRep^.next:=context.recycler.newToken(token);
@@ -918,7 +921,7 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
     if violations=[] then begin
       {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
       result:=func(parameters,location,P_threadContext(context)^);
-      {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
+      {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
     end else begin
       P_threadContext(context)^.raiseSideEffectError('function '+getId,location, violations);
       result:=nil;
@@ -930,7 +933,7 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
     if (parameters<>nil) and (parameters^.size<>0) then exit(nil);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
     result:=evaluateToLiteral(location,context);
-    {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
+    {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
 FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;

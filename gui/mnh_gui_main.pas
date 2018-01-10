@@ -39,6 +39,7 @@ USES
   mnh_doc,
   mnh_cmdLineInterpretation,
   mnh_evalThread,
+  treeUtil,
   guiOutAdapters;
 TYPE
   {$define includeInterface}
@@ -169,6 +170,7 @@ TYPE
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
     recentFileMenuItems:array of TMenuItem;
+    variablesTreeViewModel:T_treeModel;
 
     debuggerData:record
       globalVariableReport,
