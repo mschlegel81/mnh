@@ -682,7 +682,7 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
       newNode:=variablesTreeView.items.add(nil,r^.toString);
       newNode.data:=r;
       addChildren(newNode);
-      if expand then newNode.Expand(false);
+      if expand then newNode.expand(false);
     end;
 
   begin
