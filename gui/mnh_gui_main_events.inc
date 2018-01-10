@@ -87,7 +87,6 @@ PROCEDURE pmiOpenFile(CONST idOrName:string);
 
 PROCEDURE Splitter3Moved(Sender: TObject);
 PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
-PROCEDURE variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
 {$endif}
 {$ifdef includeImplementation}
 PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
@@ -143,6 +142,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     QuickOutputEdit  .clearAll;
     assistanceSynEdit.clearAll;
     outlineSynEdit   .clearAll;
+
+    variablesTreeViewModel.create(variablesTreeView);
     //Initialize state:
     popupModel.create(pmiOpenFile1,pmiOpenFile2,@pmiOpenFile);
     searchReplaceModel.create(FindDialog,ReplaceDialog);
@@ -184,6 +185,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     quick.meta.destroy;
     quick.completion.destroy;
     dispose(quick.adapters,destroy);
+    variablesTreeViewModel.destroy;
   end;
 
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -663,16 +665,6 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
 
 PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject); begin updateExpressionMemo; end;
 
-PROCEDURE addChildren(node2:TTreeNode);
-  VAR rootValue:P_variableTreeEntry;
-      children:T_variableTreeEntries;
-      child:P_variableTreeEntry;
-  begin
-    rootValue:=P_variableTreeEntry(node2.data);
-    children:=rootValue^.getChildren;
-    for child in children do MnhForm.variablesTreeView.items.AddChild(node2,child^.toString).data:=child;
-  end;
-
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
   VAR stackIdx:longint;
   PROCEDURE addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
@@ -681,7 +673,7 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
       if (r=nil) or not(r^.canExpand) then exit;
       newNode:=variablesTreeView.items.add(nil,r^.toString);
       newNode.data:=r;
-      addChildren(newNode);
+      variablesTreeViewModel.addChildren(newNode);
       if expand then newNode.expand(false);
     end;
 
@@ -703,15 +695,6 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
     end;
     updateExpressionMemo;
     if debuggerData.inlineVariableReport<>nil then addCategoryNode(debuggerData.inlineVariableReport);
-  end;
-
-PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
-  VAR i:longint;
-  begin
-    AllowExpansion:=P_variableTreeEntry(node.data)^.canExpand;
-    if not(AllowExpansion) then exit;
-    for i:=0 to node.count-1 do
-    if not(node.items[i].HasChildren) and (P_variableTreeEntry(node.items[i].data)^.canExpand) then addChildren(node.items[i]);
   end;
 
 {$endif}

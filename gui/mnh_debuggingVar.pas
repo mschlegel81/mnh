@@ -3,19 +3,11 @@ INTERFACE
 USES sysutils,
      mnh_constants,
      mnh_basicTypes,
-     mnh_litVar;
+     mnh_litVar,
+     treeUtil;
 TYPE
-  P_variableTreeEntry=^I_variableTreeEntry;
-  T_variableTreeEntries=array of P_variableTreeEntry;
-  I_variableTreeEntry=object
-    FUNCTION canExpand:boolean; virtual; abstract;
-    FUNCTION toString:string; virtual; abstract;
-    FUNCTION getChildren:T_variableTreeEntries; virtual; abstract;
-    DESTRUCTOR destroy; virtual; abstract;
-  end;
-
   P_variableTreeEntryAnonymousValue=^T_variableTreeEntryAnonymousValue;
-  T_variableTreeEntryAnonymousValue=object(I_variableTreeEntry)
+  T_variableTreeEntryAnonymousValue=object(I_treeEntry)
     private
       value:P_literal;
       isKeyValuePair:boolean;
@@ -24,7 +16,7 @@ TYPE
       CONSTRUCTOR create(CONST L:P_literal; CONST mapEntry:boolean);
       FUNCTION canExpand:boolean; virtual;
       FUNCTION toString:string; virtual;
-      FUNCTION getChildren:T_variableTreeEntries; virtual;
+      FUNCTION getChildren:T_treeEntries; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -44,7 +36,7 @@ TYPE
                               dvc_callParameter);
 
   P_variableTreeEntryCategoryNode=^T_variableTreeEntryCategoryNode;
-  T_variableTreeEntryCategoryNode=object(I_variableTreeEntry)
+  T_variableTreeEntryCategoryNode=object(I_treeEntry)
     private
       category:T_debuggerVariableCategory;
       children:array of P_variableTreeEntryNamedValue;
@@ -52,7 +44,7 @@ TYPE
       CONSTRUCTOR create(CONST category_:T_debuggerVariableCategory);
       FUNCTION canExpand:boolean; virtual;
       FUNCTION toString:string; virtual;
-      FUNCTION getChildren:T_variableTreeEntries; virtual;
+      FUNCTION getChildren:T_treeEntries; virtual;
       DESTRUCTOR destroy; virtual;
 
       PROCEDURE addEntry(CONST id:string; CONST value:P_literal; CONST retainExistent:boolean);
@@ -78,7 +70,7 @@ FUNCTION T_variableTreeEntryCategoryNode.toString: string;
     result:=name[category];
   end;
 
-FUNCTION T_variableTreeEntryCategoryNode.getChildren: T_variableTreeEntries;
+FUNCTION T_variableTreeEntryCategoryNode.getChildren: T_treeEntries;
   VAR i:longint;
   begin
     setLength(result,length(children));
@@ -167,7 +159,7 @@ FUNCTION T_variableTreeEntryAnonymousValue.toString: string;
     else                       result:=value^.toString();
   end;
 
-FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_variableTreeEntries;
+FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
   VAR i:longint;
       iter:T_arrayOfLiteral;
   begin
