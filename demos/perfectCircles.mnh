@@ -63,13 +63,16 @@ main('animate')->begin
   display;
 end;
 
-main('zoomin',K)->
+main(anim in ['zoomin','zoomout'],K)->
 begin
   local k:=K.toInt;
   clearAnimation;
   local z:=      findSolution(k)[0]^((2*k+1) /50);
   local p:=(pi*4-findSolution(k)[1]* (2*k+1))/50;
-  [0..49].each(i,plotCircles(k,'black polygon 0.5','red',z^i,p*i),
+  (anim=='zoomin' ? [0..49] : [49..0])
+  .each(i,plotCircles(k,'black polygon 0.5','red',z^i,p*i),
                  addAnimationFrame,
-                 index=0 ? display : void);
+                 index=0 ? display : void,
+                 print(2*index,'%'));
+  print('100% - animation ready');
 end;
