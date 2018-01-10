@@ -10,7 +10,7 @@ USES //basic classes
      mnh_caches,
      mnh_tokens, mnh_contexts,
      mnh_profiling,
-     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore, tokenStack,{$else}mySys,{$endif}
+     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore, tokenStack,mnh_debuggingVar, {$else}mySys,{$endif}
      mnh_funcs,
 
      mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
@@ -79,7 +79,7 @@ TYPE
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
       FUNCTION isMain:boolean;
       {$ifdef fullVersion}
-      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+      PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       {$endif}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
@@ -1664,15 +1664,15 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
 
 FUNCTION T_package.isMain: boolean; begin result:=(@self=mainPackage); end;
 {$ifdef fullVersion}
-PROCEDURE T_package.reportVariables(VAR variableReport: T_variableReport);
+PROCEDURE T_package.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
   PROCEDURE addRule(CONST rule:P_rule);
     VAR value:P_literal;
         reportId:string;
     begin
       if not(rule^.isReportable(value)) then exit;
-      reportId:=rule^.getId;
+      reportId:=filenameToPackageId(rule^.getLocation.package^.getPath)+'.'+rule^.getId;
       if (rule^.getRuleType=rt_datastore) and not(P_datastoreRule(rule)^.isInitialized) then reportId:=reportId+' (uninitialized)';
-      variableReport.addVariable(reportId,value,rule^.getLocation);
+      variableReport.addEntry(reportId,value,true);
     end;
 
   VAR rule:P_rule;

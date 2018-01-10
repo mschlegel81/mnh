@@ -31,7 +31,8 @@ USES
   mnh_constants, mnh_basicTypes,mnh_settings,
   mnh_out_adapters,
   mnh_litVar,
-  mnh_funcs, valueStore,
+  mnh_funcs,
+  mnh_debuggingVar,
   mnh_debugging,
   mnh_contexts,
   mnh_packages,
@@ -168,6 +169,12 @@ TYPE
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;
     historyMenuItems:array of TMenuItem;
     recentFileMenuItems:array of TMenuItem;
+
+    debuggerData:record
+      globalVariableReport,
+      localVariableReport,
+      inlineVariableReport:P_variableTreeEntryCategoryNode;
+    end;
     quick:record
       meta:T_editorMeta;
       adapters:P_adapters;
@@ -286,6 +293,16 @@ PROCEDURE TMnhForm.onBreakpoint(CONST data: pointer);
 
     currentSnapshot:=P_debuggingSnapshot(data);
 
+    if debuggerData.globalVariableReport<>nil then dispose(debuggerData.globalVariableReport,destroy);
+    debuggerData.globalVariableReport:=runEvaluator.reportVariables;
+
+    if debuggerData.localVariableReport<>nil then debuggerData.localVariableReport^.clear
+                                             else new(debuggerData.localVariableReport,create(dvc_local));
+    runEvaluator.context.threadContext^.reportVariables(debuggerData.localVariableReport^);
+
+    if debuggerData.inlineVariableReport<>nil then debuggerData.inlineVariableReport^.clear
+                                              else new(debuggerData.inlineVariableReport,create(dvc_inline));
+
     jumpToFile;
     clearStackView;
     updateExpressionMemo;
@@ -305,6 +322,10 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
     updateEditorsByGuiStatus;
     if   outputPageControl.activePage<>QuickTabSheet
     then outputPageControl.activePage:=outputTabSheet;
+
+    if debuggerData.globalVariableReport<>nil then begin dispose(debuggerData.globalVariableReport,destroy); debuggerData.globalVariableReport:=nil; end;
+    if debuggerData.localVariableReport <>nil then begin dispose(debuggerData.localVariableReport ,destroy); debuggerData.localVariableReport :=nil; end;
+    if debuggerData.inlineVariableReport<>nil then begin dispose(debuggerData.inlineVariableReport,destroy); debuggerData.inlineVariableReport:=nil; end;
   end;
 
 PROCEDURE TMnhForm.triggerFastPolling;
@@ -464,6 +485,8 @@ PROCEDURE TMnhForm.updateExpressionMemo;
       tokens:T_arrayOfString;
       txt:ansistring;
       k:longint=0;
+      stackIdx:longint;
+      parameterInfo:P_variableTreeEntryCategoryNode=nil;
       firstInLine:boolean;
   begin
     currentExpressionMemo.lines.clear;
@@ -476,7 +499,17 @@ PROCEDURE TMnhForm.updateExpressionMemo;
       chars:=50;
     end;
 
-    tokens:=tokenSplit(currentSnapshot^.tokenStack^.toString(currentSnapshot^.first,round(lines*chars*0.9)));
+    stackIdx:=currentSnapshot^.callStack^.size-1-callStackList.ItemIndex;
+    if (stackIdx>=0) and (stackIdx<currentSnapshot^.callStack^.size)
+    then parameterInfo:=currentSnapshot^.callStack^[stackIdx].parameters;
+
+    tokens:=currentSnapshot^.tokenStack^
+            .toDebuggerString(currentSnapshot^.first,
+                              round(lines*chars*0.9),
+                              parameterInfo,
+                              debuggerData.localVariableReport,
+                              debuggerData.globalVariableReport,
+                              debuggerData.inlineVariableReport);
 
     while k<length(tokens) do begin
       txt:='';

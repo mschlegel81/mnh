@@ -4,7 +4,10 @@ USES sysutils,
      myGenerics,
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
-     mnh_litVar;
+     mnh_litVar
+     {$ifdef fullVersion},
+     mnh_debuggingVar
+     {$endif};
 TYPE
   P_namedVariable=^T_namedVariable;
   T_namedVariable=object
@@ -22,20 +25,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION readOnlyClone:P_namedVariable;
   end;
-
- {$ifdef fullVersion}
-  T_variableReport=object
-    dat:array of record
-          id:ansistring;
-          value:P_literal;
-          location:string;
-        end;
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal; CONST location:string; CONST retainExistent:boolean=false);
-    PROCEDURE addVariable(CONST namedVar:P_namedVariable; CONST location:string);
-  end;
-  {$endif}
 
 TYPE
   T_scope=record
@@ -68,7 +57,7 @@ TYPE
       PROCEDURE scopePop;
       {$ifdef fullVersion}
       //For debugging:
-      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+      PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       {$endif}
   end;
 
@@ -285,7 +274,7 @@ FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
+PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
   VAR i :longint;
       i0:longint=0;
       up:longint=0;
@@ -299,46 +288,9 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
     if (i0>0) and (parentStore<>nil) then parentStore^.reportVariables(variableReport);
     for i:=i0 to scopeTopIndex do with scopeStack[i] do begin
       dec(up);
-      for named in v do begin
-        if up=0 then variableReport.addVariable(named,'local')
-                else variableReport.addVariable(named,'local (+'+intToStr(up)+')');
-      end;
+      for named in v do variableReport.addEntry(named^.id,named^.value,false)
     end;
     system.leaveCriticalSection(cs);
-  end;
-{$endif}
-
-{$ifdef fullVersion}
-CONSTRUCTOR T_variableReport.create;
-  begin
-    setLength(dat,0);
-  end;
-
-DESTRUCTOR T_variableReport.destroy;
-  begin
-    setLength(dat,0);
-  end;
-
-PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_literal; CONST location: string; CONST retainExistent:boolean=false);
-  VAR i,j:longint;
-  begin
-    if not(retainExistent) then begin
-      j:=0;
-      for i:=0 to length(dat)-1 do if dat[i].id<>id then begin
-        dat[j]:=dat[i];
-        inc(j);
-      end;
-      setLength(dat,j);
-    end;
-    setLength(dat,length(dat)+1);
-    dat[length(dat)-1].id:=id;
-    dat[length(dat)-1].value:=value;
-    dat[length(dat)-1].location:=location;
-  end;
-
-PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST location: string);
-  begin
-    addVariable(namedVar^.id,namedVar^.value,location);
   end;
 {$endif}
 

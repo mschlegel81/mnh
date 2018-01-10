@@ -663,50 +663,26 @@ PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName: string);
 
 PROCEDURE TMnhForm.Splitter3Moved(Sender: TObject); begin updateExpressionMemo; end;
 
-FUNCTION treeLit_canExpand(L:P_literal):boolean;
-  begin
-    result:=(L<>nil) and (L^.literalType in C_compoundTypes) and (length(L^.toString(100))>=100);
-  end;
-
-FUNCTION treeLit_toString(L:P_literal):string;
-  begin
-    if L=nil then result:=' ' else
-    if treeLit_canExpand(L) then result:=L^.typeString
-                            else result:=L^.toString();
-  end;
-
 PROCEDURE addChildren(node2:TTreeNode);
-  VAR rootValue:P_compoundLiteral;
-      iter:T_arrayOfLiteral;
-      key,val:P_literal;
-      sub:P_literal;
+  VAR rootValue:P_variableTreeEntry;
+      children:T_variableTreeEntries;
+      child:P_variableTreeEntry;
   begin
-    rootValue:=P_compoundLiteral(node2.data);
-    if rootValue^.literalType in C_mapTypes then begin
-      iter:=rootValue^.iteratableList;
-      for sub in iter do begin
-        key:=P_listLiteral(sub)^.value[0];
-        val:=P_listLiteral(sub)^.value[1];
-        MnhForm.variablesTreeView.items.AddChild(node2,key^.toString()+' => '+treeLit_toString(val)).data:=val;
-      end;
-      disposeLiteral(iter);
-    end else begin
-      iter:=rootValue^.iteratableList;
-      for sub in iter do MnhForm.variablesTreeView.items.AddChild(node2,treeLit_toString(sub)).data:=sub;
-      disposeLiteral(iter);
-    end;
+    rootValue:=P_variableTreeEntry(node2.data);
+    children:=rootValue^.getChildren;
+    for child in children do MnhForm.variablesTreeView.items.AddChild(node2,child^.toString).data:=child;
   end;
 
 PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
   VAR stackIdx:longint;
-      report:T_variableReport;
-      i:longint;
-  PROCEDURE addVariable(CONST id:string; CONST value:P_literal);
+  PROCEDURE addCategoryNode(CONST r:P_variableTreeEntryCategoryNode; CONST expand:boolean=true);
     VAR newNode:TTreeNode;
     begin
-      newNode:=variablesTreeView.items.add(nil,id+'='+treeLit_toString(value));
-      newNode.data:=value;
-      if treeLit_canExpand(value) then addChildren(newNode);
+      if (r=nil) or not(r^.canExpand) then exit;
+      newNode:=variablesTreeView.items.add(nil,r^.toString);
+      newNode.data:=r;
+      addChildren(newNode);
+      if expand then newNode.Expand(false);
     end;
 
   begin
@@ -720,23 +696,22 @@ PROCEDURE TMnhForm.callStackListSelectionChange(Sender: TObject; User: boolean);
       callStackInfoStringGrid.Cells[1,2]:=ansistring(currentSnapshot^.callStack^[stackIdx].calleeLocation);
     end;
 
+    if debuggerData.globalVariableReport<>nil then addCategoryNode(debuggerData.globalVariableReport,false);
+    addCategoryNode(currentSnapshot^.callStack^[stackIdx].parameters);
     if (callStackList.ItemIndex<=0) then begin
-      report.create;
-      runEvaluator.reportVariables(report);
-      runEvaluator.context.threadContext^.reportVariables(report);
-      for i:=length(report.dat)-1 downto 0 do
-        addVariable(report.dat[i].id+' ['+report.dat[i].location+']',report.dat[i].value);
-      report.destroy;
+      if debuggerData.localVariableReport<>nil then addCategoryNode(debuggerData.localVariableReport);
     end;
+    updateExpressionMemo;
+    if debuggerData.inlineVariableReport<>nil then addCategoryNode(debuggerData.inlineVariableReport);
   end;
 
 PROCEDURE TMnhForm.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
   VAR i:longint;
   begin
-    AllowExpansion:=treeLit_canExpand(node.data);
+    AllowExpansion:=P_variableTreeEntry(node.data)^.canExpand;
     if not(AllowExpansion) then exit;
     for i:=0 to node.count-1 do
-    if not(node.items[i].HasChildren) and (treeLit_canExpand(node.items[i].data)) then addChildren(node.items[i]);
+    if not(node.items[i].HasChildren) and (P_variableTreeEntry(node.items[i].data)^.canExpand) then addChildren(node.items[i]);
   end;
 
 {$endif}

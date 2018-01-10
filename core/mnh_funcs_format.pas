@@ -408,7 +408,7 @@ FUNCTION format_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_format);
+      context.callStackPush(tokenLocation,@builtinLocation_format,nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       {$ifdef fullVersion}
@@ -430,7 +430,7 @@ FUNCTION printf_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_printf);
+      context.callStackPush(tokenLocation,@builtinLocation_printf,nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.adapters^.noErrors) then begin

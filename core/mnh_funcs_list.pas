@@ -87,7 +87,7 @@ FUNCTION sort_imp intFuncSignature;
       then cloneOrCopyList0
       else result:=compound0^.toList;
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_sort);
+      context.callStackPush(tokenLocation,@builtinLocation_sort,nil);
       {$endif}
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.adapters^);
       {$ifdef fullVersion}
@@ -450,7 +450,7 @@ FUNCTION group_imp intFuncSignature;
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
                           else aggregator:=nil;
       {$ifdef fullVersion}
-      if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group);
+      if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,nil);
       {$endif}
       groupMap.create();
       for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then

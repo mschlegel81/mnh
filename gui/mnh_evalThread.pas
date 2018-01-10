@@ -10,7 +10,8 @@ USES sysutils,Classes,
      mnh_tokenArray,
      mnh_subrules,
      mnh_packages,mnh_doc,
-     mnh_cmdLineInterpretation;
+     mnh_cmdLineInterpretation,
+     mnh_debuggingVar;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_ensureEditScripts,er_runEditScript,er_die);
   T_evaluationState=(es_dead,es_idle,es_running,es_debugRunning,es_debugHalted,es_editEnsuring,es_editRunning);
@@ -94,7 +95,7 @@ TYPE
       FUNCTION evaluationRunning: boolean;
       FUNCTION evaluationRunningOrPending: boolean;
       FUNCTION getCodeProvider:P_codeProvider;
-      PROCEDURE reportVariables(VAR report:T_variableReport);
+      FUNCTION reportVariables:P_variableTreeEntryCategoryNode;
   end;
 
   P_runEvaluator=^T_runEvaluator;
@@ -545,10 +546,11 @@ FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
+FUNCTION T_evaluator.reportVariables:P_variableTreeEntryCategoryNode;
   begin
     system.enterCriticalSection(cs);
-    package.reportVariables(report);
+    new(result,create(dvc_global));
+    package.reportVariables(result^);
     system.leaveCriticalSection(cs);
   end;
 

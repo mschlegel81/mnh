@@ -15,6 +15,7 @@ USES //basic classes
      valueStore,
      {$ifdef fullVersion}
      mnh_plotData,mnh_funcs_plot,plotMath,
+     mnh_debuggingVar,
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
      mnh_patterns;
@@ -423,8 +424,7 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
     end;
   end;
 
-FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token;
-  VAR context: T_threadContext; CONST useUncurryingFallback: boolean): boolean;
+FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token; VAR context: T_threadContext; CONST useUncurryingFallback: boolean): boolean;
   VAR i:longint;
   FUNCTION fallbackFeasible:boolean;
     begin
@@ -463,8 +463,14 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         remaining:P_listLiteral=nil;
         previousValueStore:P_valueStore;
         firstCallOfResumable:boolean=false;
+        {$ifdef fullVersion}
+        parametersNode:P_variableTreeEntryCategoryNode=nil;
+        {$endif}
     begin
       enterCriticalSection(subruleCallCs);
+      {$ifdef fullVersion}
+      if tco_debugging in context.threadOptions then new(parametersNode,create(dvc_callParameter));
+      {$endif}
       if (indexOfSave>=0) and currentlyEvaluating then begin
         firstRep:=nil;
         lastRep:=nil;
@@ -497,6 +503,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
             if allParams=nil then begin
               allParams:=newListLiteral;
               if param<>nil then allParams^.appendAll(param);
+              {$ifdef fullVersion}
+              if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
+              {$endif}
               allParams^.unreference;
             end;
             L:=allParams;
@@ -505,17 +514,26 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
               if param=nil
               then remaining:=newListLiteral
               else remaining:=param^.tail(pattern.arity);
+              {$ifdef fullVersion}
+              if parametersNode<>nil then parametersNode^.addEntry(C_tokenInfo[tt_optionalParameters].defaultId,remaining,true);
+              {$endif}
               remaining^.unreference;
             end;
             L:=remaining;
-          end else L:=param^.value[parIdx];
+          end else begin
+            L:=param^.value[parIdx];
+            {$ifdef fullVersion}
+            if parametersNode<>nil then parametersNode^.addEntry(pattern.idForIndexInline(parIdx),L,true);
+            {$endif}
+          end;
           lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
         end else lastRep^.next:=context.recycler.newToken(token);
         lastRep:=lastRep^.next;
       end;
 
       {$ifdef fullVersion}
-      context.callStackPush(callLocation,@self);
+      if tco_debugging in context.threadOptions
+      then context.callStackPush(callLocation,@self,parametersNode);
       {$endif}
       if indexOfSave>=0 then begin
         if saveValueStore=nil then begin
@@ -898,7 +916,7 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
   begin
     violations:=violatingSideEffects(func,P_threadContext(context)^.sideEffectWhitelist);
     if violations=[] then begin
-      {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self); {$endif}
+      {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
       result:=func(parameters,location,P_threadContext(context)^);
       {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
     end else begin
@@ -910,7 +928,7 @@ FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST con
 FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
   begin
     if (parameters<>nil) and (parameters^.size<>0) then exit(nil);
-    {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self); {$endif}
+    {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
     result:=evaluateToLiteral(location,context);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(); {$endif}
   end;
