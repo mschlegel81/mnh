@@ -6,8 +6,7 @@
 *.compiled
 *.a
 *.lps
-core/res_*.inc
-built_number.inc
+gui/res_*.inc
 code_hash.inc
 demos/inputs/*.txt
 demos/*.datastore*
