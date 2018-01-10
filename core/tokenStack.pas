@@ -7,7 +7,10 @@ USES myGenerics,
      mnh_out_adapters,
      mnh_litVar,
      mnh_tokens
-     {$ifdef fullVersion},mnh_profiling{$endif};
+     {$ifdef fullVersion},
+     mnh_profiling,
+     mnh_debuggingVar
+     {$endif};
 TYPE
   P_tokenStack=^T_TokenStack;
   T_TokenStack=object
@@ -24,6 +27,10 @@ TYPE
     FUNCTION topType:T_tokenType;
     FUNCTION hasTokenTypeAnywhere(CONST t:T_tokenType):boolean;
     FUNCTION toString(CONST first:P_token; CONST lengthLimit:longint=maxLongint):ansistring;
+    {$ifdef fullVersion}
+    FUNCTION toDebuggerString(CONST first:P_token; CONST lengthLimit:longint;
+                              CONST parameterVar,localVar,globalVar,inlineVar:P_variableTreeEntryCategoryNode):T_arrayOfString;
+    {$endif}
   end;
 
   T_callStackEntry=record
@@ -33,6 +40,7 @@ TYPE
     {$ifdef fullVersion}
     timeForProfiling_inclusive,
     timeForProfiling_exclusive:double;
+    parameters:P_variableTreeEntryCategoryNode;
     {$endif}
   end;
 
@@ -47,7 +55,8 @@ TYPE
       DESTRUCTOR destroy;
       PROPERTY size:longint read fill;
       PROCEDURE clear;
-      PROCEDURE push({$ifdef fullVersion}CONST wallclockTime:double;{$endif}
+      PROCEDURE push({$ifdef fullVersion}CONST wallclockTime:double;
+                                         CONST parameters:P_variableTreeEntryCategoryNode;{$endif}
                      CONST callerLocation: T_tokenLocation;
                      CONST callee: P_objectWithIdAndLocation);
       PROCEDURE pop({$ifdef fullVersion}CONST wallclockTime:double;CONST profiler:P_profiler{$endif});
@@ -158,7 +167,7 @@ PROCEDURE T_callStack.clear;
     while fill>0 do pop({$ifdef fullVersion}0,nil{$endif});
   end;
 
-PROCEDURE T_callStack.push({$ifdef fullVersion}CONST wallclockTime:double;{$endif}
+PROCEDURE T_callStack.push({$ifdef fullVersion}CONST wallclockTime:double; CONST parameters:P_variableTreeEntryCategoryNode;{$endif}
   CONST callerLocation: T_tokenLocation;
   CONST callee: P_objectWithIdAndLocation);
   begin
@@ -170,6 +179,7 @@ PROCEDURE T_callStack.push({$ifdef fullVersion}CONST wallclockTime:double;{$endi
     if fill>0 then with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     dat[fill].timeForProfiling_exclusive:=wallclockTime;
     dat[fill].timeForProfiling_inclusive:=wallclockTime;
+    dat[fill].parameters:=parameters;
     {$endif}
     inc(fill);
   end;
@@ -185,6 +195,10 @@ PROCEDURE T_callStack.pop({$ifdef fullVersion}CONST wallclockTime: double;CONST 
         profiler^.add(calleeId,calleeLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
       end;
       if fill>1 then with dat[fill-2] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
+    end;
+    if dat[fill-1].parameters<>nil then begin
+      dispose(dat[fill-1].parameters,destroy);
+      dat[fill-1].parameters:=nil;
     end;
     {$endif}
     dec(fill);
@@ -284,6 +298,65 @@ FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint)
     end else result:='';
     result:=result+' § '+tokensToString(first,lengthLimit);
   end;
+
+{$ifdef fullVersion}
+FUNCTION T_TokenStack.toDebuggerString(CONST first:P_token; CONST lengthLimit:longint;
+                                       CONST parameterVar,localVar,globalVar,inlineVar:P_variableTreeEntryCategoryNode):T_arrayOfString;
+  VAR prevWasIdLike:boolean=false;
+  FUNCTION toShorterString(CONST t:P_token):ansistring;
+    VAR alternativeNode:P_variableTreeEntryNamedValue=nil;
+    begin
+      result:=t^.toString(prevWasIdLike,prevWasIdLike);
+      if t^.tokType=tt_literal then begin
+        if (parameterVar<>nil)                       then alternativeNode:=parameterVar^.findEntryForValue(t^.data);
+        if (alternativeNode=nil) and (localVar<>nil) then alternativeNode:=localVar    ^.findEntryForValue(t^.data);
+        if alternativeNode=nil                       then alternativeNode:=globalVar   ^.findEntryForValue(t^.data);
+        if alternativeNode=nil                       then alternativeNode:=inlineVar   ^.findEntryForValue(t^.data);
+        if (alternativeNode<>nil) then begin
+          if (length(alternativeNode^.getIdOnly)<length(result)) then begin
+            result:=alternativeNode^.getIdOnly;
+            prevWasIdLike:=true;
+          end;
+        end else if (length(result)>20) then begin
+          alternativeNode:=inlineVar^.findEntryForValue(t^.data,true);
+          result:=alternativeNode^.getIdOnly;
+          prevWasIdLike:=true;
+        end;
+      end;
+    end;
+
+  VAR i0,i:longint;
+      remainingLength:longint;
+      part:string;
+      pt:P_token;
+  begin
+    result:=C_EMPTY_STRING_ARRAY;
+    inlineVar^.clear;
+    if topIndex>=0 then begin
+      i0:=topIndex;
+      remainingLength:=lengthLimit div 2;
+      while (i0>0) and (remainingLength>0) do begin
+        dec(remainingLength,length(toShorterString(dat[i0])));
+        dec(i0);
+      end;
+      remainingLength:=lengthLimit-3;
+      inlineVar^.clear;
+      if i0>0 then result:='... ';
+      prevWasIdLike:=false;
+      for i:=i0 to topIndex do append(result,toShorterString(dat[i]));
+    end else remainingLength:=lengthLimit-3;
+    append(result,' § ');
+    pt:=first;
+    i:=length(result);
+    while (pt<>nil) and (remainingLength>0) do begin
+      part:=toShorterString(pt);
+      dec(remainingLength,length(part));
+      append(result,part);
+      pt:=pt^.next;
+    end;
+    if pt<>nil then append(result,' ...');
+  end;
+{$endif}
 
 CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_localIdInfos{$endif});
   begin

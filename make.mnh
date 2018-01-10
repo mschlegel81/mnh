@@ -47,12 +47,12 @@ currentCodeHash:=begin
   executor.execPipeless(['../checkstyle.mnh','fix']);
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
-  templateToInc('resources/examples.txt'                   ,'core/res_examples.inc');
-  templateToInc('resources/html_template.txt'              ,'core/res_html_template.inc');
-  templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
-  templateToInc('resources/ensureAssoc.mnh'                ,'core/res_ensureAssoc.inc');
-  templateToInc('resources/removeAssoc.mnh'                ,'core/res_removeAssoc.inc');
-  templateToInc('resources/ensurePackages.mnh',ensurePackagesLines,'core/res_ensurePackages.inc');
+  templateToInc('resources/examples.txt'                   ,'gui/res_examples.inc');
+  templateToInc('resources/html_template.txt'              ,'gui/res_html_template.inc');
+  templateToInc('resources/ensureNotepad++Highlighting.mnh','gui/res_ensureNppHighlighting.inc');
+  templateToInc('resources/ensureAssoc.mnh'                ,'gui/res_ensureAssoc.inc');
+  templateToInc('resources/removeAssoc.mnh'                ,'gui/res_removeAssoc.inc');
+  templateToInc('resources/ensurePackages.mnh',ensurePackagesLines,'gui/res_ensurePackages.inc');
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
   local result:=format('%8.8x',fileStats(hashFiles).getInner(3).agg(+)).copy(0,8);
@@ -141,7 +141,7 @@ private cleanup->begin
           end);
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
-   files('core/res_*.inc')|
+   files('gui/res_*.inc')|
    allFiles('versions','*.exe')|
    files(BUILDS.getInner(5))|
    files('build.log'))

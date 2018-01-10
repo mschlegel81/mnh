@@ -220,7 +220,7 @@ CONST
     8, 9,                //lazy logical operators
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     5, 9,                //special: string concatenation
-   10,10);            //list operators
+   10,11);            //list operators
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_tokenInfo:array[T_tokenType] of record

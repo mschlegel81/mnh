@@ -12,7 +12,7 @@ USES //FPC/LCL libraries
      mnh_out_adapters,mnh_litVar,
      mnh_tokens,
      valueStore,
-     mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging{$endif};
+     mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging,mnh_debuggingVar{$endif};
 TYPE
   T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace,eco_beepOnError);
   T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_stackTrace,tco_notifyParentOfAsyncTaskEnd);
@@ -135,13 +135,13 @@ TYPE
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
       PROCEDURE raiseSideEffectError(CONST id:string; CONST location:T_tokenLocation; CONST violations:T_sideEffects);
       {$ifdef fullVersion}
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation);
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop();
       PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
       PROCEDURE callStackClear();
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
-      PROCEDURE reportVariables(VAR variableReport: T_variableReport);
+      PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
 
       PROPERTY threadOptions:T_threadContextOptions read options;
@@ -546,17 +546,17 @@ PROCEDURE T_threadContext.detachWorkerContext;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation);
+PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
   begin
     if not(tco_stackTrace in options) then exit;
-    callStack.push(wallclockTime,callerLocation,callee);
+    callStack.push(wallclockTime,callParameters,callerLocation,callee);
   end;
 
 PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
   begin
     if not(tco_stackTrace in options) then exit;
     if calls[category]=nil then new(calls[category],create(package,category));
-    callStack.push(wallclockTime,calls[category]^.getLocation,calls[category]);
+    callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
   end;
 
 PROCEDURE T_threadContext.callStackPop;
@@ -566,7 +566,7 @@ PROCEDURE T_threadContext.callStackPop;
   end;
 {$endif}
 {$ifdef fullVersion}
-PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableReport);
+PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
   begin
     if callingContext<>nil then callingContext^.reportVariables(variableReport);
     valueStore^.reportVariables(variableReport);
