@@ -166,7 +166,8 @@ UNARY_NUM_TO_SAME;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
         lt_error,lt_int: result:=x^.rereferenced;
-        lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+        lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
+                 then result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
           result:=P_collectionLiteral(x)^.newOfSameType(true);
@@ -189,8 +190,8 @@ UNARY_NUM_TO_SAME;
       begin
         pot:=1;
         i:=0;
-        while i<y do begin pot:=pot*10;  inc(i); end;
-        while i>y do begin pot:=pot*0.1; dec(i); end;
+        while (i<y) and (i< 20) do begin pot:=pot*10;  inc(i); end;
+        while (i>y) and (i>-20) do begin pot:=pot*0.1; dec(i); end;
         result:=newRealLiteral(CALL_MACRO(x*pot)/pot);
       end;
 
@@ -200,7 +201,7 @@ UNARY_NUM_TO_SAME;
         if y>=0 then exit(x^.rereferenced);
         pot:=1;
         i:=0;
-        while i>y do begin pot:=pot*10; dec(i); end;
+        while (i>y) and (i>-20) do begin pot:=pot*10; dec(i); end;
         result:=newIntLiteral(CALL_MACRO(x^.value div pot) * pot);
       end;
 
@@ -228,22 +229,23 @@ UNARY_NUM_TO_SAME;
           end;
           else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
         end;
-        lt_real: case y^.literalType of
-          lt_error: result:=y^.rereferenced;
-          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
-          lt_list,lt_intList,lt_emptyList,
-          lt_set ,lt_intSet ,lt_emptySet: begin
-            result:=P_collectionLiteral(y)^.newOfSameType(true);
-            yIter :=P_collectionLiteral(y)^.iteratableList;
-            for sub in yIter do collResult^.append(recurse2(x,sub),false);
-            disposeLiteral(yIter);
-            if collResult^.containsError then begin
-              disposeLiteral(result);
-              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+        lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
+          then case y^.literalType of
+            lt_error: result:=y^.rereferenced;
+            lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
+            lt_list,lt_intList,lt_emptyList,
+            lt_set ,lt_intSet ,lt_emptySet: begin
+              result:=P_collectionLiteral(y)^.newOfSameType(true);
+              yIter :=P_collectionLiteral(y)^.iteratableList;
+              for sub in yIter do collResult^.append(recurse2(x,sub),false);
+              disposeLiteral(yIter);
+              if collResult^.containsError then begin
+                disposeLiteral(result);
+                raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+              end;
             end;
+            else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
           end;
-          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-        end;
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
           lt_error: result:=y^.rereferenced;
           lt_int: begin

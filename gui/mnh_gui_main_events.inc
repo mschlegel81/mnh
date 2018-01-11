@@ -1,5 +1,4 @@
 {$ifdef includeInterface}
-PROCEDURE cbOutlineShowPrivateChange(Sender: TObject);
 PROCEDURE EditorPopupMenuPopup(Sender: TObject);
 
 PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -95,13 +94,6 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
                         focusedEditor.TextBetweenPoints[focusedEditor.BlockBegin,focusedEditor.BlockEnd]);
   end;
 
-PROCEDURE TMnhForm.cbOutlineShowPrivateChange(Sender: TObject);
-  begin
-    setOutlineOptions(cbOutlineShowPrivate .Checked,
-                      cbOutlineShowImported.Checked,
-                      cbOutlineSortByName  .Checked);
-  end;
-
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
@@ -135,13 +127,11 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit           .highlighter:=outputHighlighter;
     QuickOutputEdit      .highlighter:=outputHighlighter;
     assistanceSynEdit    .highlighter:=outputHighlighter;
-    outlineSynEdit       .highlighter:=outputHighlighter;
     helpPopupMemo        .highlighter:=helpHighlighter  ;
     currentExpressionMemo.highlighter:=debugHighlighter ;
     OutputEdit       .clearAll;
     QuickOutputEdit  .clearAll;
     assistanceSynEdit.clearAll;
-    outlineSynEdit   .clearAll;
 
     variablesTreeViewModel.create(variablesTreeView);
     //Initialize state:
@@ -180,12 +170,12 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     runnerModel.destroy;
     completionLogic.destroy;
     guiTaskQueue.destroy;
-    finalizeEditorMeta;
     quick.task.destroy;
     quick.meta.destroy;
     quick.completion.destroy;
     dispose(quick.adapters,destroy);
     variablesTreeViewModel.destroy;
+    finalizeEditorMeta;
   end;
 
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -223,13 +213,16 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            SaveDialog,
                            breakpointsImagesList,
                            assistanceSynEdit,
-                           outlineSynEdit,
                            assistanceTabSheet,
                            outputHighlighter,
                            miLanguageRoot,
                            @InputEditKeyDown,
                            @InputEditMouseDown,
-                           @InputEditProcessUserCommand);
+                           @InputEditProcessUserCommand,
+                           outlineTreeView,
+                           cbOutlineShowPrivate,
+                           cbOutlineShowImported,
+                           @openLocation);
 
       quick.meta.createWithParent(DETACHED_EDITOR_META_INDEX,QuickTabSheet);
       quick.meta.editor.Align:=alTop;
@@ -244,9 +237,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       enableDynamicItems;
       firstShow:=false;
       UpdateTimeTimer.enabled:=true;
-      setOutlineOptions(cbOutlineShowPrivate .Checked,
-                        cbOutlineShowImported.Checked,
-                        cbOutlineSortByName  .Checked);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - end of initialization block'); {$endif}
     end;
     if hasEditor then getEditor^.activate;
