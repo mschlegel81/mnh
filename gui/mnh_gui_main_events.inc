@@ -170,7 +170,6 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     runnerModel.destroy;
     completionLogic.destroy;
     guiTaskQueue.destroy;
-    finalizeEditorMeta;
     quick.task.destroy;
     quick.meta.destroy;
     quick.completion.destroy;

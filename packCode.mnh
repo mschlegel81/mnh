@@ -2,6 +2,8 @@ USE make_config, distroLog;
 
 DEV_ROOT:=myPath.extractFileDirectory.extractFileDirectory.replace('/','\');
 DEFAULT_TARGET_FOLDER:=DEV_ROOT&'\temp\';
+CORE_TARGET_FOLDER   :=DEFAULT_TARGET_FOLDER&'core\';
+THIRD_TARGET_FOLDER  :=DEFAULT_TARGET_FOLDER&'3rd_party\';
 PACKED_CODE_FILE     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
 ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.zip';
 WEB_PAGE_FOLDER      :=DEV_ROOT&'\web\page\mnh\';
@@ -65,8 +67,6 @@ private copyToWeb->begin
 end;
 
 main->begin
-  local CORE_TARGET_FOLDER:=DEFAULT_TARGET_FOLDER&'core\';
-  local THIRD_TARGET_FOLDER:=DEFAULT_TARGET_FOLDER&'3rd_party\';
 
   print('Cleaning output folder');
   allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);

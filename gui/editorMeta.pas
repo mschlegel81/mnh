@@ -406,7 +406,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
     assistanceTabSheet    :=p_assistanceTabSheet    ;
-    new(outlineModel,create(p_outlineTreeView,p_outlineFilterPrivateCb,p_outlineFilterImportedCb,P_openlocation));
+    new(outlineModel,create(p_outlineTreeView,p_outlineFilterPrivateCb,p_outlineFilterImportedCb,p_openlocation));
 
     initHighlighters;
     initFileTypes;
@@ -1321,7 +1321,10 @@ PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
   VAR i:longint;
   begin
-    if outlineModel<>nil then dispose(outlineModel,destroy);
+    if outlineModel<>nil then begin
+      dispose(outlineModel,destroy);
+      outlineModel:=nil;
+    end;
     for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
     setLength(editorMetaData,0);
   end;

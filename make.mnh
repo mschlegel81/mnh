@@ -124,7 +124,7 @@ private showStatus->
                  B[2],
                  canBuild(B) ? needBuild(B) ? B[2].codeVersion : 'o.k.' : '?' ,
                  canBuild(B) ? B[2].compileTime : '?',
-                 (canBuild(B) ? timeForTest(B[2]) : timeForTest(B[1],ensureCodeHash)) orElse '.']))).formatTable.join("\n").print
+                 (canBuild(B) ? timeForTest(B[2]) : timeForTest(B[1],ensureCodeHash)).roundToRelevantDigits(4) orElse '.']))).formatTable.join("\n").print
   orElse print;
 
 private cleanup->begin
