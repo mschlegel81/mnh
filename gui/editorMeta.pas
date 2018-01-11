@@ -19,6 +19,7 @@ USES  //basic classes
   mnh_tables,
   mnh_plotForm,
   //MNH:
+  outlines,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_contexts,
   mnh_litVar,
@@ -110,7 +111,6 @@ T_editorMeta=object(T_codeProvider)
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
     PROCEDURE assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
-    PROCEDURE updateOutline;
     PROCEDURE pollAssistanceResult;
   private
     PROCEDURE ensureAssistant;
@@ -168,14 +168,15 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
-                    CONST p_outlineSynEdit        :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
-                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
-PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:boolean);
+                    CONST p_EditProcessUserCommand:TProcessCommandEvent;
+                    CONST p_outlineTreeView       :TTreeView;
+                    CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
+                    CONST p_openlocation          :T_openLocationCallback);
 FUNCTION hasEditor:boolean;
 FUNCTION getEditor:P_editorMeta;
 FUNCTION addEditorMetaForNewFile:longint;
@@ -207,10 +208,10 @@ VAR mainForm              :T_abstractMnhForm;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
     assistanceSynEdit     :TSynEdit;
-    outlineSynEdit        :TSynEdit;
     assistanceTabSheet    :TTabSheet;
     editorFont            :TFont;
 
+    outlineModel          :P_outlineTreeModel=nil;
     fallbackCodeAssistant :P_blankCodeAssistanceData=nil;
 
 VAR fileTypeMeta:array[T_language] of record
@@ -228,13 +229,15 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
-                    CONST p_outlineSynEdit        :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
-                    CONST p_EditProcessUserCommand:TProcessCommandEvent);
+                    CONST p_EditProcessUserCommand:TProcessCommandEvent;
+                    CONST p_outlineTreeView       :TTreeView;
+                    CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
+                    CONST p_openlocation          :T_openLocationCallback);
 
   VAR SynBatSyn1            : TSynBatSyn            ;
       SynCppSyn1            : TSynCppSyn            ;
@@ -402,25 +405,14 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditMouseDown         :=p_EditMouseDown         ;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
-    outlineSynEdit        :=p_outlineSynEdit        ;
     assistanceTabSheet    :=p_assistanceTabSheet    ;
+    new(outlineModel,create(p_outlineTreeView,p_outlineFilterPrivateCb,p_outlineFilterImportedCb,P_openlocation));
+
     initHighlighters;
     initFileTypes;
     completionLogic.create;
     editorFont:=assistanceSynEdit.Font;
     restoreEditors;
-  end;
-
-VAR outlineOptions:T_outlineOptions=[];
-PROCEDURE setOutlineOptions(CONST includePrivate,includeImported,sortByName:boolean);
-  VAR edit:P_editorMeta;
-  begin
-    outlineOptions:=[];
-    if includePrivate  then include(outlineOptions,mnh_packages.includePrivate );
-    if includeImported then include(outlineOptions,mnh_packages.includeImported);
-    if sortByName      then include(outlineOptions,mnh_packages.sortByName     );
-    edit:=getEditor;
-    if (edit<>nil) and (edit^.enabled) and (edit^.language_=LANG_MNH) then edit^.updateOutline;
   end;
 
 CONSTRUCTOR T_editorMeta.createWithParent(CONST idx:longint; CONST parent:TWinControl);
@@ -1037,16 +1029,6 @@ PROCEDURE T_editorMeta.dropAssistant;
     assistant:=nil;
   end;
 
-PROCEDURE T_editorMeta.updateOutline;
-  VAR s:string;
-  begin
-    outlineSynEdit.BeginUpdate(false);
-    outlineSynEdit.clearAll;
-    if assistant<>nil then for s in assistant^.getOutline(outlineOptions) do outlineSynEdit.lines.add(s);
-    outlineSynEdit.highlighter:=highlighter;
-    outlineSynEdit.EndUpdate;
-  end;
-
 PROCEDURE T_editorMeta.triggerCheck;
   begin
     ensureAssistant;
@@ -1059,7 +1041,10 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
       hints:T_arrayOfString;
       hasErrors,hasWarnings:boolean;
   begin
-    if language_<>LANG_MNH then exit;
+    if language_<>LANG_MNH then begin
+      outlineModel^.update(getSafeAssistant(nil));
+      exit;
+    end;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
       highlighter.codeAssistant:=assistant;
@@ -1073,7 +1058,7 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
                    else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'+SHORTCUT_SUFFIX
                                              else assistanceTabSheet.caption:='(no warnings)'+SHORTCUT_SUFFIX; end;
       for s in hints do assistanceSynEdit.lines.add(s);
-      updateOutline;
+      outlineModel^.update(assistant);
     end;
     assistant^.triggerUpdate(nil);
   end;
@@ -1336,6 +1321,7 @@ PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
   VAR i:longint;
   begin
+    if outlineModel<>nil then dispose(outlineModel,destroy);
     for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
     setLength(editorMetaData,0);
   end;
@@ -1449,7 +1435,6 @@ INITIALIZATION
   doNotCheckFileBefore:=now;
   recentlyActivated.create;
 FINALIZATION
-  finalizeEditorMeta;
   recentlyActivated.destroy;
   if fallbackCodeAssistant<>nil then dispose(fallbackCodeAssistant,destroy);
 end.

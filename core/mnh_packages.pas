@@ -10,14 +10,21 @@ USES //basic classes
      mnh_caches,
      mnh_tokens, mnh_contexts,
      mnh_profiling,
-     {$ifdef fullVersion}mnh_doc, mnh_funcs_plot,mnh_settings,mnh_html,valueStore, tokenStack,mnh_debuggingVar, {$else}mySys,{$endif}
+     {$ifdef fullVersion}
+       mnh_doc,
+       mnh_funcs_plot,
+       mnh_settings,
+       mnh_html,
+       tokenStack,
+       mnh_debuggingVar,
+     {$else}
+       mySys,
+     {$endif}
      mnh_funcs,
-
      mnh_funcs_mnh,   mnh_funcs_server, mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
      mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files, mnh_funcs_regex, mnh_funcs_xml,
      mnh_funcs_format,mnh_funcs_ipc,
      mnh_builtinGenerators,
-
      mnh_patterns,
      mnh_subrules,
      mnh_rule,
@@ -40,13 +47,11 @@ TYPE
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
   end;
 
-  T_outlineOption=(includePrivate,includeImported,sortByName);
-  T_outlineOptions=set of T_outlineOption;
-
+  T_packageList=array of P_package;
   T_package=object(T_abstractPackage)
     private
       mainPackage:P_package;
-      secondaryPackages:array of P_package;
+      secondaryPackages:T_packageList;
       extendedPackages:array of P_extendedPackage;
       runAfter:array of P_subruleExpression;
 
@@ -70,20 +75,20 @@ TYPE
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_threadContext; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
-      {$ifdef fullVersion}
-      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
-      PROCEDURE complainAboutUnused(VAR adapters:T_adapters);
-      {$endif}
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
       FUNCTION isMain:boolean;
-      {$ifdef fullVersion}
-      PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
-      {$endif}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
+
+      {$ifdef fullVersion}
+      FUNCTION usedPackages:T_packageList;
+      FUNCTION declaredRules:T_ruleList;
+      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
+      PROCEDURE complainAboutUnused(VAR adapters:T_adapters);
+      PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
-      FUNCTION outline(CONST options:T_outlineOptions):T_arrayOfString;
+      {$endif}
     end;
 
   {$ifdef fullVersion}
@@ -116,17 +121,18 @@ TYPE
       FUNCTION updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
       FUNCTION getStateHash:T_hashInt;
-      FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString; virtual;
       PROCEDURE triggerUpdate(CONST editor:P_codeProvider); virtual;
       FUNCTION resolveImport(CONST id:string):string; virtual;
       FUNCTION getImportablePackages:T_arrayOfString; virtual;
+
+      FUNCTION getPackageLocking:P_package;
+      PROCEDURE releaseLock;
   end;
 
   P_blankCodeAssistanceData=^T_blankCodeAssistanceData;
   T_blankCodeAssistanceData=object(T_codeAssistanceData)
     CONSTRUCTOR createBlank;
     PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
-    FUNCTION getOutline(CONST options:T_outlineOptions):T_arrayOfString; virtual;
     PROCEDURE triggerUpdate(CONST editor:P_codeProvider); virtual;
     FUNCTION resolveImport(CONST id:string):string; virtual;
     FUNCTION getImportablePackages:T_arrayOfString; virtual;
@@ -596,15 +602,6 @@ FUNCTION T_codeAssistanceData.getStateHash:T_hashInt;
     enterCriticalSection(cs); result:=stateHash; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_blankCodeAssistanceData.getOutline(CONST options:T_outlineOptions):T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
-FUNCTION T_codeAssistanceData.getOutline(CONST options:T_outlineOptions):T_arrayOfString;
-  begin
-    enterCriticalSection(cs);
-    if package=nil then result:=C_EMPTY_STRING_ARRAY
-                   else result:=package^.outline(options);
-    leaveCriticalSection(cs);
-  end;
-
 FUNCTION T_blankCodeAssistanceData.resolveImport(CONST id:string):string; begin result:=''; end;
 FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
   begin
@@ -618,6 +615,19 @@ FUNCTION T_blankCodeAssistanceData.getImportablePackages:T_arrayOfString; begin 
 FUNCTION T_codeAssistanceData.getImportablePackages:T_arrayOfString;
   begin
     result:=listScriptIds(extractFilePath(package^.getPath));
+  end;
+
+FUNCTION T_codeAssistanceData.getPackageLocking:P_package;
+  begin
+    enterCriticalSection(cs);
+    currentlyProcessing:=true;
+    result:=package;
+  end;
+
+PROCEDURE T_codeAssistanceData.releaseLock;
+  begin
+    currentlyProcessing:=false;
+    leaveCriticalSection(cs);
   end;
 
 FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
@@ -1544,7 +1554,9 @@ DESTRUCTOR T_package.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString;
+  CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation;
+  VAR adapters: T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
   PROCEDURE raiseModifierComplaint;
@@ -1592,14 +1604,14 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modi
     end;
   end;
 
-FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
+FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
   VAR i:longint;
   begin
     for i:=0 to length(secondaryPackages)-1 do if secondaryPackages[i]^.getId=id then exit(secondaryPackages[i]^.getPath);
     result:='';
   end;
 
-PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
+PROCEDURE T_package.resolveRuleIds(CONST adapters: P_adapters);
   VAR rule:P_rule;
   begin
     for rule in packageRules.valueSet do rule^.resolveIds(adapters);
@@ -1627,7 +1639,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
     end;
   end;
 
-PROCEDURE T_package.complainAboutUnused(VAR adapters:T_adapters);
+PROCEDURE T_package.complainAboutUnused(VAR adapters: T_adapters);
   VAR rule:P_rule;
       import:T_packageReference;
   begin
@@ -1637,7 +1649,7 @@ PROCEDURE T_package.complainAboutUnused(VAR adapters:T_adapters);
   end;
 {$endif}
 
-FUNCTION T_package.getHelpOnMain:ansistring;
+FUNCTION T_package.getHelpOnMain: ansistring;
   VAR mainRule:P_rule;
       docText:T_arrayOfString;
       i:longint;
@@ -1653,7 +1665,7 @@ FUNCTION T_package.getHelpOnMain:ansistring;
     end;
   end;
 
-FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
+FUNCTION T_package.isImportedOrBuiltinPackage(CONST id: string): boolean;
   VAR ns:T_namespace;
       i:longint;
   begin
@@ -1725,7 +1737,8 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
     end;
   end;
 
-PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
+PROCEDURE T_package.resolveId(VAR token: T_token;
+  CONST adaptersOrNil: P_adapters);
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -1781,6 +1794,26 @@ PROCEDURE T_package.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters)
     if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
+{$ifdef fullVersion}
+FUNCTION T_package.usedPackages: T_packageList;
+  VAR i:longint;
+  begin
+    setLength(result,length(packageUses));
+    for i:=0 to length(result)-1 do result[i]:=packageUses[i].pack;
+  end;
+
+FUNCTION T_package.declaredRules: T_ruleList;
+  VAR tmp:P_rule;
+      i,j:longint;
+  begin
+    result:=packageRules.valueSet;
+    for i:=1 to length(result)-1 do
+    for j:=0 to i-1 do
+    if result[i]^.getId<result[j]^.getId then begin
+      tmp:=result[i]; result[i]:=result[j]; result[j]:=tmp;
+    end;
+  end;
+
 PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
@@ -1817,39 +1850,7 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
     context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
     if needAfterEval then context.getParent^.afterEvaluation;
   end;
-
-FUNCTION T_package.outline(CONST options:T_outlineOptions):T_arrayOfString;
-  VAR temp:T_outline;
-      entry:T_outlineEntry;
-      rule:P_rule;
-      i,j:longint;
-      longestInfo:longint=0;
-
-  PROCEDURE addInfo(CONST info:T_outlineEntry);
-    VAR dup:T_outlineEntry;
-    begin
-      for dup in temp do if info=dup then exit;
-      setLength(temp,length(temp)+1);
-      temp[length(temp)-1]:=info;
-      if length(info.info)>longestInfo then longestInfo:=length(info.info);
-    end;
-
-  begin
-    setLength(temp,0);
-    for rule in packageRules.valueSet do for entry in rule^.getOutline(includePrivate in options) do addInfo(entry);
-    if includeImported in options then for rule in importedRules.valueSet do for entry in rule^.getOutline(false) do addInfo(entry);
-    if sortByName in options then begin
-      for i:=1 to length(temp)-1 do for j:=0 to i-1 do if (temp[i].id<temp[j].id) or (temp[i].id=temp[j].id) and (temp[i].location<temp[j].location) then begin
-        entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
-      end;
-    end else begin
-      for i:=1 to length(temp)-1 do for j:=0 to i-1 do if temp[i].location<temp[j].location then begin
-        entry:=temp[i]; temp[i]:=temp[j]; temp[j]:=entry;
-      end;
-    end;
-    setLength(result,length(temp));
-    for i:=0 to length(result)-1 do result[i]:=temp[i].info+StringOfChar(' ',1+longestInfo-length(temp[i].info))+ansistring(temp[i].location);
-  end;
+{$endif}
 
 {$undef include_implementation}
 INITIALIZATION

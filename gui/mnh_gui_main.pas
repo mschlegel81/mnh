@@ -47,7 +47,6 @@ TYPE
   {$WARN 5024 OFF}
 
   TMnhForm = class(T_abstractMnhForm)
-    cbOutlineSortByName,
     cbOutlineShowPrivate,
     cbOutlineShowImported:     TCheckBox;
     FindDialog:                TFindDialog;
@@ -132,7 +131,6 @@ TYPE
     Splitter4:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
-    outlineSynEdit,
     OutputEdit,
     QuickOutputEdit,
     assistanceSynEdit:         TSynEdit;
@@ -145,6 +143,7 @@ TYPE
     assistanceTabSheet,
     QuickTabSheet:             TTabSheet;
     HelpSheet: TTabSheet;
+    outlineTreeView: TTreeView;
     UpdateTimeTimer:           TTimer;
     DebugToolbar:              TToolBar;
     tbMicroStep,

@@ -11,15 +11,13 @@ USES sysutils,math,
      mnh_datastores, mnh_caches, mnh_subrules;
 TYPE
   T_subruleArray=array of P_subruleExpression;
-  T_outlineEntry=record location:T_tokenLocation; isPublic:boolean; id:string; info:string; end;
-  T_outline=array of T_outlineEntry;
 
   P_rule=^T_rule;
+  T_ruleList=array of P_rule;
   T_rule=object(T_abstractRule)
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION getDocTxt: ansistring; virtual; abstract;
-    FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
   end;
@@ -40,7 +38,6 @@ TYPE
       PROPERTY getSubrules:T_subruleArray read subrules;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
-      FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
       PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
@@ -89,7 +86,6 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
-      FUNCTION getOutline(CONST includePrivate:boolean):T_outline; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION getDocTxt: ansistring; virtual;
       FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
@@ -111,12 +107,7 @@ TYPE
       FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
   end;
 
-OPERATOR =(CONST x,y:T_outlineEntry):boolean;
 IMPLEMENTATION
-OPERATOR =(CONST x,y:T_outlineEntry):boolean;
-  begin
-    result:=(x.id=y.id) and (x.location=y.location);
-  end;
 
 PROCEDURE T_rule.checkParameters(VAR context:T_threadContext);
   begin end;
@@ -451,36 +442,6 @@ FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context
       then result^.put('function',getFunctionPointer(context,tt_customTypeRule,getLocation),false)
       else result^.put('function',getFunctionPointer(context,tt_localUserRule ,getLocation),false);
     end;
-  end;
-
-FUNCTION T_ruleWithSubrules.getOutline(CONST includePrivate:boolean):T_outline;
-  VAR i,j:longint;
-  begin
-    setLength(result,length(subrules));
-    j:=0;
-    for i:=0 to length(subrules)-1 do if includePrivate or (subrules[i]^.typ=et_normal_public) then begin
-      result[j].location:=subrules[i]^.getLocation;
-      result[j].isPublic:=subrules[i]^.typ=et_normal_public;
-      result[j].id:=getId;
-      result[j].info:=C_ruleTypeText[getRuleType];
-      if not(result[j].isPublic) then result[j].info:=result[j].info+PRIVATE_TEXT+' ';
-      result[j].info:=result[j].info+result[j].id+subrules[i]^.patternString;
-      inc(j);
-    end;
-    setLength(result,j);
-  end;
-
-FUNCTION T_mutableRule.getOutline(CONST includePrivate:boolean):T_outline;
-  begin
-    if hasPublicSubrule or includePrivate then begin
-      setLength(result,1);
-      result[0].location:=getLocation;
-      result[0].isPublic:=not(privateRule);
-      result[0].id:=getId;
-      result[0].info:=C_ruleTypeText[getRuleType];
-      if privateRule then result[0].info:=result[0].info+PRIVATE_TEXT+' ';
-      result[0].info:=result[0].info+result[0].id;
-    end else setLength(result,0);
   end;
 
 FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
