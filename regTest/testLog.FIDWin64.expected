@@ -841,8 +841,8 @@ Distribution of seven sided dice (100000 samples):
 0.14021
 0.14635
 ***** diff *****
---- regTest/../demos/inputs/unixdict.txt
-+++ regTest/../demos/inputs/unixdict2.txt
+--- /regTest/../demos/inputs/unixdict.txt
++++ /regTest/../demos/inputs/unixdict2.txt
 @@ -20,13 +20,4 @@
   aba
   ababa
