@@ -84,7 +84,6 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
               or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
     lastWordsCaret:=caret.y;
     wordsInEditor.clear;
-
     if relatedAssistant<>nil then begin
       //Completion for assistant...
       if isUseClause then begin
@@ -123,6 +122,7 @@ PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAss
     relatedAssistant:=ad;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
+    lastWordsCaret:=-1;
   end;
 
 PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);

@@ -1,14 +1,13 @@
 object MnhForm: TMnhForm
-  Left = 507
+  Left = 448
   Height = 621
-  Top = 356
+  Top = 284
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
   ClientHeight = 591
   ClientWidth = 717
   Color = clWhite
-  DesignTimePPI = 144
   KeyPreview = True
   Menu = MainMenu1
   OnChangeBounds = FormResize

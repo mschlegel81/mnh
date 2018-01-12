@@ -152,7 +152,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR context:T_evaluationContext;
         package:T_package;
     begin
-      package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
+      package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
       context.create(@consoleAdapters);
       context.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin

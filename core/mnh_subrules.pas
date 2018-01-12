@@ -535,8 +535,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       end;
 
       {$ifdef fullVersion}
-      if tco_debugging in context.threadOptions
-      then context.callStackPush(callLocation,@self,parametersNode);
+      context.callStackPush(callLocation,@self,parametersNode);
       {$endif}
       if indexOfSave>=0 then begin
         if saveValueStore=nil then begin
