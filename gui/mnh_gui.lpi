@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="52">
+    <Units Count="39">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -152,190 +152,131 @@
         <IsPartOfProject Value="True"/>
       </Unit12>
       <Unit13>
-        <Filename Value="..\core\mnh_plotData.pas"/>
+        <Filename Value="..\core\mnh_caches.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit13>
       <Unit14>
-        <Filename Value="..\core\mnh_caches.pas"/>
+        <Filename Value="..\core\consoleAsk.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit14>
       <Unit15>
-        <Filename Value="..\core\mnh_doc.pas"/>
+        <Filename Value="..\core\mnh_cmdLineInterpretation.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit15>
       <Unit16>
-        <Filename Value="..\core\consoleAsk.pas"/>
+        <Filename Value="..\core\mnh_funcs_mnh.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit16>
       <Unit17>
-        <Filename Value="..\core\mnh_cmdLineInterpretation.pas"/>
+        <Filename Value="..\core\mnh_funcs_math.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit17>
       <Unit18>
-        <Filename Value="..\core\mnh_funcs_mnh.pas"/>
+        <Filename Value="..\core\mnh_funcs_strings.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit18>
       <Unit19>
-        <Filename Value="..\core\mnh_funcs_math.pas"/>
+        <Filename Value="..\core\mnh_funcs_list.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit19>
       <Unit20>
-        <Filename Value="..\core\mnh_funcs_strings.pas"/>
+        <Filename Value="..\core\mnh_funcs_system.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit20>
       <Unit21>
-        <Filename Value="..\core\mnh_funcs_list.pas"/>
+        <Filename Value="..\core\mnh_funcs_regex.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit21>
       <Unit22>
-        <Filename Value="..\core\mnh_funcs_system.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit22>
-      <Unit23>
-        <Filename Value="..\core\mnh_funcs_regex.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit23>
-      <Unit24>
-        <Filename Value="..\core\mnh_html.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit24>
-      <Unit25>
         <Filename Value="mnh_plotform.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="plotForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_plotForm"/>
-      </Unit25>
-      <Unit26>
+      </Unit22>
+      <Unit23>
         <Filename Value="newcentralpackagedialog.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="newCentralPackageForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="newCentralPackageDialog"/>
-      </Unit26>
-      <Unit27>
+      </Unit23>
+      <Unit24>
         <Filename Value="mnh_tables.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="tableForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-      </Unit27>
-      <Unit28>
+      </Unit24>
+      <Unit25>
         <Filename Value="..\core\mnh_datastores.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit28>
-      <Unit29>
+      </Unit25>
+      <Unit26>
         <Filename Value="openDemoDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="openDemoDialogForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-      </Unit29>
-      <Unit30>
+      </Unit26>
+      <Unit27>
         <Filename Value="..\core\mnh_packages.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="..\core\mnh_contexts.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="..\core\mnh_funcs_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="..\..\common\mySys.pas"/>
+        <IsPartOfProject Value="True"/>
       </Unit30>
       <Unit31>
-        <Filename Value="..\core\mnh_contexts.pas"/>
+        <Filename Value="..\core\code_hash.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit31>
       <Unit32>
-        <Filename Value="..\core\mnh_settings.pas"/>
+        <Filename Value="..\core\mnh_funcs.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit32>
       <Unit33>
-        <Filename Value="..\core\mnh_funcs_server.pas"/>
+        <Filename Value="..\core\mnh_funcs_files.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit33>
       <Unit34>
-        <Filename Value="..\..\common\mySys.pas"/>
+        <Filename Value="..\core\mnh_basicTypes.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit34>
       <Unit35>
-        <Filename Value="..\core\code_hash.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit35>
-      <Unit36>
-        <Filename Value="..\core\mnh_token.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit36>
-      <Unit37>
-        <Filename Value="..\core\mnh_funcs.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit37>
-      <Unit38>
-        <Filename Value="..\core\mnh_funcs_files.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit38>
-      <Unit39>
-        <Filename Value="..\core\mnh_basicTypes.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit39>
-      <Unit40>
-        <Filename Value="..\core\res_ensureAssoc.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit40>
-      <Unit41>
-        <Filename Value="..\core\res_ensureNppHighlighting.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit41>
-      <Unit42>
-        <Filename Value="..\core\res_ensurePackages.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit42>
-      <Unit43>
-        <Filename Value="..\core\res_examples.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit43>
-      <Unit44>
-        <Filename Value="..\core\res_html_template.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit44>
-      <Unit45>
-        <Filename Value="..\core\res_removeAssoc.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit45>
-      <Unit46>
-        <Filename Value="mnh_workspaces.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="workspacesForm"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-      </Unit46>
-      <Unit47>
         <Filename Value="mnh_gui_outputonly.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="outputOnlyForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_gui_outputOnly"/>
-      </Unit47>
-      <Unit48>
+      </Unit35>
+      <Unit36>
         <Filename Value="..\core\tokenStack.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit48>
-      <Unit49>
+      </Unit36>
+      <Unit37>
         <Filename Value="mnh_splash.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="SplashForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-      </Unit49>
-      <Unit50>
+      </Unit37>
+      <Unit38>
         <Filename Value="..\core\mnh_rule.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit50>
-      <Unit51>
-        <Filename Value="simplemnh.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="SimpleMnhForm"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="simpleMnh"/>
-      </Unit51>
+      </Unit38>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
