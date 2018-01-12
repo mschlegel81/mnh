@@ -454,12 +454,14 @@ FUNCTION T_codeAssistanceData.isLocalId(CONST id: string; CONST lineIndex, colId
 
 FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
   VAR s:string;
+      wc:longint;
   begin
     enterCriticalSection(cs);
+    wc:=wordsInEditor.size;
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-    result:=packageIsValid;
+    result:=wordsInEditor.size>wc;
     leaveCriticalSection(cs);
   end;
 
