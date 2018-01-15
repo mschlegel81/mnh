@@ -181,6 +181,7 @@ TYPE
       CONSTRUCTOR createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath;{$endif} CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
       DESTRUCTOR destroy;
       PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+      PROCEDURE stopWorkers;
       PROCEDURE afterEvaluation;
       PROPERTY evaluationOptions:T_evaluationContextOptions read options;
       PROPERTY threadContext:P_threadContext read primaryThreadContext;
@@ -375,6 +376,20 @@ PROCEDURE T_evaluationContext.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
   end;
 
+PROCEDURE T_evaluationContext.stopWorkers;
+  begin
+    adapters^.stopEvaluation;
+    {$ifdef debugMode}
+    if detachedAsyncChildCount>0                       then writeln(stdErr,'        DEBUG: Waiting for ',detachedAsyncChildCount,' detached evaluations');
+    if (taskQueue<>nil) and (taskQueue^.queuedCount>0) then writeln(stdErr,'        DEBUG: Waiting for ',taskQueue^.queuedCount,' queued tasks');
+    {$endif}
+    while (detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0) do begin
+      if taskQueue<>nil then taskQueue^.activeDeqeue(primaryThreadContext^);
+      ThreadSwitch;
+      sleep(1);
+    end;
+  end;
+
 PROCEDURE T_evaluationContext.afterEvaluation;
   PROCEDURE logTimingInfo;
     CONST CATEGORY_DESCRIPTION:array[T_profileCategory] of string=(
@@ -422,11 +437,7 @@ PROCEDURE T_evaluationContext.afterEvaluation;
     end;
 
   begin
-    adapters^.stopEvaluation;
-    while (detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0) do begin
-      ThreadSwitch;
-      sleep(1);
-    end;
+    stopWorkers;
     adapters^.logEndOfEvaluation;
     if (adapters^.doShowTimingInfo) and (wallClock<>nil) then logTimingInfo;
     {$ifdef fullVersion}
@@ -680,9 +691,9 @@ PROCEDURE T_threadContext.raiseSideEffectError(CONST id:string; CONST location:T
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; inline;
+FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
   begin
-    if (parent^.debuggingStepper=nil) then exit(false);
+    if (parent=nil) or (parent^.debuggingStepper=nil) then exit(false);
     if first<>nil then parent^.debuggingStepper^.stepping(first,stack,@callStack);
     result:=true;
   end;
@@ -821,7 +832,10 @@ PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
   VAR task:P_queueTask=nil;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(context);
+    if task<>nil then begin
+      task^.evaluate(context);
+      if task^.isVolatile then dispose(task,destroy);
+    end;
   end;
 
 INITIALIZATION

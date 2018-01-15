@@ -1532,16 +1532,28 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
   VAR ruleList:array of P_rule;
       i:longint;
   begin
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': imported packages...'); {$endif}
+    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context);
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': run after hooks...'); {$endif}
     for i:=0 to length(runAfter)-1 do runAfter[i]^.evaluate(packageTokenLocation(@self),@context,nil);
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': http servers...'); {$endif}
     mnh_funcs_server.onPackageFinalization(@self);
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': ipc servers...'); {$endif}
     mnh_funcs_ipc   .onPackageFinalization(@self);
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': cached formats...'); {$endif}
     mnh_funcs_format.onPackageFinalization(@self);
+    if isMain then begin
+      {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': stopping workers...'); {$endif}
+      context.getParent^.stopWorkers;
+    end;
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': updating error level...'); {$endif}
     context.adapters^.updateErrorlevel;
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': writing back datastores...'); {$endif}
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do
       if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(context.adapters^);
     setLength(ruleList,0);
-    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context);
+    {$ifdef debugMode} writeln('        DEBUG: Finalize ',getId,': DONE'); {$endif}
   end;
 
 DESTRUCTOR T_package.destroy;
@@ -1589,8 +1601,8 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString;
       if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
         adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
       case ruleType of
-        rt_memoized,
-        rt_customTypeCheck: new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart,ruleType));
+        rt_memoized       : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
+        rt_customTypeCheck: new(P_typecheckRule            (result),create(ruleId,ruleDeclarationStart));
         rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      modifier_private in modifiers));
         rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,modifier_private in modifiers,modifier_plain in modifiers));
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
