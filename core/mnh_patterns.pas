@@ -76,6 +76,7 @@ TYPE
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
       PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
+      FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
   end;
 
 IMPLEMENTATION
@@ -194,7 +195,10 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
-    if restrictionType = tt_customTypeCheck then exit;
+    if restrictionType = tt_customTypeCheck then begin
+      typeWhitelist:=customTypeCheck^.getFirstParameterTypeWhitelist;
+      exit;
+    end;
     if restrictionType = tt_typeCheck then typeWhitelist:=C_typeCheckInfo[builtinTypeCheck].matching;
     if (restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
        and (restrictionValue<>nil)
@@ -660,6 +664,11 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
     for i in unusedIds do if sig[i].restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal] then
       context.adapters^.raiseWarning('Parameter '+sig[i].toString+' not used',sig[i].elementLocation);
     if hasOptionals and not(optUsed) then context.adapters^.raiseNote('Optional ... not used',subruleLocation);
+  end;
+
+FUNCTION T_pattern.getFirstParameterTypeWhitelist:T_literalTypeSet;
+  begin
+    if length(sig)>=1 then result:=sig[0].typeWhitelist else result:=[];
   end;
 
 end.

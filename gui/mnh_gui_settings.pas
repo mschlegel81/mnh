@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, mnh_funcs, mnh_out_adapters, mnh_constants,
+  StdCtrls, ExtCtrls, mnh_funcs, mnh_out_adapters, mnh_constants,
   mnh_packages,mnh_settings,mnh_doc;
 
 CONST MINIMUM_OUTPUT_LINES=16;
@@ -16,6 +16,12 @@ TYPE
 
   TSettingsForm = class(TForm)
     installButton: TButton;
+    Panel1: TPanel;
+    Panel2: TPanel;
+    Panel3: TPanel;
+    Panel4: TPanel;
+    Panel5: TPanel;
+    Panel6: TPanel;
     uninstallButton: TButton;
     outputSizeLimit: TEdit;
     Label7: TLabel;
@@ -29,7 +35,6 @@ TYPE
     Label3: TLabel;
     PageControl: TPageControl;
     TabSheet_display: TTabSheet;
-    Label8: TLabel;
     TabSheet_install: TTabSheet;
     Button1: TButton;
     TabSheet_global: TTabSheet;

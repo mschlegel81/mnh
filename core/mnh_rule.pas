@@ -66,6 +66,13 @@ TYPE
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
   end;
 
+  P_typecheckRule=^T_typecheckRule;
+  T_typecheckRule=object(T_memoizedRule)
+    CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation);
+    FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
+    FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
+  end;
+
   P_mutableRule=^T_mutableRule;
   T_mutableRule=object(T_rule)
     private
@@ -135,6 +142,11 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
   begin
     inherited create(ruleId,startAt,ruleType);
     cache.create(rule_cs);
+  end;
+
+CONSTRUCTOR T_typecheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation);
+  begin
+    inherited create(ruleId,startAt,rt_customTypeCheck);
   end;
 
 CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate: boolean; CONST ruleType: T_ruleType);
@@ -347,6 +359,69 @@ exit}
     CLEAN_EXIT(false);
   end;
 
+FUNCTION T_typecheckRule.replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean;
+{$MACRO ON}
+{$define prepareFallbackResult:=begin
+  lit:=newBoolLiteral(false);
+  firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(location,'',tt_literal,lit);
+  lastRep:=firstRep;
+end}
+  VAR lit:P_literal;
+      useParam:P_listLiteral;
+
+  begin
+    result:=true; //Typechecks always match and return true or false
+    if param=nil then useParam:=newListLiteral
+                 else useParam:=param;
+
+    if (P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT) or
+       (TryEnterCriticalsection(rule_cs)=0) then begin
+      //Work without cache:
+      if subrules[0]^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,false) then begin
+        P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
+        if (firstRep^.next=nil) and //single token, which is a boolean literal
+           (firstRep^.tokType=tt_literal) and
+           (P_literal(firstRep^.data)^.literalType=lt_boolean)
+        then lastRep:=firstRep
+        else begin
+          P_threadContext(threadContextPointer)^.recycler.cascadeDisposeToken(firstRep);
+          prepareFallbackResult;
+        end;
+      end else prepareFallbackResult;
+      //:Work without cache
+    end else begin
+      //Work with cache:
+      lit:=cache.get(useParam);
+      if lit<>nil then begin
+        //cache hit:
+        lit^.rereference;
+        firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(location,'',tt_literal,lit);
+        lastRep:=firstRep;
+        //:cache hit
+      end else begin
+        //cache miss:
+        if subrules[0]^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,false) then begin
+          P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
+          if (firstRep^.next=nil) and //single token, which is a boolean literal
+             (firstRep^.tokType=tt_literal) and
+             (P_literal(firstRep^.data)^.literalType=lt_boolean)
+          then begin
+            lastRep:=firstRep;
+            lit:=firstRep^.data;
+          end else begin
+            P_threadContext(threadContextPointer)^.recycler.cascadeDisposeToken(firstRep);
+            prepareFallbackResult;
+          end;
+        end else prepareFallbackResult;
+        cache.put(useParam,lit);
+        //:cache miss
+      end;
+      leaveCriticalSection(rule_cs);
+      //:Work with cache
+    end;
+    if param=nil then disposeLiteral(useParam);
+  end;
+
 FUNCTION T_mutableRule.replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean;
   begin
     result:=(includePrivateRules or not(privateRule)) and ((param=nil) or (param^.size=0));
@@ -369,6 +444,11 @@ FUNCTION T_datastoreRule.replaces(CONST param:P_listLiteral; CONST location:T_to
       lastRep:=firstRep;
       system.leaveCriticalSection(rule_cs);
     end;
+  end;
+
+FUNCTION T_typecheckRule.getFirstParameterTypeWhitelist:T_literalTypeSet;
+  begin
+    result:=subrules[0]^.getPattern.getFirstParameterTypeWhitelist;
   end;
 
 FUNCTION T_mutableRule.getValue(VAR context:T_threadContext):P_literal;

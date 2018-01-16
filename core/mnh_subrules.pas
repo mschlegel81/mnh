@@ -75,6 +75,7 @@ TYPE
       FUNCTION arity:longint; virtual;
       FUNCTION isVariadic:boolean;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      PROPERTY getPattern:T_pattern read pattern;
       //Literal routines:
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;

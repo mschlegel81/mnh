@@ -46,6 +46,7 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST singleParameter:P_literal; CONST location:T_tokenLocation; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
+      FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
   end;
 
   T_token=object
@@ -215,6 +216,11 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST singleParameter:P_literal; CONST
       recycler^.cascadeDisposeToken(firstRep);
     end else result:=false;
     disposeLiteral(parList);
+  end;
+
+FUNCTION T_abstractRule.getFirstParameterTypeWhitelist:T_literalTypeSet;
+  begin
+    result:=[];
   end;
 
 CONSTRUCTOR T_token.create;
