@@ -79,7 +79,7 @@ private analyzeCase(data,testCase:String)->begin
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
   local allSamples:=debugSamples|optSamples;
-  allSamples.group(1).pEach(g,g[0,1]|g.getInner(0).reverseList).transpose('').showTable('Times for '&testCase&' (newest first)',true);
+  allSamples.group(1).pEach(g,g[0,1]|g.getInner(0).reverseList.map({roundToRelevantDigits($0,4)})).transpose('').showTable('Times for '&testCase&' (newest first)',true);
 
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
@@ -117,7 +117,15 @@ private analyzeFlavour(data,flavour:String)->begin
                case[1].trailing(2).head,      //3 - sample before last
                case[1].trailing])             //4 - last sample
   .{$L|['TOTAL'| $L.agg(+).tail]}
-  .pEach(case,[case[0],case[1]  ,case[2]  ,case[3] ,case[4],case[4]-case[2],case[4]-case[3],round((case[4]/case[2]-1)*100,2),round((case[4]/case[3]-1)*100,2)])
+  .pEach(case,[case[0],
+               case[1],
+               roundToRelevantDigits(case[2]        ,3),
+               roundToRelevantDigits(case[3]        ,3),
+               roundToRelevantDigits(case[4]        ,3),
+               roundToRelevantDigits(case[4]-case[2],3),
+               roundToRelevantDigits(case[4]-case[3],3),
+               round((case[4]/case[2]-1)*100,2),
+               round((case[4]/case[3]-1)*100,2)])
   .{showTable([['case','samples','average','before','last','+avg','+before','+%avg','+%before']]|$L,true)};
   setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
   plot;
@@ -132,14 +140,15 @@ private analyzeFlavour(data,flavour:String)->begin
   plot.display;
 end;
 
+USE formattingUtils;
+
 private compareFlavours(data,flavour1:String,flavour2:String)->begin
   local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
   local tableData:=dat1.getInner(0).union(dat2.getInner(0))
     .each(case,case|(dat1[case] orElse [0,0])|(dat2[case] orElse [0,0]))
     .{$L|['TOTAL'| $L.agg(+).tail]}
-    .each(line,line|(100*(1-line[[3,4]]/line[[1,2]]))|(line[[3,4]]-line[[1,2]]));
-
+    .each(line, map(line|(100*(1-line[[3,4]]/line[[1,2]]))|(line[[3,4]]-line[[1,2]]),{roundToRelevantDigits($x,3)}));
   showTable([['case','avg. '&flavour1,'last '&flavour1,
                      'avg. '&flavour2,'last '&flavour2,
                      'rel.avg. (%)'  ,'rel.last (%)',
