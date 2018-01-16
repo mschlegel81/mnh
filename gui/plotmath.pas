@@ -98,6 +98,7 @@ TYPE
     absolutePosition:boolean;
 
     CONSTRUCTOR create(CONST x,y:double; CONST txt:T_arrayOfString);
+    FUNCTION clone:T_customText;
     DESTRUCTOR destroy;
     PROCEDURE renderText(CONST xRes,yRes:longint; CONST opt:T_scalingOptions; CONST target:TCanvas);
     PROCEDURE setAnchor(CONST s:string);
@@ -120,6 +121,18 @@ CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
     background:=WHITE;
     transparentBackground:=true;
     absolutePosition:=false;
+  end;
+
+FUNCTION T_customText.clone:T_customText;
+  begin
+    result.create(p[0],p[1],text);
+    result.fontName             :=fontName;
+    result.anchor               :=anchor;
+    result.fontSize             :=fontSize;
+    result.foreground           :=foreground;
+    result.background           :=background;
+    result.transparentBackground:=transparentBackground;
+    result.absolutePosition     :=absolutePosition;
   end;
 
 DESTRUCTOR T_customText.destroy; begin end;
@@ -238,7 +251,6 @@ PROCEDURE T_customText.setForeground(CONST r, g, b: double);
 
 PROCEDURE T_customText.setBackground(CONST r, g, b: double);
   begin
-    writeln('Setting font background');
     transparentBackground:=false;
     background[cc_red  ]:=round(255*max(0,min(1,r)));
     background[cc_green]:=round(255*max(0,min(1,g)));
@@ -299,7 +311,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         i:longint;
         tmp:double;
     begin
-      if axisTrafo['x'].autoscale or axisTrafo['y'].autoscale
+      if axisTrafo['x'].autoscale
+      or axisTrafo['y'].autoscale
       then boundingBox:=getSamplesBoundingBox
       else for axis:='x' to 'y' do for i:=0 to 1 do boundingBox[axis,i]:=axisTrafo[axis].rangeByUser[i];
       //Stretch bounding box, potentially transform to logscale:----------------------------------
