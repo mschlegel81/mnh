@@ -4275,10 +4275,6 @@ out> 0
 in> try({deserialize('x')},{warn($x.head.trailing)});
 Warning Invalid literal encoding type 120
 out> void
-in> isStateful(:: print);
-out> false
-in> isStateful(primeGenerator);
-out> true
 in> interpret('3+4');
 out> 7
 in> composeDigits([1, 0, 1], 2);
@@ -4303,3 +4299,31 @@ in> validateRegex('(3+.*');
 out> false
 in> validateRegex('\(3+.*');
 out> true
+in> [1..100].pFilter({$x mod 2=$x mod 3=$x mod 5});
+out> [1,30,31,60,61,90,91]
+in> pi;
+out> 3.141592653589793
+in> isStatefulExpression(:: sin);
+out> false
+in> isStatefulExpression(future(:: sin,[3]));
+out> true
+in> isStatelessExpression(:: sin);
+out> true
+in> isStatelessExpression(future(:: sin,[3]));
+out> false
+in> isIteratable(future(:: sin,[3]));
+out> false
+in> isIteratable(primeGenerator);
+out> true
+in> isIteratable([1..10]);
+out> true
+in> isIteratableExpression(primeGenerator);
+out> true
+in> isIteratableExpression([1..10]);
+out> false
+in> begin resetRandom; local gen:={begin local last:=0; save; last+=random; end}; print('gen.isIteratable= ', gen.isIteratable,'; ', gen.head(3)); gen:=gen.toGenerator; print('gen.isIteratable= ', gen.isIteratable,'; ', gen.head(3)); end;
+gen.isIteratable= false; {begin local last:=0; save; last+=random; end}
+gen.isIteratable= true; [0.69890123605728149,1.5846346616744995,2.5055105686187744]
+out> void
+in> toGenerator(:: sqr);
+Error Only nullary stateful expressions may be iteratable.

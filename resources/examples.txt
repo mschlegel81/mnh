@@ -784,12 +784,6 @@ try({deserialize('x')},0);
 //Try with fallback: convert error to warning
 try({deserialize('x')},{warn($x.head.trailing)});
 
-//#isStateful
-isStateful(::print);
-
-//#isStateful
-isStateful(primeGenerator);
-
 interpret("3+4");
 
 //Compose binary digits
@@ -822,6 +816,39 @@ end;
 validateRegex('(3+.*');
 
 validateRegex('\(3+.*');
+
+
+[1..100].pFilter({$x mod 2=$x mod 3=$x mod 5});
+
+pi;
+
+isStatefulExpression(::sin);
+
+isStatefulExpression(future(::sin,[3]));
+
+isStatelessExpression(::sin);
+
+isStatelessExpression(future(::sin,[3]));
+
+isIteratable(future(::sin,[3]));
+
+isIteratable(primeGenerator);
+
+isIteratable([1..10]);
+
+isIteratableExpression(primeGenerator);
+
+isIteratableExpression([1..10]);
+
+begin
+  resetRandom;
+  local gen:={begin local last:=0; save; last+=random; end};
+  print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
+  gen:=gen.toGenerator;
+  print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
+end;
+
+toGenerator(::sqr);
 
 //==END REG TEST==
 
