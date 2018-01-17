@@ -151,9 +151,6 @@ private cleanup->begin
   currentCodeHash:=void;
 end;
 
-testIsPassedAccordingToLog(B:BuildConfig)->
-  testLog.log[testLog.log.getInner(0)=B[1] and testLog.log.getInner(1)=ensureCodeHash].size>0;
-
 private isSameFileName(filename1:String,filename2:String)->begin
   local case:=isLinux ? {$x} : {$x.upper};
   (filename1.expandedFileName.case)==
