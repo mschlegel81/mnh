@@ -581,7 +581,7 @@ DESTRUCTOR T_eachTask.destroy;
 
 CONSTRUCTOR T_futureLiteral.create(CONST func_:P_expressionLiteral; CONST param_:P_listLiteral; CONST loc:T_tokenLocation; CONST blocking:boolean);
   begin
-    inherited create(loc);
+    inherited create(loc,et_builtinFuture);
     initCriticalSection(criticalSection);
     isBlocking:=blocking;
     func :=func_;                      func ^.rereference;

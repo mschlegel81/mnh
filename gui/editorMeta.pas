@@ -1,13 +1,13 @@
 UNIT editorMeta;
 INTERFACE
 USES  //basic classes
-  Classes, sysutils, FileUtil, LazUTF8, LCLType, types,
+  Classes, sysutils, LazUTF8, LCLType, types,
   //my utilities:
   myStringUtil, myGenerics,
   //GUI: LCL components
   Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
   //GUI: SynEdit
-  SynEdit, SynCompletion, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,
+  SynEdit, SynPluginMultiCaret, SynEditMiscClasses, SynEditMarks, SynEditKeyCmds,
   //GUI: highlighters
   SynHighlighterMnh, SynHighlighterPas, SynHighlighterCpp, SynHighlighterJava,
   SynHighlighterJScript, SynHighlighterPerl, SynHighlighterHTML,

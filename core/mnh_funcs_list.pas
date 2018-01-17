@@ -36,7 +36,7 @@ begin
   if (params<>nil)
      and (params^.size=2)
      and (arg0^.literalType=lt_expression)
-     and (P_expressionLiteral(arg0)^.isGenerator)
+     and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
      and (arg1^.literalType=lt_int)
      and (int1^.value>=0) then begin
      if int1^.value=0 then exit(newListLiteral());

@@ -377,7 +377,11 @@ TYPE
                tc_typeCheckString,  tc_typeCheckStringList, tc_typeCheckStringSet, tc_typeCheckStringCollection,
                tc_typeCheckNumeric, tc_typeCheckNumList,    tc_typeCheckNumSet,    tc_typeCheckNumCollection,
                tc_typeCheckMap,
-               tc_typeCheckExpression);
+               tc_typeCheckExpression,
+               tc_typeCheckStatelessExpression,
+               tc_typeCheckStatefulExpression,
+               tc_typeCheckIteratableExpression,
+               tc_typeCheckIteratable);
 
 CONST
   C_typeCheckInfo:array[T_typeCheck] of record
@@ -437,7 +441,17 @@ CONST
   {tc_typeCheckMap}               (name:'Map';               helpText:'Matches maps#Can be modified to only match maps of a given size';
                                    modifiable:true;  matching:[lt_emptyMap,lt_map]),
   {tc_typeCheckExpression}        (name:'Expression';        helpText:'Matches expressions#Can be modified to only match expressions accepting a given number of parameters';
-                                   modifiable:true;  matching:[lt_expression]));
+                                   modifiable:true;  matching:[lt_expression]),
+  {tc_typeCheckStatelessExpression}
+                                  (name:'StatelessExpression'; helpText:'Matches stateless expressions#Can be modified to only match expressions accepting a given number of parameters';
+                                   modifiable:true;  matching:[lt_expression]),
+  {tc_typeCheckStatefulExpression}(name:'StatefulExpression'; helpText:'Matches stateful expressions#Can be modified to only match expressions accepting a given number of parameters';
+                                   modifiable:true;  matching:[lt_expression]),
+  {tc_typeCheckIteratableExpression}
+                                  (name:'IteratableExpression'; helpText:'Matches iteratable expressions';
+                                   modifiable:false;  matching:[lt_expression]),
+  {tc_typeCheckIteratable}        (name:'Iteratable'; helpText:'Matches iteratable expressions, collections and maps';
+                                   modifiable:false;  matching:[lt_expression..lt_emptyMap]));
 
 TYPE
   T_modifier=(

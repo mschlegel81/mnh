@@ -58,7 +58,7 @@ PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CO
   begin
     //writeln('T_outlineNode.updateWithSubrule ',subRule^.toDocString());
     isLocal:=inMainPackage;
-    isPublic:=subRule^.typ=et_normal_public;
+    isPublic:=subRule^.isPublic;
     location:=subRule^.getLocation;
     associatedNode.text:=privatePrefix(not(isPublic))+ruleIdAndModifiers+subRule^.patternString;
     //writeln('Subrule node text is ',associatedNode.Text);
@@ -86,15 +86,15 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
       associatedNode.text:=idAndModifiers;
       //writeln('Rule node text is ',idAndModifiers,' [with subrules]');
       subrules:=P_ruleWithSubrules(rule)^.getSubrules;
-      for subRule in subrules do if inMainPackage or (subRule^.typ=et_normal_public) then inc(relevantSubruleCount);
+      for subRule in subrules do if inMainPackage or (subRule^.isPublic) then inc(relevantSubruleCount);
       if relevantSubruleCount<=1 then begin
-         for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.typ=et_normal_public) then begin
+         for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
            isLocal:=inMainPackage;
-           isPublic:=subRule^.typ=et_normal_public;
+           isPublic:=subRule^.isPublic;
            location:=subRule^.getLocation;
            associatedNode.text:=privatePrefix(not(isPublic))+idAndModifiers+subRule^.patternString;
          end;
-      end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.typ=et_normal_public) then begin
+      end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
         if childIdx>=length(children) then begin
           //writeln('Creating blank subrule node #',childIdx);
           setLength(children,childIdx+1);

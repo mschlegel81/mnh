@@ -87,7 +87,7 @@ FUNCTION newIterator(CONST input:P_literal):P_expressionLiteral;
   begin
     if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(P_compoundLiteral(input)))
     else if (input^.literalType=lt_expression) and
-            (P_expressionLiteral(input)^.isGenerator) then result:=P_expressionLiteral(input^.rereferenced)
+            (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then result:=P_expressionLiteral(input^.rereferenced)
     else new(P_singleValueIterator(result),create(input));
   end;
 
@@ -310,14 +310,14 @@ FUNCTION filter_imp intFuncSignature;
             collResult^.append(x,true);
           disposeLiteral(iter);
         end;
-        lt_expression: if (P_expressionLiteral(arg0)^.isGenerator) then begin
+        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
       end;
     end;
   end;
 
-FUNCTION parllelFilter_imp intFuncSignature;
+FUNCTION parallelFilter_imp intFuncSignature;
   VAR iterator:P_expressionLiteral;
   begin
     result:=nil;
@@ -339,7 +339,7 @@ FUNCTION parllelFilter_imp intFuncSignature;
           processFilterParallel(iterator,P_expressionLiteral(arg1),tokenLocation,context,P_collectionLiteral(result));
           disposeLiteral(iterator);
         end;
-        lt_expression: if (P_expressionLiteral(arg0)^.isGenerator) then begin
+        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
         end;
       end;
@@ -408,7 +408,7 @@ FUNCTION createLazyMapImpl(CONST generator,mapping:P_expressionLiteral; CONST to
 FUNCTION lazyMap_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.isGenerator)
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
                                           and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
       new(P_mapGenerator(result),create(newIterator(arg0),P_expressionLiteral(arg1),tokenLocation));
     end;
@@ -565,7 +565,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,[],ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
   registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,[],ak_binary,'permutationIterator(i:int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c');
   registerRule(LIST_NAMESPACE,'filter', @filter_imp,[],ak_binary,'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true');
-  registerRule(LIST_NAMESPACE,'pFilter', @parllelFilter_imp,[],ak_binary,'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel');
+  registerRule(LIST_NAMESPACE,'pFilter', @parallelFilter_imp,[],ak_binary,'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel');
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,[],ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,[se_readFile],ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,[],ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');

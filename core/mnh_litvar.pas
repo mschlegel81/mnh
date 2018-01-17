@@ -133,16 +133,38 @@ TYPE
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
-  T_expressionType=(et_normal_public,
-                    et_normal_private,
-                    et_inline_for_literal,
-                    et_inline_for_each,
-                    et_inline_for_while,
-                    et_builtinPlain,
-                    et_builtinStateful);
-CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtinPlain,et_builtinStateful];
-      C_subruleExpressionTypes:set of T_expressionType=[et_normal_private,et_normal_public];
-      C_expressionTypeString:array[T_expressionType] of string=('publicSubrule','privateSubrule','expression','eachBody','whileBody','builtin','builtinIterator');
+  T_expressionType=(et_builtin          ,
+                    et_builtinIteratable,
+                    et_builtinFuture    ,
+                    et_subrule          ,
+                    et_inline           ,
+                    et_subruleIteratable,
+                    et_inlineIteratable ,
+                    et_subruleStateful  ,
+                    et_inlineStateful   ,
+                    et_eachBody         ,
+                    et_whileBody        );
+CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIteratable,et_builtinFuture];
+      C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIteratable,et_subruleStateful];
+      C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIteratable,et_inlineStateful];
+      C_statefulExpressionTypes:set of T_expressionType=[et_builtinIteratable,et_builtinFuture,
+                                                         et_subruleIteratable,et_subruleStateful,
+                                                         et_inlineIteratable ,et_inlineStateful];
+      C_iteratableExpressionTypes:set of T_expressionType=[et_builtinIteratable,
+                                                           et_subruleIteratable,
+                                                           et_inlineIteratable];
+      C_expressionTypeString:array[T_expressionType] of string=(
+        'builtin',
+        'builtin iteratable',
+        'builtin future',
+        'subrule',
+        'inline',
+        'subrule iteratable',
+        'inline iteratable',
+        'subrule stateful',
+        'inline stateful',
+        'eachBody',
+        'whileBody');
 TYPE
   P_compoundLiteral  = ^T_compoundLiteral;
   P_listLiteral      = ^T_listLiteral    ;
@@ -164,14 +186,18 @@ TYPE
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual; abstract;
       FUNCTION arity:longint; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
-      FUNCTION isStateful:boolean; virtual; abstract;
-      FUNCTION isGenerator:boolean;
+
+      PROCEDURE makeStateful  (CONST adapters:P_adapters; CONST location:T_tokenLocation);
+      PROCEDURE makeIteratable(CONST adapters:P_adapters; CONST location:T_tokenLocation);
+
       FUNCTION getParentId:T_idString; virtual; abstract;
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
       FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
       FUNCTION typeString:string; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
+      FUNCTION equals(CONST other:P_literal):boolean; virtual;
+      FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -850,10 +876,6 @@ CONSTRUCTOR T_mapLiteral.create;
     dat.create();
   end;
 //=================================================================:CONSTRUCTORS
-FUNCTION T_expressionLiteral.isGenerator: boolean;
-  begin
-    result:=isStateful and canApplyToNumberOfParameters(0);
-  end;
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
 DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
@@ -1222,6 +1244,11 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
          or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
+FUNCTION T_expressionLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+  begin
+    result:=(relation=tt_comparatorListEq) and equals(other);
+  end;
+
 FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   begin
     if not(other^.literalType in C_compoundTypes) then exit(false);
@@ -1277,7 +1304,14 @@ FUNCTION T_setLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:
 //=====================================================================:?.negate
 FUNCTION T_literal          .typeString:string; begin result:=C_typeInfo[literalType].name; end;
 FUNCTION T_compoundLiteral  .typeString:string; begin result:=C_typeInfo[literalType].name+'('+intToStr(size)+')';  end;
-FUNCTION T_expressionLiteral.typeString:string; begin result:=C_typeInfo[literalType].name+'('+intToStr(arity)+')'; end;
+FUNCTION T_expressionLiteral.typeString:string;
+  begin
+    if expressionType in C_iteratableExpressionTypes then exit(C_typeCheckInfo[tc_typeCheckIteratableExpression].name)
+    else if expressionType in C_statefulExpressionTypes
+    then result:=C_typeCheckInfo[tc_typeCheckStatefulExpression].name
+    else result:=C_typeInfo     [literalType                   ].name;
+    result:=result+'('+intToStr(arity)+')';
+  end;
 
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
   VAR i:longint;
@@ -1365,6 +1399,30 @@ FUNCTION T_mapLiteral.hash: T_hashInt;
   end;
 
 //=======================================================================:?.hash
+PROCEDURE T_expressionLiteral.makeStateful  (CONST adapters:P_adapters; CONST location:T_tokenLocation);
+  begin
+    if expressionType in C_statefulExpressionTypes then exit;
+    case expressionType of
+      et_subrule: expressionType:=et_subruleStateful;
+      et_inline : expressionType:=et_inlineStateful;
+      else if adapters<>nil then adapters^.raiseError(C_expressionTypeString[expressionType]+' cannot be stateful',location);
+    end;
+  end;
+
+PROCEDURE T_expressionLiteral.makeIteratable(CONST adapters:P_adapters; CONST location:T_tokenLocation);
+  begin
+    if expressionType in C_iteratableExpressionTypes then exit;
+    if not(canApplyToNumberOfParameters(0)) or not(expressionType in C_statefulExpressionTypes) then begin
+      if adapters<>nil then adapters^.raiseError('Only nullary stateful expressions may be iteratable.',location);
+      exit;
+    end;
+    case expressionType of
+      et_subruleStateful: expressionType:=et_subruleIteratable;
+      et_inlineStateful : expressionType:=et_inlineIteratable;
+    else if adapters<>nil then adapters^.raiseError('Only nullary stateful expressions may be iteratable.',location);
+    end;
+  end;
+
 //?.equals:=====================================================================
 FUNCTION T_literal.equals(CONST other: P_literal): boolean;
   begin result:=(@self = other) or (other^.literalType = literalType) and (other^.toString=toString);  end;
@@ -1385,6 +1443,19 @@ FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
 FUNCTION T_stringLiteral.equals(CONST other: P_literal): boolean;
   begin
     result:=(@self = other) or (other^.literalType = lt_string) and (P_stringLiteral(other)^.val = val);
+  end;
+
+FUNCTION T_expressionLiteral.equals(CONST other: P_literal): boolean;
+  begin
+    if @self=other then exit(true);
+    if (other^.literalType<>lt_expression) or (P_expressionLiteral(other)^.expressionType<>expressionType) then exit(false);
+    case typ of
+      et_subrule ,
+      et_inline  ,
+      et_eachBody,
+      et_whileBody:result:=toString()=other^.toString();
+      else result:=false; //only equal if same
+    end;
   end;
 
 FUNCTION T_listLiteral.equals(CONST other:P_literal):boolean;

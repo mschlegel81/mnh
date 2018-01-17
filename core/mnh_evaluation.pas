@@ -1245,26 +1245,6 @@ FUNCTION doAsync(p:pointer):ptrint;
   end;
 
 {$i mnh_func_defines.inc}
-//FUNCTION asyncOrFuture(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST wantFuture:boolean):P_literal;
-//  VAR p:P_futureLiteral;
-//      childContext:P_threadContext;
-//      parameters:P_listLiteral=nil;
-//  begin
-//    result:=nil;
-//    if (params^.size>=1) and (arg0^.literalType=lt_expression) and
-//       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
-//      childContext:=context.getNewAsyncContext;
-//      if childContext<>nil then begin
-//        if params^.size=2 then parameters:=list1;
-//        new(p,create(P_expressionLiteral(arg0),parameters,childContext,tokenLocation,wantFuture));
-//        beginThread(@doAsync,p);
-//        result:=p^.rereferenced;
-//      end else begin
-//        context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
-//      end;
-//    end;
-//  end;
-
 FUNCTION async_imp intFuncSignature;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;
