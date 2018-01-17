@@ -43,10 +43,7 @@ TYPE
     //Initialized only
     flavour :T_mnhSynFlavour;
     styleTable: array[T_tokenKind,T_tokenSubKind] of TSynHighlighterAttributes;
-
-    isMarked:boolean;
     fLine: PChar;
-
     blobEnder:char;
     run: longint;
     fTokenPos: integer;
@@ -124,6 +121,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkWarning         ,s].style:=[fsBold];
       styleTable[tkNote            ,s].style:=[fsBold];
       styleTable[tkTimingNote      ,s].style:=[fsBold];
+      styleTable[tkHighlightedItem ,s].style:=[fsBold];
 
       styleTable[tkComment         ,s].foreground:=$00999999;
       styleTable[tkDocComment      ,s].foreground:=$00999999;
@@ -143,13 +141,21 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkError           ,s].background:=$0000FFFF;
       styleTable[tkWarning         ,s].foreground:=$000000ff;
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
+      styleTable[tkHighlightedItem ,s].background:=$00AAFF00;
     end;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
       if flavour=msf_debug
       then styleTable[t,skWarn].background:=$00EEEEEE
-      else styleTable[t,skWarn].style:=styleTable[t,skWarn].style+[fsUnderline];
-      styleTable[t,skError].style:=styleTable[t,skError].style+[fsUnderline];
+      else begin
+        styleTable[t,skWarn].FrameColor:=clRed;
+        styleTable[t,skWarn].FrameStyle:=slsWaved;
+        styleTable[t,skWarn].FrameEdges:=sfeBottom;
+      end;
+      styleTable[t,skError].style:=styleTable[t,skError].style+[fsBold];
       styleTable[t,skError].background:=$0000FFFF;
+      styleTable[t,skError].FrameColor:=clRed;
+      styleTable[t,skError].FrameStyle:=slsWaved;
+      styleTable[t,skError].FrameEdges:=sfeBottom;
     end;
     markedWord:='';
   end; { Create }
@@ -229,7 +235,6 @@ PROCEDURE TSynMnhSyn.next;
     end;
 
   begin
-    isMarked:=false;
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
     fTokenPos := run;
@@ -302,11 +307,11 @@ PROCEDURE TSynMnhSyn.next;
           localId := localId+fLine [run];
           inc(run);
         end;
-        if tokenTypeMap.containsKey(localId,fTokenId) then begin end
+        if localId=markedWord then fTokenId:=tkHighlightedItem
+        else if tokenTypeMap.containsKey(localId,fTokenId) then begin end
         else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId)                then fTokenId:=tkUserRule
         else if (codeAssistant<>nil) and codeAssistant^.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
         else fTokenId := tkDefault;
-        isMarked:=(localId=markedWord);
       end;
       '|', '^', '?', '+', '&', '*', '@', '.': begin
         inc(run);
@@ -403,11 +408,7 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer)
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId,fTokenSubId];
-    if isMarked then result.FrameColor:=$000000ff
-                else begin
-                  result.FrameColor:=clNone;
-                  if (flavour<>msf_debug) and (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
-                end;
+    if (flavour<>msf_debug) and (blobEnder<>#0) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString,skNormal];
   end;
 
 FUNCTION TSynMnhSyn.GetTokenKind: integer;
@@ -422,7 +423,6 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
-    isMarked:=false;
     if lineIndex=0 then blobEnder:=#0;
   end;
 

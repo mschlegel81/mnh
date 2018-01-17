@@ -1,7 +1,15 @@
 UNIT mnh_funcs_types;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,mnh_out_adapters,mnh_contexts,myGenerics;
+USES sysutils,
+     myGenerics,
+     mnh_constants,
+     mnh_basicTypes,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_patterns,
+     mnh_funcs,
+     mnh_contexts;
 VAR BUILTIN_TOSET,BUILTIN_TOLIST:P_intFuncCallback;
 
 IMPLEMENTATION
@@ -139,29 +147,24 @@ FUNCTION toMap_imp intFuncSignature;
     end;
   end;
 
-FUNCTION isStateful intFuncSignature;
+FUNCTION toGenerator_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then
-    result:=newBoolLiteral((arg0^.literalType=lt_expression)
-    and P_expressionLiteral(arg0)^.isStateful)
-    else if (params^.size=2) and (arg1^.literalType=lt_int) then
-    result:=newBoolLiteral((arg0^.literalType=lt_expression)
-    and P_expressionLiteral(arg0)^.isStateful
-    and P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(int1^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression) then begin
+      result:=arg0^.rereferenced;
+      P_expressionLiteral(result)^.makeIteratable(context.adapters,tokenLocation);
+    end;
   end;
 
 {$MACRO ON}
 {$define GENERIC_TYPE_CHECK:=FUNCTION FUNC_ID intFuncSignature;
   begin
-    result:=nil;              ;
+    result:=nil;
     if (params=nil) or (params^.size=0) then exit(newBoolLiteral(false));
     if (params<>nil) and (params^.size=1) then
-    result:=newBoolLiteral(arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching)
+    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK))
     else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
-    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching)
-       and (   (arg0^.literalType<>lt_expression    ) or (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(int1^.value)))
-       and (not(arg0^.literalType in C_compoundTypes) or (P_compoundLiteral  (arg0)^.size =int1^.value)));
+    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK,int1^.value));
   end}
 
 {$define TYPE_CHECK:=tc_typeCheckScalar          } {$define FUNC_ID:=isScalar           } GENERIC_TYPE_CHECK;
@@ -190,6 +193,10 @@ FUNCTION isStateful intFuncSignature;
 {$define TYPE_CHECK:=tc_typeCheckNumCollection   } {$define FUNC_ID:=isNumericCollection} GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tc_typeCheckMap             } {$define FUNC_ID:=isMap              } GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tc_typeCheckExpression      } {$define FUNC_ID:=isExpression       } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStatelessExpression } {$define FUNC_ID:=isStatelessExpression } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStatefulExpression  } {$define FUNC_ID:=isStatefulExpression  } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIteratableExpression} {$define FUNC_ID:=isIteratableExpression} GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIteratable          } {$define FUNC_ID:=isIteratable          } GENERIC_TYPE_CHECK;
 
 FUNCTION isVoid intFuncSignature;
   begin
@@ -215,6 +222,7 @@ INITIALIZATION
   BUILTIN_TOSET:=
   registerRule(TYPECAST_NAMESPACE,'toSet'         ,@toSet_imp     ,[],ak_unary,'toSet(X);#Casts X to set or wraps a scalar in a set');
   registerRule(TYPECAST_NAMESPACE,'toMap'         ,@toMap_imp     ,[],ak_unary,'toMap(X:collection);#Casts X to map or throws an error if not possible');
+  registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,@toGenerator_imp,[],ak_unary,'toGenerator(e:Expression(0));#Marks the expression as generator if possible or throws an error');
   registerRule(TYPECAST_NAMESPACE,'typeOf'        ,@typeOf_imp    ,[],ak_unary,'typeOf(x); //Returns a description of x''s type');
   registerRule(TYPECAST_NAMESPACE,'isVoid'             ,@isVoid             ,[],ak_unary     ,'isVoid(x); //Returns true if x is void (or no arguments were given)');
   registerRule(TYPECAST_NAMESPACE,'isScalar'           ,@isScalar           ,[],ak_unary     ,'isScalar(x); //Returns true if x is a scalar');
@@ -243,6 +251,9 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'isNumericCollection',@isNumericCollection,[],ak_variadic_1,'isNumericCollection(x); //Returns true if x is a numericCollection. Specify an additional int parameter to additionally check the size.');
   registerRule(TYPECAST_NAMESPACE,'isMap'              ,@isMap              ,[],ak_variadic_1,'isMap(x); //Returns true if x is a map. Specify an additional int parameter to additionally check the size.');
   registerRule(TYPECAST_NAMESPACE,'isExpression'       ,@isExpression       ,[],ak_variadic_1,'isExpression(x); //Returns true if x is a expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
-  registerRule(TYPECAST_NAMESPACE,'isStateful'         ,@isStateful         ,[],ak_variadic_1,'isStateful(x); //Returns true if x is a statefil expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
-end.
+  registerRule(TYPECAST_NAMESPACE,'isStatelessExpression' ,@isStatelessExpression ,[],ak_variadic_1,'isStatelessExpression(x); //Returns true if x is a stateless expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
+  registerRule(TYPECAST_NAMESPACE,'isStatefulExpression'  ,@isStatefulExpression  ,[],ak_variadic_1,'isStatefulExpression(x); //Returns true if x is a stateful expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.');
+  registerRule(TYPECAST_NAMESPACE,'isIteratableExpression',@isIteratableExpression,[],ak_unary     ,'isIteratableExpression(x); //Returns true if x is an iteratable expression.');
+  registerRule(TYPECAST_NAMESPACE,'isIteratable'          ,@isIteratable          ,[],ak_unary     ,'isIteratable(x); //Returns true if x is an iteratable expression, a collection or a map.');
 
+end.

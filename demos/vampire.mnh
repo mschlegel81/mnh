@@ -26,7 +26,7 @@ save;
   (next+=1) in [100,10000,1000000]
   ? next*=10
   : next;
-end};
+end}.toGenerator;
 
 //*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number
 main('rosetta')->begin

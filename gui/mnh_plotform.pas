@@ -562,7 +562,7 @@ FUNCTION addAnimFrame_impl intFuncSignature;
 FUNCTION display_imp intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
     context.adapters^.logInstantPlot;
-    plotForm.tempPlot.CopyFrom(context.adapters^.plot^);
+    plotForm.tempPlot.copyFrom(context.adapters^.plot^);
     result:=newVoidLiteral;
   end else result:=nil; end;
 

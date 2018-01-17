@@ -79,7 +79,35 @@ TYPE
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
   end;
 
+FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
+
 IMPLEMENTATION
+FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
+  begin
+    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) then exit(false);
+    if modifier<0 then case check of
+      tc_typeCheckStatelessExpression : result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
+      tc_typeCheckStatefulExpression  : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
+      tc_typeCheckIteratableExpression: result:=    P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes;
+      tc_typeCheckIteratable          : result:=   (valueToCheck^.literalType<>lt_expression) or
+                                                   (P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes);
+      else result:=true;
+    end else case check of
+      tc_typeCheckList,       tc_typeCheckSet,       tc_typeCheckCollection,
+      tc_typeCheckBoolList,   tc_typeCheckBoolSet,   tc_typeCheckBoolCollection,
+      tc_typeCheckIntList,    tc_typeCheckIntSet,    tc_typeCheckIntCollection,
+      tc_typeCheckRealList,   tc_typeCheckRealSet,   tc_typeCheckRealCollection,
+      tc_typeCheckStringList, tc_typeCheckStringSet, tc_typeCheckStringCollection,
+      tc_typeCheckNumList,    tc_typeCheckNumSet,    tc_typeCheckNumCollection,
+      tc_typeCheckMap:                 result:=P_compoundLiteral  (valueToCheck)^.size =                       modifier ;
+      tc_typeCheckExpression:          result:=P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
+      tc_typeCheckStatelessExpression: result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes) and
+                                                   P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
+      tc_typeCheckStatefulExpression : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes) and
+                                                   P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
+      else result:=false;
+    end;
+  end;
 CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
   begin
     id:='';
@@ -104,19 +132,15 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
   begin
     L:=parameterList.value[ownIndex];
     if not(L^.literalType in typeWhitelist) then exit(false);
-    if restrictionType=tt_customTypeCheck then begin
-      exit(customTypeCheck^.evaluateToBoolean(L,location,true,@context,@context.recycler));
-    end;
-    if (restrictionIdx>=0) and (restrictionType=tt_typeCheck) then begin
-      if builtinTypeCheck=tc_typeCheckExpression
-      then exit(P_expressionLiteral(L)^.canApplyToNumberOfParameters(restrictionIdx))
-      else if P_compoundLiteral(L)^.size<>restrictionIdx then exit(false);
-    end;
     result:=true;
-    if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
-      if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
-                                        L^.isInRelationTo(restrictionType, parameterList.value[restrictionIdx])
-                           else result:=L^.isInRelationTo(restrictionType, restrictionValue             );
+    case restrictionType of
+      tt_customTypeCheck:    exit(customTypeCheck^.evaluateToBoolean(L,location,true,@context,@context.recycler));
+      tt_typeCheck:          exit(typeCheckAccept(L,builtinTypeCheck,restrictionIdx));
+      tt_comparatorEq..tt_comparatorListEq,tt_operatorIn:begin
+        if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
+                                          L^.isInRelationTo(restrictionType, parameterList.value[restrictionIdx])
+                             else result:=L^.isInRelationTo(restrictionType, restrictionValue             );
+      end;
     end;
   end;
 

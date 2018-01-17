@@ -283,7 +283,7 @@ DESTRUCTOR T_threadContext.destroy;
     {$ifdef debugMode}{$ifdef fullVersion}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
     {$endif}{$endif}
-    dispose(valueStore,destroy);
+    if valueStore<>nil then dispose(valueStore,destroy);
     recycler  .destroy;
     if regexCache<>nil then dispose(regexCache,destroy);
     if dequeueContext_<>nil then dispose(dequeueContext_,destroy);
@@ -379,10 +379,6 @@ PROCEDURE T_evaluationContext.resetForEvaluation({$ifdef fullVersion}CONST packa
 PROCEDURE T_evaluationContext.stopWorkers;
   begin
     adapters^.stopEvaluation;
-    {$ifdef debugMode}
-    if detachedAsyncChildCount>0                       then writeln(stdErr,'        DEBUG: Waiting for ',detachedAsyncChildCount,' detached evaluations');
-    if (taskQueue<>nil) and (taskQueue^.queuedCount>0) then writeln(stdErr,'        DEBUG: Waiting for ',taskQueue^.queuedCount,' queued tasks');
-    {$endif}
     while (detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0) do begin
       if taskQueue<>nil then taskQueue^.activeDeqeue(primaryThreadContext^);
       ThreadSwitch;

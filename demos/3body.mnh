@@ -4,44 +4,59 @@ private circlePoint(phi)->[cos(phi/180*4*arctan(1)),
                            sin(phi/180*4*arctan(1))];
 
 private initialState:=
-  [circlePoint(  0),circlePoint( 90)  ,
-   circlePoint(120),[0,0],
-   circlePoint(240),-3*circlePoint(90)];
+  [circlePoint(  0),0.76*circlePoint( 90)  ,
+   circlePoint(120),0.76*circlePoint(120+90) ,
+   circlePoint(240),0.76*circlePoint(240+90)];
 
 
-private force(delta:NumericList(2))->delta*sqr(delta).agg(+)^(3/2);
+private force(delta:NumericList(2))->delta*sqr(delta).agg(+)^(-3/2);
 
 private F:={[$x[1],
              force($x[2]-$x[0])+force($x[4]-$x[0]),
              $x[3],
-             force($x[0]-$x[2])*3+force($x[4]-$x[2]),
+             force($x[0]-$x[2])+force($x[4]-$x[2]),
              $x[5],
-             force($x[0]-$x[4])*3+force($x[2]-$x[4])]};
+             force($x[0]-$x[4])+force($x[2]-$x[4])]};
 
-private mutable trace0:=[];
-private mutable trace1:=[];
-private mutable trace2:=[];
-private synchronized plotState(F)->begin
-  local p0:=F[0]; trace0:=trailing(trace0|[p0],50);
-  local p1:=F[2]; trace1:=trailing(trace1|[p1],50);
-  local p2:=F[4]; trace2:=trailing(trace2|[p2],50);
-  plot(trace0,'red l');
-  addPlot([p0],'red .');
-  addPlot(trace1,'green l');
-  addPlot([p1],'green .');
-  addPlot(trace2,'blue l');
-  addPlot([p2],'blue .');
-  plot.display;
-  sleep(0.01);
-end;
 
-private timeStepSize:=1E-2;
+newTrailPlotter(style)->{begin
+  local trace:=[];
+save;
+  trace:=trailing(trace|[$x],300);
+  addPlot([$x],style&' .');
+  addPlot(trace,style&' l');
+end};
+
+private timeStepSize:=2E-2;
+private aimFPS:=30;
 
 //@demo_for=plotting, animation
 main->begin
-  plot.setOptions([['x0',-2],['y0',-2],['x1',2],['y1',2],['axisStyleX',3],['axisStyleY',3]]);
+  plot.setOptions([['axisStyleX',3],['axisStyleY',3],['autoscaleX',false],['autoscaleY',false]]);
   local state:=initialState;
-  local i:=integrator(CASH_KARP,F,timeStepSize,1E-3);
-  state.plotState;
-  while(not(plotClosed),plotState(state:=state.i));
+  local stateLimits:=[['x0',-1.2],['y0',-1.2],['x1',1.2],['y1',1.2]].toMap;
+  local plotter:=[newTrailPlotter('red'),
+                  newTrailPlotter('green'),
+                  newTrailPlotter('blue')];
+
+  local stepForward:=integrator(BOGACKI_SHAMPINE,F,timeStepSize,1E-5);
+  local nextFrameAt:=time;
+  local stepCounter:=-1;
+  while(not(plotClosed),begin
+    local positions:=state[[0,2,4]];
+    local stateFuture:=future(stepForward,[state]);
+    plot();
+    positions.each(position,begin
+      plotter[index](position);
+      stateLimits['x0']:=min(stateLimits['x0'],position[0]);
+      stateLimits['x1']:=max(stateLimits['x1'],position[0]);
+      stateLimits['y0']:=min(stateLimits['y0'],position[1]);
+      stateLimits['y1']:=max(stateLimits['y1'],position[1]);
+    end);
+    setOptions(stateLimits);
+    plot.drawTextAbsolute(0.5,1,format('t=%6.2f',(stepCounter+=1)*timeStepSize),'T');
+    display;
+    state:=stateFuture();
+    sleepUntil(nextFrameAt+=1/aimFPS);
+  end);
 end;

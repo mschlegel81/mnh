@@ -5,7 +5,7 @@ save;
   local result:=state[max(0,n-2)]; //output is the n-2nd element
   state:=state.tail | state.agg(+);  //state is shifted; sum of all elements is appended
   result;
-end};
+end}.toGenerator;
 
 private produce(g:Expression(0))->g.head(20).join("\t");
 

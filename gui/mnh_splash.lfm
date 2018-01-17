@@ -1,8 +1,9 @@
 object SplashForm: TSplashForm
-  Left = 507
+  Left = 994
   Height = 381
-  Top = 179
+  Top = 251
   Width = 768
+  AutoSize = True
   BorderStyle = bsNone
   Caption = 'SplashForm'
   ClientHeight = 381
@@ -19,6 +20,7 @@ object SplashForm: TSplashForm
     Top = 0
     Width = 768
     Align = alClient
+    AutoSize = True
     BevelWidth = 3
     ClientHeight = 381
     ClientWidth = 768
@@ -1130,16 +1132,18 @@ object SplashForm: TSplashForm
       }
     end
     object Label1: TLabel
-      Left = 8
-      Height = 16
-      Top = 8
-      Width = 48
+      Left = 3
+      Height = 58
+      Top = 266
+      Width = 762
+      Align = alClient
       Caption = 'Label1'
       Font.CharSet = ANSI_CHARSET
-      Font.Height = -13
+      Font.Height = 18
       Font.Name = 'Courier New'
       Font.Pitch = fpFixed
-      Font.Quality = fqDraft
+      Font.Quality = fqCleartypeNatural
+      Font.Style = [fsBold]
       ParentColor = False
       ParentFont = False
     end

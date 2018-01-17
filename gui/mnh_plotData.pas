@@ -48,7 +48,7 @@ TYPE
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
-      PROCEDURE CopyFrom(VAR p:T_plot);
+      PROCEDURE copyFrom(VAR p:T_plot);
   end;
 
   T_plotSeries=object
@@ -149,7 +149,7 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
     newIdx:=length(frame);
     setLength(frame,newIdx+1);
     frame[newIdx].plotData.createWithDefaults;
-    frame[newIdx].plotData.CopyFrom(plot);
+    frame[newIdx].plotData.copyFrom(plot);
     frame[newIdx].quality:=255;
     frame[newIdx].image:=nil;
     leaveCriticalSection(seriesCs);
@@ -734,19 +734,25 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     storeImage.destroy;
   end;
 
-PROCEDURE T_plot.CopyFrom(VAR p:T_plot);
+PROCEDURE T_plot.copyFrom(VAR p:T_plot);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
     transparentCount:=p.transparentCount;
     scalingOptions:=p.scalingOptions;
+    //copy rows:
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row,length(p.row));
     for i:=0 to length(row)-1 do begin
       row[i].create(i,p.row[i].sample);
       row[i].style:=p.row[i].style;
     end;
+    //:copy rows | copy custom text:
+    for i:=0 to length(customText)-1 do customText[i].destroy;
+    setLength(customText,length(p.customText));
+    for i:=0 to length(customText)-1 do customText[i]:=p.customText[i].clone;
+    //:copy custom text
     system.leaveCriticalSection(p.cs);
     system.leaveCriticalSection(cs);
   end;

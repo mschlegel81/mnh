@@ -235,7 +235,7 @@ PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_adapters);
 FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
   VAR s:P_subruleExpression;
   begin
-    for s in subrules do if s^.typ=et_normal_public then exit(true);
+    for s in subrules do if s^.isPublic then exit(true);
     result:=false;
   end;
 
@@ -268,7 +268,7 @@ FUNCTION T_ruleWithSubrules.replaces(CONST param:P_listLiteral; CONST location:T
   begin
     result:=false;
     for uncurrying:=false to true do
-    for sub in subrules do if (includePrivateRules or (sub^.typ=et_normal_public)) and sub^.replaces(param,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,uncurrying) then begin
+    for sub in subrules do if (includePrivateRules or (sub^.isPublic)) and sub^.replaces(param,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,uncurrying) then begin
       exit(true);
     end;
     if getRuleType=rt_customTypeCheck then begin
@@ -342,7 +342,7 @@ exit}
       lastRep:=firstRep;
       CLEAN_EXIT(true);
     end else for uncurrying:=false to true do
-             for sub in subrules do if (includePrivateRules or (sub^.typ=et_normal_public)) and sub^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,uncurrying) then begin
+             for sub in subrules do if (includePrivateRules or (sub^.isPublic)) and sub^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,uncurrying) then begin
       if (P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT) then begin wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
       if (P_threadContext(threadContextPointer)^.adapters^.noErrors) then P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
       if (P_threadContext(threadContextPointer)^.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
@@ -379,7 +379,8 @@ end}
       //Work without cache:
       if subrules[0]^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,false) then begin
         P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
-        if (firstRep^.next=nil) and //single token, which is a boolean literal
+        if (firstRep<>nil) and
+           (firstRep^.next=nil) and //single token, which is a boolean literal
            (firstRep^.tokType=tt_literal) and
            (P_literal(firstRep^.data)^.literalType=lt_boolean)
         then lastRep:=firstRep
@@ -402,7 +403,8 @@ end}
         //cache miss:
         if subrules[0]^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^,false) then begin
           P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
-          if (firstRep^.next=nil) and //single token, which is a boolean literal
+          if (firstRep<>nil) and
+             (firstRep^.next=nil) and //single token, which is a boolean literal
              (firstRep^.tokType=tt_literal) and
              (P_literal(firstRep^.data)^.literalType=lt_boolean)
           then begin
