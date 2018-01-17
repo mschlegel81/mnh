@@ -8,7 +8,7 @@ save;
     L|=[L[j]+L[j-1],L[j]];
     L[i];
   end;
-end};
+end}.toGenerator;
 
 //*See http://rosettacode.org/wiki/Stern-Brocot_sequence
 main->begin

@@ -1,5 +1,5 @@
 //Definition
-type Queue(x:Expression(1))->x.isStateful AND x.toString==newQueue.toString;
+type Queue(x:StatefulExpression(1))->x.toString==newQueue.toString;
 newQueue->{
   begin
     local q:=[];
@@ -15,7 +15,7 @@ push (queue:Queue,value)->queue(['push',value]);
 //@SuppressUnusedWarning
 empty(queue:Queue      )->queue(['empty']);
 
-dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end};
+dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end}.toGenerator;
 enqueueConsumer(queue:Queue)->{begin local q:=queue; save; q.push($0); end};
 
 main->begin

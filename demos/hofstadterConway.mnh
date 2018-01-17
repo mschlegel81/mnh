@@ -5,7 +5,7 @@ hofstaderConwayGen->{begin
 save;
   (i+=1)>=3 ? HC|=(p:=HC[p]+HC[i-p]) : void;
   HC[i];
-end};
+end}.toGenerator;
 
 private maxBetween(i0,i1,L)->begin
   local subList:=L.tail(i0).head(i1-i0);
