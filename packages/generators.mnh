@@ -8,7 +8,7 @@ timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
    time<timeout
    ? gen()
    : void;
- end};
+ end}.toGenerator;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b)<=finalSum and a,b>=minElementValue, ordered by (a+b)
 //@SuppressUnusedWarning
@@ -18,7 +18,7 @@ pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
 save;
   (k-i<=minElementValue) ? begin k+=1; i:=minElementValue-1; end : void;
   k<=finalSum ? [i+=1,k-i] : void;
-end};
+end}.toGenerator;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b) and a,b>=1, ordered by (a+b)
 //*Warning: (potentially) infinite generator!
@@ -30,4 +30,4 @@ pairGenerator(initialSum)->pairGenerator(initialSum,2^63-1,1);
 listIterator(l:List)->{begin
   local index:=rangeGenerator(0,l.size);
   local value:=l;
-save; value[index()]; end};
+save; value[index()]; end}.toGenerator;
