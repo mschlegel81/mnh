@@ -56,12 +56,10 @@ FUNCTION privatePrefix(CONST isPrivate:boolean):string;
 
 PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CONST ruleIdAndModifiers: string; CONST inMainPackage:boolean);
   begin
-    //writeln('T_outlineNode.updateWithSubrule ',subRule^.toDocString());
     isLocal:=inMainPackage;
     isPublic:=subRule^.isPublic;
     location:=subRule^.getLocation;
     associatedNode.text:=privatePrefix(not(isPublic))+ruleIdAndModifiers+subRule^.patternString;
-    //writeln('Subrule node text is ',associatedNode.Text);
   end;
 
 PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:boolean);
@@ -79,12 +77,10 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
     idAndModifiers:=C_ruleTypeText[rule^.getRuleType]+rule^.getId;
     if rule^.getRuleType in C_mutableRuleTypes then begin
       associatedNode.text:=privatePrefix(not(isPublic))+idAndModifiers;
-      //writeln('Rule node text is ',associatedNode.Text,' [mutable]');
       for childIdx:=0 to length(children)-1 do dispose(children[childIdx],destroy);
       setLength(children,0);
     end else begin
       associatedNode.text:=idAndModifiers;
-      //writeln('Rule node text is ',idAndModifiers,' [with subrules]');
       subrules:=P_ruleWithSubrules(rule)^.getSubrules;
       for subRule in subrules do if inMainPackage or (subRule^.isPublic) then inc(relevantSubruleCount);
       if relevantSubruleCount<=1 then begin
@@ -96,11 +92,9 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
          end;
       end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
         if childIdx>=length(children) then begin
-          //writeln('Creating blank subrule node #',childIdx);
           setLength(children,childIdx+1);
           new(children[childIdx],createBlank(containingModel,containingModel^.view.items.AddChild(associatedNode,'')));
         end;
-        //writeln('Adding subrule #',childIdx,' to rule');
         children[childIdx]^.updateWithSubrule(subRule,idAndModifiers,inMainPackage);
         inc(childIdx);
       end;
@@ -119,7 +113,6 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
       keepCount:longint;
   begin
     associatedNode.text:=package^.getId;
-    //writeln('Package node text is ',package^.getId,' (for ',package^.getPath,')');
     isLocal:=mainPackage;
     isPublic:=true;
     location:=packageTokenLocation(package);
@@ -128,7 +121,6 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
         setLength(children,childIdx+1);
         new(children[childIdx],createBlank(containingModel,containingModel^.view.items.AddChild(associatedNode,'')));
       end;
-      //writeln('Adding rule #',childIdx,' to package');
       children[childIdx]^.updateWithRule(rule,mainPackage);
       inc(childIdx);
     end;
@@ -194,6 +186,7 @@ PROCEDURE T_outlineTreeModel.refresh;
   begin
     enterCriticalSection(cs);
     for node in packageNodes do node^.refresh;
+    if not(showImportedCheckbox.Checked) then packageNodes[0]^.associatedNode.expand(false);
     leaveCriticalSection(cs);
   end;
 
@@ -202,7 +195,6 @@ PROCEDURE T_outlineTreeModel.update(CONST assistant:P_codeAssistanceData);
       imported:T_packageList;
       i:longint;
   begin
-    //writeln('T_outlineTreeModel.update() begin');
     enterCriticalSection(cs);
     mainPackage:=assistant^.getPackageLocking;
     if mainPackage=nil then begin
@@ -212,11 +204,9 @@ PROCEDURE T_outlineTreeModel.update(CONST assistant:P_codeAssistanceData);
       imported:=mainPackage^.usedPackages;
       //ensure correct node count
       if length(packageNodes)>length(imported)+1 then begin
-        //writeln('T_outlineTreeModel.update() dropping nodes');
         for i:=length(imported)+1 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
         setLength(packageNodes,length(imported)+1);
       end else if length(packageNodes)<length(imported)+1 then begin
-        //writeln('T_outlineTreeModel.update() creating nodes');
         i:=length(packageNodes);
         setLength(packageNodes,length(imported)+1);
         while i<length(packageNodes) do begin
@@ -225,14 +215,12 @@ PROCEDURE T_outlineTreeModel.update(CONST assistant:P_codeAssistanceData);
         end;
       end;
       //update nodes
-      //writeln('T_outlineTreeModel.update() updating main package node');
       packageNodes[0]^.updateWithPackage(mainPackage,true);
-      //writeln('T_outlineTreeModel.update() updating imported package nodes');
       for i:=0 to length(imported)-1 do packageNodes[i+1]^.updateWithPackage(imported[i],false);
     end;
     assistant^.releaseLock;
+    refresh;
     leaveCriticalSection(cs);
-    //writeln('T_outlineTreeModel.update() end');
   end;
 
 PROCEDURE T_outlineTreeModel.checkboxClick(Sender: TObject);
