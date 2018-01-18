@@ -5,7 +5,7 @@ private B(1)->"1 bottle";
 private B(n)->n&" bottles";
 //@demo_for=formatting
 //*Prints out the song "99 bottles of beer", see http://rosettacode.org/wiki/99_Bottles_of_Beer or http://www.99-bottles-of-beer.net/
-main(...)->printf(//!~
+main->printf(//!~
 %{B($n)}s of beer on the wall
 %{B($n)}s of beer.
 Take one down, pass it around

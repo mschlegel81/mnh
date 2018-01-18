@@ -9,7 +9,13 @@ initHook:=begin
     end;
 end;
 
-private getData(parameters)->sendIpcRequest(oeis_server.ipcId,parameters);
+private getData(parameters)->begin
+  local t0:=time;
+  local result:=sendIpcRequest(oeis_server.ipcId,parameters);
+  local resultSize:=result.isString ? result.byteLength : result.serialize.byteLength;
+  note('Request ',parameters,"\n  answered in ",time-t0,'s; ',resultSize,'bytes; ',resultSize/(time-t0),'bytes/s; ',result.typeOf);
+  result;
+end;
 private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape(s),'; ',$message)});
 
 //*Return info on a series by ID(s)

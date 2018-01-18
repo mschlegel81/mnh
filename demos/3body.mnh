@@ -19,7 +19,7 @@ private F:={[$x[1],
              force($x[0]-$x[4])+force($x[2]-$x[4])]};
 
 
-newTrailPlotter(style)->{begin
+private newTrailPlotter(style)->{begin
   local trace:=[];
 save;
   trace:=trailing(trace|[$x],300);

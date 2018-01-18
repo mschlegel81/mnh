@@ -234,32 +234,10 @@ FUNCTION split_imp intFuncSignature;
     end;
 
   FUNCTION splitOneString(CONST s:P_stringLiteral):P_collectionLiteral;
-    PROCEDURE firstSplitterPos(CONST s:ansistring; OUT splitterStart,splitterEnd:longint);
-      VAR i,p:longint;
-      begin
-        splitterStart:=0;
-        for i:=0 to length(splitters)-1 do begin
-          p:=pos(splitters[i],s);
-          if (p>0) and ((splitterStart=0) or (p<splitterStart)) then begin
-            splitterStart:=p;
-            splitterEnd:=p+length(splitters[i]);
-          end;
-        end;
-      end;
-
-    VAR sp0,sp1:longint;
-        rest:ansistring;
+    VAR part:string;
     begin
-      firstSplitterPos(s^.value,sp0,sp1);
-      if sp0<0 then exit(newListLiteral(1)^.append(s,true));
-      result:=newListLiteral;
-      rest:=s^.value;
-      while sp0>0 do begin
-        result^.appendString(copy(rest,1,sp0-1));
-        rest:=copy(rest,sp1,length(rest));
-        firstSplitterPos(rest,sp0,sp1);
-      end;
-      result^.appendString(rest);
+      result:=newListLiteral(1);
+      for part in split(s^.value,splitters) do result^.appendString(part);
     end;
 
   FUNCTION splitRecurse(CONST p:P_literal):P_literal;
