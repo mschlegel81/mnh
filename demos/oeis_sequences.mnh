@@ -244,7 +244,8 @@ private findPolyParam(sequence:IntList)->sequence.size<6 ? void : begin
             ? b=0
               ? 2^63-1
               : floor((2^63.0-1.0-c)/b)
-            : floor((-b+[-1,1]*sqrt(b^2-4*a*(c-2.0^63+1.0)))/(2*a)).max;
+            : [floor((-b+[-1,1]*sqrt(b^2-4*a*(c-2.0^63+1.0)))/(2*a)),
+               floor((-b+[-1,1]*sqrt(b^2-4*a*(c+2.0^63-1.0)))/(2*a))].flatten.max;
       upperBound<0 ? void :
       format('rangeGenerator(0,%s).lazyMap({%s%s%s})',
             upperBound,
@@ -317,6 +318,7 @@ findPeriodicParam(L:IntList)->L.size<10 ? void :
     : void,orElse);
 
 //@SuppressUnusedWarning
+guessImplementation([])->void;
 guessImplementation(sequence:IntList)->
   findPolyParam(sequence) orElse
   findPowerParam(sequence) orElse
