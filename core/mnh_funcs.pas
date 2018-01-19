@@ -46,7 +46,6 @@ TYPE
 
   P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
   T_builtinFunctionMetaData=record
-    sideEffects:T_sideEffects;
     arityKind  :T_arityKind;
     qualifiedId:T_idString;
   end;
@@ -56,24 +55,22 @@ VAR
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;
 
-FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST sideEffects:T_sideEffects; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST fullNameOnly:boolean=false):P_intFuncCallback;
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
-FUNCTION violatingSideEffects(CONST funcPtr:pointer; CONST allowedSideEffects:T_sideEffects):T_sideEffects;
 IMPLEMENTATION
 
 VAR mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
 
-FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST sideEffects:T_sideEffects; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
   VAR meta:T_builtinFunctionMetaData;
   begin
     result:=ptr;
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
-    meta.sideEffects:=sideEffects;
     meta.arityKind:=aritiyKind;
     meta.qualifiedId:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name;
     builtinMetaMap.put(ptr,meta);
@@ -115,17 +112,10 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
     adapters.raiseError(complaintText,tokenLocation);
   end;
 
-FUNCTION violatingSideEffects(CONST funcPtr:pointer; CONST allowedSideEffects:T_sideEffects):T_sideEffects;
-  begin
-    if allowedSideEffects=C_allSideEffects then exit([]);
-    result:=getMeta(funcPtr).sideEffects-allowedSideEffects;
-  end;
-
 {$undef INNER_FORMATTING}
 {$WARN 5024 OFF}
 FUNCTION clearPrint_imp intFuncSignature;
   begin
-    if (params<>nil) and (params^.size>0) then exit(nil);
     system.enterCriticalSection(print_cs);
     context.adapters^.clearPrint();
     system.leaveCriticalSection(print_cs);
@@ -254,15 +244,15 @@ INITIALIZATION
   builtinMetaMap.create;
   new(mnhSystemPseudoPackage,create);
 
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,[se_outputViaAdapter],ak_nullary ,'clearPrint;//Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,[se_outputViaAdapter],ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,[se_outputViaAdapter],ak_variadic,'printDirect(...);//Prints out the given string without pretty printing or line breaks');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,[se_outputViaAdapter],ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,[se_outputViaAdapter],ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,[se_outputViaAdapter],ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,[],ak_unary   ,'serialize(x);//Returns a string representing x.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,[],ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,[],ak_unary   ,'bits(i:int);//Returns the bits of i');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary ,'clearPrint;//Clears the output and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic,'printDirect(...);//Prints out the given string without pretty printing or line breaks');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,ak_unary   ,'serialize(x);//Returns a string representing x.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits'        ,@bits_impl        ,ak_unary   ,'bits(i:int);//Returns the bits of i');
   system.initCriticalSection(print_cs);
 FINALIZATION
   builtinMetaMap.destroy;

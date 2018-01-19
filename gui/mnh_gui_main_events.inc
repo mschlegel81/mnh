@@ -105,9 +105,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   PROCEDURE updateRules;
     begin
       reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask',@ask_impl);
-      registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,[se_readGuiState],ak_nullary,'editors(...);//Lists all editors');
-      registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,[se_readGuiState],ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
-      registerRule(GUI_NAMESPACE,'openInEditor'  ,@openInEditor_impl ,[se_alterGuiState],ak_unary,'openInEditor(filename:string);//opens an editor tab for the given file');
+      registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors');
+      registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.');
+      registerRule(GUI_NAMESPACE,'openInEditor'  ,@openInEditor_impl ,ak_unary,'openInEditor(filename:string);//opens an editor tab for the given file');
     end;
 
   begin

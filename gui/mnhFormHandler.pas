@@ -111,7 +111,7 @@ FUNCTION anyFormShowing_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,[se_readGuiState],ak_nullary,'anyFormShowing();//returns true if any form is showing');
+  registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing');
 
 FINALIZATION
   finalizeUnit;

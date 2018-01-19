@@ -914,17 +914,10 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
   end;
 
 FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
-  VAR violations:T_sideEffects;
   begin
-    violations:=violatingSideEffects(func,P_threadContext(context)^.sideEffectWhitelist);
-    if violations=[] then begin
-      {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
-      result:=func(parameters,location,P_threadContext(context)^);
-      {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
-    end else begin
-      P_threadContext(context)^.raiseSideEffectError('function '+getId,location, violations);
-      result:=nil;
-    end;
+    {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
+    result:=func(parameters,location,P_threadContext(context)^);
+    {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
 FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
@@ -1556,11 +1549,11 @@ INITIALIZATION
   {$endif}
   subruleApplyOpCallback    :=@subruleApplyOpImpl;
   subruleReplacesCallback   :=@subruleReplaces;
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,[],ak_unary,'arity(e:expression);//Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,[],ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
-  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,[],ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
-  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,[],ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,[],ak_unary,'interpret(S);//Interprets a string or list S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary,'arity(e:expression);//Returns the arity of expression e');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
+  registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(S);//Interprets a string or list S');
 FINALIZATION
   {$ifdef fullVersion}
   generateRowIdentification.destroy;

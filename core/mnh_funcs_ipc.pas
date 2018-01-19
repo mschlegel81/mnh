@@ -253,7 +253,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
       normalizedPath:string;
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then begin
+    if ((params=nil) or (params^.size=0)) and context.checkSideEffects('assertUniqueInstance',tokenLocation,[se_alterContextState,se_accessIpc,se_server,se_detaching]) then begin
       registry.enterCs;
       normalizedPath:=expandFileName(tokenLocation.package^.getPath);
       if isServerRunning(normalizedPath)
@@ -272,7 +272,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
       childContext:P_threadContext;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and
+    if (params<>nil) and (params^.size=2) and context.checkSideEffects('startIpcServer',tokenLocation,[se_alterContextState,se_server,se_detaching])  and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       registry.enterCs;
@@ -304,7 +304,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
       responseHash:T_hashInt;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and
+    if (params<>nil) and (params^.size=2) and context.checkSideEffects('sendIpcRequest',tokenLocation,[se_accessIpc]) and
        (arg0^.literalType=lt_string) then begin
       temporaryReceiver:=newServer();
       sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,context.adapters,messageHash);
@@ -330,6 +330,7 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
 
 FUNCTION isIpcServerRunning_impl intFuncSignature;
   begin
+    if not(context.checkSideEffects('isIpcServerRunning',tokenLocation,[se_accessIpc])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then
       result:=newBoolLiteral(isServerRunning(str0^.value))
@@ -339,10 +340,10 @@ FUNCTION isIpcServerRunning_impl intFuncSignature;
 
 INITIALIZATION
   registry.create;
-  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,[se_alterContextState,se_accessIpc,se_server,se_detaching],ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
-  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,[se_alterContextState,se_accessIpc,se_server],ak_binary ,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
-  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,[se_accessIpc],ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
-  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,[se_accessIpc],ak_variadic_1,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance');
+  registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary,'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.');
+  registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary ,'startIpcServer(id:string,serve:expression(1));//Creates an IPC server');
+  registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
+  registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance');
 FINALIZATION
   registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;

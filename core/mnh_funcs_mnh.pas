@@ -19,7 +19,7 @@ FUNCTION sleep_imp intFuncSignature;
       sleepInt:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
       sleepUntil:=context.wallclockTime(true);
       result:=newVoidLiteral;
       if arg0^.literalType=lt_int
@@ -38,7 +38,7 @@ FUNCTION sleepUntil_imp intFuncSignature;
       sleepInt:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
       result:=newVoidLiteral;
       if arg0^.literalType=lt_int
       then sleepUntil:=P_intLiteral (arg0)^.value
@@ -234,38 +234,38 @@ FUNCTION funcFor_operatorOrElse intFuncSignature;
 {$undef OP}
 {$undef funcForOp}
 INITIALIZATION
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,[se_sleep],ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,[se_sleep],ak_unary  ,'sleepUntil(wallClockSeconds:number);//Sleeps until the wallclock reaches the given value');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  ,'sleepUntil(wallClockSeconds:number);//Sleeps until the wallclock reaches the given value');
   BUILTIN_MYPATH:=
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,[se_scriptDependent],ak_nullary,'myPath;//returns the path to the current package');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,[se_executableDependent],ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,[] ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,[se_versionDependent],ak_nullary,'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,[se_versionDependent],ak_nullary,'listKeywords;//Returns a list of all keywords by category');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,[] ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,[se_versionDependent],ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
-  intFuncForOperator[tt_comparatorEq     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::='     ,@funcFor_comparatorEq     ,[],ak_binary,'//Function wrapper for operator =');
-  intFuncForOperator[tt_comparatorNeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::!='    ,@funcFor_comparatorNeq    ,[],ak_binary,'//Function wrapper for operator !=');
-  intFuncForOperator[tt_comparatorLeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::<='    ,@funcFor_comparatorLeq    ,[],ak_binary,'//Function wrapper for operator <=');
-  intFuncForOperator[tt_comparatorGeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::>='    ,@funcFor_comparatorGeq    ,[],ak_binary,'//Function wrapper for operator >=');
-  intFuncForOperator[tt_comparatorLss    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::<'     ,@funcFor_comparatorLss    ,[],ak_binary,'//Function wrapper for operator <');
-  intFuncForOperator[tt_comparatorGrt    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::>'     ,@funcFor_comparatorGrt    ,[],ak_binary,'//Function wrapper for operator >');
-  intFuncForOperator[tt_comparatorListEq ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::=='    ,@funcFor_comparatorListEq ,[],ak_binary,'//Function wrapper for operator ==');
-  intFuncForOperator[tt_operatorAnd      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::and'   ,@funcFor_operatorAnd      ,[],ak_binary,'//Function wrapper for operator and');
-  intFuncForOperator[tt_operatorOr       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::or'    ,@funcFor_operatorOr       ,[],ak_binary,'//Function wrapper for operator or');
-  intFuncForOperator[tt_operatorXor      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::xor'   ,@funcFor_operatorXor      ,[],ak_binary,'//Function wrapper for operator xor');
-  intFuncForOperator[tt_operatorLazyAnd  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::AND'   ,@funcFor_operatorLazyAnd  ,[],ak_binary,'//Function wrapper for operator AND#');
-  intFuncForOperator[tt_operatorLazyOr   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::OR'    ,@funcFor_operatorLazyOr   ,[],ak_binary,'//Function wrapper for operator OR'    );
-  intFuncForOperator[tt_operatorPlus     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::+'     ,@funcFor_operatorPlus     ,[],ak_binary,'//Function wrapper for operator +'     );
-  intFuncForOperator[tt_operatorMinus    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::-'     ,@funcFor_operatorMinus    ,[],ak_binary,'//Function wrapper for operator -'     );
-  intFuncForOperator[tt_operatorMult     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::*'     ,@funcFor_operatorMult     ,[],ak_binary,'//Function wrapper for operator *'     );
-  intFuncForOperator[tt_operatorDivReal  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::/'     ,@funcFor_operatorDivReal  ,[],ak_binary,'//Function wrapper for operator /'     );
-  intFuncForOperator[tt_operatorDivInt   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::div'   ,@funcFor_operatorDivInt   ,[],ak_binary,'//Function wrapper for operator div'   );
-  intFuncForOperator[tt_operatorMod      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::mod'   ,@funcFor_operatorMod      ,[],ak_binary,'//Function wrapper for operator mod'   );
-  intFuncForOperator[tt_operatorPot      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::^'     ,@funcFor_operatorPot      ,[],ak_binary,'//Function wrapper for operator ^'     );
-  intFuncForOperator[tt_operatorStrConcat]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::&'     ,@funcFor_operatorStrConcat,[],ak_binary,'//Function wrapper for operator &'     );
-  intFuncForOperator[tt_operatorOrElse   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::orElse',@funcFor_operatorOrElse   ,[],ak_binary,'//Function wrapper for operator orElse');
-  intFuncForOperator[tt_operatorConcat   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::|'     ,@funcFor_operatorConcat   ,[],ak_binary,'//Function wrapper for operator |'     );
-  intFuncForOperator[tt_operatorIn       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::in'    ,@funcFor_operatorIn       ,[],ak_binary,'//Function wrapper for operator in'    );
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'      ,@myPath_impl     ,ak_nullary,'myPath;//returns the path to the current package');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor'    ,@executor_impl   ,ak_nullary,'executor;//returns the path to the currently executing instance of MNH');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash'        ,@hash_imp        ,ak_unary  ,'hash(x);//Returns the builtin hash for the given literal');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin' ,@listBuiltin_imp ,ak_nullary,'listBuiltin;//Returns a list of all built-in functions (qualified and non-qualified)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,ak_nullary,'listKeywords;//Returns a list of all keywords by category');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
+  intFuncForOperator[tt_comparatorEq     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::='     ,@funcFor_comparatorEq     ,ak_binary,'//Function wrapper for operator =');
+  intFuncForOperator[tt_comparatorNeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::!='    ,@funcFor_comparatorNeq    ,ak_binary,'//Function wrapper for operator !=');
+  intFuncForOperator[tt_comparatorLeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::<='    ,@funcFor_comparatorLeq    ,ak_binary,'//Function wrapper for operator <=');
+  intFuncForOperator[tt_comparatorGeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::>='    ,@funcFor_comparatorGeq    ,ak_binary,'//Function wrapper for operator >=');
+  intFuncForOperator[tt_comparatorLss    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::<'     ,@funcFor_comparatorLss    ,ak_binary,'//Function wrapper for operator <');
+  intFuncForOperator[tt_comparatorGrt    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::>'     ,@funcFor_comparatorGrt    ,ak_binary,'//Function wrapper for operator >');
+  intFuncForOperator[tt_comparatorListEq ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::=='    ,@funcFor_comparatorListEq ,ak_binary,'//Function wrapper for operator ==');
+  intFuncForOperator[tt_operatorAnd      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::and'   ,@funcFor_operatorAnd      ,ak_binary,'//Function wrapper for operator and');
+  intFuncForOperator[tt_operatorOr       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::or'    ,@funcFor_operatorOr       ,ak_binary,'//Function wrapper for operator or');
+  intFuncForOperator[tt_operatorXor      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::xor'   ,@funcFor_operatorXor      ,ak_binary,'//Function wrapper for operator xor');
+  intFuncForOperator[tt_operatorLazyAnd  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::AND'   ,@funcFor_operatorLazyAnd  ,ak_binary,'//Function wrapper for operator AND#');
+  intFuncForOperator[tt_operatorLazyOr   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::OR'    ,@funcFor_operatorLazyOr   ,ak_binary,'//Function wrapper for operator OR'    );
+  intFuncForOperator[tt_operatorPlus     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::+'     ,@funcFor_operatorPlus     ,ak_binary,'//Function wrapper for operator +'     );
+  intFuncForOperator[tt_operatorMinus    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::-'     ,@funcFor_operatorMinus    ,ak_binary,'//Function wrapper for operator -'     );
+  intFuncForOperator[tt_operatorMult     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::*'     ,@funcFor_operatorMult     ,ak_binary,'//Function wrapper for operator *'     );
+  intFuncForOperator[tt_operatorDivReal  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::/'     ,@funcFor_operatorDivReal  ,ak_binary,'//Function wrapper for operator /'     );
+  intFuncForOperator[tt_operatorDivInt   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::div'   ,@funcFor_operatorDivInt   ,ak_binary,'//Function wrapper for operator div'   );
+  intFuncForOperator[tt_operatorMod      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::mod'   ,@funcFor_operatorMod      ,ak_binary,'//Function wrapper for operator mod'   );
+  intFuncForOperator[tt_operatorPot      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::^'     ,@funcFor_operatorPot      ,ak_binary,'//Function wrapper for operator ^'     );
+  intFuncForOperator[tt_operatorStrConcat]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::&'     ,@funcFor_operatorStrConcat,ak_binary,'//Function wrapper for operator &'     );
+  intFuncForOperator[tt_operatorOrElse   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::orElse',@funcFor_operatorOrElse   ,ak_binary,'//Function wrapper for operator orElse');
+  intFuncForOperator[tt_operatorConcat   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::|'     ,@funcFor_operatorConcat   ,ak_binary,'//Function wrapper for operator |'     );
+  intFuncForOperator[tt_operatorIn       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::in'    ,@funcFor_operatorIn       ,ak_binary,'//Function wrapper for operator in'    );
 
 end.

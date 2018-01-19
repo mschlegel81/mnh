@@ -1832,19 +1832,14 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
 
     oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*
     [se_inputViaAsk,
-     se_outputViaAdapter,
      se_sound,
      se_sleep,
      se_readPackageState,
      se_alterContextState,
      se_alterPlotState,
      se_readFile,
-     se_os_query,
      se_accessHttp,
-     se_accessIpc,
-     se_scriptDependent,
-     se_executableDependent,
-     se_versionDependent]);
+     se_accessIpc]);
     lexer.create(input,packageTokenLocation(@self),@self);
     stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
     while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin

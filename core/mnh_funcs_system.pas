@@ -14,6 +14,7 @@ IMPLEMENTATION
 VAR builtinLocation_time:T_identifiedInternalFunction;
 FUNCTION resetRandom_impl intFuncSignature;
   begin
+    if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
     result:=nil;
     if (params= nil) or  (params^.size=0) then begin context.getParent^.prng.resetSeed(0); result:=newVoidLiteral; end else
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin context.getParent^.prng.resetSeed(int0^.value); result:=newVoidLiteral; end;
@@ -22,6 +23,7 @@ FUNCTION resetRandom_impl intFuncSignature;
 FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
+    if not(context.checkSideEffects('random',tokenLocation,[se_alterContextState])) then exit(nil);
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getParent^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       count:=int0^.value;
@@ -37,8 +39,9 @@ FUNCTION random_imp intFuncSignature;
 FUNCTION intRandom_imp intFuncSignature;
   VAR i,count:longint;
   begin
-     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(context.getParent^.prng.intRandom(int0^.value)))
-     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
+    if not(context.checkSideEffects('intRandom',tokenLocation,[se_alterContextState])) then exit(nil);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(context.getParent^.prng.intRandom(int0^.value)))
+    else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       count:=int1^.value;
       if count>=0 then begin
         result:=newListLiteral;
@@ -58,6 +61,7 @@ FUNCTION systime_imp intFuncSignature;
 
 FUNCTION beep_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('beep',tokenLocation,[se_sound])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newVoidLiteral;
@@ -166,7 +170,7 @@ FUNCTION printTo_impl intFuncSignature;
 
 FUNCTION setExitCode_impl intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
       ExitCode:=int0^.value;
       result:=newVoidLiteral;
     end else result:=nil;
@@ -208,28 +212,28 @@ FUNCTION time_imp intFuncSignature;
 
 FUNCTION changeDirectory_impl intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState])  then begin
       SetCurrentDir(str0^.value);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
 INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,[se_alterContextState],ak_variadic  ,'resetRandom(seed:int);//Resets internal PRNG with the given seed');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,[se_alterContextState],ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,[se_alterContextState],ak_variadic_1,'intRandom(k);//Returns an integer random value in range [0,k-1]#random(k,n);//Returns a list of n integer random values in range [0,k-1]');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,[se_os_query],ak_nullary   ,'systime;//Returns the current time as a real number');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,[se_sound],ak_variadic  ,'beep;//Makes a beep'{$ifdef Windows}+'#beep(freq:int,duration:int);//Makes a beep of given frequency and duration'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  ,'resetRandom(seed:int);//Resets internal PRNG with the given seed');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1,'intRandom(k);//Returns an integer random value in range [0,k-1]#random(k,n);//Returns a list of n integer random values in range [0,k-1]');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   ,'systime;//Returns the current time as a real number');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  ,'beep;//Makes a beep'{$ifdef Windows}+'#beep(freq:int,duration:int);//Makes a beep of given frequency and duration'{$endif});
   {$ifdef Windows}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,[se_os_query],ak_nullary   ,'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   ,'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).');
   {$endif}
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,[se_os_query],ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,[se_alterContextState],ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,[se_outputViaAdapter],ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,[se_outputViaAdapter],ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,[se_alterContextState],ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
   builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,[],ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
 FINALIZATION
