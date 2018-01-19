@@ -967,7 +967,7 @@ FUNCTION T_subruleExpression.getDocTxt: ansistring;
   begin
     result:=meta.getDocTxt+ECHO_MARKER;
     if not(publicSubrule) then result:=result+'private ';
-    result:=result+getId+';'+C_tabChar+COMMENT_PREFIX+ansistring(getLocation);
+    result:=result+getId+';'+C_tabChar+COMMENT_PREFIX+'declared '+ansistring(getLocation);
   end;
 
 FUNCTION T_inlineExpression.getId: T_idString;
@@ -1100,8 +1100,8 @@ FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
 FUNCTION T_ruleMetaData.getDocTxt:ansistring;
   PROCEDURE addLine(CONST s:string);
     begin
-      if result='' then result:=                       COMMENT_PREFIX+s
-                   else result:=result+C_lineBreakChar+COMMENT_PREFIX+s;
+      if result='' then result:=                       ECHO_MARKER+COMMENT_PREFIX+s
+                   else result:=result+C_lineBreakChar+ECHO_MARKER+COMMENT_PREFIX+s;
     end;
 
   VAR att:T_subruleAttribute;
