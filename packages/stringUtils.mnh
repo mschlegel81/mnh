@@ -13,3 +13,15 @@ startsWith(fullString,prefix)->pos(prefix,fullString)=0;
 //*.          stringList x stringList
 //@SuppressUnusedWarning
 endsWith(fullString,suffix)->copy(fullString,length(fullString)-length(suffix),length(suffix))=suffix;
+
+//*Returns s
+longestCommonPrefix(s:String)->s;
+//*Returns the longest common prefix of s1 and s2
+longestCommonPrefix(s1:String,s2:String)->begin
+  local i:=0;
+  while(copy(s1,0,i+1)==copy(s2,0,i+1),i+=1);
+  copy(s1,0,i);
+end;
+//*Returns the longest common prefix of all arguments
+//*All arguments must be Strings
+longestCommonPrefix(s:String,...)->longestCommonPrefix(s,longestCommonPrefix@...);
