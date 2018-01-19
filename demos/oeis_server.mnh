@@ -141,9 +141,9 @@ private serve_('validate')->begin
     local id      :=seq[0];
     local storeSeq:=sequences[id];
     note('Validating ',format(IDFormat,id),' against ',seq[1]);
-    local gen     :=seq[1]();
+    local gen     := seq[1]();
     local maxValidated:=-1;
-    local valid:=
+    local valid:=gen.isIteratableExpression AND
     storeSeq.each(n0,time>timeOut ? note('Validation for sequence ',id,' timed out') : begin
       local n1:=gen();
       (index>0) AND isVoid(n1)
