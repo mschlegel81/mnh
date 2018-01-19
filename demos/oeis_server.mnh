@@ -44,7 +44,7 @@ private formatInfo([])->'No matches';
 private formatInfo(numericIds:IntList)->
   numericIds.size<30
   ? numericIds         .pMap(::formatInfo).join("\n\n")
-  : numericIds.head(30).pMap(::formatInfo).join("\n\n")&format('And %s more',numericIds.size-30);
+  : numericIds.head(30).pMap(::formatInfo).join("\n\n")&"\n\n"&format('And %s more',numericIds.size-30);
 
 private top10(L:List)->top10(L.elementFrequency);
 private top10(M:Map)->begin
