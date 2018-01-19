@@ -76,6 +76,7 @@ PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
     FreeAndNil(server);
   end;
 
+VAR messageHashTally:T_hashInt=0;
 PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
                       CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR messageHash:T_hashInt);
   VAR streamWrapper:T_outputStreamWrapper;
@@ -86,7 +87,9 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
   begin
     if messageHash=0 then begin
       {$Q-}{$R-}
-      messageHash:=T_hashInt(round(now*1000000));
+      interLockedIncrement(messageHashTally);
+      messageHash:=messageHashTally;
+      messageHash:=messageHash*31+T_hashInt(round(now*86400000));
       messageHash:=messageHash*31+T_hashInt(ThreadID);
       messageHash:=messageHash*31+T_hashInt(payload^.hash);
       messageHash:=messageHash*31+hashOfAnsiString(receiverServerId);
