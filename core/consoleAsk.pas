@@ -48,6 +48,7 @@ FUNCTION ask_impl intFuncSignature;
       iter:T_arrayOfLiteral;
       i: longint;
   begin
+    if not(context.checkSideEffects('ask',tokenLocation,[se_inputViaAsk])) then exit(nil);
     result:=nil;
     if (params<>nil) and
        (params^.size = 1) and
@@ -70,7 +71,7 @@ FUNCTION ask_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   system.initCriticalSection(cs);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl,[se_inputViaAsk],ak_variadic_1,
+  registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl,ak_variadic_1,
                'ask(q:string);//Asks the user question q and returns the user input#'+
                'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option');
 FINALIZATION;

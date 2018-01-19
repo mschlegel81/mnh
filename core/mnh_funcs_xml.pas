@@ -48,7 +48,7 @@ FUNCTION readXmlFile_impl intFuncSignature;
   VAR FDoc: TXMLDocument;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('readXmlFile',tokenLocation,[se_readFile]) then begin
       if fileExists(str0^.value)
       then try
         ReadXMLFile(FDoc, str0^.value)
@@ -93,7 +93,7 @@ FUNCTION readXml_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(FILES_BUILTIN_NAMESPACE,'readXmlFile',@readXmlFile_impl,[],ak_unary,'readXmlFile(filename:string);//Reads contents of an XML file and returns the contents as a list');
-  registerRule(FILES_BUILTIN_NAMESPACE,'readXml'    ,@readXml_impl    ,[se_readFile],ak_unary,'readXml(input:string);//Parses input as XML and returns the contents as a list');
+  registerRule(FILES_BUILTIN_NAMESPACE,'readXmlFile',@readXmlFile_impl,ak_unary,'readXmlFile(filename:string);//Reads contents of an XML file and returns the contents as a list');
+  registerRule(FILES_BUILTIN_NAMESPACE,'readXml'    ,@readXml_impl    ,ak_unary,'readXml(input:string);//Parses input as XML and returns the contents as a list');
 
 end.

@@ -71,7 +71,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       yRes:longint=0;
       sizeLimit:longint=-1;
       i:longint;
-
+      sleepTime:longint=1;
       lastOutput:double;
       progressLog:T_progressLog;
       logLinesDisplayed:longint=0;
@@ -96,7 +96,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
     end;
 
   begin
-    if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_stringList,lt_list]) then begin
+    if (params<>nil) and (params^.size>=2) and (arg0^.literalType in [lt_stringList,lt_list]) and context.checkSideEffects('executeWorkflow',tokenLocation,[se_readFile,se_writeFile]) then begin
       for i:=1 to params^.size-1 do begin
         case params^.value[i]^.literalType of
           lt_int: begin
@@ -161,7 +161,8 @@ FUNCTION executeWorkflow_imp intFuncSignature;
             lastOutput:=now;
           end;
           ThreadSwitch;
-          sleep(1000);
+          sleep(sleepTime);
+          if sleepTime<1000 then inc(sleepTime);
         end;
         progressLog:=thisWorkflow.progressQueue.log;
         for i:=logLinesDisplayed to length(progressLog)-1 do begin
@@ -202,7 +203,7 @@ FUNCTION loadImage_imp intFuncSignature;
   begin
     enterCriticalSection(imigCS);
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('loadImage',tokenLocation,[se_readFile]) then begin
       new(loadedImage,create(1,1));
       try
         loadedImage^.loadFromFile(P_stringLiteral(arg0)^.value);
@@ -224,6 +225,7 @@ FUNCTION loadImage_imp intFuncSignature;
 FUNCTION saveImage_imp intFuncSignature;
   VAR ok:boolean=true;
   begin
+    if not(context.checkSideEffects('saveImage',tokenLocation,[se_writeFile])) then exit(nil);
     enterCriticalSection(imigCS);
     result:=nil;
     with context.adapters^.picture do begin
@@ -361,7 +363,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
   VAR img:T_rawImage;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int) and (arg2^.literalType=lt_int) then begin
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int) and (arg2^.literalType=lt_int) and context.checkSideEffects('getThumbnail',tokenLocation,[se_readFile]) then begin
       if not(fileExists(str0^.value)) then begin
         context.adapters^.raiseError('File '+str0^.value+' does not exist',tokenLocation);
         exit(nil);
@@ -411,22 +413,22 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
 INITIALIZATION
   initialize(imigCS);
   initCriticalSection(imigCS);
-  registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,[],ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
-  registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,[se_alterContextState,se_writeFile],ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
+  registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
+  registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
                                                                      '#//Give an additional expression(1) parameter for progress output');
-  registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,[se_alterContextState,se_readFile],ak_unary,'loadImage(filename:string);//Loads image from the given file');
-  registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,[se_writeFile],ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
-  registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,[se_alterContextState],ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
-  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,[],ak_variadic,'imageSize;//Returns the size as [width,height] of the current image.#imageSize(filename:String);//Returns the size of the given file');
-  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,[se_alterContextState],ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["exact","fill","rotFill","fit","fitExpand","rotFit"]);//Resizes the current image with non-default scaling options');
-  registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,[se_alterPlotState],ak_nullary,'displayImage;//Displays the current image.');
-  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,[],ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
-  registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,[],ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
-  registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,[se_readFile],ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
-  registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,[se_alterContextState],ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
+  registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,ak_unary,'loadImage(filename:string);//Loads image from the given file');
+  registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
+  registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
+  registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,ak_variadic,'imageSize;//Returns the size as [width,height] of the current image.#imageSize(filename:String);//Returns the size of the given file');
+  registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["exact","fill","rotFill","fit","fitExpand","rotFit"]);//Resizes the current image with non-default scaling options');
+  registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,ak_nullary,'displayImage;//Displays the current image.');
+  registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
+  registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
+  registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
+  registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.

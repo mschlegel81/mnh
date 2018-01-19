@@ -270,7 +270,6 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
         inlineRule:P_inlineExpression;
-        violations:T_sideEffects;
 
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
@@ -310,12 +309,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         {$ifndef DEBUGMODE}
         try
         {$endif}
-        violations:=violatingSideEffects(first^.data,context.sideEffectWhitelist);
-        if violations=[] then newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context)
-        else begin
-          context.raiseSideEffectError('function '+first^.txt,first^.location, violations);
-          exit;
-        end;
+        newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
         {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
@@ -420,10 +414,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
   PROCEDURE applyMutation;
     VAR newValue:P_literal;
     begin
-      if not(se_alterPackageState in context.sideEffectWhitelist) then begin
-        context.raiseSideEffectError('assingment to mutable '+P_mutableRule(first^.data)^.getId,first^.location, [se_alterPackageState]);
-        exit;
-      end;
+      if not(context.checkSideEffects('<mutation>',first^.location,[se_alterPackageState])) then exit;
       newValue:=first^.next^.data;
       P_mutableRule(first^.data)^.setMutableValue(newValue,false);
       first:=context.recycler.disposeToken(first);
@@ -451,10 +442,6 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
             first^.data:=newValue;
           end;
         end else begin
-          if not(se_alterPackageState in context.sideEffectWhitelist) then begin
-            context.raiseSideEffectError('modification of mutable '+P_mutableRule(first^.data)^.getId,first^.location,[se_alterPackageState]);
-            exit;
-          end;
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
           if context.adapters^.noErrors then begin
             first:=context.recycler.disposeToken(first);
@@ -1257,7 +1244,8 @@ FUNCTION async_imp intFuncSignature;
   begin
     result:=nil;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
-       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
+       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
+       context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
       childContext:=context.getNewAsyncContext;
       if childContext<>nil then begin
         if params^.size=2 then parameters:=list1;
@@ -1292,10 +1280,10 @@ FUNCTION future_imp intFuncSignature;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,[se_detaching],ak_variadic_1,
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1,
                'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,[se_detaching],ak_variadic_1,
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1,
                'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.');
 end.

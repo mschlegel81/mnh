@@ -98,7 +98,7 @@ FUNCTION getScreenSize_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,[],ak_nullary,'Returns the current screen size');
+  registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,ak_nullary,'Returns the current screen size');
 
 FINALIZATION
   if myDisplayImageForm<>nil then FreeAndNil(myDisplayImageForm);

@@ -232,6 +232,7 @@ FUNCTION dynamicPlot_impl intFuncSignature;
       pair:P_literal;
       i:byte;
   begin
+    if not(context.checkSideEffects('dynamicPlot',tokenLocation,[se_alterPlotState,se_inputViaAsk])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
       for i:=0 to length(customEventName)-1 do customEventName[i]:='';
@@ -263,7 +264,7 @@ PROCEDURE initializeDynamicPlotting;
     dynamicPlotLoopRunning.create(false);
     dynamicPlotLabelText.create('');
     initCriticalSection(setupCs);
-    registerRule(PLOT_NAMESPACE,'dynamicPlot',@dynamicPlot_impl,[se_alterPlotState,se_inputViaAsk],ak_unary,
+    registerRule(PLOT_NAMESPACE,'dynamicPlot',@dynamicPlot_impl,ak_unary,
       'dynamicPlot(events:map);//Sets up dynamic plotting with the given events#'+
       '//expected map structure (all entries optional):#'+
       '//  [["mouseMove" ,expression(2)],#'+

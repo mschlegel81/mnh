@@ -32,7 +32,6 @@ CONST
 
 TYPE
   T_sideEffect=(se_inputViaAsk,
-                se_outputViaAdapter,
                 se_sound,
                 se_sleep,
                 se_detaching,
@@ -41,25 +40,16 @@ TYPE
                 se_alterPackageState,
                 se_alterContextState,
                 se_alterPlotState,
-                {$ifdef fullVersion}
-                se_readGuiState,
-                se_alterGuiState,
-                {$endif}
                 se_readFile,
                 se_writeFile,
-                se_os_query,
                 se_accessHttp,
                 se_accessIpc,
-                se_executingExternal,
-                se_scriptDependent,
-                se_executableDependent,
-                se_versionDependent);
+                se_executingExternal);
   T_sideEffects=set of T_sideEffect;
 
 CONST
   C_sideEffectName:array[T_sideEffect] of string=(
                 'input',
-                'output',
                 'sound',
                 'sleep',
                 'detaching',
@@ -68,19 +58,11 @@ CONST
                 'alter package state',
                 'alter context state',
                 'alter plot state',
-                {$ifdef fullVersion}
-                'read GUI state',
-                'alter GUI state',
-                {$endif}
                 'read file',
                 'write file',
-                'OS query',
                 'http',
                 'ipc',
-                'executingExternal',
-                'scriptDependent',
-                'executableDependent',
-                'versionDependent');
+                'executingExternal');
 
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
   C_equivalentOption:array[tco_spawnWorker..tco_stackTrace] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace);
@@ -133,7 +115,7 @@ TYPE
       PROCEDURE detachWorkerContext;
 
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
-      PROCEDURE raiseSideEffectError(CONST id:string; CONST location:T_tokenLocation; CONST violations:T_sideEffects);
+      FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
       {$ifdef fullVersion}
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
@@ -673,17 +655,20 @@ PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType:string; CONST
     if missingMain then adapters^.logMissingMain;
   end;
 
-PROCEDURE T_threadContext.raiseSideEffectError(CONST id:string; CONST location:T_tokenLocation; CONST violations:T_sideEffects);
+FUNCTION T_threadContext.checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
   VAR messageText:string='';
       eff:T_sideEffect;
+      violations:T_sideEffects;
   begin
-    if violations=[] then exit;
+    violations:=functionSideEffects-allowedSideEffects;
+    if violations=[] then exit(true);
     for eff in violations do begin
       if messageText<>'' then messageText:=messageText+', ';
       messageText:=messageText+C_sideEffectName[eff];
     end;
     messageText:='Cannot apply '+id+' because of side effect(s): ['+messageText+']';
     adapters^.raiseError(messageText,location);
+    result:=false;
   end;
 
 {$ifdef fullVersion}

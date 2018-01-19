@@ -797,43 +797,43 @@ FUNCTION arctan2_impl intFuncSignature;
 
 INITIALIZATION
   //Unary Numeric -> real
-  registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,[],ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sin'   ,@sin_imp   ,[],ak_unary,'sin(n);//Returns the sine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,[],ak_unary,'arcsin(n);//Returns the arcsine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'cos'   ,@cos_imp   ,[],ak_unary,'cos(n);//Returns the cosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,[],ak_unary,'arccos(n);//Returns the arccosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'tan'   ,@tan_imp   ,[],ak_unary,'tan(n);//Returns the tangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,[],ak_unary,'arctan(n);//Returns the arctangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'exp'   ,@exp_imp   ,[],ak_unary,'exp(n);//Returns the exponential of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ln'    ,@ln_imp    ,[],ak_unary,'ln(n);//Returns the natural logarithm of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sin'   ,@sin_imp   ,ak_unary,'sin(n);//Returns the sine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,ak_unary,'arcsin(n);//Returns the arcsine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'cos'   ,@cos_imp   ,ak_unary,'cos(n);//Returns the cosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,ak_unary,'arccos(n);//Returns the arccosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'tan'   ,@tan_imp   ,ak_unary,'tan(n);//Returns the tangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,ak_unary,'arctan(n);//Returns the arctangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'exp'   ,@exp_imp   ,ak_unary,'exp(n);//Returns the exponential of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ln'    ,@ln_imp    ,ak_unary,'ln(n);//Returns the natural logarithm of numeric or expression parameter n');
   //Unary Boolean -> boolean
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,[],ak_unary,'not(b:boolean);#not(b:booleanList);//Returns the negated value of b#not(i:int);#not(i:intList);//Returns the bitwise negated value of i');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,ak_unary,'not(b:boolean);#not(b:booleanList);//Returns the negated value of b#not(i:int);#not(i:intList);//Returns the bitwise negated value of i');
   //Unary Numeric -> same (i.e. I -> I, R -> R)
-  registerRule(MATH_NAMESPACE,'abs',@abs_imp,[],ak_unary,'abs(n);//Returns the absolute value of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,[],ak_unary,'sqr(n);//Returns the square of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'abs',@abs_imp,ak_unary,'abs(n);//Returns the absolute value of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,ak_unary,'sqr(n);//Returns the square of numeric or expression parameter n');
   //Unary Numeric -> Integer
-  registerRule(MATH_NAMESPACE,'sign' ,@sign_imp ,[],ak_unary     ,'sign(n);//Returns the sign of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ceil' ,@ceil_imp ,[],ak_variadic_1,'ceil(x);//Returns the smallest integer >=x#ceil(x,k);//Does the same but with k digits precision');
-  registerRule(MATH_NAMESPACE,'floor',@floor_imp,[],ak_variadic_1,'floor(x);//Returns the largest integer <=x#floor(x,k);//Does the same but with k digits precision');
-  registerRule(MATH_NAMESPACE,'round',@round_imp,[],ak_variadic_1,'round(x);//Returns the value of x, rounded to the nearest integer#round(x,k);//Returns the value of x rounded to k-digits precision');
+  registerRule(MATH_NAMESPACE,'sign' ,@sign_imp ,ak_unary     ,'sign(n);//Returns the sign of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ceil' ,@ceil_imp ,ak_variadic_1,'ceil(x);//Returns the smallest integer >=x#ceil(x,k);//Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'floor',@floor_imp,ak_variadic_1,'floor(x);//Returns the largest integer <=x#floor(x,k);//Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'round',@round_imp,ak_variadic_1,'round(x);//Returns the value of x, rounded to the nearest integer#round(x,k);//Returns the value of x rounded to k-digits precision');
 
-  registerRule(MATH_NAMESPACE,'pi'          ,@pi_imp           ,[],ak_nullary   ,'pi;//Returns pi');
+  registerRule(MATH_NAMESPACE,'pi'          ,@pi_imp           ,ak_nullary   ,'pi;//Returns pi');
   BUILTIN_MAX:=
-  registerRule(MATH_NAMESPACE,'max'         ,@max_imp          ,[],ak_variadic_1,'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters');
-  registerRule(MATH_NAMESPACE,'argMax'      ,@argMax_imp       ,[],ak_unary     ,'argMax(L);//Returns the index of the greatest element out of list L (or the first index if ambiguous)');
+  registerRule(MATH_NAMESPACE,'max'         ,@max_imp          ,ak_variadic_1,'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters');
+  registerRule(MATH_NAMESPACE,'argMax'      ,@argMax_imp       ,ak_unary     ,'argMax(L);//Returns the index of the greatest element out of list L (or the first index if ambiguous)');
   BUILTIN_MIN:=
-  registerRule(MATH_NAMESPACE,'min'         ,@min_imp          ,[],ak_variadic_1,'min(L);//Returns the smallest element out of list L#min(x,y,...);//Returns the smallest element out of the given parameters');
-  registerRule(MATH_NAMESPACE,'argMin'      ,@argMin_imp       ,[],ak_unary     ,'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)');
-  registerRule(MATH_NAMESPACE,'isNan'       ,@isNan_impl       ,[],ak_unary     ,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
-  registerRule(MATH_NAMESPACE,'isInfinite'  ,@isInfinite_impl  ,[],ak_unary     ,'isInfinite(n);//Returns true if n is a number representing an infinite value');
-  registerRule(MATH_NAMESPACE,'subSets'     ,@subSets_impl     ,[],ak_variadic_1,'subSets(S);//Returns all distinct subsets of S#'+
+  registerRule(MATH_NAMESPACE,'min'         ,@min_imp          ,ak_variadic_1,'min(L);//Returns the smallest element out of list L#min(x,y,...);//Returns the smallest element out of the given parameters');
+  registerRule(MATH_NAMESPACE,'argMin'      ,@argMin_imp       ,ak_unary     ,'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)');
+  registerRule(MATH_NAMESPACE,'isNan'       ,@isNan_impl       ,ak_unary     ,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
+  registerRule(MATH_NAMESPACE,'isInfinite'  ,@isInfinite_impl  ,ak_unary     ,'isInfinite(n);//Returns true if n is a number representing an infinite value');
+  registerRule(MATH_NAMESPACE,'subSets'     ,@subSets_impl     ,ak_variadic_1,'subSets(S);//Returns all distinct subsets of S#'+
                                                                                  'subSets(S,k:int);//Returns all distinct subsets of S having k elements');
-  registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,[],ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
-  registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,[],ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
-  registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,[],ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
-  registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,[],ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
-  registerRule(MATH_NAMESPACE,'composeDigits',@composeDigits_imp,[],ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
+  registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
+  registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
+  registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
+  registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
+  registerRule(MATH_NAMESPACE,'composeDigits',@composeDigits_imp,ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
                                                                                   'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
                                                                                   'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
-  registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,[],ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
+  registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
 end.

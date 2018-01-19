@@ -63,6 +63,7 @@ FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
   begin
+    if not(context.checkSideEffects('addPlot',tokenLocation,[se_alterPlotState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
       if (params^.value[params^.size-1]^.literalType = lt_string) then begin
@@ -104,6 +105,7 @@ FUNCTION addPlot intFuncSignature;
 
 FUNCTION plot intFuncSignature;
   begin
+    if not(context.checkSideEffects('plot',tokenLocation,[se_alterPlotState])) then exit(nil);
     context.adapters^.plot^.clear;
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
@@ -189,6 +191,7 @@ FUNCTION setOptions intFuncSignature;
   VAR pair:P_literal;
       iter:T_arrayOfLiteral;
   begin
+    if not(context.checkSideEffects('setOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
     result:=nil;
     opt:=context.adapters^.plot^.options;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
@@ -213,6 +216,7 @@ FUNCTION setOptions intFuncSignature;
 
 FUNCTION resetOptions_impl intFuncSignature;
   begin
+    if not(context.checkSideEffects('resetOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       context.adapters^.plot^.setDefaults;
       result:=newVoidLiteral;
@@ -223,6 +227,7 @@ FUNCTION renderToFile_impl intFuncSignature;
   VAR fileName: ansistring;
       width, height, quality: longint;
   begin
+    if not(context.checkSideEffects('renderToFile',tokenLocation,[se_writeFile])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size>=3) and
       (arg0^.literalType = lt_string) and
@@ -271,6 +276,7 @@ FUNCTION renderToString_impl intFuncSignature;
 FUNCTION removePlot_imp intFuncSignature;
   VAR toDrop:longint=1;
   begin
+    if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and (int0^.value>0) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.value;
@@ -332,11 +338,11 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
     end;
   end;
 
-FUNCTION drawText_imp    intFuncSignature; begin result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
-FUNCTION drawTextAbs_imp intFuncSignature; begin result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
+FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context.checkSideEffects('drawText'        ,tokenLocation,[se_alterPlotState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,false); end;
+FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterPlotState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
 
 INITIALIZATION
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, [se_alterPlotState], ak_variadic,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
     '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
@@ -363,27 +369,27 @@ INITIALIZATION
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]'+
     '#Transparency Index:'+'  #  TI$;// with an integer $');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, [se_alterPlotState], ak_variadic_1,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, [], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
     'getOptions;//returns plot options as a key-value-list.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, [se_alterPlotState], ak_variadic_1,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
     'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
     'setOptions(key:string,value);//Sets a single plot option');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, [se_alterPlotState], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
     'resetOptions;//Sets the default plot options');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, [se_writeFile], ak_variadic_3,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,
     'renderToFile(filename<>'',width>=1,height>=1,[quality in [0..3]]);//Renders the current plot to a file.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, [], ak_variadic_2,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_variadic_2,
     'renderToString(width,height,[quality in [0..3]]);//Renders the current plot to a string.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, [se_alterPlotState], ak_nullary,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_nullary,
     'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, [se_alterPlotState], ak_variadic_3,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
     'drawText(x,y,text);//Draws custom text#'+
     'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, [se_alterPlotState], ak_variadic_3,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
     'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
     'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional');
 end.
