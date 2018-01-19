@@ -28,7 +28,7 @@
                      '            <Keywords name="Folders in comment, middle"></Keywords>',
                      '            <Keywords name="Folders in comment, close"></Keywords>',
                      '            <Keywords name="Keywords1">'&listKeywords['modifiers'].join('&#x000D;&#x000A;')&'</Keywords>',
-                     '            <Keywords name="Keywords2">'&listBuiltin.each(f,pos('.',f)>0 ? f : [f,"."&f],|).sort({copy($x,pos('.',$x)+1,100)<=copy($y,pos('.',$y)+1,100)}).join('&#x000D;&#x000A;')&'</Keywords>',
+                     '            <Keywords name="Keywords2">'&listBuiltin.filter({pos(':',$f)<0}).each(f,pos('.',f)>0 ? f : [f,"."&f],|).sort({copy($x,pos('.',$x)+1,100)<=copy($y,pos('.',$y)+1,100)}).join('&#x000D;&#x000A;')&'</Keywords>',
                      '            <Keywords name="Keywords3">'&listKeywords['specialLiterals'].join('&#x000D;&#x000A;')&'</Keywords>',
                      '            <Keywords name="Keywords4">'&listKeywords['specialConstructs'].join('&#x000D;&#x000A;')&'</Keywords>',
                      '            <Keywords name="Keywords5">$</Keywords>',
