@@ -1,3 +1,4 @@
+//*Displays a rolling circle animation
 plain script;
 USE GUI;
 

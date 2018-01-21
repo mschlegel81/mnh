@@ -55,6 +55,9 @@ TYPE
       extendedPackages:array of P_extendedPackage;
       runAfter:array of P_subruleExpression;
 
+      isPlainScript:boolean;
+      commentOnPlainMain:ansistring;
+
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
       readyForUsecase:T_packageLoadUsecase;
@@ -1426,6 +1429,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
     end;
 
   begin
+    commentOnPlainMain:='Undocumented plain script';
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     if isMain then context.adapters^.clearErrors;
@@ -1438,11 +1442,13 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
     newCodeHash:=getCodeProvider^.stateHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
-    if isPlainScriptStatement then begin
+    isPlainScript:=isPlainScriptStatement;
+    if isPlainScript then begin
       case usecase of
         lu_forImport         : context.adapters^.raiseError('Cannot import package declared as "plain script"',stmt.firstToken^.location);
         lu_forCallingMain    : usecase:=lu_forDirectExecution;
       end;
+      commentOnPlainMain:=join(stmt.comments,C_lineBreakChar);
       context.recycler.cascadeDisposeToken(stmt.firstToken);
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
     end;
@@ -1659,6 +1665,7 @@ FUNCTION T_package.getHelpOnMain: ansistring;
       docText:T_arrayOfString;
       i:longint;
   begin
+    if isPlainScript then exit('Plain script: '+commentOnPlainMain);
     if not(packageRules.containsKey(MAIN_RULE_ID,mainRule))
     then exit('The package contains no main rule')
     else begin
