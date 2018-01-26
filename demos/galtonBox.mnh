@@ -1,3 +1,4 @@
+//*Shows a Galton Box animation
 plain script; //implemented as a plain script - i.e. withtout an explicit main routine
 USE GUI;      //force GUI start (or crash on light flavors)
 
