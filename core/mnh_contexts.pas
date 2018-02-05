@@ -32,6 +32,7 @@ CONST
 
 TYPE
   T_sideEffect=(se_inputViaAsk,
+                se_output,
                 se_sound,
                 se_sleep,
                 se_detaching,
@@ -50,6 +51,7 @@ TYPE
 CONST
   C_sideEffectName:array[T_sideEffect] of string=(
                 'input',
+                'output',
                 'sound',
                 'sleep',
                 'detaching',
@@ -62,7 +64,7 @@ CONST
                 'write file',
                 'http',
                 'ipc',
-                'executingExternal');
+                'executing external');
 
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
   C_equivalentOption:array[tco_spawnWorker..tco_stackTrace] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace);

@@ -423,6 +423,7 @@ FUNCTION printf_imp intFuncSignature;
   VAR preparedStatement:P_preparedFormatStatement;
   begin
     result:=nil;
+    if not(context.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,@builtinLocation_printf,nil);
