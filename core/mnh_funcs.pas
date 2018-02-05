@@ -140,6 +140,7 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:boolean
 
 FUNCTION print_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('print',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
     context.adapters^.printOut(getStringToPrint(params));
     system.leaveCriticalSection(print_cs);
@@ -148,6 +149,7 @@ FUNCTION print_imp intFuncSignature;
 
 FUNCTION printDirect_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('printDirect',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
     context.adapters^.printDirect(getStringToPrint(params,false));
     system.leaveCriticalSection(print_cs);
@@ -156,12 +158,14 @@ FUNCTION printDirect_imp intFuncSignature;
 
 FUNCTION note_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('note',tokenLocation,[se_output])) then exit(nil);
     context.adapters^.raiseUserNote(getStringToPrint(params),tokenLocation);
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
+    if not(context.checkSideEffects('warn',tokenLocation,[se_output])) then exit(nil);
     context.adapters^.raiseUserWarning(getStringToPrint(params),tokenLocation);
     result:=newVoidLiteral;
   end;

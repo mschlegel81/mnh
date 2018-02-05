@@ -174,6 +174,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
+                    CONST p_outlineGroupBox       :TGroupBox;
                     CONST p_outlineTreeView       :TTreeView;
                     CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
                     CONST p_openlocation          :T_openLocationCallback);
@@ -212,6 +213,7 @@ VAR mainForm              :T_abstractMnhForm;
     editorFont            :TFont;
 
     outlineModel          :P_outlineTreeModel=nil;
+    outlineGroupBox       :TGroupBox;
     fallbackCodeAssistant :P_blankCodeAssistanceData=nil;
 
 VAR fileTypeMeta:array[T_language] of record
@@ -235,6 +237,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
+                    CONST p_outlineGroupBox       :TGroupBox;
                     CONST p_outlineTreeView       :TTreeView;
                     CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
                     CONST p_openlocation          :T_openLocationCallback);
@@ -406,6 +409,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     EditProcessUserCommand:=p_EditProcessUserCommand;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
     assistanceTabSheet    :=p_assistanceTabSheet    ;
+    outlineGroupBox       :=p_outlineGroupBox       ;
     new(outlineModel,create(p_outlineTreeView,p_outlineFilterPrivateCb,p_outlineFilterImportedCb,p_openlocation));
 
     initHighlighters;
@@ -614,12 +618,14 @@ PROCEDURE T_editorMeta.activate;
     try
       recentlyActivated.fileClosed(getPath);
       if language_=LANG_MNH then begin
+        outlineGroupBox.visible:=true;
         editor.highlighter:=highlighter;
         paintedWithStateHash:=0;
         assistanceTabSheet.tabVisible:=true;
         triggerCheck;
         completionLogic.assignEditor(editor_,assistant);
       end else begin
+        outlineGroupBox.visible:=false;
         editor.highlighter:=fileTypeMeta[language_].highlighter;
         assistanceSynEdit.clearAll;
         assistanceTabSheet.caption:='';

@@ -52,7 +52,7 @@ TYPE
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
-    GroupBox1:                 TGroupBox;
+    OutlineGroupBox:                 TGroupBox;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
@@ -118,7 +118,6 @@ TYPE
     OpenDialog:                TOpenDialog;
     inputPageControl,
     outputPageControl:         TPageControl;
-    leftHandSidePanel,
     BottomPanel,
     Panel1,
     Panel2:                    TPanel;

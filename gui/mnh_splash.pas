@@ -13,9 +13,6 @@ USES
   mnh_doc;
 
 TYPE
-
-  { TSplashForm }
-
   TSplashForm = class(TForm)
     CheckBox1: TCheckBox;
     Image1: TImage;
@@ -25,9 +22,7 @@ TYPE
     PROCEDURE CheckBox1Change(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
   private
-    { private declarations }
   public
-    { public declarations }
   end;
 
 FUNCTION splashForm:TSplashForm;
