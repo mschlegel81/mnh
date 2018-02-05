@@ -1700,15 +1700,21 @@ FUNCTION T_intLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
       lt_int:  result:=val<=P_intLiteral (other)^.val;
-      lt_real: result:=val<=P_realLiteral(other)^.val;
+      lt_real: if isNan(P_realLiteral(other)^.val)
+               then result:=false
+               else result:=val<=P_realLiteral(other)^.val;
     else result:=(literalType<=other^.literalType); end;
   end;
 
 FUNCTION T_realLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  result:=val< P_intLiteral (other)^.val;
-      lt_real: result:=val<=P_realLiteral(other)^.val;
+      lt_int:  if isNan(val)
+               then result:=true
+               else result:=val<=P_intLiteral(other)^.val;
+      lt_real: if isNan(val) then result:=not(isNan(P_realLiteral(other)^.val))
+               else if isNan(P_realLiteral(other)^.val) then result:=false
+               else result:=val<=P_realLiteral(other)^.val;
     else result:=(literalType<=other^.literalType);  end;
   end;
 
