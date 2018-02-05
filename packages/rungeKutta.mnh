@@ -34,6 +34,8 @@ private rungeKuttaStepper(Tableau:ERK_ButcherTableau)->begin
                 summationStageCode(summationStage,false)|';'|'end');
 end;
 
+private YComb(F)->{F($0,$1,$2,$3,F)};
+
 //*Constructs an embedded explicit Runge-Kutta method from its Butcher Tableau
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
 private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
@@ -43,10 +45,9 @@ private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
                    'local result:=',summationStageCode(summationStages[0],false),';',
   '(local subSteps:=ceil((absNorm(',summationStageCode(summationStages[1],false),'-result)/$3)^',1/order,'))<=1 ? result : ',
   'begin','local dt:=$2/subSteps',';','local y:=$0',';','[1..subSteps].each(step,','begin',
-                                    rkCodeStart       (intermediate,'y','dt'),
-                                    summationStageCode(summationStages[0],true),';','void',';',
+  'y:=$4(y,$1,dt,$3,$4)',';','void',';',
   'end)',';','y',';','end',';','end'].flatten;
-  code.toExpression;
+  code.toExpression.YComb;
 end;
 
 //*Explicit Runge-Kutta Method RK4, a.k.a. "The" Runge-Kutta Method
