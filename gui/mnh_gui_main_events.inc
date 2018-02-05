@@ -219,6 +219,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand,
+                           OutlineGroupBox,
                            outlineTreeView,
                            cbOutlineShowPrivate,
                            cbOutlineShowImported,

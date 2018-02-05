@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 448
+  Left = 985
   Height = 621
-  Top = 284
+  Top = 222
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
@@ -110,59 +110,6 @@ object MnhForm: TMnhForm
     Top = 30
     Width = 5
   end
-  object leftHandSidePanel: TPanel
-    Left = 0
-    Height = 353
-    Top = 30
-    Width = 170
-    Align = alLeft
-    BevelOuter = bvNone
-    ClientHeight = 353
-    ClientWidth = 170
-    TabOrder = 5
-    object GroupBox1: TGroupBox
-      Left = 0
-      Height = 353
-      Top = 0
-      Width = 170
-      Align = alClient
-      Caption = 'Outline'
-      ClientHeight = 323
-      ClientWidth = 166
-      TabOrder = 0
-      object cbOutlineShowPrivate: TCheckBox
-        Left = 0
-        Height = 29
-        Top = 0
-        Width = 166
-        Align = alTop
-        Caption = 'show private rules'
-        Checked = True
-        State = cbChecked
-        TabOrder = 0
-      end
-      object cbOutlineShowImported: TCheckBox
-        Left = 0
-        Height = 29
-        Top = 29
-        Width = 166
-        Align = alTop
-        Caption = 'show imported rules'
-        TabOrder = 1
-      end
-      object outlineTreeView: TTreeView
-        Left = 0
-        Height = 265
-        Top = 58
-        Width = 166
-        Align = alClient
-        ReadOnly = True
-        ScrollBars = ssAutoBoth
-        TabOrder = 2
-        Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
-      end
-    end
-  end
   object BottomPanel: TPanel
     Left = 0
     Height = 200
@@ -210,7 +157,7 @@ object MnhForm: TMnhForm
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
           Gutter.Visible = False
-          Gutter.Width = 57
+          Gutter.Width = 65
           Gutter.MouseActions = <>
           HideSelection = True
           InsertMode = False
@@ -659,7 +606,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -712,7 +659,7 @@ object MnhForm: TMnhForm
           OnMouseUp = assistanceSynEditMouseUp
           BorderStyle = bsNone
           Gutter.Visible = False
-          Gutter.Width = 57
+          Gutter.Width = 65
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1172,7 +1119,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1224,7 +1171,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 19
+          Gutter.Width = 27
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1672,7 +1619,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1824,7 +1771,7 @@ object MnhForm: TMnhForm
             TabStop = False
             BorderStyle = bsNone
             Gutter.Visible = False
-            Gutter.Width = 57
+            Gutter.Width = 65
             Gutter.MouseActions = <>
             Keystrokes = <            
               item
@@ -2268,7 +2215,7 @@ object MnhForm: TMnhForm
                 MouseActions = <>
               end
               object SynGutterLineNumber1: TSynGutterLineNumber
-                Width = 17
+                Width = 25
                 MouseActions = <>
                 MarkupInfo.Background = clBtnFace
                 MarkupInfo.Foreground = clNone
@@ -2321,7 +2268,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 19
+          Gutter.Width = 27
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -2769,7 +2716,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -2794,6 +2741,48 @@ object MnhForm: TMnhForm
       Top = 164
       Width = 717
       Panels = <>
+    end
+  end
+  object OutlineGroupBox: TGroupBox
+    Left = 0
+    Height = 353
+    Top = 30
+    Width = 170
+    Align = alLeft
+    Caption = 'Outline'
+    ClientHeight = 323
+    ClientWidth = 166
+    TabOrder = 5
+    object cbOutlineShowPrivate: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 0
+      Width = 166
+      Align = alTop
+      Caption = 'show private rules'
+      Checked = True
+      State = cbChecked
+      TabOrder = 0
+    end
+    object cbOutlineShowImported: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 29
+      Width = 166
+      Align = alTop
+      Caption = 'show imported rules'
+      TabOrder = 1
+    end
+    object outlineTreeView: TTreeView
+      Left = 0
+      Height = 265
+      Top = 58
+      Width = 166
+      Align = alClient
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
+      TabOrder = 2
+      Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
     end
   end
   object MainMenu1: TMainMenu
