@@ -40,16 +40,23 @@ TYPE
     id,path:ansistring;
     pack:P_package;
     locationOfDeclaration:T_tokenLocation;
+    {Creates a package reference with a given packId (or fails reporting via adapters if no package with the given ID can be found)}
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    {Creates a package reference with a specific path (or fails reporting via adapters if the file does not exist)}
     CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    {$ifdef fullVersion}
+    {Returns true, if the package has <idOrPath> either as ID or as path; Used for code assistance only}
     FUNCTION hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
+    {$endif}
     DESTRUCTOR destroy;
+    {Loads the specified package using the appropriate T_packageLoadUsecase}
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST forCodeAssistance:boolean);
   end;
 
   T_packageList=array of P_package;
   T_package=object(T_abstractPackage)
     private
+      {The main package; for imported packages, this points to the importing packages; for main packages this is =@self}
       mainPackage:P_package;
       secondaryPackages:T_packageList;
       extendedPackages:array of P_extendedPackage;
@@ -530,10 +537,12 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
         tt_blockLocalVariable: begin
           tokenToExplain^.tokType:=tt_blockLocalVariable;
           loc.package:=package;
+          info.location:=loc;
         end;
         tt_parameterIdentifier: begin
           tokenToExplain^.tokType:=tt_parameterIdentifier;
           loc.package:=package;
+          info.location:=loc;
         end;
         tt_use: begin
           tokenToExplain^.tokType:=tt_use;
@@ -572,7 +581,7 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
             appendBuiltinRuleInfo;
           end;
           tt_blockLocalVariable, tt_parameterIdentifier: begin
-             info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+'Declared '+ansistring(loc);
+            info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+'Declared '+ansistring(loc);
           end;
           tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
             if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
@@ -893,6 +902,7 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     pack:=nil;
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_packageReference.hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
   VAR p:string;
       dummy:longint;
@@ -906,6 +916,7 @@ FUNCTION T_packageReference.hasIdOrPath(CONST idOrPath:string; CONST importingPa
     result:=(         path =               p ) or
       (expandFileName(path)=expandFileName(p));
   end;
+{$endif}
 
 DESTRUCTOR T_packageReference.destroy;
   begin

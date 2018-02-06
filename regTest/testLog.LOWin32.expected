@@ -4327,3 +4327,5 @@ gen.isIteratable= true; [0.69890124513767659664,1.5846346444450318813,2.50551052
 out> void
 in> toGenerator(:: sqr);
 Error Only nullary stateful expressions may be iteratable.
+in> md5('Test input. Could be anything really.');
+out> 'FE418AB71E3FBFD7C4842F666284E675'

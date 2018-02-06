@@ -1,7 +1,15 @@
 UNIT mnh_funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8,base64,LConvEncoding;
+USES sysutils,
+     LazUTF8,base64,LConvEncoding,
+     synacode,
+     diff,
+     myGenerics,myStringUtil,
+     mnh_basicTypes,
+     mnh_constants,
+     mnh_out_adapters,
+     mnh_litVar,mnh_funcs,mnh_contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -800,7 +808,7 @@ FUNCTION formatTabs_impl intFuncSignature;
     end;
   end;
 
-{$define LENGTH_MACRO:=intFuncSignature;
+{$define LENGTH_MACRO:=(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   FUNCTION innerRec(l:P_literal):P_literal;
     VAR iter:T_arrayOfLiteral;
         sub :P_literal;
@@ -831,6 +839,23 @@ FUNCTION length_imp     {$define LENGTH_FUNC:=UTF8Length} {$define ID_MACRO:='le
 FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     {$define ID_MACRO:='byteLength'} LENGTH_MACRO;
 {$undef LENGTH_FUNC}
 {$undef LENGTH_MACRO}
+
+FUNCTION md5_imp intFuncSignature;
+  CONST hexDig:array[0..15]of char=('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
+  VAR md5String:string;
+      hexString:string='';
+      c:char;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then begin
+      md5String:=MD5(str0^.value);
+      for c in md5String do begin
+        hexString:=hexString+hexDig[(ord(c) shr 4) and 15]
+                            +hexDig[ ord(c)        and 15];
+      end;
+      result:=newStringLiteral(hexString)
+    end else result:=nil;
+  end;
 
 INITIALIZATION
   //Functions on Strings:
@@ -875,4 +900,5 @@ INITIALIZATION
                                                            '  The first character of the result indicates the algorithm used');
   registerRule(STRINGS_NAMESPACE,'decompress'    ,@decompress_impl,ak_unary,'decompress(S:string);#Returns an uncompressed version of S');
   registerRule(STRINGS_NAMESPACE,'formatTabs'    ,@formatTabs_impl,ak_unary,'formatTabs(S:string);#Applies tab formatting as on print');
+  registerRule(STRINGS_NAMESPACE,'md5'           ,@md5_imp,ak_unary,'md5(S:string);#Returns MD5 string for given input S');
 end.
