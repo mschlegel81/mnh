@@ -9,6 +9,7 @@ private mark(i    )->" XX";
 private UlamSpiral(n:Int)->UlamSpiral(Ulam(n),primes(n*n));
 private UlamSpiral(Lines,Primes)->printf("%s",Lines.each(l,l.each(n,n in Primes ? mark(n)  : "   ",&)));
 
+//@demo_for=math, formatting
 //*Displays a 40x40 Ulam-Spiral
 main->UlamSpiral(40);
 //*Displays a n x n Ulam-Spiral

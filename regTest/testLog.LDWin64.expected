@@ -1932,6 +1932,7 @@ The next element is 51
 main:={print('main:=', main)}
 ***** quine2 *****
 //*Quine via inspection
+//@demo_for=textbook problems
 main->print(inspect['source']);
 ***** randomWords *****
 semaroshi
@@ -4329,3 +4330,5 @@ in> toGenerator(:: sqr);
 Error Only nullary stateful expressions may be iteratable.
 in> md5('Test input. Could be anything really.');
 out> 'FE418AB71E3FBFD7C4842F666284E675'
+in> sha256('Test input. Could be anything really.');
+out> '8599B8B5BF59EDADECF9CD1A4EACB29E777F977B98F954CDD1E25693580CD86F'

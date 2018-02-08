@@ -75,7 +75,9 @@ TYPE
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
+      {$ifdef fullVersion}
       PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
+      {$endif}
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
   end;
 
@@ -668,11 +670,19 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     first:=context.recycler.disposeToken(closingBracket);
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
   VAR i:longint;
       unusedIds:T_arrayOfLongint;
       allUsed:boolean=false;
       optUsed:boolean=false;
+
+  FUNCTION warnText(CONST s:string):T_arrayOfString;
+    begin
+      setLength(result,2);
+      result[0]:=s;
+      result[1]:='You can suppress this warning with '+COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE;
+    end;
 
   begin
     setLength(unusedIds,length(sig));
@@ -686,9 +696,10 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
 
     if allUsed then exit;
     for i in unusedIds do if sig[i].restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal] then
-      context.adapters^.raiseWarning('Parameter '+sig[i].toString+' not used',sig[i].elementLocation);
-    if hasOptionals and not(optUsed) then context.adapters^.raiseNote('Optional ... not used',subruleLocation);
+      context.adapters^.raiseWarning(warnText('Parameter '+sig[i].toString+' not used'),sig[i].elementLocation);
+    if hasOptionals and not(optUsed) then context.adapters^.raiseNote(warnText('Optional ... not used'),subruleLocation);
   end;
+{$endif}
 
 FUNCTION T_pattern.getFirstParameterTypeWhitelist:T_literalTypeSet;
   begin

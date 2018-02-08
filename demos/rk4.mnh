@@ -3,7 +3,7 @@ private df     :={[1,$x[0]*sqrt($x[1])]};
 private initial:=[0,1];
 private exact(t)->1/16*(t^2+4)^2;
 
-//@demo_for=expressions
+//@demo_for=expressions, numerics/time integration
 //*Solves the Runge-Kutta task from http://rosettacode.org/wiki/Runge-Kutta_method
 main->begin
   local steps:=iterate(initial,integrator(RK4,df,0.1),100).map({$x|abs($x[1]-exact($x[0]))});

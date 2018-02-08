@@ -13,5 +13,5 @@ ratPlus (a:Int     ,b         )->ratPlus(ratInt(a),b);
 ratPlus (a:Rational,b:Int     )->ratPlus(a,ratInt(b));
 
 private arctanSeries(n:Int)->shorten([0..n].each(i,[(-1)^i,2*i+1],aggregator(::ratPlus))*ratInt(4));
-
+//@demo_for=math, custom types, rational numbers
 main->printf("%{$x.join('/')}s\t=\t%{$x.agg(/)}1.6d",[0..21].each(i,arctanSeries(i)));

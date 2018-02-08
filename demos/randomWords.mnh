@@ -35,6 +35,7 @@ randomWord->begin
   result;
 end;
 
+//@demo_for=http, memoization, map operations, strings
 main(count)->begin
   local cnt:=toInt(count);
   cnt<=0 ? fail('count must be >0') : void;

@@ -30,45 +30,8 @@ CONST
   {$endif}
   {ect_silent}                [eco_spawnWorker,eco_createDetachedTask]);
 
-TYPE
-  T_sideEffect=(se_inputViaAsk,
-                se_output,
-                se_sound,
-                se_sleep,
-                se_detaching,
-                se_server,
-                se_readPackageState,
-                se_alterPackageState,
-                se_alterContextState,
-                se_alterPlotState,
-                se_readFile,
-                se_writeFile,
-                se_accessHttp,
-                se_accessIpc,
-                se_executingExternal);
-  T_sideEffects=set of T_sideEffect;
-
-CONST
-  C_sideEffectName:array[T_sideEffect] of string=(
-                'input',
-                'output',
-                'sound',
-                'sleep',
-                'detaching',
-                'server',
-                'read package state',
-                'alter package state',
-                'alter context state',
-                'alter plot state',
-                'read file',
-                'write file',
-                'http',
-                'ipc',
-                'executing external');
-
   C_defaultOptions:T_evaluationContextOptions=[eco_spawnWorker,eco_createDetachedTask];
   C_equivalentOption:array[tco_spawnWorker..tco_stackTrace] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace);
-  C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
 
 TYPE
   T_regexMap=specialize G_stringKeyMap<TRegExpr>;
@@ -133,7 +96,9 @@ TYPE
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
+      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef DEBUGMODE} inline; {$endif}
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
+      PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef DEBUGMODE} inline; {$endif}
       FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
       PROCEDURE resolveMainParameter(VAR first:P_token);
       FUNCTION dequeueContext:P_threadContext;
@@ -582,6 +547,22 @@ FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se:T_sideE
   begin
     result:=allowedSideEffects;
     allowedSideEffects:=se;
+  end;
+
+PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token:P_token);
+  begin
+    {$ifdef debugMode}
+    if (not(token^.tokType in [tt_endRule,tt_endExpression])) then raise Exception.create('Invalid parameter for setSideEffectsByEndToken; not an end-token but '+safeTokenToString(token));
+    {$endif}
+    move(token^.data,allowedSideEffects,sizeOf(pointer));
+  end;
+
+FUNCTION T_threadContext.getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token;
+  VAR data:pointer;
+  begin
+    move(allowedSideEffects,data,sizeOf(data));
+    if blocking then result:=recycler.newToken(location,'',tt_endRule,data)
+                else result:=recycler.newToken(location,'',tt_endExpression,data);
   end;
 
 FUNCTION T_threadContext.getFutureEnvironment:T_queueTaskEnvironment;

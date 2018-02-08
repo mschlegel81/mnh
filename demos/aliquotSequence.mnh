@@ -1,5 +1,6 @@
 USE formattingUtils;
 
+//@demo_for=math, formatting
 private dividerSum(n:Int)->n<=1 ? 0 : factorize(n).subSets.each(s,s.agg(*) orElse 1,+)-n;
 
 private classify(n:Int)->

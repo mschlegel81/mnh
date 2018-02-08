@@ -17,6 +17,7 @@ private examples:=[1,2,3,4,5,17,100,255];
 
 //*Displays examples for Zeckendorf-encoding
 //*and average lengths compared to binary representation
+//@demo_for=transcoding
 main->
 printf('%8d %8d %12d',
   'decimal'|examples,

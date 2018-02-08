@@ -1,5 +1,5 @@
 LevenshteinDistance(A:String,B:String)->diffStats(A,B).getAll(['adds','deletes','modifies']).agg(+);
-
+//@demo_for=strings/diff
 //*Prints out the Levenshtein distance of strings A and B
 main(A,B)->LevenshteinDistance(A,B).print;
 //*This solves the Levenshtein distance task: http://rosettacode.org/wiki/Levenshtein_distance

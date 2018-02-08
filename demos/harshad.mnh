@@ -3,6 +3,7 @@ private isHarshadNumber(n:Int)->n mod sumOfDigits(n) = 0;
 private harshadGen(start:Int)->rangeGenerator(start,start+10000).filter(::isHarshadNumber);
 
 //*See http://rosettacode.org/wiki/Harshad_or_Niven_series
+//@demo_for=generator, math
 main->begin
   printf("%2d",harshadGen(1).head(20));
   print("The first Harshad Number >1000 is ",harshadGen(1001)());

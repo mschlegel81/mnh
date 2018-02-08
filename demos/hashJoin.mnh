@@ -50,6 +50,7 @@ outerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
       Map2[key].each(row2,tab1Substitute|row2),|);
   end;
 
+//@demo_for=map operations
 //*See https://rosettacode.org/wiki/Hash_join
 main->begin
   print('Table A:');

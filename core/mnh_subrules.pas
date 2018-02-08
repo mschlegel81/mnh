@@ -41,6 +41,22 @@ TYPE
       FUNCTION getParentId:T_idString; virtual;
   end;
 
+  T_ruleMetaData=object
+    private
+      attributes:array of T_subruleAttribute;
+      sideEffectWhitelist:T_sideEffects;
+    public
+      comment:ansistring;
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
+      FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
+      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
+      FUNCTION getAttributesLiteral:P_mapLiteral;
+      FUNCTION getDocTxt:ansistring;
+      PROCEDURE setComment(CONST commentText:ansistring);
+  end;
+
   P_inlineExpression=^T_inlineExpression;
   T_inlineExpression=object(T_expression)
     private
@@ -49,6 +65,7 @@ TYPE
       pattern:T_pattern;
       preparedBody:array of T_preparedToken;
       customId:T_idString;
+      meta:T_ruleMetaData;
 
       //save related:
       indexOfSave:longint;
@@ -90,25 +107,9 @@ TYPE
       FUNCTION patternString:string;
   end;
 
-  T_ruleMetaData=object
-    private
-      attributes:array of T_subruleAttribute;
-    public
-      comment:ansistring;
-      CONSTRUCTOR create;
-      DESTRUCTOR destroy;
-      FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
-      FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
-      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
-      FUNCTION getAttributesLiteral:P_mapLiteral;
-      FUNCTION getDocTxt:ansistring;
-      PROCEDURE setComment(CONST commentText:ansistring);
-  end;
-
   P_subruleExpression=^T_subruleExpression;
   T_subruleExpression=object(T_inlineExpression)
     private
-      meta:T_ruleMetaData;
       parent:P_objectWithIdAndLocation;
       publicSubrule:boolean;
     public
@@ -128,7 +129,9 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
+      {$ifdef fullVersion}
       PROCEDURE checkParameters(VAR context:T_threadContext);
+      {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
   end;
 
@@ -266,6 +269,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
 CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
   begin
     inherited create(srt,location);
+    meta.create;
     customId:='';
     initCriticalSection(subruleCallCs);
     functionIdsReady:=false;
@@ -292,7 +296,6 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
     constructExpression(rep,context);
     parent:=parent_;
     resolveIds(nil);
-    meta.create;
   end;
 
 CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; VAR context: T_threadContext);
@@ -377,12 +380,12 @@ DESTRUCTOR T_inlineExpression.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
     if (saveValueStore<>nil) then dispose(saveValueStore,destroy);
+    meta.destroy;
     doneCriticalSection(subruleCallCs);
   end;
 
 DESTRUCTOR T_subruleExpression.destroy;
   begin
-    meta.destroy;
     inherited destroy;
   end;
 
@@ -458,7 +461,6 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
 
   PROCEDURE prepareResult;
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
-          endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
     VAR i:longint;
         firstRelevantToken,lastRelevantToken:longint;
         blocking:boolean;
@@ -466,6 +468,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
         previousValueStore:P_valueStore;
+        previousSideEffectWhitelist:T_sideEffects;
         firstCallOfResumable:boolean=false;
         {$ifdef fullVersion}
         parametersNode:P_variableTreeEntryCategoryNode=nil;
@@ -551,7 +554,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         context.valueStore:=saveValueStore;
         context.valueStore^.parentStore:=previousValueStore;
 
+        previousSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
         firstRep:=context.recycler.disposeToken(firstRep);
+        context.setAllowedSideEffectsReturningPrevious(previousSideEffectWhitelist);
 
         context.reduceExpression(firstRep);
         if firstRep=nil
@@ -569,7 +574,8 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       end else begin
         lastRep^.next:=context.recycler.newToken(getLocation,'',tt_semicolon);
         lastRep:=lastRep^.next;
-        lastRep^.next:=context.recycler.newToken(getLocation,'',endToken[blocking]);
+        lastRep^.next:=context.getNewEndToken(blocking,getLocation);
+        context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
         lastRep:=lastRep^.next;
       end;
       currentlyEvaluating:=false;
@@ -1015,8 +1021,8 @@ FUNCTION T_subruleExpression.inspect: P_mapLiteral;
 
 FUNCTION T_inlineExpression.patternString:string; begin result:=pattern.toString; end;
 
-CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); end;
-DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
+CONSTRUCTOR T_ruleMetaData.create; begin comment:=''; setLength(attributes,0); sideEffectWhitelist:=C_allSideEffects; end;
+DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); sideEffectWhitelist:=C_allSideEffects; end;
 PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
     comment:=commentText;
@@ -1057,6 +1063,34 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
       attributes[result].key:=key;
     end;
 
+  PROCEDURE parseSideEffects(CONST s:string);
+    VAR sideEffectName:string;
+        sideEffect:T_sideEffect;
+        requirePure:boolean=false;
+        hasUnknownSideEffects:boolean=false;
+        compoundMessage:T_arrayOfString;
+    begin
+      sideEffectWhitelist:=[];
+      for sideEffectName in split(s,',') do begin
+        if trim(sideEffectName)=ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE
+        then requirePure:=true
+        else begin
+          if isSideEffectName(trim(sideEffectName),sideEffect)
+          then include(sideEffectWhitelist,sideEffect)
+          else begin
+            adapters.raiseWarning('Unknown side effect: '+trim(sideEffectName),location);
+            hasUnknownSideEffects:=true;
+          end;
+        end;
+      end;
+      if requirePure and (sideEffectWhitelist<>[]) then adapters.raiseError('Conflicting side effect restrictions: pure cannot be combined',location);
+      if hasUnknownSideEffects then begin
+        compoundMessage:='The following side effects are defined:';
+        for sideEffect in C_allSideEffects do append(compoundMessage,C_sideEffectName[sideEffect]);
+        adapters.raiseWarning(compoundMessage,location);
+      end;
+    end;
+
   begin
     setLength(attributes,0);
     for line in attributeLines do begin
@@ -1065,6 +1099,7 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
         newAttriuteIndex:=addAttribute(trim(parts[0]));
         dropFirst(parts,1);
         attributes[newAttriuteIndex].value:=trim(join(parts,'='));
+        if attributes[newAttriuteIndex].key=ALLOW_SIDE_EFFECT_ATTRIBUTE then parseSideEffects(attributes[newAttriuteIndex].value);
       end;
     end;
   end;
@@ -1074,14 +1109,17 @@ FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_li
     result:=pattern.acceptsSingleLiteral(literalTypeToAccept);
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_subruleExpression.checkParameters(VAR context:T_threadContext);
   VAR t:T_preparedToken;
       used:T_arrayOfLongint;
   begin
+    if meta.hasAttribute(SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE) then exit;
     setLength(used,0);
     for t in preparedBody do with t do if (parIdx>=0) then append(used,parIdx);
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
+{$endif}
 
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
   VAR i:longint;

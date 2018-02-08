@@ -850,6 +850,8 @@ toGenerator(::sqr);
 
 md5('Test input. Could be anything really.');
 
+sha256('Test input. Could be anything really.');
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');

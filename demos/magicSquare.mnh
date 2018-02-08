@@ -13,5 +13,6 @@ private makeSquare_(n,S:List,i,j,k)->k<n*n ? makeSquare_(n,set(S,i,j,k),
 //*Print out an 21x21 magic square for regression testing
 main->printSquare(makeSquare(21));
 
+//@demo_for=math/puzzle
 //*Print out an n x n magic square; See http://rosettacode.org/wiki/Magic_squares_of_odd_order
 main(n)->printSquare(makeSquare(softCast(n)));

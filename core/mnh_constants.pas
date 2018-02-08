@@ -13,7 +13,7 @@ CONST
   '|   \    /   |   \     |    _    | |___  \',
   '|   |\  /|   |   |\    |   | |   |  ___)  |',
   '|___| \/ |___|___| \___|___| |___| |_____/',
-  '             (c) Martin Schlegel, 2010-2017',
+  '             (c) Martin Schlegel, 2010-2018',
   '',
   'This program is distributed in the hope that it will be useful,',
   'but WITHOUT ANY WARRANTY; without even the implied warranty of',
@@ -64,7 +64,10 @@ CONST
   {$ifdef fullVersion}
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
   SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
+  SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE='SuppressUnusedParameterWarning';
   {$endif}
+  ALLOW_SIDE_EFFECT_ATTRIBUTE='AllowOnly';
+  ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE='pure';
   EXECUTE_AFTER_ATTRIBUTE='after';
 
 TYPE
@@ -637,14 +640,69 @@ CONST
     [mt_el2_warning,mt_el2_userWarning],
     [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_stackTrace,mt_el3_userDefined],
     [mt_el4_systemError,mt_el4_haltMessageReceived,mt_el4_haltMessageQuiet]);
+TYPE
+  T_sideEffect=(se_inputViaAsk,
+                se_output,
+                se_sound,
+                se_sleep,
+                se_detaching,
+                se_server,
+                se_readPackageState,
+                se_alterPackageState,
+                se_alterContextState,
+                se_alterPlotState,
+                se_readFile,
+                se_writeFile,
+                se_accessHttp,
+                se_accessIpc,
+                se_executingExternal);
+  T_sideEffects=set of T_sideEffect;
 
+CONST
+  C_sideEffectName:array[T_sideEffect] of string=(
+                'input',
+                'output',
+                'sound',
+                'sleep',
+                'detaching',
+                'server',
+                'read package state',
+                'alter package state',
+                'alter context state',
+                'alter plot state',
+                'read file',
+                'write file',
+                'http',
+                'ipc',
+                'executing external');
+  C_allSideEffects:T_sideEffects=[low(T_sideEffect)..high(T_sideEffect)];
+FUNCTION ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE:string;
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
-
+FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
 OPERATOR :=(x:qword):T_messageTypeSet;
 IMPLEMENTATION
+FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
+  VAR se:T_sideEffect;
+  begin
+    result:=false;
+    for se in C_allSideEffects do if s=C_sideEffectName[se] then begin
+      sideEffect:=se;
+      exit(true);
+    end;
+  end;
+
+FUNCTION ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE:string;
+  VAR se:T_sideEffect;
+  begin
+    result:='';
+    for se in C_allSideEffects do begin
+      if result<>'' then result:=result+', ';
+      result+=C_sideEffectName[se];
+    end;
+  end;
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin

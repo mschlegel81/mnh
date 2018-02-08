@@ -4,7 +4,7 @@ shannonEntropy(s:String)->s.chars //split s in characters
                            .{$L/($L.agg(+))} //average frequencies
                            .{$L*ln($L)/ln(2)}
                            .agg(+)*-1;
-
+//@demo_for=math/entropy, strings
 //*See http://rosettacode.org/wiki/Entropy
 //*Print out the Shannon entropy of <code>s</code>
 main(s)->print(shannonEntropy(s));

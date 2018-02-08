@@ -18,6 +18,7 @@ empty(queue:Queue      )->queue(['empty']);
 dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end}.toGenerator;
 enqueueConsumer(queue:Queue)->{begin local q:=queue; save; q.push($0); end};
 
+//@demo_for=expressions/stateful, custom types
 main->begin
   local Q:=newQueue;
   local deq:=dequeueIterator(Q);

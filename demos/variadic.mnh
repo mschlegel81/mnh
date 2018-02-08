@@ -1,3 +1,4 @@
+//@demo_for=calling conventions, recursion
 //*See http://rosettacode.org/wiki/Variadic_function
 main->print('Example parameters: "A","B","C"')|main("A","B","C");
 //*Print all the script parameters - each in a new line

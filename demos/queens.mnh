@@ -27,6 +27,7 @@ inform(numberOfQueens:Int,allSolutions:Boolean)->begin
     : void;
 end;
 
+//@demo_for=textbook problems, recursion
 //*Print out the solutions for the queens puzzle
 main(numberOfQueens)->inform(numberOfQueens.toInt,true);
 

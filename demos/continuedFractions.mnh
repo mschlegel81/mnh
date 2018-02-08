@@ -1,6 +1,6 @@
 private continuedFraction(a,b)->begin
-  local A:=a.isExpression ? a : {$n*0+(a)};
-  local B:=b.isExpression ? b : {$n*0+(b)};
+  local A:=a.isExpression(1) ? a : {$n*0+(a)};
+  local B:=b.isExpression(1) ? b : {$n*0+(b)};
 
   local resultNum:=0;
   local resultTxt:="...";
@@ -11,6 +11,7 @@ private continuedFraction(a,b)->begin
    A(0)  +  resultNum];
 end;
 
+//@demo_for=math
 //*See http://rosettacode.org/wiki/Continued_fraction
 main->begin
   local data:=[continuedFraction(1,1),

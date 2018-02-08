@@ -16,5 +16,6 @@ series(i:Int)->begin
   result;
 end;
 
+//@demo_for=memoization
 //*See http://rosettacode.org/wiki/Self-referential_sequence
 main->print([1..10000].pEach(i,series(i),aggregator({size($x)<size($y) ? $y : $x})).join(', '));

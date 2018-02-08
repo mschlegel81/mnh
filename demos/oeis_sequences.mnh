@@ -325,6 +325,7 @@ guessImplementation(sequence:IntList)->
   findPeriodicParam(sequence) orElse
   findFibonacciParam(sequence);
 
+//@demo_for=expressions/construction, expressions, generators
 classifyImplementation(imp:Expression)->classifyImplementation(imp.toString);
 classifyImplementation(imp:String)->
   imp.matches('multifactorialGenerator') ? 'multifactorialGenerator' :
