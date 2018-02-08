@@ -68,6 +68,8 @@ PROCEDURE initIntrinsicRuleList;
 PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
       isUseClause:boolean;
+      isComment:boolean;
+      k:longint;
   PROCEDURE collectAllIdentifiers;
     VAR i:longint;
     begin
@@ -78,18 +80,28 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
 
   begin
     caret:=editor.CaretXY;
-    isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
-              or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
     wordsInEditor.clear;
     if relatedAssistant<>nil then begin
       //Completion for assistant...
-      if isUseClause then begin
-        wordsInEditor.put(relatedAssistant^.getImportablePackages);
+      k:= pos(COMMENT_PREFIX,editor.lines[caret.y-1]);
+      isComment:=(k>0) and (k<caret.x);
+      if not(isComment) then for k:=1 to length(editor.lines[caret.y-1]) do if (editor.lines[caret.y-1][k]=BLOCK_COMMENT_DELIMITER) and (k<caret.x) then isComment:=not(isComment);
+      if isComment then begin
+        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE);
+        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
+        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE);
+        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE);
       end else begin
-        initIntrinsicRuleList;
-        wordsInEditor.put(intrinsicRulesForCompletion);
-        if not(relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x))
-        then collectAllIdentifiers;
+        isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
+                  or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
+        if isUseClause
+        then wordsInEditor.put(relatedAssistant^.getImportablePackages)
+        else begin
+          initIntrinsicRuleList;
+          wordsInEditor.put(intrinsicRulesForCompletion);
+          if not(relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x))
+          then collectAllIdentifiers;
+        end;
       end;
     end else collectAllIdentifiers;
   end;
