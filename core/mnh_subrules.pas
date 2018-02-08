@@ -128,7 +128,9 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION inspect:P_mapLiteral; virtual;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
+      {$ifdef fullVersion}
       PROCEDURE checkParameters(VAR context:T_threadContext);
+      {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
   end;
 
@@ -1074,14 +1076,17 @@ FUNCTION T_subruleExpression.acceptsSingleLiteral(CONST literalTypeToAccept:T_li
     result:=pattern.acceptsSingleLiteral(literalTypeToAccept);
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_subruleExpression.checkParameters(VAR context:T_threadContext);
   VAR t:T_preparedToken;
       used:T_arrayOfLongint;
   begin
+    if meta.hasAttribute(SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE) then exit;
     setLength(used,0);
     for t in preparedBody do with t do if (parIdx>=0) then append(used,parIdx);
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
+{$endif}
 
 FUNCTION T_ruleMetaData.getAttributesLiteral: P_mapLiteral;
   VAR i:longint;

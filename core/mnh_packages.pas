@@ -1414,6 +1414,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       end;
     end;
 
+  {$ifdef fullVersion}
   PROCEDURE checkParameters;
     VAR rule:P_rule;
         pack:P_package;
@@ -1421,6 +1422,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
       for pack in secondaryPackages do for rule in pack^.packageRules.valueSet do rule^.checkParameters(context);
       for rule in packageRules.valueSet do rule^.checkParameters(context);
     end;
+  {$endif}
 
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;

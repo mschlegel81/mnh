@@ -64,6 +64,7 @@ CONST
   {$ifdef fullVersion}
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
   SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
+  SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE='SuppressUnusedParameterWarning';
   {$endif}
   EXECUTE_AFTER_ATTRIBUTE='after';
 

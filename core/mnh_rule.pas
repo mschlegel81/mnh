@@ -17,9 +17,11 @@ TYPE
   T_rule=object(T_abstractRule)
     FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
-    FUNCTION getDocTxt: ansistring; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
+    {$ifdef fullVersion}
+    FUNCTION getDocTxt: ansistring; virtual; abstract;
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
+    {$endif}
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -39,8 +41,10 @@ TYPE
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
+      {$ifdef fullVersion}
       FUNCTION getDocTxt: ansistring; virtual;
       PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
+      {$endif}
   end;
 
   P_protectedRuleWithSubrules=^T_protectedRuleWithSubrules;
@@ -94,7 +98,9 @@ TYPE
       FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
+      {$ifdef fullVersion}
       FUNCTION getDocTxt: ansistring; virtual;
+      {$endif}
       FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
   end;
 
@@ -115,7 +121,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-
+{$ifdef fullVersion}
 PROCEDURE T_rule.checkParameters(VAR context:T_threadContext);
   begin end;
 
@@ -125,6 +131,7 @@ PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_threadContext);
     if length(subrules)=1 then
     for s in subrules do s^.checkParameters(context);
   end;
+{$endif}
 
 CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
@@ -568,6 +575,7 @@ FUNCTION T_mutableRule.getFunctionPointer(VAR context: T_threadContext; CONST ru
     new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_ruleWithSubrules.getDocTxt: ansistring;
   VAR s:P_subruleExpression;
   begin
@@ -582,6 +590,7 @@ FUNCTION T_mutableRule.getDocTxt: ansistring;
     result:=ECHO_MARKER+C_ruleTypeText[getRuleType]+'rule '+getId+' '+ansistring(getLocation);
     result:=result+meta.getDocTxt;
   end;
+{$endif}
 
 FUNCTION T_mutableRule.hasPublicSubrule: boolean;
   begin
