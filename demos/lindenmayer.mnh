@@ -1,5 +1,5 @@
 USE turtleGfx;
-
+//@demo_for=strings, recursion, fractals
 //@Algorithm Name=Lindenmayer system
 lindenmayer(config,depth)->lindenmayer@(config|depth);
 private lindenmayer(data,productionLHS,productionRHS,depth>0)->

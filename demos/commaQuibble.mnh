@@ -1,3 +1,4 @@
+//@demo_for=recursion, string operations
 //Implementation for string arguments
 //*One string is the string itself
 Comma_Quibble(a:String)->a;

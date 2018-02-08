@@ -3,6 +3,7 @@ realOp:=["+","*","-","/","&","^"];
 intOp :=realOp|boolOp|[" mod "," div "];
 comparator:=['>','<','=','==','!=','>=','<='];
 testOperator(op,LHS,RHS)->print(LHS,op,RHS,' = ',toExpression("$x"&op&"$y")(LHS,RHS));
+//@demo_for=calling conventions, operators, expression construction
 main->begin
   boolOp.each(op,testOperator(op,true,false));
   intOp.each(op,testOperator(op,3   ,5));

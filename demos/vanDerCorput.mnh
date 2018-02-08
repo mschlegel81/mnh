@@ -2,10 +2,11 @@ recompose(Digits:IntList,base:Int)->composeDigits(Digits.reverseList,base,Digits
 vanDerCorput(i:Int,base:Int)->digits(i,base).recompose(base);
 vanDerCorput(I:IntList,base:Int)->I.digits(base).pMap({recompose($digits,base)});
 
+//@demo_for=safe plotting
 plotIfPossible->mnhInfo['isFullVersion']
                 ? interpret("vanDerCorput([0..1000],2).plot('.')")
                 : void;
-
+//@demo_for=math
 //*See http://rosettacode.org/wiki/Van_der_Corput_sequence
 main-> printf("%s",[2..10].map({"Base "&$base&": "&vanDerCorput([1..13],$base).round(5).join(",\t")&",\t..."}))
        orElse plotIfPossible;

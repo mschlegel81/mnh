@@ -1,1 +1,2 @@
+//@demo_for=textbook problems
 main:={print('main:=', main)}

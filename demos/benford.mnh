@@ -1,4 +1,5 @@
 USE stringFib;
+//@demo_for=each, grouping/elementFrequency
 //*See http://rosettacode.org/wiki/Benford%27s_law
 main->printf('%6d %8.2f',
              'actual'|[1..1000].pEach(i,stringFib(i).copy(0,1).softCast).elementFrequency.sort.getInner(1),

@@ -1,2 +1,3 @@
 //*See  http://rosettacode.org/wiki/Combinations
+//@demo_for=combinatorics
 main(groupSize,integersToSampleFrom)->[1..integersToSampleFrom.toInt].subSets(groupSize.toInt).sort.map(::print);

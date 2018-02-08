@@ -12,6 +12,7 @@ end;
 private getData(parameters)->sendIpcRequest(oeis_server.ipcId,parameters);
 private validateRegex_(s:String)->validateRegex(s,{fail('Invalid regex: ',escape(s),'; ',$message)});
 
+//@demo_for=Inter Process Communication
 //*Return info on a series by ID(s)
 main('id',...)->getData($params).print;
 //*Returns info on a series by name pattern(s)

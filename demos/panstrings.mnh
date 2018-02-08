@@ -56,4 +56,5 @@ end;
 validate(s:String,partLength:Int)->
   binaryStrings(partLength).each(part,pos(part,s)>=0,AND);
 
+//@demo_for=strings, recursion
 main->[1..7].each(i,print(construct(i)));

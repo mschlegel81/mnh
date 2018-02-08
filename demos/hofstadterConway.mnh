@@ -22,5 +22,6 @@ end;
 //*This solves the task: http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence
 main('rosetta')->analyze(20);
 
+//@demo_for=math, generator
 //*As above but abridged for regression test
 main->analyze(17);

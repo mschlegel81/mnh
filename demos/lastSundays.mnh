@@ -9,6 +9,7 @@ end;
 
 private DATE_FMT:='%{formatTime("dd.mm.yyyy",$0)}s';
 
+//@demo_for=date operations
 //*Print out the last sundays of each month in 2015
 main->printf(DATE_FMT,lastSundaysInYear(2015));
 //*Print out the last sundays of each month in given year

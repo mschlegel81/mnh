@@ -18,6 +18,7 @@ private consolidate(ListOfSets,consolidationPoints)->
 
 private examples:=["[{A,B} {C,D}]","[{A,B} {B,C}]","[{A,B} {C,D} {D,B}]","[{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]"];
 
+//@demo_for=math/graphs
 //*See http://rosettacode.org/wiki/Set_consolidation
 main->examples.each(e,print('Consolidation of ',e,"\n",
                             '              is ',consolidate(e)));

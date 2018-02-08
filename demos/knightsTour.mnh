@@ -73,5 +73,6 @@ main(boardSize,startX,startY)->
   findTour(boardSize.toInt,[startX.toInt,startY.toInt])
   .printTour;
 
+//@demo_for=recursion, plotting, formatting, textbook problems
 main(boardSize,startX,startY,'plot')->
   main(boardSize,startX,startY).plotTour;

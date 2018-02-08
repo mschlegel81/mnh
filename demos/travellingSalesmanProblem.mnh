@@ -98,6 +98,7 @@ polish(L)->begin
 end;
 
 //*Approximately solves the Travelling Salesman Problem using sorting by Sierpinski-Curve
+//@demo_for=datastores, plotting, textbook problems
 main->begin
   resetRandom;
   plot.setOptions([['axisStyleX',0],['axisStyleY',0]]);

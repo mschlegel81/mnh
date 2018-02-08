@@ -1,4 +1,5 @@
 //@Algorithm Name=Euklidean Algorithm, Greatest common divider
+//@demo_for=math, recursion
 gcd(a)->a;
 gcd(a,0)->a;
 gcd(a,b)->gcd(b, a mod b);

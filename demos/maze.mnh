@@ -38,5 +38,6 @@ begin
      |([0..width-1].each(i,"+---",&)&"+");
 end;
 
+//@demo_for=math/graphs
 //*See http://rosettacode.org/wiki/Maze_generation
 main->printf("%s",makeMaze(20,20));

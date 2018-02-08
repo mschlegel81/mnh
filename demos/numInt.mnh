@@ -21,6 +21,7 @@ begin
     integrate(f,X[i],Y[i],X[i+1],Y[i+1],tolerance*100),+);
 end;
 
+//@demo_for=math, numerics/integration
 main->
   [[{$x^3},0,1  ,1E-5],
    [{1/$x},1,100,1E-5],

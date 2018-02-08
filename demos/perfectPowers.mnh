@@ -2,6 +2,7 @@
 //*Perfect powers can be written as a^b with a and b integers
 //Simplification: only consider prime exponents b such that 2^b <= maxVal
 //                only consider bases a such that a^b <= maxVal
+//@demo_for=math, list constructiob
 perfectPowers(maxVal)->
   primes(round(ln(maxVal)/ln(2)))
   .pEach(power,([2..round(maxVal^(1/power))]^power)

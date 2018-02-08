@@ -42,6 +42,7 @@ private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=tru
 
 //*Conway's Game Of Life
 //*Play the game in the given resolution until a key is pressed
+//@demo_for=animation
 main(width,height)->playTheGame([width.toInt,height.toInt],0.05,2^62,true);
 
 //*Play the game for the given number of steps

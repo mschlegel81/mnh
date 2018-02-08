@@ -1,2 +1,3 @@
 //*Quine via inspection
+//@demo_for=textbook problems
 main->print(inspect['source']);

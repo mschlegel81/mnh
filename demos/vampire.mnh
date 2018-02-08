@@ -28,6 +28,7 @@ save;
   : next;
 end}.toGenerator;
 
+//@demo_for=math/strings, generators
 //*Solves the "Vampire-Number" task from http://rosettacode.org/wiki/Vampire_number
 main('rosetta')->begin
   print('See http://rosettacode.org/wiki/Vampire_number');

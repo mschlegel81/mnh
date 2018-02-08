@@ -24,6 +24,7 @@ private plotState->begin
   display;
 end;
 
+//@demo_for=animation, plotting, plain script
 private stepState->begin
   //move all balls and replace them when falling out
   balls:=balls.map(::moveBall).each(ball,ball[0]<=0 ? begin

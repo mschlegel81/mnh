@@ -10,7 +10,7 @@ private AKSPolyToString(coeff:IntList)->[0..size(coeff)-1].each(i,
   powerOfX(size(coeff)-i-1)).join;
 
 private AKS_isPrime(n)->trueCount(AKSPoly(n)[[1..n-1]] mod n<>0)=0;
-
+//@demo_for=formatting, math, memoization
 //*See http://rosettacode.org/wiki/AKS_test_for_primes
 main->print('Polynomial expansions:') |
       printf("(x-1)^%{$0}d = %{AKSPolyToString(AKSPoly($0))}s",[0..7])|
