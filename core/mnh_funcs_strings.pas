@@ -5,7 +5,7 @@ USES sysutils,
      LazUTF8,base64,LConvEncoding,
      synacode,
      diff,
-     myGenerics,myStringUtil,
+     myGenerics,myStringUtil,myCrypto,
      mnh_basicTypes,
      mnh_constants,
      mnh_out_adapters,
@@ -857,6 +857,13 @@ FUNCTION md5_imp intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION sha256_imp intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(sha256(str0^.value))
+    else result:=nil;
+  end;
+
 INITIALIZATION
   //Functions on Strings:
   registerRule(STRINGS_NAMESPACE,'length'        ,@length_imp        ,ak_unary     ,'length(S:string);//Returns the number of characters in string S');
@@ -900,5 +907,6 @@ INITIALIZATION
                                                            '  The first character of the result indicates the algorithm used');
   registerRule(STRINGS_NAMESPACE,'decompress'    ,@decompress_impl,ak_unary,'decompress(S:string);#Returns an uncompressed version of S');
   registerRule(STRINGS_NAMESPACE,'formatTabs'    ,@formatTabs_impl,ak_unary,'formatTabs(S:string);#Applies tab formatting as on print');
-  registerRule(STRINGS_NAMESPACE,'md5'           ,@md5_imp,ak_unary,'md5(S:string);#Returns MD5 string for given input S');
+  registerRule(STRINGS_NAMESPACE,'md5'           ,@md5_imp,ak_unary,'md5(S:string);#Returns the MD5 digest as hexadecimal string for given input S');
+  registerRule(STRINGS_NAMESPACE,'sha256'        ,@sha256_imp,ak_unary,'sha256(S:string);#Returns SHA256 digest as hexadecimal string for given input S');
 end.
