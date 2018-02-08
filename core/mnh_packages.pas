@@ -796,15 +796,11 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
 {$ifdef fullVersion}
 PROCEDURE T_sandbox.runInstallScript;
   {$i res_ensureAssoc.inc}
-  begin
-    execute(ensureAssoc_mnh);
-  end;
+  begin execute(ensureAssoc_mnh); end;
 
 PROCEDURE T_sandbox.runUninstallScript;
   {$i res_removeAssoc.inc}
-  begin
-    execute(removeAssoc_mnh);
-  end;
+  begin execute(removeAssoc_mnh); end;
 
 PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
   VAR messages:T_storedMessages;
