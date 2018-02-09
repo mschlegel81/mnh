@@ -726,25 +726,23 @@ For built-in rules:<code>
   <li><h3><a href="index.html">Quick start</a></h4></li>
   <li><h3><a href="types.html">Types</a></h4></li>
   <li><h3><a href="operators.html">Operators</a></h4></li>
-  <li><h3><a href="functions.html">Functions</a></h4></li>
-<ul>
-<li><h4><a     href="#calls">Calls</a></h4></li>
-<li><h4><a     href="#declarations">Declarations</a></h4></li>
-<li><h4><a     href="#assignments">Assignments</a></h4></li>
-<li><h4><a     href="#restrictions">Parameter restrictions</a></h4></li>
-<li><h4><a     href="#variadic">Variadic functions</a></h4></li>
-<li><h4><a     href="#beginEnd">Begin-End-Blocks</a></h4></li>
-<li><h4><a     href="#beginSaveEnd">Begin-Save-End-Blocks</a></h4></li>
-<li><h4><a     href="#modifiers">Modifiers</a></h4><ul>
-<li><h5><a href="#privateMod">private</a></h5></li>
-<li><h5><a href="#memoizedMod">memoized</a></h5></li>
-<li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
-<li><h5><a href="#mutableMod">mutable</a></h5></li>
-<li><h5><a href="#datastoreMod">datastore</a></h5></li>
-<li><h5><a href="#plainMod">plain</a></h5></li>
-<li><h5><a href="#localMod">local</a></h5></li>
-<li><h5><a href="#typeMod">type</a></h5></li></ul></li>
-</ul>
+  <li><h3><a href="functions.html">Functions</a></h4></li><ul>
+    <li><h4><a href="#calls">Calls</a></h4></li>
+    <li><h4><a href="#declarations">Declarations</a></h4></li>
+    <li><h4><a href="#assignments">Assignments</a></h4></li>
+    <li><h4><a href="#restrictions">Parameter restrictions</a></h4></li>
+    <li><h4><a href="#variadic">Variadic functions</a></h4></li>
+    <li><h4><a href="#beginEnd">Begin-End-Blocks</a></h4></li>
+    <li><h4><a href="#beginSaveEnd">Begin-Save-End-Blocks</a></h4></li>
+    <li><h4><a href="#modifiers">Modifiers</a></h4><ul>
+      <li><h5><a href="#privateMod">private</a></h5></li>
+      <li><h5><a href="#memoizedMod">memoized</a></h5></li>
+      <li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
+      <li><h5><a href="#mutableMod">mutable</a></h5></li>
+      <li><h5><a href="#datastoreMod">datastore</a></h5></li>
+      <li><h5><a href="#plainMod">plain</a></h5></li>
+      <li><h5><a href="#localMod">local</a></h5></li>
+      <li><h5><a href="#typeMod">type</a></h5></li></ul></li></ul>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
@@ -845,10 +843,10 @@ An assignment follows the prototype <i>ruleId(pattern)</i><code>:=</code><i>rule
 As you can see it is identical to the declaration prototype apart from the assignment operator. Behaviour is only almost identical: An assignment is evaluated "<i>on declaration</i>", while a declaration is evaluated only when it
 is called. This is important when you take side effects into account. A reasonable example would be:<code>
 <!--mnh-->
-  pi:=4*arctan(1);
+  phi:=(1-sqrt(5))/2;
 <!--end-->
 </code>
-This defines pi and is evaluated only once.<br>
+This defines phi (the golden ratio) and is evaluated only once.<br>
 A less reasonable example would be the following declaration - a "random" number which stays the same during evaluation:<code>
 <!--mnh-->
   constantRandom:=random;
@@ -862,14 +860,18 @@ Parameter restrictions fall in three categories:<ul>
 </ul>
 <br>The following type checks are defined as unary (postfix) operator:<code>
 <!--mnh-->
-  :Scalar    :List          :Set           :Collection
-  :Boolean   :BooleanList   :BooleanSet    :BooleanCollection
-  :Int       :IntList       :IntSet        :IntCollection
-  :Real      :RealList      :RealSet       :RealCollection
-  :String    :StringList    :StringSet     :StringCollection
-  :Numeric   :NumericList   :NumericSet    :NumericCollection
-             :Map
-             :Expression
+  :Scalar  :List          :Set           :Collection
+  :Boolean :BooleanList   :BooleanSet    :BooleanCollection
+  :Int     :IntList       :IntSet        :IntCollection
+  :Real    :RealList      :RealSet       :RealCollection
+  :String  :StringList    :StringSet     :StringCollection
+  :Numeric :NumericList   :NumericSet    :NumericCollection
+           :Map
+           :Expression
+           :StatelessExpression
+           :StatefulExpression
+  :Iteratable 
+  :IteratableExpression         
 <!--end-->
 </code><br>
 All typechecks in columns 2,3 and 4 can be modified to accept a compound type with a specified number of elements or an expression, which can be applied to
@@ -899,7 +901,7 @@ Example: <code>
 There is a shorthand for tests on equality: the first comparand can be omitted. The following pairs of function heads are equivalent:<code>
 <!--mnh-->
   f(x==1)...;
-  f(x)...;
+  f(1)...;
 
   f(x==y,y)...;
   f(y,y)...;
@@ -976,7 +978,7 @@ As a simple example: this is a generator returing the Fibonacci-Sequence and abo
     result;
   end;
   
-  main->(::fibGen).map(::print);
+  main->(::fibGen).toGenerator.map(::print);
 <!--end-->
 </code>
 <br>
@@ -988,7 +990,7 @@ As a more sophisticated example consider this generator, returning permutations 
     local result:=next;
     next:=next.nextPermutation;
     result;
-  end};
+  end}.toGenerator;
 <!--end-->
 </code>
 And the helper functions:<code>
