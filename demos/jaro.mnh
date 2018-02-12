@@ -1,6 +1,3 @@
-private setFlag(B:BooleanList,i:Int,newValue:Boolean)->0<=i<B.size ? B.each(b,index=i ? newValue : b) : fail;
-private setFlag(B:BooleanList,i:Int)->setFlag(B,i,true);
-
 //@SuppressUnusedWarning
 jaroDistance("","")->1;
 jaroDistance(A:String,B:String)->begin
@@ -12,10 +9,7 @@ jaroDistance(A:String,B:String)->begin
     [max(0      ,index-matchDistance  )..
      min(bChars.size-1,index+matchDistance-1)].each(k,
        bChars[k]==a AND not(bMatches[k])
-       ? begin
-           bMatches:=bMatches.setFlag(k);
-           true;
-         end
+       ? bMatches[k]:=true
        : false
     ,OR)
   );
