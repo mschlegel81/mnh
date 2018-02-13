@@ -1,7 +1,7 @@
 private H(nMax)->unique(flatten((2^[0..floor(ln(nMax      )/ln(2))]).each(i,
                         flatten((3^[0..floor(ln(nMax/ i   )/ln(3))]).each(j,
                                  5^[0..floor(ln(nMax/(i*j))/ln(5))]*i*j))))).sort;
-private H:=H(2^31);
+H:=H(2^31);
 //@demo_for=list construction
 //*See http://rosettacode.org/wiki/Hamming_numbers
 main->print('The first 20 Hamming numbers are: ',head(H,20))|

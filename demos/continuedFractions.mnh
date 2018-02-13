@@ -1,22 +1,20 @@
-private continuedFraction(a,b)->begin
-  local A:=a.isExpression(1) ? a : {$n*0+(a)};
-  local B:=b.isExpression(1) ? b : {$n*0+(b)};
-
-  local resultNum:=0;
-  local resultTxt:="...";
-  [1000..1].each(n,
-    resultNum       :=B(n)  /(  A(n)  +  resultNum  ),
-    n<=5 ? resultTxt:=B(n)&"/("&A(n)&"+"&resultTxt&")" : void);
-  [A(0)&"+"&resultTxt,
-   A(0)  +  resultNum];
+private cfString(A:Expression(1),B:Expression(1),depth>0)->begin
+  local e:='...';
+  [depth..1].each(n,begin e:=B(n)&'/('&A(n)&'+'&e&')'; void; end);
+  A(0)&'+'&e;
 end;
+private zero:={$0*0};
+private cfString(A:Numeric,B,depth>0)->cfString(zero+A,B,depth);
+private cfString(A,B:Numeric,depth>0)->cfString(A,zero+B,depth);
+private cfValue(A,B,depth>0)->cfString(A,B,depth).replace('...','0').interpret;
 
 //@demo_for=math
 //*See http://rosettacode.org/wiki/Continued_fraction
-main->begin
-  local data:=[continuedFraction(1,1),
-               continuedFraction({$n=0?1:2 }, 1           ),
-               continuedFraction({$n=0?2:$n},{$n=1?1:$n-1}),
-               continuedFraction({$n=0?3:6 },{(2*$n-1)^2} )];
-  printf("%s\t=\t%g",data.getInner(0),data.getInner(1));
-end;
+main->[[          1,            1],
+       [{$n=0?1:2 },            1],
+       [{$n=0?2:$n},{$n=1?1:$n-1}],
+       [{$n=0?3:6 },{(2*$n-1)^2} ]]
+      .pMap({cfString($p[0],$p[1],5)&"\t=\t"&
+              cfValue($p[0],$p[1],1000)})
+      .join("\n")
+      .print;

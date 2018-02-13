@@ -74,7 +74,7 @@ AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkSt
                ['-suspend' ,{execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
                ['-restart' ,{execPipeless('Shutdown.exe',['-r','-t','00'])}],
                ['-shutdown',{execPipeless('Shutdown.exe',['-s','-t','00'])}],
-               ['-beep',{while(true,begin beep; sleep(1); end)}]];
+               ['-beep'    ,{while(true,begin beep; sleep(1); end)}]];
 
 //*As with time or interval but with custom action when timer is done
 //*after can be: -lock

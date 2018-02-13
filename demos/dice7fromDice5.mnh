@@ -1,8 +1,18 @@
-dice5->intRandom(5);
-dice7       -> dice7(dice5*5+dice5);
-dice7(n<21) -> n mod 7;
-dice7(n   ) -> dice7;
+//For reference: the unoptimized implementation
+//rand7of5_unoptimized      ->rand7of5_unoptimized(intRandom(5)*5+intRandom(5));
+//rand7of5_unoptimized(i<21)->i mod 7;
+//rand7of5_unoptimized(i   )->rand7of5_unoptimized;
+
+//*Optimized version with vectorization
+//@demo_for=vectorization, statistics
+private rand7of5(count:Int)->begin
+  local r:=intRandom(5,count)*5+intRandom(5,count);
+  r:=r[r<21] mod 7;
+  r.size<count
+  ? r | rand7of5(count-r.size)
+  : r;
+end;
 
 simpleHist(L)->(elementFrequency(L).getInner(1)/size(L)).join("\n");
 
-main->print("Distribution of seven sided dice (100000 samples): \n",simpleHist([1..100000].each(k,dice7)));
+main->print("Distribution of seven sided dice (100000 samples): \n",simpleHist(rand7of5(100000)));

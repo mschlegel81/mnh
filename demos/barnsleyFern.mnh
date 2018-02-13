@@ -1,3 +1,4 @@
+//@AllowOnly=alter context state
 private barnsleyFern(sampleCount)->begin
   local x:=random(1);
   local y:=random(1);

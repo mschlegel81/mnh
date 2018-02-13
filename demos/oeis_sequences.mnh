@@ -88,9 +88,11 @@ USE thueMorseSequence;
 A010060->listIterator(thueMorseSequence(10000).ord);
 USE truncatablePrimes;
 //@SuppressUnusedWarning
-A024785->listIterator(leftTruncatablePrimes (100000));
+A024785->listIterator(leftTruncatablePrimes (1000000));
 //@SuppressUnusedWarning
-A024770->listIterator(rightTruncatablePrimes(100000));
+A024770->listIterator(rightTruncatablePrimes(1000000));
+//@SuppressUnusedWarning
+A020994->listIterator(leftTruncatablePrimes (1000000).intersect(rightTruncatablePrimes(1000000)).sort);
 USE hofstadter_sequences;
 //@SuppressUnusedWarning
 A005228->naturalNumbers(1).lazyMap(::hofstadter_sequences.R);
@@ -155,6 +157,10 @@ A169718->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])}
 //@SuppressUnusedWarning
 A187243->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10])});
 
+USE vampire;
+//@SuppressUnusedWarning
+A014575->naturalNumbers(1260).filter(::isVampire);
+
 //@SuppressUnusedWarning
 A018900->naturalNumbers(0).filter({$x.bits.trueCount=2});
 //@SuppressUnusedWarning
@@ -194,6 +200,54 @@ A114806->multifactorialGenerator(9);
 //@SuppressUnusedWarning
 A288327->multifactorialGenerator(10);
 
+USE pascal;
+//@SuppressUnusedWarning
+A010926->pascalTriangleRow(10).listIterator;
+//@SuppressUnusedWarning
+A010927->pascalTriangleRow(11).listIterator;
+//@SuppressUnusedWarning
+A010928->pascalTriangleRow(12).listIterator;
+//@SuppressUnusedWarning
+A010929->pascalTriangleRow(13).listIterator;
+//@SuppressUnusedWarning
+A010930->pascalTriangleRow(14).listIterator;
+//@SuppressUnusedWarning
+A010931->pascalTriangleRow(15).listIterator;
+//@SuppressUnusedWarning
+A010932->pascalTriangleRow(16).listIterator;
+//@SuppressUnusedWarning
+A010933->pascalTriangleRow(17).listIterator;
+//@SuppressUnusedWarning
+A010934->pascalTriangleRow(18).listIterator;
+//@SuppressUnusedWarning
+A010935->pascalTriangleRow(19).listIterator;
+//@SuppressUnusedWarning
+A010936->pascalTriangleRow(20).listIterator;
+//@SuppressUnusedWarning
+A010937->pascalTriangleRow(21).listIterator;
+//@SuppressUnusedWarning
+A010938->pascalTriangleRow(22).listIterator;
+//@SuppressUnusedWarning
+A010939->pascalTriangleRow(23).listIterator;
+//@SuppressUnusedWarning
+A010940->pascalTriangleRow(24).listIterator;
+//@SuppressUnusedWarning
+A010941->pascalTriangleRow(25).listIterator;
+//@SuppressUnusedWarning
+A010942->pascalTriangleRow(26).listIterator;
+//@SuppressUnusedWarning
+A010943->pascalTriangleRow(27).listIterator;
+//@SuppressUnusedWarning
+A010944->pascalTriangleRow(28).listIterator;
+//@SuppressUnusedWarning
+A010945->pascalTriangleRow(29).listIterator;
+//@SuppressUnusedWarning
+A010946->pascalTriangleRow(30).listIterator;
+
+USE perfectPowers;
+//@SuppressUnusedWarning
+A001597->perfectPowers(10^6).listIterator;
+
 USE sternBrocot;
 //@SuppressUnusedWarning
 A002487->sternBrocotGenerator;
@@ -201,6 +255,18 @@ A002487->sternBrocotGenerator;
 USE hofstadterConway;
 //@SuppressUnusedWarning
 A004001->hofstaderConwayGen;
+
+USE hamming;
+//@SuppressUnusedWarning
+A051037->listIterator(hamming.H);
+
+USE harshad;
+//@SuppressUnusedWarning
+A005349->naturalNumbers(1).filter(::isHarshadNumber);
+
+USE kaprekar;
+//@SuppressUnusedWarning
+A006886->naturalNumbers(1).filter(::isKaprekar);
 
 scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
   local fiboMod:={$state.tail|($state.agg(+) mod modulus)};
@@ -328,14 +394,17 @@ guessImplementation(sequence:IntList)->
 //@demo_for=expressions/construction, expressions, generators
 classifyImplementation(imp:Expression)->classifyImplementation(imp.toString);
 classifyImplementation(imp:String)->
-  imp.matches('multifactorialGenerator') ? 'multifactorialGenerator' :
-  imp.matches('{\$x\.bits\.trueCount=\d}') ? 'byHammingWeight' :
-  imp.matches('hofstadter_sequences') ? 'hofstadter_sequences' :
-  imp.matches('countPartitions') ? 'countPartitions' :
-  imp.matches('scanFiboMod\(\d,\$n\)') ? 'scanFiboMod' :
-  imp.matches('\]\[\$i mod ') ? 'periodicSeries' :
-  imp.matches('^generalizedFibonacci') ? 'generalizedFibonacci' :
-  imp.matches('\^rangeGenerator\(') ? 'exponentialSeries' :
-  imp.matches('^rangeGenerator\(0,.*\)\^\d+$') ? 'powerSeries' :
+  imp.matches('multifactorialGenerator')                    ? 'multifactorialGenerator' :
+  imp.matches('{\$x\.bits\.trueCount=\d}')                  ? 'byHammingWeight' :
+  imp.matches('hofstadter_sequences')                       ? 'hofstadter_sequences' :
+  imp.matches('countPartitions')                            ? 'countPartitions' :
+  imp.matches('scanFiboMod\(\d,\$n\)')                      ? 'scanFiboMod' :
+  imp.matches('\]\[\$i mod ')                               ? 'periodicSeries' :
+  imp.matches('^generalizedFibonacci')                      ? 'generalizedFibonacci' :
+  imp.matches('\^rangeGenerator\(')                         ? 'exponentialSeries' :
+  imp.matches('^rangeGenerator\(0,.*\)\^\d+$')              ? 'powerSeries' :
   imp.matches('^rangeGenerator\(0,.*\)\.lazyMap\({.*\*\$x') ? 'quadraticOrLinearSeries' :
-  imp.matches('^rangeGenerator\(0,.*\)\.lazyMap\({\d*}\)$') ? 'constantSeries' : imp;
+  imp.matches('^rangeGenerator\(0,.*\)\.lazyMap\({\d*}\)$') ? 'constantSeries' :
+  imp.matches('TruncatablePrimes')                          ? 'truncatablePrimes' :
+  imp.matches('pascalTriangleRow')                          ? 'pascalTriangleRow' :
+  imp;

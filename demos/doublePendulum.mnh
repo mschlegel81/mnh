@@ -32,7 +32,7 @@ private accel(state:NumericList(4))->accel@state;
 private quickRoot(F:Expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
 
 //*Returns first derivative in time for given state
-//@demo_for=numerics, simulation, animation, plain script
+//@demo_for=numerics, simulation, animation, plain script, future
 private accel(phi1,phi2,phi1dt,phi2dt)->
   begin
     [phi1dt,
