@@ -91,6 +91,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
         wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
         wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE);
         wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE);
+        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+EXECUTE_AFTER_ATTRIBUTE);
       end else begin
         isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
                   or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
@@ -139,13 +140,15 @@ PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourc
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: SynCompletionCodeCompletion value: ',value);
     writeln(stdErr,'        DEBUG:                       sourceValue: ',sourceValue);
-    writeln(stdErr,'        DEBUG:                                  : ',StringOfChar(' ',completionStart-1),'^');
     {$endif}
-    i:=completionStart+1;
-    while (i<=length(sourceValue)) and not(sourceValue[i] in delimiters) do inc(i);
-    SourceEnd  .x:=i              -1+SourceStart.x;
-    SourceStart.x:=completionStart-1+SourceStart.x;
-    wordsInEditor.clear;
+    if (length(value)>=1) and (value[1] in delimiters) then begin
+      for i:=length(sourceValue) downto 1 do
+        if copy(sourceValue,i,length(sourceValue)-i+1)=
+           copy(value      ,1,length(sourceValue)-i+1) then begin
+          value:=copy(sourceValue,1,i-1)+value;
+          exit;
+        end;
+    end;
   end;
 
 PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
