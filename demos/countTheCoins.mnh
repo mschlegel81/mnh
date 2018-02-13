@@ -1,6 +1,5 @@
 //@demo_for=memoization
-private memoized change(amount,set)->
-amount<=0 ? 1 : //there is only one way to give out 0 cents
+private memoized change(amount>0,set)->
 begin
   local restSet:=set.get(set<=amount); //only work with coins >= amount
   local coin:=head(restSet); //the current coin is the first (i.e. largest) of the remaining coins
@@ -9,6 +8,8 @@ begin
     ? (amount mod coin = 0 ? 1 : 0)
     : [amount div coin..0].each(i,change(amount-i*coin,tail(restSet)),+);
 end;
+
+private change(amount<=0,set)->1;
 
 //*Returns the number of ways <amount> can be represented as a sum of integers in <set>
 //@SuppressUnusedWarning

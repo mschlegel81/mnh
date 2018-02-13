@@ -127,7 +127,7 @@ FUNCTION toList_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
-        result:=newListLiteral(int1^.value);
+        result:=newListLiteral();
         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context);
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
           listResult^.append(valueToAppend,false);

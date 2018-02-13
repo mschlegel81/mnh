@@ -687,6 +687,7 @@ PROCEDURE T_editorMeta.closeEditorQuietly;
       ignoreDeleted:=false;
     end;
     editor.modified:=false;
+    getEditor^.activate;
   end;
 
 PROCEDURE T_editorMeta.closeEditorWithDialogs;
@@ -1157,6 +1158,8 @@ FUNCTION getEditor:P_editorMeta;
     if (i>=0) and (i<length(editorMetaData))
     then result:=editorMetaData[i]
     else result:=nil;
+
+    if result=nil then result:=editorMetaData[addEditorMetaForNewFile];
   end;
 
 FUNCTION addEditorMetaForNewFile:longint;
@@ -1169,6 +1172,7 @@ FUNCTION addEditorMetaForNewFile:longint;
     //i now is the index of the last visible editor meta +1
     if (i>=0) and (i<length(editorMetaData)) then begin
       editorMetaData[i]^.initForNewFile;
+      editorMetaData[i]^.activate;
       exit(i);
     end;
 
@@ -1180,6 +1184,7 @@ FUNCTION addEditorMetaForNewFile:longint;
     result:=i;
     editorMetaData[i]^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (editorMetaData[i]^.language=LANG_MNH);
     editorMetaData[i]^.editor.readonly                :=runnerModel.areEditorsLocked;
+    editorMetaData[i]^.activate;
   end;
 
 FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useCurrentPageAsFallback:boolean):longint;

@@ -1,4 +1,4 @@
-POWERS_OF_TEN:=10^[1..18];
+private POWERS_OF_TEN:=10^[1..18];
 isKaprekar(i in POWERS_OF_TEN)->false;
 isKaprekar(i:Int)->begin
   local i2:=i.sqr;

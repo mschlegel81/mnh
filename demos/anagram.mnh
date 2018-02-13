@@ -1,5 +1,6 @@
 USE inputs;
 //@demo_for=file processing, string processing, list processing
+//@AllowOnly=read file, http
 readDict(filename)->fileLines(filename).pEach(word,[join(word.chars.sort),word]);
 
 anagramsInDict(list)->list

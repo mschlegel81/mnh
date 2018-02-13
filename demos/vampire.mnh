@@ -10,6 +10,9 @@ private getFangs(i:Int)->begin
   [i div toTest,toTest].transpose.filter({$f.areFangs(iDigits)});
 end;
 
+//@SuppressUnusedWarning
+isVampire(i:Int)->(i.digits.size and 1)=0 AND getFangs(i).size>=1;
+
 private printVampire(i:Int)->begin
   local fangs:=getFangs(i);
   fangs==[]

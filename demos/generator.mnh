@@ -9,7 +9,7 @@ powerGen(power:Int)->{begin
   local i:=0;
 save;
   positiveOrVoid((i+=1)^p);
-end};
+end}.toGenerator;
 
 //*Generates a series of values which are square numbers but not cubic numbers
 squareButNotCubic->{begin
@@ -25,11 +25,10 @@ save;
   end);
   while(nextSquare>nextCube,nextCube:=cubes());
   nextSquare;
-end};
+end}.toGenerator;
 
 //*Extracts elements with given indexes from a generator
-extract(generator:Expression(0), indexes:IntList)->
-  [0..max(indexes)].each(i,generator())[indexes];
+extract(generator:IteratableExpression, indexes:IntList)->generator.head(indexes.max+1)[indexes];
 
 //*Solves the "Generator/Exponential" task from rosettacode.org (http://rosettacode.org/wiki/Generator/Exponential)
 main->squareButNotCubic.extract([20..29]).print;
