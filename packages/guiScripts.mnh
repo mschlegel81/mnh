@@ -1,5 +1,6 @@
 //@SuppressUnusedWarning
 //@insertScript=Pick file or directory
+//@SuppressUnusedParameterWarning
 pickFile(s:String)->ask('Pick file or directory').escape;
 
 //@SuppressUnusedWarning
@@ -44,6 +45,7 @@ editDiffPrint(editorFile:String)->printf("%s",editDiff(editorFile));
 
 //@SuppressUnusedWarning
 //@utility=find in all open files
+//@SuppressUnusedParameterWarning
 findInAll(editorFile:String)->begin
   local searchRegex:=ask('Please enter regex for search.');
   searchRegex<>''
@@ -60,6 +62,7 @@ openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent)['u
 //@utility=Compare folders (new editor)
 //@newEdit
 //@language=diff
+//@SuppressUnusedParameterWarning
 compareFolders(editorFile:String)->begin
   local folder1:=ask('Please enter folder 1').expandedFileName;
   local filesIn1:=folder1.allFiles.replaceOne(folder1,'');
@@ -74,6 +77,7 @@ end;
 
 //@SuppressUnusedWarning
 //@utility=List demos by category
+//@SuppressUnusedParameterWarning
 demosByCategory(dummyParameter)->
 allFiles(mnhInfo['configDir'],'*.mnh')
 .each(file,file.inspect['declares']

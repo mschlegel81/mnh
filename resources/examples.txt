@@ -570,10 +570,13 @@ isString('Test');
 
 isString(true);
 
+//#isExpression
 isExpression(::sin);
 
+//#isExpression
 isExpression(::sin,1);
 
+//#isExpression
 isExpression(::sin,2);
 
 digits(123);
@@ -820,24 +823,34 @@ validateRegex('\(3+.*');
 
 pi;
 
+//#isStatefulExpression
 isStatefulExpression(::sin);
 
+//#isStatefulExpression
 isStatefulExpression(future(::sin,[3]));
 
+//#isStatelessExpression
 isStatelessExpression(::sin);
 
+//#isStatelessExpression
 isStatelessExpression(future(::sin,[3]));
 
+//#isIteratable
 isIteratable(future(::sin,[3]));
 
+//#isIteratable
 isIteratable(primeGenerator);
 
+//#isIteratable
 isIteratable([1..10]);
 
+//#isIteratableExpression
 isIteratableExpression(primeGenerator);
 
+//#isIteratableExpression
 isIteratableExpression([1..10]);
 
+//#isIteratable
 begin
   resetRandom;
   local gen:={begin local last:=0; save; last+=random; end};
@@ -846,6 +859,7 @@ begin
   print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
 end;
 
+//#toGenerator
 toGenerator(::sqr);
 
 md5('Test input. Could be anything really.');

@@ -399,7 +399,10 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
             rewrite(handle);
             isOpen:=true;
             {$ifdef debugMode} writeln(stdErr,'        DEBUG: creating file ',cmdParam);{$endif}
-          end else isOpen:=false;
+          end else begin
+            isOpen:=false;
+            {$ifdef debugMode} writeln(stdErr,'        DEBUG: not(!) creating file ',cmdParam);{$endif}
+          end;
         end;
         exit(true);
       end;
@@ -426,13 +429,14 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
   {$include res_html_template.inc}
   VAR templateLine:string;
       templateFileHandle:textFile;
+      templateLineCount:longint=0;
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
     prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: processing documentation template');{$endif}
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: processing documentation template ',templateFileName);{$endif}
     if templateFileName<>'' then begin
       assign(templateFileHandle,templateFileName);
       reset(templateFileHandle);
@@ -443,6 +447,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
           beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));
           definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
         end;
+        inc(templateLineCount);
       end;
       close(templateFileHandle);
       settings.value^.htmlDocGeneratedForCodeHash:='';
@@ -452,10 +457,11 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));
         definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
       end;
+      inc(templateLineCount);
       settings.value^.htmlDocGeneratedForCodeHash:=CODE_HASH;
     end;
     with outFile do if isOpen then close(handle);
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready');{$endif}
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
   end;
 
 PROCEDURE finalizeFunctionDocMap;
