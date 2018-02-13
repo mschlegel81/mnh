@@ -416,6 +416,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       filesToOpen:=ipcModel.getFilesToOpen;
       if length(filesToOpen)=0 then exit(false);
       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpen,true);
+      Show;
       result:=true;
     end;
 
