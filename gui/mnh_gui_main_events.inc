@@ -96,7 +96,8 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    if runEvaluator      .evaluationRunning then runEvaluator      .haltEvaluation;
+    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
+    quick.adapters^.haltEvaluation;
     quick.task.ensureStop;
     storeEditorsToSettings;
   end;
@@ -378,6 +379,7 @@ PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
     runnerModel.haltEvaluation;
+    quick.adapters^.haltEvaluation;
     currentSnapshot:=nil;
   end;
 

@@ -1847,7 +1847,8 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
     end;
 
     oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*
-    [se_inputViaAsk,
+    [se_output,
+     se_inputViaAsk,
      se_sound,
      se_sleep,
      se_readPackageState,
