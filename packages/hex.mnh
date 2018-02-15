@@ -39,5 +39,3 @@ hexPlus(a:String,b:String)->begin
   (C.size and 1)=1 ? C|=0     : void;
   HEX_DIGITS[C.reverseList].join;
 end;
-
-

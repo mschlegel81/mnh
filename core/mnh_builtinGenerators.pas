@@ -2,6 +2,7 @@ UNIT mnh_builtinGenerators;
 INTERFACE
 USES sysutils,
      myGenerics,
+     myStringUtil,
      mnh_constants,
      mnh_basicTypes,
      mnh_litVar,
@@ -560,6 +561,115 @@ FUNCTION primeGenerator intFuncSignature;
     else result:=nil;
   end;
 
+TYPE
+  P_stringIterator=^T_stringIterator;
+  T_stringIterator=object(T_builtinGeneratorExpression)
+    private
+      charSet:array of char;
+      currIdx:array of longint;
+      minL,maxL:longint;
+      first:boolean;
+    public
+      CONSTRUCTOR create(CONST loc:T_tokenLocation; CONST chars:T_charSet; CONST minLength,maxLength:longint);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_stringIterator.create(CONST loc:T_tokenLocation; CONST chars:T_charSet; CONST minLength,maxLength:longint);
+  VAR i:longint;
+      c:char;
+  begin
+    inherited create(loc);
+    setLength(charSet,256);
+    i:=0;
+    for c in chars do begin
+      charSet[i]:=c;
+      inc(i);
+    end;
+    setLength(charSet,i);
+
+    minL:=minLength;
+    maxL:=maxLength;
+
+    first:=true;
+  end;
+
+FUNCTION T_stringIterator.toString(CONST lengthLimit:longint=maxLongint):string;
+  VAR i:longint;
+  begin
+    result:='stringIterator(['+escapeString(charSet[0],es_pickShortest);
+    for i:=1 to length(charSet)-1 do result+=','+escapeString(charSet[i],es_pickShortest);
+    result+='],'+intToStr(minL)+','+intToStr(maxL)+')';
+  end;
+
+FUNCTION T_stringIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal;
+  VAR s:string;
+      i:longint=0;
+      carry:boolean=true;
+  begin
+    if first then begin
+      setLength(currIdx,minL);
+      for i:=0 to minL-1 do currIdx[i]:=0;
+      first:=false;
+    end else begin
+      i:=0;
+      while (i<length(currIdx)) and carry do begin
+        inc(currIdx[i]);
+        if currIdx[i]>=length(charSet) then begin
+          currIdx[i]:=0;
+          inc(i);
+        end else carry:=false
+      end;
+      if carry then begin
+        setLength(currIdx,length(currIdx)+1);
+        currIdx[length(currIdx)-1]:=0;
+      end;
+    end;
+    if length(currIdx)>maxL then exit(newVoidLiteral);
+
+    setLength(s,length(currIdx));
+    for i:=0 to length(currIdx)-1 do s[length(s)-i]:=charSet[currIdx[i]];
+    result:=newStringLiteral(s);
+  end;
+
+DESTRUCTOR T_stringIterator.destroy;
+  begin
+    setLength(charSet,0);
+    setLength(currIdx,0);
+  end;
+
+FUNCTION stringIterator intFuncSignature;
+  VAR charSet:T_charSet;
+      iter:T_arrayOfLiteral;
+      c:P_literal;
+      s:string;
+      err:boolean=false;
+  begin
+    if (params<>nil) and (params^.size=3) and
+       (arg0^.literalType in [lt_stringList,lt_stringSet]) and
+       (arg1^.literalType=lt_int) and (int1^.value>=0) and
+       (arg2^.literalType=lt_int) and (int2^.value>=int1^.value) then begin
+      charSet:=[];
+      iter:=collection0^.iteratableList;
+      for c in iter do begin
+        s:=P_stringLiteral(c)^.value;
+        if length(s)=1
+        then include(charSet,s[1])
+        else begin
+          err:=true;
+          context.adapters^.raiseError('Charset must only contain strings of 1 byte.',tokenLocation);
+        end;
+      end;
+      if length(iter)=0 then begin
+        err:=true;
+        context.adapters^.raiseError('Charset must contain at least one string of 1 byte',tokenLocation);
+      end;
+      disposeLiteral(iter);
+      if err then result:=nil
+             else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.value,int2^.value));
+    end else result:=nil;
+  end;
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
@@ -569,5 +679,6 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
+  registerRule(MATH_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
   listProcessing.newIterator:=@newIterator;
 end.
