@@ -679,6 +679,6 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'lazyMap', @lazyMap_imp,ak_binary,'lazyMap(G:expression(0),mapFunc:expression(1));//Returns generator G mapped using mapFunc');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
-  registerRule(MATH_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
+  registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
   listProcessing.newIterator:=@newIterator;
 end.
