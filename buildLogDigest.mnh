@@ -1,10 +1,12 @@
-ignoredCodes:=[1002,1008,1021,1022,1023,3018,3019,3100,3104,9015,9022,4055,4056,5044];
+ignoredCodes:=[1002,1008,1021,1022,1023,3018,3019,3100,3104,9015,9022,4055,4056,5044,5024];
 ignoredPatterns:=['dev/3rd_party',
                   '/igSrc/ig_.*\(5024\).*"(ix|iy|c)"',
                   '/gui/.*\(5024\)',
                   '/core/.*\(5024\).*"(location|context)"',
                   '/core/mnh_func_defines\.inc.*\(5024\).*"tokenLocation"',
                   '/core/mnh_litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
+                  '/core/mnh_packages.*\(5036\).*Local variable \"clauseEnd\" does not seem to be initialized',
+                  '/core/mnh_funcs_list.*\(5036\).*Local variable "aggregator" does not seem to be initialized',
                   '/core/mnh_func_defines\.inc.*\(5024\).*"params"',
                   '/gui/mnh_evalThread\.pas.*\(5024\).*"params"',
                   '/gui/ipcModel\.pas.*\(5024\).*"parameters"',

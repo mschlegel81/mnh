@@ -197,7 +197,11 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
     end;
     if x<>nil then disposeLiteral(x);
 
-    while firstToAggregate<>nil do if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
+    while firstToAggregate<>nil do
+    if not(canAggregate)
+    then environment.taskQueue^
+         .activeDeqeue(dequeueContext^);
+
     dispose(environment.values,destroy);
     with recycling do while fill>0 do begin
       dec(fill);
