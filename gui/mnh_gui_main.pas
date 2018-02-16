@@ -52,7 +52,7 @@ TYPE
     FindDialog:                TFindDialog;
     callStackGroupBox,
     currentExpressionGroupBox,
-    OutlineGroupBox:                 TGroupBox;
+    outlineGroupBox:                 TGroupBox;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
