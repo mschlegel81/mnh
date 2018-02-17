@@ -1,0 +1,72 @@
+USE '../demos/inputs/inputs.mnh';
+
+private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
+//@SuppressUnusedWarning
+allDemos:=files(demosRoot&'*.mnh').sort;
+
+plotters:=demosRoot&[
+'barnsleyFern.mnh',
+'fractalPlant.mnh',
+'kochCurve.mnh',
+'rotatingCube.mnh',
+'sierpinskiCurve.mnh',
+'travellingSalesmanProblem.mnh',
+'turtleGfx.mnh',
+'heart.mnh'];
+
+//@SuppressUnusedWarning
+testParameters((demosRoot&'24.mnh'             ))->['demo'];
+testParameters((demosRoot&'aliquotSequence.mnh'))->[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488].map(::toString);
+testParameters((demosRoot&'asciiCalendar.mnh'  ))->['1966'];
+testParameters((demosRoot&'clock.mnh'          ))->['once'];
+testParameters((demosRoot&'combinations.mnh'   ))->['3','5'];
+testParameters((demosRoot&'countInFactors.mnh' ))->['25'];
+testParameters((demosRoot&'diff.mnh'           ))->[dict,editedDict];
+testParameters((demosRoot&'emptyFolders.mnh'   ))->['.'];
+testParameters((demosRoot&'fannkuch.mnh'       ))->['7'];
+testParameters((demosRoot&'findDuplicates.mnh' ))->['.'];
+testParameters((demosRoot&'gcd.mnh'            ))->['1238124','1236'];
+testParameters((demosRoot&'gol.mnh'            ))->['40','40','9'];
+testParameters((demosRoot&'josephus.mnh'       ))->['41','3','1'];
+testParameters((demosRoot&'knightsTour.mnh'    ))->['8','0','0'];
+testParameters((demosRoot&'oeis.mnh'           ))->['gen','A061358','100'];
+testParameters((demosRoot&'pascal.mnh'         ))->['12'];
+testParameters((demosRoot&'pangrams.mnh'       ))->['check','The quick brown fox jumps over the lazy dog.'];
+testParameters((demosRoot&'randomWords.mnh'    ))->["16"];
+testParameters((demosRoot&'shannonEntropy.mnh' ))->["1223334444"];
+testParameters((demosRoot&'sierpinskiTriangle.mnh'))->["5"];
+testParameters(scriptFileName:String)->[];
+
+skipFile(scriptFile)->skipFile(scriptFile,mnhInfo['isFullVersion']);
+
+private skipFile((demosRoot&'3body.mnh'              ),fullVersion)->true;
+private skipFile((demosRoot&'htmlFunctionPlotter.mnh'),fullVersion)->true;
+private skipFile((demosRoot&'simpleServer.mnh'       ),fullVersion)->true;
+private skipFile((demosRoot&'helloWorldHttp.mnh'     ),fullVersion)->true;
+private skipFile((demosRoot&'ipcDatastore.mnh'       ),fullVersion)->true;
+private skipFile((demosRoot&'doublePendulum.mnh'     ),fullVersion)->true;
+private skipFile((demosRoot&'galtonBox.mnh'          ),fullVersion)->true;
+private skipFile((demosRoot&'oeis_sequences.mnh'     ),fullVersion)->true;
+private skipFile((demosRoot&'oeis_server.mnh'        ),fullVersion)->true;
+private skipFile((demosRoot&'perfectCircles.mnh'     ),fullVersion)->true;
+private skipFile((demosRoot&'rollingCircle.mnh'      ),fullVersion)->true;
+private skipFile(file in plotters                     ,false      )->true;
+private skipFile(scriptFileName:String                ,fullVersion)->false;
+
+//@SuppressUnusedWarning
+testsToExecuteForFlavour(flavourString)->begin
+  local fullVersion:=copy(flavourString,0,1)='F';
+  allDemos.filter({not(skipFile($script,fullVersion))});
+end;
+
+//@SuppressUnusedWarning
+isSmokeTest((demosRoot&'task.mnh'          ))->true;
+isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
+isSmokeTest((demosRoot&'clock.mnh'         ))->true;
+isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
+isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
+isSmokeTest(scriptFileName:String)->false;
+
+//@SuppressUnusedWarning
+checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]);
+checkAfterTest(file)->void;

@@ -1,4 +1,4 @@
-USE testLog,mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis_server.mnh';
+USE mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis_server.mnh',testExpectation;
 //@SuppressUnusedWarning=hook
 initHook:=begin
   startIpcServer(ipcId,::serve);
@@ -114,7 +114,7 @@ private buildExe(B:BuildConfig)->
 testExe(B:BuildConfig,...)->
   not(B.canBuild) OR B.buildBlindly
   ? void
-  : (B[6] ? void : B.buildExe) orElse (...==[]) and testAlreadyPassed(B[2]) or needBuild(B)
+  : (B[6] ? void : B.buildExe) orElse (...==[]) and allTestsPassed(B[1],ensureCodeHash) or needBuild(B)
     ? void
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['regTest/regTest.mnh']|...)=0
@@ -129,7 +129,8 @@ private showStatus->
                  B[2],
                  canBuild(B) ? needBuild(B) ? B[2].codeVersion : 'o.k.' : '?' ,
                  canBuild(B) ? B[2].compileTime : '?',
-                 (canBuild(B) ? timeForTest(B[2]) : timeForTest(B[1],ensureCodeHash)).roundToRelevantDigits(4) orElse '.']))).formatTable.join("\n").print
+                 (canBuild(B) ? timeForFullTest(B[1],B[2].codeVersion)
+                              : timeForFullTest(B[1],ensureCodeHash  )).roundToRelevantDigits(4) orElse '.']))).formatTable.join("\n").print
   orElse print;
 
 private cleanup->begin

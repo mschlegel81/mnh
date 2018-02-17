@@ -26,6 +26,7 @@ versions/*.7z
 buildLogDigest.datastore0
 mnh_prof
 versions/*.zip
+core/build_number.inc
 mnhi
 mnhi_debug
-/core/build_number.inc
+/regTest/testExpectation.datastore1

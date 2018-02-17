@@ -1,0 +1,130 @@
+USE guiScripts,test_config;
+private plain datastore expectations:=[].toMap;
+private datastore runTimes:=[].toMap;
+
+//@SuppressUnusedWarning
+memoized runTimesAsFlatList->runTimes.each(e0,e0[1].each(e1,e1[1].each(e2,[e0[0],e1[0],e2[1]]),|),|);
+
+private flavourDependentScripts:=
+  ['accumulatorFactory',
+   'continuedFractions',
+   'dice7fromDice5',
+   'diff',
+   'grep',
+   'cauchy',
+   'jaro',
+   'numInt',
+   'opTest',
+   'numDiff',
+   'montyHall',
+   'rk4',
+   'root',
+   'shannonEntropy',
+   'thieleInterpolation',
+   'vanDerCorput',
+   'travellingSalesmanProblem',
+   'wordCount',
+   'examples_from_file'].union(plotters.map(::extractFileNameOnly));
+private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
+
+//@SuppressUnusedWarning
+private plausibilizeExpectationsOnStartup:=
+  expectations.each(entry,
+    begin
+      local script:=entry[0];
+      local expect:=entry[1];
+      isFlavourDependent(script) AND not(expect.isMap)
+      ? expectations[script]:=void
+      : not(isFlavourDependent(script)) AND expect.isMap
+      ? begin
+          expect:=expect.each(e,e[1],head);
+          expectations[script]:=expect;
+        end
+      : void;
+    end);
+
+private TEST_FAILURE_LOG:=myPath.extractFileDirectory&'/testFailures.log';
+private myFlavour    :=mnhInfo['flavour'];
+private myCodeVersion:=mnhInfo['codeVersion'];
+
+logSmokeTestRunTime(script:String,runTime:Numeric)->begin
+  runTimes[script          ].isVoid ? runTimes[script          ]:=[].toMap : void;
+  runTimes[script,myFlavour].isVoid ? runTimes[script,myFlavour]:=[]       : void;
+  runTimes[script,myFlavour]|=[[myCodeVersion,runTime]];
+  true;
+end;
+
+//@SuppressUnusedWarning
+isTestAlreadyPassed(script)->isTestAlreadyPassed(script,myFlavour,myCodeVersion);
+private isTestAlreadyPassed(script,flavour,codeVersion)->codeVersion in (runTimes[script,flavour] orElse []).getInner(0);
+
+
+private mutable failedTests:=[];
+//@SuppressUnusedWarning
+getFailedTests->failedTests;
+
+synchronized checkExpectation(script:String,testRunOutput:StringList,runTime:Numeric)->begin
+  local resultOk:=checkExpectation(script,testRunOutput);
+  resultOk
+  ? logSmokeTestRunTime(script,runTime)
+  : void;
+  resultOk;
+end;
+
+//@SuppressUnusedWarning
+checkExpectation(script:String,testRunOutput:StringList)->begin
+  local expectation:=expectations[script,isFlavourDependent(script) ? myFlavour : void];
+  expectation.isVoid
+  ? isFlavourDependent(script)
+    ? begin
+        expectations[script].isVoid
+        ? expectations[script]:=[].toMap
+        : void;
+        expectations[script,myFlavour]:=testRunOutput;
+        note('Logged new test run expectation for ',script,'/',myFlavour);
+        true;
+      end
+    : begin
+        expectations[script]:=testRunOutput;
+        note('Logged new test run expectation for ',script);
+        true;
+      end
+  : expectation==testRunOutput
+    ? true
+    : begin
+        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,testRunOutput,2)|repeat('/',100));
+        failedTests|=script;
+        false;
+      end;
+end;
+
+//@SuppressUnusedWarning
+allTestsPassed(flavour:String,codeHash:String)->
+  testsToExecuteForFlavour(flavour).each(t,extractFileNameOnly(t).isTestAlreadyPassed(flavour,codeHash),AND);
+
+//@SuppressUnusedWarning
+timeForFullTest(flavour:String,codeHash:String)->begin
+  local groupedTimes:=runTimes.getAll(testsToExecuteForFlavour(flavour).map(::extractFileNameOnly))
+                              .map({($x[flavour] orElse []).filter({$z[0]==codeHash}).getInner(1)});
+  groupedTimes.each(t,t.size>=1,AND)
+  ? groupedTimes.each(t,t.agg(+)/t.size,+)
+  : void;
+end;
+
+//*Remove/reset expectation for the given script and flavour
+main('remove',script,flavour)->
+  isVoid(expectations[script])
+  ? print('No expecation logged for ',script)
+  : isFlavourDependent(script)
+    ? begin
+        isVoid(expectations[script,flavour])
+        ? print('No expecation logged for ',script,'/',flavour)
+        : expectations[script,flavour]:=print('Expectation for ',script,'/',flavour,' reset');
+      end
+    : expectations[script]:=print('Expectation for ',script,' reset');
+
+//*Remove/reset expectation for the given script (and all flavours)
+main('remove',script)->
+  isVoid(expectations[script])
+  ? print('No expecation logged for ',script)
+  : expectations[script]:=print('Expectation for ',script,' reset');

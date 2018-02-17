@@ -797,8 +797,10 @@ PROCEDURE T_taskQueue.activeDeqeue(VAR context: T_threadContext);
   begin
     task:=dequeue;
     if task<>nil then begin
-      task^.evaluate(context);
-      if task^.isVolatile then dispose(task,destroy);
+      if task^.isVolatile then begin
+        task^.evaluate(context);
+        dispose(task,destroy);
+      end else task^.evaluate(context);
     end;
   end;
 

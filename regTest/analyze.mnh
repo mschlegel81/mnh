@@ -1,4 +1,4 @@
-USE GUI, mnhUtil;
+USE GUI, mnhUtil,testExpectation;
 
 private avg([])->Nan;
 private avg(L:NumericList)->L.agg(+)/L.size;
@@ -14,11 +14,11 @@ private averageAndRelativeSigma(X)->begin
   [avg,sqrt(variance)/avg];
 end;
 
-private doAnalysis(rt:List)->begin
+private doAnalysis()->begin
   ([['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios']]|
-  rt.getInner(0).unique.pEach(testCase,
+  runTimesAsFlatList.getInner(0).unique.pEach(testCase,
     begin
-      local debugSamples:=rt[rt.getInner(0)=testCase];
+      local debugSamples:=runTimesAsFlatList[runTimesAsFlatList.getInner(0)=testCase];
       local debugMask:=debugSamples.getInner(1).matches('^[F|L]D');
             debugSamples:=debugSamples.getInner(2);
       local optSamples  :=debugSamples[not(debugMask)];
@@ -34,7 +34,7 @@ private doAnalysis(rt:List)->begin
 
   [true,false].each(debugVersions,
   begin
-    local filteredTests:=rt[rt.getInner(1).matches('^[F|L]I?D')=debugVersions];
+    local filteredTests:=runTimesAsFlatList[runTimesAsFlatList.getInner(1).matches('^[F|L]I?D')=debugVersions];
     filteredTests.size=0 ? void :
     begin
       print("=====================================================================\n",
@@ -155,27 +155,7 @@ private compareFlavours(data,flavour1:String,flavour2:String)->begin
                      'Delta.avg.'  ,'Delta.last']]|tableData,'Flavour comparison',true);
 end;
 
-private loadAndFilterUnplausible(filename)->
-  (filename.fileExists
-   ? filename.fileContents.deserialize
-   : begin
-       local result:=readDatastore('regTest.datastore0')[1];
-       filename.writeFile(result.serialize);
-       result;
-     end).pEach(i,0<=i[2]<=500 ? i : void);
-
-main('merge',fileA,fileB<>fileA,output)->begin
-  fileExists(fileA) ? void : fail(fileA,' cannot be found');
-  fileExists(fileB) ? void : fail(fileB,' cannot be found');
-  output.writeFile(serialize(
-  print('Reading ',fileA,' and applying suffix "_A"')|
-  fileA.fileContents.deserialize.pEach(x,[x[0],x[1]&'_A',x[2]])|
-  print('Reading ',fileB,' and applying suffix "_B"')|
-  fileB.fileContents.deserialize.pEach(x,[x[0],x[1]&'_B',x[2]])|
-  print('Writing ',output)));
-end;
-
-main(inputFile:String)->doAnalysis(inputFile.loadAndFilterUnplausible);
+main()->doAnalysis();
 bar(factor,q)->begin
   local a:=round(factor*q[0]);
   local b:=round(factor*q[1]);
@@ -185,26 +165,24 @@ bar(factor,q)->begin
   (b<c ? repeat('=',c-b-1)&'>' : '');
 end;
 
-main(inputFile:String,testCaseOrFlavour:String)->begin
-  local data:=inputFile.loadAndFilterUnplausible;
-  testCaseOrFlavour in data.getInner(0)
-  ? analyzeCase(data,testCaseOrFlavour)
-  : testCaseOrFlavour in data.getInner(1)
-    ? analyzeFlavour(data,testCaseOrFlavour)
+main(testCaseOrFlavour:String)->begin
+  testCaseOrFlavour in runTimesAsFlatList.getInner(0)
+  ? analyzeCase(runTimesAsFlatList,testCaseOrFlavour)
+  : testCaseOrFlavour in runTimesAsFlatList.getInner(1)
+    ? analyzeFlavour(runTimesAsFlatList,testCaseOrFlavour)
     : begin
         print('Input is neither test case nor flavor');
-        print('Flavours: ',data.getInner(1).unique.join(' '));
-        print('Cases: ',data.getInner(0).unique.join(' '));
+        print('Flavours: ',runTimesAsFlatList.getInner(1).unique.join(' '));
+        print('Cases: ',runTimesAsFlatList.getInner(0).unique.join(' '));
       end;
 end;
 
-main(inputFile:String,flavour1:String,flavour2:String)->begin
-  local data:=inputFile.loadAndFilterUnplausible;
-  flavour1 in data.getInner(1) AND
-  flavour2 in data.getInner(1)
-  ? compareFlavours(data,flavour1,flavour2)
+main(flavour1:String,flavour2:String)->begin
+  flavour1 in runTimesAsFlatList.getInner(1) AND
+  flavour2 in runTimesAsFlatList.getInner(1)
+  ? compareFlavours(runTimesAsFlatList,flavour1,flavour2)
   : begin
       print('Input must be two flavours to compare');
-      print('Flavours: ',data.getInner(1).unique.join(' '));
+      print('Flavours: ',runTimesAsFlatList.getInner(1).unique.join(' '));
     end;
 end;
