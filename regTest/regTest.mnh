@@ -1,101 +1,37 @@
-USE '../demos/inputs/inputs.mnh',
-    testLog;
-
-private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
-memoized allDemos:=files(demosRoot&'*.mnh').sort;
-datastore runTimes;
-
-plotters:=demosRoot&[
-'barnsleyFern.mnh',
-'fractalPlant.mnh',
-'kochCurve.mnh',
-'rotatingCube.mnh',
-'sierpinskiCurve.mnh',
-'travellingSalesmanProblem.mnh',
-'turtleGfx.mnh',
-'heart.mnh'];
-
-testParameters((demosRoot&'24.mnh'             ))->['demo'];
-testParameters((demosRoot&'aliquotSequence.mnh'))->[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488].map(::toString);
-testParameters((demosRoot&'asciiCalendar.mnh'  ))->['1966'];
-testParameters((demosRoot&'clock.mnh'          ))->['once'];
-testParameters((demosRoot&'combinations.mnh'   ))->['3','5'];
-testParameters((demosRoot&'countInFactors.mnh' ))->['25'];
-testParameters((demosRoot&'diff.mnh'           ))->[dict,editedDict];
-testParameters((demosRoot&'emptyFolders.mnh'   ))->['.'];
-testParameters((demosRoot&'fannkuch.mnh'       ))->['7'];
-testParameters((demosRoot&'findDuplicates.mnh' ))->['.'];
-testParameters((demosRoot&'gcd.mnh'            ))->['1238124','1236'];
-testParameters((demosRoot&'gol.mnh'            ))->['40','40','9'];
-testParameters((demosRoot&'josephus.mnh'       ))->['41','3','1'];
-testParameters((demosRoot&'knightsTour.mnh'    ))->['8','0','0'];
-testParameters((demosRoot&'oeis.mnh'           ))->['gen','A061358','100'];
-testParameters((demosRoot&'pascal.mnh'         ))->['12'];
-testParameters((demosRoot&'pangrams.mnh'       ))->['check','The quick brown fox jumps over the lazy dog.'];
-testParameters((demosRoot&'randomWords.mnh'    ))->["16"];
-testParameters((demosRoot&'shannonEntropy.mnh' ))->["1223334444"];
-testParameters((demosRoot&'sierpinskiTriangle.mnh'))->["5"];
-testParameters(scriptFileName:String)->[];
-
-private skipFile((demosRoot&'3body.mnh'              ))->true;
-private skipFile((demosRoot&'htmlFunctionPlotter.mnh'))->true;
-private skipFile((demosRoot&'simpleServer.mnh'       ))->true;
-private skipFile((demosRoot&'helloWorldHttp.mnh'     ))->true;
-private skipFile((demosRoot&'ipcDatastore.mnh'       ))->true;
-private skipFile((demosRoot&'doublePendulum.mnh'     ))->true;
-private skipFile((demosRoot&'galtonBox.mnh'          ))->true;
-private skipFile((demosRoot&'oeis_sequences.mnh'     ))->true;
-private skipFile((demosRoot&'oeis_server.mnh'        ))->true;
-private skipFile((demosRoot&'perfectCircles.mnh'     ))->true;
-private skipFile((demosRoot&'rollingCircle.mnh'      ))->true;
-private skipFile(file in plotters)->not(mnhInfo['isFullVersion']);
-private skipFile(scriptFileName:String)->false;
-
-private isSmokeTest((demosRoot&'task.mnh'          ))->true;
-private isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
-private isSmokeTest((demosRoot&'clock.mnh'         ))->true;
-private isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
-private isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
-private isSmokeTest(scriptFileName:String)->false;
-
-private printAndReturn(...)->printDirect@("\rExecuting: "|...| repeat(' ',20)) orElse join('***** '|...|' *****');
-private checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]);
-private checkAfterTest(file)->void;
+USE testExpectation,test_config;
 
 testFile(scriptFileName:String,doLog:Boolean)->
-scriptFileName.skipFile
-? note('Not testing ',scriptFileName)
-: begin
-    mnhInfo['isFullVersion']
-    ? "plot.resetOptions".toExpression()()
-    : void;
-
+ begin
+    printDirect("\r",scriptFileName,repeat(' ',20));
     local logName:=extractFileNameOnly(scriptFileName);
-    local output:=printAndReturn(logName);
     local startTime:=time;
-    output|=runScript(scriptFileName,testParameters(scriptFileName),true)
-            .filter({$e.head=='printline' OR $e.head.matches('[E|e]rror')})
-            .getInner(2)
-            .split("\n")
-            .flatten;
-    local scriptTime:=time-startTime;
-    output|=checkAfterTest(scriptFileName);
-    doLog ? runTimes|=[[logName,mnhInfo['flavour'],scriptTime]] : void;
-    note('Time for ',logName,': ',scriptTime);
+    local output:=runScript(scriptFileName,testParameters(scriptFileName),true)
+          .filter({$e.head=='printline' OR $e.head.matches('[E|e]rror')})
+          .getInner(2)
+          .split("\n")
+          .flatten|checkAfterTest(scriptFileName);
+
     scriptFileName.isSmokeTest
-    ? void
-    : output;
+    ? doLog
+      ? logSmokeTestRunTime(logName,time-startTime)
+      : void
+    : checkExpectation(
+        logName,
+        output,
+        doLog ? time-startTime : void);
   end;
 
-private printExecute([])->void;
-private printExecute(code:StringList)->begin
+private sbExecute([])->void;
+private sbExecute(code:StringList)->begin
   local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
   out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;
 end;
 
+private EXAMPLES_LOG_NAME:='examples_from_file';
 private executeExamples(doLog:Boolean)->begin
+  printDirect("\r",EXAMPLES_LOG_NAME,repeat(' ',20));
   resetRandom;
-  local output:=printAndReturn('examples from file');
+  local output:=[];
   local collectOut:=true;
   local codeToExecute:=[];
   local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
@@ -104,57 +40,43 @@ private executeExamples(doLog:Boolean)->begin
     line==''
     ? begin
         collectOut
-        ? output|=printExecute(codeToExecute)
-        :         printExecute(codeToExecute);
+        ? output|=sbExecute(codeToExecute)
+        : void;
         codeToExecute:=[];
       end
     : line.matches('==END REG TEST==')
       ? collectOut:=false
       : codeToExecute|=line);
-  printExecute(codeToExecute);
-  local scriptTime:=time-startTime;
-  doLog ? runTimes|=[["examples/onlineHelp",mnhInfo['flavour'],scriptTime]] : void;
-  note('Time for examples/onlineHelp: ',scriptTime);
-  output;
+  checkExpectation(
+        EXAMPLES_LOG_NAME,
+        output,
+        doLog ? time-startTime : void);
 end;
 
-testAll(logging:Boolean)->
-  validateCollectedOutput(logging,
-                          allDemos.map({testFile($0,logging)}).flatten |
-                          executeExamples(logging));
+//*Runs tests and returns true if no test failed
+testAll(logging:Boolean, forceRun:Boolean)->begin
+  local toRun:=allDemos
+           .filter({not(skipFile($f))})
+           .filter({forceRun OR not(isTestAlreadyPassed(extractFileNameOnly($script)))});
+  local allPassed:=
+  (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR not(isTestAlreadyPassed(EXAMPLES_LOG_NAME))) ? executeExamples(logging) : void)).agg(AND);
+  printDirect("\r"," ".repeat(50),"\r");
+  printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
+    allDemos.size+1,
+    allDemos.size+1-toRun.size-ord(runExamples),
+                    toRun.size+ord(runExamples),
+    getFailedTests.size);
+  allPassed ? print("All tests ok     ",repeat(' ',50)) orElse true
+            : print("Some tests failed:",repeat(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse false;
+end;
 
-main->testAlreadyPassed
-      ? print('Tests skipped. They have already been passed.')
-      : testAll(true);
+main->testAll(true,false);
 
 //*Test again, even if all tests have been passed
-main('retest')->testAll(true);
+main('retest')->testAll(true,true);
 
 //*Test again, without logging passed tests
-main('noLog')->testAll(false);
-
-//*Export datastore
-main('export',filename:String)->writeFile(filename,runTimes.serialize);
+main('noLog')->testAll(false,true);
 
 //*Display info on test cases
 main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKIP' : '',$0.testParameters.join(" ")].join("\t")}).join("\n").print;
-
-//*Limit number of samples to count per flavour/testcase retaining the newest samples
-main('limit',count:String)->begin
-  local limit:=count.softCast;
-  limit.isInt AND limit>1
-  ? begin
-      print('Samples @pre : ',runTimes.size);
-      print('Filtering samples to be retained (per flavour and testcase)');
-      local indexLists:=runTimes.pEach(sample,sample.leading|index).group(runTimes.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}).getInner(2).each(i,i.isList ? i : [i]);
-      indexLists.each(list,list.size>limit,OR) //update only if at least one list is too long
-      ? begin
-          local indexesToRetain:=indexLists.each(l,l.trailing(limit)).flatten;
-          printf('Dropping %{$1-$0}s of %{$1}s entries',indexesToRetain.size,runTimes.size);
-          runTimes:=runTimes.get(indexesToRetain);
-        end
-      : print('Nothing to be done. Longest sample row has ',indexLists.each(list,list.size,max),' elements');
-      print('Samples @post: ',runTimes.size);
-    end
-  : fail("count must be an integer >=1");
-end;
