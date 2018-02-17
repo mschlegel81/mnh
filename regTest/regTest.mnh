@@ -27,7 +27,6 @@ private sbExecute(code:StringList)->begin
   out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;
 end;
 
-private EXAMPLES_LOG_NAME:='examples_from_file';
 private executeExamples(doLog:Boolean)->begin
   printDirect("\r",EXAMPLES_LOG_NAME,repeat(' ',20));
   resetRandom;

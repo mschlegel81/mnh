@@ -24,7 +24,7 @@ private flavourDependentScripts:=
    'vanDerCorput',
    'travellingSalesmanProblem',
    'wordCount',
-   'examples_from_file'].union(plotters.map(::extractFileNameOnly));
+   EXAMPLES_LOG_NAME].union(plotters.map(::extractFileNameOnly));
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
 
 //@SuppressUnusedWarning
@@ -57,7 +57,6 @@ end;
 //@SuppressUnusedWarning
 isTestAlreadyPassed(script)->isTestAlreadyPassed(script,myFlavour,myCodeVersion);
 private isTestAlreadyPassed(script,flavour,codeVersion)->codeVersion in (runTimes[script,flavour] orElse []).getInner(0);
-
 
 private mutable failedTests:=[];
 //@SuppressUnusedWarning
@@ -98,13 +97,15 @@ checkExpectation(script:String,testRunOutput:StringList)->begin
       end;
 end;
 
+private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|testsToExecuteForFlavour(flavour).extractFileNameOnly;
+
 //@SuppressUnusedWarning
 allTestsPassed(flavour:String,codeHash:String)->
-  testsToExecuteForFlavour(flavour).each(t,extractFileNameOnly(t).isTestAlreadyPassed(flavour,codeHash),AND);
+  expectationNamesForFlavour(flavour).each(t,t.isTestAlreadyPassed(flavour,codeHash),AND);
 
 //@SuppressUnusedWarning
 timeForFullTest(flavour:String,codeHash:String)->begin
-  local groupedTimes:=runTimes.getAll(testsToExecuteForFlavour(flavour).map(::extractFileNameOnly))
+  local groupedTimes:=runTimes.getAll(expectationNamesForFlavour(flavour))
                               .map({($x[flavour] orElse []).filter({$z[0]==codeHash}).getInner(1)});
   groupedTimes.each(t,t.size>=1,AND)
   ? groupedTimes.each(t,t.agg(+)/t.size,+)
