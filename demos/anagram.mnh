@@ -1,15 +1,15 @@
 USE inputs;
 //@demo_for=file processing, string processing, list processing
 //@AllowOnly=read file, http
-readDict(filename)->fileLines(filename).pEach(word,[join(word.chars.sort),word]);
+readDict(filename)->fileLineIterator(filename).pEach(word,begin
+  local l:=word.lower; [join(l.chars.sort),l]; end);
 
 anagramsInDict(list)->list
                      .group(0)
-                     .pEach(gr,size(gr)<=1 ? void : gr.getInner(1))
-                     .sort;
+                     .pEach(gr,size(gr)<=1 ? void : gr.getInner(1));
 
 //*Finds anagrams in unixdict.txt
 main->main(inputs.dict);
 
 //*Finds anagrams in a custom dictionary, sort by anagrams per group and print them out (one line per group)
-main(filename)->printf("%{join($0,', ')}s",readDict(filename).anagramsInDict.trailing(10));
+main(filename)->printf("%{join($0,', ')}s",readDict(filename).anagramsInDict.sort.trailing(10));

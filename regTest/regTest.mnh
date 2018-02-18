@@ -65,8 +65,8 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
     allDemos.size+1-toRun.size-ord(runExamples),
                     toRun.size+ord(runExamples),
     getFailedTests.size);
-  allPassed ? print("All tests ok     ",repeat(' ',50)) orElse true
-            : print("Some tests failed:",repeat(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse false;
+  allPassed ? print("All tests ok     ",repeat(' ',50))
+            : print("Some tests failed:",repeat(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse setExitCode(99);
 end;
 
 main->testAll(true,false);
