@@ -7,20 +7,16 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ButtonPanel;
 TYPE
-
-  { TcloseDialogForm }
-
   TcloseDialogForm = class(TForm)
     ButtonPanel1: TButtonPanel;
     PROCEDURE FormShow(Sender: TObject);
   private
-    { private declarations }
   public
-    { public declarations }
     FUNCTION showOnLoad     (CONST fileName:string): integer;
     FUNCTION showOnClose    (CONST fileName:string): integer;
     FUNCTION showOnDeleted  (CONST fileName:string): integer;
     FUNCTION showOnOutOfSync(CONST fileName:string): integer;
+    FUNCTION showOnQuitWhileEvaluating:integer;
   end;
 
 FUNCTION closeDialogForm:TcloseDialogForm;
@@ -35,9 +31,6 @@ FUNCTION closeDialogForm:TcloseDialogForm;
   end;
 
 {$R *.lfm}
-
-{ TcloseDialogForm }
-
 PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
   begin
   end;
@@ -75,6 +68,15 @@ FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName:string): integer;
     ButtonPanel1.OKButton.caption := 'Close';
     ButtonPanel1.CancelButton.caption := 'Ignore changes';
     ButtonPanel1.CloseButton.caption := 'Overwrite';
+    result:=ShowModal;
+  end;
+
+FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating:integer;
+  begin
+    caption:='Still evaluating...';
+    ButtonPanel1.OKButton.caption:= 'Quit after end of evaluation';
+    ButtonPanel1.CancelButton.caption:='Don''t quit';
+    ButtonPanel1.CloseButton.caption:= 'Cancel evaluation and quit';
     result:=ShowModal;
   end;
 
