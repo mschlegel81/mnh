@@ -135,11 +135,11 @@ end;
 //*Remove/reset expectation for the given script and flavour
 main('remove',script,flavour)->
   isVoid(expectations[script])
-  ? print('No expecation logged for ',script)
+  ? print('No expectation logged for ',script)
   : isFlavourDependent(script)
     ? begin
         isVoid(expectations[script,flavour])
-        ? print('No expecation logged for ',script,'/',flavour)
+        ? print('No expectation logged for ',script,'/',flavour)
         : expectations[script,flavour]:=print('Expectation for ',script,'/',flavour,' reset');
       end
     : expectations[script]:=print('Expectation for ',script,' reset');
@@ -147,7 +147,7 @@ main('remove',script,flavour)->
 //*Remove/reset expectation for the given script (and all flavours)
 main('remove',script)->
   isVoid(expectations[script])
-  ? print('No expecation logged for ',script)
+  ? print('No expectation logged for ',script)
   : expectations[script]:=print('Expectation for ',script,' reset');
 
 main->begin
@@ -166,7 +166,7 @@ main->begin
        ? [case,
           'flavour dependent',
           expectations[case].isVoid
-          ? 'expectation missing
+          ? 'expectation missing'
           : begin
               local missingFor:=flavoursByTest[case].minus(expectations[case].getInner(0));
               missingFor.size=0
