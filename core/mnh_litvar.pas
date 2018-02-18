@@ -3237,7 +3237,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
       //writeln(stdErr,'        DEBUG:               ACC=',accessor^.toString(50));
       //writeln(stdErr,'        DEBUG:               RHS=',RHS^.toString(50));
       //{$endif}
-      if accessor^.size=0 then case mutation of
+      if accessor^.size=0 then case nestedMutation of
         tt_mut_nested_assign  : exit(assign            (toMutate,                   RHS));
         tt_mut_nestedPlus     : exit(simpleMutate      (toMutate,tt_operatorPlus   ,RHS));
         tt_mut_nestedMinus    : exit(simpleMutate      (toMutate,tt_operatorMinus  ,RHS));
