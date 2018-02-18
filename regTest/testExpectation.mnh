@@ -80,12 +80,12 @@ checkExpectation(script:String,testRunOutput:StringList)->begin
         ? expectations[script]:=[].toMap
         : void;
         expectations[script,myFlavour]:=testRunOutput;
-        note('Logged new test run expectation for ',script,'/',myFlavour);
+        print('Logged new test run expectation for ',script,'/',myFlavour);
         true;
       end
     : begin
         expectations[script]:=testRunOutput;
-        note('Logged new test run expectation for ',script);
+        print('Logged new test run expectation for ',script);
         true;
       end
   : expectation==testRunOutput
