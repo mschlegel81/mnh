@@ -33,14 +33,22 @@ private plausibilizeExpectationsOnStartup:=
     begin
       local script:=entry[0];
       local expect:=entry[1];
-      isFlavourDependent(script) AND not(expect.isMap)
-      ? expectations[script]:=void
-      : not(isFlavourDependent(script)) AND expect.isMap
-      ? begin
-          expect:=expect.each(e,e[1],head);
-          expectations[script]:=expect;
-        end
-      : void;
+      isFlavourDependent(script)
+      ? expect.isMap
+        ? begin
+            local changed:=false;
+            expect:=expect.each(e,e[0] in BUILDS.getInner(1) ? e : begin changed:=true; void; end).toMap;
+            changed
+            ? expectations[script]:=expect
+            : void;
+          end
+        : expectations[script]:=void
+      : expect.isMap
+        ? begin
+            expect:=expect.each(e,e[1],head);
+            expectations[script]:=expect;
+          end
+        : void;
     end);
 
 private TEST_FAILURE_LOG:=myPath.extractFileDirectory&'/testFailures.log';
