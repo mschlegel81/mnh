@@ -1,17 +1,22 @@
 USE anagram,inputs;
 //@demo_for=string processing, list processing, file processing
-private findSemordnilaps->
-  readDict(inputs.dict)
+private findSemordnilaps(dictionaryFile:String)->
+  readDict(dictionaryFile)
   .anagramsInDict
   .pEach(anagramGroup,
-        begin
-          local semordnilapGroup:=intersect(anagramGroup,reverseString(anagramGroup));
-          size(semordnilapGroup)==0 ? void : semordnilapGroup;
-        end);
+     begin
+       local semordnilapGroup:=intersect(anagramGroup,reverseString(anagramGroup));
+       size(semordnilapGroup)==0 ? void : semordnilapGroup.toList.join("\v, ");
+     end);
+
+private sortByLength(L:List)->L[L.length.sortPerm];
+
+main(dictionaryFile)->begin
+  local fullList:=findSemordnilaps(dictionaryFile);
+  printf('Found %d Semordnilaps',size(fullList));
+  printf("%s\t%s",['Examples:','','','',''],fullList.get(intRandom(size(fullList),5)));
+  printf("%s\t%s",['Longest :','','','',''],fullList.sortByLength.trailing(5)         );
+end;
 
 //*See http://rosettacode.org/wiki/Semordnilap
-main->begin
-  local fullList:=findSemordnilaps;
-  printf('Found %d Semordnilaps',size(fullList));
-  printf("%s\t%s",['Examples:','','','',''],fullList.get(intRandom(size(fullList),5)).each(s,s.join("\v, ")));
-end;
+main->main(inputs.dict);

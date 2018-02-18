@@ -172,6 +172,7 @@ FUNCTION setExitCode_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
       ExitCode:=int0^.value;
+      context.adapters^.setUserDefinedExitCode(ExitCode);
       result:=newVoidLiteral;
     end else result:=nil;
   end;

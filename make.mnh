@@ -111,15 +111,15 @@ private buildExe(B:BuildConfig)->
     end
   : void;
 
-testExe(B:BuildConfig,...)->
+private testExe(B:BuildConfig,...)->
   not(B.canBuild) OR B.buildBlindly
   ? void
   : (B[6] ? void : B.buildExe) orElse (...==[]) and allTestsPassed(B[1],ensureCodeHash) or needBuild(B)
     ? void
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['regTest/regTest.mnh']|...)=0
-      ? tprint('Test passed')
-      : fail('Test failed');
+      ? tprint('Test passed') orElse true
+      : tprint('Test failed') orElse false;
 
 private showStatus->
   print orElse
@@ -164,9 +164,11 @@ main->main('build');
 //*Build all targets
 main('build')->BUILDS.reverseList.each(B,B.buildExe);
 //*Test all targets - non-debug versions will be built if necessary
-main('test')->BUILDS.reverseList.each(B,B.testExe);
+main('test')->BUILDS.reverseList.each(B,B.testExe,and) ? void : fail('There are failed tests');
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
-main('retest')->BUILDS.reverseList.each(B,B.testExe('retest'));
+main('retest')->BUILDS.reverseList.each(B,B.testExe('retest'),and) ? void : fail('There are failed tests');
+//*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
+main('noLogTest')->BUILDS.reverseList.each(B,B.testExe('noLog'),and) ? void : fail('There are failed tests');
 //*Show the current built status
 main('status')->showStatus;
 //*Show the current built status

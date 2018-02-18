@@ -4,6 +4,9 @@ private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
 //@SuppressUnusedWarning
 allDemos:=files(demosRoot&'*.mnh').sort;
 
+//@SuppressUnusedWarning
+EXAMPLES_LOG_NAME:='examples_from_file';
+
 plotters:=demosRoot&[
 'barnsleyFern.mnh',
 'fractalPlant.mnh',
