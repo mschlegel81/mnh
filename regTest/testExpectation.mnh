@@ -1,4 +1,4 @@
-USE guiScripts,test_config;
+USE guiScripts,test_config,'..\make_config.mnh',formattingUtils;
 private plain datastore expectations:=[].toMap;
 private datastore runTimes:=[].toMap;
 
@@ -97,7 +97,11 @@ checkExpectation(script:String,testRunOutput:StringList)->begin
       end;
 end;
 
-private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|testsToExecuteForFlavour(flavour).extractFileNameOnly;
+private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|
+  testsToExecuteForFlavour(flavour)
+    .filter({not(isSmokeTest($case)) and
+             not(skipFile($case,copy(flavour,0,1)=='F'))})
+    .extractFileNameOnly;
 
 //@SuppressUnusedWarning
 allTestsPassed(flavour:String,codeHash:String)->
@@ -129,3 +133,34 @@ main('remove',script)->
   isVoid(expectations[script])
   ? print('No expecation logged for ',script)
   : expectations[script]:=print('Expectation for ',script,' reset');
+
+main->begin
+  local allFlavours:=BUILDS.filter({not(buildBlindly($B))}).getInner(1);
+  local testsByFlavour:=allFlavours.each(flavour,
+    [flavour,
+     flavour.expectationNamesForFlavour
+            .toSet])
+    .toMap;
+  local allTests:=testsByFlavour.getInner(1).flatten.unique;
+  local flavoursByTest:=testsByFlavour.each(entry,entry[1].each(case,[case,entry[0]]).toMap,aggregator({mergeMaps($x,$y,::|)}));
+
+  allTests
+    .each(case,begin
+       isFlavourDependent(case)
+       ? [case,
+          'flavour dependent',
+          expectations[case].isVoid
+          ? 'expectation missing
+          : begin
+              local missingFor:=flavoursByTest[case].minus(expectations[case].getInner(0));
+              missingFor.size=0
+              ? 'complete'
+              : 'missing for: '&join(missingFor,', ');
+            end]
+       : [case,
+          '',
+          expectations[case].isVoid
+          ? 'expectation missing'
+          : 'complete'];
+     end).sort(2).formatTable(['Test','by flavour?','Completeness']).join("\n").print;
+end;

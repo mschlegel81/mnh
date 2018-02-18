@@ -42,19 +42,19 @@ testParameters(scriptFileName:String)->[];
 
 skipFile(scriptFile)->skipFile(scriptFile,mnhInfo['isFullVersion']);
 
-private skipFile((demosRoot&'3body.mnh'              ),fullVersion)->true;
-private skipFile((demosRoot&'htmlFunctionPlotter.mnh'),fullVersion)->true;
-private skipFile((demosRoot&'simpleServer.mnh'       ),fullVersion)->true;
-private skipFile((demosRoot&'helloWorldHttp.mnh'     ),fullVersion)->true;
-private skipFile((demosRoot&'ipcDatastore.mnh'       ),fullVersion)->true;
-private skipFile((demosRoot&'doublePendulum.mnh'     ),fullVersion)->true;
-private skipFile((demosRoot&'galtonBox.mnh'          ),fullVersion)->true;
-private skipFile((demosRoot&'oeis_sequences.mnh'     ),fullVersion)->true;
-private skipFile((demosRoot&'oeis_server.mnh'        ),fullVersion)->true;
-private skipFile((demosRoot&'perfectCircles.mnh'     ),fullVersion)->true;
-private skipFile((demosRoot&'rollingCircle.mnh'      ),fullVersion)->true;
-private skipFile(file in plotters                     ,false      )->true;
-private skipFile(scriptFileName:String                ,fullVersion)->false;
+skipFile((demosRoot&'3body.mnh'              ),fullVersion)->true;
+skipFile((demosRoot&'htmlFunctionPlotter.mnh'),fullVersion)->true;
+skipFile((demosRoot&'simpleServer.mnh'       ),fullVersion)->true;
+skipFile((demosRoot&'helloWorldHttp.mnh'     ),fullVersion)->true;
+skipFile((demosRoot&'ipcDatastore.mnh'       ),fullVersion)->true;
+skipFile((demosRoot&'doublePendulum.mnh'     ),fullVersion)->true;
+skipFile((demosRoot&'galtonBox.mnh'          ),fullVersion)->true;
+skipFile((demosRoot&'oeis_sequences.mnh'     ),fullVersion)->true;
+skipFile((demosRoot&'oeis_server.mnh'        ),fullVersion)->true;
+skipFile((demosRoot&'perfectCircles.mnh'     ),fullVersion)->true;
+skipFile((demosRoot&'rollingCircle.mnh'      ),fullVersion)->true;
+skipFile(file in plotters                     ,false      )->true;
+skipFile(scriptFileName:String                ,fullVersion)->false;
 
 //@SuppressUnusedWarning
 testsToExecuteForFlavour(flavourString)->begin
