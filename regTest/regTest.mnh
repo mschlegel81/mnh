@@ -1,8 +1,14 @@
 USE testExpectation,test_config;
 
+private mutable longestCaseText:=0;
+private printCase(s:String)->begin
+  longestCaseText:=max(longestCaseText,s.length);
+  printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
+end;
+
 testFile(scriptFileName:String,doLog:Boolean)->
  begin
-    printDirect("\r",scriptFileName,repeat(' ',20));
+    printCase(scriptFileName);
     local logName:=extractFileNameOnly(scriptFileName);
     local startTime:=time;
     local output:=runScript(scriptFileName,testParameters(scriptFileName),true)
@@ -28,7 +34,7 @@ private sbExecute(code:StringList)->begin
 end;
 
 private executeExamples(doLog:Boolean)->begin
-  printDirect("\r",EXAMPLES_LOG_NAME,repeat(' ',20));
+  printCase(EXAMPLES_LOG_NAME);
   resetRandom;
   local output:=[];
   local collectOut:=true;
@@ -59,7 +65,8 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
            .filter({forceRun OR not(isTestAlreadyPassed(extractFileNameOnly($script)))});
   local allPassed:=
   (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR not(isTestAlreadyPassed(EXAMPLES_LOG_NAME))) ? executeExamples(logging) : void)).agg(AND);
-  printDirect("\r"," ".repeat(50),"\r");
+  printCase("");
+  printDirect("\r");
   printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
     allDemos.size+1,
     allDemos.size+1-toRun.size-ord(runExamples),
