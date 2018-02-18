@@ -288,6 +288,24 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
                                        else textLineEnding:=LineEnding;
     end;
 
+    VAR outputBuffer:array[0..9999] of char;
+        outputBufferFill:longint=0;
+    PROCEDURE writeChar(CONST c:char);
+      begin
+        outputBuffer[outputBufferFill]:=c;
+        inc(outputBufferFill);
+        if outputBufferFill>=length(outputBuffer) then begin
+          stream.write(outputBuffer,length(outputBuffer));
+          outputBufferFill:=0;
+        end;
+      end;
+
+    PROCEDURE flushBuffer;
+      begin
+        stream.write(outputBuffer,outputBufferFill);
+        outputBufferFill:=0;
+      end;
+    VAR c:char;
   begin
     if trim(name) = '' then exit(false);
     try
@@ -300,9 +318,10 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
            end
       else stream:=TFileStream.create(name,fmCreate);
       for i:=0 to length(textToWrite)-1 do begin
-        for j:=1 to length(textToWrite[i]) do stream.writeByte(ord(textToWrite[i][j]));
-        for j:=1 to length(textLineEnding) do stream.writeByte(ord(textLineEnding[j]));
+        for c in textToWrite[i] do writeChar(c);
+        for c in textLineEnding do writeChar(c);
       end;
+      flushBuffer;
       stream.destroy;
       result := true;
     except
