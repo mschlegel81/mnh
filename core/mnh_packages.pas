@@ -890,7 +890,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
 CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
     locationOfDeclaration:=tokenLocation;
-    path:=extractFilePath(tokenLocation.package^.getPath)+path_;
+    path:=expandFileName(extractFilePath(tokenLocation.package^.getPath)+path_);
     id:=filenameToPackageId(path_);
     if not(fileExists(path)) and fileExists(path_) then path:=path_;
     if not(fileExists(path))

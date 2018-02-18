@@ -22,6 +22,7 @@ USES
   openDemoDialog,
   mnh_plotForm,
   mnh_splash,
+  closeDialog,
   //MNH:
   editorMeta,
   editPopupModel,
@@ -163,6 +164,7 @@ TYPE
     PROCEDURE updateScriptMenus;
     PROCEDURE updateFileHistory;
   private
+    quitPosted:boolean;
     focusEditorOnEditMouseUp:boolean;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     scriptMenuItems:array[T_scriptType] of array of TMenuItem;

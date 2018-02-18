@@ -115,7 +115,7 @@ private testExe(B:BuildConfig,...)->
   not(B.canBuild) OR B.buildBlindly
   ? void
   : (B[6] ? void : B.buildExe) orElse (...==[]) and allTestsPassed(B[1],ensureCodeHash) or needBuild(B)
-    ? void
+    ? true
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['regTest/regTest.mnh']|...)=0
       ? tprint('Test passed') orElse true

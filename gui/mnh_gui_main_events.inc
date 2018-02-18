@@ -95,7 +95,15 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  VAR mr:integer=mrClose;
   begin
+    if runEvaluator.evaluationRunning or quick.task.processing
+    then mr:=closeDialogForm.showOnQuitWhileEvaluating;
+    if mr<>mrClose then begin
+      quitPosted:=(mr=mrOk);
+      CloseAction:=caNone;
+      exit;
+    end;
     if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     quick.adapters^.haltEvaluation;
     quick.task.ensureStop;
@@ -113,6 +121,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - begin'); {$endif}
+    quitPosted:=false;
     registerForm(self,'MnhForm',true,true);
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
@@ -432,10 +441,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         meta:P_editorMeta;
     begin
       meta:=getEditor;
-      if meta=nil
-      then aid:=''
-      else aid:=C_tabChar+intToStr(meta^.editor.CaretY)+
-                      ','+intToStr(meta^.editor.CaretX);
+      if quitPosted then aid:=C_tabChar+'QUITTING AFTER EVALUATION' else begin
+        if meta=nil
+        then aid:=''
+        else aid:=C_tabChar+intToStr(meta^.editor.CaretY)+
+                        ','+intToStr(meta^.editor.CaretX);
+      end;
       if quick.task.processing
       then StatusBar.SimpleText:='Processing quick task'+aid
       else StatusBar.SimpleText:=runEvaluator.getRunnerStateInfo.message+aid;
@@ -462,10 +473,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     flushedMessages:=guiOutAdapter.flushToGui(OutputEdit);
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
     if (mt_gui_breakpointEncountered in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
+    if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then exit;
 
     flushedMessages:=P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui(QuickOutputEdit);
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=QuickTabSheet;
+    if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then exit;
 
     while guiTaskQueue.executeTask do;
