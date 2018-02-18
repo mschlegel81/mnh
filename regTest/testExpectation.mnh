@@ -2,6 +2,11 @@ USE guiScripts,test_config,'..\make_config.mnh',formattingUtils;
 private plain datastore expectations:=[].toMap;
 private datastore runTimes:=[].toMap;
 
+private testRootLinux  :=myPath.extractFileDirectory.extractFileDirectory;
+private testRootWindows:=testRootLinux.replace('/','\');
+private testRootPlaceholder:='<#>';
+private pathDependentScripts:=['diff','grep',EXAMPLES_LOG_NAME];
+
 //@SuppressUnusedWarning
 memoized runTimesAsFlatList->runTimes.each(e0,e0[1].each(e1,e1[1].each(e2,[e0[0],e1[0],e2[1]]),|),|);
 
@@ -9,8 +14,6 @@ private flavourDependentScripts:=
   ['accumulatorFactory',
    'continuedFractions',
    'dice7fromDice5',
-   'diff',
-   'grep',
    'cauchy',
    'jaro',
    'numInt',
@@ -80,6 +83,11 @@ end;
 
 //@SuppressUnusedWarning
 checkExpectation(script:String,testRunOutput:StringList)->begin
+  local outputToCheck:=script in pathDependentScripts
+                       ? testRunOutput.replace(testRootLinux  ,testRootPlaceholder)
+                                      .replace(testRootWindows,testRootPlaceholder)
+                       : testRunOutput;
+
   local expectation:=expectations[script,isFlavourDependent(script) ? myFlavour : void];
   expectation.isVoid
   ? isFlavourDependent(script)
@@ -87,19 +95,19 @@ checkExpectation(script:String,testRunOutput:StringList)->begin
         expectations[script].isVoid
         ? expectations[script]:=[].toMap
         : void;
-        expectations[script,myFlavour]:=testRunOutput;
+        expectations[script,myFlavour]:=outputToCheck;
         print('Logged new test run expectation for ',script,'/',myFlavour);
         true;
       end
     : begin
-        expectations[script]:=testRunOutput;
+        expectations[script]:=outputToCheck;
         print('Logged new test run expectation for ',script);
         true;
       end
-  : expectation==testRunOutput
+  : expectation==outputToCheck
     ? true
     : begin
-        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,testRunOutput,2)|repeat('/',100));
+        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,outputToCheck,2)|repeat('/',100));
         failedTests|=script;
         false;
       end;
