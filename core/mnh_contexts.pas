@@ -680,8 +680,10 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           ThreadSwitch;
           sleep(sleepTime div 5);
         end else begin
-          currentTask^.evaluate(tempcontext);
-          if currentTask^.isVolatile then dispose(currentTask,destroy);
+          if currentTask^.isVolatile then begin
+            currentTask^.evaluate(tempcontext);
+            dispose(currentTask,destroy);
+          end else currentTask^.evaluate(tempcontext);
           sleepTime:=0;
         end;
       until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue^.destructionPending) or not(adapters^.noErrors);
