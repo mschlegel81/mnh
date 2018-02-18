@@ -125,6 +125,7 @@ TYPE
       privatePlot:P_plot;
       {$endif}
       subAdapters:array of P_adapters;
+      userDefinedExitCode:longint;
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
     public
       {$ifdef fullVersion}
@@ -189,6 +190,7 @@ TYPE
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
       FUNCTION getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
 
+      PROCEDURE setUserDefinedExitCode(CONST code:longint);
       PROCEDURE setExitCode;
       FUNCTION triggersBeep:boolean;
 
@@ -675,6 +677,7 @@ PROCEDURE T_adapters.logDisplayTable;                                           
 PROCEDURE T_adapters.clearAll({$ifdef fullVersion}CONST includePlot:boolean=false{$endif});
   VAR i:longint;
   begin
+    userDefinedExitCode:=0;
     clearErrors;
     clearPrint;
     someEchoInput        :=false;
@@ -845,10 +848,16 @@ FUNCTION T_adapters.getAdapter(CONST adapterType:T_adapterType):P_abstractOutAda
     result:=nil;
   end;
 
+PROCEDURE T_adapters.setUserDefinedExitCode(CONST code:longint);
+  begin
+    userDefinedExitCode:=code;
+  end;
+
 PROCEDURE T_adapters.setExitCode;
   VAR mt:T_messageType;
       code:longint=0;
   begin
+    code:=userDefinedExitCode;
     for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
     ExitCode:=code;
   end;
