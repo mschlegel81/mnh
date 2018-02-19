@@ -163,17 +163,14 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put('isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
       .put('isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
       .put('is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^
-      .put('compileTime'    , {$I %DATE%}+' '+{$I %TIME%}                )^
-      .put('compilerVersion', {$I %FPCVERSION%}                          )^
-      .put('targetCpu'      , {$I %FPCTARGET%}                           )^
-      .put('targetOs'       , {$I %FPCTargetOS%}                         )^
-      .put('codeVersion'    , CODE_HASH                                  )^
-      .put('build'          , BUILD_NUMBER                               )^
-      .put('flavour'        ,{$ifdef fullVersion}'F'{$else}'L'{$endif}+
-                                                                               {$ifdef imig}'I'{$else}''{$endif}+
-                             {$ifdef debugMode}  'D'{$else}'O'{$endif}+
-                             {$I %FPCTargetOS%}                          )^
-      .put('configDir'      ,configDir)
+      .put('compileTime'    ,{$I %DATE%}+' '+{$I %TIME%})^
+      .put('compilerVersion',{$I %FPCVERSION%}          )^
+      .put('targetCpu'      ,{$I %FPCTARGET%}           )^
+      .put('targetOs'       ,{$I %FPCTargetOS%}         )^
+      .put('codeVersion'    ,CODE_HASH                  )^
+      .put('build'          ,BUILD_NUMBER               )^
+      .put('flavour'        ,FLAVOUR_STRING             )^
+      .put('configDir'      ,configDir                  )
     else result:=nil;
   end;
 

@@ -58,10 +58,17 @@ private TEST_FAILURE_LOG:=myPath.extractFileDirectory&'/testFailures.log';
 private myFlavour    :=mnhInfo['flavour'];
 private myCodeVersion:=mnhInfo['codeVersion'];
 
-logSmokeTestRunTime(script:String,runTime:Numeric)->begin
-  runTimes[script          ].isVoid ? runTimes[script          ]:=[].toMap : void;
-  runTimes[script,myFlavour].isVoid ? runTimes[script,myFlavour]:=[]       : void;
-  runTimes[script,myFlavour]|=[[myCodeVersion,runTime]];
+private mutable timesOfThisRun:=[];
+
+logSmokeTestRunTime(script:String,runTime:Numeric,doLog:Boolean)->begin
+  doLog
+  ? begin
+      runTimes[script          ].isVoid ? runTimes[script          ]:=[].toMap : void;
+      runTimes[script,myFlavour].isVoid ? runTimes[script,myFlavour]:=[]       : void;
+      runTimes[script,myFlavour]|=[[myCodeVersion,runTime]];
+    end
+  : void;
+  timesOfThisRun|=[[script,runTime]];
   true;
 end;
 
@@ -73,16 +80,16 @@ private mutable failedTests:=[];
 //@SuppressUnusedWarning
 getFailedTests->failedTests;
 
-synchronized checkExpectation(script:String,testRunOutput:StringList,runTime:Numeric)->begin
+synchronized checkExpectation(script:String,testRunOutput:StringList,runTime:Numeric,doLog:Boolean)->begin
   local resultOk:=checkExpectation(script,testRunOutput);
   resultOk
-  ? logSmokeTestRunTime(script,runTime)
+  ? logSmokeTestRunTime(script,runTime,doLog)
   : void;
   resultOk;
 end;
 
 //@SuppressUnusedWarning
-checkExpectation(script:String,testRunOutput:StringList)->begin
+private checkExpectation(script:String,testRunOutput:StringList)->begin
   local outputToCheck:=script in pathDependentScripts
                        ? testRunOutput.replace(testRootLinux  ,testRootPlaceholder)
                                       .replace(testRootWindows,testRootPlaceholder)
@@ -111,6 +118,37 @@ checkExpectation(script:String,testRunOutput:StringList)->begin
         failedTests|=script;
         false;
       end;
+end;
+
+private average(X)->X.flatten.agg(+)/X.size;
+
+private memoized averageRunTimes->runTimes.each(caseEntry,begin
+  local case:=caseEntry[0];
+  //Create time groups by flavour
+  local times:=caseEntry[1]
+               .each(flavEntry,flavEntry[1].getInner(1).each(t,[flavEntry[0],t]),|)
+               .group(0,{[$x[0],$x[1]|$y[1]]}).toMap;
+  //Add time groups by optimization group (optimized/debug)
+  times.map({[$x[0].copy(1,1),$x[1]]})
+       .group(0,{[$x[0],$x[1]|$y[1]]})
+       .each(G,times[G[0]]:=G[1]);
+  //Average Times
+  times.each(t,times[t[0]]:=t[1].average);
+  [case,times];
+end).toMap;
+
+//@SuppressUnusedWarning
+showTestTimeInfo->timesOfThisRun.size=0 ? void : begin
+  local thisRunTotalTime:=timesOfThisRun.getInner(1).agg(+);
+  local myFlavourGroup:=copy(myFlavour,1,1);
+  local timesByFlavour     :=
+    averageRunTimes
+    .getAll(timesOfThisRun.getInner(0))
+    .map({[$x[myFlavour],$x[myFlavourGroup]]})
+    .agg(+);
+  print('Test time : ',thisRunTotalTime);
+  printf('  compared to average (flavour): %6.2f%%',thisRunTotalTime/timesByFlavour[0]*100);
+  printf('  compared to average (group  ): %6.2f%%',thisRunTotalTime/timesByFlavour[1]*100);
 end;
 
 private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|

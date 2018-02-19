@@ -252,7 +252,7 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   end;
 
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
-  VAR i,j: longint;
+  VAR i: longint;
       textLineEnding:string;
       stream:TFileStream;
 
