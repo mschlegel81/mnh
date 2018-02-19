@@ -4,7 +4,7 @@ USE inputs;
 readDict(filename)->fileLineIterator(filename).pEach(word,begin
   local l:=word.lower; [join(l.chars.sort),l]; end);
 
-anagramsInDict(list)->list
+private anagramsInDict(list)->list
                      .group(0)
                      .pEach(gr,size(gr)<=1 ? void : gr.getInner(1));
 

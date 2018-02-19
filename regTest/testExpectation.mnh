@@ -218,6 +218,3 @@ main->begin
           : 'complete'];
      end).sort(2).formatTable(['Test','by flavour?','Completeness']).join("\n").print;
 end;
-
-
-
