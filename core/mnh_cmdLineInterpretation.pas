@@ -95,8 +95,6 @@ PROCEDURE displayHelp;
     writeln('                       1..4 : override minimum error level');
     writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
     writeln('  -h                display this help or help on the input file if present and quit');
-    writeln('  -version          show version info and exit');
-    writeln('  -codeHash         show codeHash and exit');
     writeln('  -headless         forbid input via ask (scripts using ask will crash)');
     writeln('  -cmd              directly execute the following command');
     writeln('  -info             show info; same as -cmd mnhInfo.print');
@@ -118,16 +116,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
       directExecutionMode:boolean=false;
-
-  PROCEDURE displayVersionInfo;
-    begin writeln('MNH5',
-                  {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
-                  {$ifdef debugMode}',debug)'{$else}')'{$endif},
-                  {$I %DATE%},
-                  ' ',{$I %TIME%},
-                  ' FPC',{$I %FPCVERSION%},
-                  ' for ',{$I %FPCTARGET%},' ',{$I %FPCTargetOS%});
-    end;
 
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
@@ -198,8 +186,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     i:=1;
     while i<=paramCount do begin
       if (fileOrCommandToInterpret='') or directExecutionMode then begin
-        if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
-        else if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
+        if startsWith(paramStr(i),'-v') then verbosityString:=copy(paramStr(i),3,length(paramStr(i))-2)
         {$ifdef fullVersion}
         else if (paramStr(i)='-install') then begin
           writeln('Updating scripts and demos');
@@ -257,9 +244,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-headless') then headless:=true
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
-        else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
-                                                                       {$ifdef debugMode}  'D'{$else}'O'{$endif},
-                                                                       {$I %FPCTargetOS%},':',CODE_HASH); quitImmediate:=true; end
         else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
