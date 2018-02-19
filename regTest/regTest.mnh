@@ -18,13 +18,14 @@ testFile(scriptFileName:String,doLog:Boolean)->
           .flatten|checkAfterTest(scriptFileName);
 
     scriptFileName.isSmokeTest
-    ? doLog
-      ? logSmokeTestRunTime(logName,time-startTime)
-      : void
+    ? logSmokeTestRunTime(logName,
+                          time-startTime,
+                          doLog)
     : checkExpectation(
         logName,
         output,
-        doLog ? time-startTime : void);
+        time-startTime,
+        doLog);
   end;
 
 private sbExecute([])->void;
@@ -55,7 +56,8 @@ private executeExamples(doLog:Boolean)->begin
   checkExpectation(
         EXAMPLES_LOG_NAME,
         output,
-        doLog ? time-startTime : void);
+        time-startTime,
+        doLog);
 end;
 
 //*Runs tests and returns true if no test failed
@@ -74,6 +76,7 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
     getFailedTests.size);
   allPassed ? print("All tests ok     ",repeat(' ',50))
             : print("Some tests failed:",repeat(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse setExitCode(99);
+  showTestTimeInfo;
 end;
 
 main->testAll(true,false);
