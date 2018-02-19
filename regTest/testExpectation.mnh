@@ -218,3 +218,27 @@ main->begin
           : 'complete'];
      end).sort(2).formatTable(['Test','by flavour?','Completeness']).join("\n").print;
 end;
+
+USE statistics;
+//*Limit to 50 timings per case and flavour
+//*Drop all values outside of 4 sigma environment
+main('cleanup')->begin
+  local droppedExtremes:=0;
+  local droppedTotal:=0;
+  runTimes.each(caseEntry,begin
+    local case:=caseEntry[0];
+    caseEntry[1].each(flavEntry,begin
+      local flavour:=flavEntry[0];
+      local times:=flavEntry[1];
+      local threshold:=times.getInner(1).mean+
+                     4*times.getInner(1).standardVariation;
+      droppedTotal+=times.size;
+      droppedExtremes+=trueCount(times.getInner(1)>threshold);
+      times:=times[times.getInner(1)<=threshold].head(50);
+      droppedTotal-=times.size;
+      runTimes[case,flavour]:=times;
+    end);
+  end);
+  print('Dropped ',droppedExtremes,' extreme timing values');
+  print('Dropped ',droppedTotal   ,' values in total');
+end;

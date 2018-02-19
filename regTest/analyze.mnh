@@ -1,4 +1,4 @@
-USE GUI, mnhUtil,testExpectation;
+USE GUI, testExpectation;
 
 private avg([])->Nan;
 private avg(L:NumericList)->L.agg(+)/L.size;
@@ -19,7 +19,7 @@ private doAnalysis()->begin
   runTimesAsFlatList.getInner(0).unique.pEach(testCase,
     begin
       local debugSamples:=runTimesAsFlatList[runTimesAsFlatList.getInner(0)=testCase];
-      local debugMask:=debugSamples.getInner(1).matches('^[F|L]D');
+      local debugMask:=debugSamples.getInner(1).matches('^[F|L|I]D');
             debugSamples:=debugSamples.getInner(2);
       local optSamples  :=debugSamples[not(debugMask)];
             debugSamples:=debugSamples[    debugMask ];
@@ -34,7 +34,7 @@ private doAnalysis()->begin
 
   [true,false].each(debugVersions,
   begin
-    local filteredTests:=runTimesAsFlatList[runTimesAsFlatList.getInner(1).matches('^[F|L]I?D')=debugVersions];
+    local filteredTests:=runTimesAsFlatList[runTimesAsFlatList.getInner(1).matches('^[F|L|I]D')=debugVersions];
     filteredTests.size=0 ? void :
     begin
       print("=====================================================================\n",
@@ -75,7 +75,7 @@ private analyzeCase(data,testCase:String)->begin
   local debugSamples:=[];
   local optSamples:=[];
   data[data.getInner(0)=testCase]
-  .each(sample,sample[1].matches('^[F|L]I?D')
+  .each(sample,sample[1].matches('^[F|L|I]D')
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
   local allSamples:=debugSamples|optSamples;
