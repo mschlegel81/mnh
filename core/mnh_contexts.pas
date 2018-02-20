@@ -181,7 +181,7 @@ TYPE
   end;
 
 VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; VAR context:T_threadContext);
-    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
+    subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
     suppressBeep:boolean=false;
 {$ifndef fullVersion}
 FUNCTION workerThreadCount:longint;

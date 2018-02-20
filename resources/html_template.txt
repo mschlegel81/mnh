@@ -793,7 +793,7 @@ will lead to an error output.</li>
   someFunction();
 <!--end-->
 </code>
-If <code>someFunction</code> returns a nullary expression, consider the following:<code>
+If <code>someFunction</code> returns an expression, consider the following:<code>
 <!--mnh-->
    in> someFunction :={1+2*3};
    in> someFunction;
@@ -803,21 +803,6 @@ If <code>someFunction</code> returns a nullary expression, consider the followin
        //First evaluate someFunction then evaluate the returned expression
    in> someFunction()();
   out> 7
-<!--end-->
-</code>
-If however <code>someOtherFunction</code> returns an unary expression the behaviour is slightly different:<code>
-<!--mnh-->
-   in> someOtherFunction:={$x/2};
-       //As above
-   in> someOtherFunction();
-  out> {($x/2)}
-       //As above, passing (1) as parameter list to the returned expression
-   in> someOtherFunction()(1);
-  out> 0.5
-       //Fallback behaviour: someOtherFunction cannot be applied to parameter list (1)
-       //  but the returned expression can, so it is interpreted as the previous call
-   in> someOtherFunction(1);
-  out> 0.5
 <!--end-->
 </code>
 </li><li><b>Visibility</b><br>

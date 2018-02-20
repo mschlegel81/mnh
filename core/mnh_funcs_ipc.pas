@@ -1,7 +1,8 @@
 UNIT mnh_funcs_ipc;
 INTERFACE
 USES sysutils, Classes, simpleipc, //RTL
-     myGenerics,serializationUtil, //my tools
+     myGenerics,serializationUtil,
+     {$ifdef UNIX}myStringUtil,{$endif}  //my tools
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_contexts,mnh_litVar,
@@ -15,10 +16,11 @@ TYPE
   T_myIpcServer=object
     serverId:string;
     feedbackLocation:T_tokenLocation;
-    servingExpression:P_expressionLiteral;
-    servingContext:P_threadContext;
+    servingExpressionOrNil:P_expressionLiteral;
+    servingContextOrNil   :P_threadContext;
+    adapters:P_adapters;
     hasKillRequest:boolean;
-    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext);
+    CONSTRUCTOR create(CONST serverId_:string; CONST location:T_tokenLocation; CONST expression:P_expressionLiteral; CONST context:P_threadContext; VAR adapters_:T_adapters);
     DESTRUCTOR destroy;
   end;
 
@@ -63,17 +65,23 @@ FUNCTION newServer(CONST serverId:string=''):TSimpleIPCServer;
   begin
     registry.enterCs;
     result:=TSimpleIPCServer.create(nil);
-    if serverId<>'' then result.serverId:=serverId
-                    else result.serverId:=getNewServerId;
-    result.Global:=true;
-    result.StartServer;
-    registry.leaveCs;
+    try
+      if serverId<>'' then result.serverId:=serverId
+                      else result.serverId:=getNewServerId;
+      result.Global:=true;
+      result.StartServer;
+    finally
+      registry.leaveCs;
+    end;
   end;
 
 PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
   begin
-    server.StopServer;
-    FreeAndNil(server);
+    try
+      server.StopServer;
+    finally
+      FreeAndNil(server);
+    end;
   end;
 
 VAR messageHashTally:T_hashInt=0;
@@ -175,22 +183,19 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
           payload:P_literal;
           messageHash:T_hashInt;
         end;
-        adaptersOrNil:P_adapters;
     begin with P_myIpcServer(p)^ do begin
-      if servingContext=nil then adaptersOrNil:=nil
-                            else adaptersOrNil:=servingContext^.adapters;
       //Even unique-instance-marker-servers should fetch messages from time to time
-      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,adaptersOrNil) and
+      if readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,adapters) and
          processThisRequest(request.messageHash) and
-         (servingContext<>nil) and
-         (servingExpression<>nil) then begin
+         (servingExpressionOrNil<>nil) and
+         (servingContextOrNil<>nil) then begin
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          response.payload:=servingExpression^.evaluateToLiteral(feedbackLocation,servingContext,request.payload);
-          response.statusOk:=servingContext^.adapters^.noErrors;
+          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,request.payload);
+          response.statusOk:=servingContextOrNil^.adapters^.noErrors;
         end else begin
-          if adaptersOrNil<>nil then adaptersOrNil^.raiseWarning('IPC server received request with error status - answering with error status',feedbackLocation);
+          servingContextOrNil^.adapters^.raiseWarning('IPC server received request with error status - answering with error status',feedbackLocation);
           response.payload :=nil;
           response.statusOk:=false;
         end;
@@ -210,39 +215,47 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     with P_myIpcServer(p)^ do begin
       for recentRequestOffset:=0 to length(recentRequests)-1 do recentRequests[recentRequestOffset]:=0;
       recentRequestOffset:=0;
-      if servingContext<>nil then servingContext^.adapters^.raiseNote('IPC server started. '+serverId,feedbackLocation);
-      server:=newServer(serverId);
-      while not(hasKillRequest) and ((servingContext=nil) or (servingContext^.adapters^.noErrors)) do begin
+      try
+        server:=newServer(serverId);
+        if servingContextOrNil<>nil then servingContextOrNil^.adapters^.raiseNote('IPC server started. '+serverId,feedbackLocation)
+      except on e:Exception do adapters^.raiseSystemError(e.message,feedbackLocation); end;
+
+      while not(hasKillRequest) and (adapters^.noErrors) do begin
         if serve then sleepTime:=0
                  else begin
                    if sleepTime<100 then inc(sleepTime);
                    sleep(sleepTime);
                  end;
       end;
-      disposeServer(server);
-      if servingContext<>nil then servingContext^.adapters^.raiseNote('IPC server stopped. '+serverId,feedbackLocation);
+      try
+        disposeServer(server);
+      except on e:Exception do
+        if not(adapters^.hasFatalError) then adapters^.raiseSystemError(e.message,feedbackLocation);
+      end;
+      if servingContextOrNil<>nil then servingContextOrNil^.adapters^.raiseNote('IPC server stopped. '+serverId,feedbackLocation);
     end;
     dispose(P_myIpcServer(p),destroy);
     result:=0;
   end;
 
-CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext);
+CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_tokenLocation; CONST expression: P_expressionLiteral; CONST context: P_threadContext; VAR adapters_:T_adapters);
   begin
     serverId:=serverId_;
     feedbackLocation:=location;
-    servingExpression:=expression;
-    servingContext:=context;
+    servingExpressionOrNil:=expression;
+    servingContextOrNil:=context;
+    adapters:=@adapters_;
     registry.onCreation(@self);
     hasKillRequest:=false;
   end;
 
 DESTRUCTOR T_myIpcServer.destroy;
   begin
-    if servingContext<>nil then begin
-      servingContext^.doneEvaluating;
-      dispose(servingContext,destroy);
+    if servingContextOrNil<>nil then begin
+      servingContextOrNil^.doneEvaluating;
+      dispose(servingContextOrNil,destroy);
     end;
-    if servingExpression<>nil then disposeLiteral(servingExpression);
+    if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
     registry.onDestruction(@self);
   end;
 
@@ -255,13 +268,20 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
     result:=nil;
     if ((params=nil) or (params^.size=0)) and context.checkSideEffects('assertUniqueInstance',tokenLocation,[se_alterContextState,se_accessIpc,se_server,se_detaching]) then begin
       registry.enterCs;
-      normalizedPath:=expandFileName(tokenLocation.package^.getPath);
-      if isServerRunning(normalizedPath)
-      then context.adapters^.raiseError('There already is an instance of this script running',tokenLocation)
-      else begin
-        new(markerServer,create(normalizedPath,tokenLocation,nil,nil));
-        beginThread(@ipcServerThread,markerServer);
-        result:=newVoidLiteral;
+      try
+        normalizedPath:=expandFileName(tokenLocation.package^.getPath);
+        {$ifdef UNIX}
+        normalizedPath:=cleanString(replaceAll(normalizedPath,'/','_'),['a'..'z','A'..'Z','0'..'9','_'],'_');
+        {$endif}
+        if isServerRunning(normalizedPath)
+        then context.adapters^.raiseError('There already is an instance of this script running',tokenLocation)
+        else begin
+          new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.adapters^));
+          beginThread(@ipcServerThread,markerServer);
+          result:=newVoidLiteral;
+        end;
+      except on e:Exception do
+        context.adapters^.raiseSystemError(e.message,tokenLocation);
       end;
       registry.leaveCs;
     end;
@@ -281,7 +301,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
       end else begin
         childContext:=context.getNewAsyncContext;
         if childContext<>nil then begin
-          new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext));
+          new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.adapters^));
           beginThread(@ipcServerThread,ipcServer);
           result:=newVoidLiteral;
         end else context.adapters^.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
