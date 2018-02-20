@@ -1374,7 +1374,8 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
         parametersForMain:P_listLiteral=nil;
-        t,dummy:P_token;
+        t:P_token=nil;
+        dummy:P_token=nil;
         i:longint;
         {$ifdef fullVersion}displayedHelp:boolean=false;{$endif}
     begin
