@@ -1374,40 +1374,42 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
         parametersForMain:P_listLiteral=nil;
-        t:P_token;
+        t,dummy:P_token;
         i:longint;
+        {$ifdef fullVersion}displayedHelp:boolean=false;{$endif}
     begin
       if not(readyForUsecase=lu_forCallingMain) or not(context.adapters^.noErrors) then exit;
       if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
-        t:=context.recycler.newToken(packageTokenLocation(@self),MAIN_RULE_ID,tt_localUserRule,mainRule);
-        parametersForMain:=newListLiteral;
-        parametersForMain^.rereference;
+        parametersForMain:=newListLiteral(length(mainParameters));
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
-        t^.next:=context.recycler.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
+
         {$ifdef fullVersion}
         context.callStackPush(@self,pc_interpretation,pseudoCallees);
         {$endif}
         if profile then context.timeBaseComponent(pc_interpretation);
-        context.reduceExpression(t);
+
+        if mainRule^.replaces(parametersForMain,packageTokenLocation(@self),t,dummy,true,@context)
+        then context.reduceExpression(t)
+        else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
+          writeln(getHelpOnMain);
+          {$ifdef fullVersion}displayedHelp:=true;{$endif}
+        end else context.raiseCannotApplyError('user defined rule '+mainRule^.getId,
+                                               parametersForMain,
+                                               mainRule^.getLocation,
+                                               mainRule^.getCmdLineHelpText,true);
         if profile then context.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
         context.callStackPop(nil);
         {$endif}
+
+        {$ifdef fullVersion}
         //error handling if main returns more than one token:------------------
-        if (t=nil) or (t^.next<>nil) then begin
-          {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
+        if not(displayedHelp) and ((t=nil) or (t^.next<>nil)) and context.adapters^.hasNeedGUIerror
           then context.adapters^.raiseNote('Evaluation requires GUI-startup. Re-evaluating.',packageTokenLocation(@self));
-          {$endif}
-        end;
         //------------------:error handling if main returns more than one token
-        //special handling if main returns an expression:----------------------
-        if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
-           (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_expressionLiteral(t^.data)^.evaluateToLiteral(packageTokenLocation(@self),@context);
-        end;
-        //----------------------:special handling if main returns an expression
+        {$endif}
         context.recycler.cascadeDisposeToken(t);
         disposeLiteral(parametersForMain);
         parametersForMain:=nil;

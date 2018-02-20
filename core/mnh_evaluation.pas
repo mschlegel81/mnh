@@ -279,9 +279,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,first^.tokType in [tt_localUserRule,tt_customTypeRule],@context)) then begin
-            if (P_rule(first^.data)^.getId=MAIN_RULE_ID)
-            then context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,P_rule(first^.data)^.getCmdLineHelpText,true)
-            else context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+            context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
             exit;
           end;
         {$ifndef DEBUGMODE}
