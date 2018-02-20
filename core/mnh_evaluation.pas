@@ -1254,17 +1254,23 @@ FUNCTION async_imp intFuncSignature;
     if (params^.size>=1) and (arg0^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
        context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
-      childContext:=context.getNewAsyncContext;
-      if childContext<>nil then begin
-        if params^.size=2 then parameters:=list1;
-        new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
-        getMem(task,sizeOf(T_asyncTask));
-        task^.myContext:=childContext;
-        task^.payload  :=payload;
-        beginThread(@doAsync,task);
-        result:=payload^.rereferenced;
-      end else begin
-        context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
+      try
+        childContext:=context.getNewAsyncContext;
+        if childContext<>nil then begin
+          if params^.size=2 then parameters:=list1;
+          new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
+          getMem(task,sizeOf(T_asyncTask));
+          task^.myContext:=childContext;
+          task^.payload  :=payload;
+          beginThread(@doAsync,task);
+          result:=payload^.rereferenced;
+        end else begin
+          context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
+        end;
+      except on e:EOutOfMemory do begin
+        context.adapters^.raiseSystemError(e.message,tokenLocation);
+      end;
+
       end;
     end;
   end;

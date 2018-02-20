@@ -466,10 +466,10 @@ PROCEDURE T_threadContext.doneEvaluating;
 FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
-    interLockedIncrement(parent^.detachedAsyncChildCount);
     new(result,createThreadContext(nil,adapters));
     parent^.setupThreadContext(result);
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
+    interLockedIncrement(parent^.detachedAsyncChildCount);
   end;
 
 PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_queueTaskEnvironment);
