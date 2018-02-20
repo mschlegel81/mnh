@@ -97,7 +97,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
 
       //Evaluation calls:
-      FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
       FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual;
 
       //Inspection/documentation calls
@@ -431,22 +431,8 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
     end;
   end;
 
-FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token; VAR context: T_threadContext; CONST useUncurryingFallback: boolean): boolean;
+FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token; VAR context: T_threadContext): boolean;
   VAR i:longint;
-  FUNCTION fallbackFeasible:boolean;
-    begin
-      result:=useUncurryingFallback and
-             (indexOfSave<0) and
-              //The given parameters must match
-             (param<>nil) and pattern.matchesForFallback(param^,callLocation,context) and
-              //The function result must (likely) be an expression
-         (    (preparedBody[0].token.tokType=tt_literal)
-          and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
-           or (length(preparedBody)>=2)
-          and (preparedBody[0].token.tokType=tt_expBraceOpen)
-          and (preparedBody[length(preparedBody)-1].token.tokType=tt_expBraceClose));
-    end;
-
   PROCEDURE updateBody;
     VAR i:longint;
         level:longint=1;
@@ -589,16 +575,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
        (param<>nil) and pattern.matches(param^,callLocation,context) then begin
       prepareResult;
       result:=lastRep<>nil;
-    end else if fallbackFeasible then begin
-      prepareResult;
-      result:=lastRep<>nil;
-      tempInnerParam:=newListLiteral;
-      for i:=pattern.arity to param^.size-1 do tempInnerParam^.append(param^.value[i],true);
-      lastRep^.next:=context.recycler.newToken(getLocation,'',tt_parList,tempInnerParam);
-      lastRep:=lastRep^.next;
     end else begin
       result:=false;
-      if useUncurryingFallback then case typ of
+      case typ of
         et_eachBody: begin
           if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
                        else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
@@ -611,9 +590,9 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
     end;
   end;
 
-FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext; CONST useUncurryingFallback:boolean):boolean;
+FUNCTION subruleReplaces(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
   begin
-    result:=P_subruleExpression(subrulePointer)^.replaces(param,callLocation,firstRep,lastRep,context,useUncurryingFallback);
+    result:=P_subruleExpression(subrulePointer)^.replaces(param,callLocation,firstRep,lastRep,context);
   end;
 
 CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
@@ -911,7 +890,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
 FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
   VAR toReduce,dummy:P_token;
   begin
-    if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^,false)
+    if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^)
     then begin
       if (toReduce=nil) or (toReduce^.next<>nil) or (toReduce^.tokType<>tt_literal) then
         P_threadContext(context)^.reduceExpression(toReduce);

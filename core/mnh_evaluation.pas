@@ -240,7 +240,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     PROCEDURE evaluateBody; inline;
       VAR toReduce,dummy:P_token;
       begin
-        if bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context,false) then begin
+        if bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context) then begin
           reduceExpression(toReduce,context);
           context.recycler.cascadeDisposeToken(toReduce);
         end;
@@ -337,8 +337,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         end else begin
           inlineRule:=first^.data;
           //failing "replaces" for inline rules will raise evaluation error.
-          if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,false)) and
-             not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,true )) then exit;
+          if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context)) then exit;
         end;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
