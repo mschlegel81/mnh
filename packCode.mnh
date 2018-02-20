@@ -87,8 +87,8 @@ main->begin
   allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
 
   print('Copying MNH sources');
-  allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh','*.expected'])
-    .filter({not($0.matches('/lib/|core/res_.*inc$|core/built_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
+  allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh','*.expected','testExpectation.datastore0','distroLog.datastore0'])
+    .filter({not($0.matches('/lib/|core/res_.*inc$|core/build_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
     .pMap({copyWithLicense($0,DEFAULT_TARGET_FOLDER&$0)});
 

@@ -62,6 +62,7 @@ end;
 
 //*Runs tests and returns true if no test failed
 testAll(logging:Boolean, forceRun:Boolean)->begin
+  assertUniqueInstance;
   sandBoxExecute('1');
   local toRun:=allDemos
            .filter({not(skipFile($f))})
