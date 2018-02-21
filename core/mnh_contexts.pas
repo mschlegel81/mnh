@@ -326,10 +326,13 @@ PROCEDURE T_evaluationContext.resetForEvaluation({$ifdef fullVersion}CONST packa
   end;
 
 PROCEDURE T_evaluationContext.stopWorkers;
+  CONST TIME_OUT_AFTER=10/(24*60*60); //=10 seconds
+  VAR timeout:double;
   begin
+    timeout:=now+TIME_OUT_AFTER;
     adapters^.stopEvaluation;
-    while (detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0) do begin
-      if taskQueue<>nil then taskQueue^.activeDeqeue(primaryThreadContext^);
+    while (now<timeout) and ((detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0)) do begin
+      if taskQueue<>nil then taskQueue^.activeDeqeue(primaryThreadContext^.dequeueContext^);
       ThreadSwitch;
       sleep(1);
     end;

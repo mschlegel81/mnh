@@ -1267,10 +1267,8 @@ FUNCTION async_imp intFuncSignature;
         end else begin
           context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
         end;
-      except on e:EOutOfMemory do begin
-        context.adapters^.raiseSystemError(e.message,tokenLocation);
-      end;
-
+      except
+        on e:EOutOfMemory do context.adapters^.raiseSystemError(e.message,tokenLocation);
       end;
     end;
   end;
