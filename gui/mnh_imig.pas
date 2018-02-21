@@ -151,7 +151,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         lastOutput:=now;
         while thisWorkflow.progressQueue.calculating and (context.adapters^.noErrors) do begin
           progressLog:=thisWorkflow.progressQueue.log;
-          for i:=logLinesDisplayed to length(progressLog)-1 do begin
+          for i:=logLinesDisplayed to length(progressLog)-1 do if progressLog[i].message<>'' then begin
             doOutput(intToStr(i)+'/'+intToStr(thisWorkflow.stepCount+1)+': '+progressLog[i].message);
             logLinesDisplayed:=i+1;
             lastOutput:=now;
