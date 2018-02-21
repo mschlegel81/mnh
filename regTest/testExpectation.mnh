@@ -188,6 +188,7 @@ main('remove',script)->
   ? print('No expectation logged for ',script)
   : expectations[script]:=print('Expectation for ',script,' reset');
 
+//*List information on all test expectations
 main->begin
   local allFlavours:=BUILDS.filter({not(buildBlindly($B))}).getInner(1);
   local testsByFlavour:=allFlavours.each(flavour,
@@ -222,7 +223,7 @@ end;
 USE statistics;
 
 //*Limit to 50 timings per case and flavour
-//*Drop all values outside of 4 sigma environment
+//*Drop all values outside of 3 sigma environment
 main('cleanup')->begin
   local droppedExtremes:=0;
   local droppedTotal:=0;
@@ -232,7 +233,7 @@ main('cleanup')->begin
       local flavour:=flavEntry[0];
       local times:=flavEntry[1];
       local threshold:=times.getInner(1).mean+
-                     4*times.getInner(1).standardVariation;
+                     3*times.getInner(1).standardVariation;
       droppedTotal+=times.size;
       droppedExtremes+=trueCount(times.getInner(1)>threshold);
       times:=times[times.getInner(1)<=threshold].head(50);
