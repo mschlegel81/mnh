@@ -491,7 +491,7 @@ PROCEDURE T_mapTask.define(CONST x: P_literal);
   begin
     enterCriticalSection(taskCs);
     if mapPayload.mapParameter<>nil then disposeLiteral(mapPayload.mapParameter);
-    mapPayload.mapParameter:=x^.rereferenced;
+    if x<>nil then mapPayload.mapParameter:=x^.rereferenced;
     nextToAggregate:=nil;
     env.taskQueue^.enqueue(@self,env.callingContext);
     leaveCriticalSection(taskCs);
