@@ -1,10 +1,23 @@
-USE testExpectation,test_config;
+USE testExpectation,test_config,'../demos/oeis_server.mnh';
 
 private mutable longestCaseText:=0;
 private printCase(s:String)->begin
   longestCaseText:=max(longestCaseText,s.length);
   printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
 end;
+
+startedMyOwnServer:=begin
+  isIpcServerRunning(oeis_server.ipcId) OR $1=='stopServer'
+  ? false
+  : begin
+      executor.execAsync([inspect['uses'].each(i,i[0].matches('(?i)oeis_server') ? i[1] : void,head)]);
+      sleep(1);
+      true;
+    end;
+end;
+
+//@after
+onShutdown->startedMyOwnServer ? sendIpcRequest(ipcId,['stop']) : void;
 
 testFile(scriptFileName:String,doLog:Boolean)->
  begin
