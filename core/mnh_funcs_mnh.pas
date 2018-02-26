@@ -23,7 +23,7 @@ FUNCTION sleep_imp intFuncSignature;
       sleepUntil:=context.wallclockTime(true);
       result:=newVoidLiteral;
       if arg0^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (arg0)^.value
+      then sleepUntil:=sleepUntil+P_intLiteral (arg0)^.value.toFloat
       else sleepUntil:=sleepUntil+P_realLiteral(arg0)^.value;
       while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
@@ -41,7 +41,7 @@ FUNCTION sleepUntil_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
       result:=newVoidLiteral;
       if arg0^.literalType=lt_int
-      then sleepUntil:=P_intLiteral (arg0)^.value
+      then sleepUntil:=P_intLiteral (arg0)^.value.toFloat
       else sleepUntil:=P_realLiteral(arg0)^.value;
       while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));

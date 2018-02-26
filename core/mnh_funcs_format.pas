@@ -133,11 +133,11 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
     case category of
       fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
         lt_real: begin txt:=txt+sysutils.format(realFmt,[P_realLiteral(l)^.value]); exit; end;
-        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.value)]); exit; end;
+        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.value.toInt)]); exit; end;
       end;
       fmtCat_decimal, fmtCat_hex:
       if l^.literalType=lt_int then begin
-        txt:=txt+sysutils.format(intFmt,[P_intLiteral(l)^.value]);
+        txt:=txt+sysutils.format(intFmt,[P_intLiteral(l)^.value.toInt]);
         exit;
       end;
     end;
@@ -455,14 +455,14 @@ FUNCTION formatTime_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
       fmt:=P_stringLiteral(arg0)^.value;
       case arg1^.literalType of
-        lt_int:  result:=fmtIt(P_intLiteral (arg1)^.value);
+        lt_int:  result:=fmtIt(P_intLiteral (arg1)^.value.toInt);
         lt_real: result:=fmtIt(P_realLiteral(arg1)^.value);
         lt_emptyList: result:=newListLiteral;
         lt_realList,lt_intList,lt_numList: begin
           result:=newListLiteral;
           L:=list1;
           for i:=0 to L^.size-1 do case(L^.value[i]^.literalType) of
-            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value[i])^.value),false);
+            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value[i])^.value.toInt),false);
             lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value[i])^.value),false);
           end;
         end;

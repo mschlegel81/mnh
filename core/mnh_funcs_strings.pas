@@ -80,16 +80,16 @@ FUNCTION copy_imp intFuncSignature;
   FUNCTION safeStart(CONST index:longint):longint; inline;
     begin
       if arg1^.literalType=lt_int
-        then result:=int1^.value
-        else result:=P_intLiteral(list1^.value[index])^.value;
+        then result:=int1^.value.toInt
+        else result:=P_intLiteral(list1^.value[index])^.value.toInt;
       inc(result);
     end;
 
   FUNCTION safeLen(CONST index:longint):longint; inline;
     begin
       if arg2^.literalType=lt_int
-        then result:=int2^.value
-        else result:=P_intLiteral(list2^.value[index])^.value;
+        then result:=int2^.value.toInt
+        else result:=P_intLiteral(list2^.value[index])^.value.toInt;
     end;
 
   FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):string; inline;
@@ -110,8 +110,8 @@ FUNCTION copy_imp intFuncSignature;
       if not(allOkay) then exit(nil)
       else if not(anyList) then
         result:=newStringLiteral(myCopy(str0,
-                           P_intLiteral(arg1)^.value+1,
-                           P_intLiteral(arg2)^.value))
+                           P_intLiteral(arg1)^.value.toInt+1,
+                           P_intLiteral(arg2)^.value.toInt))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
@@ -448,7 +448,7 @@ FUNCTION repeat_impl intFuncSignature;
        (arg1^.literalType = lt_int) then begin
       res:='';
       sub:=str0^.value;
-      for i:=1 to int1^.value do res:=res+sub;
+      for i:=1 to int1^.value.toInt do res:=res+sub;
       result:=newStringLiteral(res);
     end;
   end;
@@ -722,7 +722,7 @@ FUNCTION diffStats_impl intFuncSignature;
         (arg1^.literalType in [lt_stringList,lt_emptyList]) or
         (arg0^.literalType=lt_string) and
         (arg1^.literalType=lt_string)) and
-       ((params^.size=2) or (arg2^.literalType=lt_int) and (int2^.value>=0)) then begin
+       ((params^.size=2) or (arg2^.literalType=lt_int) and (int2^.value.toInt>=0)) then begin
       result:=prepareDiff(arg0,arg1,diff);
       diff.destroy;
     end;
@@ -776,7 +776,7 @@ FUNCTION compress_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(compressString(str0^.value,0))
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int)
-      then result:=newStringLiteral(compressString(str0^.value,int1^.value))
+      then result:=newStringLiteral(compressString(str0^.value,int1^.value.toInt))
   end;
 
 FUNCTION decompress_impl intFuncSignature;

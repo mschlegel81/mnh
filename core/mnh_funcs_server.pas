@@ -88,8 +88,8 @@ FUNCTION startServer_impl intFuncSignature;
        (arg2^.literalType in [lt_int,lt_real])  and
        context.checkSideEffects('startHttpServer',tokenLocation,[se_alterContextState,se_server,se_detaching]) then begin
 
-      if arg2^.literalType=lt_int then timeout:=int2^.value/(24*60*60)
-                                  else timeout:=real2^.value/(24*60*60);
+      if arg2^.literalType=lt_int then timeout:=int2^.value.toFloat/(24*60*60)
+                                  else timeout:=real2^.value       /(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
       servingExpression^.rereference;
       childContext:=context.getNewAsyncContext;

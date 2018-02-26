@@ -200,7 +200,8 @@ FUNCTION bits_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       initialize(bits);
-      move(P_intLiteral(arg0)^.value,bits,8);
+      if P_intLiteral(arg0)^.value.canBeRepresentedAsInt64() then move(P_intLiteral(arg0)^.value.toInt,bits,8)
+      else raise Exception.create('unimplemented');
       result:=newListLiteral;
       for k:=0 to 63 do listResult^.appendBool(bits[k]);
     end else result:=nil;

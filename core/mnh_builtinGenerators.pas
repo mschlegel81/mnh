@@ -134,7 +134,7 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
 FUNCTION rangeGenerator intFuncSignature;
   begin
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      new(P_rangeGenerator(result),create(int0^.value,int1^.value,tokenLocation));
+      new(P_rangeGenerator(result),create(int0^.value.toInt,int1^.value.toInt,tokenLocation));
     end else result:=nil;
   end;
 
@@ -229,7 +229,7 @@ FUNCTION permutationIterator intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType=lt_int then begin
-        new(P_permutationIterator(result),create(int0^.value,tokenLocation));
+        new(P_permutationIterator(result),create(int0^.value.toInt,tokenLocation));
       end else if arg0^.literalType in C_compoundTypes then begin
         new(P_permutationIterator(result),create(compound0,tokenLocation));
       end;
@@ -648,8 +648,8 @@ FUNCTION stringIterator intFuncSignature;
   begin
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType in [lt_stringList,lt_stringSet]) and
-       (arg1^.literalType=lt_int) and (int1^.value>=0) and
-       (arg2^.literalType=lt_int) and (int2^.value>=int1^.value) then begin
+       (arg1^.literalType=lt_int) and (int1^.value.toInt>=0) and
+       (arg2^.literalType=lt_int) and (int2^.value.toInt>=int1^.value.toInt) then begin
       charSet:=[];
       iter:=collection0^.iteratableList;
       for c in iter do begin
@@ -667,7 +667,7 @@ FUNCTION stringIterator intFuncSignature;
       end;
       disposeLiteral(iter);
       if err then result:=nil
-             else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.value,int2^.value));
+             else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.value.toInt,int2^.value.toInt));
     end else result:=nil;
   end;
 INITIALIZATION
