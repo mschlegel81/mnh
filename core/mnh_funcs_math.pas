@@ -703,25 +703,13 @@ FUNCTION primes_impl intFuncSignature;
 
 FUNCTION digits_impl intFuncSignature;
   VAR base:int64=10;
-  FUNCTION digitsOf(i:int64):P_listLiteral;
-    VAR digit:array[0..63] of int64;
-        digitCount:longint=0;
+  FUNCTION digitsOf(CONST i:T_bigint):P_listLiteral;
+    VAR digits:T_arrayOfLongint;
         k:longint;
     begin
-      if i<0 then begin
-        context.adapters^.raiseError('Cannot determine digits of negative integer '+intToStr(i),tokenLocation);
-        exit(newListLiteral);
-      end;
-      if i=0 then begin
-        digit[0]:=0;
-        digitCount:=1;
-      end else while i>0 do begin
-        digit[digitCount]:=i mod base;
-        i:=i div base;
-        inc(digitCount);
-      end;
-      result:=newListLiteral(digitCount);
-      for k:=digitCount-1 downto 0 do result^.appendInt(digit[k]);
+      digits:=i.getDigits(base);
+      result:=newListLiteral(length(digits));
+      for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
     end;
 
   VAR j:longint;
@@ -735,9 +723,9 @@ FUNCTION digits_impl intFuncSignature;
         context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString,tokenLocation);
         exit(nil);
       end;
-      if arg0^.literalType=lt_int then exit(digitsOf(int0^.value.toInt));
+      if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
       result:=collection0^.newOfSameType(true);
-      for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value.toInt),false);
+      for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
     end;
   end;
 
