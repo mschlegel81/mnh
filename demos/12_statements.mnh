@@ -30,7 +30,7 @@ check(T:BooleanList(13))->T==[false,                      //0. (dummy)
                           T[[7,8,9]].trueCount=1,
                           T[[1..11]].trueCount=4];
 private printBits(i)->printf("%S",[0..11].each(j,txt[j]&"\tis "&((i and (2^j))>0)));
-
-private twelveBits(i)->false|bits(i).head(12);
+private M:=2^[0..11];
+private twelveBits(i)->false|((i and M)=M);
 //*See http://rosettacode.org/wiki/Twelve_statements
 main->[0..2^12-1].pEach(i,check(twelveBits(i)) ? printBits(i) orElse true : false,OR);

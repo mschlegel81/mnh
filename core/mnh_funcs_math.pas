@@ -225,10 +225,10 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       if y>=0 then exit(x^.rereferenced);
       while (i>y) and (i>-19) do begin pot:=pot*10; dec(i); end;
       if not(x^.value.canBeRepresentedAsInt64()) then begin
-        raise Exception.create('Unimplemented');
+        context.adapters^.raiseError('Cannot apply custom rounding to big integers',location);
+        exit(newVoidLiteral);
       end;
       xv:=x^.value.toInt;
-      xv  :=xv div pot;
       result:=newIntLiteral((xv div pot) * pot);
     end;
 
@@ -639,33 +639,76 @@ FUNCTION permutations_impl intFuncSignature;
   end;
 
 FUNCTION factorize_impl intFuncSignature;
-  {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; listResult^.appendInt(p); end}
-  VAR n,p:int64;
+  {$define DIVIDE_THROUGH:=while smallN mod p=0 do begin smallN:=smallN div p; listResult^.appendInt(p); end}
+  VAR p:int64;
+      smallN:int64;
+      bigN  :T_bigint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      n:=int0^.value.toInt;
-      if (n=1) or (n=0) then exit(newListLiteral^.appendInt(n));
-      result:=newListLiteral;
-      if n<0 then begin
-        n:=-n;
-        listResult^.appendInt(-1);
+      if int0^.value.canBeRepresentedAsInt64() then begin
+        smallN:=int0^.value.toInt;
+        if (smallN=1) or (smallN=0) then exit(newListLiteral^.appendInt(smallN));
+        result:=newListLiteral;
+        if smallN<0 then begin
+          smallN:=-smallN;
+          listResult^.appendInt(-1);
+        end;
+        p:=2; DIVIDE_THROUGH;
+        p:=3; DIVIDE_THROUGH;
+        p:=5; DIVIDE_THROUGH;
+        p:=7;
+        while (smallN>=p*p) and (context.adapters^.noErrors) do begin
+          DIVIDE_THROUGH; inc(p,4); // n*30 +  7
+          DIVIDE_THROUGH; inc(p,2); // n*30 + 11
+          DIVIDE_THROUGH; inc(p,4); // n*30 + 13
+          DIVIDE_THROUGH; inc(p,2); // n*30 + 17
+          DIVIDE_THROUGH; inc(p,4); // n*30 + 19
+          DIVIDE_THROUGH; inc(p,6); // n*30 + 23
+          DIVIDE_THROUGH; inc(p,2); // n*30 + 29
+          DIVIDE_THROUGH; inc(p,6); // n*30 + 31
+        end;
+        if smallN>1 then listResult^.appendInt(smallN);
+      end else begin
+        bigN.create(int0^.value);
+        result:=newListLiteral;
+        if bigN.isNegative then begin
+          bigN.flipSign;
+          listResult^.appendInt(-1);
+        end;
+        p:=2; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
+        p:=3; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
+        p:=5; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
+        p:=7;
+        while (p<4294967266) and (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (context.adapters^.noErrors) and not(bign.canBeRepresentedAsInt64()) do begin
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 +  7
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 11
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 13
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 17
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 19
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 23
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 29
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 31
+        end;
+        if (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (bign.canBeRepresentedAsInt64()) then begin
+          smallN:=bigN.toInt;
+          bigN.destroy;
+          while (smallN>=p*p) and (context.adapters^.noErrors) do begin
+            DIVIDE_THROUGH; inc(p,4); // n*30 +  7
+            DIVIDE_THROUGH; inc(p,2); // n*30 + 11
+            DIVIDE_THROUGH; inc(p,4); // n*30 + 13
+            DIVIDE_THROUGH; inc(p,2); // n*30 + 17
+            DIVIDE_THROUGH; inc(p,4); // n*30 + 19
+            DIVIDE_THROUGH; inc(p,6); // n*30 + 23
+            DIVIDE_THROUGH; inc(p,2); // n*30 + 29
+            DIVIDE_THROUGH; inc(p,6); // n*30 + 31
+          end;
+          if smallN>1 then listResult^.appendInt(smallN);
+        end else begin
+          if bigN.compare(1)=CR_GREATER then listResult^.append(newIntLiteral(bigN),false)
+                                        else bigN.destroy;
+        end;
       end;
-      p:=2; DIVIDE_THROUGH;
-      p:=3; DIVIDE_THROUGH;
-      p:=5; DIVIDE_THROUGH;
-      p:=7;
-      while (p*p<=n) and (context.adapters^.noErrors) do begin
-        DIVIDE_THROUGH; inc(p,4); // n*30 +  7
-        DIVIDE_THROUGH; inc(p,2); // n*30 + 11
-        DIVIDE_THROUGH; inc(p,4); // n*30 + 13
-        DIVIDE_THROUGH; inc(p,2); // n*30 + 17
-        DIVIDE_THROUGH; inc(p,4); // n*30 + 19
-        DIVIDE_THROUGH; inc(p,6); // n*30 + 23
-        DIVIDE_THROUGH; inc(p,2); // n*30 + 29
-        DIVIDE_THROUGH; inc(p,6); // n*30 + 31
-      end;
-      if n>1 then listResult^.appendInt(n);
     end;
   end;
 
