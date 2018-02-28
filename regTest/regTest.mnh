@@ -6,6 +6,7 @@ private printCase(s:String)->begin
   printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
 end;
 
+//@SuppressUnusedWarning
 startedMyOwnServer:=begin
   isIpcServerRunning(oeis_server.ipcId) OR $1=='stopServer'
   ? false
@@ -16,8 +17,6 @@ startedMyOwnServer:=begin
     end;
 end;
 
-//@after
-onShutdown->startedMyOwnServer ? sendIpcRequest(ipcId,['stop']) : void;
 
 testFile(scriptFileName:String,doLog:Boolean)->
  begin

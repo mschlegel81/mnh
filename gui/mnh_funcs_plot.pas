@@ -25,7 +25,7 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
         if isInfinite(result) then
           result:=Nan;
         end;
-      lt_int: result:=P_intLiteral(x)^.value;
+      lt_int: result:=P_intLiteral(x)^.value.toInt;
       else result:=Nan;
     end;
   end;
@@ -90,11 +90,11 @@ FUNCTION addPlot intFuncSignature;
          (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
          (arg1^.literalType in [lt_int,lt_real]) and
          (arg2^.literalType in [lt_int,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
-         (arg3^.literalType=lt_int) and (int3^.value>=2) then begin
+         (arg3^.literalType=lt_int) and (int3^.value.toInt>=2) then begin
         context.adapters^.plot^.addRow(options,generateRow(P_expressionLiteral(arg0),
                                                           fReal(arg1),
                                                           fReal(arg2),
-                                                          int3^.value,
+                                                          int3^.value.toInt,
                                                           tokenLocation,
                                                           context));
         if context.adapters^.noErrors then context.adapters^.logDeferredPlot;
@@ -181,10 +181,10 @@ FUNCTION setOptions intFuncSignature;
         opt.axisTrafo['y'].logscale:=P_boolLiteral(value)^.value;
       end else
       if (key='axisStyleX'    ) and (value^.literalType=lt_int) then begin
-        opt.axisStyle['x']:=P_intLiteral(value)^.value and 7;
+        opt.axisStyle['x']:=P_intLiteral(value)^.value.lowDigit and 7;
       end else
       if (key='axisStyleY'    ) and (value^.literalType=lt_int) then begin
-        opt.axisStyle['y']:=P_intLiteral(value)^.value and 7;
+        opt.axisStyle['y']:=P_intLiteral(value)^.value.lowDigit and 7;
       end else fail;
     end;
 
@@ -236,9 +236,9 @@ FUNCTION renderToFile_impl intFuncSignature;
       ((params^.size = 3) or (params^.size = 4) and
       (arg3^.literalType = lt_int)) then begin
       fileName:=str0^.value;
-      width:=int1^.value;
-      height:=int2^.value;
-      if params^.size>3 then quality:=int3^.value
+      width:=int1^.value.toInt;
+      height:=int2^.value.toInt;
+      if params^.size>3 then quality:=int3^.value.lowDigit
                         else quality:=0;
       if (fileName = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       try
@@ -264,9 +264,9 @@ FUNCTION renderToString_impl intFuncSignature;
       (arg1^.literalType = lt_int) and
       ((params^.size = 2) or (params^.size = 3) and
       (arg2^.literalType = lt_int)) then begin
-      width:=int0^.value;
-      height:=int1^.value;
-      if params^.size>2 then quality:=int2^.value
+      width:=int0^.value.toInt;
+      height:=int1^.value.toInt;
+      if params^.size>2 then quality:=int2^.value.lowDigit
                         else quality:=0;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       result:=newStringLiteral(context.adapters^.plot^.renderToString(width,height,quality));
@@ -278,8 +278,8 @@ FUNCTION removePlot_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
-       (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and (int0^.value>0) then begin
-      if (params<>nil) and (params^.size=1) then toDrop:=int0^.value;
+       (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and (int0^.value.toInt>0) then begin
+      if (params<>nil) and (params^.size=1) then toDrop:=int0^.value.toInt;
       context.adapters^.plot^.removeRows(toDrop);
       context.adapters^.logDeferredPlot;
       result:=newVoidLiteral;

@@ -1,7 +1,15 @@
 UNIT mnh_funcs_math;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils,mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_adapters,mnh_contexts,myGenerics;
+USES sysutils,
+     math,
+     bigint,
+     myGenerics,
+     mnh_basicTypes,mnh_constants,
+     mnh_litVar,
+     mnh_funcs,
+     mnh_out_adapters,
+     mnh_contexts;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
@@ -13,8 +21,8 @@ IMPLEMENTATION
     result:=nil;
     case x^.literalType of
       lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
-      lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
-      lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
+      lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value.toFloat)); except result:=newRealLiteral(Nan) end;
+      lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value        )); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
       lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
         result:=P_collectionLiteral(x)^.newOfSameType(true);
@@ -81,18 +89,25 @@ FUNCTION ln_imp intFuncSignature;
 {$define ID_MACRO:='ln'}
 UNARY_NUM_TO_REAL;
 
+{$undef CALL_MACRO}
+{$undef ID_MACRO}
 {$undef UNARY_NUM_TO_REAL}
 
 FUNCTION not_imp intFuncSignature;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR y:P_literal;
         iter:T_arrayOfLiteral;
+        zero:T_bigint;
     begin
       result:=nil;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('not',tokenLocation,@context);
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
-        lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
+        lt_int:     begin
+                      zero.createZero;
+                      result:=newIntLiteral (P_intLiteral (x)^.value.bitXor(zero));
+                      zero.destroy;
+                    end;
         lt_list,lt_booleanList,lt_intList,lt_emptyList,
         lt_set ,lt_booleanSet ,lt_intSet ,lt_emptySet: begin
           result:=P_collectionLiteral(x)^.newOfSameType(true);
@@ -100,7 +115,7 @@ FUNCTION not_imp intFuncSignature;
           for y in iter do P_collectionLiteral(result)^.append(not_rec(y),false);
           disposeLiteral(iter);
           if collResult^.containsError then begin
-            raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+            raiseNotApplicableError('not',x,tokenLocation,context.adapters^);
             disposeLiteral(result);
           end;
         end;
@@ -114,77 +129,80 @@ FUNCTION not_imp intFuncSignature;
     then result:=not_rec(arg0);
   end;
 
-{$define UNARY_NUM_TO_SAME:=
-FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR sub:P_literal;
-      iter:T_arrayOfLiteral;
-  begin
-    result:=nil;
-    case x^.literalType of
-      lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
-      lt_error: begin result:=x; result^.rereference; end;
-      lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
-      lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-      lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
-        result:=P_collectionLiteral(x)^.newOfSameType(true);
-        iter  :=P_collectionLiteral(x)^.iteratableList;
-        for sub in iter do collResult^.append(recurse(sub),false);
-        disposeLiteral(iter);
-        if collResult^.containsError then begin
-          raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
-          disposeLiteral(result);
-        end;
-      end;
-      else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
-    end;
-  end;
-
-begin
-  result:=nil;
-  if (params<>nil) and (params^.size=1)
-  then result:=recurse(arg0);
-end}
-
 FUNCTION abs_imp intFuncSignature;
-{$define CALL_MACRO:=abs}
-{$define ID_MACRO:='abs'}
-UNARY_NUM_TO_SAME;
-
-FUNCTION sqr_imp intFuncSignature;
-{$define CALL_MACRO:=sqr}
-{$define ID_MACRO:='sqr'}
-UNARY_NUM_TO_SAME;
-
-{$undef UNARY_NUM_TO_SAME}
-
-{$define ROUND_IMPLEMENTATION:=FUNCTION recurse1(CONST x:P_literal):P_literal;
+  FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR sub:P_literal;
         iter:T_arrayOfLiteral;
     begin
       result:=nil;
       case x^.literalType of
-        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
-        lt_error,lt_int: result:=x^.rereferenced;
-        lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
-                 then result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('abs',tokenLocation,@context);
+        lt_error: begin result:=x; result^.rereference; end;
+        lt_int : if P_intLiteral(x)^.value.isNegative
+                 then result:=newIntLiteral(P_intLiteral(x)^.value.negated)
+                 else result:=x^.rereferenced;
+        lt_real: if P_realLiteral(x)^.value<0
+                 then result:=newRealLiteral(-P_realLiteral(x)^.value)
+                 else result:=x^.rereferenced;
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
           result:=P_collectionLiteral(x)^.newOfSameType(true);
           iter  :=P_collectionLiteral(x)^.iteratableList;
-          for sub in iter do collResult^.append(recurse1(sub),false);
+          for sub in iter do collResult^.append(recurse(sub),false);
           disposeLiteral(iter);
           if collResult^.containsError then begin
-            raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+            raiseNotApplicableError('abs',x,tokenLocation,context.adapters^);
             disposeLiteral(result);
           end;
         end;
-        else raiseNotApplicableError(ID_MACRO,x,tokenLocation,context.adapters^);
+        else raiseNotApplicableError('abs',x,tokenLocation,context.adapters^);
       end;
     end;
 
-  FUNCTION recurse2(CONST x,y:P_literal):P_literal;
-    FUNCTION myRound(CONST x:T_myFloat; CONST y:int64):P_literal; inline;
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1)
+  then result:=recurse(arg0);
+end;
+
+FUNCTION sqr_imp intFuncSignature;
+  FUNCTION recurse(CONST x:P_literal):P_literal;
+    VAR sub:P_literal;
+        iter:T_arrayOfLiteral;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sqr',tokenLocation,@context);
+        lt_error: begin result:=x; result^.rereference; end;
+        lt_int : result:=newIntLiteral (P_intLiteral (x)^.value.mult(P_intLiteral (x)^.value));
+        lt_real: result:=newRealLiteral(sqr(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType(true);
+          iter  :=P_collectionLiteral(x)^.iteratableList;
+          for sub in iter do collResult^.append(recurse(sub),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            raiseNotApplicableError('sqr',x,tokenLocation,context.adapters^);
+            disposeLiteral(result);
+          end;
+        end;
+        else raiseNotApplicableError('sqr',x,tokenLocation,context.adapters^);
+      end;
+    end;
+
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1)
+  then result:=recurse(arg0);
+end;
+
+FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roundingMode:T_roundingMode;
+                     CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  CONST funcName:array[T_roundingMode] of string=('round',  //RM_DEFAULT,
+                                                  'ceil',   //RM_UP,
+                                                  'floor'); //RM_DOWN
+  FUNCTION myRound(CONST x:T_myFloat; CONST y:int64):P_literal; inline;
       VAR pot:T_myFloat;
           i:int64;
       begin
@@ -192,106 +210,93 @@ UNARY_NUM_TO_SAME;
         i:=0;
         while (i<y) and (i< 20) do begin pot:=pot*10;  inc(i); end;
         while (i>y) and (i>-20) do begin pot:=pot*0.1; dec(i); end;
-        result:=newRealLiteral(CALL_MACRO(x*pot)/pot);
+        case roundingMode of
+          RM_DEFAULT: result:=newRealLiteral(round  (x*pot)/pot);
+          RM_UP     : result:=newRealLiteral(ceil64 (x*pot)/pot);
+          RM_DOWN   : result:=newRealLiteral(floor64(x*pot)/pot);
+        end;
       end;
 
-    FUNCTION myRound(CONST x:P_intLiteral; CONST y:int64):P_literal; inline;
-      VAR pot,i:int64;
-      begin
-        if y>=0 then exit(x^.rereferenced);
-        pot:=1;
-        i:=0;
-        while (i>y) and (i>-20) do begin pot:=pot*10; dec(i); end;
-        result:=newIntLiteral(CALL_MACRO(x^.value div pot) * pot);
-      end;
-
-    VAR sub,ySub:P_literal;
-        yIter:T_arrayOfLiteral;
-        xIter:T_arrayOfLiteral;
-        i    :longint;
+  FUNCTION myRound(CONST x:P_intLiteral; CONST y:int64):P_literal; inline;
+    VAR i   :longint=0;
+        pot :digitType=1;
+        xv  :int64;
     begin
+      if y>=0 then exit(x^.rereferenced);
+      while (i>y) and (i>-19) do begin pot:=pot*10; dec(i); end;
+      if not(x^.value.canBeRepresentedAsInt64()) then begin
+        context.adapters^.raiseError('Cannot apply custom rounding to big integers',location);
+        exit(newVoidLiteral);
+      end;
+      xv:=x^.value.toInt;
+      result:=newIntLiteral((xv div pot) * pot);
+    end;
+
+  VAR big:T_bigint;
+      sub:P_literal;
+      iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    if relevantDigits=0 then begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(funcName[roundingMode],location,@context);
+        lt_error,lt_int: result:=x^.rereferenced;
+        lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
+                 then begin
+                   big.fromFloat(P_realLiteral(x)^.value,roundingMode);
+                   result:=newIntLiteral(big);
+                 end;
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
+          result:=P_collectionLiteral(x)^.newOfSameType(true);
+          iter  :=P_collectionLiteral(x)^.iteratableList;
+          for sub in iter do collResult^.append(customRound(sub,0,roundingMode,location,context),false);
+          disposeLiteral(iter);
+          if collResult^.containsError then begin
+            raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
+            disposeLiteral(result);
+          end;
+        end;
+        else raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
+      end;
+    end else begin
       result:=nil;
       case x^.literalType of
         lt_error: result:=x^.rereferenced;
-        lt_int : case y^.literalType of
-          lt_error: result:=y^.rereferenced;
-          lt_int: result:=myRound(P_intLiteral(x),P_intLiteral(y)^.value);
-          lt_list,lt_intList,lt_emptyList,
-          lt_set ,lt_intSet ,lt_emptySet: begin
-            result:=P_collectionLiteral(y)^.newOfSameType(true);
-            yIter :=P_collectionLiteral(y)^.iteratableList;
-            for sub in yIter do collResult^.append(recurse2(x,sub),false);
-            disposeLiteral(yIter);
-            if collResult^.containsError then begin
-              disposeLiteral(result);
-              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-            end;
-          end;
-          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-        end;
+        lt_int : result:=myRound(P_intLiteral(x),relevantDigits);
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
-          then case y^.literalType of
-            lt_error: result:=y^.rereferenced;
-            lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
-            lt_list,lt_intList,lt_emptyList,
-            lt_set ,lt_intSet ,lt_emptySet: begin
-              result:=P_collectionLiteral(y)^.newOfSameType(true);
-              yIter :=P_collectionLiteral(y)^.iteratableList;
-              for sub in yIter do collResult^.append(recurse2(x,sub),false);
-              disposeLiteral(yIter);
-              if collResult^.containsError then begin
-                disposeLiteral(result);
-                raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-              end;
-            end;
-            else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-          end;
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
-          lt_error: result:=y^.rereferenced;
-          lt_int: begin
+                 then result:=myRound(P_realLiteral(x)^.value,relevantDigits)
+                 else raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList:
+          begin
             result:=newListLiteral;
-            xIter:=P_collectionLiteral(x)^.iteratableList;
-            for sub in xIter do P_listLiteral(result)^.append(recurse2(sub,y),false);
-            disposeLiteral(xIter);
+            iter:=P_collectionLiteral(x)^.iteratableList;
+            for sub in iter do P_listLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context),false);
+            disposeLiteral(iter);
             if collResult^.containsError then begin
               disposeLiteral(result);
-              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+              raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
             end;
           end;
-          lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do listResult^.append(recurse2(P_listLiteral(x)^.value[i],P_listLiteral(y)^.value[i]),false);
-          end else context.adapters^.raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
-          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-        end;
-        lt_set,lt_intSet,lt_realSet,lt_numSet,lt_emptySet: case y^.literalType of
-          lt_error: result:=y^.rereferenced;
-          lt_int: begin
+
+        lt_set,lt_intSet,lt_realSet,lt_numSet,lt_emptySet:  begin
             result:=newSetLiteral;
-            xIter:=P_collectionLiteral(x)^.iteratableList;
-            for sub in xIter do P_setLiteral(result)^.append(recurse2(sub,y),false);
-            disposeLiteral(xIter);
+            iter:=P_collectionLiteral(x)^.iteratableList;
+            for sub in iter do P_setLiteral(result)^.append(customRound(sub,relevantDigits,roundingMode,location,context),false);
+            disposeLiteral(iter);
             if collResult^.containsError then begin
               disposeLiteral(result);
-              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+              raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
             end;
           end;
-          lt_set,lt_intSet,lt_emptySet: begin
-            result:=newSetLiteral;
-            xIter:=P_collectionLiteral(x)^.iteratableList;
-            yIter:=P_collectionLiteral(y)^.iteratableList;
-            for sub in xIter do for ySub in yIter do setResult^.append(recurse2(sub,ySub),false);
-            if collResult^.containsError then begin
-              disposeLiteral(result);
-              raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-            end;
-          end;
-          else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
-        end;
-        else raiseNotApplicableError(ID_MACRO,x,y,tokenLocation,context.adapters^);
+
+        else raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
       end;
     end;
+  end;
 
+{
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then result:=recurse1(arg0) else
@@ -299,25 +304,28 @@ UNARY_NUM_TO_SAME;
   end}
 
 FUNCTION round_imp intFuncSignature;
-{$define CALL_MACRO:=round}
-{$define ID_MACRO:='round'}
-ROUND_IMPLEMENTATION;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)                                then result:=customRound(arg0,0                ,RM_DEFAULT,tokenLocation,context) else
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_int) then result:=customRound(arg0,int1^.value.toInt,RM_DEFAULT,tokenLocation,context);
+  end;
 
 FUNCTION floor64(CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)<0 then dec(result); end;
 FUNCTION ceil64 (CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)>0 then inc(result); end;
 
 FUNCTION ceil_imp intFuncSignature;
-{$define CALL_MACRO:=ceil64}
-{$define ID_MACRO:='ceil'}
-ROUND_IMPLEMENTATION;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)                                then result:=customRound(arg0,0                ,RM_UP,tokenLocation,context) else
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_int) then result:=customRound(arg0,int1^.value.toInt,RM_UP,tokenLocation,context);
+  end;
 
 FUNCTION floor_imp intFuncSignature;
-{$define CALL_MACRO:=floor64}
-{$define ID_MACRO:='floor'}
-ROUND_IMPLEMENTATION;
-{$undef ROUND_IMPLEMENTATION}
-{$undef CALL_MACRO}
-{$undef ID_MACRO}
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)                                then result:=customRound(arg0,0                ,RM_DOWN,tokenLocation,context) else
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_int) then result:=customRound(arg0,int1^.value.toInt,RM_DOWN,tokenLocation,context);
+  end;
 
 FUNCTION sign_imp intFuncSignature;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
@@ -328,7 +336,7 @@ FUNCTION sign_imp intFuncSignature;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation,@context);
         lt_error: result:=x^.rereferenced;
-        lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
+        lt_int : result:=newIntLiteral(P_intLiteral (x)^.value.sign);
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
@@ -563,7 +571,7 @@ FUNCTION subSets_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and ((params^.size=1) or (arg1^.literalType=lt_int)) then begin
-      if params^.size=2 then acceptOnlySetsOfSize:=int1^.value;
+      if params^.size=2 then acceptOnlySetsOfSize:=int1^.value.toInt;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         sets.create;
         setLength(mustContain,0);
@@ -631,33 +639,76 @@ FUNCTION permutations_impl intFuncSignature;
   end;
 
 FUNCTION factorize_impl intFuncSignature;
-  {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; listResult^.appendInt(p); end}
-  VAR n,p:int64;
+  {$define DIVIDE_THROUGH:=while smallN mod p=0 do begin smallN:=smallN div p; listResult^.appendInt(p); end}
+  VAR p:int64;
+      smallN:int64;
+      bigN  :T_bigint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      n:=int0^.value;
-      if (n=1) or (n=0) then exit(newListLiteral^.appendInt(n));
-      result:=newListLiteral;
-      if n<0 then begin
-        n:=-n;
-        listResult^.appendInt(-1);
+      if int0^.value.canBeRepresentedAsInt64() then begin
+        smallN:=int0^.value.toInt;
+        if (smallN=1) or (smallN=0) then exit(newListLiteral^.appendInt(smallN));
+        result:=newListLiteral;
+        if smallN<0 then begin
+          smallN:=-smallN;
+          listResult^.appendInt(-1);
+        end;
+        p:=2; DIVIDE_THROUGH;
+        p:=3; DIVIDE_THROUGH;
+        p:=5; DIVIDE_THROUGH;
+        p:=7;
+        while (smallN>=p*p) and (context.adapters^.noErrors) do begin
+          DIVIDE_THROUGH; inc(p,4); // n*30 +  7
+          DIVIDE_THROUGH; inc(p,2); // n*30 + 11
+          DIVIDE_THROUGH; inc(p,4); // n*30 + 13
+          DIVIDE_THROUGH; inc(p,2); // n*30 + 17
+          DIVIDE_THROUGH; inc(p,4); // n*30 + 19
+          DIVIDE_THROUGH; inc(p,6); // n*30 + 23
+          DIVIDE_THROUGH; inc(p,2); // n*30 + 29
+          DIVIDE_THROUGH; inc(p,6); // n*30 + 31
+        end;
+        if smallN>1 then listResult^.appendInt(smallN);
+      end else begin
+        bigN.create(int0^.value);
+        result:=newListLiteral;
+        if bigN.isNegative then begin
+          bigN.flipSign;
+          listResult^.appendInt(-1);
+        end;
+        p:=2; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
+        p:=3; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
+        p:=5; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
+        p:=7;
+        while (p<4294967266) and (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (context.adapters^.noErrors) and not(bign.canBeRepresentedAsInt64()) do begin
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 +  7
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 11
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 13
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 17
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 19
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 23
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 29
+          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 31
+        end;
+        if (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (bign.canBeRepresentedAsInt64()) then begin
+          smallN:=bigN.toInt;
+          bigN.destroy;
+          while (smallN>=p*p) and (context.adapters^.noErrors) do begin
+            DIVIDE_THROUGH; inc(p,4); // n*30 +  7
+            DIVIDE_THROUGH; inc(p,2); // n*30 + 11
+            DIVIDE_THROUGH; inc(p,4); // n*30 + 13
+            DIVIDE_THROUGH; inc(p,2); // n*30 + 17
+            DIVIDE_THROUGH; inc(p,4); // n*30 + 19
+            DIVIDE_THROUGH; inc(p,6); // n*30 + 23
+            DIVIDE_THROUGH; inc(p,2); // n*30 + 29
+            DIVIDE_THROUGH; inc(p,6); // n*30 + 31
+          end;
+          if smallN>1 then listResult^.appendInt(smallN);
+        end else begin
+          if bigN.compare(1)=CR_GREATER then listResult^.append(newIntLiteral(bigN),false)
+                                        else bigN.destroy;
+        end;
       end;
-      p:=2; DIVIDE_THROUGH;
-      p:=3; DIVIDE_THROUGH;
-      p:=5; DIVIDE_THROUGH;
-      p:=7;
-      while (p*p<=n) and (context.adapters^.noErrors) do begin
-        DIVIDE_THROUGH; inc(p,4); // n*30 +  7
-        DIVIDE_THROUGH; inc(p,2); // n*30 + 11
-        DIVIDE_THROUGH; inc(p,4); // n*30 + 13
-        DIVIDE_THROUGH; inc(p,2); // n*30 + 17
-        DIVIDE_THROUGH; inc(p,4); // n*30 + 19
-        DIVIDE_THROUGH; inc(p,6); // n*30 + 23
-        DIVIDE_THROUGH; inc(p,2); // n*30 + 29
-        DIVIDE_THROUGH; inc(p,6); // n*30 + 31
-      end;
-      if n>1 then listResult^.appendInt(n);
     end;
   end;
 
@@ -689,31 +740,19 @@ FUNCTION primes_impl intFuncSignature;
 
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
-    then result:=sievePrimes(int0^.value)
+    then result:=sievePrimes(int0^.value.toInt)
     else result:=nil;
   end;
 
 FUNCTION digits_impl intFuncSignature;
   VAR base:int64=10;
-  FUNCTION digitsOf(i:int64):P_listLiteral;
-    VAR digit:array[0..63] of int64;
-        digitCount:longint=0;
+  FUNCTION digitsOf(CONST i:T_bigint):P_listLiteral;
+    VAR digits:T_arrayOfLongint;
         k:longint;
     begin
-      if i<0 then begin
-        context.adapters^.raiseError('Cannot determine digits of negative integer '+intToStr(i),tokenLocation);
-        exit(newListLiteral);
-      end;
-      if i=0 then begin
-        digit[0]:=0;
-        digitCount:=1;
-      end else while i>0 do begin
-        digit[digitCount]:=i mod base;
-        i:=i div base;
-        inc(digitCount);
-      end;
-      result:=newListLiteral(digitCount);
-      for k:=digitCount-1 downto 0 do result^.appendInt(digit[k]);
+      digits:=i.getDigits(base);
+      result:=newListLiteral(length(digits));
+      for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
     end;
 
   VAR j:longint;
@@ -722,7 +761,7 @@ FUNCTION digits_impl intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
       (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
-      if params^.size=2 then base:=int1^.value;
+      if params^.size=2 then base:=int1^.value.toInt;
       if base<=1 then begin
         context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString,tokenLocation);
         exit(nil);
@@ -734,50 +773,51 @@ FUNCTION digits_impl intFuncSignature;
   end;
 
 FUNCTION composeDigits_imp intFuncSignature;
-  VAR base:int64=10;
+  VAR base:longint=10;
       Shift:int64=0;
-
+      digits:T_arrayOfLongint;
+      intPart :T_bigint;
+      fracPart:T_myFloat;
       k  :longint;
-      dig:int64    =0;
-      ir :int64    =0;
-      fr :T_myFloat=0;
-      invalidatedIntResult:boolean=false;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and
        (arg0^.literalType in [lt_emptyList,lt_intList]) then begin
       if params^.size>=2 then begin
-        if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value;
-        if base<=1 then begin
+        if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value.toInt;
+        if (base<=1) or not(int1^.value.canBeRepresentedAsInt32()) then begin
           context.adapters^.raiseError('Cannot compose digits with base '+arg1^.toString,tokenLocation);
           exit(nil);
         end;
       end;
       if params^.size=3 then begin
-        if arg2^.literalType<>lt_int then exit(nil) else Shift:=int2^.value;
+        if arg2^.literalType<>lt_int then exit(nil) else Shift:=int2^.value.toInt;
+        if not(int2^.value.canBeRepresentedAsInt32()) then begin
+          context.adapters^.raiseError('Shift argument is out of bounds',tokenLocation);
+          exit(nil);
+        end;
       end;
       if arg0^.literalType=lt_emptyList then exit(newIntLiteral(0));
+      for k:=0 to list0^.size-1 do if not(P_intLiteral(list0^.value[k])^.value.isBetween(0,base-1)) then begin
+        context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
+        exit(nil);
+      end;
 
-      {$Q-}{$R-}
-      for k:=0 to list0^.size-1 do begin
-        dig:=P_intLiteral(list0^.value[k])^.value;
-        if (dig>=base) or (dig<0) then context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
-        ir:=ir*base+dig;
-        fr:=fr*base+dig;
-        invalidatedIntResult:=invalidatedIntResult or (ir<0);
-      end;
-      if Shift<0 then for k:=-1 downto Shift do begin
-        ir:=ir*base+dig;
-        fr:=fr*base+dig;
-        invalidatedIntResult:=invalidatedIntResult or (ir<0);
-      end else if Shift>0 then begin
-        dig:=1;
-        for k:=1 to Shift do fr:=fr/base;
-        invalidatedIntResult:=true;
-      end;
-      {$Q+}{$R+}
-      if invalidatedIntResult then exit(newRealLiteral(fr))
-                              else exit(newIntLiteral (ir));
+      if list0^.size>Shift then begin
+        setLength(digits,list0^.size-Shift);
+        for k:=0 to min(length(digits),list0^.size)-1 do digits[k]:=P_intLiteral(list0^.value[k])^.value.toInt;
+        for k:=list0^.size to length(digits)-1 do digits[k]:=0;
+        intPart.createFromDigits(base,digits);
+      end else intPart.createZero;
+      if Shift>0 then begin
+        fracPart:=0;
+        for k:=list0^.size-1 downto list0^.size-Shift do begin
+          if k>=0 then fracPart+=P_intLiteral(list0^.value[k])^.value.toInt;
+          fracPart/=base;
+        end;
+        result:=newRealLiteral(intPart.toFloat+fracPart);
+        intPart.destroy;
+      end else exit(newIntLiteral(intPart));
     end;
   end;
 
@@ -787,12 +827,29 @@ FUNCTION arctan2_impl intFuncSignature;
     if (params<>nil) and (params^.size=2) and
        (arg0^.literalType in [lt_int,lt_real]) and
        (arg1^.literalType in [lt_int,lt_real]) then begin
-      if arg0^.literalType=lt_int then x:=int0^.value
+      if arg0^.literalType=lt_int then x:=int0^.value.toFloat
                                   else x:=real0^.value;
-      if arg1^.literalType=lt_int then y:=int1^.value
+      if arg1^.literalType=lt_int then y:=int1^.value.toFloat
                                   else y:=real1^.value;
       result:=newRealLiteral(arctan2(x,y));
     end else result:=nil;
+  end;
+
+FUNCTION gcd_impl intFuncSignature;
+  VAR ir,temp:T_bigint;
+      k:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) then begin
+      for k:=0 to params^.size-1 do if params^.value[k]^.literalType<>lt_int then exit(nil);
+      if params^.size=1 then exit(arg0^.rereferenced);
+      ir:=int0^.value.greatestCommonDivider(int1^.value);
+      for k:=2 to params^.size-1 do begin
+        temp:=ir.greatestCommonDivider(P_intLiteral(params^.value[k])^.value);
+        ir.destroy; ir:=temp;
+      end;
+      result:=newIntLiteral(ir);
+    end;
   end;
 
 INITIALIZATION
@@ -836,4 +893,5 @@ INITIALIZATION
                                                                                   'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
                                                                                   'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
+  registerRule(MATH_NAMESPACE,'gcd'         ,@gcd_impl         ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
 end.

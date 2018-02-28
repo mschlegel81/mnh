@@ -6,7 +6,7 @@ private memoized next(prev:String)->
 //*Returns the last char in String s
 private lastChar(s:String)->s.copy(s.length-1,1);
 //*Returns all binary strings of a given length
-private binaryStrings(len>=1)->rangeGenerator(0,2^len-1).pMap({bits($i).ord.head(len).join});
+private binaryStrings(len>=1)->rangeGenerator(0,2^len-1).pMap({digits($i,2).join}).pMap({repeat('0',len-$s.length)&$s});
 //*Returns a\[b]
 private without(a:StringCollection,b:String)->a.minus([b]);
 //*Returns s if it does not contain '!' or void otherwise

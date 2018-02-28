@@ -170,23 +170,37 @@ timeForFullTest(flavour:String,codeHash:String)->begin
   : void;
 end;
 
+private allScripts->expectations.getInner(0);
+private allFlavours->BUILDS.filter({not(buildBlindly($B))}).getInner(1);
+
+matching(L:StringCollection,pattern)->
+  pattern.matches('\*|\|')
+  ? begin
+      local reg:=pattern.replace('*','.*');
+      L.filter({$s.matches(reg)});
+    end
+  : L.filter({$s=pattern});
+
 //*Remove/reset expectation for the given script and flavour
-main('remove',script,flavour)->
-  isVoid(expectations[script])
-  ? print('No expectation logged for ',script)
-  : isFlavourDependent(script)
-    ? begin
-        isVoid(expectations[script,flavour])
-        ? print('No expectation logged for ',script,'/',flavour)
-        : expectations[script,flavour]:=print('Expectation for ',script,'/',flavour,' reset');
-      end
-    : expectations[script]:=print('Expectation for ',script,' reset');
+main('remove',Script,Flavour)->
+  allScripts.matching(Script).each(script,
+    allFlavours.matching(Flavour).each(flavour,
+      isVoid(expectations[script])
+      ? print('No expectation logged for ',script)
+      : isFlavourDependent(script)
+        ? begin
+            isVoid(expectations[script,flavour])
+            ? print('No expectation logged for ',script,'/',flavour)
+            : expectations[script,flavour]:=print('Expectation for ',script,'/',flavour,' reset');
+          end
+        : expectations[script]:=print('Expectation for ',script,' reset')));
 
 //*Remove/reset expectation for the given script (and all flavours)
-main('remove',script)->
-  isVoid(expectations[script])
-  ? print('No expectation logged for ',script)
-  : expectations[script]:=print('Expectation for ',script,' reset');
+main('remove',Script)->
+  allScripts.matching(Script).each(script,
+    isVoid(expectations[script])
+    ? print('No expectation logged for ',script)
+    : expectations[script]:=print('Expectation for ',script,' reset'));
 
 //*List information on all test expectations
 main->begin

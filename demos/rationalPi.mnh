@@ -1,4 +1,3 @@
-USE gcd;
 //@SuppressUnusedParameterWarning
 type Rational(l:IntList(2))->true;
 
