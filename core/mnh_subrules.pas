@@ -166,7 +166,7 @@ TYPE
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
@@ -290,7 +290,7 @@ CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: 
 
 CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext);
   begin
-    init(et_subrule,rep^.location);
+    init(et_subrule,declAt);
     publicSubrule:=not(isPrivate);
     pattern:=pat;
     constructExpression(rep,context);
@@ -421,7 +421,7 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType; CONST ot
          or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
   begin
     if      tok^.tokType in C_operators   then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
     else if tok^.tokType=tt_intrinsicRule then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
@@ -432,7 +432,6 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
   end;
 
 FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token; VAR context: T_threadContext): boolean;
-  VAR i:longint;
   PROCEDURE updateBody;
     VAR i:longint;
         level:longint=1;
@@ -568,7 +567,6 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       leaveCriticalSection(subruleCallCs);
     end;
 
-  VAR tempInnerParam:P_listLiteral;
   begin
     lastRep:=nil;
     if (param= nil) and pattern.matchesNilPattern or
