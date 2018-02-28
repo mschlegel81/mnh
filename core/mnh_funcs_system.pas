@@ -2,6 +2,7 @@ UNIT mnh_funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
+     bigint,
      Classes,FileUtil,LazFileUtils,LazUTF8,
      myGenerics,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,
      mnh_basicTypes,mnh_constants,
@@ -40,12 +41,12 @@ FUNCTION intRandom_imp intFuncSignature;
   VAR i,count:longint;
   begin
     if not(context.checkSideEffects('intRandom',tokenLocation,[se_alterContextState])) then exit(nil);
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(context.getParent^.prng.intRandom(int0^.value.toInt)))
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(randomInt(@(context.getParent^.prng.dwordRandom),int0^.value)))
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       count:=int1^.value.toInt;
       if count>=0 then begin
         result:=newListLiteral;
-        for i:=1 to count do listResult^.appendInt(context.getParent^.prng.intRandom(int0^.value.toInt));
+        for i:=1 to count do listResult^.append(newIntLiteral(randomInt(@(context.getParent^.prng.dwordRandom),int0^.value)),false);
         exit(result);
       end;
     end;

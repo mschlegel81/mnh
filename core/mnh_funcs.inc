@@ -12,7 +12,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getParent^.prng.XOS));
+      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getParent^.prng.dwordRandom));
     end;
   end;
 
