@@ -835,6 +835,23 @@ FUNCTION arctan2_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION gcd_impl intFuncSignature;
+  VAR ir,temp:T_bigint;
+      k:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) then begin
+      for k:=0 to params^.size-1 do if params^.value[k]^.literalType<>lt_int then exit(nil);
+      if params^.size=1 then exit(arg0^.rereferenced);
+      ir:=int0^.value.greatestCommonDivider(int1^.value);
+      for k:=2 to params^.size-1 do begin
+        temp:=ir.greatestCommonDivider(P_intLiteral(params^.value[k])^.value);
+        ir.destroy; ir:=temp;
+      end;
+      result:=newIntLiteral(ir);
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -876,4 +893,5 @@ INITIALIZATION
                                                                                   'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
                                                                                   'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
+  registerRule(MATH_NAMESPACE,'gcd'         ,@gcd_impl         ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
 end.

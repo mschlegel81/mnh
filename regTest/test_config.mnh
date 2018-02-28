@@ -28,7 +28,6 @@ testParameters((demosRoot&'diff.mnh'           ))->[dict,editedDict];
 testParameters((demosRoot&'emptyFolders.mnh'   ))->['.'];
 testParameters((demosRoot&'fannkuch.mnh'       ))->['7'];
 testParameters((demosRoot&'findDuplicates.mnh' ))->['.'];
-testParameters((demosRoot&'gcd.mnh'            ))->['1238124','1236'];
 testParameters((demosRoot&'gol.mnh'            ))->['40','40','9'];
 testParameters((demosRoot&'josephus.mnh'       ))->['41','3','1'];
 testParameters((demosRoot&'knightsTour.mnh'    ))->['8','0','0'];
