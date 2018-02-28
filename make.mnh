@@ -1,9 +1,4 @@
-USE mnhInfo,formattingUtils,make_config,distroLog,'demos/oeis_server.mnh',testExpectation;
-//@SuppressUnusedWarning=hook
-initHook:=begin
-  startIpcServer(ipcId,::serve);
-  oeis_server.quietMode:=true;
-end;
+USE mnhInfo,formattingUtils,make_config,distroLog,testExpectation;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
 private needBuild(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));

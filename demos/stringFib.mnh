@@ -23,6 +23,7 @@ plus(x:String,y:String)->begin
 end;
 
 memoized stringFib(i:Int)->i<=1 ? "1" : stringFib(i-1).plus(stringFib(i-2));
+memoized intFib   (i:Int)->i<=1 ?  1  : intFib   (i-1)+        intFib(i-2) ;
 
 //*Prints out the first 1000 Fibonacci-Numbers
-main->printf("%s\t",[1..1000].each(i,stringFib(i)));
+main->printf("%s\t",[1..1000].each(i,intFib(i)));

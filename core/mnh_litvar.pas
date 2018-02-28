@@ -3,7 +3,7 @@ UNIT mnh_litVar;
 INTERFACE
 USES sysutils, math, typinfo,
      Classes,LazUTF8,
-     myGenerics, myStringUtil, serializationUtil,
+     myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_constants,
      mnh_basicTypes,
      mnh_out_adapters;
@@ -72,10 +72,12 @@ TYPE
   P_intLiteral = ^T_intLiteral;
   T_intLiteral = object(T_scalarLiteral)
   private
-    val: int64;
+    val: T_bigint;
+    CONSTRUCTOR create(CONST value: T_bigint);
     CONSTRUCTOR create(CONST value: int64);
   public
-    PROPERTY value:int64 read val;
+    DESTRUCTOR destroy; virtual;
+    PROPERTY value:T_bigint read val;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
@@ -368,6 +370,7 @@ FUNCTION exp(CONST x:double):double; inline;
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef DEBUGMODE} inline; {$endif}
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
+FUNCTION newIntLiteral(value: T_bigint): P_intLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
 FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
@@ -453,6 +456,17 @@ PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 PROCEDURE disposeLiteralWithoutResettingPointer(l:P_literal); inline;
   begin
     if l^.unreference<=0 then dispose(l,destroy);
+  end;
+
+FUNCTION newIntLiteral(value: T_bigint): P_intLiteral;
+  VAR iv:int64;
+  begin
+    if value.isBetween(low(intLit),high(intLit)) then begin
+      iv:=value.toInt;
+      value.destroy;
+      exit(P_intLiteral(intLit[iv].rereferenced));
+    end;
+    new(result,create(value));
   end;
 
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
@@ -550,6 +564,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
   VAR i: longint;
       allZeroes:boolean=true;
       atLeastOneDigit:boolean=false;
+      big:T_bigint;
       intResult:int64;
   begin
     result:=nil;
@@ -564,7 +579,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         allZeroes:=allZeroes and (input[i]='0');
       end;
       if atLeastOneDigit then parsedLength:=i+1-offset
-                         else exit;
+                         else exit(nil);
       //Only digits on indexes [1..i]; accept decimal point and following digts
       if (i<length(input)) and (input [i+1] = '.') then begin
         inc(i);
@@ -582,12 +597,12 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         if suppressOutput then exit(nil);
         result:=newRealLiteral(strToFloatDef(copy(input, offset, parsedLength), Nan));
       end else begin
-
         if suppressOutput then exit(nil);
         intResult:=StrToInt64Def(copy(input, offset, parsedLength), 0);
-        if (intResult=0) and not(allZeroes)
-        then result:=newRealLiteral(strToFloatDef(copy(input, offset, parsedLength), Nan))
-        else result:=newIntLiteral(intResult);
+        if (intResult=0) and not(allZeroes) then begin
+          big.fromString(copy(input, offset, parsedLength));
+          result:=newIntLiteral(big);
+        end else result:=newIntLiteral(intResult);
       end;
     end;
   end;
@@ -830,9 +845,10 @@ FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declared
 {$MACRO ON}
 {$define inline_init:=numberOfReferences:=1; literalType:=}
 CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
-CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                   end;
+CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherited init}inline_init(lt_int);     val:=value; end;
+CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherited init}inline_init(lt_int);     val.fromInt(value); end;
+CONSTRUCTOR T_intLiteral       .create(CONST value: T_bigint);   begin {inherited init}inline_init(lt_int);     val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherited init}inline_init(lt_real);    val:=value; end;
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
@@ -878,6 +894,7 @@ CONSTRUCTOR T_mapLiteral.create;
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
+DESTRUCTOR T_intLiteral.destroy; begin val.destroy; end;
 DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;
@@ -1058,7 +1075,7 @@ PROCEDURE T_listLiteral.removeElement(CONST index:longint);
 FUNCTION T_literal          .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:='<ERR>';           end;
 FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_TEXT_VOID;        end;
 FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val];   end;
-FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=intToStr(val);     end;
+FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;     end;
 FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   begin
@@ -1181,8 +1198,7 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
   end;
 
 FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
-  VAR ovi: int64;
-      ovr: T_myFloat;
+  VAR cr:T_comparisonResult;
   begin
     case relation of
       tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_int].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
@@ -1190,23 +1206,23 @@ FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P
     end;
     case other^.literalType of
       lt_int: begin
-        ovi:=P_intLiteral(other)^.val;
-        result:=(val=ovi) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
-             or (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-             or (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        cr:=val.compare(P_intLiteral(other)^.val);
+        result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       lt_real: begin
-        ovr:=P_realLiteral(other)^.val;
-        result:=(val=ovr) and (relation in [tt_comparatorEq, tt_comparatorLeq, tt_comparatorGeq])
-             or (val<ovr) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-             or (val>ovr) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        cr:=val.compare(P_realLiteral(other)^.val);
+        result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq, tt_comparatorLeq, tt_comparatorGeq])
+             or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       else result:=false;
     end;
   end;
 
 FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
-  VAR ovi: int64;
+  VAR cr:T_comparisonResult;
       ovr: T_myFloat;
   begin
     case relation of
@@ -1215,10 +1231,10 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
     end;
     case other^.literalType of
       lt_int: begin
-        ovi:=P_intLiteral(other)^.val;
-        result:=(val=ovi) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
-             or (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-             or (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+        cr:=C_FLIPPED[P_intLiteral(other)^.val.compare(val)];
+        result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
       end;
       lt_real: begin
         ovr:=P_realLiteral(other)^.val;
@@ -1279,7 +1295,7 @@ FUNCTION T_expressionLiteral.negate(CONST minusLocation: T_tokenLocation; VAR ad
   end;
 
 FUNCTION T_intLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newIntLiteral(-value); end;
+  begin result:=newIntLiteral(value.negated); end;
 FUNCTION T_realLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
   begin result:=newRealLiteral(-value); end;
 FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
@@ -1327,7 +1343,7 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor longint(val); {$R+} end;
+FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor val.lowDigit; if val.isNegative then inc(result); {$R+} end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}{$R-}
@@ -1429,7 +1445,7 @@ FUNCTION T_literal.equals(CONST other: P_literal): boolean;
 
 FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
   begin
-    result:=(@self = other) or (other^.literalType = lt_int) and (P_intLiteral(other)^.val = val);
+    result:=(@self = other) or (other^.literalType = lt_int) and (P_intLiteral(other)^.val.equals(val));
   end;
 
 FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
@@ -1547,14 +1563,14 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
     result:=nil;
     case accessor^.literalType of
       lt_int: begin
-        i:=P_intLiteral(accessor)^.val;
+        i:=P_intLiteral(accessor)^.val.toInt;
         if (i>=0) and (i<fill) then exit(dat[i]^.rereferenced)
                                else exit(newVoidLiteral);
       end;
       lt_intList, lt_emptyList: begin
         result:=newListLiteral(P_listLiteral(accessor)^.fill);
         for j:=0 to P_listLiteral(accessor)^.fill-1 do begin
-          i:=P_intLiteral(P_listLiteral(accessor)^.dat[j])^.val;
+          i:=P_intLiteral(P_listLiteral(accessor)^.dat[j])^.val.toInt;
           if (i>=0) and (i<fill) then P_listLiteral(result)^.append(dat[i],true);
         end;
         exit(result);
@@ -1564,7 +1580,7 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
         P_setLiteral(result)^.dat.rehashForExpectedSize(P_setLiteral(accessor)^.size);
         iter:=P_setLiteral(accessor)^.iteratableList;
         for idx in iter do begin
-          i:=P_intLiteral(idx)^.val;
+          i:=P_intLiteral(idx)^.val.toInt;
           if (i>=0) and (i<fill) then P_setLiteral(result)^.append(dat[i],true);
         end;
         disposeLiteral(iter);
@@ -1644,8 +1660,8 @@ FUNCTION T_mapLiteral.getInner(CONST accessor:P_literal):P_literal;
   begin
     case accessor^.literalType of
       lt_int: begin
-        wantKeys  :=(P_intLiteral(accessor)^.val=0);
-        wantValues:=(P_intLiteral(accessor)^.val=1);
+        wantKeys  :=(P_intLiteral(accessor)^.val.toInt=0);
+        wantValues:=(P_intLiteral(accessor)^.val.toInt=1);
         validCase :=true;
       end;
       lt_intList, lt_intSet,lt_emptyList,lt_emptySet: begin
@@ -1699,19 +1715,15 @@ FUNCTION T_boolLiteral.leqForSorting(CONST other: P_literal): boolean;
 FUNCTION T_intLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  result:=val<=P_intLiteral (other)^.val;
-      lt_real: if isNan(P_realLiteral(other)^.val)
-               then result:=false
-               else result:=val<=P_realLiteral(other)^.val;
+      lt_int:  result:=val.compare(P_intLiteral (other)^.val) in [CR_LESSER,CR_EQUAL];
+      lt_real: result:=val.compare(P_realLiteral(other)^.val) in [CR_LESSER,CR_EQUAL];
     else result:=(literalType<=other^.literalType); end;
   end;
 
 FUNCTION T_realLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  if isNan(val)
-               then result:=true
-               else result:=val<=P_intLiteral(other)^.val;
+      lt_int:  result:=P_intLiteral(other)^.val.compare(val) in [CR_EQUAL,CR_GREATER];
       lt_real: if isNan(val) then result:=not(isNan(P_realLiteral(other)^.val))
                else if isNan(P_realLiteral(other)^.val) then result:=false
                else result:=val<=P_realLiteral(other)^.val;
@@ -1949,8 +1961,8 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
     end;
     last:=dat[fill-1];
     if (last^.literalType = lt_int) and (L^.literalType = lt_int) then begin
-      i0:=P_intLiteral(last)^.val;
-      i1:=P_intLiteral(L)^.val;
+      i0:=P_intLiteral(last)^.val.toInt;
+      i1:=P_intLiteral(L   )^.val.toInt;
       newLen:=fill+abs(i1-i0)+1;
       if newLen>alloc then begin
         ReAllocMem(dat,sizeOf(P_literal)*newLen);
@@ -2478,7 +2490,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         end;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int: exit(newIntLiteral(P_intLiteral(LHS)^.val and P_intLiteral(RHS)^.val));
+          lt_int: exit(newIntLiteral(P_intLiteral(LHS)^.val.bitAnd(P_intLiteral(RHS)^.val)));
           lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: S_x_L_recursion;
         end;
         lt_set ,lt_emptySet ,
@@ -2516,7 +2528,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         end;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int: exit(newIntLiteral(P_intLiteral(LHS)^.val or P_intLiteral(RHS)^.val));
+          lt_int: exit(newIntLiteral(P_intLiteral(LHS)^.val.bitOr(P_intLiteral(RHS)^.val)));
           lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: S_x_L_recursion;
         end;
         lt_set ,lt_emptySet ,
@@ -2554,7 +2566,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         end;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int: exit(newIntLiteral(P_intLiteral(LHS)^.val xor P_intLiteral(RHS)^.val));
+          lt_int: exit(newIntLiteral(P_intLiteral(LHS)^.val.bitXor(P_intLiteral(RHS)^.val)));
           lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: S_x_L_recursion;
         end;
         lt_set ,lt_emptySet ,
@@ -2587,14 +2599,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    {$Q-}exit(newIntLiteral (P_intLiteral(LHS)^.val+P_intLiteral (RHS)^.val));{$Q+}
-          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val+P_realLiteral(RHS)^.val));
+          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val.plus(P_intLiteral(RHS)^.val)));
+          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat+P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_real: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val+P_intLiteral (RHS)^.val));
+          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val+P_intLiteral (RHS)^.val.toFloat));
           lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.val+P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2638,14 +2650,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    {$Q-}exit(newIntLiteral (P_intLiteral(LHS)^.val-P_intLiteral (RHS)^.val));{$Q+}
-          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val-P_realLiteral(RHS)^.val));
+          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val.minus(P_intLiteral (RHS)^.val)));
+          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat-P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_real: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val-P_intLiteral (RHS)^.val));
+          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val-P_intLiteral (RHS)^.val.toFloat));
           lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.val-P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2677,14 +2689,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    {$Q-}exit(newIntLiteral (P_intLiteral(LHS)^.val*P_intLiteral (RHS)^.val));{$Q+}
-          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val*P_realLiteral(RHS)^.val));
+          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val.mult(P_intLiteral (RHS)^.val)));
+          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat*P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_real: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val*P_intLiteral (RHS)^.val));
+          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val*P_intLiteral (RHS)^.val.toFloat));
           lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.val*P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2716,14 +2728,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newRealLiteral(P_intLiteral(LHS)^.val/P_intLiteral (RHS)^.val));
-          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val/P_realLiteral(RHS)^.val));
+          lt_int:    exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat/P_intLiteral (RHS)^.val.toFloat));
+          lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat/P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_real: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val/P_intLiteral (RHS)^.val));
+          lt_int:    exit(newRealLiteral(P_realLiteral(LHS)^.val/P_intLiteral (RHS)^.val.toFloat));
           lt_real:   exit(newRealLiteral(P_realLiteral(LHS)^.val/P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2755,8 +2767,9 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int: if P_intLiteral(RHS)^.val<>0 then exit(newIntLiteral(P_intLiteral(LHS)^.val div P_intLiteral(RHS)^.val))
-                                               else exit(newRealLiteral(Nan));
+          lt_int: if P_intLiteral(RHS)^.val.isZero
+                  then exit(newRealLiteral(Nan))
+                  else exit(newIntLiteral(P_intLiteral(LHS)^.val.divide(P_intLiteral(RHS)^.val)));
           lt_list,lt_intList,lt_emptyList,
           lt_set ,lt_intSet ,lt_emptySet: S_x_L_recursion;
         end;
@@ -2787,8 +2800,9 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int: if P_intLiteral(RHS)^.val<>0 then exit(newIntLiteral(P_intLiteral(LHS)^.val mod P_intLiteral(RHS)^.val))
-                                               else exit(newRealLiteral(Nan));
+          lt_int: if P_intLiteral(RHS)^.val.isZero
+                  then exit(newRealLiteral(Nan))
+                  else exit(newIntLiteral(P_intLiteral(LHS)^.val.modulus(P_intLiteral(RHS)^.val)));
           lt_list,lt_intList,lt_emptyList,
           lt_set ,lt_intSet ,lt_emptySet: S_x_L_recursion;
         end;
@@ -2811,45 +2825,49 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
 
   FUNCTION perform_pot(CONST LHS:P_literal; CONST RHS:P_literal):P_literal;
     {$define function_id:=perform_pot}
-    FUNCTION pot_int_int(x, y: int64): P_scalarLiteral;
-      VAR temp: int64;
+    FUNCTION pot_int_int(CONST x, y: T_bigint): P_scalarLiteral;
+      VAR exponent:int64;
           tx, rx: T_myFloat;
       begin
-        if y>=0 then begin
-          {$Q-}
-          temp:=1;
-          while y>0 do begin
-            if odd(y) then temp:=temp*x;
-            x:=int64(x)*int64(x);
-            y:=y shr 1;
-          end;
-          {$Q+}
-          result:=newIntLiteral(temp);
-        end else begin
-          rx:=x;
+        if not(y.canBeRepresentedAsInt32) then begin
+          adapters.raiseError('Huge exponents are unimplemented',tokenLocation);
+          exit(newVoidLiteral);
+        end;
+        exponent:=y.toInt;
+        if exponent>=0
+        then result:=newIntLiteral(x.pow(exponent))
+        else begin
+          rx:=x.toFloat;
           tx:=1;
-          y:=-y;
-          while y>0 do begin
-            if odd(y) then tx:=tx*rx;
+          exponent:=-exponent;
+          while exponent>0 do begin
+            if odd(exponent) then tx:=tx*rx;
             rx:=rx*rx;
-            y:=y shr 1;
+            exponent:=exponent shr 1;
           end;
           result:=newRealLiteral(1/tx);
         end;
       end;
 
-    FUNCTION pot_real_int(x: T_myFloat; y: longint): T_myFloat;
+    FUNCTION pot_real_int(x: T_myFloat; CONST y: T_bigint): P_scalarLiteral;
+      VAR exponent:int64;
+          resultVal:T_myFloat=1;
       begin
-        if y<0 then begin
-          y:=-y;
+        if not(y.canBeRepresentedAsInt32) then begin
+          adapters.raiseError('Huge exponents are unimplemented',tokenLocation);
+          exit(newVoidLiteral);
+        end;
+        exponent:=y.toInt;
+        if exponent<0 then begin
+          exponent:=-exponent;
           x:=1/x;
         end;
-        result:=1;
-        while y>0 do begin
-          if odd(y) then result:=result*x;
+        while exponent>0 do begin
+          if odd(exponent) then resultVal*=x;
           x:=x*x;
-          y:=y shr 1;
+          exponent:=exponent shr 1;
         end;
+        result:=newRealLiteral(resultVal);
       end;
 
     VAR i:longint;
@@ -2861,13 +2879,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         lt_int: case RHS^.literalType of
           defaultRHSCases;
           lt_int:    exit(pot_int_int(P_intLiteral(LHS)^.val,P_intLiteral (RHS)^.val));
-          lt_real:   exit(newRealLiteral(exp(ln(P_intLiteral(LHS)^.val)*P_realLiteral(RHS)^.val)));
+          lt_real:   exit(newRealLiteral(exp(ln(P_intLiteral(LHS)^.val.toFloat)*P_realLiteral(RHS)^.val)));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
         end;
         lt_real: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newRealLiteral(pot_real_int(P_realLiteral(LHS)^.val,P_intLiteral(RHS)^.val)));
+          lt_int:    exit(pot_real_int(P_realLiteral(LHS)^.val,P_intLiteral(RHS)^.val));
           lt_real:   exit(newRealLiteral(exp(ln(P_realLiteral(LHS)^.val)*P_realLiteral(RHS)^.val)));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -3219,7 +3237,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         P_mapLiteral(toMutate)^.drop(RHS);
       end else if (toMutate^.literalType in C_listTypes) and (RHS^.literalType=lt_int) then begin
         ensureExclusiveAccess(P_listLiteral(toMutate));
-        P_listLiteral(toMutate)^.removeElement(P_intLiteral(RHS)^.val);
+        P_listLiteral(toMutate)^.removeElement(P_intLiteral(RHS)^.val.toInt);
       end else adapters.raiseError('Cannot drop from literal of type '+toMutate^.typeString,location);
       return(newVoidLiteral);
     end;
@@ -3252,7 +3270,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
       result:=false;
       if toMutate^.literalType in C_listTypes then begin
         if accessor^.value[0]^.literalType=lt_int then begin
-          listIndex:=P_intLiteral(accessor^.value[0])^.val;
+          listIndex:=P_intLiteral(accessor^.value[0])^.val.toInt;
           if (listIndex>=0) and (listIndex<P_listLiteral(toMutate)^.fill) then begin
             ensureExclusiveAccess(P_listLiteral(toMutate));
             prevType:=P_listLiteral(toMutate)^.dat[listIndex]^.literalType;
@@ -3580,7 +3598,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
       stream^.writeNaturalNumber(byte(L^.literalType));
       case L^.literalType of
         lt_boolean:stream^.writeBoolean   (P_boolLiteral  (L)^.val);
-        lt_int:    stream^.writeInteger   (P_intLiteral   (L)^.val);
+        lt_int:    P_intLiteral(L)^.val.writeToStream(stream);
         lt_real:   stream^.writeDouble    (P_realLiteral  (L)^.val);
         lt_string: stream^.writeAnsiString(P_stringLiteral(L)^.val);
         lt_booleanList,lt_booleanSet:begin
@@ -3592,7 +3610,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_intList,lt_intSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then stream^.writeInteger(P_intLiteral(x)^.val);
+          for x in iter do if (adapters=nil) or (adapters^.noErrors) then P_intLiteral(x)^.val.writeToStream(stream);
           disposeLiteral(iter);
         end;
         lt_realList,lt_realSet:begin

@@ -3,6 +3,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
      myGenerics,
+     bigint,
      mnh_constants,
      mnh_basicTypes,
      mnh_out_adapters,
@@ -59,8 +60,8 @@ FUNCTION toBoolean_imp intFuncSignature;
         lt_boolean: begin result:=arg0; result^.rereference; exit(result); end;
         lt_string: if lowercase(str0^.value) = LITERAL_BOOL_TEXT[false] then exit(newBoolLiteral(false))
               else if lowercase(str0^.value) = LITERAL_BOOL_TEXT[true]  then exit(newBoolLiteral(true));
-        lt_int: if int0^.value=0 then exit(newBoolLiteral(false))
-           else if int0^.value=1 then exit(newBoolLiteral(true));
+        lt_int: if int0^.value.isZero              then exit(newBoolLiteral(false))
+           else if int0^.value.compare(1)=CR_EQUAL then exit(newBoolLiteral(true));
         lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
             else if real0^.value=1 then exit(newBoolLiteral(true));
       end;
@@ -105,12 +106,12 @@ FUNCTION toReal_imp intFuncSignature;
       case arg0^.literalType of
         lt_real: begin result:=arg0; result^.rereference; exit(result); end;
         lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-        lt_int: exit(newRealLiteral(int0^.value));
+        lt_int: exit(newRealLiteral(int0^.value.toFloat));
         lt_string: begin
           result:=parseNumber(str0^.value,1,false,len);
           if (result=nil) or (result^.literalType=lt_real) then exit(result);
           //parsed an integer
-          x:=P_intLiteral(result)^.value;
+          x:=P_intLiteral(result)^.value.toFloat;
           disposeLiteral(result);
           exit(newRealLiteral(x));
         end;
@@ -174,7 +175,7 @@ FUNCTION toGenerator_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then
     result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK))
     else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
-    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK,int1^.value));
+    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK,int1^.value.toInt));
   end}
 
 {$define TYPE_CHECK:=tc_typeCheckScalar          } {$define FUNC_ID:=isScalar           } GENERIC_TYPE_CHECK;

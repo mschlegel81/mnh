@@ -2,7 +2,7 @@ UNIT mnh_imig;
 INTERFACE
 USES sysutils,   //system
      ExtCtrls,
-     myGenerics,myTools, //common
+     myGenerics,myTools,bigint, //common
      //mnh:
      mnh_constants, mnh_basicTypes,
      mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,mnh_plotData,
@@ -100,10 +100,10 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       for i:=1 to params^.size-1 do begin
         case params^.value[i]^.literalType of
           lt_int: begin
-            if P_intLiteral(params^.value[i])^.value<=0 then exit(nil);
-            if      xRes=0 then xRes:=P_intLiteral(params^.value[i])^.value
-            else if yRes=0 then yRes:=P_intLiteral(params^.value[i])^.value
-            else if sizeLimit<=-1 then sizeLimit:=P_intLiteral(params^.value[i])^.value
+            if P_intLiteral(params^.value[i])^.value.compare(0)<>CR_GREATER then exit(nil);
+            if      xRes=0 then xRes:=P_intLiteral(params^.value[i])^.value.toInt
+            else if yRes=0 then yRes:=P_intLiteral(params^.value[i])^.value.toInt
+            else if sizeLimit<=-1 then sizeLimit:=P_intLiteral(params^.value[i])^.value.toInt
             else exit(nil);
           end;
           lt_string: begin
@@ -239,7 +239,7 @@ FUNCTION saveImage_imp intFuncSignature;
         if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
         then value^.saveToFile(P_stringLiteral(arg0)^.value)
         else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int)
-        then value^.saveJpgWithSizeLimit(str0^.value,int1^.value)
+        then value^.saveJpgWithSizeLimit(str0^.value,int1^.value.toInt)
         else ok:=false;
       except
         on e:Exception do begin
@@ -303,8 +303,8 @@ FUNCTION resizeImage_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int)
       and ((params^.size=2) or (params^.size=3) and (arg2^.literalType=lt_string)) then begin
-      xRes:=int0^.value;
-      yRes:=int1^.value;
+      xRes:=int0^.value.toInt;
+      yRes:=int1^.value.toInt;
       if params^.size=3 then style:=str2^.value;
       r:=res_dataResize;
       for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
@@ -343,7 +343,7 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
       else context.adapters^.raiseError('Cannot display image because no image is loaded',tokenLocation);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       if context.adapters^.picture.value<>nil
-      then result:=newStringLiteral(context.adapters^.picture.value^.getJpgFileData(int0^.value))
+      then result:=newStringLiteral(context.adapters^.picture.value^.getJpgFileData(int0^.value.toInt))
       else context.adapters^.raiseError('Cannot display image because no image is loaded',tokenLocation);
     end;
     leaveCriticalSection(imigCS);
@@ -369,7 +369,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
         exit(nil);
       end;
       img.create(str0^.value);
-      img.resize(int1^.value,int2^.value,res_fit);
+      img.resize(int1^.value.toInt,int2^.value.toInt,res_fit);
       result:=newStringLiteral(img.getJpgFileData(80));
       img.destroy;
     end;
@@ -386,9 +386,9 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       (arg1^.literalType = lt_int) and
       ((params^.size = 2) or (params^.size = 3) and
       (arg2^.literalType = lt_int)) then begin
-      width:=int0^.value;
-      height:=int1^.value;
-      if params^.size>2 then quality:=int2^.value
+      width:=int0^.value.toInt;
+      height:=int1^.value.toInt;
+      if params^.size>2 then quality:=int2^.value.toInt
                         else quality:=0;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
 

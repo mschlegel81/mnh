@@ -22,7 +22,7 @@ begin
   if (params<>nil) and (params^.size>=1) then begin
     if arg0^.literalType in C_listTypes then begin
       if      (params^.size=1) then result:=list0^.CALL_MACRO
-      else if (params^.size=2) and (arg1^.literalType=lt_int) then result:=list0^.CALL_MACRO(int1^.value);
+      else if (params^.size=2) and (arg1^.literalType=lt_int) then result:=list0^.CALL_MACRO(int1^.value.toInt);
     end else if arg0^.literalType in C_scalarTypes then SCALAR_FALLBACK;
   end;
 end}
@@ -39,11 +39,11 @@ begin
      and (arg0^.literalType=lt_expression)
      and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
      and (arg1^.literalType=lt_int)
-     and (int1^.value>=0) then begin
-     if int1^.value=0 then exit(newListLiteral());
+     and (int1^.value.toInt>=0) then begin
+     if int1^.value.toInt=0 then exit(newListLiteral());
      iterator:=P_expressionLiteral(arg0);
-     result:=newListLiteral(int1^.value);
-     for i:=1 to int1^.value do begin
+     result:=newListLiteral(int1^.value.toInt);
+     for i:=1 to int1^.value.toInt do begin
        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context);
        if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
        then break
@@ -100,7 +100,7 @@ FUNCTION sort_imp intFuncSignature;
       if arg0^.literalType in C_listTypes
       then cloneOrCopyList0
       else result:=compound0^.toList;
-      P_listLiteral(result)^.sortBySubIndex(int1^.value,tokenLocation,context.adapters^);
+      P_listLiteral(result)^.sortBySubIndex(int1^.value.toInt,tokenLocation,context.adapters^);
     end
   end;
 
@@ -445,7 +445,7 @@ FUNCTION group_imp intFuncSignature;
       if arg1^.literalType=lt_int
       then begin
         initialize(keyList);
-        makeKeysByIndex(P_intLiteral(arg1)^.value);
+        makeKeysByIndex(P_intLiteral(arg1)^.value.toInt);
       end else keyList:=list1^.iteratableList;
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)

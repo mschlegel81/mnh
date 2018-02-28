@@ -1,5 +1,5 @@
 //@demo_for=stateful expressions
-private fibonacciGenerator(n>=1)->{begin
+fibonacciGenerator(n>=1)->{begin
   local state:=[1..n]*0+1; //current state - initially a list of n 1s
 save;
   local result:=state[max(0,n-2)]; //output is the n-2nd element

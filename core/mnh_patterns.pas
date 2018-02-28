@@ -600,11 +600,11 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                   if (parts[i].first^.next<>nil) and
                      (parts[i].first^.next^.tokType=tt_literal) and
                      (P_literal   (parts[i].first^.next^.data)^.literalType=lt_int) and
-                     (P_intLiteral(parts[i].first^.next^.data)^.value>=0) and
+                     (P_intLiteral(parts[i].first^.next^.data)^.value.toInt>=0) and
                      (parts[i].first^.next^.next<>nil) and
                      (parts[i].first^.next^.next^.tokType=tt_braceClose) and
                      (parts[i].first^.next^.next^.next=nil) then begin
-                      rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.next^.data)^.value;
+                      rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.next^.data)^.value.toInt;
                       context.recycler.cascadeDisposeToken(parts[i].first);
                   end else begin
                     context.reduceExpression(parts[i].first);
@@ -612,9 +612,9 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                        (parts[i].first<>nil) and
                        (parts[i].first^.tokType=tt_literal) and
                        (P_literal   (parts[i].first^.data)^.literalType=lt_int) and
-                       (P_intLiteral(parts[i].first^.data)^.value>=0)
+                       (P_intLiteral(parts[i].first^.data)^.value.toInt>=0)
                     then begin
-                      rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.data)^.value;
+                      rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.data)^.value.toInt;
                       context.recycler.cascadeDisposeToken(parts[i].first);
                     end else fail(parts[i].first);
                   end;

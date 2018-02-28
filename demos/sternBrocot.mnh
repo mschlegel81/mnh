@@ -1,4 +1,3 @@
-USE gcd;
 sternBrocotGenerator->{begin
   local L:=[0,1,1];
   local i:=-1;

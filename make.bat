@@ -6,5 +6,5 @@
   ..\lazarus64\lazbuild.exe -B --bm=deployment consoles\mnh_light.lpi
   move consoles\mnh_light.exe .)  
 @copy mnh_light.exe mnh_temp.exe
-@if "%1"=="-h" (mnh_temp.exe -h make.mnh) else (mnh_temp.exe make.mnh %*)
+@mnh_temp.exe make.mnh %*
 @del mnh_temp.exe

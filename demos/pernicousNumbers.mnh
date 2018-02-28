@@ -1,5 +1,5 @@
 private P64:=math.primes(62).toSet;
-isPernicious(n:Int)->bits(n).trueCount in P64;
+isPernicious(n:Int)->digits(n,2).agg(+) in P64;
 private pernicousInRange(iMin,iMax)->[iMin..iMax].pEach(i,isPernicious(i) ? i : void);
 //*See http://rosettacode.org/wiki/Pernicious_numbers
 //@demo_for=each/filter, bitwise
