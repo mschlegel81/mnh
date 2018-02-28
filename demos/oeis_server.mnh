@@ -207,6 +207,7 @@ private synchronized resetTimeout()->begin
 end;
 private synchronized resetTimeout(x)->begin
   timeout:=time+600;
+  print('Timeout set to ',formatTime('hh:mm:ss',systime+10/24/60));
   x;
 end;
 
