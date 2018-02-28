@@ -1125,7 +1125,7 @@ end}
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
               // || aggregator ( + )
               first^.tokType:=tt_aggregatorExpressionLiteral;
-              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next,context);
+              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next);
               first^.next:=context.recycler.disposeToken(first^.next); //drop (
               first^.next:=context.recycler.disposeToken(first^.next); //drop +
               first^.next:=context.recycler.disposeToken(first^.next); //drop )
@@ -1170,7 +1170,7 @@ end}
         tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
-            first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
+            first^.data:=createPrimitiveAggregatorLiteral(first^.next);
             first^.tokType:=tt_literal;
             first^.next:=context.recycler.disposeToken(first^.next);
             didSubstitution:=true;
