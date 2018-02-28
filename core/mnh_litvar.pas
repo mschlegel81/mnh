@@ -3660,6 +3660,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
   PROCEDURE ser(CONST L:P_literal; CONST outerIndex:longint);
     VAR iter:T_arrayOfLiteral;
         k:longint;
+        sortedTemp:P_listLiteral=nil;
     begin
       case L^.literalType of
         lt_boolean,lt_int,lt_string,lt_real,lt_void: appendPart(L^.toString());
@@ -3677,7 +3678,12 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
           end;
           appendPart('[');
           inc(indent);
-          iter:=P_compoundLiteral(L)^.iteratableList;
+          if L^.literalType in [lt_set..lt_emptySet,lt_map..lt_emptyMap] then begin
+            sortedTemp:=P_compoundLiteral(L)^.toList;
+            sortedTemp^.sort;
+            iter:=sortedTemp^.iteratableList;
+            disposeLiteral(sortedTemp);
+          end else iter:=P_compoundLiteral(L)^.iteratableList;
           for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.noErrors) then begin
             ser(iter[k],k);
             if k<length(iter)-1 then appendSeparator;
