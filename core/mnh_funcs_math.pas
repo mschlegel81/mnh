@@ -773,50 +773,51 @@ FUNCTION digits_impl intFuncSignature;
   end;
 
 FUNCTION composeDigits_imp intFuncSignature;
-  VAR base:int64=10;
+  VAR base:longint=10;
       Shift:int64=0;
-
+      digits:T_arrayOfLongint;
+      intPart :T_bigint;
+      fracPart:T_myFloat;
       k  :longint;
-      dig:int64    =0;
-      ir :int64    =0;
-      fr :T_myFloat=0;
-      invalidatedIntResult:boolean=false;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and
        (arg0^.literalType in [lt_emptyList,lt_intList]) then begin
       if params^.size>=2 then begin
         if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value.toInt;
-        if (base<=1) or not(int1^.value.canBeRepresentedAsInt64()) then begin
+        if (base<=1) or not(int1^.value.canBeRepresentedAsInt32()) then begin
           context.adapters^.raiseError('Cannot compose digits with base '+arg1^.toString,tokenLocation);
           exit(nil);
         end;
       end;
       if params^.size=3 then begin
         if arg2^.literalType<>lt_int then exit(nil) else Shift:=int2^.value.toInt;
+        if not(int2^.value.canBeRepresentedAsInt32()) then begin
+          context.adapters^.raiseError('Shift argument is out of bounds',tokenLocation);
+          exit(nil);
+        end;
       end;
       if arg0^.literalType=lt_emptyList then exit(newIntLiteral(0));
+      for k:=0 to list0^.size-1 do if not(P_intLiteral(list0^.value[k])^.value.isBetween(0,base-1)) then begin
+        context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
+        exit(nil);
+      end;
 
-      {$Q-}{$R-}
-      for k:=0 to list0^.size-1 do begin
-        dig:=P_intLiteral(list0^.value[k])^.value.toInt;
-        if (dig>=base) or (dig<0) then context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
-        ir:=ir*base+dig;
-        fr:=fr*base+dig;
-        invalidatedIntResult:=invalidatedIntResult or (ir<0);
-      end;
-      if Shift<0 then for k:=-1 downto Shift do begin
-        ir:=ir*base+dig;
-        fr:=fr*base+dig;
-        invalidatedIntResult:=invalidatedIntResult or (ir<0);
-      end else if Shift>0 then begin
-        dig:=1;
-        for k:=1 to Shift do fr:=fr/base;
-        invalidatedIntResult:=true;
-      end;
-      {$Q+}{$R+}
-      if invalidatedIntResult then exit(newRealLiteral(fr))
-                              else exit(newIntLiteral (ir));
+      if list0^.size>Shift then begin
+        setLength(digits,list0^.size-Shift);
+        for k:=0 to min(length(digits),list0^.size)-1 do digits[k]:=P_intLiteral(list0^.value[k])^.value.toInt;
+        for k:=list0^.size to length(digits)-1 do digits[k]:=0;
+        intPart.createFromDigits(base,digits);
+      end else intPart.createZero;
+      if Shift>0 then begin
+        fracPart:=0;
+        for k:=list0^.size-1 downto list0^.size-Shift do begin
+          if k>=0 then fracPart+=P_intLiteral(list0^.value[k])^.value.toInt;
+          fracPart/=base;
+        end;
+        result:=newRealLiteral(intPart.toFloat+fracPart);
+        intPart.destroy;
+      end else exit(newIntLiteral(intPart));
     end;
   end;
 
