@@ -850,7 +850,7 @@ FUNCTION md5_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
       md5String:=MD5(str0^.value);
-      SetLength(digits,length(md5String));
+      setLength(digits,length(md5String));
       for i:=1 to length(md5String) do digits[i-1]:=ord(md5String[i]);
       md5Int.createFromDigits(256,digits);
       result:=newIntLiteral(md5Int);
