@@ -17,8 +17,8 @@ TYPE
               fmtCat_number,
               fmtCat_string,
               fmtCat_hex);
-    intFmt,realFmt,strFmt:string;
-
+    realFmt,strFmt:string;
+    lengthPar1,lengthPar2:longint;
     CONSTRUCTOR create(CONST formatString:ansistring);
     PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal);
     DESTRUCTOR destroy;
@@ -70,58 +70,56 @@ PROCEDURE clearCachedFormats;
   end;
 
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);
+  VAR parts:T_arrayOfString;
   begin
+    parts:=split(copy(formatString,2,length(formatString)-2),'.');
+    if length(parts)>0 then lengthPar1:=strToIntDef(parts[0],-1) else lengthPar1:=-1;
+    if length(parts)>1 then lengthPar2:=strToIntDef(parts[1],-1) else lengthPar2:=-1;
+
     if length(formatString)>0 then case formatString[length(formatString)] of
       'd','D': begin
         category:=fmtCat_decimal;
-        intFmt :=formatString;
         strFmt :=copy(formatString,1,length(formatString)-1)+'s';
         realFmt:=copy(formatString,1,length(formatString)-1)+'f';
       end;
       'e','E': begin
         category:=fmtCat_scientific;
         realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+        lengthPar2:=-1;
       end;
       'f','F': begin
         category:=fmtCat_fixedPoint;
         realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
       end;
       'g','G': begin
         category:=fmtCat_general;
         realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+        lengthPar2:=-1;
       end;
       'm','M': begin
         category:=fmtCat_currency;
         realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
       end;
       'n','N': begin
         category:=fmtCat_number;
         realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
       end;
       's','S': begin
         category:=fmtCat_string;
         strFmt :=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         realFmt:=copy(formatString,1,length(formatString)-1)+'f';
       end;
       'x','X': begin
         category:=fmtCat_hex;
-        intFmt :=formatString;
         strFmt :=copy(formatString,1,length(formatString)-1)+'s';
         realFmt:=copy(formatString,1,length(formatString)-1)+'f';
       end;
       else begin
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
         strFmt :=copy(formatString,1,length(formatString)-1)+'s';
         realFmt:=copy(formatString,1,length(formatString)-1)+'f';
       end;
@@ -129,26 +127,35 @@ CONSTRUCTOR T_format.create(CONST formatString: ansistring);
   end;
 
 PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
+  FUNCTION pad(CONST s:string; CONST numberFormat:boolean):string;
+    VAR leadingMinus:byte=0;
+    begin
+      result:=s;
+      if numberFormat and (copy(result,1,1)='-') then begin
+        leadingMinus:=1;
+        result:=copy(result,2,length(result)-1);
+      end;
+      while length(result)+leadingMinus<lengthPar2 do result:='0'+result;
+      if leadingMinus=1 then result:='-'+result;
+      while length(result)             <lengthPar1 do result:=' '+result;
+    end;
+
   begin
     case category of
       fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
         lt_real: begin txt:=txt+sysutils.format(realFmt,[P_realLiteral(l)^.value]); exit; end;
-        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.value.toInt)]); exit; end;
+        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.value.toFloat)]); exit; end;
       end;
-      fmtCat_decimal, fmtCat_hex:
-      if l^.literalType=lt_int then begin
-        txt:=txt+sysutils.format(intFmt,[P_intLiteral(l)^.value.toInt]);
-        exit;
-      end;
+      fmtCat_decimal: if l^.literalType=lt_int then begin txt+=pad(P_intLiteral(l)^.value.toString   ,true); exit; end;
+      fmtCat_hex    : if l^.literalType=lt_int then begin txt+=pad(P_intLiteral(l)^.value.toHexString,true); exit; end;
     end;
     if l^.literalType in C_scalarTypes
     then txt:=txt+sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
-    else txt:=txt+sysutils.format(strFmt,[l^.toString]);
+    else txt:=txt+sysutils.format(strFmt,[l^.toString]                   );
   end;
 
 DESTRUCTOR T_format.destroy;
   begin
-    intFmt:='';
     realFmt:='';
     strFmt:='';
   end;
