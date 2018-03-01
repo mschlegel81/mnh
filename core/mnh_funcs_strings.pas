@@ -842,7 +842,7 @@ FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     {$define ID_MACRO:='by
 
 FUNCTION md5_imp intFuncSignature;
   VAR md5String:string;
-      md5Int:T_bigint;
+      md5Int:T_bigInt;
       digits:T_arrayOfLongint;
       i:longint;
 
@@ -858,7 +858,7 @@ FUNCTION md5_imp intFuncSignature;
   end;
 
 FUNCTION sha256_imp intFuncSignature;
-  VAR sha256Int:T_bigint;
+  VAR sha256Int:T_bigInt;
       sha256Digest:T_sha256Hash;
       sha256Digits:T_arrayOfLongint;
       i:longint;
