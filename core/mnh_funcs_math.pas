@@ -863,6 +863,14 @@ FUNCTION iSqrt_impl intFuncSignature;
     end;
   end;
 
+FUNCTION hammingWeight_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+      result:=newIntLiteral(int0^.value.hammingWeight);
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -906,4 +914,5 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
   registerRule(MATH_NAMESPACE,'gcd'         ,@gcd_impl         ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
   registerRule(MATH_NAMESPACE,'iSqrt'       ,@iSqrt_impl       ,ak_unary     ,'iSqrt(x:Int);//Returns a tuple of the integer square root of x and a flag indicating if x is a square');
+  registerRule(MATH_NAMESPACE,'hammingWeight',@hammingWeight_impl,ak_unary,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
 end.
