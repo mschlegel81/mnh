@@ -217,7 +217,9 @@ main->begin
     .each(case,begin
        isFlavourDependent(case)
        ? [case,
-          'flavour dependent',
+          'flavour dependent'& ((expectations[case] orElse ["",[]]).getInner(1).toSet.size<=1
+                                ? " (?)"
+                                : "" ),
           expectations[case].isVoid
           ? 'expectation missing'
           : begin
@@ -241,20 +243,33 @@ USE statistics;
 main('cleanup')->begin
   local droppedExtremes:=0;
   local droppedTotal:=0;
-  runTimes.each(caseEntry,begin
-    local case:=caseEntry[0];
-    caseEntry[1].each(flavEntry,begin
-      local flavour:=flavEntry[0];
-      local times:=flavEntry[1];
-      local threshold:=times.getInner(1).mean+
-                     3*times.getInner(1).standardVariation;
-      droppedTotal+=times.size;
-      droppedExtremes+=trueCount(times.getInner(1)>threshold);
-      times:=times[times.getInner(1)<=threshold].head(50);
-      droppedTotal-=times.size;
-      runTimes[case,flavour]:=times;
+  local anyDropped:=true;
+  while(anyDropped,begin
+    anyDropped:=false;
+    runTimes.each(caseEntry,begin
+      local case:=caseEntry[0];
+      caseEntry[1].each(flavEntry,begin
+        local flavour:=flavEntry[0];
+        local times:=flavEntry[1];
+        local threshold:=times.getInner(1).mean+
+                       3*times.getInner(1).standardVariation;
+        local sizeBefore:=times.size;
+        droppedTotal+=times.size;
+        droppedExtremes+=trueCount(times.getInner(1)>threshold);
+        times:=times[times.getInner(1)<=threshold];
+        droppedExtremes+=trueCount(times.getInner(1)<=0);
+        times:=times[times.getInner(1)>0].head(50);
+        droppedTotal-=times.size;
+        sizeBefore!=times.size
+        ? begin
+            runTimes[case,flavour]:=times;
+            anyDropped:=true;
+          end
+        : void;
+        void;
+      end);
     end);
   end);
-  print('Dropped ',droppedExtremes,' extreme timing values');
+  print('Dropped ',droppedExtremes,' extreme or negative timing values');
   print('Dropped ',droppedTotal   ,' values in total');
 end;
