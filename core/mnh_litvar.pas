@@ -72,12 +72,12 @@ TYPE
   P_intLiteral = ^T_intLiteral;
   T_intLiteral = object(T_scalarLiteral)
   private
-    val: T_bigint;
-    CONSTRUCTOR create(CONST value: T_bigint);
+    val: T_bigInt;
+    CONSTRUCTOR create(CONST value: T_bigInt);
     CONSTRUCTOR create(CONST value: int64);
   public
     DESTRUCTOR destroy; virtual;
-    PROPERTY value:T_bigint read val;
+    PROPERTY value:T_bigInt read val;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
@@ -370,7 +370,7 @@ FUNCTION exp(CONST x:double):double; inline;
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef DEBUGMODE} inline; {$endif}
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
-FUNCTION newIntLiteral(value: T_bigint): P_intLiteral;
+FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
 FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
@@ -458,7 +458,7 @@ PROCEDURE disposeLiteralWithoutResettingPointer(l:P_literal); inline;
     if l^.unreference<=0 then dispose(l,destroy);
   end;
 
-FUNCTION newIntLiteral(value: T_bigint): P_intLiteral;
+FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
   VAR iv:int64;
   begin
     if value.isBetween(low(intLit),high(intLit)) then begin
@@ -564,7 +564,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
   VAR i: longint;
       allZeroes:boolean=true;
       atLeastOneDigit:boolean=false;
-      big:T_bigint;
+      big:T_bigInt;
       intResult:int64;
   begin
     result:=nil;
@@ -848,7 +848,7 @@ CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numb
 CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
 CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherited init}inline_init(lt_int);     val.fromInt(value); end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: T_bigint);   begin {inherited init}inline_init(lt_int);     val:=value; end;
+CONSTRUCTOR T_intLiteral       .create(CONST value: T_bigInt);   begin {inherited init}inline_init(lt_int);     val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherited init}inline_init(lt_real);    val:=value; end;
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
@@ -2825,7 +2825,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
 
   FUNCTION perform_pot(CONST LHS:P_literal; CONST RHS:P_literal):P_literal;
     {$define function_id:=perform_pot}
-    FUNCTION pot_int_int(CONST x, y: T_bigint): P_scalarLiteral;
+    FUNCTION pot_int_int(CONST x, y: T_bigInt): P_scalarLiteral;
       VAR exponent:int64;
           tx, rx: T_myFloat;
       begin
@@ -2849,7 +2849,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         end;
       end;
 
-    FUNCTION pot_real_int(x: T_myFloat; CONST y: T_bigint): P_scalarLiteral;
+    FUNCTION pot_real_int(x: T_myFloat; CONST y: T_bigInt): P_scalarLiteral;
       VAR exponent:int64;
           resultVal:T_myFloat=1;
       begin
@@ -3493,6 +3493,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         listSize:longint;
         i:longint;
         mapKey,mapValue:P_literal;
+        tempInt:T_bigInt;
     begin
       reusableIndex:=stream^.readNaturalNumber;
       if reusableIndex<=byte(high(T_literalType)) then literalType:=T_literalType(byte(reusableIndex))
@@ -3510,7 +3511,10 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       case literalType of
         lt_boolean  : result:=newBoolLiteral  (stream^.readBoolean   );
-        lt_int      : result:=newIntLiteral   (stream^.readInteger   );
+        lt_int      : begin
+                        tempInt.readFromStream(stream);
+                        result:=newIntLiteral(tempInt);
+                      end;
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString);
         lt_emptyList: result:=newListLiteral;
@@ -3527,7 +3531,10 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
             lt_booleanList,lt_booleanSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
             lt_intList,lt_intSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendInt(stream^.readInteger);
+              for i:=0 to listSize-1 do if stream^.allOkay then begin
+                tempInt.readFromStream(stream);
+                P_collectionLiteral(result)^.append(newIntLiteral(tempInt),false);
+              end;
             lt_realList,lt_realSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
             lt_stringList,lt_stringSet:

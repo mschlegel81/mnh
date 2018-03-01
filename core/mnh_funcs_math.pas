@@ -97,7 +97,7 @@ FUNCTION not_imp intFuncSignature;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR y:P_literal;
         iter:T_arrayOfLiteral;
-        zero:T_bigint;
+        zero:T_bigInt;
     begin
       result:=nil;
       case x^.literalType of
@@ -232,7 +232,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       result:=newIntLiteral((xv div pot) * pot);
     end;
 
-  VAR big:T_bigint;
+  VAR big:T_bigInt;
       sub:P_literal;
       iter:T_arrayOfLiteral;
   begin
@@ -642,7 +642,7 @@ FUNCTION factorize_impl intFuncSignature;
   {$define DIVIDE_THROUGH:=while smallN mod p=0 do begin smallN:=smallN div p; listResult^.appendInt(p); end}
   VAR p:int64;
       smallN:int64;
-      bigN  :T_bigint;
+      bigN  :T_bigInt;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
@@ -746,7 +746,7 @@ FUNCTION primes_impl intFuncSignature;
 
 FUNCTION digits_impl intFuncSignature;
   VAR base:int64=10;
-  FUNCTION digitsOf(CONST i:T_bigint):P_listLiteral;
+  FUNCTION digitsOf(CONST i:T_bigInt):P_listLiteral;
     VAR digits:T_arrayOfLongint;
         k:longint;
     begin
@@ -776,7 +776,7 @@ FUNCTION composeDigits_imp intFuncSignature;
   VAR base:longint=10;
       Shift:int64=0;
       digits:T_arrayOfLongint;
-      intPart :T_bigint;
+      intPart :T_bigInt;
       fracPart:T_myFloat;
       k  :longint;
   begin
@@ -836,7 +836,7 @@ FUNCTION arctan2_impl intFuncSignature;
   end;
 
 FUNCTION gcd_impl intFuncSignature;
-  VAR ir,temp:T_bigint;
+  VAR ir,temp:T_bigInt;
       k:longint;
   begin
     result:=nil;
@@ -853,7 +853,7 @@ FUNCTION gcd_impl intFuncSignature;
   end;
 
 FUNCTION iSqrt_impl intFuncSignature;
-  VAR r:T_bigint;
+  VAR r:T_bigInt;
       isSquare:boolean;
   begin
     result:=nil;
