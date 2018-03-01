@@ -11,9 +11,7 @@ private pathDependentScripts:=['diff','grep',EXAMPLES_LOG_NAME];
 memoized runTimesAsFlatList->runTimes.each(e0,e0[1].each(e1,e1[1].each(e2,[e0[0],e1[0],e2[1]]),|),|);
 
 private flavourDependentScripts:=
-  ['accumulatorFactory',
-   'continuedFractions',
-   'dice7fromDice5',
+  ['continuedFractions',
    'cauchy',
    'jaro',
    'numInt',
@@ -21,12 +19,9 @@ private flavourDependentScripts:=
    'numDiff',
    'montyHall',
    'rk4',
-   'root',
    'shannonEntropy',
    'thieleInterpolation',
-   'vanDerCorput',
    'travellingSalesmanProblem',
-   'wordCount',
    EXAMPLES_LOG_NAME].union(plotters.map(::extractFileNameOnly));
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
 
