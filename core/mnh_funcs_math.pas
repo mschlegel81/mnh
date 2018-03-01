@@ -680,7 +680,7 @@ FUNCTION factorize_impl intFuncSignature;
         p:=3; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
         p:=5; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
         p:=7;
-        while (p<4294967266) and (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (context.adapters^.noErrors) and not(bign.canBeRepresentedAsInt64()) do begin
+        while (p<4294967266) and (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (context.adapters^.noErrors) and not(bigN.canBeRepresentedAsInt64()) do begin
           while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 +  7
           while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 11
           while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 13
@@ -690,7 +690,7 @@ FUNCTION factorize_impl intFuncSignature;
           while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 29
           while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 31
         end;
-        if (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (bign.canBeRepresentedAsInt64()) then begin
+        if (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (bigN.canBeRepresentedAsInt64()) then begin
           smallN:=bigN.toInt;
           bigN.destroy;
           while (smallN>=p*p) and (context.adapters^.noErrors) do begin
@@ -852,6 +852,17 @@ FUNCTION gcd_impl intFuncSignature;
     end;
   end;
 
+FUNCTION iSqrt_impl intFuncSignature;
+  VAR r:T_bigint;
+      isSquare:boolean;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+      r:=int0^.value.iSqrt(isSquare);
+      result:=newListLiteral(2)^.append(newIntLiteral(r),false)^.appendBool(isSquare);
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -894,4 +905,5 @@ INITIALIZATION
                                                                                   'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
   registerRule(MATH_NAMESPACE,'gcd'         ,@gcd_impl         ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
+  registerRule(MATH_NAMESPACE,'iSqrt'       ,@iSqrt_impl       ,ak_unary     ,'iSqrt(x:Int);//Returns a tuple of the integer square root of x and a flag indicating if x is a square');
 end.
