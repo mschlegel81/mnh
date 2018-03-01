@@ -3493,6 +3493,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         listSize:longint;
         i:longint;
         mapKey,mapValue:P_literal;
+        tempInt:T_bigint;
     begin
       reusableIndex:=stream^.readNaturalNumber;
       if reusableIndex<=byte(high(T_literalType)) then literalType:=T_literalType(byte(reusableIndex))
@@ -3510,7 +3511,10 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       case literalType of
         lt_boolean  : result:=newBoolLiteral  (stream^.readBoolean   );
-        lt_int      : result:=newIntLiteral   (stream^.readInteger   );
+        lt_int      : begin
+                        tempInt.readFromStream(stream);
+                        result:=newIntLiteral(tempInt);
+                      end;
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString);
         lt_emptyList: result:=newListLiteral;
@@ -3527,7 +3531,10 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
             lt_booleanList,lt_booleanSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
             lt_intList,lt_intSet:
-              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendInt(stream^.readInteger);
+              for i:=0 to listSize-1 do if stream^.allOkay then begin
+                tempInt.readFromStream(stream);
+                P_collectionLiteral(result)^.append(newIntLiteral(tempInt),false);
+              end;
             lt_realList,lt_realSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
             lt_stringList,lt_stringSet:
