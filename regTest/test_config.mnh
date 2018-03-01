@@ -62,6 +62,10 @@ testsToExecuteForFlavour(flavourString)->begin
 end;
 
 //@SuppressUnusedWarning
+testsToExecuteForAnyFlavour->
+  allDemos.filter({not(skipFile($script,true) and skipFile($script,false))});
+
+//@SuppressUnusedWarning
 isSmokeTest((demosRoot&'task.mnh'          ))->true;
 isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
 isSmokeTest((demosRoot&'clock.mnh'         ))->true;

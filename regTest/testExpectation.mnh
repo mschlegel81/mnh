@@ -267,4 +267,11 @@ main('cleanup')->begin
   end);
   print('Dropped ',droppedExtremes,' extreme or negative timing values');
   print('Dropped ',droppedTotal   ,' values in total');
+
+  runTimes.getInner(0)
+          .minus(testsToExecuteForAnyFlavour.extractFileNameOnly|EXAMPLES_LOG_NAME)
+          .each(caseWithoutTest,begin
+             runTimes[caseWithoutTest]:=void;
+             printf('Dropped timing values for "%s" because there is no corresponding script',caseWithoutTest);
+           end);
 end;
