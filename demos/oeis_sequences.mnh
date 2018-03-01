@@ -162,21 +162,21 @@ USE vampire;
 A014575->naturalNumbers(1260).filter(::isVampire);
 
 //@SuppressUnusedWarning
-A018900->naturalNumbers(0).filter({$x.bits.trueCount=2});
+A018900->naturalNumbers(0).filter({$x.hammingWeight=2});
 //@SuppressUnusedWarning
-A014311->naturalNumbers(0).filter({$x.bits.trueCount=3});
+A014311->naturalNumbers(0).filter({$x.hammingWeight=3});
 //@SuppressUnusedWarning
-A014312->naturalNumbers(0).filter({$x.bits.trueCount=4});
+A014312->naturalNumbers(0).filter({$x.hammingWeight=4});
 //@SuppressUnusedWarning
-A014313->naturalNumbers(0).filter({$x.bits.trueCount=5});
+A014313->naturalNumbers(0).filter({$x.hammingWeight=5});
 //@SuppressUnusedWarning
-A023688->naturalNumbers(0).filter({$x.bits.trueCount=6});
+A023688->naturalNumbers(0).filter({$x.hammingWeight=6});
 //@SuppressUnusedWarning
-A023689->naturalNumbers(0).filter({$x.bits.trueCount=7});
+A023689->naturalNumbers(0).filter({$x.hammingWeight=7});
 //@SuppressUnusedWarning
-A023690->naturalNumbers(0).filter({$x.bits.trueCount=8});
+A023690->naturalNumbers(0).filter({$x.hammingWeight=8});
 //@SuppressUnusedWarning
-A023691->naturalNumbers(0).filter({$x.bits.trueCount=9});
+A023691->naturalNumbers(0).filter({$x.hammingWeight=9});
 
 USE multifactorial;
 //@SuppressUnusedWarning

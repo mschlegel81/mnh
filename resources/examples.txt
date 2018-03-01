@@ -862,6 +862,14 @@ md5('Test input. Could be anything really.');
 
 sha256('Test input. Could be anything really.');
 
+hammingWeight(17213);
+
+iSqrt(12345^2+1);
+
+iSqrt(112233^2);
+
+gcd(1231512,143543);
+
 //==END REG TEST==
 
 wrapTextInHttp('Test');
