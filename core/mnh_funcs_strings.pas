@@ -5,7 +5,7 @@ USES sysutils,
      LazUTF8,base64,LConvEncoding,
      synacode,
      diff,
-     myGenerics,myStringUtil,myCrypto,
+     myGenerics,myStringUtil,myCrypto,bigint,
      mnh_basicTypes,
      mnh_constants,
      mnh_out_adapters,
@@ -841,27 +841,36 @@ FUNCTION byteLength_imp {$define LENGTH_FUNC:=length}     {$define ID_MACRO:='by
 {$undef LENGTH_MACRO}
 
 FUNCTION md5_imp intFuncSignature;
-  CONST hexDig:array[0..15]of char=('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
   VAR md5String:string;
-      hexString:string='';
-      c:char;
+      md5Int:T_bigint;
+      digits:T_arrayOfLongint;
+      i:longint;
+
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
       md5String:=MD5(str0^.value);
-      for c in md5String do begin
-        hexString:=hexString+hexDig[(ord(c) shr 4) and 15]
-                            +hexDig[ ord(c)        and 15];
-      end;
-      result:=newStringLiteral(hexString)
+      SetLength(digits,length(md5String));
+      for i:=1 to length(md5String) do digits[i-1]:=ord(md5String[i]);
+      md5Int.createFromDigits(256,digits);
+      result:=newIntLiteral(md5Int);
     end else result:=nil;
   end;
 
 FUNCTION sha256_imp intFuncSignature;
+  VAR sha256Int:T_bigint;
+      sha256Digest:T_sha256Hash;
+      sha256Digits:T_arrayOfLongint;
+      i:longint;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(sha256(str0^.value))
-    else result:=nil;
+    then begin
+      sha256Digest:=sha256(str0^.value);
+      setLength(sha256Digits,length(sha256Digest));
+      for i:=0 to length(sha256Digest)-1 do sha256Digits[i]:=sha256Digest[i];
+      sha256Int.createFromDigits(256,sha256Digits);
+      result:=newIntLiteral(sha256Int);
+    end  else result:=nil;
   end;
 
 INITIALIZATION
