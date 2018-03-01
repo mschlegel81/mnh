@@ -101,8 +101,10 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     then mr:=closeDialogForm.showOnQuitWhileEvaluating;
     if mr<>mrClose then begin
       quitPosted:=(mr=mrOk);
-      CloseAction:=caNone;
-      exit;
+      if runEvaluator.evaluationRunning or quick.task.processing then begin
+        CloseAction:=caNone;
+        exit;
+      end;
     end;
     if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     quick.adapters^.haltEvaluation;
