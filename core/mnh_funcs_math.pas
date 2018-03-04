@@ -639,76 +639,15 @@ FUNCTION permutations_impl intFuncSignature;
   end;
 
 FUNCTION factorize_impl intFuncSignature;
-  {$define DIVIDE_THROUGH:=while smallN mod p=0 do begin smallN:=smallN div p; listResult^.appendInt(p); end}
-  VAR p:int64;
-      smallN:int64;
-      bigN  :T_bigInt;
+  VAR factors:T_factorizationResult;
+      i:longint;
   begin
-    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      if int0^.value.canBeRepresentedAsInt64() then begin
-        smallN:=int0^.value.toInt;
-        if (smallN=1) or (smallN=0) then exit(newListLiteral^.appendInt(smallN));
-        result:=newListLiteral;
-        if smallN<0 then begin
-          smallN:=-smallN;
-          listResult^.appendInt(-1);
-        end;
-        p:=2; DIVIDE_THROUGH;
-        p:=3; DIVIDE_THROUGH;
-        p:=5; DIVIDE_THROUGH;
-        p:=7;
-        while (smallN>=p*p) and (context.adapters^.noErrors) do begin
-          DIVIDE_THROUGH; inc(p,4); // n*30 +  7
-          DIVIDE_THROUGH; inc(p,2); // n*30 + 11
-          DIVIDE_THROUGH; inc(p,4); // n*30 + 13
-          DIVIDE_THROUGH; inc(p,2); // n*30 + 17
-          DIVIDE_THROUGH; inc(p,4); // n*30 + 19
-          DIVIDE_THROUGH; inc(p,6); // n*30 + 23
-          DIVIDE_THROUGH; inc(p,2); // n*30 + 29
-          DIVIDE_THROUGH; inc(p,6); // n*30 + 31
-        end;
-        if smallN>1 then listResult^.appendInt(smallN);
-      end else begin
-        bigN.create(int0^.value);
-        result:=newListLiteral;
-        if bigN.isNegative then begin
-          bigN.flipSign;
-          listResult^.appendInt(-1);
-        end;
-        p:=2; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
-        p:=3; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
-        p:=5; while bigN.divideIfRestless(p) do listResult^.appendInt(p);
-        p:=7;
-        while (p<4294967266) and (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (context.adapters^.noErrors) and not(bigN.canBeRepresentedAsInt64()) do begin
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 +  7
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 11
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 13
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 17
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,4); // n*30 + 19
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 23
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,2); // n*30 + 29
-          while bigN.divideIfRestless(p) do listResult^.appendInt(p); inc(p,6); // n*30 + 31
-        end;
-        if (bigN.compare(p*p) in [CR_EQUAL,CR_GREATER]) and (bigN.canBeRepresentedAsInt64()) then begin
-          smallN:=bigN.toInt;
-          bigN.destroy;
-          while (smallN>=p*p) and (context.adapters^.noErrors) do begin
-            DIVIDE_THROUGH; inc(p,4); // n*30 +  7
-            DIVIDE_THROUGH; inc(p,2); // n*30 + 11
-            DIVIDE_THROUGH; inc(p,4); // n*30 + 13
-            DIVIDE_THROUGH; inc(p,2); // n*30 + 17
-            DIVIDE_THROUGH; inc(p,4); // n*30 + 19
-            DIVIDE_THROUGH; inc(p,6); // n*30 + 23
-            DIVIDE_THROUGH; inc(p,2); // n*30 + 29
-            DIVIDE_THROUGH; inc(p,6); // n*30 + 31
-          end;
-          if smallN>1 then listResult^.appendInt(smallN);
-        end else begin
-          if bigN.compare(1)=CR_GREATER then listResult^.append(newIntLiteral(bigN),false)
-                                        else bigN.destroy;
-        end;
-      end;
+      factors:=bigint.factorize(int0^.value);
+      result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
+      for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
+      for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
+      listResult^.sort;
     end;
   end;
 
@@ -717,7 +656,7 @@ FUNCTION primes_impl intFuncSignature;
     VAR isPrime:array of boolean;
         i,p:longint;
     begin
-      if pMax<2 then exit(newListLiteral);
+      if (pMax<2) or (pMax>2147117569) then exit(newListLiteral);
       setLength(isPrime,pMax+1);
       isPrime[0]:=false;
       isPrime[1]:=false;
@@ -739,7 +678,7 @@ FUNCTION primes_impl intFuncSignature;
     end;
 
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and (int0^.value.canBeRepresentedAsInt32)
     then result:=sievePrimes(int0^.value.toInt)
     else result:=nil;
   end;

@@ -1141,8 +1141,7 @@ Booleans are the simplest type. There are only two possible values:<code><span c
 To directly input a boolean, use the reserved words <code><span class="literal">true</span></code> and <code><span class="literal">false</span></code>.
 
 <h4><br><a name="integers">Integers</a></h4>
-Integers are internally represented as 64bit two-complement integer numbers. Consequently the smallest possible integer is -9223372036854775808 and the largest possible integer is 9223372036854775807.<br>
-Note that no overflow-checking is employed.<br>
+Integers are represented with a dynamic number of digits. For <i>small</i> values, the built-in operations are employed (it depends on the specific function/operation which values can be considered small).<br>
 Together with reals, integers form the class of <i>numeric</i> values.<br>
 To directly input an integer, write a number only containing of digits, without a decimal point.
 
@@ -1249,7 +1248,7 @@ Lists contain zero or more elements of any type. They are represented as an enum
 <!--end-->
 </code>
 This example also shows, that types within a list can be mixed. You can use the same notation to construct lists.<br>In addition there is the <code>..</code>-separator, which is only allowed in list constructors.
-It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers and one-character-strings.<br>
+It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers within 64bit range and one-character-strings.<br>
 List elements can be extracted from Lists via the <code>get</code> function or the associated shorthand <code>[?]</code>. The most straightforward way is access by a single index:<code>
 <!--mnh-->
    in> simpleList :=['A'..'F'];
