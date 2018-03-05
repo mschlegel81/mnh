@@ -834,6 +834,24 @@ FUNCTION powMod_impl intFuncSignature;
     end;
   end;
 
+FUNCTION modularInverse_impl intFuncSignature;
+  VAR intResult:T_bigInt;
+      validResult:boolean;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+       (arg0^.literalType=lt_int) and not(int0^.value.isNegative) and not(int0^.value.isZero) and
+       (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and not(int1^.value.isZero) then begin
+      intResult:=int0^.value.modularInverse(int1^.value,validResult);
+      if validResult
+      then result:=newIntLiteral(intResult)
+      else begin
+        intResult.destroy;
+        result:=newRealLiteral(Nan);
+      end;
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -872,12 +890,13 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'isPrime'     ,@isPrime_impl     ,ak_unary     ,'isPrime(i:int);//Returns true if i is a prime, false otherwise');
   registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
   registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
-  registerRule(MATH_NAMESPACE,'composeDigits',@composeDigits_imp,ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
-                                                                              'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
-                                                                              'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
-  registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
-  registerRule(MATH_NAMESPACE,'gcd'         ,@gcd_impl         ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
-  registerRule(MATH_NAMESPACE,'iSqrt'       ,@iSqrt_impl       ,ak_unary     ,'iSqrt(x:Int);//Returns a tuple of the integer square root of x and a flag indicating if x is a square');
-  registerRule(MATH_NAMESPACE,'hammingWeight',@hammingWeight_impl,ak_unary   ,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
-  registerRule(MATH_NAMESPACE,'powMod'      ,@powMod_impl      ,ak_ternary   ,'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z');
+  registerRule(MATH_NAMESPACE,'composeDigits' ,@composeDigits_imp  ,ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
+                                                                                  'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
+                                                                                  'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
+  registerRule(MATH_NAMESPACE,'arctan2'       ,@arctan2_impl       ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
+  registerRule(MATH_NAMESPACE,'gcd'           ,@gcd_impl           ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
+  registerRule(MATH_NAMESPACE,'iSqrt'         ,@iSqrt_impl         ,ak_unary     ,'iSqrt(x:Int);//Returns a tuple of the integer square root of x and a flag indicating if x is a square');
+  registerRule(MATH_NAMESPACE,'hammingWeight' ,@hammingWeight_impl ,ak_unary     ,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
+  registerRule(MATH_NAMESPACE,'powMod'        ,@powMod_impl        ,ak_ternary   ,'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z');
+  registerRule(MATH_NAMESPACE,'modularInverse',@modularInverse_impl,ak_binary    ,'modularInverse(x>0,m>0);//Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists');
 end.
