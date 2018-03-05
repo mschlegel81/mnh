@@ -2603,7 +2603,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                      if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt62) and
                         (P_intLiteral(RHS)^.val.canBeRepresentedAsInt62) then
                      exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt+
-                                        P_intLiteral(RHS)^.val.toInt) else
+                                        P_intLiteral(RHS)^.val.toInt)) else
                      {$endif}
                      exit(newIntLiteral (P_intLiteral(LHS)^.val.plus(P_intLiteral(RHS)^.val)));
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat+P_realLiteral(RHS)^.val));
@@ -2660,7 +2660,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                      if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt62) and
                         (P_intLiteral(RHS)^.val.canBeRepresentedAsInt62) then
                      exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt-
-                                        P_intLiteral(RHS)^.val.toInt) else
+                                        P_intLiteral(RHS)^.val.toInt)) else
                      {$endif}
                      exit(newIntLiteral (P_intLiteral(LHS)^.val.minus(P_intLiteral (RHS)^.val)));
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat-P_realLiteral(RHS)^.val));
@@ -2705,7 +2705,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                      if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt32) and
                         (P_intLiteral(RHS)^.val.canBeRepresentedAsInt32) then
                      exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt*
-                                        P_intLiteral(RHS)^.val.toInt) else
+                                        P_intLiteral(RHS)^.val.toInt)) else
                      {$endif}
                      exit(newIntLiteral (P_intLiteral(LHS)^.val.mult(P_intLiteral (RHS)^.val)));
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat*P_realLiteral(RHS)^.val));
