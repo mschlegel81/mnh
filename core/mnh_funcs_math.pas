@@ -643,11 +643,24 @@ FUNCTION factorize_impl intFuncSignature;
       i:longint;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      factors:=bigint.factorize(int0^.value);
+      factors:=bigint.factorize(int0^.value,false);
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
       listResult^.sort;
+    end;
+  end;
+
+FUNCTION isPrime_impl intFuncSignature;
+  VAR factors:T_factorizationResult;
+      i:longint;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+      if (int0^.value.isNegative) then exit(newBoolLiteral(false));
+      if (int0^.value.compare(1) in [CR_LESSER,CR_EQUAL]) then exit(newBoolLiteral(false));
+      factors:=bigint.factorize(int0^.value,true);
+      result:=newBoolLiteral(length(factors.smallFactors)+length(factors.bigFactors)<=1);
+      for i:=0 to length(factors.bigFactors)-1 do factors.bigFactors[i].destroy;
     end;
   end;
 
@@ -856,6 +869,7 @@ INITIALIZATION
                                                                               'subSets(S,k:int);//Returns all distinct subsets of S having k elements');
   registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
   registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
+  registerRule(MATH_NAMESPACE,'isPrime'     ,@isPrime_impl     ,ak_unary     ,'isPrime(i:int);//Returns true if i is a prime, false otherwise');
   registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
   registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
   registerRule(MATH_NAMESPACE,'composeDigits',@composeDigits_imp,ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
