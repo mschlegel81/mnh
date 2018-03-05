@@ -2003,7 +2003,7 @@ expectations:=
      'in> composeDigits([1, 0, 2], 10, 2);','out> 1.02',"in> sandBoxExecute('f(x)->3*x+1; f(f(f(1)))');",
      "out> [['in>','','f(x)->3*x+1;'],['in>','','f(f(f(1)));'],['out>','','40']]",
      "in> begin local x:=async({print('start') orElse sleep(0.1) orElse'end'}); print('1: ', x().isVoid); sleep(0.2); print('2: ', x()); end;",
-     '1: true','2: ','out> void',
+     '1: true','start','2: end','out> void',
      "in> begin local x:=future({print('start') orElse sleep(0.1) orElse'end'}); print('1: ', x().isVoid); sleep(0.2); print('2: ', x()); end;",
      'start','1: false','2: end','out> void',"in> validateRegex('(3+.*');",'out> false',"in> validateRegex('\\(3+.*');",
      'out> true','in> [1..100].pFilter({$x mod 2=$x mod 3=$x mod 5});','out> [1,30,31,60,61,90,91]','in> pi;',
