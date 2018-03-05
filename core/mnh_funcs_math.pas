@@ -810,6 +810,17 @@ FUNCTION hammingWeight_impl intFuncSignature;
     end;
   end;
 
+FUNCTION powMod_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and
+       (arg0^.literalType=lt_int) and not(int0^.value.isNegative) and
+       (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and
+       (arg2^.literalType=lt_int) and not(int2^.value.isNegative) then begin
+      result:=newIntLiteral(int0^.value.powMod(int1^.value,int2^.value));
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -842,16 +853,17 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'isNan'       ,@isNan_impl       ,ak_unary     ,'isNan(n);//Returns true if n is a number representing the value Not-A-Number');
   registerRule(MATH_NAMESPACE,'isInfinite'  ,@isInfinite_impl  ,ak_unary     ,'isInfinite(n);//Returns true if n is a number representing an infinite value');
   registerRule(MATH_NAMESPACE,'subSets'     ,@subSets_impl     ,ak_variadic_1,'subSets(S);//Returns all distinct subsets of S#'+
-                                                                                 'subSets(S,k:int);//Returns all distinct subsets of S having k elements');
+                                                                              'subSets(S,k:int);//Returns all distinct subsets of S having k elements');
   registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
   registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
   registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
   registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
   registerRule(MATH_NAMESPACE,'composeDigits',@composeDigits_imp,ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+
-                                                                                  'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
-                                                                                  'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
+                                                                              'composeDigits(digits:intList,base:int);//Returns a number constructed from digits with given base #'+
+                                                                              'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'     ,@arctan2_impl     ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
   registerRule(MATH_NAMESPACE,'gcd'         ,@gcd_impl         ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
   registerRule(MATH_NAMESPACE,'iSqrt'       ,@iSqrt_impl       ,ak_unary     ,'iSqrt(x:Int);//Returns a tuple of the integer square root of x and a flag indicating if x is a square');
-  registerRule(MATH_NAMESPACE,'hammingWeight',@hammingWeight_impl,ak_unary,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
+  registerRule(MATH_NAMESPACE,'hammingWeight',@hammingWeight_impl,ak_unary   ,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
+  registerRule(MATH_NAMESPACE,'powMod'      ,@powMod_impl      ,ak_ternary   ,'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z');
 end.
