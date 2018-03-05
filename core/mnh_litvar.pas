@@ -2599,7 +2599,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val.plus(P_intLiteral(RHS)^.val)));
+          lt_int:    {$ifndef DEBUGMODE}
+                     if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt62) and
+                        (P_intLiteral(RHS)^.val.canBeRepresentedAsInt62) then
+                     exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt+
+                                        P_intLiteral(RHS)^.val.toInt) else
+                     {$endif}
+                     exit(newIntLiteral (P_intLiteral(LHS)^.val.plus(P_intLiteral(RHS)^.val)));
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat+P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2650,7 +2656,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val.minus(P_intLiteral (RHS)^.val)));
+          lt_int:    {$ifndef DEBUGMODE}
+                     if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt62) and
+                        (P_intLiteral(RHS)^.val.canBeRepresentedAsInt62) then
+                     exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt-
+                                        P_intLiteral(RHS)^.val.toInt) else
+                     {$endif}
+                     exit(newIntLiteral (P_intLiteral(LHS)^.val.minus(P_intLiteral (RHS)^.val)));
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat-P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
@@ -2689,7 +2701,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    exit(newIntLiteral (P_intLiteral(LHS)^.val.mult(P_intLiteral (RHS)^.val)));
+          lt_int:    {$ifndef DEBUGMODE}
+                     if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt32) and
+                        (P_intLiteral(RHS)^.val.canBeRepresentedAsInt32) then
+                     exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt*
+                                        P_intLiteral(RHS)^.val.toInt) else
+                     {$endif}
+                     exit(newIntLiteral (P_intLiteral(LHS)^.val.mult(P_intLiteral (RHS)^.val)));
           lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.val.toFloat*P_realLiteral(RHS)^.val));
           lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
           lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: S_x_L_recursion;
