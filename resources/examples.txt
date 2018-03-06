@@ -245,7 +245,9 @@ join(['a','b','c']);
 
 join([1..5],' ');
 
-length('Test');
+length('Test öäü');
+
+byteLength('Test öäü');
 
 length(['Text','AbC']);
 
@@ -886,6 +888,17 @@ gcd(1231512,143543);
 
 //Example given by rosettacode.org
 powMod(2988348162058574136915891421498819466320163312926952423791023078876139,2351399303373464486466122544523690094744975233415544072992656881240319,10^40);
+
+//#randomGenerator
+randomGenerator(123).head(10);
+
+//#intRandomGenerator
+intRandomGenerator(123,5).head(10);
+
+//#isaacRandomGenerator
+isaacRandomGenerator(123,5).head(10);
+
+modularInverse(3,32);
 
 //==END REG TEST==
 
