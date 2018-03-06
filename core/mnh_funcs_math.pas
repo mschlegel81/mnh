@@ -94,6 +94,8 @@ UNARY_NUM_TO_REAL;
 {$undef UNARY_NUM_TO_REAL}
 
 FUNCTION not_imp intFuncSignature;
+  VAR consideredBits:longint=-1;
+
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR y:P_literal;
         iter:T_arrayOfLiteral;
@@ -105,7 +107,7 @@ FUNCTION not_imp intFuncSignature;
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
         lt_int:     begin
                       zero.createZero;
-                      result:=newIntLiteral (P_intLiteral (x)^.value.bitXor(zero));
+                      result:=newIntLiteral (P_intLiteral (x)^.value.bitNegate(consideredBits));
                       zero.destroy;
                     end;
         lt_list,lt_booleanList,lt_intList,lt_emptyList,
@@ -125,9 +127,101 @@ FUNCTION not_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=not_rec(arg0);
+    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_int) and (int1^.value.canBeRepresentedAsInt32))
+    then begin
+      if params^.size=2 then consideredBits:=int1^.value.toInt;
+      result:=not_rec(arg0);
+    end;
   end;
+
+{$define BITWISE_FUNC:=VAR consideredBits:longint=-1;
+  FUNCTION recurse(CONST x,y:P_literal):P_literal;
+    VAR xIter,yIter:T_arrayOfLiteral;
+        xSub ,ySub ,rSub:P_literal;
+        i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_int: case y^.literalType of
+          lt_int: exit(newIntLiteral(P_intLiteral(x)^.value.BIGINT_OP(P_intLiteral(y)^.value,consideredBits)));
+          lt_emptyList,lt_intList,lt_list,
+          lt_emptySet ,lt_intSet ,lt_set: begin
+            result:=P_collectionLiteral(y)^.newOfSameType(true);
+            yIter :=P_collectionLiteral(y)^.iteratableList;
+            for ySub in yIter do if context.adapters^.noErrors then
+              P_collectionLiteral(result)^.append(recurse(x,ySub),false);
+            disposeLiteral(yIter);
+            exit(result);
+          end;
+        end;
+        lt_emptyList,lt_intList,lt_list: case y^.literalType of
+          lt_int: begin
+            result:=P_collectionLiteral(x)^.newOfSameType(true);
+            xIter :=P_collectionLiteral(x)^.iteratableList;
+            for xSub in xIter do if context.adapters^.noErrors then
+              P_collectionLiteral(result)^.append(recurse(xSub,y),false);
+            disposeLiteral(xIter);
+            exit(result);
+          end;
+          lt_emptyList,lt_intList,lt_list: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
+            result:=newListLiteral(P_listLiteral(x)^.size);
+            for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then begin
+              rSub:=recurse(P_listLiteral(x)^.value[i],
+                            P_listLiteral(y)^.value[i]);
+              if rSub<>nil then P_listLiteral(result)^.append(rSub,false);
+            end;
+            exit(result);
+          end else context.adapters^.raiseError('Incompatible list sizes in '+FUNC_NAME+': '+intToStr(P_listLiteral(x)^.size)+' != '+intToStr(P_listLiteral(y)^.size),tokenLocation);
+        end;
+        lt_emptySet ,lt_intSet ,lt_set: case y^.literalType of
+          lt_int: begin
+            result:=P_collectionLiteral(x)^.newOfSameType(true);
+            xIter :=P_collectionLiteral(x)^.iteratableList;
+            for xSub in xIter do if context.adapters^.noErrors then
+              P_collectionLiteral(result)^.append(recurse(xSub,y),false);
+            disposeLiteral(xIter);
+            exit(result);
+          end;
+          lt_emptySet ,lt_intSet ,lt_set : begin
+            xIter:=P_setLiteral(x)^.iteratableList;
+            yIter:=P_setLiteral(y)^.iteratableList;
+            result:=newSetLiteral();
+            for xSub in xIter do if context.adapters^.noErrors then for ySub in yIter do begin
+              rSub:=recurse(xSub,ySub);
+              if rSub<>nil then P_setLiteral(result)^.append(rSub,false);
+            end;
+            disposeLiteral(xIter);
+            disposeLiteral(yIter);
+            exit(result);
+          end;
+        end;
+      end;
+      if (result=nil) and context.adapters^.noErrors then context.raiseCannotApplyError('builtin rule '+FUNC_NAME,params,tokenLocation,C_EMPTY_STRING_ARRAY);
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) or ((params^.size=3) and (arg2^.literalType=lt_int) and (int2^.value.canBeRepresentedAsInt32)) then begin
+      if params^.size=3 then consideredBits:=int2^.value.toInt;
+      result:=recurse(arg0,arg1);
+      if (result<>nil) and not(context.adapters^.noErrors) then disposeLiteral(result);
+    end;
+  end}
+
+FUNCTION bitAnd_imp intFuncSignature;
+{$define BIGINT_OP:=bitAnd}
+{$define FUNC_NAME:='bitAnd'}
+BITWISE_FUNC;
+
+FUNCTION bitOr_imp intFuncSignature;
+{$define BIGINT_OP:=bitOr}
+{$define FUNC_NAME:='bitOr'}
+BITWISE_FUNC;
+
+FUNCTION bitXor_imp intFuncSignature;
+{$define BIGINT_OP:=bitXor}
+{$define FUNC_NAME:='bitCor'}
+BITWISE_FUNC;
 
 FUNCTION abs_imp intFuncSignature;
   FUNCTION recurse(CONST x:P_literal):P_literal;
@@ -869,7 +963,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'exp'   ,@exp_imp   ,ak_unary,'exp(n);//Returns the exponential of numeric or expression parameter n');
   registerRule(MATH_NAMESPACE,'ln'    ,@ln_imp    ,ak_unary,'ln(n);//Returns the natural logarithm of numeric or expression parameter n');
   //Unary Boolean -> boolean
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,ak_unary,'not(b:boolean);#not(b:booleanList);//Returns the negated value of b#not(i:int);#not(i:intList);//Returns the bitwise negated value of i');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,ak_unary,'not(b);#//Returns the negated value of Boolean or Int Scalar or Collection b#not(i,bitCount);//Returns the bitwise negated value of i assuming bitCount total relevant bits');
   //Unary Numeric -> same (i.e. I -> I, R -> R)
   registerRule(MATH_NAMESPACE,'abs',@abs_imp,ak_unary,'abs(n);//Returns the absolute value of numeric or expression parameter n');
   registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,ak_unary,'sqr(n);//Returns the square of numeric or expression parameter n');
@@ -904,4 +998,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'hammingWeight' ,@hammingWeight_impl ,ak_unary     ,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
   registerRule(MATH_NAMESPACE,'powMod'        ,@powMod_impl        ,ak_ternary   ,'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z');
   registerRule(MATH_NAMESPACE,'modularInverse',@modularInverse_impl,ak_binary    ,'modularInverse(x>0,m>0);//Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists');
+  registerRule(MATH_NAMESPACE,'bitAnd'        ,@bitAnd_imp         ,ak_variadic_2,'bitAnd(x,y,relevantBits);//Returns bitwise x and y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
+  registerRule(MATH_NAMESPACE,'bitOr'         ,@bitOr_imp          ,ak_variadic_2,'bitOr(x,y,relevantBits);//Returns bitwise x or y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
+  registerRule(MATH_NAMESPACE,'bitXor'        ,@bitXor_imp         ,ak_variadic_2,'bitXor(x,y,relevantBits);//Returns bitwise x xor y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
 end.
