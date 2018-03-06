@@ -237,7 +237,7 @@ main('scan')->begin
   startIpcServer(ipcId,::serve);
   print('IPC Server started. ',ipcId);
   foundImplementations:=
-  sequences.each(seq,implemented[index].isVoid ? begin
+  sequences.pEach(seq,implemented[index].isVoid ? begin
     local imp:=try({guessImplementation(seq)},{fail('guessImplementation failed for ',index)});
     imp.isVoid
     ? void
