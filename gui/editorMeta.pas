@@ -1048,10 +1048,7 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
       hints:T_arrayOfString;
       hasErrors,hasWarnings:boolean;
   begin
-    if language_<>LANG_MNH then begin
-      outlineModel^.update(getSafeAssistant(nil));
-      exit;
-    end;
+    if language_<>LANG_MNH then exit;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
       highlighter.codeAssistant:=assistant;
