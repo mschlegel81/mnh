@@ -1,6 +1,7 @@
 UNIT mnh_builtinGenerators;
 INTERFACE
 USES sysutils,
+     mySys,myCrypto,bigint,
      myGenerics,
      myStringUtil,
      mnh_constants,
@@ -480,7 +481,10 @@ TYPE
   P_primeGenerator=^T_primeGenerator;
   T_primeGenerator=object(T_builtinGeneratorExpression)
     private
-      table:array of bitpacked array[0..255] of boolean;
+      CONST
+        CHUNK_SIZE_LOG2=12;
+        CHUNK_SIZE=1 shl CHUNK_SIZE_LOG2;
+      VAR table:array of bitpacked array[0..CHUNK_SIZE-1] of boolean;
       index:int64;
     public
       CONSTRUCTOR create(CONST loc:T_tokenLocation);
@@ -496,11 +500,11 @@ CONSTRUCTOR T_primeGenerator.create(CONST loc: T_tokenLocation);
     setLength(table,1);
     index:=2;
 
-    for i:=0 to 255 do table[0][i]:=i>=2;
-    for i:=2 to 16 do begin
+    for i:=0 to CHUNK_SIZE-1 do table[0][i]:=i>=2;
+    for i:=2 to 1 shl (CHUNK_SIZE_LOG2 div 2) do begin
       if table[0][i] then begin
         j:=i*i;
-        while j<=255 do begin
+        while j<CHUNK_SIZE do begin
           table[0][j]:=false;
           inc(j,i);
         end;
@@ -520,19 +524,19 @@ FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
         i,j:{$ifdef CPU32}longint{$else}int64{$endif};
     begin
       k0:=length(table);
-      offset:=k0 shl 8;
+      offset:=k0 shl CHUNK_SIZE_LOG2;
       setLength(table,k0*2);
-      newMax:=int64(256)*int64(length(table))-int64(1);
+      newMax:=int64(CHUNK_SIZE)*int64(length(table))-int64(1);
       {$ifdef debugMode}
       writeln(stdErr,'        DEBUG: computing primes in range ',offset,'..',newMax);
       {$endif}
-      for k:=k0 to length(table)-1 do for i:=0 to 255 do table[k][i]:=odd(i);
+      for k:=k0 to length(table)-1 do for i:=0 to CHUNK_SIZE-1 do table[k][i]:=odd(i);
       for i:=3 to round(sqrt(newMax)) do begin
-        if table[i shr 8][i and 255] then begin
+        if table[i shr CHUNK_SIZE_LOG2][i and (CHUNK_SIZE-1)] then begin
           j:=i*i;
           while j<offset do inc(j,i);
           while j<=newMax do begin
-            table[j shr 8][j and 255]:=false;
+            table[j shr CHUNK_SIZE_LOG2][j and (CHUNK_SIZE-1)]:=false;
             inc(j,i);
           end;
         end;
@@ -540,10 +544,10 @@ FUNCTION T_primeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
     end;
 
   begin
-    if index>=int64(256)*int64(length(table)) then extendTable;
-    while not(table[index shr 8][index and 255]) do begin
+    if index>=int64(CHUNK_SIZE)*int64(length(table)) then extendTable;
+    while not(table[index shr CHUNK_SIZE_LOG2][index and (CHUNK_SIZE-1)]) do begin
       inc(index);
-      if index>=int64(256)*int64(length(table)) then extendTable;
+      if index>=int64(CHUNK_SIZE)*int64(length(table)) then extendTable;
     end;
     result:=newIntLiteral(index);
     inc(index);
@@ -670,6 +674,134 @@ FUNCTION stringIterator intFuncSignature;
              else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.value.toInt,int2^.value.toInt));
     end else result:=nil;
   end;
+
+TYPE
+  P_realRandomGenerator=^T_realRandomGenerator;
+  T_realRandomGenerator=object(T_builtinGeneratorExpression)
+    private
+      XOS:T_xosPrng;
+    public
+      CONSTRUCTOR create(CONST seed:T_bigInt; CONST loc:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+  P_intRandomGenerator=^T_intRandomGenerator;
+  T_intRandomGenerator=object(T_builtinGeneratorExpression)
+    private
+      XOS:T_xosPrng;
+      range:T_bigInt;
+    public
+      CONSTRUCTOR create(CONST seed,maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+  P_isaacRandomGenerator=^T_isaacRandomGenerator;
+  T_isaacRandomGenerator=object(T_builtinGeneratorExpression)
+    private
+      isaac:T_ISAAC;
+      range:T_bigInt;
+    public
+      CONSTRUCTOR create(CONST seed,maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_realRandomGenerator.create(CONST seed: T_bigInt; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    XOS.create;
+    XOS.resetSeed(seed.getRawBytes);
+  end;
+
+CONSTRUCTOR T_isaacRandomGenerator.create(CONST seed, maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    isaac.create;
+    isaac.setSeed(seed.getRawBytes);
+    range.create(maxValExclusive);
+  end;
+
+CONSTRUCTOR T_intRandomGenerator.create(CONST seed, maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    XOS.create;
+    XOS.resetSeed(seed.getRawBytes);
+    range.create(maxValExclusive);
+  end;
+
+DESTRUCTOR T_realRandomGenerator.destroy;
+  begin
+    XOS.destroy;
+  end;
+
+DESTRUCTOR T_intRandomGenerator.destroy;
+  begin
+    XOS.destroy;
+    range.destroy;
+  end;
+
+DESTRUCTOR T_isaacRandomGenerator.destroy;
+  begin
+    isaac.destroy;
+    range.destroy;
+  end;
+
+FUNCTION T_realRandomGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:='randomGenerator';
+  end;
+
+FUNCTION T_intRandomGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:='intRandomGenerator('+range.toString+')';
+  end;
+
+FUNCTION T_isaacRandomGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:='isaacRandomGenerator('+range.toString+')';
+  end;
+
+FUNCTION T_realRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
+  begin
+    result:=newRealLiteral(XOS.realRandom);
+  end;
+
+FUNCTION T_intRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
+  begin
+    result:=newIntLiteral(bigint.randomInt(@XOS.dwordRandom,range));
+  end;
+
+FUNCTION T_isaacRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
+  begin
+    result:=newIntLiteral(bigint.randomInt(@isaac.iRandom,range));
+  end;
+
+FUNCTION randomGenerator_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then
+      new(P_realRandomGenerator(result),create(int0^.value,tokenLocation));
+  end;
+
+FUNCTION intRandomGenerator_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and not(int1^.value.isZero) then
+      new(P_intRandomGenerator(result),create(int0^.value,int1^.value,tokenLocation));
+  end;
+
+FUNCTION isaacRandomGenerator_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and not(int1^.value.isZero) then
+      new(P_isaacRandomGenerator(result),create(int0^.value,int1^.value,tokenLocation));
+  end;
+
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
@@ -680,5 +812,8 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLineIterator', @fileLineIterator,ak_binary,'fileLineIterator(filename:string);//returns an iterator over all lines in f');
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
   registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
+  registerRule(STRINGS_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary,'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)');
+  registerRule(STRINGS_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary,'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)');
+  registerRule(STRINGS_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)');
   listProcessing.newIterator:=@newIterator;
 end.
