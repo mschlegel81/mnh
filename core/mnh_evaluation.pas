@@ -217,8 +217,8 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         //find closing bracket and body parts
         bodyParts:=getBodyParts(first,1,context.recycler,context.adapters,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
-        if length(bodyParts)<>2 then begin
-          context.adapters^.raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',errorLocation);
+        if (length(bodyParts)>2) or (length(bodyParts)<1) then begin
+          context.adapters^.raiseError('Invalid while-construct; Exactly one or two arguments (head, body) are expected.',errorLocation);
           exit(false);
         end;
 
@@ -228,10 +228,9 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         end;
 
         //create head/body rules------------------------------------------------
-        emptyPattern.create;
         new(headRule,createForWhile(bodyParts[0].first,bodyParts[0].first^.location,context));
+        if length(bodyParts)=2 then
         new(bodyRule,createForWhile(bodyParts[1].first,bodyParts[1].first^.location,context));
-        emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;
       end;
@@ -240,7 +239,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     PROCEDURE evaluateBody; inline;
       VAR toReduce,dummy:P_token;
       begin
-        if bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context) then begin
+        if (bodyRule<>nil) and bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context) then begin
           reduceExpression(toReduce,context);
           context.recycler.cascadeDisposeToken(toReduce);
         end;
@@ -260,6 +259,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       first^.next:=context.recycler.disposeToken(bracketClosingWhile);
       //cleanup----------------------------------------------------------------------
       dispose(headRule,destroy);
+      if bodyRule<>nil then
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
