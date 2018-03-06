@@ -811,7 +811,12 @@ FUNCTION iSqrt_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       r:=int0^.value.iSqrt(isSquare);
-      result:=newListLiteral(2)^.append(newIntLiteral(r),false)^.appendBool(isSquare);
+      if isSquare
+      then result:=newIntLiteral(r)
+      else begin
+        r.destroy;
+        result:=newRealLiteral(Nan);
+      end;
     end;
   end;
 
@@ -895,7 +900,7 @@ INITIALIZATION
                                                                                   'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'       ,@arctan2_impl       ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
   registerRule(MATH_NAMESPACE,'gcd'           ,@gcd_impl           ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
-  registerRule(MATH_NAMESPACE,'iSqrt'         ,@iSqrt_impl         ,ak_unary     ,'iSqrt(x:Int);//Returns a tuple of the integer square root of x and a flag indicating if x is a square');
+  registerRule(MATH_NAMESPACE,'iSqrt'         ,@iSqrt_impl         ,ak_unary     ,'iSqrt(x:Int);//Returns the integer square root of x or NaN if x is no square');
   registerRule(MATH_NAMESPACE,'hammingWeight' ,@hammingWeight_impl ,ak_unary     ,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
   registerRule(MATH_NAMESPACE,'powMod'        ,@powMod_impl        ,ak_ternary   ,'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z');
   registerRule(MATH_NAMESPACE,'modularInverse',@modularInverse_impl,ak_binary    ,'modularInverse(x>0,m>0);//Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists');
