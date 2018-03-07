@@ -31,7 +31,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
-            <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\common;..\..\3rd_party\synapse;..\..\3rd_party\epikTimer;..\3rd_party"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -235,7 +235,7 @@
         <IsPartOfProject Value="True"/>
       </Unit29>
       <Unit30>
-        <Filename Value="..\..\common\mySys.pas"/>
+        <Filename Value="..\common\mySys.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit30>
       <Unit31>
@@ -287,7 +287,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
-      <OtherUnitFiles Value="..\core;..\..\common;..\..\3rd_party\synapse;..\..\3rd_party\diff;..\..\3rd_party\epikTimer;..\3rd_party"/>
+      <OtherUnitFiles Value="..\core;..\common;..\..\3rd_party\synapse;..\..\3rd_party\epikTimer;..\3rd_party"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

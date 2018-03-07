@@ -81,8 +81,7 @@ Die Aktuelle Version ist Build Nr. %{$0}s
   EDITOR_CALL.execAsync([WEB_PAGE_FOLDER&'downloads.html']);
 end;
 
-main->begin
-
+main('copy')->begin
   print('Cleaning output folder');
   allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
 
@@ -94,7 +93,7 @@ main->begin
 
   print('Copying common sources');
   hashFiles
-    .filter({$0.matches('common|diff')})
+    .filter({$0.matches('diff')})
     .pMap({copyWithLicense($0,CORE_TARGET_FOLDER&extractFileName($0))});
 
   print('Copying 3rd party sources');
@@ -104,13 +103,23 @@ main->begin
 
   print('Creating readme');
   writeFileLines(DEFAULT_TARGET_FOLDER&'readme.txt',Readme);
+end;
 
+main('pack')->begin
   changeDirectory(DEFAULT_TARGET_FOLDER);
 
   sevenZipExe.execPipeless(['a','-r','-bd',PACKED_CODE_FILE,'*']);
   print('File ',PACKED_CODE_FILE,' created');
+end;
+
+main('clean')->begin
   print('Cleaning output folder');
   allFiles(DEFAULT_TARGET_FOLDER,'*').map(::deleteFile);
+end;
 
+main->begin
+  main('copy');
+  main('pack');
+  main('clean');
   ask('Update web page ?',['Y','N'])=='Y' ? copyToWeb : void;
 end;
