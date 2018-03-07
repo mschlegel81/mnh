@@ -220,7 +220,7 @@ BITWISE_FUNC;
 
 FUNCTION bitXor_imp intFuncSignature;
 {$define BIGINT_OP:=bitXor}
-{$define FUNC_NAME:='bitCor'}
+{$define FUNC_NAME:='bitXor'}
 BITWISE_FUNC;
 
 FUNCTION abs_imp intFuncSignature;
@@ -1014,5 +1014,5 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'bitAnd'        ,@bitAnd_imp         ,ak_variadic_2,'bitAnd(x,y,relevantBits);//Returns bitwise x and y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
   registerRule(MATH_NAMESPACE,'bitOr'         ,@bitOr_imp          ,ak_variadic_2,'bitOr(x,y,relevantBits);//Returns bitwise x or y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
   registerRule(MATH_NAMESPACE,'bitXor'        ,@bitXor_imp         ,ak_variadic_2,'bitXor(x,y,relevantBits);//Returns bitwise x xor y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
-  registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary,'bitShift(x:Int,bitsToShift)');
+  registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary,'bitShift(x:Int,bitsToShift);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed');
 end.
