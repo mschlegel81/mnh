@@ -77,8 +77,7 @@ memoized sevenZipExe->
 //@SuppressUnusedWarning
 call7z(fileList,builtNo,suffix)->sevenZipExe.execPipeless(['a','-mx=9','-bd',format('versions/mnh5_%s_%s.zip',builtNo,suffix)]|fileList);
 
-hashFiles:=['../3rd_party/diff/diff.pas',
-            '../3rd_party/epikTimer/epiktimer.pas',
+hashFiles:=['../3rd_party/epikTimer/epiktimer.pas',
             '../3rd_party/synapse/blcksock.pas',
             '../3rd_party/synapse/synacode.pas',
             '../3rd_party/synapse/synafpc.pas',
@@ -86,6 +85,7 @@ hashFiles:=['../3rd_party/diff/diff.pas',
             '../3rd_party/synapse/synautil.pas',
             '../3rd_party/synapse/synsock.pas',
             'common/bigint.pas',
+            'common/diff.pas',
             'common/httpUtil.pas',
             'common/huffman.pas',
             'common/myCrypto.pas',

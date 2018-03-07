@@ -212,7 +212,7 @@ main->begin
     .each(case,begin
        isFlavourDependent(case)
        ? [case,
-          'flavour dependent'& ((expectations[case] orElse ["",[]]).getInner(1).toSet.size<=1
+          'flavour dependent'& ((expectations[case] orElse [[],[]]).getInner(1).toSet.size<=1
                                 ? " (?)"
                                 : "" ),
           expectations[case].isVoid
