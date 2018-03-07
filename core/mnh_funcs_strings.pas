@@ -168,6 +168,33 @@ FUNCTION chars_imp intFuncSignature;
     end;
   end;
 
+FUNCTION byteToChar_imp intFuncSignature;
+  FUNCTION charOf(CONST i:T_bigInt):P_literal;
+    VAR ib:longint;
+    begin
+      result:=nil;
+      if i.canBeRepresentedAsInt32() then begin
+        ib:=i.toInt;
+        if (ib>=0) and (ib<=255) then exit(charLit[chr(ib)].rereferenced);
+      end;
+      context.adapters^.raiseError('Value '+i.toString+' is not a valid byte; must be in range [0..255]',tokenLocation);
+    end;
+
+  VAR k:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      case arg0^.literalType of
+        lt_int: result:=charOf(int0^.value);
+        lt_emptyList: result:=newListLiteral(0);
+        lt_intList: begin
+          result:=list0^.newOfSameType(true);
+          for k:=0 to list0^.size-1 do listResult^.append(charOf(P_intLiteral(list0^.value[k])^.value),false);
+        end;
+      end;
+    end;
+  end;
+
 FUNCTION charSet_imp intFuncSignature;
   FUNCTION charset_internal(CONST input:P_literal):P_setLiteral;
     VAR charIndex,
@@ -881,6 +908,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'copy'          ,@copy_imp          ,ak_ternary   ,'copy(S,start,length)://Returns the substring of S starting at index start and having specified length');
   registerRule(STRINGS_NAMESPACE,'chars'         ,@chars_imp         ,ak_unary     ,'chars(S);//Returns the characters in S as a list#chars;//Returns all possible single-byte characters in natural ordering');
   registerRule(STRINGS_NAMESPACE,'charSet'       ,@charSet_imp       ,ak_unary     ,'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)');
+  registerRule(STRINGS_NAMESPACE,'byteToChar'    ,@byteToChar_imp    ,ak_unary     ,'byteToChar(b in [0..255]);//Returns the corresponding character as a string of one byte length');
   registerRule(STRINGS_NAMESPACE,'bytes'         ,@bytes_imp         ,ak_unary     ,'bytes(S);//Returns the bytes in S as a list of strings');
   registerRule(STRINGS_NAMESPACE,'split'         ,@split_imp         ,ak_binary    ,'split(S:string,splitter:string);//Returns a list of strings obtained by splitting S at the specified splitters#//The splitters themselves are not contained in the result');
   registerRule(STRINGS_NAMESPACE,'join'          ,@join_impl         ,ak_unary     ,'join(L:list);//Returns a string-concatenation of all elements in L#join(L:list,joiner:string);//Returns a string-concatenation of all elements, with joiner between.');
