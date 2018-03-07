@@ -807,10 +807,12 @@ FUNCTION digits_impl intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
       (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
-      if params^.size=2 then base:=int1^.value.toInt;
-      if base<=1 then begin
-        context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString,tokenLocation);
-        exit(nil);
+      if params^.size=2 then begin
+        base:=int1^.value.toInt;
+        if (base<=1) or (base>maxLongint) or not(int1^.value.canBeRepresentedAsInt32) then begin
+          context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be between 2 and '+intTostr(maxLongint),tokenLocation);
+          exit(nil);
+        end;
       end;
       if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
       result:=collection0^.newOfSameType(true);
