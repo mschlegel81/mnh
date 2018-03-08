@@ -737,7 +737,7 @@ FUNCTION factorize_impl intFuncSignature;
       i:longint;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      factors:=bigint.factorize(int0^.value,false);
+      factors:=bigint.factorize(int0^.value);
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
@@ -746,15 +746,9 @@ FUNCTION factorize_impl intFuncSignature;
   end;
 
 FUNCTION isPrime_impl intFuncSignature;
-  VAR factors:T_factorizationResult;
-      i:longint;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      if (int0^.value.isNegative) then exit(newBoolLiteral(false));
-      if (int0^.value.compare(1) in [CR_LESSER,CR_EQUAL]) then exit(newBoolLiteral(false));
-      factors:=bigint.factorize(int0^.value,true);
-      result:=newBoolLiteral(length(factors.smallFactors)+length(factors.bigFactors)<=1);
-      for i:=0 to length(factors.bigFactors)-1 do factors.bigFactors[i].destroy;
+      result:=newBoolLiteral(millerRabinTest(int0^.value));
     end;
   end;
 
