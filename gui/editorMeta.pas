@@ -613,7 +613,7 @@ PROCEDURE T_editorMeta.activate;
 
     for l in T_language do begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
-      fileTypeMeta[l].menuItem.Checked:=(l=language);
+      fileTypeMeta[l].menuItem.checked:=(l=language);
     end;
     try
       recentlyActivated.fileClosed(getPath);

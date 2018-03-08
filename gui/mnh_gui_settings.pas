@@ -82,7 +82,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       EditorFontDialog.Font.name := settings.value^.editorFontname;
       FontButton.Font.name := settings.value^.editorFontname;
     end;
-    AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
+    AntialiasCheckbox.checked := settings.value^.antialiasedFonts;
     setFontSize(settings.value^.fontSize);
     setOutputLimit(settings.value^.outputLinesLimit);
     if not(settings.value^.loaded) then begin
@@ -185,7 +185,7 @@ PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
 
 PROCEDURE TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
   begin
-    settings.value^.antialiasedFonts:=AntialiasCheckbox.Checked;
+    settings.value^.antialiasedFonts:=AntialiasCheckbox.checked;
   end;
 
 PROCEDURE TSettingsForm.autosaveComboBoxChange(Sender: TObject);
