@@ -173,7 +173,7 @@ PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
 
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   begin
-    mi_comma.Checked:=not(mi_comma.Checked);
+    mi_comma.checked:=not(mi_comma.checked);
     fillTable;
   end;
 
@@ -207,7 +207,7 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
 PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   VAR newLiteral:P_listLiteral;
   begin
-    mi_transpose.Checked:=not(mi_transpose.Checked);
+    mi_transpose.checked:=not(mi_transpose.checked);
     newLiteral:=literal^.transpose(@emptyStringSingleton);
     disposeLiteral(literal);
     literal:=newLiteral;
@@ -223,7 +223,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
     dummyLocation.package:=nil;
     dummyLocation.column:=0;
     dummyLocation.line:=0;
-    if not(IsColumn) or (firstIsHeader and mi_transpose.Checked) then exit;
+    if not(IsColumn) or (firstIsHeader and mi_transpose.checked) then exit;
     with sorted do if byColumn=index then begin
       byColumn:=index;
       ascending:=not(ascending);
@@ -296,7 +296,7 @@ PROCEDURE TtableForm.fillTable;
   FUNCTION getHeaderCell(CONST i:longint):string;
     begin
       if (firstIsHeader) and (i>=0) and (i<length(headerData)) then result:=headerData[i] else result:='';
-      if not(mi_transpose.Checked) and (sorted.byColumn=i) then begin
+      if not(mi_transpose.checked) and (sorted.byColumn=i) then begin
         if sorted.ascending then result:=result+' v'
                             else result:=result+' ^';
       end;
@@ -320,7 +320,7 @@ PROCEDURE TtableForm.fillTable;
             cellLit:=iter[j];
             case cellLit^.literalType of
               lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
-              lt_real,lt_realList,lt_numList:if mi_comma.Checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
+              lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
                                                                  else cellContents[i,j]:=           cellLit^.toString;
               lt_void: cellContents[i,j]:='';
               else cellContents[i,j]:=cellLit^.toString;
@@ -332,7 +332,7 @@ PROCEDURE TtableForm.fillTable;
           cellLit:=rowLit; j:=0;
           case cellLit^.literalType of
             lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
-            lt_real,lt_realList,lt_numList:if mi_comma.Checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
+            lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
                                                                else cellContents[i,j]:=           cellLit^.toString;
             lt_void: cellContents[i,j]:='';
             else cellContents[i,j]:=cellLit^.toString;
@@ -343,7 +343,7 @@ PROCEDURE TtableForm.fillTable;
     end;
     StringGrid.clear;
 
-    if firstIsHeader and mi_transpose.Checked then begin
+    if firstIsHeader and mi_transpose.checked then begin
       StringGrid.RowCount:=dataRows+1;
       StringGrid.ColCount:=dataColumns+1;
       StringGrid.FixedCols:=1;

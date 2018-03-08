@@ -153,8 +153,8 @@ PROCEDURE T_outlineNode.refresh;
   VAR child:P_outlineNode;
   begin
     associatedNode.visible:=(isPublic or isLocal) and
-                            (isPublic or containingModel^.showPrivateCheckbox.Checked) and
-                            (isLocal or containingModel^.showImportedCheckbox.Checked);
+                            (isPublic or containingModel^.showPrivateCheckbox.checked) and
+                            (isLocal or containingModel^.showImportedCheckbox.checked);
     if associatedNode.visible then for child in children do child^.refresh;
   end;
 
@@ -186,7 +186,7 @@ PROCEDURE T_outlineTreeModel.refresh;
   begin
     enterCriticalSection(cs);
     for node in packageNodes do node^.refresh;
-    if not(showImportedCheckbox.Checked) then packageNodes[0]^.associatedNode.expand(false);
+    if not(showImportedCheckbox.checked) then packageNodes[0]^.associatedNode.expand(false);
     leaveCriticalSection(cs);
   end;
 

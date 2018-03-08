@@ -1,0 +1,4 @@
+[submodule "common"]
+	path = common
+	url = C:/dev/git/common
+	branch = master

@@ -814,6 +814,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary,'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary,'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html');
   listProcessing.newIterator:=@newIterator;
 end.

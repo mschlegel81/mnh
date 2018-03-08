@@ -212,7 +212,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if not(firstShow) then updateFormPositionInSettings;
     updateWordWrap;
-    if miHelp.Checked and (outputPageControl.activePage=HelpSheet) then helpPopupMemo.text:=getHelpPopupText;
+    if miHelp.checked and (outputPageControl.activePage=HelpSheet) then helpPopupMemo.text:=getHelpPopupText;
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
@@ -260,7 +260,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShif
   VAR help,jump,mark:boolean;
       editor:P_editorMeta;
   begin
-    help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
+    help:=miHelp.checked and (outputPageControl.activePage=HelpSheet);
     jump:=(key=13) and (ssCtrl in Shift);
     mark:=(key=13) and (ssAlt  in Shift);
     if not(jump or mark or help) then exit;
@@ -279,7 +279,7 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     point.x:=x;
     point.y:=y;
     point:=getEditor^.editor.PixelsToRowColumn(point);
-    help:=miHelp.Checked and (outputPageControl.activePage=HelpSheet);
+    help:=miHelp.checked and (outputPageControl.activePage=HelpSheet);
     jump:=(ssCtrl in Shift);
     getEditor^.setUnderCursor(mark,help or jump,point);
     if jump then openLocation(getHelpLocation);
@@ -319,7 +319,7 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSy
     if command=ecUserDefinedFirst+2 then cycleEditors(false);
     if command=ecUserDefinedFirst+3 then begin
       getEditor^.toggleBreakpoint;
-      miDebug.Checked:=true;
+      miDebug.checked:=true;
       runnerModel.debugMode:=true;
       onDebuggerEvent;
     end;
@@ -338,7 +338,7 @@ PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
     updateWordWrap;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk
-    then runnerModel.customRun(true,miProfile.Checked,askForm.getLastAnswerReleasing(nil))
+    then runnerModel.customRun(true,miProfile.checked,askForm.getLastAnswerReleasing(nil))
     else                                              askForm.getLastAnswerReleasing(nil);
   end;
 
@@ -346,22 +346,22 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if not(runnerModel.canRun) or quick.task.processing then exit;
     updateWordWrap;
-    runnerModel.customRun(false,miProfile.Checked);
+    runnerModel.customRun(false,miProfile.checked);
   end;
 
 PROCEDURE TMnhForm.miProfileClick(Sender: TObject);
   begin
-    miProfile.Checked:=not(miProfile.Checked);
-    if miProfile.Checked and not(miTimingInfo.Checked) then begin
-      miTimingInfo.Checked:=miTimingInfo.AutoCheck;
+    miProfile.checked:=not(miProfile.checked);
+    if miProfile.checked and not(miTimingInfo.checked) then begin
+      miTimingInfo.checked:=miTimingInfo.AutoCheck;
       miTimingInfoClick(Sender);
     end;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   begin
-    miDebug.Checked:=not(miDebug.Checked);
-    runnerModel.debugMode:=miDebug.Checked;
+    miDebug.checked:=not(miDebug.checked);
+    runnerModel.debugMode:=miDebug.checked;
     onDebuggerEvent;
   end;
 
@@ -383,8 +383,8 @@ PROCEDURE TMnhForm.miShowQuickEvalClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
   begin
-    miStackTracing.Checked:=not(miStackTracing.Checked);
-    runnerModel.stackTracing:=miStackTracing.Checked;
+    miStackTracing.checked:=not(miStackTracing.checked);
+    runnerModel.stackTracing:=miStackTracing.checked;
   end;
 
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
@@ -398,7 +398,7 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
     if quick.task.processing then exit;
     updateWordWrap;
-    if runnerModel.canRun then runnerModel.rerun(miProfile.Checked)
+    if runnerModel.canRun then runnerModel.rerun(miProfile.checked)
     else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
                                           else runnerModel.doDebuggerAction(breakSoonest);
     currentSnapshot:=nil;
@@ -544,16 +544,16 @@ PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin setVerbosity(3)
 PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin setVerbosity(4); end;
 PROCEDURE TMnhForm.miUserErrorsClick(Sender: TObject);
   begin
-    if miUserErrors.Checked then setVerbosity(254) else setVerbosity(255);
+    if miUserErrors.checked then setVerbosity(254) else setVerbosity(255);
   end;
 
-PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .Checked,mt_echo_declaration); end;
-PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .Checked,mt_echo_input);       end;
-PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.Checked,mt_echo_output);      end;
-PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .Checked,mt_timing_info);      end;
+PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .checked,mt_echo_declaration); end;
+PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .checked,mt_echo_input);       end;
+PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.checked,mt_echo_output);      end;
+PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info);      end;
 PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
   begin
-    settings.value^.wordWrapEcho:=miWrapEcho.Checked;
+    settings.value^.wordWrapEcho:=miWrapEcho.checked;
     updateWordWrap;
   end;
 
@@ -612,8 +612,8 @@ PROCEDURE TMnhForm.miGotoClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
   begin
-    miHelp.Checked:=not(miHelp.Checked);
-    if miHelp.Checked then begin
+    miHelp.checked:=not(miHelp.checked);
+    if miHelp.checked then begin
       outputPageControl.activePage:=HelpSheet;
       getEditor^.setUnderCursor(false,false);
       helpPopupMemo.text:=getHelpPopupText;

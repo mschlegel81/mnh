@@ -151,7 +151,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
-    miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
+    miAutoReset.checked:=settings.value^.doResetPlotOnEvaluation;
     tempPlot.createWithDefaults;
     tempPlotShown:=false;
     animation.create;
@@ -216,19 +216,19 @@ PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
 
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
   begin
-    miAutoReset.Checked:=not(miAutoReset.Checked);
-    settings.value^.doResetPlotOnEvaluation:=miAutoReset.Checked;
+    miAutoReset.checked:=not(miAutoReset.checked);
+    settings.value^.doResetPlotOnEvaluation:=miAutoReset.checked;
   end;
 
 PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
   begin
-    miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
+    miAutoscaleX.checked:=not(miAutoscaleX.checked);
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
   begin
-    miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
+    miAutoscaleY.checked:=not(miAutoscaleY.checked);
     pushSettingsToPlotContainer;
   end;
 
@@ -252,59 +252,59 @@ PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
 
 PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
   begin
-    miLogscaleX.Checked:=not(miLogscaleX.Checked);
+    miLogscaleX.checked:=not(miLogscaleX.checked);
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miLogscaleYClick(Sender: TObject);
   begin
-    miLogscaleY.Checked:=not(miLogscaleY.Checked);
+    miLogscaleY.checked:=not(miLogscaleY.checked);
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
   begin
-    miPreserveAspect.Checked:=not(miPreserveAspect.Checked);
+    miPreserveAspect.checked:=not(miPreserveAspect.checked);
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
   begin
-    miXFinerGrid.Checked:=not(miXFinerGrid.Checked);
-    if miXFinerGrid.Checked then miXGrid.Checked:=true;
+    miXFinerGrid.checked:=not(miXFinerGrid.checked);
+    if miXFinerGrid.checked then miXGrid.checked:=true;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miXGridClick(Sender: TObject);
   begin
-    miXGrid.Checked:=not(miXGrid.Checked);
-    if not(miXGrid.Checked) then miXFinerGrid.Checked:=false;
+    miXGrid.checked:=not(miXGrid.checked);
+    if not(miXGrid.checked) then miXFinerGrid.checked:=false;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miXTicsClick(Sender: TObject);
   begin
-    miXTics.Checked:=not(miXTics.Checked);
+    miXTics.checked:=not(miXTics.checked);
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miYFinerGridClick(Sender: TObject);
   begin
-    miYFinerGrid.Checked:=not(miYFinerGrid.Checked);
-    if miYFinerGrid.Checked then miYGrid.Checked:=true;
+    miYFinerGrid.checked:=not(miYFinerGrid.checked);
+    if miYFinerGrid.checked then miYGrid.checked:=true;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miYGridClick(Sender: TObject);
   begin
-    miYGrid.Checked:=not(miYGrid.Checked);
-    if not(miYGrid.Checked) then miYFinerGrid.Checked:=false;
+    miYGrid.checked:=not(miYGrid.checked);
+    if not(miYGrid.checked) then miYFinerGrid.checked:=false;
     pushSettingsToPlotContainer;
   end;
 
 PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
   begin
-    miYTics.Checked:=not(miYTics.Checked);
+    miYTics.checked:=not(miYTics.checked);
     pushSettingsToPlotContainer;
   end;
 
@@ -357,14 +357,14 @@ PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     postPlotClosed;
     closedByUser:=true;
-    animateCheckBox.Checked:=false;
+    animateCheckBox.checked:=false;
   end;
 
 FUNCTION TplotForm.getPlotQuality: byte;
   begin
-    if      miAntiAliasing4.Checked then result:=PLOT_QUALITY_HIGH
-    else if miAntiAliasing3.Checked then result:=PLOT_QUALITY_MEDIUM_2
-    else if miAntiAliasing2.Checked then result:=PLOT_QUALITY_MEDIUM_1
+    if      miAntiAliasing4.checked then result:=PLOT_QUALITY_HIGH
+    else if miAntiAliasing3.checked then result:=PLOT_QUALITY_MEDIUM_2
+    else if miAntiAliasing2.checked then result:=PLOT_QUALITY_MEDIUM_1
     else                                 result:=PLOT_QUALITY_LOW;
   end;
 
@@ -372,17 +372,17 @@ PROCEDURE TplotForm.pullPlotSettingsToGui;
   VAR currentScalingOptions:T_scalingOptions;
   begin
     currentScalingOptions:=guiAdapters^.plot^.options;
-    miXTics.Checked         :=gse_tics       in currentScalingOptions.axisStyle['x'];
-    miXGrid.Checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['x'];
-    miXFinerGrid.Checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['x'];
-    miYTics.Checked         :=gse_tics       in currentScalingOptions.axisStyle['y'];
-    miYGrid.Checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['y'];
-    miYFinerGrid.Checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['y'];
-    miPreserveAspect.Checked:=currentScalingOptions.preserveAspect;
-    miAutoscaleX.Checked    :=currentScalingOptions.axisTrafo['x'].autoscale;
-    miAutoscaleY.Checked    :=currentScalingOptions.axisTrafo['y'].autoscale;
-    miLogscaleX.Checked     :=currentScalingOptions.axisTrafo['x'].logscale;
-    miLogscaleY.Checked     :=currentScalingOptions.axisTrafo['y'].logscale;
+    miXTics.checked         :=gse_tics       in currentScalingOptions.axisStyle['x'];
+    miXGrid.checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['x'];
+    miXFinerGrid.checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['x'];
+    miYTics.checked         :=gse_tics       in currentScalingOptions.axisStyle['y'];
+    miYGrid.checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['y'];
+    miYFinerGrid.checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['y'];
+    miPreserveAspect.checked:=currentScalingOptions.preserveAspect;
+    miAutoscaleX.checked    :=currentScalingOptions.axisTrafo['x'].autoscale;
+    miAutoscaleY.checked    :=currentScalingOptions.axisTrafo['y'].autoscale;
+    miLogscaleX.checked     :=currentScalingOptions.axisTrafo['x'].logscale;
+    miLogscaleY.checked     :=currentScalingOptions.axisTrafo['y'].logscale;
   end;
 
 PROCEDURE TplotForm.pushSettingsToPlotContainer;
@@ -391,18 +391,18 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
   PROCEDURE updateCurrent;
     begin
       currentScalingOptions.axisStyle['x']:=[];
-      if miXTics.Checked      then include(currentScalingOptions.axisStyle['x'],gse_tics      );
-      if miXGrid.Checked      then include(currentScalingOptions.axisStyle['x'],gse_coarseGrid);
-      if miXFinerGrid.Checked then include(currentScalingOptions.axisStyle['x'],gse_fineGrid  );
+      if miXTics.checked      then include(currentScalingOptions.axisStyle['x'],gse_tics      );
+      if miXGrid.checked      then include(currentScalingOptions.axisStyle['x'],gse_coarseGrid);
+      if miXFinerGrid.checked then include(currentScalingOptions.axisStyle['x'],gse_fineGrid  );
       currentScalingOptions.axisStyle['y']:=[];
-      if miYTics.Checked      then include(currentScalingOptions.axisStyle['y'],gse_tics      );
-      if miYGrid.Checked      then include(currentScalingOptions.axisStyle['y'],gse_coarseGrid);
-      if miYFinerGrid.Checked then include(currentScalingOptions.axisStyle['y'],gse_fineGrid  );
-      currentScalingOptions.preserveAspect:=miPreserveAspect.Checked;
-      currentScalingOptions.axisTrafo['x'].logscale:=miLogscaleX.Checked;
-      currentScalingOptions.axisTrafo['y'].logscale:=miLogscaleY.Checked;
-      currentScalingOptions.axisTrafo['x'].autoscale:=miAutoscaleX.Checked;
-      currentScalingOptions.axisTrafo['y'].autoscale:=miAutoscaleY.Checked;
+      if miYTics.checked      then include(currentScalingOptions.axisStyle['y'],gse_tics      );
+      if miYGrid.checked      then include(currentScalingOptions.axisStyle['y'],gse_coarseGrid);
+      if miYFinerGrid.checked then include(currentScalingOptions.axisStyle['y'],gse_fineGrid  );
+      currentScalingOptions.preserveAspect:=miPreserveAspect.checked;
+      currentScalingOptions.axisTrafo['x'].logscale:=miLogscaleX.checked;
+      currentScalingOptions.axisTrafo['y'].logscale:=miLogscaleY.checked;
+      currentScalingOptions.axisTrafo['x'].autoscale:=miAutoscaleX.checked;
+      currentScalingOptions.axisTrafo['y'].autoscale:=miAutoscaleY.checked;
     end;
 
   begin
@@ -516,7 +516,7 @@ FUNCTION TplotForm.timerTick:boolean;
   begin
     result:=false;
     if gui_started and (showing) and (animation.frameCount>0) then begin
-      if animateCheckBox.Checked then begin
+      if animateCheckBox.checked then begin
         animation.nextFrame(animationFrameIndex);
         animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
         inc(framesSampled);
@@ -537,7 +537,7 @@ FUNCTION TplotForm.timerTick:boolean;
 FUNCTION TplotForm.wantTimerInterval: longint;
   CONST intendedMsPerFrame:array[0..10] of longint=(2000,1000,500,200,100,50,30,20,15,10,1);
   begin
-    if animateCheckBox.Checked then result:=intendedMsPerFrame[animationSpeedTrackbar.position]
+    if animateCheckBox.checked then result:=intendedMsPerFrame[animationSpeedTrackbar.position]
                                else result:=50;
   end;
 

@@ -220,7 +220,7 @@ BITWISE_FUNC;
 
 FUNCTION bitXor_imp intFuncSignature;
 {$define BIGINT_OP:=bitXor}
-{$define FUNC_NAME:='bitCor'}
+{$define FUNC_NAME:='bitXor'}
 BITWISE_FUNC;
 
 FUNCTION abs_imp intFuncSignature;
@@ -737,7 +737,7 @@ FUNCTION factorize_impl intFuncSignature;
       i:longint;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      factors:=bigint.factorize(int0^.value,false);
+      factors:=bigint.factorize(int0^.value);
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
@@ -746,15 +746,9 @@ FUNCTION factorize_impl intFuncSignature;
   end;
 
 FUNCTION isPrime_impl intFuncSignature;
-  VAR factors:T_factorizationResult;
-      i:longint;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      if (int0^.value.isNegative) then exit(newBoolLiteral(false));
-      if (int0^.value.compare(1) in [CR_LESSER,CR_EQUAL]) then exit(newBoolLiteral(false));
-      factors:=bigint.factorize(int0^.value,true);
-      result:=newBoolLiteral(length(factors.smallFactors)+length(factors.bigFactors)<=1);
-      for i:=0 to length(factors.bigFactors)-1 do factors.bigFactors[i].destroy;
+      result:=newBoolLiteral(millerRabinTest(int0^.value));
     end;
   end;
 
@@ -807,10 +801,12 @@ FUNCTION digits_impl intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
       (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
-      if params^.size=2 then base:=int1^.value.toInt;
-      if base<=1 then begin
-        context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString,tokenLocation);
-        exit(nil);
+      if params^.size=2 then begin
+        base:=int1^.value.toInt;
+        if (base<=1) or (base>maxLongint) or not(int1^.value.canBeRepresentedAsInt32) then begin
+          context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be between 2 and '+intToStr(maxLongint),tokenLocation);
+          exit(nil);
+        end;
       end;
       if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
       result:=collection0^.newOfSameType(true);
@@ -951,6 +947,17 @@ FUNCTION modularInverse_impl intFuncSignature;
     end;
   end;
 
+FUNCTION bitShift_impl intFuncSignature;
+  VAR res:T_bigInt;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
+      res.create(int0^.value);
+      res.shiftRight(int1^.value.toInt);
+      result:=newIntLiteral(res);
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -1001,4 +1008,5 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'bitAnd'        ,@bitAnd_imp         ,ak_variadic_2,'bitAnd(x,y,relevantBits);//Returns bitwise x and y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
   registerRule(MATH_NAMESPACE,'bitOr'         ,@bitOr_imp          ,ak_variadic_2,'bitOr(x,y,relevantBits);//Returns bitwise x or y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
   registerRule(MATH_NAMESPACE,'bitXor'        ,@bitXor_imp         ,ak_variadic_2,'bitXor(x,y,relevantBits);//Returns bitwise x xor y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
+  registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary,'bitShift(x:Int,bitsToShift);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed');
 end.
