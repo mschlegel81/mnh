@@ -33,8 +33,12 @@ private ensurePackagesLines->'{'|
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
-  tprint('Checkstyle');
-  executor.execPipeless(['../checkstyle.mnh','fix']);
+  fileExists('../checkstyle.mnh')
+  ? begin
+      tprint('Checkstyle');
+      executor.execPipeless(['../checkstyle.mnh','fix']);
+    end
+  : void;
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('resources/examples.txt'                   ,'gui/res_examples.inc');
@@ -121,6 +125,8 @@ private showStatus->
                               : timeForFullTest(B[1],ensureCodeHash  )).roundToRelevantDigits(4) orElse '.']))).formatTable.join("\n").print
   orElse print;
 
+private verboseDelete(file)->fileExists(file) ? void : tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!');
+
 private cleanup->begin
   allFolders('.')
   .each(f,extractFileName(f) in ["nppBackup","backup"] ? f : void)
@@ -135,7 +141,7 @@ private cleanup->begin
    files(BUILDS.getInner(5))|
    files('build.log'))
   .unique
-  .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  .map(::verboseDelete);
   delp;
   currentCodeHash:=void;
 end;
@@ -167,7 +173,8 @@ main('clean')->tprint('Cleaning') orElse cleanup;
 main('CLEAN')->begin
   tprint('Deep cleaning');
   cleanup;
-  files('versions/*').|(files(BUILDS.getInner(2))).each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  files('versions/*').|(files(BUILDS.getInner(2))).map(::verboseDelete);
+  files('3rd_party/*').minus(hashFiles).map(::verboseDelete);
 end;
 //*Beep - just for notification purposes
 main('beep')->beep;

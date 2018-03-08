@@ -2,14 +2,12 @@ USE make_config, distroLog;
 
 DEV_ROOT:=myPath.extractFileDirectory.extractFileDirectory.replace('/','\');
 DEFAULT_TARGET_FOLDER:=DEV_ROOT&'\temp\';
-CORE_TARGET_FOLDER   :=DEFAULT_TARGET_FOLDER&'core\';
-THIRD_TARGET_FOLDER  :=DEFAULT_TARGET_FOLDER&'3rd_party\';
 PACKED_CODE_FILE     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'_code.zip';
 ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.zip';
 WEB_PAGE_FOLDER      :=DEV_ROOT&'\web\page\mnh\';
 EDITOR_CALL          :='C:\Program Files (x86)\Notepad++\notepad++.exe';
 
-NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'];
+NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'] and not(filename.matches('3rd_party'));
 License:=//!~
 //
 // This file is part of the MNH project.
@@ -90,16 +88,6 @@ main('copy')->begin
     .filter({not($0.matches('/lib/|core/res_.*inc$|core/build_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
     .pMap({copyWithLicense($0,DEFAULT_TARGET_FOLDER&$0)});
-
-  print('Copying common sources');
-  hashFiles
-    .filter({$0.matches('diff')})
-    .pMap({copyWithLicense($0,CORE_TARGET_FOLDER&extractFileName($0))});
-
-  print('Copying 3rd party sources');
-  ['../3rd_party/epikTimer/','../3rd_party/synapse/']
-    .each(root,allFiles(root,['*.inc','*.pp','*.pas'])
-    .pMap({copyFile($0,THIRD_TARGET_FOLDER&extractFileName($0))}));
 
   print('Creating readme');
   writeFileLines(DEFAULT_TARGET_FOLDER&'readme.txt',Readme);
