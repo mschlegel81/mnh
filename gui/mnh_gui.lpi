@@ -31,7 +31,7 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
-            <OtherUnitFiles Value="..\core;..\common;..\..\3rd_party\synapse;..\..\3rd_party\epikTimer;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\common;..\3rd_party"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -72,8 +72,8 @@
             <Filename Value="mnhi"/>
           </Target>
           <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core"/>
-            <OtherUnitFiles Value="..\core;..\common;..\..\3rd_party\synapse;..\..\3rd_party\epikTimer;..\..\art.source\igSrc"/>
+            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\common;..\..\art.source\igSrc;..\3rd_party"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -113,8 +113,8 @@
             <Filename Value="mnhi_debug"/>
           </Target>
           <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core"/>
-            <OtherUnitFiles Value="..\core;..\common;..\..\3rd_party\synapse;..\..\3rd_party\epikTimer;..\..\art.source\igSrc"/>
+            <IncludeFiles Value="$(ProjOutDir);..\..\art.source\igSrc;..\core;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\common;..\..\art.source\igSrc;..\3rd_party"/>
             <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
@@ -370,7 +370,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
-      <OtherUnitFiles Value="..\core;..\common;..\..\3rd_party\synapse;..\..\3rd_party\epikTimer;..\3rd_party"/>
+      <OtherUnitFiles Value="..\core;..\common;..\3rd_party"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
