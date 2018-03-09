@@ -787,14 +787,15 @@ FUNCTION primes_impl intFuncSignature;
   end;
 
 FUNCTION digits_impl intFuncSignature;
-  VAR base:int64=10;
+  VAR base:T_bigInt;
+      useDecimalBase:boolean=true;
   FUNCTION digitsOf(CONST i:T_bigInt):P_listLiteral;
-    VAR digits:T_arrayOfLongint;
+    VAR digits:T_arrayOfBigint;
         k:longint;
     begin
-      digits:=i.getDigits(base);
+      digits:=bigDigits(i,base);
       result:=newListLiteral(length(digits));
-      for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
+      for k:=length(digits)-1 downto 0 do result^.append(newIntLiteral(digits[k]),false);
     end;
 
   VAR j:longint;
@@ -804,64 +805,96 @@ FUNCTION digits_impl intFuncSignature;
       (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
       if params^.size=2 then begin
-        base:=int1^.value.toInt;
-        if (base<=1) or (base>maxLongint) or not(int1^.value.canBeRepresentedAsInt32) then begin
-          context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be between 2 and '+intToStr(maxLongint),tokenLocation);
+        base:=int1^.value;
+        if (base.compare(1) in [CR_LESSER,CR_EQUAL]) then begin
+          context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
           exit(nil);
         end;
+        useDecimalBase:=false;
+      end else base.fromInt(10);
+
+      if arg0^.literalType=lt_int
+      then result:=digitsOf(int0^.value)
+      else begin
+        result:=collection0^.newOfSameType(true);
+        for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
       end;
-      if arg0^.literalType=lt_int then exit(digitsOf(int0^.value));
-      result:=collection0^.newOfSameType(true);
-      for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
+
+      if useDecimalBase then base.destroy;
     end;
   end;
 
 FUNCTION composeDigits_imp intFuncSignature;
-  VAR base:longint=10;
+  VAR garbage:T_arrayOfBigint;
+      zeroUsed:boolean=false;
+      zero:T_bigInt;
+  PROCEDURE markAsGarbage(VAR x:T_bigInt);
+    begin
+      setLength(garbage,length(garbage)+1);
+      garbage[length(garbage)-1]:=x;
+    end;
+
+  PROCEDURE clearGarbage;
+    VAR i:longint;
+    begin
+      for i:=0 to length(garbage)-1 do garbage[i].destroy;
+    end;
+
+  FUNCTION newTempZero:T_bigInt;
+    begin
+      if zeroUsed then exit(zero);
+      zero.createZero;
+      markAsGarbage(zero);
+      result:=zero;
+    end;
+
+  VAR base:T_bigInt;
       Shift:int64=0;
-      digits:T_arrayOfLongint;
+      digits:T_arrayOfBigint;
       intPart :T_bigInt;
-      fracPart:T_myFloat;
+      fracPart,invFloatBase:T_myFloat;
       k  :longint;
   begin
     result:=nil;
+    setLength(garbage,0);
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and
        (arg0^.literalType in [lt_emptyList,lt_intList]) then begin
       if params^.size>=2 then begin
-        if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value.toInt;
-        if (base<=1) or not(int1^.value.canBeRepresentedAsInt32()) then begin
-          context.adapters^.raiseError('Cannot compose digits with base '+arg1^.toString,tokenLocation);
-          exit(nil);
-        end;
+        if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value;
+      end else begin
+        base.fromInt(10);
+        markAsGarbage(base);
       end;
       if params^.size=3 then begin
         if arg2^.literalType<>lt_int then exit(nil) else Shift:=int2^.value.toInt;
         if not(int2^.value.canBeRepresentedAsInt32()) then begin
           context.adapters^.raiseError('Shift argument is out of bounds',tokenLocation);
+          clearGarbage;
           exit(nil);
         end;
       end;
-      if arg0^.literalType=lt_emptyList then exit(newIntLiteral(0));
-      for k:=0 to list0^.size-1 do if not(P_intLiteral(list0^.value[k])^.value.isBetween(0,base-1)) then begin
-        context.adapters^.raiseError('Digits must be in range 0..base-1',tokenLocation);
-        exit(nil);
+      if arg0^.literalType=lt_emptyList then begin
+        clearGarbage;
+        exit(newIntLiteral(0));
       end;
 
       if list0^.size>Shift then begin
         setLength(digits,list0^.size-Shift);
-        for k:=0 to min(length(digits),list0^.size)-1 do digits[k]:=P_intLiteral(list0^.value[k])^.value.toInt;
-        for k:=list0^.size to length(digits)-1 do digits[k]:=0;
-        intPart.createFromDigits(base,digits);
+        for k:=0 to min(length(digits),list0^.size)-1 do digits[k]:=P_intLiteral(list0^.value[k])^.value;
+        for k:=list0^.size to length(digits)-1 do digits[k]:=newTempZero;
+        intPart:=newFromBigDigits(digits,base);
       end else intPart.createZero;
       if Shift>0 then begin
         fracPart:=0;
+        invFloatBase:=1/base.toFloat;
         for k:=list0^.size-1 downto list0^.size-Shift do begin
           if k>=0 then fracPart+=P_intLiteral(list0^.value[k])^.value.toInt;
-          fracPart/=base;
+          fracPart*=invFloatBase;
         end;
         result:=newRealLiteral(intPart.toFloat+fracPart);
         intPart.destroy;
-      end else exit(newIntLiteral(intPart));
+      end else result:=newIntLiteral(intPart);
+      clearGarbage;
     end;
   end;
 
