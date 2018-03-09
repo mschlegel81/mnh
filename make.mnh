@@ -130,7 +130,7 @@ private showStatus->
                               : timeForFullTest(B[1],ensureCodeHash  )).roundToRelevantDigits(4) orElse '.']))).formatTable.join("\n").print
   orElse print;
 
-private verboseDelete(file)->fileExists(file) ? void : tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!');
+private verboseDelete(file)->fileExists(file) ? tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!') : void;
 
 private cleanup->begin
   allFolders('.')

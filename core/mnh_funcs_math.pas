@@ -736,6 +736,7 @@ FUNCTION factorize_impl intFuncSignature;
   VAR factors:T_factorizationResult;
       i:longint;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       factors:=bigint.factorize(int0^.value);
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
@@ -747,6 +748,7 @@ FUNCTION factorize_impl intFuncSignature;
 
 FUNCTION isPrime_impl intFuncSignature;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
       result:=newBoolLiteral(millerRabinTest(int0^.value));
     end;
@@ -993,7 +995,7 @@ INITIALIZATION
                                                                               'subSets(S,k:int);//Returns all distinct subsets of S having k elements');
   registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,ak_unary     ,'permutations(L:list);//Returns a list of all permutations of S');
   registerRule(MATH_NAMESPACE,'factorize'   ,@factorize_impl   ,ak_unary     ,'factorize(i:int);//Returns a list of all prime factors of i');
-  registerRule(MATH_NAMESPACE,'isPrime'     ,@isPrime_impl     ,ak_unary     ,'isPrime(i:int);//Returns true if i is a prime, false otherwise');
+  registerRule(MATH_NAMESPACE,'isPrime'     ,@isPrime_impl     ,ak_unary     ,'isPrime(i:int);//Returns true if i is a prime, false otherwise#//result is guaranteed to be correct for i<3.317E23');
   registerRule(MATH_NAMESPACE,'primes'      ,@primes_impl      ,ak_unary     ,'primes(pMax:int);//Returns prime numbers up to pMax');
   registerRule(MATH_NAMESPACE,'digits'      ,@digits_impl      ,ak_variadic_1,'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base');
   registerRule(MATH_NAMESPACE,'composeDigits' ,@composeDigits_imp  ,ak_variadic_1,'composeDigits(digits:intList);//Returns a number constructed from digits (base 10)#'+

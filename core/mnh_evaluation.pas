@@ -14,7 +14,6 @@ USES sysutils,
      mnh_funcs_math,
      mnh_funcs_list,
      mnh_funcs_types,
-     mnh_patterns,
      mnh_subrules,
      mnh_rule,
      mnh_aggregators,
@@ -210,7 +209,6 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     FUNCTION parseBodyOk:boolean;
       VAR i:longint;
           bodyParts:T_bodyParts;
-          emptyPattern:T_pattern;
       begin
         result:=false;
         //first token is <while>-Token
