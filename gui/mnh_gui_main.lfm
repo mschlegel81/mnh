@@ -18,7 +18,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.8.0.6'
+  LCLVersion = '1.8.2.0'
   object inputPageControl: TPageControl
     Left = 175
     Height = 353
@@ -157,7 +157,7 @@ object MnhForm: TMnhForm
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
           Gutter.Visible = False
-          Gutter.Width = 65
+          Gutter.Width = 57
           Gutter.MouseActions = <>
           HideSelection = True
           InsertMode = False
@@ -606,7 +606,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -659,7 +659,7 @@ object MnhForm: TMnhForm
           OnMouseUp = assistanceSynEditMouseUp
           BorderStyle = bsNone
           Gutter.Visible = False
-          Gutter.Width = 65
+          Gutter.Width = 57
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1119,7 +1119,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1166,12 +1166,11 @@ object MnhForm: TMnhForm
           Font.Quality = fqNonAntialiased
           ParentColor = False
           ParentFont = False
-          PopupMenu = EditorPopupMenu
           TabOrder = 0
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 27
+          Gutter.Width = 19
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1619,7 +1618,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1771,7 +1770,7 @@ object MnhForm: TMnhForm
             TabStop = False
             BorderStyle = bsNone
             Gutter.Visible = False
-            Gutter.Width = 65
+            Gutter.Width = 57
             Gutter.MouseActions = <>
             Keystrokes = <            
               item
@@ -2215,7 +2214,7 @@ object MnhForm: TMnhForm
                 MouseActions = <>
               end
               object SynGutterLineNumber1: TSynGutterLineNumber
-                Width = 25
+                Width = 17
                 MouseActions = <>
                 MarkupInfo.Background = clBtnFace
                 MarkupInfo.Foreground = clNone
@@ -2263,12 +2262,11 @@ object MnhForm: TMnhForm
           Font.Quality = fqNonAntialiased
           ParentColor = False
           ParentFont = False
-          PopupMenu = EditorPopupMenu
           TabOrder = 0
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 27
+          Gutter.Width = 19
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -2716,7 +2714,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -2849,7 +2847,7 @@ object MnhForm: TMnhForm
       end
     end
     object subMenuSearch: TMenuItem
-      Caption = '&Search'
+      Caption = 'E&dit'
       object miFind: TMenuItem
         Caption = '&Find'
         ShortCut = 16454
@@ -2874,6 +2872,11 @@ object MnhForm: TMnhForm
         Caption = '&Go to line'
         ShortCut = 16455
         OnClick = miGotoClick
+      end
+      object miRename: TMenuItem
+        Caption = 'Rename'
+        ShortCut = 49234
+        OnClick = miRenameClick
       end
     end
     object subMenuEvaluation: TMenuItem
@@ -4463,17 +4466,6 @@ object MnhForm: TMnhForm
       F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000F0F0F000F0F0F000F0F0F000F0F0F000
     }
-  end
-  object EditorPopupMenu: TPopupMenu
-    OnPopup = EditorPopupMenuPopup
-    left = 272
-    top = 248
-    object pmiOpenFile1: TMenuItem
-      Caption = 'New Item1'
-    end
-    object pmiOpenFile2: TMenuItem
-      Caption = 'New Item2'
-    end
   end
   object SynExporterHTML: TSynExporterHTML
     Color = clWindow

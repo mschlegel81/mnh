@@ -21,6 +21,7 @@ USES  //basic classes
   //MNH:
   outlines,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
+  mnh_tokenArray,
   mnh_contexts,
   mnh_litVar,
   mnh_funcs,
@@ -94,6 +95,7 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION caretInMainFormCoordinates:TPoint;
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
+    FUNCTION canRenameUnderCursor(OUT orignalId,idType:string; OUT ref:T_searchTokenLocation):boolean;
     PROCEDURE setCaret(CONST location: T_searchTokenLocation);
     PROCEDURE toggleComment;
     PROCEDURE moveLine(CONST up:boolean);
@@ -164,7 +166,6 @@ T_runnerModel=object
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
-                    CONST p_EditorPopupMenu       :TPopupMenu;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
@@ -202,7 +203,6 @@ VAR runnerModel:T_runnerModel;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
-    EditorPopupMenu       :TPopupMenu;
     SaveDialog            :TSaveDialog;
     breakpointsImagesList :TImageList;
     EditKeyUp             :TKeyEvent;
@@ -227,7 +227,6 @@ VAR editorMetaData:array of P_editorMeta;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
-                    CONST p_EditorPopupMenu       :TPopupMenu;
                     CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
@@ -401,7 +400,6 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
   begin
     mainForm              :=p_mainForm              ;
     inputPageControl      :=p_inputPageControl      ;
-    EditorPopupMenu       :=p_EditorPopupMenu       ;
     SaveDialog            :=p_SaveDialog            ;
     breakpointsImagesList :=p_breakpointsImagesList ;
     EditKeyUp             :=p_EditKeyUp             ;
@@ -527,7 +525,6 @@ CONSTRUCTOR T_editorMeta.createWithParent(CONST idx:longint; CONST parent:TWinCo
     addKeystroke(ecUserDefinedFirst+5,32808);//Alt+Down
     highlighter:=TSynMnhSyn.create(mainForm,msf_input);
     editor_.highlighter:=highlighter;
-    editor_.PopupMenu:=EditorPopupMenu;
     initForNewFile;
   end;
 
@@ -641,10 +638,18 @@ PROCEDURE T_editorMeta.activate;
   end;
 
 PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
+  PROCEDURE invalidateWordUnderCursor;
+    begin
+      underCursor.location.line:=-1;
+    end;
+
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; language: ',language_); {$endif}
     if not(enabled) then exit;
-    if language_=LANG_MNH then triggerCheck;
+    if language_=LANG_MNH then begin
+      triggerCheck;
+      invalidateWordUnderCursor;
+    end;
     if index<>DETACHED_EDITOR_META_INDEX then mainForm.caption:=updateSheetCaption;
   end;
 
@@ -810,6 +815,20 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean;
 PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
   begin
     setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
+  end;
+
+FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId,idType:string; OUT ref:T_searchTokenLocation):boolean;
+  begin
+    if language<>LANG_MNH then exit(false);
+    setUnderCursor(false,true);
+    result:=underCursor.canRename;
+    orignalId:=underCursor.idWithoutIsPrefix;
+    case underCursor.tokenType of
+      tt_localUserRule: idType:='local rule';
+      tt_parameterIdentifier: idType:='parameter';
+      tt_blockLocalVariable: idType:='local variable';
+      else idType:='identifier';
+    end;
   end;
 
 PROCEDURE T_editorMeta.setCaret(CONST location: T_searchTokenLocation);
@@ -1251,7 +1270,7 @@ PROCEDURE storeEditorsToSettings;
 
 FUNCTION getHelpPopupText:string;
   begin
-    result:=ECHO_MARKER+underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
+    result:=underCursor.infoText;
   end;
 
 FUNCTION getHelpLocation:T_searchTokenLocation;
