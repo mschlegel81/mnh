@@ -13,14 +13,13 @@ TYPE
     form:TForm;
     isMain:boolean;
     cyclable:boolean;
-    name:string;
 
-    CONSTRUCTOR create(CONST form_:TForm; CONST name_:string; CONST isMain_,cyclable_:boolean);
+    CONSTRUCTOR create(CONST form_:TForm; CONST isMain_,cyclable_:boolean);
     DESTRUCTOR destroy;
     FUNCTION visible: boolean;
   end;
 
-PROCEDURE registerForm(CONST f:TForm; CONST name:string; CONST isMainForm,includeInCycle:boolean);
+PROCEDURE registerForm(CONST f:TForm; CONST isMainForm,includeInCycle:boolean);
 PROCEDURE unregisterForm(CONST f:TForm);
 PROCEDURE formCycle(CONST caller:TForm; CONST cycleForward:boolean);
 FUNCTION anyFormShowing:boolean;
@@ -64,14 +63,14 @@ FUNCTION indexOfForm(CONST f:TForm):longint;
     result:=-1;
   end;
 
-PROCEDURE registerForm(CONST f: TForm; CONST name:string; CONST isMainForm, includeInCycle: boolean);
+PROCEDURE registerForm(CONST f: TForm; CONST isMainForm, includeInCycle: boolean);
   VAR i:longint;
   begin
     i:=indexOfForm(f);
     if i<0 then begin
       i:=length(formMeta);
       setLength(formMeta,i+1);
-      new(formMeta[i],create(f, name, isMainForm,includeInCycle));
+      new(formMeta[i],create(f,isMainForm,includeInCycle));
     end;
   end;
 
@@ -88,12 +87,11 @@ PROCEDURE unregisterForm(CONST f: TForm);
     setLength(formMeta,length(formMeta)-1);
   end;
 
-CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST name_:string; CONST isMain_,cyclable_: boolean);
+CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST isMain_,cyclable_: boolean);
   begin
     form:=form_;
     isMain:=isMain_;
     cyclable:=cyclable_;
-    name:=name_;
   end;
 
 DESTRUCTOR T_formMeta.destroy;
@@ -103,9 +101,6 @@ DESTRUCTOR T_formMeta.destroy;
 FUNCTION T_formMeta.visible: boolean;
   begin
     result:=(form<>nil) and (form.visible);
-    {$ifdef debugMode}
-    writeln(stdErr,'        DEBUG: Form ',name,' visible= ',result);
-    {$endif}
   end;
 
 {$i mnh_func_defines.inc}

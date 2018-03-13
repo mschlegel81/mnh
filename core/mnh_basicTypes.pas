@@ -36,6 +36,7 @@ OPERATOR := (CONST x: T_tokenLocation): ansistring;
 OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
 OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
+OPERATOR = (CONST x,y:T_searchTokenLocation):boolean;
 OPERATOR < (CONST x,y:T_tokenLocation):boolean;
 FUNCTION positionIsBeforeOrAtLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
 FUNCTION positionIsBeforeLocation(CONST posLine,posColumn:longint; CONST location:T_tokenLocation):boolean;
@@ -81,6 +82,11 @@ OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
   begin
     result:=(x.package=y.package) and (x.line=y.line) and (x.column=y.column);
+  end;
+
+OPERATOR = (CONST x,y:T_searchTokenLocation):boolean;
+  begin
+    result:=(x.fileName=y.fileName) and (x.line=y.line) and (x.column=y.column);
   end;
 
 OPERATOR < (CONST x,y:T_tokenLocation):boolean;

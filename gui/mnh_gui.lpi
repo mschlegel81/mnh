@@ -165,7 +165,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="39">
+    <Units Count="40">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -360,6 +360,14 @@
         <Filename Value="..\core\mnh_rule.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit38>
+      <Unit39>
+        <Filename Value="renamedialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="renameForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="renameDialog"/>
+      </Unit39>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

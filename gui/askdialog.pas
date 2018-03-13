@@ -71,7 +71,7 @@ FUNCTION askForm:TaskForm;
   begin
     if myAskForm=nil then myAskForm:=TaskForm.create(nil);
     result:=myAskForm;
-    registerForm(myAskForm,'myAskForm',false,false);
+    registerForm(myAskForm,false,false);
   end;
 
 {$R *.lfm}

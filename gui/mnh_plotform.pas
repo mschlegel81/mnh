@@ -119,7 +119,7 @@ FUNCTION plotForm: TplotForm;
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(nil);
       myPlotForm.pullPlotSettingsToGui();
-      registerForm(myPlotForm,'myPlotForm',false,true);
+      registerForm(myPlotForm,false,true);
     end;
     result:=myPlotForm;
   end;

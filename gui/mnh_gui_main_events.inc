@@ -1,6 +1,4 @@
 {$ifdef includeInterface}
-PROCEDURE EditorPopupMenuPopup(Sender: TObject);
-
 PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE FormCreate(Sender: TObject);
 PROCEDURE FormDestroy(Sender: TObject);
@@ -18,6 +16,7 @@ PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift:
 PROCEDURE InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
 //Search/Replace
 PROCEDURE miFindClick(Sender: TObject);
+PROCEDURE miRenameClick(Sender: TObject);
 PROCEDURE miReplaceClick(Sender: TObject);
 PROCEDURE miFindNextClick(Sender: TObject);
 PROCEDURE miFindPreviousClick(Sender: TObject);
@@ -88,12 +87,6 @@ PROCEDURE Splitter3Moved(Sender: TObject);
 PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 {$endif}
 {$ifdef includeImplementation}
-PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
-  begin
-    popupModel.setFiles(focusedEditor.GetWordAtRowCol(focusedEditor.CaretXY),
-                        focusedEditor.TextBetweenPoints[focusedEditor.BlockBegin,focusedEditor.BlockEnd]);
-  end;
-
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR mr:integer=mrClose;
   begin
@@ -124,7 +117,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - begin'); {$endif}
     quitPosted:=false;
-    registerForm(self,'MnhForm',true,true);
+    registerForm(self,true,true);
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
     //Dynamic GUI components:
@@ -147,7 +140,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     variablesTreeViewModel.create(variablesTreeView);
     //Initialize state:
-    popupModel.create(pmiOpenFile1,pmiOpenFile2,@pmiOpenFile);
     searchReplaceModel.create(FindDialog,ReplaceDialog);
     runnerModel.create;
     focusEditorOnEditMouseUp:=false;
@@ -177,7 +169,6 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     mnh_evalThread.earlyFinalization;
     saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
-    popupModel.destroy;
     searchReplaceModel.destroy;
     runnerModel.destroy;
     completionLogic.destroy;
@@ -221,7 +212,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
       editorMeta.setupUnit(self,
                            inputPageControl,
-                           EditorPopupMenu,
                            SaveDialog,
                            breakpointsImagesList,
                            assistanceSynEdit,
@@ -331,6 +321,18 @@ PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceMode
 PROCEDURE TMnhForm.miReplaceClick     (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,false); end;
 PROCEDURE TMnhForm.miFindNextClick    (Sender: TObject); begin searchReplaceModel.doFindNext        (focusedEditor);       end;
 PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceModel.doFindPrevious    (focusedEditor);       end;
+PROCEDURE TMnhForm.miRenameClick(Sender: TObject);
+  VAR meta:P_editorMeta;
+      id,typeString:string;
+      renameLocation:T_searchTokenLocation;
+  begin
+    meta:=getEditor;
+    if (meta<>nil) and
+       meta^.canRenameUnderCursor(id,typeString,renameLocation) and
+       (renameForm.showModalFor(id,typeString)=mrOk) then begin
+
+    end;
+  end;
 
 PROCEDURE TMnhForm.miCallMainClick(Sender: TObject);
   begin

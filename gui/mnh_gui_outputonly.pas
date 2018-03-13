@@ -72,7 +72,7 @@ PROCEDURE ToutputOnlyForm.triggerFastPolling;
 
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
-    registerForm(self,'outputOnlyForm',true,true);
+    registerForm(self,true,true);
     initGuiOutAdapters(outputOnlyForm,false);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);

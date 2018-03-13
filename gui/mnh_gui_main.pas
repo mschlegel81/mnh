@@ -25,7 +25,6 @@ USES
   closeDialog,
   //MNH:
   editorMeta,
-  editPopupModel,
   searchModel,
   mnhCompletion,
   ipcModel,
@@ -41,11 +40,14 @@ USES
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   treeUtil,
-  guiOutAdapters;
+  guiOutAdapters,
+  renameDialog;
 TYPE
   {$define includeInterface}
   {$include guiEditorInterface.inc}
   {$WARN 5024 OFF}
+
+  { TMnhForm }
 
   TMnhForm = class(T_abstractMnhForm)
     cbOutlineShowPrivate,
@@ -54,6 +56,7 @@ TYPE
     callStackGroupBox,
     currentExpressionGroupBox,
     outlineGroupBox:                 TGroupBox;
+    miRename: TMenuItem;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
@@ -97,8 +100,6 @@ TYPE
     miTimingInfo,
     miWrapEcho,
     mi_settings,
-    pmiOpenFile1,
-    pmiOpenFile2,
     subMenuCode,
     subMenuEvaluation,
     subMenuFile,
@@ -122,7 +123,6 @@ TYPE
     BottomPanel,
     Panel1,
     Panel2:                    TPanel;
-    EditorPopupMenu:           TPopupMenu;
     ReplaceDialog:             TReplaceDialog;
     SaveDialog:                TSaveDialog;
     Splitter1,
