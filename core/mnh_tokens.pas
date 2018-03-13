@@ -40,6 +40,7 @@ TYPE
       PROCEDURE setIdResolved;
       PROPERTY isIdResolved:boolean read idResolved;
       FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
+      FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
       PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;

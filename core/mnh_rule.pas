@@ -19,7 +19,6 @@ TYPE
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
     {$ifdef fullVersion}
-    FUNCTION getDocTxt: ansistring; virtual; abstract;
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
     {$endif}
   end;

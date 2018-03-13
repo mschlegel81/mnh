@@ -9,6 +9,7 @@ USES sysutils,math,
      tokenStack,
      {$ifdef fullVersion}
      mnh_html,
+     mnh_doc,
      {$endif}
      mnh_tokens,mnh_out_adapters;
 TYPE
@@ -30,6 +31,10 @@ TYPE
       FUNCTION getPath:ansistring; virtual;
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
+      {$ifdef fullVersion}
+      FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
+      FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
+      {$endif}
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -47,6 +52,44 @@ TYPE
     attributes:T_arrayOfString;
     firstToken:P_token;
   end;
+
+  {$ifdef fullVersion}
+  T_tokenInfo=record
+    infoText:ansistring;
+    location,startLoc,endLoc:T_searchTokenLocation;
+
+    canRename:boolean;
+    tokenType:T_tokenType;
+    idWithoutIsPrefix:string;
+  end;
+
+  T_enhancedToken=object
+    private
+      token:P_token;
+      originalType:T_tokenType;
+      references:T_tokenLocation;
+      linksTo:(nothing,packageUse,packageInclude);
+      hasIsPrefix:boolean;
+      endsAtColumn:longint;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+    public
+      CONSTRUCTOR create(CONST tok:P_token; CONST localIdInfos:P_localIdInfos; CONST package:P_abstractPackage);
+      DESTRUCTOR destroy;
+      FUNCTION toInfo:T_tokenInfo;
+  end;
+
+  T_enhancedTokens=object
+    private
+      dat:array of T_enhancedToken;
+      PROCEDURE add(CONST tok:P_token; CONST localIdInfos:P_localIdInfos; CONST package:P_abstractPackage);
+      PROCEDURE addLineEnder(CONST lineLength:longint);
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION getTokenAtIndex(CONST rowIndex:longint):T_enhancedToken;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+  end;
+  {$endif}
 
   T_lexer=object
     private
@@ -72,7 +115,10 @@ TYPE
       CONSTRUCTOR create(CONST package:P_abstractPackage);
       DESTRUCTOR destroy;
       FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}):T_enhancedStatement;
+      {$ifdef fullVersion}
       FUNCTION getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint):P_token;
+      FUNCTION getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
+      {$endif}
   end;
 
 PROCEDURE preprocessStatement(CONST token:P_token; VAR adapters: T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
@@ -127,6 +173,209 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
       t:=t^.next;
     end;
   end;
+
+{$ifdef fullVersion}
+PROCEDURE T_enhancedTokens.add(CONST tok: P_token; CONST localIdInfos: P_localIdInfos; CONST package: P_abstractPackage);
+  VAR i:longint;
+  begin
+    i:=length(dat);
+    setLength(dat,i+1);
+    dat[i].create(tok,localIdInfos,package);
+    if (i>0) and (tok<>nil) then begin
+      dat[i-1].endsAtColumn:=tok^.location.column-1;
+    end;
+  end;
+
+PROCEDURE T_enhancedTokens.addLineEnder(CONST lineLength:longint);
+  VAR last:longint;
+  begin
+    last:=length(dat)-1;
+    add(nil,nil,nil);
+    if last>0 then dat[last].endsAtColumn:=lineLength;
+  end;
+
+CONSTRUCTOR T_enhancedTokens.create;
+  begin
+    setLength(dat,0);
+  end;
+
+DESTRUCTOR T_enhancedTokens.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(dat)-1 do dat[i].destroy;
+    setLength(dat,0);
+  end;
+
+FUNCTION T_enhancedTokens.getTokenAtIndex(CONST rowIndex: longint): T_enhancedToken;
+  VAR i:longint;
+  begin
+    for i:=0 to length(dat)-1 do if (dat[i].token<>nil) and (rowIndex>=dat[i].token^.location.column) and (rowIndex<=dat[i].endsAtColumn) then exit(dat[i]);
+    //Fallback 1
+    for i:=1 to length(dat)-1 do if (dat[i].token<>nil) and (dat[i].token^.location.column>rowIndex) then exit(dat[i-1]);
+    //Fallback 2
+    result:=dat[length(dat)-1];
+  end;
+
+FUNCTION T_enhancedTokens.renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST newName:string):boolean;
+  VAR i:longint;
+  begin
+    result:=false;
+    for i:=length(dat)-1 downto 0 do if dat[i].token<>nil then begin
+      if dat[i].renameInLine(line,referencedLocation,newName) then result:=true;
+    end;
+  end;
+
+CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST localIdInfos: P_localIdInfos; CONST package:P_abstractPackage);
+  VAR tokenText:string;
+  begin
+    linksTo:=nothing;
+    hasIsPrefix:=false;
+    endsAtColumn:=maxLongint;
+    if tok=nil then begin
+      token:=nil;
+      originalType:=tt_EOL;
+      references.package:=package;
+      references.column:=0;
+      references.line:=0;
+      exit;
+    end;
+    token:=tok;
+    originalType:=token^.tokType;
+    references:=token^.location; //default: references itself
+
+    tokenText:=safeTokenToString(token);
+    if (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck,tt_identifier,tt_literal]) then
+    case localIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
+      tt_blockLocalVariable: begin
+        token^.tokType:=tt_blockLocalVariable;
+        references.package:=package;
+      end;
+      tt_parameterIdentifier: begin
+        token^.tokType:=tt_parameterIdentifier;
+        references.package:=package;
+      end;
+      tt_use: begin
+        references.package:=package^.getImport(tokenText);
+        if references.package=nil
+        then references.package:=package
+        else begin
+          linksTo:=packageUse;
+          references.line:=1;
+          references.column:=1;
+        end;
+      end;
+      tt_include:begin
+        references.package:=package^.getExtended(tokenText);
+        if references.package=nil
+        then references.package:=package
+        else begin
+          linksTo:=packageInclude;
+          references.line:=1;
+          references.column:=1;
+        end;
+      end;
+    end;
+    if (linksTo=nothing) and (token^.tokType in [tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck]) then begin
+      references:=P_abstractRule(token^.data)^.getLocation;
+    end;
+    if (token^.tokType=tt_customTypeRule) then
+      hasIsPrefix:='is'+token^.txt=P_abstractRule(token^.data)^.getId;
+  end;
+
+DESTRUCTOR T_enhancedToken.destroy;
+  begin
+    if token<>nil then dispose(token,destroy);
+  end;
+
+FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST newName: string): boolean;
+  VAR is_:string[2]='';
+  begin
+    if (referencedLocation<>token^.location) then case token^.tokType of
+      tt_identifier         ,//: exit(false);
+      tt_parameterIdentifier,
+      tt_localUserRule      ,
+      tt_importedUserRule   ,
+      tt_blockLocalVariable ,
+      tt_customTypeCheck    ,
+      tt_customTypeRule     : if references<>referencedLocation then exit(false);
+      else exit(false);
+    end;
+    if hasIsPrefix then is_:='is';
+    result:=true;
+    line:=copy(line,1,token^.location.column)+is_+newName+copy(line,endsAtColumn+1,length(line));
+  end;
+
+FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
+  VAR i:longint;
+      tokenText:string;
+  FUNCTION getBuiltinRuleInfo:string;
+    VAR doc:P_intrinsicFunctionDocumentation;
+    begin
+      ensureBuiltinDocExamples;
+      if (length(tokenText)>1) and (tokenText[1]='.')
+      then doc:=functionDocMap.get(copy(tokenText,2,length(tokenText)-1))
+      else doc:=functionDocMap.get(tokenText);
+      if doc=nil then exit;
+      result:='Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
+    end;
+  begin
+    if token=nil then begin
+      result.infoText:='(eol)';
+      result.location:=C_nilTokenLocation;
+      result.startLoc:=C_nilTokenLocation;
+      result.endLoc  :=C_nilTokenLocation;
+      result.canRename:=false;
+      result.idWithoutIsPrefix:='';
+      result.tokenType:=tt_EOL;
+      exit;
+    end;
+    result.tokenType    :=token^.tokType;
+    result.location     :=references;
+    result.startLoc     :=token^.location;
+    result.endLoc       :=token^.location;
+    result.endLoc.column:=endsAtColumn;
+    //tt_importedUserRule ?!?
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule];
+    tokenText:=safeTokenToString(token);
+    if result.canRename then begin
+      if hasIsPrefix then result.idWithoutIsPrefix:=copy(tokenText,3,length(tokenText)-2)
+                     else result.idWithoutIsPrefix:=                        tokenText;
+    end;
+    result.infoText:=ECHO_MARKER+tokenText;
+    case linksTo of
+      packageUse: begin
+        result.infoText+=C_lineBreakChar+'Used package: '+ansistring(references);
+        exit;
+      end;
+      packageInclude: begin
+        result.infoText+=C_lineBreakChar+'Included package: '+ansistring(references);
+        exit;
+      end;
+    end;
+    result.infoText+=C_lineBreakChar
+                    +replaceAll(C_tokenInfo[token^.tokType].helpText,'#',C_lineBreakChar);
+    for i:=0 to length(C_specialWordInfo)-1 do
+      if C_specialWordInfo[i].txt=tokenText then
+      result.infoText+=C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
+
+    case token^.tokType of
+      tt_intrinsicRule:
+        result.infoText+=C_lineBreakChar+getBuiltinRuleInfo;
+      tt_blockLocalVariable, tt_parameterIdentifier:
+        result.infoText+=C_lineBreakChar+'Declared '+ansistring(references);
+      tt_importedUserRule,tt_localUserRule,tt_customTypeRule, tt_customTypeCheck: begin
+        result.infoText+=C_lineBreakChar
+                        +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
+        if intrinsicRuleMap.containsKey(tokenText) then
+         result.infoText+='hides '+getBuiltinRuleInfo;
+      end;
+      tt_type,tt_typeCheck:
+        result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
+      tt_modifier:
+        result.infoText+=C_lineBreakChar+replaceAll(C_modifierInfo[token^.getModifier].helpText,'#',C_lineBreakChar);
+    end;
+  end;
+{$endif}
 
 FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
   CONST retainBlanks: boolean): P_token;
@@ -607,6 +856,7 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
     localIdStack.destroy;
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_lexer.getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint): P_token;
   VAR recycler:T_tokenRecycler;
       adapters:T_adapters;
@@ -635,6 +885,33 @@ FUNCTION T_lexer.getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endCo
     else endColumnIndex:=result^.next^.location.column;
     associatedPackage^.resolveId(result^,nil);
   end;
+
+FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
+  VAR recycler:T_tokenRecycler;
+      adapters:T_adapters;
+      t:P_token;
+  begin
+    recycler.create;
+    adapters.create;
+    while fetchNext(recycler,adapters,false) do begin end;
+    dec(inputLocation.line);
+    inputLocation.column:=length(input[length(input)-1]);
+
+    recycler.destroy;
+    adapters.destroy;
+
+    result.create;
+    t:=nextStatement.firstToken;
+    while t<>nil do begin
+      associatedPackage^.resolveId(t^,nil);
+      result.add(t,localIdInfos,associatedPackage);
+      t:=t^.next;
+    end;
+    result.addLineEnder(inputLocation.column);
+    resetTemp;
+  end;
+
+{$endif}
 
 CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);
   begin
@@ -700,6 +977,10 @@ FUNCTION T_abstractPackage.getId: T_idString;                          begin res
 FUNCTION T_abstractPackage.getPath: ansistring;                        begin result:=codeProvider^.getPath;                      end;
 
 {$ifdef fullVersion}
+
+FUNCTION T_abstractPackage.getImport(CONST idOrPath:string):P_abstractPackage; begin result:=nil; end;
+FUNCTION T_abstractPackage.getExtended(CONST idOrPath:string):P_abstractPackage; begin result:=nil; end;
+
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
   VAR lexer:T_lexer;
       location:T_tokenLocation;
