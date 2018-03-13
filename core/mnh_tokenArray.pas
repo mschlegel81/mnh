@@ -58,7 +58,7 @@ TYPE
     infoText:ansistring;
     location,startLoc,endLoc:T_searchTokenLocation;
 
-    canRename:boolean;
+    canRename,mightBeUsedInOtherPackages:boolean;
     tokenType:T_tokenType;
     idWithoutIsPrefix:string;
   end;
@@ -302,7 +302,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     end;
     if hasIsPrefix then is_:='is';
     result:=true;
-    line:=copy(line,1,token^.location.column)+is_+newName+copy(line,endsAtColumn+1,length(line));
+    line:=copy(line,1,token^.location.column-1)+is_+newName+copy(line,endsAtColumn+1,length(line));
   end;
 
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
@@ -319,27 +319,28 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       result:='Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
   begin
-    if token=nil then begin
-      result.infoText:='(eol)';
-      result.location:=C_nilTokenLocation;
-      result.startLoc:=C_nilTokenLocation;
-      result.endLoc  :=C_nilTokenLocation;
-      result.canRename:=false;
-      result.idWithoutIsPrefix:='';
-      result.tokenType:=tt_EOL;
-      exit;
-    end;
+    result.infoText:='(eol)';
+    result.location:=C_nilTokenLocation;
+    result.startLoc:=C_nilTokenLocation;
+    result.endLoc  :=C_nilTokenLocation;
+    result.canRename:=false;
+    result.mightBeUsedInOtherPackages:=false;
+    result.idWithoutIsPrefix:='';
+    result.tokenType:=tt_EOL;
+    if token=nil then exit;
     result.tokenType    :=token^.tokType;
     result.location     :=references;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
     //tt_importedUserRule ?!?
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
       if hasIsPrefix then result.idWithoutIsPrefix:=copy(tokenText,3,length(tokenText)-2)
                      else result.idWithoutIsPrefix:=                        tokenText;
+      result.mightBeUsedInOtherPackages:=(token^.tokType=tt_importedUserRule) or
+                                         (token^.tokType in [tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
     end;
     result.infoText:=ECHO_MARKER+tokenText;
     case linksTo of

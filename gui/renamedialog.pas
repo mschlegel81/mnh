@@ -7,7 +7,8 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls,
-  mnhFormHandler;
+  mnhFormHandler,
+  mnh_constants;
 
 TYPE
 
@@ -28,7 +29,7 @@ TYPE
   private
 
   public
-    FUNCTION showModalFor(CONST id,typeString:string):integer;
+    FUNCTION showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther:boolean):integer;
     FUNCTION newId:string;
   end;
 
@@ -59,11 +60,13 @@ PROCEDURE TrenameForm.NewNameEditChange(Sender: TObject);
     OKButton.enabled:=NewNameEdit.text<>OriginalNameEdit.text;
   end;
 
-FUNCTION TrenameForm.showModalFor(CONST id, typeString: string): integer;
+FUNCTION TrenameForm.showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther:boolean):integer;
   begin
-    caption:='Rename '+typeString;
+    caption:='Rename '+C_tokenInfo[tokenType].helpText;
     OriginalNameEdit.text:=id;
     NewNameEdit.text:=id;
+    checkAllEditorsCheckBox.enabled:=enableScanOther;
+    checkAllEditorsCheckBox.checked:=checkAllEditorsCheckBox.checked and enableScanOther;
     result:=ShowModal;
   end;
 
