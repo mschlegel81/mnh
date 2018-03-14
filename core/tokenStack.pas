@@ -74,12 +74,18 @@ TYPE
   T_localIdInfos=object
     private
       infos: array of T_localIdInfo;
+      blobLines:array of record
+        lineIndex:longint;
+        blobCloser:char;
+      end;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+      PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
+      FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
       PROCEDURE clear;
   end;
   {$endif}
@@ -144,9 +150,26 @@ PROCEDURE T_localIdInfos.add(CONST id:T_idString; CONST validFrom,validUntil:T_t
     infos[i].tokenType :=typ;
   end;
 
+PROCEDURE T_localIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:char);
+  VAR k:longint;
+  begin
+    k:=length(blobLines);
+    setLength(blobLines,k+1);
+    blobLines[k].lineIndex :=lineIndex;
+    blobLines[k].blobCloser:=closer;
+  end;
+
+FUNCTION T_localIdInfos.getBlobCloserOrZero(CONST lineIndex:longint):char;
+  VAR k:longint;
+  begin
+    result:=#0;
+    for k:=0 to length(blobLines)-1 do if blobLines[k].lineIndex=lineIndex then exit(blobLines[k].blobCloser);
+  end;
+
 PROCEDURE T_localIdInfos.clear;
   begin
     setLength(infos,0);
+    setLength(blobLines,0);
   end;
 
 CONSTRUCTOR T_callStack.create;

@@ -11,9 +11,6 @@ USES
   mnh_constants;
 
 TYPE
-
-  { TrenameForm }
-
   TrenameForm = class(TForm)
     CancelButton: TButton;
     checkAllEditorsCheckBox: TCheckBox;

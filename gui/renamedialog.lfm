@@ -37,6 +37,7 @@ object renameForm: TrenameForm
       Top = 3
       Width = 424
       Align = alClient
+      Enabled = False
       ReadOnly = True
       TabOrder = 0
       Text = 'OriginalNameEdit'
