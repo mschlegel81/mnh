@@ -323,14 +323,16 @@ PROCEDURE TMnhForm.miFindNextClick    (Sender: TObject); begin searchReplaceMode
 PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject); begin searchReplaceModel.doFindPrevious    (focusedEditor);       end;
 PROCEDURE TMnhForm.miRenameClick(Sender: TObject);
   VAR meta:P_editorMeta;
-      id,typeString:string;
+      id:string;
+      idType:T_tokenType;
       renameLocation:T_searchTokenLocation;
+      scanOther:boolean;
   begin
     meta:=getEditor;
     if (meta<>nil) and
-       meta^.canRenameUnderCursor(id,typeString,renameLocation) and
-       (renameForm.showModalFor(id,typeString)=mrOk) then begin
-
+       meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
+       (renameForm.showModalFor(id,idType,scanOther)=mrOk) then begin
+      meta^.doRename(renameLocation,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
     end;
   end;
 

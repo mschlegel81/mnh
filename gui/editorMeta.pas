@@ -95,7 +95,9 @@ T_editorMeta=object(T_codeProvider)
     FUNCTION caretInMainFormCoordinates:TPoint;
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean; CONST caret:TPoint);
     PROCEDURE setUnderCursor(CONST updateMarker,forHelpOrJump: boolean);
-    FUNCTION canRenameUnderCursor(OUT orignalId,idType:string; OUT ref:T_searchTokenLocation):boolean;
+    FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
+    PROCEDURE doRename(CONST ref:T_searchTokenLocation; CONST newId:string; CONST renameInOtherEditors:boolean=false);
+
     PROCEDURE setCaret(CONST location: T_searchTokenLocation);
     PROCEDURE toggleComment;
     PROCEDURE moveLine(CONST up:boolean);
@@ -817,18 +819,44 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean
     setUnderCursor(updateMarker,forHelpOrJump,editor.CaretXY);
   end;
 
-FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId,idType:string; OUT ref:T_searchTokenLocation):boolean;
+FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
   begin
     if language<>LANG_MNH then exit(false);
     setUnderCursor(false,true);
-    result:=underCursor.canRename;
+    result   :=underCursor.canRename;
     orignalId:=underCursor.idWithoutIsPrefix;
-    case underCursor.tokenType of
-      tt_localUserRule: idType:='local rule';
-      tt_parameterIdentifier: idType:='parameter';
-      tt_blockLocalVariable: idType:='local variable';
-      else idType:='identifier';
+    tokTyp   :=underCursor.tokenType;
+    ref      :=underCursor.location;
+    mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
+  end;
+
+PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST newId:string; CONST renameInOtherEditors:boolean=false);
+  VAR meta:P_editorMeta;
+      lineIndex:longint;
+      lineTxt:string;
+  PROCEDURE updateLine;
+    VAR lineStart,lineEnd:TPoint;
+    begin
+      lineStart.y:=lineIndex+1; lineStart.x:=0;
+      lineEnd  .y:=lineIndex+1; lineEnd  .x:=length(editor.lines[lineIndex])+1;
+      editor.SetTextBetweenPoints(lineStart,lineEnd,lineTxt);
     end;
+
+  begin
+    if not(enabled) or (language<>LANG_MNH) then exit;
+
+    if renameInOtherEditors then saveFile();
+    ensureAssistant;
+    assistant^.synchronousUpdate(@self);
+
+    editor.BeginUpdate(true);
+    with editor do for lineIndex:=0 to lines.count-1 do begin
+      lineTxt:=lines[lineIndex];
+      if assistant^.renameIdentifierInLine(ref,newId,lineTxt,lineIndex+1) then updateLine;
+    end;
+    editor.EndUpdate;
+
+    if renameInOtherEditors then for meta in editorMetaData do if meta<>@self then meta^.doRename(ref,newId);
   end;
 
 PROCEDURE T_editorMeta.setCaret(CONST location: T_searchTokenLocation);

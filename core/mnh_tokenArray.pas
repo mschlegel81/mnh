@@ -58,7 +58,7 @@ TYPE
     infoText:ansistring;
     location,startLoc,endLoc:T_searchTokenLocation;
 
-    canRename:boolean;
+    canRename,mightBeUsedInOtherPackages:boolean;
     tokenType:T_tokenType;
     idWithoutIsPrefix:string;
   end;
@@ -106,8 +106,8 @@ TYPE
       nextStatement:T_enhancedStatement;
       beforeLastTokenized,
       lastTokenized:P_token;
-      FUNCTION getToken(CONST line:ansistring; VAR recycler:T_tokenRecycler; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):P_token;
-      FUNCTION fetchNext(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):boolean;
+      FUNCTION getToken(CONST line:ansistring; VAR recycler:T_tokenRecycler; VAR adapters:T_adapters; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):P_token;
+      FUNCTION fetchNext(                      VAR recycler:T_tokenRecycler; VAR adapters:T_adapters; {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks:boolean=false):boolean;
       PROCEDURE resetTemp;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST location:T_tokenLocation; CONST inPackage:P_abstractPackage);
@@ -116,7 +116,6 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION getNextStatement(VAR recycler:T_tokenRecycler; VAR adapters:T_adapters{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif}):T_enhancedStatement;
       {$ifdef fullVersion}
-      FUNCTION getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint):P_token;
       FUNCTION getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
       {$endif}
   end;
@@ -302,7 +301,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     end;
     if hasIsPrefix then is_:='is';
     result:=true;
-    line:=copy(line,1,token^.location.column)+is_+newName+copy(line,endsAtColumn+1,length(line));
+    line:=copy(line,1,token^.location.column-1)+is_+newName+copy(line,endsAtColumn+1,length(line));
   end;
 
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
@@ -319,27 +318,28 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       result:='Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
   begin
-    if token=nil then begin
-      result.infoText:='(eol)';
-      result.location:=C_nilTokenLocation;
-      result.startLoc:=C_nilTokenLocation;
-      result.endLoc  :=C_nilTokenLocation;
-      result.canRename:=false;
-      result.idWithoutIsPrefix:='';
-      result.tokenType:=tt_EOL;
-      exit;
-    end;
+    result.infoText:='(eol)';
+    result.location:=C_nilTokenLocation;
+    result.startLoc:=C_nilTokenLocation;
+    result.endLoc  :=C_nilTokenLocation;
+    result.canRename:=false;
+    result.mightBeUsedInOtherPackages:=false;
+    result.idWithoutIsPrefix:='';
+    result.tokenType:=tt_EOL;
+    if token=nil then exit;
     result.tokenType    :=token^.tokType;
     result.location     :=references;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
     //tt_importedUserRule ?!?
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_importedUserRule,tt_localUserRule,tt_blockLocalVariable,tt_customTypeCheck,tt_customTypeRule];
     tokenText:=safeTokenToString(token);
     if result.canRename then begin
       if hasIsPrefix then result.idWithoutIsPrefix:=copy(tokenText,3,length(tokenText)-2)
                      else result.idWithoutIsPrefix:=                        tokenText;
+      result.mightBeUsedInOtherPackages:=(token^.tokType=tt_importedUserRule) or
+                                         (token^.tokType in [tt_localUserRule,tt_customTypeCheck,tt_customTypeRule]) and (P_abstractRule(token^.data)^.hasPublicSubrule);
     end;
     result.infoText:=ECHO_MARKER+tokenText;
     case linksTo of
@@ -378,7 +378,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
 {$endif}
 
 FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
-  CONST retainBlanks: boolean): P_token;
+  {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks: boolean): P_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(message:ansistring);
@@ -447,6 +447,9 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
   begin
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
+      {$ifdef fullVersion}
+      if localIdInfos<>nil then localIdInfos^.markBlobLine(inputLocation.line,closer);
+      {$endif}
       //id now is rest of line
       id:=copy(line,inputLocation.column,length(line));
       if pos(closer,id)<=0 then begin
@@ -613,13 +616,13 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
     if parsedLength>0 then inc(inputLocation.column,parsedLength);
   end;
 
-FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler;
-  VAR adapters: T_adapters; CONST retainBlanks: boolean): boolean;
+FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler; VAR adapters: T_adapters;
+  {$ifdef fullVersion} CONST localIdInfos:P_localIdInfos;{$endif} CONST retainBlanks: boolean): boolean;
   FUNCTION fetch:P_token;
     begin
       result:=nil;
       while (result=nil) and (adapters.noErrors) and (inputIndex<length(input)) do begin
-        result:=getToken(input[inputIndex],recycler,adapters,retainBlanks);
+        result:=getToken(input[inputIndex],recycler,adapters{$ifdef fullVersion},localIdInfos{$endif},retainBlanks);
         if (result=nil) then begin
           inc(inputIndex);
           inc(inputLocation.line);
@@ -816,12 +819,12 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
       lastLocation:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}localIdInfos{$endif});
-    while fetchNext(recycler,adapters) and (lastTokenized<>nil) do case lastTokenized^.tokType of
+    while fetchNext(recycler,adapters{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) do case lastTokenized^.tokType of
       tt_beginBlock: begin
         localIdStack.clear;
         localIdStack.scopePush;
         lastWasLocalModifier:=false;
-        while fetchNext(recycler,adapters) and (lastTokenized<>nil) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
+        while fetchNext(recycler,adapters{$ifdef fullVersion},localIdInfos{$endif}) and (lastTokenized<>nil) and not((lastTokenized^.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
           lastLocation:=lastTokenized^.location;
           case lastTokenized^.tokType of
             tt_beginBlock    : localIdStack.scopePush;
@@ -857,43 +860,16 @@ FUNCTION T_lexer.getNextStatement(VAR recycler: T_tokenRecycler; VAR adapters: T
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_lexer.getTokenAtColumnOrNil(CONST startColumnIndex:longint; OUT endColumnIndex:longint): P_token;
-  VAR recycler:T_tokenRecycler;
-      adapters:T_adapters;
-      prev:P_token=nil;
-      lineToFind:longint;
-  begin
-    recycler.create;
-    adapters.create;
-    while fetchNext(recycler,adapters,false) do begin end;
-    dec(inputLocation.line);
-    inputLocation.column:=length(input[length(input)-1]);
-
-    recycler.destroy;
-    adapters.destroy;
-    result:=nextStatement.firstToken;
-    lineToFind:=1+inputLocation.line-inputIndex;
-    while (result<>nil) and (result^.location.line=lineToFind) and (result^.location.column<startColumnIndex) do begin
-      prev:=result;
-      result:=result^.next;
-    end;
-    if prev<>nil  then result:=prev;
-    if result=nil then result:=lastTokenized;
-    if result=nil then exit;
-    if (result^.next=nil) or (result^.next^.location.line<>lineToFind)
-    then endColumnIndex:=length(input[0])
-    else endColumnIndex:=result^.next^.location.column;
-    associatedPackage^.resolveId(result^,nil);
-  end;
-
 FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhancedTokens;
   VAR recycler:T_tokenRecycler;
       adapters:T_adapters;
       t:P_token;
   begin
+    blob.closer:=localIdInfos^.getBlobCloserOrZero(inputLocation.line);
+
     recycler.create;
     adapters.create;
-    while fetchNext(recycler,adapters,false) do begin end;
+    while fetchNext(recycler,adapters,nil,false) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(input[length(input)-1]);
 
@@ -994,7 +970,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
     adapters.create;
     recycler.create;
-    repeat until not(lexer.fetchNext(recycler,adapters,true));
+    repeat until not(lexer.fetchNext(recycler,adapters{$ifdef fullVersion},nil{$endif},true));
     adapters.destroy;
     t:=lexer.nextStatement.firstToken;
     lexer.resetTemp;

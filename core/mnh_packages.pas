@@ -127,8 +127,10 @@ TYPE
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
       FUNCTION updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
+      FUNCTION renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
       FUNCTION getStateHash:T_hashInt;
       PROCEDURE triggerUpdate(CONST editor:P_codeProvider); virtual;
+      PROCEDURE synchronousUpdate(CONST editor:P_codeProvider); virtual;
       FUNCTION resolveImport(CONST id:string):string; virtual;
       FUNCTION getImportablePackages:T_arrayOfString; virtual;
 
@@ -141,6 +143,7 @@ TYPE
     CONSTRUCTOR createBlank;
     PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
     PROCEDURE triggerUpdate(CONST editor:P_codeProvider); virtual;
+    PROCEDURE synchronousUpdate(CONST editor:P_codeProvider); virtual;
     FUNCTION resolveImport(CONST id:string):string; virtual;
     FUNCTION getImportablePackages:T_arrayOfString; virtual;
   end;
@@ -489,7 +492,23 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
     info:=enhanced.getTokenAtIndex(CaretX).toInfo;
     enhanced.destroy;
     lexer.destroy;
+    leaveCriticalSection(cs);
+  end;
 
+FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
+  VAR lexer:T_lexer;
+      loc:T_tokenLocation;
+      enhanced:T_enhancedTokens;
+  begin
+    enterCriticalSection(cs);
+    loc.line:=CaretY;
+    loc.column:=1;
+    loc.package:=package;
+    lexer.create(lineText,loc,package);
+    enhanced:=lexer.getEnhancedTokens(localIdInfos);
+    result:=enhanced.renameInLine(lineText,location,newId);
+    enhanced.destroy;
+    lexer.destroy;
     leaveCriticalSection(cs);
   end;
 
@@ -550,6 +569,21 @@ PROCEDURE T_codeAssistanceData.triggerUpdate(CONST editor:P_codeProvider);
     checkPending:=false;
     currentlyProcessing:=true;
     beginThread(@codeAssistantCheckThread,@self);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_blankCodeAssistanceData.synchronousUpdate(CONST editor:P_codeProvider); begin end;
+PROCEDURE T_codeAssistanceData.synchronousUpdate(CONST editor:P_codeProvider);
+  begin
+    if editor=nil then exit;
+    enterCriticalSection(cs);
+    while currentlyProcessing do begin
+      leaveCriticalSection(cs);
+      ThreadSwitch; sleep(1);
+      enterCriticalSection(cs);
+    end;
+    editorForUpdate:=editor;
+    sandbox^.updateCodeAssistanceData(editor,self);
     leaveCriticalSection(cs);
   end;
 
