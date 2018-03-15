@@ -283,7 +283,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
 
 DESTRUCTOR T_filterGenerator.destroy;
   begin
-    dispose(sourceGenerator,destroy);
+    disposeLiteral(sourceGenerator);
     disposeLiteral(filterExpression);
   end;
 
@@ -398,7 +398,7 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
 
 DESTRUCTOR T_mapGenerator.destroy;
   begin
-    dispose(sourceGenerator,destroy);
+    disposeLiteral(sourceGenerator);
     disposeLiteral(mapExpression);
   end;
 
