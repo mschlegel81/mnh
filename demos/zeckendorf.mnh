@@ -1,19 +1,33 @@
-private memoized fib(i> 0)->fib(i-1)+fib(i-2);
-private          fib(i<=0):=1;
-private inv(F:Expression(1),n  )->inv(F,n,0);
-private inv(F:Expression(1),n,i)->(F(i))>=n ? i : inv(F,n,i+1);
+private memoized
+  fib(i>=1)->fib(i-1)+fib(i-2);
+  fib(i<=0)->1;
+  fib(I:IntList)->I.map(::fib);
 
-private encode(F,n:Int     )->replace('#'&encode(F,n,inv(F,n)),["#0","#"],["#",""]);
-private encode(F,n:Int,i>=0)->(F(i))<=n ? 1 & encode(F,n-(F(i)),i-1)
-                                        : 0 & encode(F,n       ,i-1);
-private encode(F,n:Int,i)->"";
-private encode(F,N:IntList)->N.pEach(n,encode(F,n));
+//*Encodes i
+zeckendorfEncode(i:Int)->begin
+  local k:=0;
+  while(fib(k)<i,k+=1);
+  local j:=i;
+  fib([k..0]).each(f,j>=f ? begin j-=f; 1; end : 0).composeDigits(2);
+end;
+zeckendorfEncode(I:IntList)->I.pMap(::zeckendorfEncode);
 
-private FIB:={fib($i)};
-private POT:={2^$i};
+//*Decodes i
+zeckendorfDecode(i:Int)->i.digits(2).reverseList.each(b,b*fib(index),+);
+zeckendorfDecode(I:IntList)->I.pMap(::zeckendorfDecode);
 
-private memoized avgLen(bits)->[2^(bits-1)..2^bits-1].pEach(i,length(encode(FIB,i)),+)/(2^(bits-1));
+//*Validates encoded i
+zeckendorfValidate(i:Int)->begin
+  local D:=i.digits(2);
+  not((D.tail=1) and (D.leading=1)).agg(AND);
+end;
+zeckendorfValidate(I:IntList)->I.pMap(::zeckendorfValidate);
+
 private examples:=[1,2,3,4,5,17,100,255];
+//*Returns string of i in binary representation
+private binString(i:Int)->i.digits(2).join;
+
+private memoized avgLen(bits)->zeckendorfEncode([2^(bits-1)..2^bits-1]).pEach(i,i.digits(2).size,+)/(2^(bits-1));
 
 //*Displays examples for Zeckendorf-encoding
 //*and average lengths compared to binary representation
@@ -21,8 +35,8 @@ private examples:=[1,2,3,4,5,17,100,255];
 main->
 printf('%8d %8d %12d',
   'decimal'|examples,
-  'binary'|encode(POT,examples),
-  'Zeckendorf'|encode(FIB,examples))|
+  'binary'|(examples.map(::binString)),
+  'Zeckendorf'|examples.map(::zeckendorfEncode).map(::binString))|
 print("\n    bits rel. overhead") |
 printf('%2d %5.2f     %9.4f',
        [1..12],
