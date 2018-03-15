@@ -283,7 +283,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
 
 DESTRUCTOR T_filterGenerator.destroy;
   begin
-    dispose(sourceGenerator,destroy);
+    disposeLiteral(sourceGenerator);
     disposeLiteral(filterExpression);
   end;
 
@@ -398,7 +398,7 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
 
 DESTRUCTOR T_mapGenerator.destroy;
   begin
-    dispose(sourceGenerator,destroy);
+    disposeLiteral(sourceGenerator);
     disposeLiteral(mapExpression);
   end;
 
@@ -687,11 +687,20 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
+  T_abstractRandomGenerator=object(T_builtinGeneratorExpression)
+    private
+      range:T_bigInt;
+    public
+      CONSTRUCTOR create(CONST maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;  virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
   P_intRandomGenerator=^T_intRandomGenerator;
-  T_intRandomGenerator=object(T_builtinGeneratorExpression)
+  T_intRandomGenerator=object(T_abstractRandomGenerator)
     private
       XOS:T_xosPrng;
-      range:T_bigInt;
     public
       CONSTRUCTOR create(CONST seed,maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
@@ -700,15 +709,45 @@ TYPE
   end;
 
   P_isaacRandomGenerator=^T_isaacRandomGenerator;
-  T_isaacRandomGenerator=object(T_builtinGeneratorExpression)
+  T_isaacRandomGenerator=object(T_abstractRandomGenerator)
     private
       isaac:T_ISAAC;
-      range:T_bigInt;
     public
       CONSTRUCTOR create(CONST seed,maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_abstractRandomGenerator.create(CONST maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    range.create(maxValExclusive);
+  end;
+
+FUNCTION T_abstractRandomGenerator.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
+  begin
+    result:=(parCount=0) or (parCount=1);
+  end;
+
+FUNCTION T_abstractRandomGenerator.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
+  begin
+    result:=nil;
+    if (parameters=nil) or (parameters^.size=0) then begin
+      result:=evaluateToLiteral(location,context);
+    end else if (parameters<>nil) and (parameters^.size=1) and (parameters^.value[0]^.literalType=lt_int) and (P_intLiteral(parameters^.value[0])^.value.compare(1)=CR_GREATER) then begin
+      range.destroy;
+      range.create(P_intLiteral(parameters^.value[0])^.value);
+      result:=newStringLiteral('random range altered to '+parameters^.value[0]^.toString());
+    end else begin
+      P_threadContext(context)^.adapters^.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
+      result:=newVoidLiteral;
+    end;
+  end;
+
+DESTRUCTOR T_abstractRandomGenerator.destroy;
+  begin
+    range.destroy;
   end;
 
 CONSTRUCTOR T_realRandomGenerator.create(CONST seed: T_bigInt; CONST loc: T_tokenLocation);
@@ -720,18 +759,16 @@ CONSTRUCTOR T_realRandomGenerator.create(CONST seed: T_bigInt; CONST loc: T_toke
 
 CONSTRUCTOR T_isaacRandomGenerator.create(CONST seed, maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
   begin
-    inherited create(loc);
+    inherited create(maxValExclusive,loc);
     isaac.create;
     isaac.setSeed(seed.getRawBytes);
-    range.create(maxValExclusive);
   end;
 
 CONSTRUCTOR T_intRandomGenerator.create(CONST seed, maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
   begin
-    inherited create(loc);
+    inherited create(maxValExclusive,loc);
     XOS.create;
     XOS.resetSeed(seed.getRawBytes);
-    range.create(maxValExclusive);
   end;
 
 DESTRUCTOR T_realRandomGenerator.destroy;
@@ -742,13 +779,13 @@ DESTRUCTOR T_realRandomGenerator.destroy;
 DESTRUCTOR T_intRandomGenerator.destroy;
   begin
     XOS.destroy;
-    range.destroy;
+    inherited destroy;
   end;
 
 DESTRUCTOR T_isaacRandomGenerator.destroy;
   begin
     isaac.destroy;
-    range.destroy;
+    inherited destroy;
   end;
 
 FUNCTION T_realRandomGenerator.toString(CONST lengthLimit: longint): string;
@@ -813,7 +850,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'primeGenerator',@primeGenerator,ak_nullary,'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!');
   registerRule(STRINGS_NAMESPACE,'stringIterator',@stringIterator,ak_ternary,'stringIterator(charSet:T_stringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary,'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary,'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary,'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)#//The range of the returned generator can be changed by calling it with an integer argument.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html#//The range of the returned generator can be changed by calling it with an integer argument.');
   listProcessing.newIterator:=@newIterator;
 end.

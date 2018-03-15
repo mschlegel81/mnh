@@ -485,7 +485,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
       lt_stringList,lt_emptyList: case arg1^.literalType of
         lt_string: begin
           result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
+          for i:=0 to list0^.size-1 do
             listResult^.appendString(
             replaceAll(
             extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
@@ -494,7 +494,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
         end;
         lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
           result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
+          for i:=0 to list0^.size-1 do
             listResult^.appendString(
             replaceAll(
             extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
@@ -540,6 +540,6 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileNameOnly' ,@extractFileNameOnly_imp ,ak_unary ,'extractFileNameOnly(F);//Returns the expanded file names (without path and extension) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileExt'      ,@extractFileExt_imp      ,ak_unary ,'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt'       ,@changeFileExtension_imp ,ak_binary,'changeFileExt(filename,newExtension);//Returns the path of file with the new extension');
-  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename'    ,@relativeFilename_impl   ,ak_binary,'relativeFilename(reference,file);//Returns the path of file relative to reference');
+  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFileName'    ,@relativeFilename_impl   ,ak_binary,'relativeFileName(reference,file);//Returns the path of file relative to reference');
 
 end.
