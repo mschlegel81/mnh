@@ -485,7 +485,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
       lt_stringList,lt_emptyList: case arg1^.literalType of
         lt_string: begin
           result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
+          for i:=0 to list0^.size-1 do
             listResult^.appendString(
             replaceAll(
             extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
@@ -494,7 +494,7 @@ FUNCTION relativeFilename_impl intFuncSignature;
         end;
         lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
           result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
+          for i:=0 to list0^.size-1 do
             listResult^.appendString(
             replaceAll(
             extractRelativePath(P_stringLiteral(list0^.value[i])^.value+'/',
