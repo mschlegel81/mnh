@@ -395,7 +395,7 @@ compress('Testtext').decompress;
 //#mnh.listKeywords
 listKeywords.each(category,print(category[0],': ',category[1].head(3).join(', '),', ...'));
 
-relativeFilename('~/folder/','~/other/example.txt');
+relativeFileName('~/folder/','~/other/example.txt');
 
 primes(20);
 
