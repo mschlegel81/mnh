@@ -540,6 +540,6 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileNameOnly' ,@extractFileNameOnly_imp ,ak_unary ,'extractFileNameOnly(F);//Returns the expanded file names (without path and extension) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileExt'      ,@extractFileExt_imp      ,ak_unary ,'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt'       ,@changeFileExtension_imp ,ak_binary,'changeFileExt(filename,newExtension);//Returns the path of file with the new extension');
-  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename'    ,@relativeFilename_impl   ,ak_binary,'relativeFilename(reference,file);//Returns the path of file relative to reference');
+  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFileName'    ,@relativeFilename_impl   ,ak_binary,'relativeFileName(reference,file);//Returns the path of file relative to reference');
 
 end.
