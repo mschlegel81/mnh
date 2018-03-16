@@ -300,6 +300,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       VAR pot:T_myFloat;
           i:int64;
       begin
+        result:=nil;
         pot:=1;
         i:=0;
         while (i<y) and (i< 20) do begin pot:=pot*10;  inc(i); end;

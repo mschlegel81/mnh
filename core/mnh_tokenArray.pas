@@ -314,7 +314,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       if (length(tokenText)>1) and (tokenText[1]='.')
       then doc:=functionDocMap.get(copy(tokenText,2,length(tokenText)-1))
       else doc:=functionDocMap.get(tokenText);
-      if doc=nil then exit;
+      if doc=nil then exit('');
       result:='Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
   begin

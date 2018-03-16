@@ -137,7 +137,7 @@ CONSTRUCTOR T_variableTreeEntryAnonymousValue.create(CONST L:P_literal; CONST ma
 
 FUNCTION T_variableTreeEntryAnonymousValue.canExpand: boolean;
   begin
-    if value=nil then exit;
+    if value=nil then exit(false);
     if isKeyValuePair
     then result:=(length(P_listLiteral(value)^.value[0]^.toString(50))>=50) or
                  (length(P_listLiteral(value)^.value[1]^.toString(50))>=50)
