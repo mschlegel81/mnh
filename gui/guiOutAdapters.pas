@@ -181,6 +181,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       exit([]);
     end;
     try
+    syn.BeginUpdate(false);
     flushing:=true;
     result:=[];
     if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
@@ -247,9 +248,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
         writeln(stdErr,'        DEBUG: mnh form show triggered');
         {$endif}
       end;
+      syn.EndUpdate;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
-    end;
+    end else syn.EndUpdate;
 
     finally
       flushing:=false;
