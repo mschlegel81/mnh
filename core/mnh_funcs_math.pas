@@ -795,7 +795,14 @@ FUNCTION digits_impl intFuncSignature;
     begin
       digits:=bigDigits(i,base);
       result:=newListLiteral(length(digits));
-      for k:=length(digits)-1 downto 0 do result^.append(newIntLiteral(digits[k]),false);
+      if base.compare(maxSingletonInt) in [CR_EQUAL,CR_LESSER]
+      then begin
+        for k:=length(digits)-1 downto 0 do begin
+          result^.appendInt(digits[k].toInt);
+          digits[k].destroy;
+        end;
+      end else for k:=length(digits)-1 downto 0 do result^.append(newIntLiteral(digits[k]),false);
+      setLength(digits,0);
     end;
 
   VAR j:longint;

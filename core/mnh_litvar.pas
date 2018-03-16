@@ -405,11 +405,11 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
 VAR emptyStringSingleton: T_stringLiteral;
 VAR boolLit       : array[false..true] of T_boolLiteral;
     charLit       : array[#0..#255] of T_stringLiteral;
-
+CONST maxSingletonInt=4000;
 IMPLEMENTATION
 VAR
   errLit        : T_literal;
-  intLit        : array[-100..4000] of T_intLiteral;
+  intLit        : array[-100..maxSingletonInt] of T_intLiteral;
   voidLit       : T_voidLiteral;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
