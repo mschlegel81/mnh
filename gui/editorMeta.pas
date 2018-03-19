@@ -30,7 +30,8 @@ USES  //basic classes
   mnh_evalThread,
   mnh_packages,
   mnhCompletion,
-  guiOutAdapters;
+  guiOutAdapters,
+  mnh_datastores;
 
 TYPE T_language=(LANG_MNH   = 0,
                  LANG_CPP   = 1,
@@ -65,6 +66,7 @@ T_editorMeta=object(T_codeProvider)
       isChanged:boolean;
       ignoreDeleted:boolean;
     end;
+    strictlyReadOnly:boolean;
     assistant   : P_codeAssistanceData;
     language_   : T_language;
     tabsheet    : TTabSheet;
@@ -554,8 +556,11 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
       fileAccessAge:=state.fileAccessAge;
       filePath     :=state.filePath;
       ignoreDeleted:=false;
+      strictlyReadOnly:=state.strictReadOnly;
     end;
-    state.getLines(editor.lines);
+    if fileInfo.isChanged
+    then state.getLines(editor.lines)
+    else setFile(state.filePath);
     for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
     editor.CaretX:=state.caret['x'];
     editor.CaretY:=state.caret['y'];
@@ -584,8 +589,12 @@ FUNCTION T_editorMeta.stateHash: T_hashInt;
   VAR s:ansistring;
   begin
     {$Q-}{$R-}
-    result:=editor.lines.count;
-    for s in editor.lines do result:=result*31+hashOfAnsiString(s);
+    try
+      result:=editor.lines.count;
+      for s in editor.lines do result:=result*31+hashOfAnsiString(s);
+    except
+      exit(0);
+    end;
     {$Q+}{$R+}
     if result=0 then result:=1;
   end;
@@ -745,13 +754,33 @@ PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
   end;
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
+  FUNCTION isDatastore:boolean;
+    begin
+      result:=UpperCase(copy(ExtractFileExt(filename),2,9))='DATASTORE';
+    end;
+  VAR datastore:boolean=false;
+      defaultLoad:boolean=true;
+      tempLines:T_arrayOfString;
+      l:string;
   begin
     tabsheet.tabVisible:=true;
     fileInfo.filePath:=fileName;
     fileInfo.ignoreDeleted:=false;
     editor.clearAll;
     try
-      editor.lines.loadFromFile(fileInfo.filePath);
+      strictlyReadOnly:=false;
+      if isDatastore then begin
+        datastore:=true;
+        if isBinaryDatastore(fileName,tempLines) then begin
+          editor.Lines.Clear;
+          for l in tempLines do editor.Lines.Add(l);
+          strictlyReadOnly:=true;
+          editor.ReadOnly:=true;
+          defaultLoad:=false;
+        end;
+        language:=LANG_MNH;
+      end;
+      if defaultLoad then editor.lines.loadFromFile(fileInfo.filePath);
       fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       fileInfo.isChanged:=false;
       editor.modified:=false;
@@ -760,7 +789,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
       fileInfo.isChanged:=true;
       fileInfo.fileAccessAge:=0;
     end;
-    guessLanguage(LANG_TXT);
+    if not(datastore) then guessLanguage(LANG_TXT);
     updateSheetCaption;
   end;
 
@@ -895,6 +924,7 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
     settings^.workspace.editorState[index].filePath:=fileInfo.filePath;
     settings^.workspace.editorState[index].fileAccessAge:=fileInfo.fileAccessAge;
     settings^.workspace.editorState[index].changed:=changed;
+    settings^.workspace.editorState[index].strictReadOnly:=strictlyReadOnly;
     setLength(settings^.workspace.editorState[index].lines,editor.lines.count);
     for i:=0 to length(settings^.workspace.editorState[index].lines)-1 do settings^.workspace.editorState[index].lines[i]:=editor.lines[i];
     settings^.workspace.editorState[index].caret['x']:=editor.CaretX;
@@ -1227,7 +1257,7 @@ FUNCTION addEditorMetaForNewFile:longint;
 
     result:=i;
     editorMetaData[i]^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (editorMetaData[i]^.language=LANG_MNH);
-    editorMetaData[i]^.editor.readonly                :=runnerModel.areEditorsLocked;
+    editorMetaData[i]^.editor.readonly                :=runnerModel.areEditorsLocked or editorMetaData[i]^.strictlyReadOnly;
     editorMetaData[i]^.activate;
   end;
 
@@ -1329,7 +1359,7 @@ PROCEDURE updateEditorsByGuiStatus;
   begin
     for m in editorMetaData do begin
       m^.editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (m^.language=LANG_MNH);
-      m^.editor.readonly                :=runnerModel.areEditorsLocked;
+      m^.editor.readonly                :=runnerModel.areEditorsLocked or m^.strictlyReadOnly;
     end;
   end;
 
@@ -1463,7 +1493,7 @@ PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
     mainForm.onDebuggerEvent;
     if hasEditor then with getEditor^ do begin
       editor.Gutter.MarksPart.visible:=debugMode_ and (language=LANG_MNH);
-      editor.readonly:=areEditorsLocked;
+      editor.readonly:=areEditorsLocked or strictlyReadOnly;
     end;
   end;
 
