@@ -3,7 +3,7 @@ INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
      myStringUtil,myGenerics,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
-     mnh_plotForm, mnh_tables, dynamicPlotting;
+     mnh_plotForm, mnh_tables, dynamicPlotting,variableTreeViews;
 TYPE
   T_abstractMnhForm=class(TForm)
     public
@@ -196,6 +196,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
           parentForm.triggerFastPolling;
         end;
         mt_displayTable: conditionalShowTables;
+        mt_displayTreeView: conditionalShowVarTrees;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin

@@ -23,6 +23,7 @@ USES
   mnh_plotForm,
   mnh_splash,
   closeDialog,
+  variableTreeViews,
   //MNH:
   editorMeta,
   searchModel,
