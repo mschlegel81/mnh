@@ -491,15 +491,15 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
 FUNCTION newSingletonString(CONST value: ansistring): P_stringLiteral;     inline;
   VAR r:P_literal;
   begin
-    EnterCriticalsection(singletonCs);
+    enterCriticalSection(singletonCs);
     if stringSingletons.containsKey(value,r) then begin
-      LeaveCriticalsection(singletonCs);
+      leaveCriticalSection(singletonCs);
       exit(P_stringLiteral(r^.rereferenced));
     end;
     new(result,create(value));
     result^.rereference;
     stringSingletons.put(value,result);
-    LeaveCriticalsection(singletonCs);
+    leaveCriticalSection(singletonCs);
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;       begin new(result,create(value));       end;
@@ -3804,7 +3804,7 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
-  InitCriticalSection(singletonCs);
+  initCriticalSection(singletonCs);
   stringSingletons.create(@disposeLiteral);
 
 FINALIZATION
@@ -3815,5 +3815,5 @@ FINALIZATION
   emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
-  DoneCriticalsection(singletonCs);
+  doneCriticalSection(singletonCs);
 end.

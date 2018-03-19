@@ -86,7 +86,7 @@ PROCEDURE TVarTreeViewForm.FormDestroy(Sender: TObject);
   begin
     if rootNode<>nil then dispose(rootnode,destroy);
     model.destroy;
-    VarTreeView.Items.Clear;
+    VarTreeView.items.clear;
   end;
 
 PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
