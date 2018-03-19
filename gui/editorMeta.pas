@@ -756,7 +756,7 @@ PROCEDURE T_editorMeta.guessLanguage(CONST fallback: T_language);
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   FUNCTION isDatastore:boolean;
     begin
-      result:=UpperCase(copy(ExtractFileExt(filename),2,9))='DATASTORE';
+      result:=uppercase(copy(extractFileExt(fileName),2,9))='DATASTORE';
     end;
   VAR datastore:boolean=false;
       defaultLoad:boolean=true;
@@ -772,10 +772,10 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
       if isDatastore then begin
         datastore:=true;
         if isBinaryDatastore(fileName,tempLines) then begin
-          editor.Lines.Clear;
-          for l in tempLines do editor.Lines.Add(l);
+          editor.lines.clear;
+          for l in tempLines do editor.lines.add(l);
           strictlyReadOnly:=true;
-          editor.ReadOnly:=true;
+          editor.readonly:=true;
           defaultLoad:=false;
         end;
         language:=LANG_MNH;

@@ -23,16 +23,16 @@ TYPE
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST adapters: P_adapters; CONST writePlainText:boolean);
   end;
 
-FUNCTION isBinaryDatastore(CONST filename:string; OUT dataAsStringList:T_arrayOfString):Boolean;
+FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
 IMPLEMENTATION
 
-FUNCTION isBinaryDatastore(CONST filename:string; OUT dataAsStringList:T_arrayOfString):Boolean;
+FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
   VAR wrapper:T_bufferedInputStreamWrapper;
       id:string;
       literal:P_literal=nil;
       dummyLocation:T_tokenLocation;
   begin
-    wrapper.createToReadFromFile(filename);
+    wrapper.createToReadFromFile(fileName);
     id:=wrapper.readAnsiString;
     result:=wrapper.allOkay;
     if result then begin
