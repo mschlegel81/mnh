@@ -1638,8 +1638,19 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threa
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
-      result:=newListLiteral;
-      for i:=0 to length(packageUses)-1 do result^.append(newListLiteral^.appendString(packageUses[i].id)^.appendString(packageUses[i].path),false);
+      result:=newListLiteral(length(packageUses));
+      for i:=0 to length(packageUses)-1 do result^.append(
+        newListLiteral^.appendString(packageUses[i].id)^
+                       .appendString(packageUses[i].path),false);
+    end;
+
+  FUNCTION includeList:P_listLiteral;
+    VAR i:longint;
+    begin
+      result:=newListLiteral(length(extendedPackages));
+      for i:=0 to length(extendedPackages)-1 do result^.append(
+        newListLiteral^.appendString(extendedPackages[i]^.getId)^
+                       .appendString(extendedPackages[i]^.getPath),false);
     end;
 
   FUNCTION rulesList:P_mapLiteral;
@@ -1656,6 +1667,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threa
                           .put('path'    ,getPath)^
                           .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
                           .put('uses'    ,usesList,false)^
+                          .put('includes',includeList,false)^
                           .put('declares',rulesList,false);
   end;
 
