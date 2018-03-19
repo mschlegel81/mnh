@@ -1,5 +1,5 @@
 ignoredCodes:=[1002,1008,1021,1022,1023,3018,3019,3100,3104,9015,9022,4055,4056,5044,5024];
-ignoredPatterns:=['dev/3rd_party',
+ignoredPatterns:=['3rd_party',
                   '/igSrc/ig_.*\(5024\).*"(ix|iy|c)"',
                   '/gui/.*\(5024\)',
                   '/core/.*\(5024\).*"(location|context)"',
