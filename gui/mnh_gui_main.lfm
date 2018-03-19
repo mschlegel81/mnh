@@ -3026,15 +3026,6 @@ object MnhForm: TMnhForm
     object subMenuCode: TMenuItem
       Caption = 'S&cripts'
       OnClick = miUtilityScriptRootClick
-      object editScriptRoot: TMenuItem
-        Caption = '&Edit scripts'
-      end
-      object miUtilityScriptRoot: TMenuItem
-        Caption = '&Utility scripts'
-      end
-      object miInserScriptRoot: TMenuItem
-        Caption = '&Insert scripts'
-      end
       object miEditGuiScripts: TMenuItem
         Caption = 'Edit &Script file'
         OnClick = miEditGuiScriptsClick

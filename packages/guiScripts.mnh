@@ -4,15 +4,15 @@
 pickFile(s:String)->ask('Pick file or directory').escape;
 
 //@SuppressUnusedWarning
-//@editScript=Trim trailing spaces
+//@editScript=edit/Trim trailing spaces
 trimTrailingSpaces(s:StringList)->s.trimRight;
 
 //@SuppressUnusedWarning
-//@editScript=Remove double blank lines
+//@editScript=edit/Remove double blank lines
 removeDoubleBlanks(s:StringList)->s.join("\n").replace("\n\n\n","\n\n").split("\n");
 
 //@SuppressUnusedWarning
-//@editScript=Sort lines and remove duplicates
+//@editScript=edit/Sort lines and remove duplicates
 sortLines(s:StringList)->s.unique.sort;
 
 unifiedDiff(aName:String,bName:String,aLines:StringList,bLines:StringList,additionalLines>=0)->begin
@@ -34,7 +34,7 @@ unifiedDiff(aName:String,bName:String,aLines:StringList,bLines:StringList,additi
 
 end;
 
-//@utility=diff (new editor)
+//@utility=diff/new editor
 //@newEdit
 //@language=diff
 editDiff(editorFile:String)->begin
@@ -43,11 +43,11 @@ editDiff(editorFile:String)->begin
 end;
 
 //@SuppressUnusedWarning
-//@utility=diff
+//@utility=diff/print
 editDiffPrint(editorFile:String)->printf("%s",editDiff(editorFile));
 
 //@SuppressUnusedWarning
-//@utility=find in all open files
+//@utility=search/find in all open files
 //@SuppressUnusedParameterWarning
 findInAll(editorFile:String)->begin
   local searchRegex:=ask('Please enter regex for search.');
@@ -58,11 +58,36 @@ findInAll(editorFile:String)->begin
 end;
 
 //@SuppressUnusedWarning
-//@utility=open all imported files
-openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent)['uses'].getInner(1).each(file,openInEditor(file));
+//@utility=dependencies/open all imported files
+openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent).useAndIncPaths.map(::openInEditor);
+
+private plain datastore scriptFolders:=void;
+
+findAllMnhScripts->begin
+  scriptFolders.isVoid OR (ask("Do you want to rescan all drives for .mnh files?\nIt might take a while if you choose yes.",['Yes','No'])=='Yes')
+  ? begin
+      local result:=(mnhInfo['targetOs']=='Linux'
+                     ? driveInfo.map({$x[1,'type']='fixed' ? $x[0] : void})&':'
+                     : ['/'])
+                    .pEach(root,allFiles(root,'*.mnh'),|);
+      scriptFolders:=result.extractFileDirectory.unique;
+      result;
+    end
+  : scriptFolders.pEach(root,allFiles(root,'*.mnh',false),|);
+end;
+
+private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','includes']).each(x,x.getInner(1),|);
 
 //@SuppressUnusedWarning
-//@utility=Compare folders (new editor)
+//@utility=dependencies/open all importing files
+openImporting(editorFile:String)->begin
+  print(editorFile);
+  findAllMnhScripts.minus([editorFile]).pEach(script,note(script),editorFile in inspect(script).useAndIncPaths ? script.openInEditor : void);
+  void;
+end;
+
+//@SuppressUnusedWarning
+//@utility=diff/Compare folders (new editor)
 //@newEdit
 //@language=diff
 //@SuppressUnusedParameterWarning
@@ -93,7 +118,7 @@ allFiles(mnhInfo['configDir'],'*.mnh')
      print('Demos for: ',demoGroup[0],"\n  ",demoGroup[1].join("\n  ")));
 
 //@SuppressUnusedWarning
-//@utility=file changes
+//@utility=diff/file changes
 //@newEdit
 //@language=diff
 editDiff2(editorFile:String)->
@@ -101,3 +126,26 @@ editDiff2(editorFile:String)->
               editorFile,
               fileLines(editorFile),
               editorContent(editorFile),2);
+
+//@SuppressUnusedWarning
+//@utility=Check for updates
+//@SuppressUnusedParameterWarning
+checkForUpdates(editorFile:String)->begin
+  local availableDownloads:=
+  httpGet(local downloadPage:='http://schlegel.bplaced.de/mnh/downloads.html')
+  .split("\n")
+  .matchComposite('a href="mnh5_.*\.zip"')
+  .flatten
+  .filter(::isString)
+  .replace(['a href="','"'],'');
+  local downloadableBuild:=availableDownloads.split("_").flatten.softCast.filter(::isNumeric).max;
+  downloadableBuild==mnhInfo['build']
+  ? print('Your version of MNH5 is up to date')
+  : begin
+      ask(format("Your version is %s, download version %s?",mnhInfo['build'],downloadableBuild),
+          ['Yes','No'])=="Yes"
+      ? openUrl(downloadPage)
+      : void;
+    end;
+  void;
+end;

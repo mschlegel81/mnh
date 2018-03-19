@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="40">
+    <Units Count="41">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -285,6 +285,11 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="renameDialog"/>
       </Unit39>
+      <Unit40>
+        <Filename Value="menuutil.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="menuUtil"/>
+      </Unit40>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
