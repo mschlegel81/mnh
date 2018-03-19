@@ -1,11 +1,11 @@
 //@demo_for=httpGet
 private ensureFile(path,URL)->fileExists(path) ? path : begin
   note('Fetching ',URL);
-  writeFile(path,httpGet(URL));
+  writeFile(path,httpGet(URL).decompress);
   path;
 end;
 
-kjv ->ensureFile(extractFileDirectory(myPath)&"/kjv.txt"     ,'http://www.gutenberg.org/cache/epub/10/pg10.txt');
+kjv ->ensureFile(extractFileDirectory(myPath)&"/kjv.txt"     ,'http://schlegel.bplaced.de/data/kjv.dat');
 dict->ensureFile(extractFileDirectory(myPath)&"/unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');
 editedDict->begin
   local path:=dict.changeFileExt('2.txt');
