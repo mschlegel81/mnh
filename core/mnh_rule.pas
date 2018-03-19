@@ -482,14 +482,14 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
 
   begin
     result:=newMapLiteral^
-      .put('type'    ,C_ruleTypeText[getRuleType])^
-      .put('location',getLocation       )^
-      .put('subrules',subrulesList,false)
+      .put(newSingletonString('type'    ),newSingletonString(C_ruleTypeText[getRuleType]),false)^
+      .put(newSingletonString('location'),newStringLiteral(getLocation                  ),false)^
+      .put(newSingletonString('subrules'),subrulesList               ,false)
       {$ifdef fullVersion}
-      ^.put('used',isIdResolved)
+      ^.put(newSingletonString('used'),newBoolLiteral(isIdResolved),false)
       {$endif};
     if includeFunctionPointer then
-    result^.put('function',getFunctionPointer(context,tt_localUserRule,getLocation),false);
+    result^.put(newSingletonString('function'),getFunctionPointer(context,tt_localUserRule,getLocation),false);
   end;
 
 FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext): P_mapLiteral;
@@ -505,28 +505,28 @@ FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context
       value:=namedValue.getValue;
       result:=newListLiteral(1);
       result^.append(newMapLiteral^
-        .put('pattern' ,'()'            )^
-        .put('location',getLocation     )^
-        .put('type'    ,privateOrPublic )^
-        .put('comment' ,''              )^
-        .put('body'    ,value^.toString )^
-        .put('comment'   ,meta.comment  )^
-        .put('attributes',meta.getAttributesLiteral,false),false);
+        .put(newSingletonString('pattern'   ),newSingletonString('()')           ,false)^
+        .put(newSingletonString('location'  ),newStringLiteral(getLocation)      ,false    )^
+        .put(newSingletonString('type'      ),newSingletonString(privateOrPublic),false)^
+        .put(newSingletonString('comment'   ),newStringLiteral('')               ,false)^
+        .put(newSingletonString('body'      ),newStringLiteral(value^.toString)  ,false)^
+        .put(newSingletonString('comment'   ),newStringLiteral(meta.comment)     ,false)^
+        .put(newSingletonString('attributes'),meta.getAttributesLiteral,false)   ,false);
       value^.unreference;
     end;
 
   begin
     result:=newMapLiteral^
-      .put('type'    ,C_ruleTypeText[getRuleType])^
-      .put('location',getLocation        )^
-      .put('subrules',subrulesList,false)
+      .put(newSingletonString('type'    ),newSingletonString(C_ruleTypeText[getRuleType]),false)^
+      .put(newSingletonString('location'),newStringLiteral(getLocation)                  ,false)^
+      .put(newSingletonString('subrules'),subrulesList                                   ,false)
       {$ifdef fullVersion}
-      ^.put('used',isIdResolved)
+      ^.put(newSingletonString('subrules'),newBoolLiteral(isIdResolved),false)
       {$endif};
     if includeFunctionPointer then begin
       if getRuleType=rt_customTypeCheck
-      then result^.put('function',getFunctionPointer(context,tt_customTypeRule,getLocation),false)
-      else result^.put('function',getFunctionPointer(context,tt_localUserRule ,getLocation),false);
+      then result^.put(newSingletonString('function'),getFunctionPointer(context,tt_customTypeRule,getLocation),false)
+      else result^.put(newSingletonString('function'),getFunctionPointer(context,tt_localUserRule ,getLocation),false);
     end;
   end;
 

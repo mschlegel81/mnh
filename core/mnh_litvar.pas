@@ -374,6 +374,7 @@ FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
 FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
+FUNCTION newSingletonString(CONST value: ansistring): P_stringLiteral;     inline;
 FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral;       inline;
 FUNCTION newListLiteral  (CONST a:P_literal;
                           CONST b:P_literal=nil)      : P_listLiteral; inline;
@@ -408,9 +409,11 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
 CONST maxSingletonInt=4000;
 IMPLEMENTATION
 VAR
-  errLit        : T_literal;
-  intLit        : array[-100..maxSingletonInt] of T_intLiteral;
-  voidLit       : T_voidLiteral;
+  errLit : T_literal;
+  intLit : array[-100..maxSingletonInt] of T_intLiteral;
+  voidLit: T_voidLiteral;
+  stringSingletons:specialize G_stringKeyMap<P_literal>;
+  singletonCs:TRTLCriticalSection;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
   FUNCTION headByMessageType(CONST messageType:T_messageType):P_collectionLiteral;
@@ -483,6 +486,20 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
       if length(value)=1 then result:=P_stringLiteral(charLit[value[1]]   .rereferenced)
                          else result:=P_stringLiteral(emptyStringSingleton.rereferenced);
     end else new(result, create(value));
+  end;
+
+FUNCTION newSingletonString(CONST value: ansistring): P_stringLiteral;     inline;
+  VAR r:P_literal;
+  begin
+    EnterCriticalsection(singletonCs);
+    if stringSingletons.containsKey(value,r) then begin
+      LeaveCriticalsection(singletonCs);
+      exit(P_stringLiteral(r^.rereferenced));
+    end;
+    new(result,create(value));
+    result^.rereference;
+    stringSingletons.put(value,result);
+    LeaveCriticalsection(singletonCs);
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;       begin new(result,create(value));       end;
@@ -3776,7 +3793,6 @@ FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CO
   end;
 
 VAR i: longint;
-
 INITIALIZATION
   errLit.init(lt_error);
   initialize(boolLit);
@@ -3788,6 +3804,8 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+  InitCriticalSection(singletonCs);
+  stringSingletons.create(@disposeLiteral);
 
 FINALIZATION
   errLit.destroy;
@@ -3797,4 +3815,5 @@ FINALIZATION
   emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
+  DoneCriticalsection(singletonCs);
 end.
