@@ -1,0 +1,56 @@
+type Key(k:IntList(2))->(k[0]>0) and (k[1]>0);
+
+compositeSeed(...)->([getEnv,systime,time]|...).serialize.sha256;
+
+//@SuppressUnusedWarning
+//*Returns a list: [private key,public key] to be used with function crypt
+//*Optional arguments are used for randomization
+generateKeyPair(keyLength>=16,...)->begin
+  local pair:=void;
+  while(isVoid(pair:=
+  constructKeyPairFrom@(
+    isaacRandomGenerator(
+      compositeSeed@...,
+      floor(2.0^(keyLength/2)))
+    .filter(::isPrime)
+    .head(2))));
+  pair;
+end;
+
+//*Checks if a private key and public key work together (safeguard for false negatives of the primality test)
+cryptoWorks(privateKey:Key,publicKey:Key)->privateKey[0]==publicKey[0] AND begin
+  local pt:=intRandom(privateKey[0],100);
+  pt==pt.pMap({publicKey .rsaCrypt(privateKey.rsaCrypt($x))})
+    ==pt.pMap({privateKey.rsaCrypt(publicKey .rsaCrypt($x))});
+end;
+
+private constructKeyPairFrom(p>2,q!=p)->begin
+  local lambda:=(p-1)*(q-1) div gcd(p-1,q-1);
+  local e:=65537;//intRandomGenerator(intRandom(2^64),2^17).filter({gcd(lambda,$e)==1}).head(1)[0];
+  local d:=modularInverse(e,lambda);
+  cryptoWorks([p*q,d],[p*q,e])
+  ?          [[p*q,d],[p*q,e]]
+  : void;
+end;
+
+rsaCrypt(key:Key,message>=0)->
+  message<key[0] ? powMod(message,key[1],key[0])
+                 : message.digits(key[0]).pMap({powMod($d,key[1],key[0])}).composeDigits(key[0]);
+
+
+main->begin
+  print('Creating key pair');
+  local keyPair:=constructKeyPairFrom(127,1009);
+  print(' private key: ',keyPair[0]);
+  print('  public key: ',keyPair[1]);
+  print("\nCipher: 102030405060708090 with public...");
+  local ct:=keyPair[1].rsaCrypt(102030405060708090);
+  print('        ',ct);
+  print('Decipher with private...');
+  print('        ',keyPair[0].rsaCrypt(ct));
+  print("\nCipher: 102030405060708090 with private...");
+  ct:=keyPair[0].rsaCrypt(102030405060708090);
+  print('        ',ct);
+  print('Decipher with public...');
+  print('        ',keyPair[1].rsaCrypt(ct));
+end;
