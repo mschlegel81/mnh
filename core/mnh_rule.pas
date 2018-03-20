@@ -371,17 +371,18 @@ FUNCTION T_typecheckRule.replaces(CONST param:P_listLiteral; CONST location:T_to
   lastRep:=firstRep;
 end}
   VAR lit:P_literal;
-      useParam:P_listLiteral;
 
   begin
     result:=true; //Typechecks always match and return true or false
-    if param=nil then useParam:=newListLiteral
-                 else useParam:=param;
+    if param=nil then begin
+      prepareFallbackResult;
+      exit(true);
+    end;
 
     if (P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT) or
        (TryEnterCriticalsection(rule_cs)=0) then begin
       //Work without cache:
-      if subrules[0]^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
+      if subrules[0]^.replaces(param,location,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
         P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
         if (firstRep<>nil) and
            (firstRep^.next=nil) and //single token, which is a boolean literal
@@ -396,7 +397,7 @@ end}
       //:Work without cache
     end else begin
       //Work with cache:
-      lit:=cache.get(useParam);
+      lit:=cache.get(param);
       if lit<>nil then begin
         //cache hit:
         lit^.rereference;
@@ -405,7 +406,7 @@ end}
         //:cache hit
       end else begin
         //cache miss:
-        if subrules[0]^.replaces(useParam,location,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
+        if subrules[0]^.replaces(param,location,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
           P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
           if (firstRep<>nil) and
              (firstRep^.next=nil) and //single token, which is a boolean literal
@@ -419,13 +420,12 @@ end}
             prepareFallbackResult;
           end;
         end else prepareFallbackResult;
-        cache.put(useParam,lit);
+        cache.put(param,lit);
         //:cache miss
       end;
       leaveCriticalSection(rule_cs);
       //:Work with cache
     end;
-    if param=nil then disposeLiteral(useParam);
   end;
 
 FUNCTION T_mutableRule.replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean;
