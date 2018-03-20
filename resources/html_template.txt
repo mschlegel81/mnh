@@ -676,6 +676,7 @@ It can also be used to assign a value to a mutable rule or a block-local variabl
 <!--end-->
 </code><br>
 This operator can also be employed to perform in-place modification of (potentially nested) lists and maps:<code>
+<!--mnh-->
    begin
      local x:=['a'..'f']; //returns x
      print(x);    //prints ['a','b','c','d','e','f']
@@ -686,6 +687,7 @@ This operator can also be employed to perform in-place modification of (potentia
      x[5]:='NEW'; //returns 'NEW' after adding a new element at index 5 (index 6 would result in an out-of-bounds error!)
      print(x);    //returns ['a','b','c','-','f','NEW']
    end;
+<!--end-->
 </code>
 </td></tr>
 </table>
@@ -805,6 +807,30 @@ If <code>someFunction</code> returns an expression, consider the following:<code
   out> 7
 <!--end-->
 </code>
+<li><b>Currying and Uncurrying</b><br>
+Calling a user defined function with a parameter list of the wrong length leads to Currying or Uncurrying.
+This is only applies if the parameter list is not empty and for rules which <ul><li>are user defined</li><li>have no optional parameters</li><li>have only one subrule or subrules of the same arity</li></ul>
+Examples:<code>
+<!--mnh-->
+       //Unary function returning an unary expression: 
+   in> f(x)->{3*x+$y};
+   in> f(1); 
+  out> {3*1+$y}
+   in> f(1)(2); 
+  out> 5
+   in> f(1,2); //uncurrying
+  out> 5
+       //Binary function returning a numeric:
+   in> g(x,y)->3*x+y;
+   in> g(1); //currying
+  out> {g(1,$0)}
+   in> g(1)(2);
+  out> 5
+   in> g(1, 2); 
+  out> 5
+<!--end-->
+</code>
+</li>
 </li><li><b>Visibility</b><br>
 Visibility is handled as in Pascal, i.e. a local function definition hides all imported functions with the same name. <br>
 If a function of the same name is defined in more than one used package, the definition in the last imported package hides previous definitions.<br>

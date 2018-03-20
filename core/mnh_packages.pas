@@ -1177,7 +1177,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         end;
         if t^.tokType      in C_openingBrackets then inc(level)
         else if t^.tokType in C_closingBrackets then dec(level);
-        if (level=0) and (t^.tokType=tt_assign) or (t^.tokType=tt_declare) then exit(t);
+        if (level=0) and (t^.tokType in [tt_assign,tt_declare]) then exit(t);
         t:=t^.next;
       end;
       result:=nil;
@@ -1307,7 +1307,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
         {$endif}
         if profile then context.timeBaseComponent(pc_interpretation);
 
-        if mainRule^.replaces(parametersForMain,packageTokenLocation(@self),t,dummy,true,@context)
+        if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@context)
         then context.reduceExpression(t)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           writeln(getHelpOnMain);

@@ -45,8 +45,8 @@ TYPE
       PROCEDURE clearCache; virtual;
       PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST location:T_tokenLocation; OUT firstRep,lastRep:P_token; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer):boolean; virtual; abstract;
-      FUNCTION evaluateToBoolean(CONST singleParameter:P_literal; CONST location:T_tokenLocation; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
+      FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
   end;
 
@@ -196,19 +196,21 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
   begin
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
     if result then adapters.raiseWarning('Unused rule '+id+
-    '; you can suppress this warning with '+COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE,lineLocation(declarationStart));
+    '; you can suppress this warning with '+
+    COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE,
+    lineLocation(declarationStart));
   end;
 {$endif}
 
 PROCEDURE T_abstractRule.clearCache; begin end;
 PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_adapters); begin end;
-FUNCTION T_abstractRule.evaluateToBoolean(CONST singleParameter:P_literal; CONST location:T_tokenLocation; CONST includePrivateRules:boolean; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
+FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;
   begin
     new(parList,create(1));
     parList^.append(singleParameter,true);
-    if replaces(parList,location,firstRep,lastRep,includePrivateRules,threadContextPointer)
+    if replaces(ruleTokenType,callLocation,parList,firstRep,lastRep,threadContextPointer)
     then begin
       result:=(firstRep<>     nil          ) and
               (firstRep^.next=nil          ) and

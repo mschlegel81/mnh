@@ -170,6 +170,7 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
+FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
 IMPLEMENTATION
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
@@ -817,6 +818,22 @@ FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST var
         last^.next:=newToken(ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
       end;
     end;
+  end;
+
+FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
+  FUNCTION newToken(CONST tokenText:T_idString; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
+    begin result:=context.recycler.newToken(location,tokenText,tokenType,ptr); end;
+  VAR last:P_token;
+      i:longint;
+  begin
+    result:=newToken('',tt_parList_constructor,givenParameters^.rereferenced);
+    last:=result;
+    for i:=givenParameters^.size to expectedArity-1 do begin
+      last^.next:=newToken('$'+intToStr(i-givenParameters^.size),tt_parameterIdentifier);
+      last:=last^.next;
+    end;
+    last^.next:=newToken('',tt_braceClose);
+    last:=last^.next;
   end;
 
 FUNCTION T_builtinExpression.getEquivalentInlineExpression(VAR context:T_threadContext): P_inlineExpression;

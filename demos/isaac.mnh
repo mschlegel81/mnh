@@ -1,0 +1,19 @@
+//*Encrypts an arbitrary literal
+isaacEncrypt(seed:Int,message:String)->begin
+  local gen:=isaacRandomGenerator(seed,256);
+  message.bytes.ord
+  .map({$b.bitXor(gen(),8)})
+  .byteToChar
+  .join;
+end;
+
+//*Returns a tuple [decryptedMessage,validationOk]
+isaacDecrypt(seed:Int,message:String)->begin
+  local gen:=isaacRandomGenerator(seed,256);
+  message.bytes.ord.map({$b.bitXor(gen(),8)}).byteToChar.join;
+end;
+
+main->begin
+  isaacEncrypt(1423,'This is a test').base64encode      .print;
+  isaacDecrypt(1423,'yaIJRrxEM+WRKIInxBw='.base64decode).print;
+end;
