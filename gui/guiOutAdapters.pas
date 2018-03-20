@@ -3,7 +3,7 @@ INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
      myStringUtil,myGenerics,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
-     mnh_plotForm, mnh_tables{$ifdef imig},mnh_imig_form{$endif},dynamicPlotting;
+     mnh_plotForm, mnh_tables{$ifdef imig},mnh_imig_form{$endif},dynamicPlotting,variableTreeViews;
 
 TYPE
   T_abstractMnhForm=class(TForm)
@@ -200,6 +200,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
           parentForm.triggerFastPolling;
         end;
         mt_displayTable: conditionalShowTables;
+        mt_displayTreeView: conditionalShowVarTrees;
         {$ifdef imig}
         mt_displayImage: DisplayImageForm.displayCurrentImage;
         {$endif}

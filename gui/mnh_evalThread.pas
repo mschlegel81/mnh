@@ -42,7 +42,6 @@ TYPE
       DESTRUCTOR destroy;
     public
       PROPERTY getName:string read name;
-      PROPERTY getScriptType:T_scriptType read scriptType;
   end;
 
   P_editScriptTask=^T_editScriptTask;
@@ -169,6 +168,7 @@ FUNCTION main(p:pointer):ptrint;
         successful:boolean=true;
     begin
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
+      P_runEvaluator(p)^.utilityScriptPackage^.finalize(context.threadContext^);
       context.afterEvaluation;
       if (context.adapters^.hasPrintOut) or
          (context.adapters^.hasNonSilentError) then begin

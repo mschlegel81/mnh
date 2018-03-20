@@ -163,6 +163,7 @@ TYPE
       PROCEDURE logEndOfEditScript(CONST data:pointer; CONST success:boolean);
       PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
       PROCEDURE logDisplayTable;
+      PROCEDURE logDisplayTreeView;
       {$ifdef imig}
       PROCEDURE logDisplayImage;
       {$endif}
@@ -695,6 +696,7 @@ PROCEDURE T_adapters.logEndOfEditScript(CONST data: pointer; CONST success: bool
     raiseCustomMessage(message(mtOfSuccess[success],C_EMPTY_STRING_ARRAY,C_nilTokenLocation,data));
   end;
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logDisplayTreeView;                                                              begin raiseCustomMessage(message(mt_displayTreeView               ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$ifdef imig}
 PROCEDURE T_adapters.logDisplayImage;
   begin

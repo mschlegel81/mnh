@@ -157,7 +157,7 @@ object MnhForm: TMnhForm
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
           Gutter.Visible = False
-          Gutter.Width = 57
+          Gutter.Width = 65
           Gutter.MouseActions = <>
           HideSelection = True
           InsertMode = False
@@ -606,7 +606,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -659,7 +659,7 @@ object MnhForm: TMnhForm
           OnMouseUp = assistanceSynEditMouseUp
           BorderStyle = bsNone
           Gutter.Visible = False
-          Gutter.Width = 57
+          Gutter.Width = 65
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1119,7 +1119,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1170,7 +1170,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 19
+          Gutter.Width = 27
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1618,7 +1618,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1770,7 +1770,7 @@ object MnhForm: TMnhForm
             TabStop = False
             BorderStyle = bsNone
             Gutter.Visible = False
-            Gutter.Width = 57
+            Gutter.Width = 65
             Gutter.MouseActions = <>
             Keystrokes = <            
               item
@@ -2214,7 +2214,7 @@ object MnhForm: TMnhForm
                 MouseActions = <>
               end
               object SynGutterLineNumber1: TSynGutterLineNumber
-                Width = 17
+                Width = 25
                 MouseActions = <>
                 MarkupInfo.Background = clBtnFace
                 MarkupInfo.Foreground = clNone
@@ -2266,7 +2266,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 19
+          Gutter.Width = 27
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -2714,7 +2714,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 17
+              Width = 25
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -3026,15 +3026,6 @@ object MnhForm: TMnhForm
     object subMenuCode: TMenuItem
       Caption = 'S&cripts'
       OnClick = miUtilityScriptRootClick
-      object editScriptRoot: TMenuItem
-        Caption = '&Edit scripts'
-      end
-      object miUtilityScriptRoot: TMenuItem
-        Caption = '&Utility scripts'
-      end
-      object miInserScriptRoot: TMenuItem
-        Caption = '&Insert scripts'
-      end
       object miEditGuiScripts: TMenuItem
         Caption = 'Edit &Script file'
         OnClick = miEditGuiScriptsClick

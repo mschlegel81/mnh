@@ -24,6 +24,7 @@ end;
 
 T_editorState=object(T_serializable)
   visible:boolean;
+  strictReadOnly:boolean;
   filePath:ansistring;
   fileAccessAge:double;
   changed:boolean;
@@ -517,6 +518,7 @@ PROCEDURE T_formPosition.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
 CONSTRUCTOR T_editorState.create;
   begin
     visible:=false;
+    strictReadOnly:=false;
     setLength(lines,0);
     filePath:='';
     fileAccessAge:=0;
@@ -540,7 +542,7 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
     for i:=0 to length(lines)-1 do dat.append(lines[i]);
   end;
 
-FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366166; end;
+FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366167; end;
 
 FUNCTION T_editorState.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
   VAR i:longint;
@@ -549,14 +551,13 @@ FUNCTION T_editorState.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):b
     visible:=true;
     filePath:=stream.readAnsiString;
     changed:=stream.readBoolean;
+    strictReadOnly:=stream.readBoolean;
     if changed then begin
       fileAccessAge:=stream.readDouble;
       setLength(lines,stream.readNaturalNumber);
       for i:=0 to length(lines)-1 do lines[i]:=stream.readAnsiString;
-     end else begin
-      lines:=fileLines(filePath,result);
-      if result then fileAge(filePath,fileAccessAge)
-                else visible:=false;
+    end else begin
+      lines:=C_EMPTY_STRING_ARRAY;
     end;
     setLength(markedLines,stream.readNaturalNumber);
     for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
@@ -573,6 +574,7 @@ PROCEDURE T_editorState.saveToStream(VAR stream:T_bufferedOutputStreamWrapper; C
     if filePath<>'' then filePath:=expandFileName(filePath);
     stream.writeAnsiString(filePath);
     stream.writeBoolean(changed);
+    stream.writeBoolean(strictReadOnly);
     if changed or saveAll then begin
       stream.writeDouble(fileAccessAge);
       stream.writeNaturalNumber(length(lines));

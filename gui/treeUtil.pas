@@ -11,8 +11,6 @@ TYPE
     DESTRUCTOR destroy; virtual; abstract;
   end;
 
-  { T_treeModel }
-
   T_treeModel=object
     private
       view:TTreeView;

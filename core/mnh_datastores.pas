@@ -23,7 +23,32 @@ TYPE
       PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST adapters: P_adapters; CONST writePlainText:boolean);
   end;
 
+FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
 IMPLEMENTATION
+
+FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
+  VAR wrapper:T_bufferedInputStreamWrapper;
+      id:string;
+      literal:P_literal=nil;
+      dummyLocation:T_tokenLocation;
+  begin
+    wrapper.createToReadFromFile(fileName);
+    id:=wrapper.readAnsiString;
+    result:=wrapper.allOkay;
+    if result then begin
+      try
+        literal:=newLiteralFromStream(@wrapper,dummyLocation,nil);
+        if wrapper.allOkay and (literal<>nil) then begin
+          dataAsStringList:=id+':=';
+          append(dataAsStringList,serializeToStringList(literal,dummyLocation,nil));
+        end else result:=false;
+      except
+        result:=false;
+      end;
+      if literal<>nil then disposeLiteral(literal);
+    end else dataAsStringList:=C_EMPTY_STRING_ARRAY;
+    wrapper.destroy;
+  end;
 
 PROCEDURE T_datastoreMeta.tryObtainName(CONST createIfMissing: boolean);
   VAR allStores:T_arrayOfString;

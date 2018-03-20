@@ -77,7 +77,6 @@ TYPE
       PROCEDURE clear(CONST includeSecondaries:boolean);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
-      PROCEDURE finalize(VAR context:T_threadContext);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
@@ -90,6 +89,7 @@ TYPE
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
+      PROCEDURE finalize(VAR context:T_threadContext);
 
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -1638,8 +1638,19 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threa
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
-      result:=newListLiteral;
-      for i:=0 to length(packageUses)-1 do result^.append(newListLiteral^.appendString(packageUses[i].id)^.appendString(packageUses[i].path),false);
+      result:=newListLiteral(length(packageUses));
+      for i:=0 to length(packageUses)-1 do result^.append(
+        newListLiteral^.appendString(packageUses[i].id)^
+                       .appendString(packageUses[i].path),false);
+    end;
+
+  FUNCTION includeList:P_listLiteral;
+    VAR i:longint;
+    begin
+      result:=newListLiteral(length(extendedPackages));
+      for i:=0 to length(extendedPackages)-1 do result^.append(
+        newListLiteral^.appendString(extendedPackages[i]^.getId)^
+                       .appendString(extendedPackages[i]^.getPath),false);
     end;
 
   FUNCTION rulesList:P_mapLiteral;
@@ -1656,6 +1667,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer:boolean; VAR context:T_threa
                           .put('path'    ,getPath)^
                           .put('source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^
                           .put('uses'    ,usesList,false)^
+                          .put('includes',includeList,false)^
                           .put('declares',rulesList,false);
   end;
 

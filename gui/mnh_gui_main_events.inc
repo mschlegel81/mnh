@@ -121,9 +121,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
     //Dynamic GUI components:
-    setLength(scriptMenuItems[st_edit  ],0);
-    setLength(scriptMenuItems[st_insert],0);
-    setLength(scriptMenuItems[st_util  ],0);
+    scriptMenu.create(subMenuCode,@miRunCustomUtilScript);
     setLength(historyMenuItems,0);
     setLength(recentFileMenuItems,0);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);

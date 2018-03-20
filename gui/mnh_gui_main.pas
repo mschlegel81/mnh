@@ -23,6 +23,7 @@ USES
   mnh_plotForm,
   mnh_splash,
   closeDialog,
+  variableTreeViews,
   //MNH:
   editorMeta,
   searchModel,
@@ -40,6 +41,7 @@ USES
   mnh_cmdLineInterpretation,
   mnh_evalThread,
   treeUtil,
+  menuUtil,
   guiOutAdapters,
   renameDialog;
 TYPE
@@ -61,7 +63,6 @@ TYPE
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
     MainMenu1:                 TMainMenu;
-    editScriptRoot,
     miLanguageRoot,
     MenuItem4,
     miAbout,
@@ -105,9 +106,7 @@ TYPE
     subMenuFile,
     subMenuHelp,
     subMenuSearch,
-    miInserScriptRoot,
     miEditGuiScripts,
-    miUtilityScriptRoot,
     submenuEditorAppearance,
     miStackTracing,
     miUserErrors,
@@ -167,7 +166,7 @@ TYPE
     quitPosted:boolean;
     focusEditorOnEditMouseUp:boolean;
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
-    scriptMenuItems:array[T_scriptType] of array of TMenuItem;
+    scriptMenu:T_submenuModel;
     historyMenuItems:array of TMenuItem;
     recentFileMenuItems:array of TMenuItem;
     variablesTreeViewModel:T_treeModel;
@@ -387,51 +386,21 @@ PROCEDURE TMnhForm.enableDynamicItems;
     miSave             .enabled:=not(locked);
     miSaveAs           .enabled:=not(locked);
     miReload           .enabled:=not(locked);
-    editScriptRoot     .enabled:=not(locked);
-    miInserScriptRoot  .enabled:=not(locked);
+    subMenuCode        .enabled:=not(locked);
     miEditGuiScripts   .enabled:=not(locked);
-    miUtilityScriptRoot.enabled:=not(locked);
     miFileHistoryRoot  .enabled:=not(locked);
     miReplace          .enabled:=not(locked);
     miOpenDemo         .enabled:=not(locked);
   end;
 
 PROCEDURE TMnhForm.updateScriptMenus;
-  VAR i,k:longint;
+  VAR i:longint;
       scriptList:T_scriptMetaArray;
-      script:P_scriptMeta;
-      scriptType:T_scriptType;
-      root:TMenuItem;
   begin
-    for scriptType in T_scriptType do begin
-      case scriptType of
-        st_edit: root:=editScriptRoot;
-        st_util: root:=miUtilityScriptRoot;
-        else     root:=miInserScriptRoot;
-      end;
-      for i:=0 to length(scriptMenuItems[scriptType])-1 do begin
-        root.remove(scriptMenuItems[scriptType][i]);
-        FreeAndNil(scriptMenuItems[scriptType][i]);
-      end;
-      setLength(scriptMenuItems[scriptType],0);
-    end;
+    scriptMenu.clear;
     scriptList:=runEvaluator.getScripts;
-    for i:=0 to length(scriptList)-1 do begin
-      script:=scriptList[i];
-      scriptType:=script^.getScriptType;
-      case scriptType of
-        st_edit: root:=editScriptRoot;
-        st_util: root:=miUtilityScriptRoot;
-        else     root:=miInserScriptRoot;
-      end;
-      k:=length(scriptMenuItems[scriptType]);
-      setLength(scriptMenuItems[scriptType],k+1);
-      scriptMenuItems[scriptType][k]:=TMenuItem.create(MainMenu1);
-      scriptMenuItems[scriptType][k].caption:=script^.getName;
-      scriptMenuItems[scriptType][k].Tag:=i;
-      scriptMenuItems[scriptType][k].OnClick:=@miRunCustomUtilScript;
-      root.add(scriptMenuItems[scriptType][k]);
-    end;
+    for i:=0 to length(scriptList)-1 do scriptMenu.addItem(scriptList[i]^.getName,i);
+    setLength(scriptList,0);
   end;
 
 PROCEDURE TMnhForm.updateFileHistory;
