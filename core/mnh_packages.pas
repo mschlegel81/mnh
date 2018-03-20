@@ -1307,7 +1307,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
         {$endif}
         if profile then context.timeBaseComponent(pc_interpretation);
 
-        if mainRule^.replaces(parametersForMain,packageTokenLocation(@self),t,dummy,true,@context)
+        if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@context)
         then context.reduceExpression(t)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           writeln(getHelpOnMain);
