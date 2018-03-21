@@ -322,10 +322,9 @@ FUNCTION T_ruleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; CONST call
   VAR sub:P_subruleExpression;
   begin
     result:=false;
-    for sub in subrules do if ((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or (sub^.isPublic)) and sub^.replaces(param,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
-      exit(true);
-    end;
-    result:=isCurryFallbackPossible(ruleTokenType,commonArity,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
+    for sub in subrules do if ((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or (sub^.isPublic)) and sub^.replaces(param,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then exit(true);
+    if (getId<>MAIN_RULE_ID)
+    then result:=isCurryFallbackPossible(ruleTokenType,commonArity,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
   end;
 
 FUNCTION T_protectedRuleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;

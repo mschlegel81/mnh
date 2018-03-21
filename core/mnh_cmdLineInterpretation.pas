@@ -116,7 +116,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
       directExecutionMode:boolean=false;
-
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
