@@ -317,21 +317,23 @@ FUNCTION join_impl intFuncSignature;
       end;
     end;
 
-  VAR resTxt:ansistring='';
-      joiner:ansistring='';
-      i:longint;
+  VAR i:longint;
       iter:T_arrayOfLiteral;
+      resultParts:T_arrayOfString;
   begin
     result:=nil;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
-      if params^.size=2 then joiner:=str1^.value;
       if (arg0^.literalType in C_listTypes+C_setTypes) then begin
         if collection0^.size=0 then exit(newStringLiteral(''));
         iter:=collection0^.iteratableList;
-        resTxt:=stringOfLit(iter[0]);
-        for i:=1 to length(iter)-1 do resTxt:=resTxt+joiner+stringOfLit(iter[i]);
+        setLength(resultParts,length(iter));
+        for i:=0 to length(iter)-1 do resultParts[i]:=stringOfLit(iter[i]);
         disposeLiteral(iter);
-        result:=newStringLiteral(resTxt);
+
+        if params^.size=2
+        then result:=newStringLiteral(join(resultParts,str1^.value))
+        else result:=newStringLiteral(join(resultParts,''         ));
+        setLength(resultParts,0);
       end else if (arg0^.literalType in C_scalarTypes) then
         result:=newStringLiteral(stringOfLit(arg0));
     end;

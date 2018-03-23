@@ -84,7 +84,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
 
 PROCEDURE TVarTreeViewForm.FormDestroy(Sender: TObject);
   begin
-    if rootNode<>nil then dispose(rootnode,destroy);
+    if rootNode<>nil then dispose(rootNode,destroy);
     model.destroy;
     VarTreeView.items.clear;
   end;
@@ -103,7 +103,7 @@ PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption:
       dispose(rootNode,destroy);
       VarTreeView.items.clear;
     end;
-    new(rootnode,create(L,false));
+    new(rootNode,create(L,false));
     node:=VarTreeView.items.add(nil,rootNode^.toString);
     node.data:=rootNode;
     model.addChildren(node);

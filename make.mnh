@@ -76,12 +76,15 @@ private ensureBuildNumber->begin
     end;
 end;
 
+USE oeis_server;
+
 private myMove(source,dest:String)->fileExists(source) ? begin
   local tries:=3;
   while(fileExists(dest) AND tries>0,
     deleteFile(dest) ? void : begin
     tries-=1;
-    sleep(0.1);
+    isIpcServerRunning(oeis_server.ipcId) AND sendIpcRequest(oeis_server.ipcId,['stop']);
+    sleep(0.5);
   end);
   fileExists(dest) ? fail('Failed deleting '+dest) : void;
   moveFile(source,dest) ? void : fail('File move '+source+' -> '+dest+' failed!');

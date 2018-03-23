@@ -61,8 +61,8 @@ FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters; CONST messageTail:ansistring='');
 IMPLEMENTATION
-
 VAR mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
+TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
 
 FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
   VAR meta:T_builtinFunctionMetaData;
@@ -122,27 +122,45 @@ FUNCTION clearPrint_imp intFuncSignature;
     result:=newVoidLiteral;
   end;
 
-FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:boolean=true):T_arrayOfString; inline;
+FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatTabsOption):T_arrayOfString; {$ifndef DEBUGMODE} inline; {$endif}
+  CONST TAB          =1;
+        LINEBREAK    =2;
+        TAB_AND_BREAK=3;
   VAR i:longint;
-      resultText:string;
+      resultParts:T_arrayOfString;
+      tl:byte=0;
   begin
-    resultText:='';
-    if params<>nil then for i:=0 to params^.size-1 do case params^.value[i]^.literalType of
-      lt_boolean,lt_int,lt_real,lt_string,lt_expression:
-        resultText:=resultText + P_scalarLiteral(params^.value[i])^.stringForm;
-      lt_list..lt_emptyMap:
-        resultText:=resultText + params^.value[i]^.toString;
+    if params<>nil then begin
+      setLength(resultParts,params^.size);
+      for i:=0 to params^.size-1 do begin
+        case params^.value[i]^.literalType of
+          lt_boolean,lt_int,lt_real,lt_string,lt_expression:
+            resultParts[i]:=P_scalarLiteral(params^.value[i])^.stringForm;
+          lt_list..lt_emptyMap:
+            resultParts[i]:=params^.value[i]^.toString;
+        end;
+      end;
     end;
-    if doFormatTabs
-    then result:=formatTabs(split(resultText))
-    else result:=resultText;
+    if doFormatTabs=ft_never then exit(join(resultParts,''));
+    result:=join(resultParts,'');
+    if doFormatTabs=ft_always then tl:=TAB_AND_BREAK;
+    i:=1;
+    while (tl<>TAB_AND_BREAK) and (i<=length(result[0])) do begin
+      case result[0][i] of
+        C_lineBreakChar   : tl:=tl or LINEBREAK;
+        C_tabChar         : tl:=tl or TAB;
+        C_invisibleTabChar: tl:=TAB_AND_BREAK;
+      end;
+      inc(i);
+    end;
+    if tl=TAB_AND_BREAK then result:=formatTabs(split(result[0]));
   end;
 
 FUNCTION print_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('print',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.adapters^.printOut(getStringToPrint(params));
+    context.adapters^.printOut(getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -151,7 +169,7 @@ FUNCTION printDirect_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('printDirect',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.adapters^.printDirect(getStringToPrint(params,false));
+    context.adapters^.printDirect(getStringToPrint(params,ft_never));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -159,14 +177,14 @@ FUNCTION printDirect_imp intFuncSignature;
 FUNCTION note_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('note',tokenLocation,[se_output])) then exit(nil);
-    context.adapters^.raiseUserNote(getStringToPrint(params),tokenLocation);
+    context.adapters^.raiseUserNote(getStringToPrint(params,ft_always),tokenLocation);
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('warn',tokenLocation,[se_output])) then exit(nil);
-    context.adapters^.raiseUserWarning(getStringToPrint(params),tokenLocation);
+    context.adapters^.raiseUserWarning(getStringToPrint(params,ft_always),tokenLocation);
     result:=newVoidLiteral;
   end;
 
@@ -174,7 +192,7 @@ FUNCTION fail_impl intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then context.adapters^.raiseUserError('Fail.',tokenLocation)
     else begin
-      context.adapters^.raiseUserError(getStringToPrint(params),tokenLocation);
+      context.adapters^.raiseUserError(getStringToPrint(params,ft_always),tokenLocation);
       result:=newVoidLiteral;
     end;
     result:=nil;

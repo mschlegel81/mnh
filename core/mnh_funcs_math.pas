@@ -788,21 +788,26 @@ FUNCTION primes_impl intFuncSignature;
   end;
 
 FUNCTION digits_impl intFuncSignature;
-  VAR base:T_bigInt;
-      useDecimalBase:boolean=true;
+  VAR bigBase:T_bigInt;
+      smallBase:longint=10;
+
+  FUNCTION smallDigitsOf(CONST i:T_bigInt):P_listLiteral;
+    VAR digits:T_arrayOfLongint;
+        k:longint;
+    begin
+      digits:=i.getDigits(smallBase);
+      result:=newListLiteral(length(digits));
+      for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
+      setLength(digits,0);
+    end;
+
   FUNCTION digitsOf(CONST i:T_bigInt):P_listLiteral;
     VAR digits:T_arrayOfBigint;
         k:longint;
     begin
-      digits:=bigDigits(i,base);
+      digits:=bigDigits(i,bigBase);
       result:=newListLiteral(length(digits));
-      if base.compare(maxSingletonInt) in [CR_EQUAL,CR_LESSER]
-      then begin
-        for k:=length(digits)-1 downto 0 do begin
-          result^.appendInt(digits[k].toInt);
-          digits[k].destroy;
-        end;
-      end else for k:=length(digits)-1 downto 0 do result^.append(newIntLiteral(digits[k]),false);
+      for k:=length(digits)-1 downto 0 do result^.append(newIntLiteral(digits[k]),false);
       setLength(digits,0);
     end;
 
@@ -813,22 +818,32 @@ FUNCTION digits_impl intFuncSignature;
       (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
       ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
       if params^.size=2 then begin
-        base:=int1^.value;
-        if (base.compare(1) in [CR_LESSER,CR_EQUAL]) then begin
+        bigBase:=int1^.value;
+        if (bigBase.compare(1) in [CR_LESSER,CR_EQUAL]) then begin
           context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
           exit(nil);
         end;
-        useDecimalBase:=false;
-      end else base.fromInt(10);
-
-      if arg0^.literalType=lt_int
-      then result:=digitsOf(int0^.value)
-      else begin
-        result:=collection0^.newOfSameType(true);
-        for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
+        if bigBase.canBeRepresentedAsInt32()
+        then smallBase:=bigBase.toInt
+        else smallBase:=-1;
       end;
 
-      if useDecimalBase then base.destroy;
+      if smallBase>0 then begin
+        if arg0^.literalType=lt_int
+        then result:=smallDigitsOf(int0^.value)
+        else begin
+          result:=collection0^.newOfSameType(true);
+          for j:=0 to list0^.size-1 do collResult^.append(smallDigitsOf(P_intLiteral(list0^.value[j])^.value),false);
+        end;
+      end else begin
+        if arg0^.literalType=lt_int
+        then result:=digitsOf(int0^.value)
+        else begin
+          result:=collection0^.newOfSameType(true);
+          for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
+        end;
+      end;
+
     end;
   end;
 

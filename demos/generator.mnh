@@ -4,12 +4,7 @@ positiveOrVoid(i)->void;
 
 //@demo_for=stateful expressions
 //*Generates a series of powers
-powerGen(power:Int)->{begin
-  local p:=power;
-  local i:=0;
-save;
-  positiveOrVoid((i+=1)^p);
-end}.toGenerator;
+powerGen(power:Int)->rangeGenerator(1,2^63-1)^power;
 
 //*Generates a series of values which are square numbers but not cubic numbers
 squareButNotCubic->{begin
