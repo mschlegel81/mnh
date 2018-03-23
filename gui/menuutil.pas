@@ -72,7 +72,7 @@ PROCEDURE T_submenuModel.addItem(CONST paths: T_arrayOfString; CONST Tag: ptrint
       sub^.item.Tag:=Tag;
     end else begin
       //submenu root
-      setLength(pathtail,length(paths)-1);
+      setLength(pathTail,length(paths)-1);
       for k:=0 to length(pathTail)-1 do pathTail[k]:=paths[k+1];
       sub^.addItem(pathTail,Tag);
     end;

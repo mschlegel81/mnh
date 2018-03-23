@@ -9,7 +9,6 @@ USES sysutils, Classes, simpleipc, //RTL
      mnh_funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
-FUNCTION isServerRunning(CONST serverId:string):boolean;
 IMPLEMENTATION
 TYPE
   P_myIpcServer=^T_myIpcServer;

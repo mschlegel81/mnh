@@ -828,7 +828,7 @@ FUNCTION digits_impl intFuncSignature;
         else smallBase:=-1;
       end;
 
-      if smallbase>0 then begin
+      if smallBase>0 then begin
         if arg0^.literalType=lt_int
         then result:=smallDigitsOf(int0^.value)
         else begin
