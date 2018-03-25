@@ -5,20 +5,8 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_constants,
      mnh_fileWrappers,
      mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,mnh_settings,{$endif}
-     mnh_contexts,
-     mnh_funcs,
      mnh_funcs_mnh,
-     mnh_funcs_server,
-     mnh_funcs_ipc,
-     mnh_funcs_types,
-     mnh_funcs_math,
-     mnh_funcs_strings,
-     mnh_funcs_list,
-     mnh_funcs_system,
-     mnh_funcs_files,
-     mnh_funcs_regex,
-     mnh_funcs_xml,
-     mnh_funcs_format,
+     mnh_contexts,
      mnh_packages,
      mnh_evaluation;
 
@@ -101,8 +89,8 @@ PROCEDURE displayHelp;
     {$ifdef fullVersion}
     writeln('  -install          update packes and demos, ensure installation directory and file associations');
     writeln('  -uninstall        remove packes and demos, remove installation directory and file associations');
-    writeln('  -profile          do a profiling run - implies +time');
-    writeln('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
+    writeln('  -profile          do a profiling run - implies -vt');
+    writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
     {$endif}
     writeln('  -out <filename>[(options)] write output to the given file; Options are verbosity options');
     writeln('     if no options are given, the global output settings will be used');

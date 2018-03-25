@@ -211,8 +211,8 @@ main(target:String)->begin
     testAfterBuild ? {buildExe($B) orElse testExe($B) orElse true}
                    : {buildExe($B) orElse true};
 
-  BUILDS.each(B,isSameFileName(B[2],tgt) OR tgt=B[1] ? buildAndTest(B) orElse true : false,OR) OR
-  BUILDS.each(B,isSimilarFile (B[2],tgt)             ? buildAndTest(B) orElse true : false,or)
+  BUILDS.each(B,isSameFileName(B[2],tgt) OR tgt=B[1] ? buildAndTest(B) OR fail : false,OR) OR
+  BUILDS.each(B,isSimilarFile (B[2],tgt)             ? buildAndTest(B) OR fail : false,or)
   ? void
   : fail("Don't know what to do with: "+target+". Accepted parameters are\n"+(acceptedMainParameters | VALID_TARGETS).join("\n"));
 end;
