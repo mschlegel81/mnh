@@ -263,7 +263,8 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
       for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.adapters^.raiseWarning('Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation),rule^.getLocation);
     end else begin
       disposeLiteral(subrules[i]);
-      context.adapters^.raiseWarning('Overriding rule '+rule^.getId,rule^.getLocation);
+      if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE))
+      then context.adapters^.raiseWarning('Overriding rule '+rule^.getId+'; you can suppress this warning with '+COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+OVERRIDE_ATTRIBUTE,rule^.getLocation);
     end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
