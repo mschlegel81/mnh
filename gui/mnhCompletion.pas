@@ -92,6 +92,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
         wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE);
         wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE);
         wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+EXECUTE_AFTER_ATTRIBUTE);
+        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+OVERRIDE_ATTRIBUTE);
       end else begin
         isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
                   or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
