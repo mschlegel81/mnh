@@ -1,7 +1,3 @@
-//*Used pro forma to avoid infinite loops
-positiveOrVoid(i>0)->i;
-positiveOrVoid(i)->void;
-
 //@demo_for=stateful expressions
 //*Generates a series of powers
 powerGen(power:Int)->rangeGenerator(1,2^63-1)^power;
