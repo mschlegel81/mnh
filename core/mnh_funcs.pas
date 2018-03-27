@@ -123,12 +123,9 @@ FUNCTION clearPrint_imp intFuncSignature;
   end;
 
 FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatTabsOption):T_arrayOfString; {$ifndef DEBUGMODE} inline; {$endif}
-  CONST TAB          =1;
-        LINEBREAK    =2;
-        TAB_AND_BREAK=3;
   VAR i:longint;
       resultParts:T_arrayOfString;
-      tl:byte=0;
+      tabOrBreak:boolean=false;
   begin
     if params<>nil then begin
       setLength(resultParts,params^.size);
@@ -143,17 +140,13 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
     end;
     if doFormatTabs=ft_never then exit(join(resultParts,''));
     result:=join(resultParts,'');
-    if doFormatTabs=ft_always then tl:=TAB_AND_BREAK;
+    tabOrBreak:=(doFormatTabs=ft_always);
     i:=1;
-    while (tl<>TAB_AND_BREAK) and (i<=length(result[0])) do begin
-      case result[0][i] of
-        C_lineBreakChar   : tl:=tl or LINEBREAK;
-        C_tabChar         : tl:=tl or TAB;
-        C_invisibleTabChar: tl:=TAB_AND_BREAK;
-      end;
+    while (not(tabOrBreak)) and (i<=length(result[0])) do begin
+      tabOrBreak:=tabOrBreak or (result[0][i] in [C_lineBreakChar,C_tabChar,C_invisibleTabChar]);
       inc(i);
     end;
-    if tl=TAB_AND_BREAK then result:=formatTabs(split(result[0]));
+    if tabOrBreak then result:=formatTabs(split(result[0]));
   end;
 
 FUNCTION print_imp intFuncSignature;
