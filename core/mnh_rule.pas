@@ -567,7 +567,7 @@ FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context
       .put(newSingletonString('location'),newStringLiteral(getLocation)                  ,false)^
       .put(newSingletonString('subrules'),subrulesList                                   ,false)
       {$ifdef fullVersion}
-      ^.put(newSingletonString('subrules'),newBoolLiteral(isIdResolved),false)
+      ^.put(newSingletonString('used'),newBoolLiteral(isIdResolved),false)
       {$endif};
     if includeFunctionPointer then begin
       if getRuleType=rt_customTypeCheck
