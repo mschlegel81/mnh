@@ -1189,7 +1189,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     if statement.firstToken=nil then exit;
     if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
 
-    if not(context.adapters^.noErrors) then begin
+    if (usecase<>lu_forCodeAssistance) and not(context.adapters^.noErrors) then begin
       context.recycler.cascadeDisposeToken(statement.firstToken);
       exit;
     end;
@@ -1215,7 +1215,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       context.callStackPush(@self,pc_declaration,pseudoCallees);
       {$endif}
       if profile then context.timeBaseComponent(pc_declaration);
-      if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
+      if not ((assignmentToken^.next<>nil) and (usecase=lu_forCodeAssistance) or (assignmentToken^.next^.areBracketsPlausible(context.adapters^))) then begin
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;
@@ -1383,7 +1383,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_threadConte
     end;
     if profile then context.timeBaseComponent(pc_tokenizing);
 
-    while (context.adapters^.noErrors) and (stmt.firstToken<>nil) do begin
+    while ((usecase=lu_forCodeAssistance) or (context.adapters^.noErrors)) and (stmt.firstToken<>nil) do begin
       interpret(stmt,usecase,context{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},localIdInfos{$endif});
