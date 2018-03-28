@@ -62,6 +62,7 @@ PROCEDURE initIntrinsicRuleList;
       intrinsicRulesForCompletion.put(C_modifierInfo[m].name);
     for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
       intrinsicRulesForCompletion.put(C_specialWordInfo[i].txt);
+    intrinsicRulesForCompletion.put('?');
     intrinsicRulesForCompletion_ready:=true;
   end;
 
@@ -117,7 +118,7 @@ CONSTRUCTOR T_completionLogic.create;
     SynCompletion.OnCodeCompletion:=@SynCompletionCodeCompletion;
     SynCompletion.OnExecute       :=@SynCompletionExecute;
     SynCompletion.OnSearchPosition:=@SynCompletionSearchPosition;
-    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:?<>=@';
+    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:<>=@';
   end;
 
 DESTRUCTOR T_completionLogic.destroy;
@@ -141,7 +142,12 @@ PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourc
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: SynCompletionCodeCompletion value: ',value);
     writeln(stdErr,'        DEBUG:                       sourceValue: ',sourceValue);
+    writeln(stdErr,'        DEBUG:                       sourceStart: ',SourceStart.x);
     {$endif}
+    if value='begin' then begin
+      value:=value+C_lineBreakChar+StringOfChar(' ',SourceStart.x-1)+'end';
+      exit;
+    end;
     if (length(value)>=1) and (value[1] in delimiters) then begin
       for i:=length(sourceValue) downto 1 do
         if copy(sourceValue,i,length(sourceValue)-i+1)=
