@@ -68,13 +68,6 @@ FUNCTION beep_imp intFuncSignature;
       result:=newVoidLiteral;
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: beep by function call'); {$endif}
       sysutils.beep;
-    {$ifdef Windows}
-    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      result:=newVoidLiteral;
-      {$ifdef debugMode} writeln(stdErr,'        DEBUG: beep by function call'); {$endif}
-      windows.beep(int0^.value.toInt,
-                   int1^.value.toInt);
-    {$endif}
     end;
   end;
 {$ifdef Windows}
@@ -225,7 +218,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  ,'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1,'intRandom(k);//Returns an integer random value in range [0,k-1]#random(k,n);//Returns a list of n integer random values in range [0,k-1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   ,'systime;//Returns the current time as a real number');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  ,'beep;//Makes a beep'{$ifdef Windows}+'#beep(freq:int,duration:int);//Makes a beep of given frequency and duration'{$endif});
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  ,'beep;//Makes a beep');
   {$ifdef Windows}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   ,'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).');
   {$endif}
