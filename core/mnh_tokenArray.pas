@@ -289,8 +289,8 @@ DESTRUCTOR T_enhancedToken.destroy;
 FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST newName: string): boolean;
   VAR is_:string[2]='';
   begin
-    if (referencedLocation<>token^.location) then case token^.tokType of
-      tt_identifier         ,//: exit(false);
+    case token^.tokType of
+      tt_identifier         ,
       tt_parameterIdentifier,
       tt_localUserRule      ,
       tt_importedUserRule   ,

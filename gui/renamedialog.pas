@@ -49,6 +49,7 @@ PROCEDURE TrenameForm.NewNameEditKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['A'..'Z','a'..'z',#8]) or (length(NewNameEdit.text)>0) and (key in ['0'..'9','_'])
     then exit
+    else if key=#13 then ModalResult:=mrOk
     else key:=#0;
   end;
 
