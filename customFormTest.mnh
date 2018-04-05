@@ -1,23 +1,39 @@
+//@SuppressUnusedWarning
 newButton  ->[['type','button'  ]].toMap;
+//@SuppressUnusedWarning
 newEdit    ->[['type','edit'    ]].toMap;
+//@SuppressUnusedWarning
 newCheckbox->[['type','checkbox']].toMap;
+//@SuppressUnusedWarning
 newLabel   ->[['type','label'   ]].toMap;
+//@SuppressUnusedWarning
 newPanel   ->[['type','panel'   ]].toMap;
+//@SuppressUnusedWarning
 alLeft  (m:Map)->[['align','left'  ]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 alRight (m:Map)->[['align','right' ]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 alTop   (m:Map)->[['align','top'   ]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 alBottom(m:Map)->[['align','bottom']].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 withCaption(m:Map,caption)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 withParts(m:Map,components:List)->[['parts',components]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
 bind(m:Map,id:String)->[['bind',id]].toMap.mergeMaps(m,::orElse);
 
 begin
-  local checked:=false;
   local text:='Click me';
   showDialog('Test',
     newPanel.withParts([
+      newPanel.alRight.withParts([newLabel.withCaption('Right')]),
+      newPanel.withParts([
+
       newLabel.withCaption({try({interpret(text)},{$0.head.trailing})})
                .withAction({print('Button clicked')}),
       newButton.alTop.withCaption({'A '+formatTime('c',systime)}),
@@ -26,5 +42,5 @@ begin
       newEdit.alTop
              .withCaption('Input')
              .bind('text')
-             ]));
+             ])]));
 end;

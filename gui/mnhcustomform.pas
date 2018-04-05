@@ -34,7 +34,7 @@ TYPE
       bindingValue:P_literal;
     end;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE postAction(CONST param:P_literal);
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
     PROCEDURE update; virtual; abstract;
@@ -46,7 +46,7 @@ TYPE
     editPanel:TPanel;
     editLabel:TLabel;
     edit:TEdit;
-    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE OnChange(Sender: TObject);
@@ -55,14 +55,14 @@ TYPE
   P_labelMeta=^T_labelMeta;
   T_labelMeta=object(T_guiElementMeta)
     mylabel:TLabel;
-    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
   end;
 
   P_checkboxMeta=^T_checkboxMeta;
   T_checkboxMeta=object(T_guiElementMeta)
     checkbox:TCheckBox;
-    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
   end;
@@ -70,7 +70,7 @@ TYPE
   P_buttonMeta=^T_buttonMeta;
   T_buttonMeta=object(T_guiElementMeta)
     button:TButton;
-    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
   end;
@@ -81,10 +81,11 @@ TYPE
   private
     setupParam:P_mapLiteral;
     setupLocation:T_tokenLocation;
+    setupContext:P_threadContext;
     meta:array of P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
-    PROCEDURE initialize(VAR adapters:T_adapters);
+    PROCEDURE initialize();
   public
     PROCEDURE processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
     PROCEDURE updateComponents;
@@ -104,7 +105,7 @@ PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
     leaveCriticalSection(scriptedFormCs);
   end;
 
-FUNCTION createScriptedForm(CONST title:string; CONST definition:P_mapLiteral; CONST errorLocation:T_tokenLocation):TscriptedForm;
+FUNCTION createScriptedForm(CONST title:string; CONST definition:P_mapLiteral; CONST context:P_threadContext; CONST errorLocation:T_tokenLocation):TscriptedForm;
   begin
     enterCriticalSection(scriptedFormCs);
     if scriptedForm<>nil then begin
@@ -115,6 +116,7 @@ FUNCTION createScriptedForm(CONST title:string; CONST definition:P_mapLiteral; C
     registerForm(scriptedForm,false,true);
     scriptedForm.setupLocation:=errorLocation;
     scriptedForm.setupParam:=definition;
+    scriptedForm.setupContext:=context;
     scriptedForm.caption:=title;
     definition^.rereferenced;
     scriptedForm.displayPending:=true;
@@ -141,7 +143,7 @@ FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
     if result^.literalType=lt_void then disposeLiteral(result);
   end;
 
-CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; CONST adapters: P_adapters);
+CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
   VAR tmp:P_literal;
   begin
     with config do begin
@@ -161,7 +163,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_t
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then config.action:=P_expressionLiteral(tmp)
-      else adapters^.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
+      else context.adapters^.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
     end;
 
     tmp:=mapGet(def,CAPTION_KEY);
@@ -169,7 +171,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_t
       case tmp^.literalType of
         lt_expression: config.caption:=P_expressionLiteral(tmp);
         lt_string    : state .caption:=P_stringLiteral(tmp)^.value;
-        else adapters^.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
+        else context.adapters^.raiseError('caption is: '+tmp^.typeString+'; must be string or expression',location);
       end;
     end;
 
@@ -178,7 +180,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_t
       case tmp^.literalType of
         lt_expression: config.enabled:=P_expressionLiteral(tmp);
         lt_boolean   : state .enabled:=P_boolLiteral(tmp)^.value;
-        else adapters^.raiseError('enabled is: '+tmp^.typeString+'; must be boolean or expression',location);
+        else context.adapters^.raiseError('enabled is: '+tmp^.typeString+'; must be boolean or expression',location);
       end;
     end;
 
@@ -186,7 +188,8 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_t
     if tmp<>nil then begin
       if tmp^.literalType=lt_string then begin
         config.bindingTo:=P_stringLiteral(tmp)^.value;
-      end else adapters^.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
+        state.bindingValue:=context.valueStore^.getVariableValue(config.bindingTo);
+      end else context.adapters^.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
       disposeLiteral(tmp);
     end;
   end;
@@ -248,15 +251,6 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
     end;
   end;
 
-PROCEDURE doAlign(component:TControl; CONST Align:TAlign; CONST setAutosize:boolean);
-  begin
-    component.Align:=alNone;
-    component.Align:=Align;
-    if setAutosize then begin
-      component.AutoSize:=Align<>alClient;
-    end;
-  end;
-
 DESTRUCTOR T_guiElementMeta.destroy;
   begin
     if config.action  <>nil then disposeLiteral(config.action );
@@ -287,12 +281,12 @@ FUNCTION getAlignment(CONST def:P_mapLiteral; CONST location:T_tokenLocation; CO
     disposeLiteral(alignLit);
   end;
 
-CONSTRUCTOR T_editMeta.create(CONST parent:TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; CONST adapters: P_adapters);
+CONSTRUCTOR T_editMeta.create(CONST parent:TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
   begin
-    inherited create(def,location,adapters);
+    inherited create(def,location,context);
     editPanel:=TPanel.create(parent);
     editPanel.parent:=parent;
-    editPanel.Align:=getAlignment(def,location,adapters);
+    editPanel.Align:=getAlignment(def,location,context.adapters);
     editPanel.AutoSize:=editPanel.Align<>alClient;
 
     editPanel.BorderWidth:=3;
@@ -313,7 +307,14 @@ CONSTRUCTOR T_editMeta.create(CONST parent:TWinControl; CONST def: P_mapLiteral;
     edit.enabled:=state.enabled;
     edit.text:='';
     if (config.action<>nil) then edit.OnKeyDown:=@OnKeyDown;
-    if (config.bindingTo<>'') then edit.OnChange:=@OnChange;
+    if (config.bindingTo<>'') then begin
+      edit.OnChange:=@OnChange;
+      if state.bindingValue<>nil then begin
+        if state.bindingValue^.literalType=lt_string
+        then edit.Text:=P_stringLiteral(state.bindingValue)^.value
+        else edit.text:=                state.bindingValue^.toString();
+      end;
+    end;
   end;
 
 PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -336,12 +337,12 @@ PROCEDURE T_editMeta.update;
     edit.enabled:=state.enabled;
   end;
 
-CONSTRUCTOR T_labelMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; CONST adapters: P_adapters);
+CONSTRUCTOR T_labelMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
   begin
-    inherited create(def,location,adapters);
+    inherited create(def,location,context);
     mylabel:=TLabel.create(parent);
     mylabel.parent:=parent;
-    mylabel.Align:=getAlignment(def,location,adapters);
+    mylabel.Align:=getAlignment(def,location,context.adapters);
 
     mylabel.AutoSize:=mylabel.Align<>alClient;
   end;
@@ -352,14 +353,15 @@ PROCEDURE T_labelMeta.update;
     mylabel.enabled:=state.enabled;
   end;
 
-CONSTRUCTOR T_checkboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; CONST adapters: P_adapters);
+CONSTRUCTOR T_checkboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
   begin
-    inherited create(def,location,adapters);
+    inherited create(def,location,context);
     checkbox:=TCheckBox.create(parent);
     checkbox.parent:=parent;
-    checkbox.Align:=getAlignment(def,location,adapters);
+    checkbox.Align:=getAlignment(def,location,context.adapters);
 
     if (config.action<>nil) or (config.bindingTo<>'') then checkbox.OnClick:=@OnClick;
+    checkbox.Checked:=state.bindingValue = @boolLit[true];
   end;
 
 PROCEDURE T_checkboxMeta.update;
@@ -377,13 +379,13 @@ PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
     postAction(newBoolLiteral(checkbox.checked));
   end;
 
-CONSTRUCTOR T_buttonMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; CONST adapters: P_adapters);
+CONSTRUCTOR T_buttonMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
   begin
-    inherited create(def,location,adapters);
+    inherited create(def,location,context);
     button:=TButton.create(parent);
     button.parent:=parent;
     update;
-    button.Align:=getAlignment(def,location,adapters);
+    button.Align:=getAlignment(def,location,context.adapters);
 
     if config.action<>nil then button.OnClick:=@OnClick;
   end;
@@ -419,7 +421,7 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
     doneCriticalSection(lock);
   end;
 
-PROCEDURE TscriptedForm.initialize(VAR adapters: T_adapters);
+PROCEDURE TscriptedForm.initialize();
   TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel);//,tc_output);
   CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel');//,'output');
 
@@ -429,14 +431,14 @@ PROCEDURE TscriptedForm.initialize(VAR adapters: T_adapters);
     begin
       componentTypeLiteral:=mapGet(def,TYPE_KEY);
       if (componentTypeLiteral=nil) or (componentTypeLiteral^.literalType<>lt_string) then begin
-        adapters.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
+        setupContext^.adapters^.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
         if componentTypeLiteral<>nil then disposeLiteral(componentTypeLiteral);
         exit(tc_error);
       end;
       result:=tc_error;
       for tc in T_componentType do if C_componentType[tc]=P_stringLiteral(componentTypeLiteral)^.value then result:=tc;
       if result=tc_error then
-        adapters.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","label","checkbox"]',setupLocation);
+        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","label","checkbox"]',setupLocation);
       disposeLiteral(componentTypeLiteral);
     end;
 
@@ -459,25 +461,25 @@ PROCEDURE TscriptedForm.initialize(VAR adapters: T_adapters);
       writeln('Adding custom component(s) ',def^.toString());
       if def^.literalType in C_mapTypes then case componentTypeOf(P_mapLiteral(def)) of
         tc_label: begin
-          new(labelMeta,create(component,P_mapLiteral(def),setupLocation,@adapters));
+          new(labelMeta,create(component,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(labelMeta);
         end;
         tc_button: begin
-          new(buttonMeta,create(component,P_mapLiteral(def),setupLocation,@adapters));
+          new(buttonMeta,create(component,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(buttonMeta);
         end;
         tc_checkbox:begin
-          new(checkboxMeta,create(component,P_mapLiteral(def),setupLocation,@adapters));
+          new(checkboxMeta,create(component,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(checkboxMeta);
         end;
         tc_textBox:begin
-          new(editMeta,create(component,P_mapLiteral(def),setupLocation,@adapters));
+          new(editMeta,create(component,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(editMeta);
         end;
         tc_panel:begin
           newPanel:=TPanel.create(component);
           newPanel.parent:=component;
-          newPanel.Align:=getAlignment(P_mapLiteral(def),setupLocation,@adapters);
+          newPanel.Align:=getAlignment(P_mapLiteral(def),setupLocation,setupContext^.adapters);
           newPanel.AutoSize:=newPanel.Align<>alClient;
           newPanel.BorderWidth:=3;
           newPanel.BorderStyle:=bsNone;
@@ -489,14 +491,14 @@ PROCEDURE TscriptedForm.initialize(VAR adapters: T_adapters);
           else if panelContents^.literalType=lt_list then begin
             iter:=P_listLiteral(panelContents)^.iteratableList;
             disposeLiteral(panelContents);
-            for panelContents in iter do if adapters.noErrors then initComponent(newPanel,panelContents);
+            for panelContents in iter do if setupContext^.adapters^.noErrors then initComponent(newPanel,panelContents);
             disposeLiteral(iter);
           end else begin
-            adapters.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
+            setupContext^.adapters^.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
             disposeLiteral(panelContents);
           end;
         end;
-      end else adapters.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
+      end else setupContext^.adapters^.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
     end;
 
   begin
@@ -530,10 +532,10 @@ PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
   begin
     enterCriticalSection(lock);
     if displayPending and adapters.noErrors then begin
-      if setupParam<>nil then begin
-        initialize(adapters);
+      if (setupParam<>nil) and (setupContext<>nil) then begin
+        initialize();
         disposeLiteral(setupParam);
-        setupParam:=nil;
+        setupContext:=nil;
       end;
       Show;
       displayPending:=false;
@@ -551,6 +553,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
       form:=
       createScriptedForm(P_stringLiteral(params^.value[0])^.value,
                          P_mapLiteral(params^.value[1]),
+                         @context,
                          location);
       context.adapters^.logDisplayCustomForm;
 
