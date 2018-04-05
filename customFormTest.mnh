@@ -7,15 +7,9 @@ newCheckbox->[['type','checkbox']].toMap;
 //@SuppressUnusedWarning
 newLabel   ->[['type','label'   ]].toMap;
 //@SuppressUnusedWarning
-newPanel   ->[['type','panel'   ]].toMap;
+newPanel(contents:List)->[['type','panel'],['parts',contents]].toMap;
 //@SuppressUnusedWarning
-alLeft  (m:Map)->[['align','left'  ]].toMap.mergeMaps(m,::orElse);
-//@SuppressUnusedWarning
-alRight (m:Map)->[['align','right' ]].toMap.mergeMaps(m,::orElse);
-//@SuppressUnusedWarning
-alTop   (m:Map)->[['align','top'   ]].toMap.mergeMaps(m,::orElse);
-//@SuppressUnusedWarning
-alBottom(m:Map)->[['align','bottom']].toMap.mergeMaps(m,::orElse);
+newSplitPanel(left:List,right:List)->[['type','splitPanel'],['left',left],['right',right]].toMap;
 //@SuppressUnusedWarning
 withCaption(m:Map,caption)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
 //@SuppressUnusedWarning
@@ -23,24 +17,17 @@ withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::or
 //@SuppressUnusedWarning
 withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
 //@SuppressUnusedWarning
-withParts(m:Map,components:List)->[['parts',components]].toMap.mergeMaps(m,::orElse);
-//@SuppressUnusedWarning
 bind(m:Map,id:String)->[['bind',id]].toMap.mergeMaps(m,::orElse);
 
 begin
   local text:='Click me';
   showDialog('Test',
-    newPanel.withParts([
-      newPanel.alRight.withParts([newLabel.withCaption('Right')]),
-      newPanel.withParts([
-
-      newLabel.withCaption({try({interpret(text)},{$0.head.trailing})})
-               .withAction({print('Button clicked')}),
-      newButton.alTop.withCaption({'A '+formatTime('c',systime)}),
-      newButton.alTop.withCaption('B'),
-      newButton.alTop.withCaption('C'),
-      newEdit.alTop
-             .withCaption('Input')
-             .bind('text')
-             ])]));
+    newPanel(
+      [newLabel.withCaption({try({interpret(text)},{$0.head.trailing})}),
+       newSplitPanel(
+         [newButton.withCaption({'A '+formatTime('c',systime)}),
+          newButton.withCaption('B'),
+          newButton.withCaption('C'),
+          newEdit.withCaption('Input').bind('text')],
+         [newLabel.withCaption('Right')])]));
 end;
