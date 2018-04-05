@@ -160,6 +160,7 @@ TYPE
       PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
       PROCEDURE logDisplayTable;
       PROCEDURE logDisplayTreeView;
+      PROCEDURE logDisplayCustomForm;
       {$endif}
       PROCEDURE logTimingInfo(CONST infoText:T_arrayOfString);
       PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
@@ -674,6 +675,7 @@ PROCEDURE T_adapters.logEndOfEditScript(CONST data: pointer; CONST success: bool
   end;
 PROCEDURE T_adapters.logDisplayTable;                                                                 begin raiseCustomMessage(message(mt_displayTable                  ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 PROCEDURE T_adapters.logDisplayTreeView;                                                              begin raiseCustomMessage(message(mt_displayTreeView               ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
+PROCEDURE T_adapters.logDisplayCustomForm;                                                            begin raiseCustomMessage(message(mt_displayCustomDialog           ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 {$endif}
 
 PROCEDURE T_adapters.clearAll({$ifdef fullVersion}CONST includePlot:boolean=false{$endif});

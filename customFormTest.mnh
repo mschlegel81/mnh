@@ -1,0 +1,30 @@
+newButton  ->[['type','button'  ]].toMap;
+newEdit    ->[['type','edit'    ]].toMap;
+newCheckbox->[['type','checkbox']].toMap;
+newLabel   ->[['type','label'   ]].toMap;
+newPanel   ->[['type','panel'   ]].toMap;
+alLeft  (m:Map)->[['align','left'  ]].toMap.mergeMaps(m,::orElse);
+alRight (m:Map)->[['align','right' ]].toMap.mergeMaps(m,::orElse);
+alTop   (m:Map)->[['align','top'   ]].toMap.mergeMaps(m,::orElse);
+alBottom(m:Map)->[['align','bottom']].toMap.mergeMaps(m,::orElse);
+withCaption(m:Map,caption)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
+withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::orElse);
+withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
+withParts(m:Map,components:List)->[['parts',components]].toMap.mergeMaps(m,::orElse);
+bind(m:Map,id:String)->[['bind',id]].toMap.mergeMaps(m,::orElse);
+
+begin
+  local checked:=false;
+  local text:='Click me';
+  showDialog('Test',
+    newPanel.withParts([
+      newLabel.withCaption({try({interpret(text)},{$0.head.trailing})})
+               .withAction({print('Button clicked')}),
+      newButton.alTop.withCaption({'A '+formatTime('c',systime)}),
+      newButton.alTop.withCaption('B'),
+      newButton.alTop.withCaption('C'),
+      newEdit.alTop
+             .withCaption('Input')
+             .bind('text')
+             ]));
+end;

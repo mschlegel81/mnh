@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="42">
+    <Units Count="43">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -297,6 +297,14 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="variableTreeViews"/>
       </Unit41>
+      <Unit42>
+        <Filename Value="mnhcustomform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="scriptedForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="mnhCustomForm"/>
+      </Unit42>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
