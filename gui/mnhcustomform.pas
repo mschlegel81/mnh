@@ -9,13 +9,21 @@ USES
   ExtCtrls, StdCtrls, mnh_constants, mnh_basicTypes, mnh_contexts,
   mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters;
 
+TYPE
+  T_definingMapKey=(dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right);
+  T_definingMapKeys=set of T_definingMapKey;
+
 CONST
-  TYPE_KEY   ='type';
-  ACTION_KEY ='action';
-  CAPTION_KEY='caption';
-  ENABLED_KEY='enabled';
-  BINDING_KEY='bind';
-  ITEMS_KEY  ='items';
+  key:array[T_definingMapKey] of string=(
+    'type',
+    'action',
+    'caption',
+    'enabled',
+    'bind',
+    'items',
+    'parts',
+    'left',
+    'right');
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
@@ -35,7 +43,7 @@ TYPE
       bindingValue:P_literal;
     end;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
     PROCEDURE postAction(CONST param:P_literal);
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     PROCEDURE update; virtual; abstract;
@@ -111,7 +119,7 @@ TYPE
     elements:array of P_guiElementMeta;
     lastControl:TControl;
     winControl:TWinControl;
-    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
     PROCEDURE add(CONST meta:P_guiElementMeta);
     PROCEDURE update; virtual;
@@ -208,16 +216,35 @@ FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
 
 CONSTRUCTOR T_splitPanelMeta.create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
   begin
-    Left .create(parent,def,location,context); Left.winControl.Align:=alLeft;
-    Right.create(parent,def,location,context); Right.winControl.Align:=alClient;
+    Left .create(parent,def,location,context,[dmk_type,dmk_left,dmk_right]); Left.winControl.Align:=alLeft;
+    Right.create(parent,def,location,context,[dmk_type,dmk_left,dmk_right]); Right.winControl.Align:=alClient;
   end;
 
 DESTRUCTOR T_splitPanelMeta.destroy;
   begin
   end;
 
-CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
-  CONST location: T_tokenLocation; VAR context: T_threadContext);
+CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext; CONST consideredKeys:T_definingMapKeys);
+  PROCEDURE raiseUnusedKeyWarning;
+    FUNCTION isConsidered(CONST k:P_literal):boolean;
+      VAR c:T_definingMapKey;
+      begin
+        if k^.literalType<>lt_string then exit(false);
+        result:=false;
+        for c in consideredKeys do if key[c]=P_stringLiteral(k)^.value then exit(true);
+      end;
+
+    VAR keys:T_arrayOfLiteral;
+        k:P_literal;
+    begin
+      if not(context.adapters^.noErrors) then exit;
+      keys:=def^.keyIteratableList;
+      for k in keys do if not(isConsidered(k)) then begin
+        context.adapters^.raiseWarning('Key '+k^.toString()+' is ignored in '+def^.toString(),location);
+      end;
+      disposeLiteral(keys);
+    end;
+
   VAR tmp:P_literal;
   begin
     with config do begin
@@ -233,14 +260,14 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       enabled        :=true;
     end;
 
-    tmp:=mapGet(def,ACTION_KEY);
+    tmp:=mapGet(def,key[dmk_action]);
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then config.action:=P_expressionLiteral(tmp)
       else context.adapters^.raiseError('action is: '+tmp^.typeString+'; must be expression',location);
     end;
 
-    tmp:=mapGet(def,CAPTION_KEY);
+    tmp:=mapGet(def,key[dmk_caption]);
     if tmp<>nil then begin
       case tmp^.literalType of
         lt_expression: config.caption:=P_expressionLiteral(tmp);
@@ -249,7 +276,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       end;
     end;
 
-    tmp:=mapGet(def,ENABLED_KEY);
+    tmp:=mapGet(def,key[dmk_enabled]);
     if tmp<>nil then begin
       case tmp^.literalType of
         lt_expression: config.enabled:=P_expressionLiteral(tmp);
@@ -258,7 +285,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       end;
     end;
 
-    tmp:=mapGet(def,BINDING_KEY);
+    tmp:=mapGet(def,key[dmk_bind]);
     if tmp<>nil then begin
       if tmp^.literalType=lt_string then begin
         config.bindingTo:=P_stringLiteral(tmp)^.value;
@@ -266,6 +293,8 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       end else context.adapters^.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
       disposeLiteral(tmp);
     end;
+
+    raiseUnusedKeyWarning;
   end;
 
 PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
@@ -337,11 +366,10 @@ DESTRUCTOR T_guiElementMeta.destroy;
     if state.bindingValue   <>nil then disposeLiteral(state.bindingValue);
   end;
 
-CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl;
-  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
   VAR context: T_threadContext);
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
     editPanel:=TPanel.create(parent);
     editPanel.parent:=parent;
     editPanel.Align:=alTop;
@@ -410,7 +438,7 @@ PROCEDURE T_editMeta.update;
 
 CONSTRUCTOR T_labelMeta.create(CONST parent: TWinControl;CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,[dmk_type,dmk_caption]);
     mylabel:=TLabel.create(parent);
     mylabel.parent:=parent;
     mylabel.Align:=alTop;
@@ -429,7 +457,7 @@ FUNCTION T_labelMeta.getControl: TControl;
 
 CONSTRUCTOR T_checkboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
     checkbox:=TCheckBox.create(parent);
     checkbox.parent:=parent;
     checkbox.Align:=alTop;
@@ -462,7 +490,7 @@ CONSTRUCTOR T_buttonMeta.create(CONST parent: TWinControl;
   CONST def: P_mapLiteral; CONST location: T_tokenLocation;
   VAR context: T_threadContext);
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled]);
     button:=TButton.create(parent);
     button.parent:=parent;
     update;
@@ -487,11 +515,10 @@ FUNCTION T_buttonMeta.getControl: TControl;
     result:=button;
   end;
 
-CONSTRUCTOR T_outputMemoMeta.create(CONST parent: TWinControl;
-  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+CONSTRUCTOR T_outputMemoMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
   VAR context: T_threadContext);
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,[dmk_type,dmk_caption]);
     memo:=TMemo.create(parent);
     memo.Font.name:='Courier New';
     memo.parent:=parent;
@@ -531,9 +558,9 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 CONSTRUCTOR T_comboboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
   VAR tmp:P_literal;
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items]);
     config_items:=nil;
-    tmp:=mapGet(def,ITEMS_KEY);
+    tmp:=mapGet(def,key[dmk_items]);
     if tmp<>nil then begin
       case tmp^.literalType of
         lt_expression: config_items:=P_expressionLiteral(tmp);
@@ -629,12 +656,10 @@ DESTRUCTOR T_comboboxMeta.destroy;
     setLength(state_items,0);
   end;
 
-CONSTRUCTOR T_panelMeta.create(CONST parent: TWinControl;
-  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
-  VAR context: T_threadContext);
+CONSTRUCTOR T_panelMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext; CONST consideredKeys:T_definingMapKeys);
   VAR newPanel:TPanel;
   begin
-    inherited create(def,location,context);
+    inherited create(def,location,context,consideredKeys);
     setLength(elements,0);
     newPanel:=TPanel.create(parent);
     newPanel.parent:=parent;
@@ -723,7 +748,7 @@ PROCEDURE TscriptedForm.initialize();
     VAR tc:T_componentType;
         componentTypeLiteral:P_literal;
     begin
-      componentTypeLiteral:=mapGet(def,TYPE_KEY);
+      componentTypeLiteral:=mapGet(def,key[dmk_type]);
       if (componentTypeLiteral=nil) or (componentTypeLiteral^.literalType<>lt_string) then begin
         setupContext^.adapters^.raiseError('Missing "type" entry in '+def^.toString(100),setupLocation);
         if componentTypeLiteral<>nil then disposeLiteral(componentTypeLiteral);
@@ -785,7 +810,7 @@ PROCEDURE TscriptedForm.initialize();
         tc_panel:begin
           new(newPanel,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(newPanel);
-          panelContents:=mapGet(P_mapLiteral(def),'parts');
+          panelContents:=mapGet(P_mapLiteral(def),key[dmk_parts]);
           if panelContents=nil then begin end
           else if panelContents^.literalType=lt_list then begin
             iter:=P_listLiteral(panelContents)^.iteratableList;
@@ -800,7 +825,7 @@ PROCEDURE TscriptedForm.initialize();
         end;
         tc_splitPanel:begin
           splitPanel.create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^);
-          panelContents:=mapGet(P_mapLiteral(def),'left');
+          panelContents:=mapGet(P_mapLiteral(def),key[dmk_left]);
           if panelContents=nil then begin end
           else if panelContents^.literalType=lt_list then begin
             iter:=P_listLiteral(panelContents)^.iteratableList;
@@ -812,7 +837,7 @@ PROCEDURE TscriptedForm.initialize();
             disposeLiteral(panelContents);
           end;
 
-          panelContents:=mapGet(P_mapLiteral(def),'right');
+          panelContents:=mapGet(P_mapLiteral(def),key[dmk_right]);
           if panelContents=nil then begin end
           else if panelContents^.literalType=lt_list then begin
             iter:=P_listLiteral(panelContents)^.iteratableList;

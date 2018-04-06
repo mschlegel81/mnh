@@ -350,6 +350,7 @@ TYPE
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
+      FUNCTION keyIteratableList:T_arrayOfLiteral;
 
       PROCEDURE drop(CONST L:P_literal);
       FUNCTION put(CONST key,                  newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
@@ -2414,6 +2415,13 @@ FUNCTION T_mapLiteral.iteratableList: T_arrayOfLiteral;
     e:=dat.keyValueList;
     setLength(result,length(e));
     for i:=0 to length(e)-1 do result[i]:=newListLiteral(2)^.append(e[i].key,true)^.append(e[i].value,true);
+  end;
+
+FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;
+  VAR L:P_literal;
+  begin
+    result:=dat.keySet;
+    for L in result do L^.rereference;
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
