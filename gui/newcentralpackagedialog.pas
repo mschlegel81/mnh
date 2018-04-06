@@ -9,9 +9,6 @@ USES
   ExtCtrls, myStringUtil, mnh_constants, mnh_fileWrappers, myGenerics, LazFileUtils, mnh_doc;
 
 TYPE
-
-  { TnewCentralPackageForm }
-
   TnewCentralPackageForm = class(TForm)
     restoreButton: TButton;
     remButton: TButton;

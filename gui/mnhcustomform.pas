@@ -41,6 +41,7 @@ TYPE
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
     FUNCTION getControl:TControl; virtual; abstract;
+    FUNCTION preferClientAlignment:boolean; virtual;
   end;
 
   P_editMeta=^T_editMeta;
@@ -87,6 +88,7 @@ TYPE
     CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
+    FUNCTION preferClientAlignment:boolean; virtual;
   end;
 
   P_comboboxMeta=^T_comboboxMeta;
@@ -101,20 +103,27 @@ TYPE
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    DESTRUCTOR destroy; virtual;
   end;
 
-  T_panelMeta=object
+  P_panelMeta=^T_panelMeta;
+  T_panelMeta=object(T_guiElementMeta)
+    elements:array of P_guiElementMeta;
     lastControl:TControl;
     winControl:TWinControl;
-    CONSTRUCTOR create(CONST parent:TWinControl);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
     PROCEDURE add(CONST meta:P_guiElementMeta);
-    DESTRUCTOR destroy;
+    PROCEDURE update; virtual;
+    FUNCTION getControl:TControl; virtual;
+    FUNCTION preferClientAlignment:boolean; virtual;
+    PROCEDURE alignContents;
+    DESTRUCTOR destroy; virtual;
   end;
 
   T_splitPanelMeta=object
     Left,Right:T_panelMeta;
-    CONSTRUCTOR create(CONST parent:TWinControl);
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     DESTRUCTOR destroy;
   end;
 
@@ -197,10 +206,10 @@ FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
     if result^.literalType=lt_void then disposeLiteral(result);
   end;
 
-CONSTRUCTOR T_splitPanelMeta.create(CONST parent: TWinControl);
+CONSTRUCTOR T_splitPanelMeta.create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
   begin
-    Left .create(parent); Left.winControl.Align:=alLeft;
-    Right.create(parent); Right.winControl.Align:=alClient;
+    Left .create(parent,def,location,context); Left.winControl.Align:=alLeft;
+    Right.create(parent,def,location,context); Right.winControl.Align:=alClient;
   end;
 
 DESTRUCTOR T_splitPanelMeta.destroy;
@@ -328,7 +337,8 @@ DESTRUCTOR T_guiElementMeta.destroy;
     if state.bindingValue   <>nil then disposeLiteral(state.bindingValue);
   end;
 
-CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl;
+  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
   VAR context: T_threadContext);
   begin
     inherited create(def,location,context);
@@ -385,6 +395,11 @@ PROCEDURE T_editMeta.OnChange(Sender: TObject);
 FUNCTION T_editMeta.getControl: TControl;
   begin
     result:=editPanel;
+  end;
+
+FUNCTION T_guiElementMeta.preferClientAlignment: boolean;
+  begin
+    result:=false;
   end;
 
 PROCEDURE T_editMeta.update;
@@ -472,13 +487,17 @@ FUNCTION T_buttonMeta.getControl: TControl;
     result:=button;
   end;
 
-CONSTRUCTOR T_outputMemoMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
+CONSTRUCTOR T_outputMemoMeta.create(CONST parent: TWinControl;
+  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+  VAR context: T_threadContext);
   begin
     inherited create(def,location,context);
     memo:=TMemo.create(parent);
     memo.Font.name:='Courier New';
     memo.parent:=parent;
     memo.Align:=alTop;
+    memo.ScrollBars:=ssAutoBoth;
+    memo.WordWrap:=false;
     memo.readonly:=true;
   end;
 
@@ -491,6 +510,11 @@ PROCEDURE T_outputMemoMeta.update;
 FUNCTION T_outputMemoMeta.getControl: TControl;
   begin
     result:=memo;
+  end;
+
+FUNCTION T_outputMemoMeta.preferClientAlignment: boolean;
+  begin
+    result:=true;
   end;
 
 OPERATOR:=(x:T_listLiteral):T_arrayOfString;
@@ -579,7 +603,8 @@ FUNCTION T_comboboxMeta.getControl: TControl;
     result:=combobox;
   end;
 
-FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation;
+  VAR context: T_threadContext): boolean;
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
   begin
@@ -597,9 +622,20 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
     end;
   end;
 
-CONSTRUCTOR T_panelMeta.create(CONST parent: TWinControl);
+DESTRUCTOR T_comboboxMeta.destroy;
+  begin
+    inherited destroy;
+    if config_items<>nil then disposeLiteral(config_items);
+    setLength(state_items,0);
+  end;
+
+CONSTRUCTOR T_panelMeta.create(CONST parent: TWinControl;
+  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+  VAR context: T_threadContext);
   VAR newPanel:TPanel;
   begin
+    inherited create(def,location,context);
+    setLength(elements,0);
     newPanel:=TPanel.create(parent);
     newPanel.parent:=parent;
     newPanel.Align:=alTop;
@@ -624,11 +660,39 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     if lastControl<>nil then begin
       meta^.getControl.top:=lastControl.top+lastControl.height+10;
     end;
+    setLength(elements,length(elements)+1);
+    elements[length(elements)-1]:=meta;
     lastControl:=meta^.getControl;
+  end;
+
+PROCEDURE T_panelMeta.update; begin end;
+
+FUNCTION T_panelMeta.getControl: TControl;
+  begin
+    result:=winControl;
+  end;
+
+FUNCTION T_panelMeta.preferClientAlignment: boolean;
+  begin
+    result:=true;
+  end;
+
+PROCEDURE T_panelMeta.alignContents;
+  VAR lastClient:longint;
+      k:longint;
+  begin
+    lastClient:=length(elements)-1;
+    while (lastClient>=0) and not(elements[lastClient]^.preferClientAlignment) do dec(lastClient);
+    if lastClient<0 then exit;
+    for k:=length(elements)-1 downto lastClient+1 do elements[k]^.getControl.Align:=alBottom;
+    elements[lastClient]^.getControl.Align:=alClient;
+    elements[lastClient]^.getControl.AutoSize:=true;
   end;
 
 DESTRUCTOR T_panelMeta.destroy;
   begin
+    inherited destroy;
+    setLength(elements,0);
   end;
 
 PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
@@ -679,8 +743,7 @@ PROCEDURE TscriptedForm.initialize();
         editMeta    :P_editMeta;
         memoMeta    :P_outputMemoMeta;
         comboMeta   :P_comboboxMeta;
-
-        newPanel    :T_panelMeta;
+        newPanel    :P_panelMeta;
         splitPanel  :T_splitPanelMeta;
         panelContents:P_literal;
         iter:T_arrayOfLiteral;
@@ -720,22 +783,23 @@ PROCEDURE TscriptedForm.initialize();
         end;
 
         tc_panel:begin
-          newPanel.create(container.winControl);
+          new(newPanel,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
+          addMeta(newPanel);
           panelContents:=mapGet(P_mapLiteral(def),'parts');
           if panelContents=nil then begin end
           else if panelContents^.literalType=lt_list then begin
             iter:=P_listLiteral(panelContents)^.iteratableList;
             disposeLiteral(panelContents);
-            for panelContents in iter do if setupContext^.adapters^.noErrors then initComponent(newPanel,panelContents);
+            for panelContents in iter do if setupContext^.adapters^.noErrors then initComponent(newPanel^,panelContents);
             disposeLiteral(iter);
           end else begin
             setupContext^.adapters^.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
             disposeLiteral(panelContents);
           end;
-          newPanel.destroy;
+          newPanel^.alignContents;
         end;
         tc_splitPanel:begin
-          splitPanel.create(container.winControl);
+          splitPanel.create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^);
           panelContents:=mapGet(P_mapLiteral(def),'left');
           if panelContents=nil then begin end
           else if panelContents^.literalType=lt_list then begin
@@ -769,6 +833,7 @@ PROCEDURE TscriptedForm.initialize();
     enterCriticalSection(lock);
     formMeta.createForExistingForm(self);
     initComponent(formMeta,setupParam);
+    formMeta.alignContents;
     formMeta.destroy;
     displayPending:=true;
     leaveCriticalSection(lock);
