@@ -3,7 +3,8 @@ INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
      myStringUtil,myGenerics,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
-     mnh_plotForm, mnh_tables{$ifdef imig},mnh_imig_form{$endif},dynamicPlotting,variableTreeViews;
+     mnh_plotForm, mnh_tables{$ifdef imig},mnh_imig_form{$endif},
+     dynamicPlotting,variableTreeViews,mnhCustomForm;
 
 TYPE
   T_abstractMnhForm=class(TForm)
@@ -201,6 +202,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
         end;
         mt_displayTable: conditionalShowTables;
         mt_displayTreeView: conditionalShowVarTrees;
+        mt_displayCustomDialog: conditionalShowCustomForms(guiAdapters);
         {$ifdef imig}
         mt_displayImage: DisplayImageForm.displayCurrentImage;
         {$endif}
@@ -234,6 +236,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
           end;
         mt_endOfEvaluation: begin
           if plotFormIsInitialized and plotForm.InteractionPanel.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+          freeScriptedForms;
           parentForm.onEndOfEvaluation;
         end;
         mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);

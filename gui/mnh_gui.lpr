@@ -12,7 +12,8 @@ USES {$ifdef UNIX} cthreads,{$else}
   mnh_cmdLineInterpretation,
   ipcModel,
   mnh_gui_main,
-  mnh_gui_outputOnly;
+  mnh_gui_outputOnly,
+  mnhCustomForm;
 
 {$R *.res}
 
