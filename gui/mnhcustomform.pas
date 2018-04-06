@@ -15,9 +15,11 @@ CONST
   CAPTION_KEY='caption';
   ENABLED_KEY='enabled';
   BINDING_KEY='bind';
+  ITEMS_KEY  ='items';
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
+  PscriptedForm=^TscriptedForm;
   T_guiElementMeta=object
     config:record
       action :P_expressionLiteral;
@@ -35,7 +37,7 @@ TYPE
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE postAction(CONST param:P_literal);
-    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
     FUNCTION getControl:TControl; virtual; abstract;
@@ -79,6 +81,28 @@ TYPE
     FUNCTION getControl:TControl; virtual;
   end;
 
+  P_outputMemoMeta=^T_outputMemoMeta;
+  T_outputMemoMeta=object(T_guiElementMeta)
+    memo:TMemo;
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    PROCEDURE update; virtual;
+    FUNCTION getControl:TControl; virtual;
+  end;
+
+  P_comboboxMeta=^T_comboboxMeta;
+  T_comboboxMeta=object(T_guiElementMeta)
+    comboboxPanel:TPanel;
+    comboboxLabel:TLabel;
+    combobox:TComboBox;
+    config_items:P_expressionLiteral;
+    state_items :T_arrayOfString;
+    CONSTRUCTOR create(CONST parent:TWinControl; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    PROCEDURE update; virtual;
+    PROCEDURE OnChange(Sender: TObject);
+    FUNCTION getControl:TControl; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+  end;
+
   T_panelMeta=object
     lastControl:TControl;
     winControl:TWinControl;
@@ -104,6 +128,7 @@ TYPE
     meta:array of P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
+    processingEvents:boolean;
     PROCEDURE initialize();
   public
     PROCEDURE processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
@@ -117,6 +142,16 @@ IMPLEMENTATION
 VAR scriptedFormCs:TRTLCriticalSection;
     scriptedForm: TscriptedForm;
 {$R *.lfm}
+
+PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
+  VAR i:longint;
+  begin
+    for i:=0 to c.ControlCount-1 do begin
+      c.Controls[i].Cursor:=Cursor;
+      if c.Controls[i] is TWinControl then propagateCursor(TWinControl(c.Controls[i]),Cursor);
+    end;
+  end;
+
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
   begin
     enterCriticalSection(scriptedFormCs);
@@ -172,7 +207,8 @@ DESTRUCTOR T_splitPanelMeta.destroy;
   begin
   end;
 
-CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
+CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
+  CONST location: T_tokenLocation; VAR context: T_threadContext);
   VAR tmp:P_literal;
   begin
     with config do begin
@@ -229,9 +265,11 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
     if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
     state.actionParameter:=param;
     state.actionTriggered:=true;
+    propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
   end;
 
-FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
+FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
+  VAR context: T_threadContext): boolean;
   VAR tmp:P_literal;
       oldEnabled:boolean;
       oldCaption:string;
@@ -297,7 +335,7 @@ CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral
     editPanel:=TPanel.create(parent);
     editPanel.parent:=parent;
     editPanel.Align:=alTop;
-    editPanel.AutoSize:=editPanel.Align<>alClient;
+    editPanel.AutoSize:=true;
 
     editPanel.BorderWidth:=3;
     editPanel.BorderStyle:=bsNone;
@@ -313,8 +351,10 @@ CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral
 
     edit:=TEdit.create(parent);
     edit.parent:=editPanel;
+    edit.AnchorToNeighbour(akLeft,10,editLabel);
     edit.Align:=alClient;
     edit.enabled:=state.enabled;
+    edit.AutoSize:=true;
     edit.text:='';
     if (config.action<>nil) then edit.OnKeyDown:=@OnKeyDown;
     if (config.bindingTo<>'') then begin
@@ -353,16 +393,12 @@ PROCEDURE T_editMeta.update;
     edit.enabled:=state.enabled;
   end;
 
-CONSTRUCTOR T_labelMeta.create(CONST parent: TWinControl;
-  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
-  VAR context: T_threadContext);
+CONSTRUCTOR T_labelMeta.create(CONST parent: TWinControl;CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
   begin
     inherited create(def,location,context);
     mylabel:=TLabel.create(parent);
     mylabel.parent:=parent;
     mylabel.Align:=alTop;
-
-    mylabel.AutoSize:=mylabel.Align<>alClient;
   end;
 
 PROCEDURE T_labelMeta.update;
@@ -376,9 +412,7 @@ FUNCTION T_labelMeta.getControl: TControl;
     result:=mylabel;
   end;
 
-CONSTRUCTOR T_checkboxMeta.create(CONST parent: TWinControl;
-  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
-  VAR context: T_threadContext);
+CONSTRUCTOR T_checkboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
   begin
     inherited create(def,location,context);
     checkbox:=TCheckBox.create(parent);
@@ -438,6 +472,131 @@ FUNCTION T_buttonMeta.getControl: TControl;
     result:=button;
   end;
 
+CONSTRUCTOR T_outputMemoMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
+  begin
+    inherited create(def,location,context);
+    memo:=TMemo.create(parent);
+    memo.Font.name:='Courier New';
+    memo.parent:=parent;
+    memo.Align:=alTop;
+    memo.readonly:=true;
+  end;
+
+PROCEDURE T_outputMemoMeta.update;
+  begin
+    memo.text:=state.caption;
+    memo.enabled:=state.enabled;
+  end;
+
+FUNCTION T_outputMemoMeta.getControl: TControl;
+  begin
+    result:=memo;
+  end;
+
+OPERATOR:=(x:T_listLiteral):T_arrayOfString;
+  VAR i:longint;
+  begin
+    setLength(result,x.size);
+    for i:=0 to length(result)-1 do begin
+      if x.value[i]^.literalType=lt_string
+      then result[i]:=P_stringLiteral(x.value[i])^.value
+      else result[i]:=                x.value[i]^.toString();
+    end;
+  end;
+
+CONSTRUCTOR T_comboboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
+  VAR tmp:P_literal;
+  begin
+    inherited create(def,location,context);
+    config_items:=nil;
+    tmp:=mapGet(def,ITEMS_KEY);
+    if tmp<>nil then begin
+      case tmp^.literalType of
+        lt_expression: config_items:=P_expressionLiteral(tmp);
+        lt_stringList,
+        lt_emptyList: state_items :=P_listLiteral(tmp)^;
+        else context.adapters^.raiseError('items is: '+tmp^.typeString+'; must be stringList or expression',location);
+      end;
+    end;
+
+    comboboxPanel:=TPanel.create(parent);
+    comboboxPanel.parent:=parent;
+    comboboxPanel.Align:=alTop;
+    comboboxPanel.AutoSize:=true;
+
+    comboboxPanel.BorderWidth:=3;
+    comboboxPanel.BorderStyle:=bsNone;
+    comboboxPanel.BevelInner:=bvNone;
+    comboboxPanel.BevelOuter:=bvNone;
+    comboboxPanel.caption:='';
+
+    comboboxLabel:=TLabel.create(parent);
+    comboboxLabel.parent:=comboboxPanel;
+    comboboxLabel.Align:=alLeft;
+    comboboxLabel.caption:=state.caption;
+    comboboxLabel.AutoSize:=true;
+
+    combobox:=TComboBox.create(parent);
+    combobox.parent:=comboboxPanel;
+    combobox.Align:=alClient;
+    combobox.AutoSize:=true;
+    combobox.AnchorToNeighbour(akLeft,10,comboboxLabel);
+    combobox.enabled:=state.enabled;
+    combobox.text:='';
+    if (config.action<>nil) then combobox.OnSelect:=@OnChange;
+    if (config.bindingTo<>'') then begin
+      combobox.OnSelect:=@OnChange;
+      if state.bindingValue<>nil then begin
+        if state.bindingValue^.literalType=lt_string
+        then combobox.text:=P_stringLiteral(state.bindingValue)^.value
+        else combobox.text:=                state.bindingValue^.toString();
+      end;
+    end;
+  end;
+
+PROCEDURE T_comboboxMeta.update;
+  VAR i:longint;
+  begin
+    combobox.enabled:=state.enabled;
+    comboboxLabel.caption:=state.caption;
+
+    while (combobox.items.count>length(state_items)) do combobox.items.delete(length(state_items));
+    for i:=0 to combobox.items.count-1 do combobox.items[i]:=state_items[i];
+    for i:=combobox.items.count to length(state_items)-1 do combobox.items.add(state_items[i]);
+  end;
+
+PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
+  begin
+    if (config.bindingTo<>'') then begin
+      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
+      state.bindingValue:=newStringLiteral(combobox.text);
+    end;
+    postAction(newStringLiteral(combobox.text));
+  end;
+
+FUNCTION T_comboboxMeta.getControl: TControl;
+  begin
+    result:=combobox;
+  end;
+
+FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+  VAR oldItems:T_arrayOfString;
+      tmp:P_literal;
+  begin
+    result:=inherited evaluate(location,context);
+    if config_items<>nil then begin
+      oldItems:=state_items;
+      tmp:=config.caption^.evaluateToLiteral(location,@context);
+      if (tmp<>nil) then begin
+        if tmp^.literalType in [lt_stringList,lt_emptyList] then begin
+          state_items:=P_listLiteral(tmp)^;
+        end else context.adapters^.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
+        disposeLiteral(tmp);
+      end;
+      result:=result or not(arrEquals(oldItems,state_items));
+    end;
+  end;
+
 CONSTRUCTOR T_panelMeta.create(CONST parent: TWinControl);
   VAR newPanel:TPanel;
   begin
@@ -464,7 +623,6 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
   begin
     if lastControl<>nil then begin
       meta^.getControl.top:=lastControl.top+lastControl.height+10;
-      meta^.getControl.AnchorToNeighbour(akTop,3,lastControl);
     end;
     lastControl:=meta^.getControl;
   end;
@@ -494,8 +652,8 @@ PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
   end;
 
 PROCEDURE TscriptedForm.initialize();
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel);//,tc_output);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel');//,'output');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_outputMemo,tc_comboBox);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','outputMemo','comboBox');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -510,7 +668,7 @@ PROCEDURE TscriptedForm.initialize();
       result:=tc_error;
       for tc in T_componentType do if C_componentType[tc]=P_stringLiteral(componentTypeLiteral)^.value then result:=tc;
       if result=tc_error then
-        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","label","checkbox","splitPanel"]',setupLocation);
+        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","outputMemo","checkbox","splitPanel"]',setupLocation);
       disposeLiteral(componentTypeLiteral);
     end;
 
@@ -519,6 +677,8 @@ PROCEDURE TscriptedForm.initialize();
         buttonMeta  :P_buttonMeta;
         checkboxMeta:P_checkboxMeta;
         editMeta    :P_editMeta;
+        memoMeta    :P_outputMemoMeta;
+        comboMeta   :P_comboboxMeta;
 
         newPanel    :T_panelMeta;
         splitPanel  :T_splitPanelMeta;
@@ -533,7 +693,6 @@ PROCEDURE TscriptedForm.initialize();
       end;
 
     begin
-      writeln('Adding custom component(s) ',def^.toString());
       if def^.literalType in C_mapTypes then case componentTypeOf(P_mapLiteral(def)) of
         tc_label: begin
           new(labelMeta,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
@@ -551,6 +710,15 @@ PROCEDURE TscriptedForm.initialize();
           new(editMeta,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(editMeta);
         end;
+        tc_outputMemo:begin
+          new(memoMeta,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
+          addMeta(memoMeta);
+        end;
+        tc_comboBox:begin
+          new(comboMeta,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
+          addMeta(comboMeta);
+        end;
+
         tc_panel:begin
           newPanel.create(container.winControl);
           panelContents:=mapGet(P_mapLiteral(def),'parts');
@@ -606,14 +774,17 @@ PROCEDURE TscriptedForm.initialize();
     leaveCriticalSection(lock);
   end;
 
-PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
+PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
+  VAR context: T_threadContext);
   VAR m:P_guiElementMeta;
       somethingDone:boolean=false;
   begin
     enterCriticalSection(lock);
+    processingEvents:=true;
     for m in meta do if context.adapters^.noErrors then begin
       if m^.evaluate(location,context) then somethingDone:=true;
     end;
+    processingEvents:=false;
     leaveCriticalSection(lock);
     if somethingDone then context.adapters^.logDisplayCustomForm;
   end;
@@ -624,6 +795,8 @@ PROCEDURE TscriptedForm.updateComponents;
     enterCriticalSection(lock);
     for m in meta do m^.update;
     leaveCriticalSection(lock);
+    if processingEvents then propagateCursor(self,crHourGlass)
+                        else propagateCursor(self,crDefault);
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
@@ -638,7 +811,6 @@ PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
       Show;
       displayPending:=false;
     end;
-    writeln('Updating components');
     updateComponents;
     leaveCriticalSection(lock);
   end;
@@ -666,7 +838,8 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
 INITIALIZATION
   initCriticalSection(scriptedFormCs);
   scriptedForm:=nil;
-  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'');
+  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'Shows a custom dialog defined by the given map; returns void when the form is closed');
+
 FINALIZATION
   freeScriptedForms;
   doneCriticalSection(scriptedFormCs);

@@ -5,6 +5,10 @@ newEdit    ->[['type','edit'    ]].toMap;
 //@SuppressUnusedWarning
 newCheckbox->[['type','checkbox']].toMap;
 //@SuppressUnusedWarning
+newMemo->[['type','outputMemo']].toMap;
+//@SuppressUnusedWarning
+newComboBox(options)->[['type','comboBox'],['items',options]].toMap;
+//@SuppressUnusedWarning
 newLabel   ->[['type','label'   ]].toMap;
 //@SuppressUnusedWarning
 newPanel(contents:List)->[['type','panel'],['parts',contents]].toMap;
@@ -18,16 +22,3 @@ withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::or
 withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
 //@SuppressUnusedWarning
 bind(m:Map,id:String)->[['bind',id]].toMap.mergeMaps(m,::orElse);
-
-begin
-  local text:='Click me';
-  showDialog('Test',
-    newPanel(
-      [newLabel.withCaption({try({interpret(text)},{$0.head.trailing})}),
-       newSplitPanel(
-         [newButton.withCaption({'A '+formatTime('c',systime)}),
-          newButton.withCaption('B'),
-          newButton.withCaption('C'),
-          newEdit.withCaption('Input').bind('text')],
-         [newLabel.withCaption('Right')])]));
-end;
