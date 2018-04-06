@@ -1,20 +1,20 @@
 object newCentralPackageForm: TnewCentralPackageForm
   Left = 379
-  Height = 294
+  Height = 403
   Top = 145
-  Width = 263
+  Width = 262
   BorderStyle = bsDialog
   Caption = 'Manage utility packages'
-  ClientHeight = 294
-  ClientWidth = 263
+  ClientHeight = 403
+  ClientWidth = 262
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '1.8.2.0'
   object ListBox: TListBox
     Left = 0
-    Height = 137
-    Top = 25
-    Width = 263
+    Height = 199
+    Top = 35
+    Width = 262
     Align = alClient
     ItemHeight = 0
     OnClick = ListBoxClick
@@ -24,71 +24,99 @@ object newCentralPackageForm: TnewCentralPackageForm
   end
   object remButton: TButton
     Left = 0
-    Height = 25
-    Top = 162
-    Width = 263
+    Height = 35
+    Top = 234
+    Width = 262
     Align = alBottom
+    AutoSize = True
     Caption = 'remove package'
     OnClick = remButtonClick
     TabOrder = 1
   end
   object GroupBox1: TGroupBox
+    AnchorSideRight.Side = asrBottom
     Left = 0
-    Height = 107
-    Top = 187
-    Width = 263
+    Height = 134
+    Top = 269
+    Width = 262
     Align = alBottom
+    AutoSize = True
     Caption = 'create package'
-    ClientHeight = 87
-    ClientWidth = 259
+    ClientHeight = 104
+    ClientWidth = 258
     TabOrder = 2
     object Label1: TLabel
-      Left = 8
-      Height = 15
-      Top = 8
-      Width = 35
+      Left = 0
+      Height = 25
+      Top = 0
+      Width = 51
       Caption = 'Name:'
       ParentColor = False
     end
     object packageNameEdit: TEdit
-      Left = 72
-      Height = 23
-      Top = 8
-      Width = 184
+      AnchorSideLeft.Control = filenameEdit
+      AnchorSideRight.Control = filenameEdit
+      AnchorSideRight.Side = asrBottom
+      Left = 80
+      Height = 33
+      Top = 0
+      Width = 171
+      Anchors = [akTop, akLeft, akRight]
       OnChange = packageNameEditChange
       TabOrder = 0
     end
     object Label2: TLabel
-      Left = 8
-      Height = 15
-      Top = 32
-      Width = 51
+      Left = 0
+      Height = 25
+      Top = 40
+      Width = 74
+      BorderSpacing.Right = 6
       Caption = 'Filename:'
       ParentColor = False
     end
     object filenameEdit: TEdit
-      Left = 72
-      Height = 23
-      Top = 32
-      Width = 184
+      AnchorSideLeft.Control = Label2
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = packageNameEdit
+      AnchorSideTop.Side = asrBottom
+      Left = 80
+      Height = 33
+      Top = 36
+      Width = 171
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 3
       ReadOnly = True
       TabStop = False
       TabOrder = 1
       Text = 'filenameEdit'
     end
     object complaintLabel: TLabel
-      Left = 8
-      Height = 15
-      Top = 64
-      Width = 93
+      AnchorSideLeft.Control = Label1
+      AnchorSideTop.Control = filenameEdit
+      AnchorSideTop.Side = asrBottom
+      AnchorSideBottom.Side = asrBottom
+      Left = 3
+      Height = 25
+      Top = 72
+      Width = 141
+      BorderSpacing.Around = 3
       Caption = 'File already exists!'
       ParentColor = False
     end
     object okButton: TButton
-      Left = 181
-      Height = 25
-      Top = 56
-      Width = 75
+      AnchorSideLeft.Control = complaintLabel
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = filenameEdit
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = filenameEdit
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Side = asrBottom
+      Left = 193
+      Height = 35
+      Top = 69
+      Width = 58
+      Anchors = [akTop, akRight]
+      AutoSize = True
       Caption = 'O.K.'
       ModalResult = 1
       TabOrder = 2
@@ -96,11 +124,12 @@ object newCentralPackageForm: TnewCentralPackageForm
   end
   object restoreButton: TButton
     Left = 0
-    Height = 25
+    Height = 35
     Hint = 'Restoring only recreates missing packages.'#13#10'You can delete a corrupted package to restore its original state.'
     Top = 0
-    Width = 263
+    Width = 262
     Align = alTop
+    AutoSize = True
     Caption = 'restore default packages'
     OnClick = restoreButtonClick
     ParentShowHint = False
