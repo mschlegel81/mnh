@@ -20,16 +20,13 @@ FUNCTION try_imp intFuncSignature;
   FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
     VAR prevAdapters,
         tryAdapters:P_adapters;
-        oldWhitelist:T_sideEffects;
         interceptor:P_errorInterceptor;
         messagesLiteral:P_literal;
     begin
       prevAdapters:=context.adapters;
       tryAdapters:=prevAdapters^.getAdaptersForTry(interceptor);
       context.adapters:=tryAdapters;
-      oldWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist-[se_alterPlotState]);
       result:=toTry^.evaluateToLiteral(tokenLocation,@context);
-      context.setAllowedSideEffectsReturningPrevious(oldWhitelist);
       context.adapters:=prevAdapters;
       if (result=nil) or (interceptor^.hasError) then begin
         if (result<>nil) then disposeLiteral(result);

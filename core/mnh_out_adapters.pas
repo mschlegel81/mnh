@@ -123,6 +123,7 @@ TYPE
       hasMessageOfType:array[T_messageType] of boolean;
       {$ifdef fullVersion}
       privatePlot:P_plot;
+      isTryingInstance:boolean;
       {$endif}
       subAdapters:array of P_adapters;
       userDefinedExitCode:longint;
@@ -574,6 +575,7 @@ CONSTRUCTOR T_adapters.create;
   begin
     {$ifdef fullVersion}
     privatePlot:=nil;
+    isTryingInstance:=false;
     preferredEchoLineLength:=-1;
     {$endif}
     setLength(adapter,0);
@@ -587,7 +589,7 @@ DESTRUCTOR T_adapters.destroy;
     for i:=0 to length(adapter)-1 do if adapter[i]^.autodestruct then dispose(adapter[i],destroy);
     setLength(adapter,0);
     {$ifdef fullVersion}
-    if privatePlot<>nil then dispose(privatePlot,destroy);
+    if (privatePlot<>nil) and not(isTryingInstance) then dispose(privatePlot,destroy);
     {$endif}
   end;
 
@@ -924,6 +926,8 @@ FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeError
 FUNCTION T_adapters.getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
   begin
     new(result,create);
+    result^.isTryingInstance:=true;
+    result^.privatePlot:=plot;
     new(errorInterceptor,create(@self));
     result^.addOutAdapter(errorInterceptor,true);
   end;
