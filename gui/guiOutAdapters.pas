@@ -83,7 +83,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       outputLinesLimit:longint=0;
       wroteToSyn:boolean=false;
       s:string;
-
+      showFormsAfter:boolean=false;
       linesToWrite:T_arrayOfString;
       bufferOffset:longint=0;
 
@@ -197,7 +197,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
         end;
         mt_displayTable: conditionalShowTables;
         mt_displayTreeView: conditionalShowVarTrees;
-        mt_displayCustomDialog: conditionalShowCustomForms(guiAdapters);
+        mt_displayCustomDialog: showFormsAfter:=true;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
@@ -255,7 +255,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end else syn.EndUpdate;
-
+    if showFormsAfter then conditionalShowCustomForms(guiAdapters);
     finally
       flushing:=false;
       system.leaveCriticalSection(cs);
