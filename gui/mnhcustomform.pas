@@ -19,6 +19,7 @@ CONST
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
+  PscriptedForm=^TscriptedForm;
   T_guiElementMeta=object
     config:record
       action :P_expressionLiteral;
@@ -127,6 +128,7 @@ TYPE
     meta:array of P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
+    processingEvents:boolean;
     PROCEDURE initialize();
   public
     PROCEDURE processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
@@ -140,6 +142,16 @@ IMPLEMENTATION
 VAR scriptedFormCs:TRTLCriticalSection;
     scriptedForm: TscriptedForm;
 {$R *.lfm}
+
+PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
+  VAR i:longint;
+  begin
+    for i:=0 to c.ControlCount-1 do begin
+      c.Controls[i].Cursor:=Cursor;
+      if c.Controls[i] is TWinControl then propagateCursor(TWinControl(c.Controls[i]),Cursor);
+    end;
+  end;
+
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
   begin
     enterCriticalSection(scriptedFormCs);
@@ -195,7 +207,8 @@ DESTRUCTOR T_splitPanelMeta.destroy;
   begin
   end;
 
-CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context:T_threadContext);
+CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
+  CONST location: T_tokenLocation; VAR context: T_threadContext);
   VAR tmp:P_literal;
   begin
     with config do begin
@@ -252,9 +265,11 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
     if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
     state.actionParameter:=param;
     state.actionTriggered:=true;
+    propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
   end;
 
-FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
+FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
+  VAR context: T_threadContext): boolean;
   VAR tmp:P_literal;
       oldEnabled:boolean;
       oldCaption:string;
@@ -320,6 +335,7 @@ CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral
     editPanel:=TPanel.create(parent);
     editPanel.parent:=parent;
     editPanel.Align:=alTop;
+    editPanel.AutoSize:=true;
 
     editPanel.BorderWidth:=3;
     editPanel.BorderStyle:=bsNone;
@@ -335,8 +351,10 @@ CONSTRUCTOR T_editMeta.create(CONST parent: TWinControl; CONST def: P_mapLiteral
 
     edit:=TEdit.create(parent);
     edit.parent:=editPanel;
+    edit.AnchorToNeighbour(akLeft,10,editLabel);
     edit.Align:=alClient;
     edit.enabled:=state.enabled;
+    edit.AutoSize:=true;
     edit.text:='';
     if (config.action<>nil) then edit.OnKeyDown:=@OnKeyDown;
     if (config.bindingTo<>'') then begin
@@ -504,6 +522,7 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLit
     comboboxPanel:=TPanel.create(parent);
     comboboxPanel.parent:=parent;
     comboboxPanel.Align:=alTop;
+    comboboxPanel.AutoSize:=true;
 
     comboboxPanel.BorderWidth:=3;
     comboboxPanel.BorderStyle:=bsNone;
@@ -520,6 +539,8 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: TWinControl; CONST def: P_mapLit
     combobox:=TComboBox.create(parent);
     combobox.parent:=comboboxPanel;
     combobox.Align:=alClient;
+    combobox.AutoSize:=true;
+    combobox.AnchorToNeighbour(akLeft,10,comboboxLabel);
     combobox.enabled:=state.enabled;
     combobox.text:='';
     if (config.action<>nil) then combobox.OnSelect:=@OnChange;
@@ -602,7 +623,6 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
   begin
     if lastControl<>nil then begin
       meta^.getControl.top:=lastControl.top+lastControl.height+10;
-      meta^.getControl.AnchorToNeighbour(akTop,3,lastControl);
     end;
     lastControl:=meta^.getControl;
   end;
@@ -673,7 +693,6 @@ PROCEDURE TscriptedForm.initialize();
       end;
 
     begin
-      writeln('Adding custom component(s) ',def^.toString());
       if def^.literalType in C_mapTypes then case componentTypeOf(P_mapLiteral(def)) of
         tc_label: begin
           new(labelMeta,create(container.winControl,P_mapLiteral(def),setupLocation,setupContext^));
@@ -755,14 +774,17 @@ PROCEDURE TscriptedForm.initialize();
     leaveCriticalSection(lock);
   end;
 
-PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
+PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
+  VAR context: T_threadContext);
   VAR m:P_guiElementMeta;
       somethingDone:boolean=false;
   begin
     enterCriticalSection(lock);
+    processingEvents:=true;
     for m in meta do if context.adapters^.noErrors then begin
       if m^.evaluate(location,context) then somethingDone:=true;
     end;
+    processingEvents:=false;
     leaveCriticalSection(lock);
     if somethingDone then context.adapters^.logDisplayCustomForm;
   end;
@@ -773,6 +795,8 @@ PROCEDURE TscriptedForm.updateComponents;
     enterCriticalSection(lock);
     for m in meta do m^.update;
     leaveCriticalSection(lock);
+    if processingEvents then propagateCursor(self,crHourGlass)
+                        else propagateCursor(self,crDefault);
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
@@ -787,7 +811,6 @@ PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
       Show;
       displayPending:=false;
     end;
-    writeln('Updating components');
     updateComponents;
     leaveCriticalSection(lock);
   end;
