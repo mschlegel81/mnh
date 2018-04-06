@@ -124,6 +124,7 @@ TYPE
       hasMessageOfType:array[T_messageType] of boolean;
       {$ifdef fullVersion}
       privatePlot:P_plot;
+      isTryingInstance:boolean;
       {$endif}
       subAdapters:array of P_adapters;
       userDefinedExitCode:longint;
@@ -234,6 +235,8 @@ CONST
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_displayTable,
+    mt_displayTreeView,
+    mt_displayCustomDialog,
     mt_guiPseudoPackageFound
     {$endif}
     {$ifdef imig},
@@ -582,6 +585,7 @@ CONSTRUCTOR T_adapters.create;
   begin
     {$ifdef fullVersion}
     privatePlot:=nil;
+    isTryingInstance:=false;
     preferredEchoLineLength:=-1;
     {$endif}
     {$ifdef imig}
@@ -604,7 +608,7 @@ DESTRUCTOR T_adapters.destroy;
     for i:=0 to length(adapter)-1 do if adapter[i]^.autodestruct then dispose(adapter[i],destroy);
     setLength(adapter,0);
     {$ifdef fullVersion}
-    if privatePlot<>nil then dispose(privatePlot,destroy);
+    if (privatePlot<>nil) and not(isTryingInstance) then dispose(privatePlot,destroy);
     {$endif}
     {$ifdef imig}
     if (picture.value<>nil) then dropImage(picture.value);
@@ -956,6 +960,10 @@ FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeError
 FUNCTION T_adapters.getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
   begin
     new(result,create);
+    {$ifdef fullVersion}
+    result^.isTryingInstance:=true;
+    result^.privatePlot:=plot;
+    {$endif}
     new(errorInterceptor,create(@self));
     result^.addOutAdapter(errorInterceptor,true);
   end;

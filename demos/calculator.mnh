@@ -1,0 +1,18 @@
+USE customFormUtil;
+
+private prettyExecute(input:String)->
+  sandBoxExecute(input).map({$x.join("\t")})
+                       .join("\n")
+                       .formatTabs
+                       .join("\n");
+
+//@demo_for=custom forms
+main->begin
+  local inputText:='';
+  showDialog('Calculator',
+    [newEdit
+      .withCaption('Input')
+      .bind('inputText'),
+     newOutputMemo
+      .withCaption({prettyExecute(inputText)})]);
+end;
