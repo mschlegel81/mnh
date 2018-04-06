@@ -7,5 +7,6 @@ object scriptedForm: TscriptedForm
   DesignTimePPI = 144
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyUp = FormKeyUp
   LCLVersion = '1.8.2.0'
 end
