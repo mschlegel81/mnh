@@ -417,6 +417,7 @@ PROCEDURE T_editMeta.OnChange(Sender: TObject);
     if (config.bindingTo<>'') then begin
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(edit.text);
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
     end;
   end;
 
@@ -477,6 +478,7 @@ PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
     if (config.bindingTo<>'') then begin
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newBoolLiteral(checkbox.checked);
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
     end;
     postAction(newBoolLiteral(checkbox.checked));
   end;
@@ -621,6 +623,7 @@ PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
     if (config.bindingTo<>'') then begin
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(combobox.text);
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
     end;
     postAction(newStringLiteral(combobox.text));
   end;
