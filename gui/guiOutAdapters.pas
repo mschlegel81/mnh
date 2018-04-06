@@ -3,7 +3,8 @@ INTERFACE
 USES SynEdit,SynEditKeyCmds,Forms,
      myStringUtil,myGenerics,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
-     mnh_plotForm, mnh_tables, dynamicPlotting,variableTreeViews,mnhCustomForm;
+     mnh_plotForm, mnh_tables,
+     dynamicPlotting,variableTreeViews,mnhCustomForm;
 TYPE
   T_abstractMnhForm=class(TForm)
     public
