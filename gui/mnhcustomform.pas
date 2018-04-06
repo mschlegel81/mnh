@@ -131,7 +131,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
   private
-    setupParam:P_mapLiteral;
+    setupParam:P_literal;
     setupLocation:T_tokenLocation;
     setupContext:P_threadContext;
     meta:array of P_guiElementMeta;
@@ -168,7 +168,7 @@ PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
     leaveCriticalSection(scriptedFormCs);
   end;
 
-FUNCTION createScriptedForm(CONST title:string; CONST definition:P_mapLiteral; CONST context:P_threadContext; CONST errorLocation:T_tokenLocation):TscriptedForm;
+FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_threadContext; CONST errorLocation:T_tokenLocation):TscriptedForm;
   begin
     enterCriticalSection(scriptedFormCs);
     if scriptedForm<>nil then begin
@@ -829,10 +829,13 @@ PROCEDURE TscriptedForm.initialize();
     end;
 
   VAR formMeta:T_panelMeta;
+      k:longint;
   begin
     enterCriticalSection(lock);
     formMeta.createForExistingForm(self);
-    initComponent(formMeta,setupParam);
+    if setupParam^.literalType in C_listTypes
+    then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta,P_listLiteral(setupParam)^.value[k])
+    else                                                  initComponent(formMeta,              setupParam           );
     formMeta.alignContents;
     formMeta.destroy;
     displayPending:=true;
@@ -884,7 +887,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
   VAR form:TscriptedForm;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes) then begin
+    if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin
       form:=
       createScriptedForm(P_stringLiteral(params^.value[0])^.value,
                          P_mapLiteral(params^.value[1]),
@@ -903,7 +906,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
 INITIALIZATION
   initCriticalSection(scriptedFormCs);
   scriptedForm:=nil;
-  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'Shows a custom dialog defined by the given map; returns void when the form is closed');
+  registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');
 
 FINALIZATION
   freeScriptedForms;

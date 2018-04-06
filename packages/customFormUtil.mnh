@@ -1,24 +1,35 @@
 //@SuppressUnusedWarning
-newButton  ->[['type','button'  ]].toMap;
+newButton  ->[['type','button']].toMap;
+
 //@SuppressUnusedWarning
-newEdit    ->[['type','edit'    ]].toMap;
+newEdit    ->[['type','edit']].toMap;
+
 //@SuppressUnusedWarning
 newCheckbox->[['type','checkbox']].toMap;
+
 //@SuppressUnusedWarning
-newMemo->[['type','outputMemo']].toMap;
+newOutputMemo->[['type','outputMemo']].toMap;
+
 //@SuppressUnusedWarning
 newComboBox(options)->[['type','comboBox'],['items',options]].toMap;
+
 //@SuppressUnusedWarning
 newLabel   ->[['type','label'   ]].toMap;
+
 //@SuppressUnusedWarning
 newPanel(contents:List)->[['type','panel'],['parts',contents]].toMap;
+
 //@SuppressUnusedWarning
 newSplitPanel(left:List,right:List)->[['type','splitPanel'],['left',left],['right',right]].toMap;
+
 //@SuppressUnusedWarning
 withCaption(m:Map,caption)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
+
 //@SuppressUnusedWarning
 withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::orElse);
+
 //@SuppressUnusedWarning
 withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
+
 //@SuppressUnusedWarning
 bind(m:Map,id:String)->[['bind',id]].toMap.mergeMaps(m,::orElse);
