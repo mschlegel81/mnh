@@ -2,40 +2,23 @@ object openDemoDialogForm: TopenDemoDialogForm
   Left = 596
   Height = 240
   Top = 301
-  Width = 432
+  Width = 198
+  BorderStyle = bsDialog
   Caption = 'Open demo'
   ClientHeight = 240
-  ClientWidth = 432
-  OnCreate = FormCreate
+  ClientWidth = 198
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.8.0.6'
-  object demosGrid: TStringGrid
+  LCLVersion = '1.6.0.4'
+  object ListBox: TListBox
     Left = 0
     Height = 240
     Top = 0
-    Width = 432
+    Width = 198
     Align = alClient
-    AutoFillColumns = True
-    ColCount = 2
-    FixedCols = 0
-    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goColSpanning, goSmoothScroll]
+    ItemHeight = 0
+    OnDblClick = ListBoxDblClick
+    OnKeyPress = ListBoxKeyPress
     TabOrder = 0
-    OnDblClick = demosGridDblClick
-    OnHeaderClick = demosGridHeaderClick
-    OnKeyPress = demosGridKeyPress
-    ColWidths = (
-      214
-      214
-    )
-    Cells = (
-      2
-      0
-      0
-      'Demo'
-      1
-      0
-      'Tag(s)'
-    )
   end
 end
