@@ -926,8 +926,10 @@ FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeError
 FUNCTION T_adapters.getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
   begin
     new(result,create);
+    {$ifdef fullVersion}
     result^.isTryingInstance:=true;
     result^.privatePlot:=plot;
+    {$endif}
     new(errorInterceptor,create(@self));
     result^.addOutAdapter(errorInterceptor,true);
   end;
