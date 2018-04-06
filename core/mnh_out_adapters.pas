@@ -227,6 +227,8 @@ CONST
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_displayTable,
+    mt_displayTreeView,
+    mt_displayCustomDialog,
     mt_guiPseudoPackageFound
     {$endif}];
   C_collectAllOutputBehavior:T_messageTypeSet=[low(T_messageType)..high(T_messageType)];
