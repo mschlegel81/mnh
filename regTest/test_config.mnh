@@ -53,6 +53,7 @@ skipFile((demosRoot&'oeis_server.mnh'        ),fullVersion)->true;
 skipFile((demosRoot&'perfectCircles.mnh'     ),fullVersion)->true;
 skipFile((demosRoot&'rollingCircle.mnh'      ),fullVersion)->true;
 skipFile((demosRoot&'calculator.mnh'         ),fullVersion)->true;
+skipFile((demosRoot&'fileViewer.mnh'         ),fullVersion)->true;
 skipFile(file in plotters                     ,false      )->true;
 skipFile(scriptFileName:String                ,fullVersion)->false;
 

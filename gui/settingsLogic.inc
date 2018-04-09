@@ -80,6 +80,7 @@ PROCEDURE processFontSettings;
       assistanceSynEdit.Font:=OutputEdit.Font;
       updateWordWrap;
     end;
+    conditionalShowCustomForms(guiAdapters);
   end;
 
 PROCEDURE initializeSettings;

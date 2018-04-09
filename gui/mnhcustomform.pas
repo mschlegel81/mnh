@@ -41,7 +41,9 @@ TYPE
       actionParameter:P_literal;
       caption:string;
       enabled:boolean;
+      bindUpdateTriggered:boolean;
       bindingValue:P_literal;
+      evaluating:boolean;
     end;
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
@@ -95,8 +97,11 @@ TYPE
   P_outputMemoMeta=^T_outputMemoMeta;
   T_outputMemoMeta=object(T_guiElementMeta)
     synMeta:T_basicEditorMeta;
+    config_hlLang:P_expressionLiteral;
+    state_hlLang :string;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
     PROCEDURE update; virtual;
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION preferClientAlignment:boolean; virtual;
     DESTRUCTOR destroy; virtual;
@@ -254,8 +259,12 @@ DESTRUCTOR T_splitPanelMeta.destroy;
   end;
 
 PROCEDURE T_splitPanelMeta.OnResize(Sender: TObject);
-  VAR leftW,rightW,totalW,dummy:longint;
+  VAR leftW :longint=0;
+      rightW:longint=0;
+      totalW:longint=0;
+      dummy :longint=0;
   begin
+    if state.evaluating then exit;
     Left .getControl.AutoSize:=true;
     Left .getControl.GetPreferredSize(leftW ,dummy);
     Right.getControl.GetPreferredSize(rightW,dummy);
@@ -303,6 +312,8 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       actionParameter:=nil;
       caption        :='';
       enabled        :=true;
+      bindUpdateTriggered:=false;
+      evaluating:=false;
     end;
 
     tmp:=mapGet(def,key[dmk_action]);
@@ -344,6 +355,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
 
 PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
   begin
+    if state.evaluating then exit;
     if config.action=nil then exit;
     if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
     state.actionParameter:=param;
@@ -357,6 +369,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
       oldEnabled:boolean;
       oldCaption:string;
   begin
+    state.evaluating:=true;
     result:=false;
     if state.actionTriggered then begin
       tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter);
@@ -384,21 +397,36 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
       result:=result or (oldCaption<>state.caption);
     end;
 
-    if (config.bindingTo<>'') and (state.bindingValue<>nil) then begin
-      tmp:=context.valueStore^.getVariableValue(config.bindingTo);
-      if tmp=nil then begin
-        result:=true;
-        context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.adapters);
-      end else begin
-        if tmp^.equals(state.bindingValue) then begin
-          disposeLiteral(tmp);
-        end else begin
+    if (config.bindingTo<>'') then begin
+      if (state.bindingValue<>nil) and (state.bindUpdateTriggered) then begin
+        tmp:=context.valueStore^.getVariableValue(config.bindingTo);
+        if tmp=nil then begin
           result:=true;
-          disposeLiteral(tmp);
           context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.adapters);
+        end else begin
+          if tmp^.equals(state.bindingValue) then begin
+            disposeLiteral(tmp);
+          end else begin
+            result:=true;
+            disposeLiteral(tmp);
+            context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.adapters);
+          end;
+        end;
+        state.bindUpdateTriggered:=false;
+      end else if not(state.bindUpdateTriggered) then begin
+        tmp:=context.valueStore^.getVariableValue(config.bindingTo);
+        if tmp<>nil then begin
+          if tmp^.equals(state.bindingValue)
+          then  disposeLiteral(tmp)
+          else begin
+            disposeLiteral(state.bindingValue);
+            state.bindingValue:=tmp;
+            result:=true;
+          end;
         end;
       end;
     end;
+    state.evaluating:=false;
   end;
 
 DESTRUCTOR T_guiElementMeta.destroy;
@@ -454,13 +482,16 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
 
 PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
+    if state.evaluating then exit;
     if (key<>13) then exit;
     postAction(newStringLiteral(TEdit(Sender).text));
   end;
 
 PROCEDURE T_editMeta.OnChange(Sender: TObject);
   begin
+    if state.evaluating then exit;
     if (config.bindingTo<>'') then begin
+      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(edit.text);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
@@ -479,13 +510,18 @@ FUNCTION T_guiElementMeta.preferClientAlignment: boolean;
 
 PROCEDURE T_guiElementMeta.OnKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
+    if state.evaluating then exit;
     if (key=9) and (Sender is TControl) and (ssCtrl in Shift) then formCycle(TForm(TControl(Sender).GetTopParent),ssShift in Shift);
   end;
 
 PROCEDURE T_editMeta.update;
   begin
+    if state.evaluating then exit;
     editLabel.caption:=state.caption;
     edit.enabled:=state.enabled;
+    if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
+      edit.caption:=P_stringLiteral(state.bindingValue)^.value;
+    end;
   end;
 
 CONSTRUCTOR T_labelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -500,6 +536,7 @@ CONSTRUCTOR T_labelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
 
 PROCEDURE T_labelMeta.update;
   begin
+    if state.evaluating then exit;
     mylabel.caption:=state.caption;
     mylabel.enabled:=state.enabled;
   end;
@@ -525,13 +562,19 @@ CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
 
 PROCEDURE T_checkboxMeta.update;
   begin
+    if state.evaluating then exit;
     checkbox.caption:=state.caption;
     checkbox.enabled:=state.enabled;
+    if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_boolean) then begin
+      checkbox.checked:=P_boolLiteral(state.bindingValue)^.value;
+    end;
   end;
 
 PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
   begin
+    if state.evaluating then exit;
     if (config.bindingTo<>'') then begin
+      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newBoolLiteral(checkbox.checked);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
@@ -560,12 +603,14 @@ CONSTRUCTOR T_buttonMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiter
 
 PROCEDURE T_buttonMeta.update;
   begin
+    if state.evaluating then exit;
     button.caption:=state.caption;
     button.enabled:=state.enabled;
   end;
 
 PROCEDURE T_buttonMeta.OnClick(Sender: TObject);
   begin
+    if state.evaluating then exit;
     postAction(nil);
   end;
 
@@ -591,7 +636,9 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
 
 PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
   begin
+    if state.evaluating then exit;
     if (config.bindingTo<>'') then begin
+      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(synMeta.editor.text);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
@@ -600,6 +647,7 @@ PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
 
 PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
+    if state.evaluating then exit;
     if (key<>13) or not(ssShift in Shift) then exit;
     postAction(newStringLiteral(synMeta.editor.text));
   end;
@@ -615,12 +663,19 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
     synMeta.editor.readonly:=true;
     synMeta.editor.OnKeyUp:=@OnKeyUp;
     synMeta.activate;
+    state_hlLang:='';
+    config_hlLang:=nil;
 
     langLit:=mapGet(def,key[dmk_highlight]);
     if langLit<>nil then begin
-      if langLit^.literalType=lt_string
-      then synMeta.setLanguage(P_stringLiteral(langLit)^.value,LANG_TXT)
-      else context.adapters^.raiseError('highlighter is: '+langLit^.typeString+'; must be string',location);
+      case langLit^.literalType of
+        lt_string: begin
+          state_hlLang:=P_stringLiteral(langLit)^.value;
+          synMeta.setLanguage(state_hlLang,LANG_TXT);
+        end;
+        lt_expression: config_hlLang:=P_expressionLiteral(langLit^.rereferenced);
+        else context.adapters^.raiseError('highlighter is: '+langLit^.typeString+'; must be string or expression',location);
+      end;
       disposeLiteral(langLit);
     end else synMeta.language:=LANG_TXT;
     parent^.add(@self);
@@ -630,11 +685,16 @@ PROCEDURE T_outputMemoMeta.update;
   begin
     synMeta.editor.text:=state.caption;
     synMeta.editor.enabled:=state.enabled;
+    synMeta.setLanguage(state_hlLang,synMeta.language);
+    synMeta.activate;
   end;
 
 PROCEDURE T_inputEditorMeta.update;
   begin
+    if state.evaluating then exit;
+    synMeta.setLanguage(state_hlLang,synMeta.language);
     synMeta.editor.enabled:=state.enabled;
+    synMeta.activate;
   end;
 
 FUNCTION T_outputMemoMeta.getControl: TControl;
@@ -650,6 +710,7 @@ FUNCTION T_outputMemoMeta.preferClientAlignment: boolean;
 DESTRUCTOR T_outputMemoMeta.destroy;
   begin
     synMeta.destroy;
+    if config_hlLang<>nil then disposeLiteral(config_hlLang);
   end;
 
 OPERATOR:=(x:T_listLiteral):T_arrayOfString;
@@ -719,17 +780,24 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
 PROCEDURE T_comboboxMeta.update;
   VAR i:longint;
   begin
+    if state.evaluating then exit;
     combobox.enabled:=state.enabled;
     comboboxLabel.caption:=state.caption;
 
     while (combobox.items.count>length(state_items)) do combobox.items.delete(length(state_items));
     for i:=0 to combobox.items.count-1 do combobox.items[i]:=state_items[i];
     for i:=combobox.items.count to length(state_items)-1 do combobox.items.add(state_items[i]);
+
+    if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
+      combobox.text:=P_stringLiteral(state.bindingValue)^.value;
+    end;
   end;
 
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
   begin
+    if state.evaluating then exit;
     if (config.bindingTo<>'') then begin
+      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(combobox.text);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
@@ -739,15 +807,35 @@ PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
 
 FUNCTION T_comboboxMeta.getControl: TControl;
   begin
-    result:=combobox;
+    result:=comboboxPanel;
   end;
 
-FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation;
-  VAR context: T_threadContext): boolean;
+FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
+  VAR tmp:P_literal;
+      oldLang:string;
+  begin
+    result:=inherited evaluate(location,context);
+    state.evaluating:=true;
+    if config_hlLang<>nil then begin
+      tmp:=config_hlLang^.evaluateToLiteral(location,@context);
+      if tmp<>nil then begin
+        if tmp^.literalType=lt_string then begin
+          oldLang:=state_hlLang;
+          state_hlLang:=P_stringLiteral(tmp)^.value;
+          result:=result or (oldLang<>state_hlLang);
+        end else context.adapters^.raiseError( 'Cannot evaluate expression to String '+config_hlLang^.toString(50)+'; returned type is '+tmp^.typeString,config_hlLang^.getLocation);
+        disposeLiteral(tmp);
+      end;
+    end;
+    state.evaluating:=false;
+  end;
+
+FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
   begin
     result:=inherited evaluate(location,context);
+    state.evaluating:=true;
     if config_items<>nil then begin
       oldItems:=state_items;
       tmp:=config.caption^.evaluateToLiteral(location,@context);
@@ -759,6 +847,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation;
       end;
       result:=result or not(arrEquals(oldItems,state_items));
     end;
+    state.evaluating:=false;
   end;
 
 DESTRUCTOR T_comboboxMeta.destroy;

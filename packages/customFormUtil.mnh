@@ -1,11 +1,11 @@
-private HIGHLIGHTERS:=['mnh','cpp','c','h','hh','css','diff','html','ini','java','js','json','pas','perl','php','py','sh','sql','vb','bat','xml','txt','output'];
+HIGHLIGHTERS:=['mnh','cpp','c','h','hh','css','diff','html','ini','java','js','json','pas','perl','php','py','sh','sql','vb','bat','xml','txt','output'];
 
 //@SuppressUnusedWarning
-newButton  ->[['type','button']].toMap;
 
+newButton  ->[['type','button'  ]].toMap;
 //@SuppressUnusedWarning
-newEdit    ->[['type','edit']].toMap;
 
+newEdit    ->[['type','edit'    ]].toMap;
 //@SuppressUnusedWarning
 newCheckbox->[['type','checkbox']].toMap;
 
@@ -13,8 +13,12 @@ newCheckbox->[['type','checkbox']].toMap;
 newInputEditor(highlighter in HIGHLIGHTERS)->[['type','inputEditor'],['highlight',highlighter]].toMap;
 
 //@SuppressUnusedWarning
+newInputEditor(highlighter:Expression(0))->[['type','inputEditor'],['highlight',highlighter]].toMap;
+//@SuppressUnusedWarning
 newOutputEditor(highlighter in HIGHLIGHTERS)->[['type','outputEditor'],['highlight',highlighter]].toMap;
 
+//@SuppressUnusedWarning
+newOutputEditor(highlighter:Expression(0))->[['type','outputEditor'],['highlight',highlighter]].toMap;
 //@SuppressUnusedWarning
 newComboBox(options)->[['type','comboBox'],['items',options]].toMap;
 
