@@ -1,3 +1,5 @@
+private HIGHLIGHTERS:=['mnh','cpp','c','h','hh','css','diff','html','ini','java','js','json','pas','perl','php','py','sh','sql','vb','bat','xml','txt','output'];
+
 //@SuppressUnusedWarning
 newButton  ->[['type','button']].toMap;
 
@@ -8,7 +10,10 @@ newEdit    ->[['type','edit']].toMap;
 newCheckbox->[['type','checkbox']].toMap;
 
 //@SuppressUnusedWarning
-newOutputMemo->[['type','outputMemo']].toMap;
+newInputEditor(highlighter in HIGHLIGHTERS)->[['type','inputEditor'],['highlight',highlighter]].toMap;
+
+//@SuppressUnusedWarning
+newOutputEditor(highlighter in HIGHLIGHTERS)->[['type','outputEditor'],['highlight',highlighter]].toMap;
 
 //@SuppressUnusedWarning
 newComboBox(options)->[['type','comboBox'],['items',options]].toMap;
