@@ -227,7 +227,7 @@ PROCEDURE initFileTypes;
     addFileType(LANG_BAT   ,'bat' ,SynBatSyn1            ,'Windows &Batch File' );
     addFileType(LANG_XML   ,'xml' ,SynXMLSyn1            ,'&XML'                );
     addFileType(LANG_TXT   ,'txt' ,nil                   ,'unknown (&Text)'     );
-    fileTypeMeta[LANG_OUTPUT].extensions:=C_EMPTY_STRING_ARRAY;
+    fileTypeMeta[LANG_OUTPUT].extensions:='OUTPUT';
     fileTypeMeta[LANG_OUTPUT].highlighter:=outputHighlighter;
     fileTypeMeta[LANG_OUTPUT].menuItem:=nil;
   end;
@@ -417,12 +417,7 @@ PROCEDURE T_basicEditorMeta.activate;
     editor_.Font:=editorFont;
     if language_=LANG_MNH then editor.highlighter:=highlighter
                           else editor.highlighter:=fileTypeMeta[language_].highlighter;
-   if language_=LANG_MNH then begin
-      completionLogic.assignEditor(editor_,nil);
-    end else begin
-      completionLogic.assignEditor(editor_,nil);
-    end;
-
+    completionLogic.assignEditor(editor_,nil);
   end;
 
 PROCEDURE T_basicEditorMeta.setCaret(CONST location: T_searchTokenLocation);

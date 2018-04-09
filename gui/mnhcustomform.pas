@@ -7,10 +7,10 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, StdCtrls, mnh_constants, mnh_basicTypes, mnh_contexts,
-  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters;
+  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase;
 
 TYPE
-  T_definingMapKey=(dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right);
+  T_definingMapKey=(dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight);
   T_definingMapKeys=set of T_definingMapKey;
 
 CONST
@@ -23,7 +23,8 @@ CONST
     'items',
     'parts',
     'left',
-    'right');
+    'right',
+    'highlight');
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
@@ -93,11 +94,20 @@ TYPE
 
   P_outputMemoMeta=^T_outputMemoMeta;
   T_outputMemoMeta=object(T_guiElementMeta)
-    memo:TMemo;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    synMeta:T_basicEditorMeta;
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION preferClientAlignment:boolean; virtual;
+    DESTRUCTOR destroy; virtual;
+  end;
+
+  P_inputEditorMeta=^T_inputEditorMeta;
+  T_inputEditorMeta=object(T_outputMemoMeta)
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    PROCEDURE update; virtual;
+    PROCEDURE OnChange(Sender: TObject);
+    PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   end;
 
   P_comboboxMeta=^T_comboboxMeta;
@@ -564,35 +574,82 @@ FUNCTION T_buttonMeta.getControl: TControl;
     result:=button;
   end;
 
-CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                                    CONST location: T_tokenLocation; VAR context: T_threadContext);
+CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
   begin
-    inherited create(def,location,context,[dmk_type,dmk_caption]);
-    memo:=TMemo.create(parent^.winControl);
-    memo.Font.name:='Courier New';
-    memo.parent:=parent^.winControl;
-    memo.Align:=alTop;
-    memo.ScrollBars:=ssAutoBoth;
-    memo.WordWrap:=false;
-    memo.readonly:=true;
-    memo.OnKeyUp:=@OnKeyUp;
+    inherited create(parent,def,location,context,[dmk_type,dmk_highlight,dmk_bind,dmk_action]);
+    synMeta.editor.readonly:=false;
+    if (config.bindingTo<>'') then begin
+      synMeta.editor.OnChange:=@OnChange;
+      if state.bindingValue<>nil then begin
+        if state.bindingValue^.literalType=lt_string
+        then synMeta.editor.text:=P_stringLiteral(state.bindingValue)^.value
+        else synMeta.editor.text:=                state.bindingValue^.toString();
+      end;
+    end;
+    if (config.action<>nil) then synMeta.editor.OnKeyDown:=@OnKeyDown;
+  end;
+
+PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
+  begin
+    if (config.bindingTo<>'') then begin
+      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
+      state.bindingValue:=newStringLiteral(synMeta.editor.text);
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+    end;
+  end;
+
+PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key<>13) or not(ssShift in Shift) then exit;
+    postAction(newStringLiteral(synMeta.editor.text));
+  end;
+
+CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
+                                    CONST location: T_tokenLocation; VAR context: T_threadContext;
+                                    CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
+  VAR langLit:P_literal;
+  begin
+    inherited create(def,location,context,consideredKeys);
+    synMeta.createWithParent(parent^.winControl);
+    synMeta.editor.Align:=alTop;
+    synMeta.editor.readonly:=true;
+    synMeta.editor.OnKeyUp:=@OnKeyUp;
+    synMeta.activate;
+
+    langLit:=mapGet(def,key[dmk_highlight]);
+    if langLit<>nil then begin
+      if langLit^.literalType=lt_string
+      then synMeta.setLanguage(P_stringLiteral(langLit)^.value,LANG_TXT)
+      else context.adapters^.raiseError('highlighter is: '+langLit^.typeString+'; must be string',location);
+      disposeLiteral(langLit);
+    end else synMeta.language:=LANG_TXT;
     parent^.add(@self);
   end;
 
 PROCEDURE T_outputMemoMeta.update;
   begin
-    memo.text:=state.caption;
-    memo.enabled:=state.enabled;
+    synMeta.editor.text:=state.caption;
+    synMeta.editor.enabled:=state.enabled;
+  end;
+
+PROCEDURE T_inputEditorMeta.update;
+  begin
+    synMeta.editor.enabled:=state.enabled;
   end;
 
 FUNCTION T_outputMemoMeta.getControl: TControl;
   begin
-    result:=memo;
+    result:=synMeta.editor;
   end;
 
 FUNCTION T_outputMemoMeta.preferClientAlignment: boolean;
   begin
     result:=true;
+  end;
+
+DESTRUCTOR T_outputMemoMeta.destroy;
+  begin
+    synMeta.destroy;
   end;
 
 OPERATOR:=(x:T_listLiteral):T_arrayOfString;
@@ -800,8 +857,8 @@ PROCEDURE TscriptedForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftS
   end;
 
 PROCEDURE TscriptedForm.initialize();
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_outputMemo,tc_comboBox);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','outputMemo','comboBox');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_comboBox);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','comboBox');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -816,7 +873,7 @@ PROCEDURE TscriptedForm.initialize();
       result:=tc_error;
       for tc in T_componentType do if C_componentType[tc]=P_stringLiteral(componentTypeLiteral)^.value then result:=tc;
       if result=tc_error then
-        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","outputMemo","checkbox","splitPanel"]',setupLocation);
+        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","inputEditor","outputEditor","checkbox","splitPanel"]',setupLocation);
       disposeLiteral(componentTypeLiteral);
     end;
 
@@ -825,7 +882,8 @@ PROCEDURE TscriptedForm.initialize();
         buttonMeta  :P_buttonMeta;
         checkboxMeta:P_checkboxMeta;
         editMeta    :P_editMeta;
-        memoMeta    :P_outputMemoMeta;
+        inputEditM  :P_inputEditorMeta;
+        outputEditM :P_outputMemoMeta;
         comboMeta   :P_comboboxMeta;
         newPanel    :P_panelMeta;
         splitPanel  :P_splitPanelMeta;
@@ -853,12 +911,13 @@ PROCEDURE TscriptedForm.initialize();
 
     begin
       if def^.literalType in C_mapTypes then case componentTypeOf(P_mapLiteral(def)) of
-        tc_label:     begin new(labelMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(labelMeta   ); end;
-        tc_button:    begin new(buttonMeta  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(buttonMeta  ); end;
-        tc_checkbox:  begin new(checkboxMeta,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(checkboxMeta); end;
-        tc_textBox:   begin new(editMeta    ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(editMeta    ); end;
-        tc_outputMemo:begin new(memoMeta    ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(memoMeta    ); end;
-        tc_comboBox:  begin new(comboMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
+        tc_label:        begin new(labelMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(labelMeta   ); end;
+        tc_button:       begin new(buttonMeta  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(buttonMeta  ); end;
+        tc_checkbox:     begin new(checkboxMeta,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(checkboxMeta); end;
+        tc_textBox:      begin new(editMeta    ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(editMeta    ); end;
+        tc_inputEditor : begin new(inputEditM  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(inputEditM  ); end;
+        tc_outputEditor: begin new(outputEditM ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
+        tc_comboBox:     begin new(comboMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
 
         tc_panel:begin
           new(newPanel,create(@container,P_mapLiteral(def),setupLocation,setupContext^));
