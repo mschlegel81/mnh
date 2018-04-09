@@ -25,6 +25,7 @@ USES
   closeDialog,
   variableTreeViews,
   //MNH:
+  editorMetaBase,
   editorMeta,
   searchModel,
   mnhCompletion,
@@ -177,7 +178,7 @@ TYPE
       inlineVariableReport:P_variableTreeEntryCategoryNode;
     end;
     quick:record
-      meta:T_editorMeta;
+      meta:T_basicEditorMeta;
       adapters:P_adapters;
       task:T_postEvaluationData;
       completion:T_completionLogic;

@@ -169,7 +169,6 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     searchReplaceModel.destroy;
     runnerModel.destroy;
-    completionLogic.destroy;
     guiTaskQueue.destroy;
     quick.task.destroy;
     quick.meta.destroy;
@@ -225,7 +224,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
                            cbOutlineShowImported,
                            @openLocation);
 
-      quick.meta.createWithParent(DETACHED_EDITOR_META_INDEX,QuickTabSheet);
+      quick.meta.createWithParent(QuickTabSheet);
       quick.meta.editor.Align:=alTop;
       quick.meta.editor.height:=80;
       quick.meta.editor.OnChange:=@QuickEditChange;
