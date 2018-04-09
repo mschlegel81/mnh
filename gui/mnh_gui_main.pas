@@ -44,7 +44,8 @@ USES
   treeUtil,
   menuUtil,
   guiOutAdapters,
-  renameDialog;
+  renameDialog,
+  mnhCustomForm;
 TYPE
   {$define includeInterface}
   {$include guiEditorInterface.inc}

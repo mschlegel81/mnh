@@ -1,0 +1,34 @@
+USE customFormUtil;
+
+main->main('');
+
+//@demo_for=custom forms
+main(fileToOpen)->begin
+  local filename:='';
+  local lines   :='';
+  local hl      :='txt';
+  local openFile:={fileExists($filename)
+    ? begin
+        filename:=$filename;
+        lines:=filename.fileLines.join("\n");
+        hl:=filename.extractFileExt.replace('.','');
+      end
+    : begin
+        lines:='';
+        hl:='txt';
+      end};
+  openFile(fileToOpen);
+  showDialog('Fileviewer',
+            [newSplitPanel([newEdit
+                              .bind('filename')
+                              .withCaption('File')
+                              .withAction(openFile)],
+                           [newButton
+                              .withCaption('...')
+                              .withAction({openFile(ask('Pick a file'))})]),
+             newComboBox(HIGHLIGHTERS)
+               .withCaption('Highlighting')
+               .bind('hl'),
+             newOutputEditor({hl})
+               .withCaption({lines})]);
+end;

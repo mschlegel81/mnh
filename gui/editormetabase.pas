@@ -397,8 +397,7 @@ FUNCTION T_basicEditorMeta.isPseudoFile: boolean;
     result:=true;
   end;
 
-PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string;
-  CONST fallback: T_language);
+PROCEDURE T_basicEditorMeta.setLanguage(CONST extensionWithoutDot: string; CONST fallback: T_language);
   VAR l:T_language;
       s:string;
       ext:string;
