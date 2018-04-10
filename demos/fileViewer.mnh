@@ -1,5 +1,14 @@
 USE customFormUtil;
 
+private datastore fileHlAssoc:=[].toMap;
+private synchronized getHlAssoc(filename:String)->
+  fileHlAssoc[filename] orElse filename.extractFileExt.replace('.','');
+private synchronized logHlAssoc('',assoc)->void;
+private synchronized logHlAssoc(filename,assoc)->
+  filename.extractFileExt.replace('.','')==assoc
+  ? void
+  : fileHlAssoc[filename]:=assoc;
+
 main->main('');
 
 //@demo_for=custom forms
@@ -9,15 +18,17 @@ main(fileToOpen)->begin
   local hl      :='txt';
   local openFile:={fileExists($filename)
     ? begin
+        logHlAssoc(filename,hl);
         filename:=$filename;
         lines:=filename.fileLines.join("\n");
-        hl:=filename.extractFileExt.replace('.','');
+        hl:=filename.getHlAssoc;
       end
     : begin
+        logHlAssoc(filename,hl);
         lines:='';
         hl:='txt';
       end};
-  openFile(fileToOpen);
+  openFile(fileToOpen.expandedFileName);
   showDialog('Fileviewer',
             [newSplitPanel([newEdit
                               .bind('filename')
@@ -31,4 +42,5 @@ main(fileToOpen)->begin
                .bind('hl'),
              newOutputEditor({hl})
                .withCaption({lines})]);
+  logHlAssoc(filename,hl);
 end;
