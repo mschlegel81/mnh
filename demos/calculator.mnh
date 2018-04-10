@@ -1,8 +1,19 @@
 USE customFormUtil;
 
+private REMAP:=
+[['in>'        ,#226#128#139' in>'],
+ ['out>'       ,#226#128#139'out>'],
+ ['...>'       ,#226#128#139'...>'],
+ ['Note'       ,#226#128#140'Note'],
+ ['Warning'    ,#226#129#163'Warning'],
+ ['Error'      ,#226#129#162'Error'],
+ ['Stack trace',#226#129#162'Stack trace'],
+ ['User-Error' ,#226#129#162'User-Error'],
+ ['Sys. Error' ,#226#129#162'Sys. Error'],
+ ['printline'  ,'']].toMap;
+
 private prettyExecute(input:String)->
-  sandBoxExecute(input).map({$x.join("\t")})
-                       .join("\n")
+  sandBoxExecute(input).map({(REMAP[$x.head] orElse $x.head) & "\t" & $x.trailing}).join("\n")
                        .formatTabs
                        .join("\n");
 
@@ -10,9 +21,8 @@ private prettyExecute(input:String)->
 main->begin
   local inputText:='';
   showDialog('Calculator',
-    [newEdit
-      .withCaption('Input')
+    [newInputEditor('mnh')
       .bind('inputText'),
-     newOutputMemo
+     newOutputEditor('output')
       .withCaption({prettyExecute(inputText)})]);
 end;
