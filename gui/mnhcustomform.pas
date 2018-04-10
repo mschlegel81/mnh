@@ -1083,6 +1083,10 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
   VAR form:TscriptedForm;
   begin
     result:=nil;
+    if not(gui_started) then begin
+      context.adapters^.logDisplayCustomForm;
+      exit(nil);
+    end;
     if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin
       form:=
       createScriptedForm(P_stringLiteral(params^.value[0])^.value,

@@ -5,9 +5,14 @@ UNIT mnh_gui_outputOnly;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  mnh_constants, mnh_funcs, mnh_cmdLineInterpretation, mnh_contexts, mnh_settings, mnh_out_adapters,
-  mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh;
+  //basic
+  sysutils, FileUtil,
+  //LCL
+  Classes, SynEdit, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  //MNH
+  mnh_constants,
+  mnh_funcs, mnh_cmdLineInterpretation, mnh_contexts, mnh_settings, mnh_out_adapters,
+  mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase;
 
 TYPE
   ToutputOnlyForm = class(T_abstractMnhForm)
@@ -93,6 +98,8 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
     {$endif}
+    setupEditorMetaBase(self,outputHighlighter,nil);
+    editorMetaBase.editorFont:=OutputEdit.Font;
   end;
 
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
