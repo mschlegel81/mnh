@@ -154,10 +154,12 @@ TYPE
   end;
 
   TscriptedForm = class(TForm)
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
+    markedForCleanup:boolean;
     setupParam:P_literal;
     setupLocation:T_tokenLocation;
     setupContext:P_threadContext;
@@ -189,10 +191,22 @@ PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
   end;
 
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
-  VAR scriptedForm:TscriptedForm;
+  VAR index:longint=0;
+      k:longint;
   begin
     enterCriticalSection(scriptedFormCs);
-    for scriptedForm in scriptedForms do scriptedForm.conditionalShow(adapters);
+    while index<length(scriptedForms) do begin
+      if scriptedForms[index].markedForCleanup then begin
+        unregisterForm(scriptedForms[index]);
+        FreeAndNil(    scriptedForms[index]);
+        for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
+        setLength(scriptedForms,length(scriptedForms)-1);
+      end else begin
+        scriptedForms[index].conditionalShow(adapters);
+        inc(index);
+      end;
+    end;
+
     leaveCriticalSection(scriptedFormCs);
   end;
 
@@ -709,6 +723,7 @@ FUNCTION T_outputMemoMeta.preferClientAlignment: boolean;
 
 DESTRUCTOR T_outputMemoMeta.destroy;
   begin
+    inherited destroy;
     synMeta.destroy;
     if config_hlLang<>nil then disposeLiteral(config_hlLang);
   end;
@@ -920,6 +935,17 @@ DESTRUCTOR T_panelMeta.destroy;
     setLength(elements,0);
   end;
 
+PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  begin
+    if TryEnterCriticalsection(lock)=0
+    then CloseAction:=caNone
+    else begin
+      if processingEvents then CloseAction:=caNone
+                          else markedForCleanup:=(CloseAction in [caFree,caHide]);
+      leaveCriticalSection(lock);
+    end;
+  end;
+
 PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
   begin
     initCriticalSection(lock);
@@ -927,6 +953,7 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
     setLength(meta,0);
     displayPending:=false;
     leaveCriticalSection(lock);
+    markedForCleanup:=false;
   end;
 
 PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);
@@ -1038,17 +1065,20 @@ PROCEDURE TscriptedForm.initialize();
     leaveCriticalSection(lock);
   end;
 
-PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
-  VAR context: T_threadContext);
+PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
   VAR m:P_guiElementMeta;
       somethingDone:boolean=false;
+      customFormBefore:pointer;
   begin
     enterCriticalSection(lock);
+    customFormBefore:=context.parentCustomForm;
+    context.parentCustomForm:=self;
     processingEvents:=true;
     for m in meta do if context.adapters^.noErrors then begin
       if m^.evaluate(location,context) then somethingDone:=true;
     end;
     processingEvents:=false;
+    context.parentCustomForm:=customFormBefore;
     leaveCriticalSection(lock);
     if somethingDone then context.adapters^.logDisplayCustomForm;
   end;
@@ -1056,16 +1086,14 @@ PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation;
 PROCEDURE TscriptedForm.updateComponents;
   VAR m:P_guiElementMeta;
   begin
-    enterCriticalSection(lock);
     for m in meta do m^.update;
-    leaveCriticalSection(lock);
     if processingEvents then propagateCursor(self,crHourGlass)
                         else propagateCursor(self,crDefault);
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
   begin
-    enterCriticalSection(lock);
+    if TryEnterCriticalsection(lock)=0 then exit;
     if displayPending and adapters.noErrors then begin
       if (setupParam<>nil) and (setupContext<>nil) then begin
         initialize();
@@ -1095,15 +1123,18 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
                          location);
       context.adapters^.logDisplayCustomForm;
 
-      while ((form.displayPending) or (form.showing)) and (context.adapters^.noErrors) do begin
+      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).Hide;
+      while not(form.markedForCleanup) and (context.adapters^.noErrors) do begin
         form.processPendingEvents(location,context);
         sleep(10);
       end;
+      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).Show;
       result:=newVoidLiteral;
     end;
   end;
 
 INITIALIZATION
+  initialize(scriptedFormCs);
   initCriticalSection(scriptedFormCs);
   setLength(scriptedForms,0);
   registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');

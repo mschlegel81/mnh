@@ -62,6 +62,9 @@ TYPE
       dequeueContext_:P_threadContext;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
     public
+      {$ifdef fullVersion}
+      parentCustomForm:pointer;
+      {$endif}
       regexCache:P_regexMap;
       recycler  :T_tokenRecycler;
       valueStore:P_valueStore;
@@ -201,6 +204,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     new(valueStore,create);
     {$ifdef fullVersion}
     callStack .create;
+    parentCustomForm:=nil;
     {$endif}
     parent        :=parent_;
     adapters      :=outAdapters;
@@ -218,6 +222,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
     new(valueStore,create);
     {$ifdef fullVersion}
     callStack .create;
+    parentCustomForm:=nil;
     {$endif}
     allowedSideEffects:=C_allSideEffects;
     regexCache    :=nil;
@@ -231,6 +236,7 @@ DESTRUCTOR T_threadContext.destroy;
   begin
     {$ifdef debugMode}{$ifdef fullVersion}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
+    parentCustomForm:=nil;
     {$endif}{$endif}
     if valueStore<>nil then dispose(valueStore,destroy);
     recycler  .destroy;
@@ -403,6 +409,7 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
     context^.parent:=@self;
     {$ifdef fullVersion}
     context^.callStack.clear;
+    context^.parentCustomForm:=nil;
     {$endif}
     context^.valueStore^.clear;
     context^.adapters:=adapters;

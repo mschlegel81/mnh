@@ -5,6 +5,7 @@ object scriptedForm: TscriptedForm
   Width = 480
   Caption = 'scriptedForm'
   DesignTimePPI = 144
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyUp = FormKeyUp
