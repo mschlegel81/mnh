@@ -62,6 +62,9 @@ TYPE
       dequeueContext_:P_threadContext;
       CONSTRUCTOR createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_adapters=nil);
     public
+      {$ifdef fullVersion}
+      parentCustomForm:pointer;
+      {$endif}
       regexCache:P_regexMap;
       recycler  :T_tokenRecycler;
       valueStore:P_valueStore;
@@ -87,7 +90,7 @@ TYPE
       PROCEDURE callStackPop(CONST first:P_token);
       PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
       PROCEDURE callStackClear();
-      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
+      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
 
@@ -96,9 +99,9 @@ TYPE
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
-      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef DEBUGMODE} inline; {$endif}
+      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-      PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef DEBUGMODE} inline; {$endif}
+      PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef debugMode} inline; {$endif}
       FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
       PROCEDURE resolveMainParameter(VAR first:P_token);
       FUNCTION dequeueContext:P_threadContext;
@@ -201,6 +204,7 @@ CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContex
     new(valueStore,create);
     {$ifdef fullVersion}
     callStack .create;
+    parentCustomForm:=nil;
     {$endif}
     parent        :=parent_;
     adapters      :=outAdapters;
@@ -218,6 +222,7 @@ CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_adapters);
     new(valueStore,create);
     {$ifdef fullVersion}
     callStack .create;
+    parentCustomForm:=nil;
     {$endif}
     allowedSideEffects:=C_allSideEffects;
     regexCache    :=nil;
@@ -231,6 +236,7 @@ DESTRUCTOR T_threadContext.destroy;
   begin
     {$ifdef debugMode}{$ifdef fullVersion}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
+    parentCustomForm:=nil;
     {$endif}{$endif}
     if valueStore<>nil then dispose(valueStore,destroy);
     recycler  .destroy;
@@ -403,6 +409,7 @@ PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
     context^.parent:=@self;
     {$ifdef fullVersion}
     context^.callStack.clear;
+    context^.parentCustomForm:=nil;
     {$endif}
     context^.valueStore^.clear;
     context^.adapters:=adapters;
@@ -658,7 +665,7 @@ FUNCTION T_threadContext.checkSideEffects(CONST id:string; CONST location:T_toke
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
+FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
   begin
     if (parent=nil) or (parent^.debuggingStepper=nil) then exit(false);
     if first<>nil then parent^.debuggingStepper^.stepping(first,stack,@callStack);

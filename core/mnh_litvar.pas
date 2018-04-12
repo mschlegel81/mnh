@@ -368,7 +368,7 @@ VAR
 
 FUNCTION exp(CONST x:double):double; inline;
 
-PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef DEBUGMODE} inline; {$endif}
+PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef debugMode} inline; {$endif}
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
 FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
@@ -2625,7 +2625,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    {$ifndef DEBUGMODE}
+          lt_int:    {$ifndef debugMode}
                      if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt62) and
                         (P_intLiteral(RHS)^.val.canBeRepresentedAsInt62) then
                      exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt+
@@ -2682,7 +2682,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    {$ifndef DEBUGMODE}
+          lt_int:    {$ifndef debugMode}
                      if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt62) and
                         (P_intLiteral(RHS)^.val.canBeRepresentedAsInt62) then
                      exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt-
@@ -2727,7 +2727,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         defaultLHScases;
         lt_int: case RHS^.literalType of
           defaultRHSCases;
-          lt_int:    {$ifndef DEBUGMODE}
+          lt_int:    {$ifndef debugMode}
                      if (P_intLiteral(LHS)^.val.canBeRepresentedAsInt32) and
                         (P_intLiteral(RHS)^.val.canBeRepresentedAsInt32) then
                      exit(newIntLiteral(P_intLiteral(LHS)^.val.toInt*
@@ -3812,6 +3812,7 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+  initialize(singletonCs);
   initCriticalSection(singletonCs);
   stringSingletons.create(@disposeLiteral);
 
