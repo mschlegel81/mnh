@@ -26,7 +26,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
 
-  PROCEDURE initTokTypes; {$ifndef DEBUGMODE}inline;{$endif}
+  PROCEDURE initTokTypes; {$ifndef debugMode}inline;{$endif}
     begin
       if stack.topIndex>=0 then cTokType[-1]:=stack.topType
                            else cTokType[-1]:=tt_EOL;
@@ -273,14 +273,14 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
-        {$ifndef DEBUGMODE}
+        {$ifndef debugMode}
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(first^.tokType,first^.location,parameterListLiteral,firstReplace,lastReplace,@context)) then begin
             context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
             exit;
           end;
-        {$ifndef DEBUGMODE}
+        {$ifndef debugMode}
         except
           on e:Exception do begin
             context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId,first^.location);
@@ -302,11 +302,11 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
-        {$ifndef DEBUGMODE}
+        {$ifndef debugMode}
         try
         {$endif}
         newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
-        {$ifndef DEBUGMODE}
+        {$ifndef debugMode}
         except
           on e:Exception do begin
             context.adapters^.raiseSystemError('Severe error trying to apply builtin rule '+first^.txt,first^.location);
@@ -395,7 +395,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       didSubstitution:=true;
     end;
 
-  PROCEDURE startOrPushParameterList; {$ifndef DEBUGMODE}inline;{$endif}
+  PROCEDURE startOrPushParameterList; {$ifndef debugMode}inline;{$endif}
     begin
       stack.push(first);
       if first^.tokType=tt_braceOpen then begin
@@ -516,7 +516,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       end;
     end;
 
-  PROCEDURE process_op_lit; {$ifndef DEBUGMODE} inline;{$endif}
+  PROCEDURE process_op_lit; {$ifndef debugMode} inline;{$endif}
     begin
       case cTokType[1] of
         tt_comparatorEq..tt_operatorConcatAlt:
@@ -827,7 +827,7 @@ end}
   begin
     inc(context.callDepth);
     stack.create;
-    {$ifndef DEBUGMODE}try{$endif}
+    {$ifndef debugMode}try{$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
@@ -1185,7 +1185,7 @@ end}
         end;
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
-    {$ifndef DEBUGMODE}
+    {$ifndef debugMode}
     except
       on e:Exception do begin
         context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth));

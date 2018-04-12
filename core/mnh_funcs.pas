@@ -122,7 +122,7 @@ FUNCTION clearPrint_imp intFuncSignature;
     result:=newVoidLiteral;
   end;
 
-FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatTabsOption):T_arrayOfString; {$ifndef DEBUGMODE} inline; {$endif}
+FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatTabsOption):T_arrayOfString; {$ifndef debugMode} inline; {$endif}
   VAR i:longint;
       resultParts:T_arrayOfString;
       tabOrBreak:boolean=false;

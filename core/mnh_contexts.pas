@@ -87,7 +87,7 @@ TYPE
       PROCEDURE callStackPop(CONST first:P_token);
       PROCEDURE callStackPrint(CONST targetAdapters:P_adapters=nil);
       PROCEDURE callStackClear();
-      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
+      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
 
@@ -96,9 +96,9 @@ TYPE
       FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
       PROPERTY getParent:P_evaluationContext read parent;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
-      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef DEBUGMODE} inline; {$endif}
+      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-      PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef DEBUGMODE} inline; {$endif}
+      PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef debugMode} inline; {$endif}
       FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
       PROCEDURE resolveMainParameter(VAR first:P_token);
       FUNCTION dequeueContext:P_threadContext;
@@ -658,7 +658,7 @@ FUNCTION T_threadContext.checkSideEffects(CONST id:string; CONST location:T_toke
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef DEBUGMODE} inline; {$endif}
+FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
   begin
     if (parent=nil) or (parent^.debuggingStepper=nil) then exit(false);
     if first<>nil then parent^.debuggingStepper^.stepping(first,stack,@callStack);
