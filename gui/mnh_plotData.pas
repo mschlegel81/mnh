@@ -68,7 +68,7 @@ TYPE
       FUNCTION frameCount:longint;
       PROCEDURE getFrame(CONST target:TImage; CONST frameIndex:longint; CONST quality:byte);
       PROCEDURE addFrame(VAR plot:T_plot);
-      PROCEDURE nextFrame(VAR frameIndex:longint);
+      FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
@@ -155,13 +155,22 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
     leaveCriticalSection(seriesCs);
   end;
 
-PROCEDURE T_plotSeries.nextFrame(VAR frameIndex: longint);
+FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean):boolean;
   begin
     enterCriticalSection(seriesCs);
-    if length(frame)=0 then frameIndex:=-1
-    else begin
+    if length(frame)=0 then begin
+      frameIndex:=-1;
+      result:=false;
+    end else begin
+      result:=true;
       inc(frameIndex);
-      if frameIndex>=length(frame) then frameIndex:=0;
+      if frameIndex>=length(frame) then begin
+        if cycle then frameIndex:=0
+                 else begin
+                   frameIndex:=length(frame)-1;
+                   result:=false;
+                 end;
+      end;
     end;
     leaveCriticalSection(seriesCs);
   end;

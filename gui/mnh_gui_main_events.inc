@@ -26,7 +26,7 @@ PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
-procedure miRunExternallyClick(Sender: TObject);
+PROCEDURE miRunExternallyClick(Sender: TObject);
 PROCEDURE miShowAssistanceClick(Sender: TObject);
 PROCEDURE miShowOutputClick(Sender: TObject);
 PROCEDURE miShowQuickEvalClick(Sender: TObject);
@@ -367,7 +367,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     onDebuggerEvent;
   end;
 
-procedure TMnhForm.miRunExternallyClick(Sender: TObject);
+PROCEDURE TMnhForm.miRunExternallyClick(Sender: TObject);
   begin
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk
