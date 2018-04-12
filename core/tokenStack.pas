@@ -291,7 +291,7 @@ PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
 
 PROCEDURE T_TokenStack.quietPop;
   begin
-    dec(topIndex);
+    if topIndex>=0 then dec(topIndex);
   end;
 
 FUNCTION T_TokenStack.topType:T_tokenType;

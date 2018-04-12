@@ -98,6 +98,7 @@ TYPE
     miProfile,
     miReload,
     miReplace,
+    miRunExternally,
     miSave,
     miSaveAs,
     miTimingInfo,

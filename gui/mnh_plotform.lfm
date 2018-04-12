@@ -1,10 +1,10 @@
 object plotForm: TplotForm
-  Left = 430
+  Left = 795
   Height = 451
-  Top = 165
+  Top = 351
   Width = 700
   Caption = 'MNH plot'
-  ClientHeight = 431
+  ClientHeight = 421
   ClientWidth = 700
   Menu = MainMenu
   OnClose = FormClose
@@ -15,7 +15,7 @@ object plotForm: TplotForm
   OnResize = FormResize
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.6.4.0'
+  LCLVersion = '1.8.2.0'
   object plotImage: TImage
     Cursor = crCross
     Left = 0
@@ -28,14 +28,14 @@ object plotForm: TplotForm
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 408
+    Height = 36
+    Top = 385
     Width = 700
     Panels = <>
   end
   object InteractionPanel: TFlowPanel
     Left = 0
-    Height = 98
+    Height = 167
     Top = 0
     Width = 700
     Align = alTop
@@ -96,14 +96,15 @@ object plotForm: TplotForm
         WrapAfter = waAuto
         Index = 10
       end>
+    FlowLayout = tlTop
     FlowStyle = fsLeftRightTopBottom
     TabOrder = 1
     Visible = False
     object ButtonLeaveInteractiveMode: TButton
       Left = 1
-      Height = 25
+      Height = 35
       Top = 1
-      Width = 148
+      Width = 207
       Anchors = []
       AutoSize = True
       Caption = 'Leave interactive mode'
@@ -111,19 +112,19 @@ object plotForm: TplotForm
       TabOrder = 0
     end
     object InteractiveLabel: TLabel
-      Left = 149
-      Height = 15
+      Left = 208
+      Height = 25
       Top = 1
-      Width = 11
+      Width = 17
       Anchors = []
       Caption = 'df'
       ParentColor = False
     end
     object CustomEventButton0: TButton
-      Left = 160
-      Height = 25
+      Left = 225
+      Height = 35
       Top = 1
-      Width = 139
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton0'
@@ -132,10 +133,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton1: TButton
       Tag = 1
-      Left = 299
-      Height = 25
+      Left = 419
+      Height = 35
       Top = 1
-      Width = 139
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton1'
@@ -144,10 +145,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton2: TButton
       Tag = 2
-      Left = 438
-      Height = 25
-      Top = 1
-      Width = 139
+      Left = 1
+      Height = 35
+      Top = 36
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton2'
@@ -156,10 +157,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton3: TButton
       Tag = 3
-      Left = 1
-      Height = 25
-      Top = 26
-      Width = 139
+      Left = 195
+      Height = 35
+      Top = 36
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton3'
@@ -168,10 +169,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton4: TButton
       Tag = 4
-      Left = 140
-      Height = 25
-      Top = 26
-      Width = 139
+      Left = 389
+      Height = 35
+      Top = 36
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton4'
@@ -180,10 +181,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton5: TButton
       Tag = 5
-      Left = 279
-      Height = 25
-      Top = 26
-      Width = 139
+      Left = 1
+      Height = 35
+      Top = 71
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton5'
@@ -192,10 +193,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton6: TButton
       Tag = 6
-      Left = 418
-      Height = 25
-      Top = 26
-      Width = 139
+      Left = 195
+      Height = 35
+      Top = 71
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton6'
@@ -204,10 +205,10 @@ object plotForm: TplotForm
     end
     object CustomEventButton7: TButton
       Tag = 7
-      Left = 557
-      Height = 25
-      Top = 26
-      Width = 139
+      Left = 389
+      Height = 35
+      Top = 71
+      Width = 194
       Anchors = []
       AutoSize = True
       Caption = 'CustomEventButton7'
@@ -216,27 +217,27 @@ object plotForm: TplotForm
     end
     object AnimationGroupBox: TGroupBox
       Left = 1
-      Height = 45
-      Top = 51
-      Width = 468
+      Height = 59
+      Top = 106
+      Width = 624
       Anchors = []
       AutoSize = True
       Caption = 'Animation'
-      ClientHeight = 25
-      ClientWidth = 464
+      ClientHeight = 29
+      ClientWidth = 620
       TabOrder = 9
       object animateCheckBox: TCheckBox
         Left = 0
-        Height = 25
+        Height = 29
         Top = 0
-        Width = 63
+        Width = 93
         Align = alLeft
         Caption = 'animate'
         TabOrder = 0
       end
       object animationSpeedTrackbar: TTrackBar
-        Left = 63
-        Height = 25
+        Left = 161
+        Height = 29
         Top = 0
         Width = 100
         Position = 1
@@ -244,17 +245,17 @@ object plotForm: TplotForm
         TabOrder = 1
       end
       object animationFPSLabel: TLabel
-        Left = 163
-        Height = 25
+        Left = 261
+        Height = 29
         Top = 0
-        Width = 101
+        Width = 149
         Align = alLeft
         Caption = 'animationFPSLabel'
         ParentColor = False
       end
       object frameTrackBar: TTrackBar
-        Left = 264
-        Height = 25
+        Left = 410
+        Height = 29
         Top = 0
         Width = 200
         Frequency = 5
@@ -262,6 +263,24 @@ object plotForm: TplotForm
         Position = 0
         Align = alLeft
         TabOrder = 2
+      end
+      object cycleCheckbox: TCheckBox
+        Left = 93
+        Height = 29
+        Top = 0
+        Width = 68
+        Align = alLeft
+        Caption = 'cycle'
+        TabOrder = 3
+      end
+      object frameIndexLabel: TLabel
+        Left = 610
+        Height = 29
+        Top = 0
+        Width = 10
+        Align = alLeft
+        Caption = '0'
+        ParentColor = False
       end
     end
   end

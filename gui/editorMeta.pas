@@ -117,6 +117,7 @@ T_runnerModel=object
     PROPERTY debugMode:boolean read debugMode_ write setDebugMode;
     FUNCTION canRun(CONST quickMode:boolean=false):boolean;
     PROCEDURE customRun(CONST mainCall,profiling:boolean; CONST mainParameters:string='');
+    PROCEDURE runExternally(CONST mainParameters:string='');
     PROCEDURE rerun(CONST profiling:boolean);
     PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
     PROCEDURE doDebuggerAction(CONST newState:T_debuggerState);
@@ -1002,6 +1003,29 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
                 else runEvaluator.evaluate(getEditor,               contextType);
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;
+  end;
+
+PROCEDURE T_runnerModel.runExternally(CONST mainParameters:string='');
+  VAR params:string;
+      callParameters:T_arrayOfString;
+      sp:longint;
+  begin
+    params:=mainParameters;
+    setLength(callParameters,1);
+    callParameters[0]:=getEditor^.getPath;
+
+    params:=trim(params);
+    while params<>'' do begin
+      sp:=pos(' ',params);
+      if sp<=0 then begin
+        append(callParameters,params);
+        params:='';
+      end else begin
+        append(callParameters,copy(params,1,sp-1));
+        params:=trim(copy(params,sp+1,length(params)));
+      end;
+    end;
+    runCommandAsyncOrPipeless(paramStr(0),callParameters,true);
   end;
 
 PROCEDURE T_runnerModel.rerun(CONST profiling:boolean);

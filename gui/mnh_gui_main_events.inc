@@ -26,6 +26,7 @@ PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
+PROCEDURE miRunExternallyClick(Sender: TObject);
 PROCEDURE miShowAssistanceClick(Sender: TObject);
 PROCEDURE miShowOutputClick(Sender: TObject);
 PROCEDURE miShowQuickEvalClick(Sender: TObject);
@@ -364,6 +365,14 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     miDebug.checked:=not(miDebug.checked);
     runnerModel.debugMode:=miDebug.checked;
     onDebuggerEvent;
+  end;
+
+PROCEDURE TMnhForm.miRunExternallyClick(Sender: TObject);
+  begin
+    askForm.initWithQuestion('Please give command line parameters');
+    if askForm.ShowModal=mrOk
+    then runnerModel.runExternally(askForm.getLastAnswerReleasing(nil))
+    else                           askForm.getLastAnswerReleasing(nil);
   end;
 
 PROCEDURE TMnhForm.miShowAssistanceClick(Sender: TObject);

@@ -2897,6 +2897,11 @@ object MnhForm: TMnhForm
         ShortCut = 120
         OnClick = miCallMainClick
       end
+      object miRunExternally: TMenuItem
+        Caption = 'Run in new instance'
+        ShortCut = 8312
+        OnClick = miRunExternallyClick
+      end
       object miDebug: TMenuItem
         Caption = 'Debug'
         OnClick = miDebugClick

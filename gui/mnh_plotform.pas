@@ -13,6 +13,7 @@ USES
 TYPE
   TplotForm = class(TForm)
     animateCheckBox: TCheckBox;
+    cycleCheckbox: TCheckBox;
     CustomEventButton0: TButton;
     ButtonLeaveInteractiveMode: TButton;
     CustomEventButton1: TButton;
@@ -26,6 +27,7 @@ TYPE
     InteractionPanel: TFlowPanel;
     InteractiveLabel: TLabel;
     animationFPSLabel: TLabel;
+    frameIndexLabel: TLabel;
     MainMenu: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
@@ -516,8 +518,7 @@ FUNCTION TplotForm.timerTick:boolean;
   begin
     result:=false;
     if gui_started and (showing) and (animation.frameCount>0) then begin
-      if animateCheckBox.checked then begin
-        animation.nextFrame(animationFrameIndex);
+      if animateCheckBox.checked and animation.nextFrame(animationFrameIndex,cycleCheckbox.checked) then begin
         animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
         inc(framesSampled);
         if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
@@ -529,6 +530,7 @@ FUNCTION TplotForm.timerTick:boolean;
       end;
       frameTrackBar.max:=animation.frameCount-1;
       frameTrackBar.position:=animationFrameIndex;
+      frameIndexLabel.caption:=intToStr(animationFrameIndex);
       if frameTrackBar.max>20 then frameTrackBar.frequency:=5
                               else frameTrackBar.frequency:=1;
     end else result:=false;
