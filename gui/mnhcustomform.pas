@@ -176,7 +176,7 @@ PROCEDURE freeScriptedForms;
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
 IMPLEMENTATION
 VAR scriptedFormCs:TRTLCriticalSection;
-    scriptedForm: TscriptedForm;
+    scriptedForms: array of TscriptedForm;
 {$R *.lfm}
 
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
@@ -189,38 +189,38 @@ PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
   end;
 
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
+  VAR scriptedForm:TscriptedForm;
   begin
     enterCriticalSection(scriptedFormCs);
-    if scriptedForm<>nil then scriptedForm.conditionalShow(adapters);
+    for scriptedForm in scriptedForms do scriptedForm.conditionalShow(adapters);
     leaveCriticalSection(scriptedFormCs);
   end;
 
 FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONST context:P_threadContext; CONST errorLocation:T_tokenLocation):TscriptedForm;
   begin
     enterCriticalSection(scriptedFormCs);
-    if scriptedForm<>nil then begin
-      unregisterForm(scriptedForm);
-      FreeAndNil(scriptedForm);
-    end;
-    scriptedForm:=TscriptedForm.create(nil);
-    registerForm(scriptedForm,false,true);
-    scriptedForm.setupLocation:=errorLocation;
-    scriptedForm.setupParam:=definition;
-    scriptedForm.setupContext:=context;
-    scriptedForm.caption:=title;
+    result:=TscriptedForm.create(nil);
+    registerForm(result,false,true);
+    result.setupLocation:=errorLocation;
+    result.setupParam:=definition;
+    result.setupContext:=context;
+    result.caption:=title;
     definition^.rereferenced;
-    scriptedForm.displayPending:=true;
-    result:=scriptedForm;
+    result.displayPending:=true;
+    setLength(scriptedForms,length(scriptedForms)+1);
+    scriptedForms[length(scriptedForms)-1]:=result;
     leaveCriticalSection(scriptedFormCs);
   end;
 
 PROCEDURE freeScriptedForms;
+  VAR k:longint;
   begin
     enterCriticalSection(scriptedFormCs);
-    if scriptedForm<>nil then begin
-      unregisterForm(scriptedForm);
-      FreeAndNil(scriptedForm);
+    for k:=0 to length(scriptedForms)-1 do begin
+      unregisterForm(scriptedForms[k]);
+      FreeAndNil(scriptedForms[k]);
     end;
+    setLength(scriptedForms,0);
     leaveCriticalSection(scriptedFormCs);
   end;
 
@@ -1105,7 +1105,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
 
 INITIALIZATION
   initCriticalSection(scriptedFormCs);
-  scriptedForm:=nil;
+  setLength(scriptedForms,0);
   registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');
 
 FINALIZATION
