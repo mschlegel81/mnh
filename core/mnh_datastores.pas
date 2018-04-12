@@ -37,6 +37,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
     result:=wrapper.allOkay;
     if result then begin
       try
+        initialize(dummyLocation);
         literal:=newLiteralFromStream(@wrapper,dummyLocation,nil);
         if wrapper.allOkay and (literal<>nil) then begin
           dataAsStringList:=id+':=';

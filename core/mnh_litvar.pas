@@ -3812,6 +3812,7 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+  initialize(singletonCs);
   initCriticalSection(singletonCs);
   stringSingletons.create(@disposeLiteral);
 
