@@ -64,7 +64,7 @@ FUNCTION newTreeForm:TVarTreeViewForm;
 {$R *.lfm}
 
 FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_threadContext): P_literal;
-  VAR caption:string='MNH table';
+  VAR caption:string='MNH variable';
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and

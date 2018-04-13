@@ -242,7 +242,7 @@ object plotForm: TplotForm
         Width = 100
         Position = 1
         Align = alLeft
-        TabOrder = 1
+        TabOrder = 2
       end
       object animationFPSLabel: TLabel
         Left = 261
@@ -262,7 +262,7 @@ object plotForm: TplotForm
         OnChange = frameTrackBarChange
         Position = 0
         Align = alLeft
-        TabOrder = 2
+        TabOrder = 3
       end
       object cycleCheckbox: TCheckBox
         Left = 93
@@ -271,7 +271,7 @@ object plotForm: TplotForm
         Width = 68
         Align = alLeft
         Caption = 'cycle'
-        TabOrder = 3
+        TabOrder = 1
       end
       object frameIndexLabel: TLabel
         Left = 610
