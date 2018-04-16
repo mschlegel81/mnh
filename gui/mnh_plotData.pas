@@ -409,7 +409,7 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     //========================================================:coordinate grid
     try
       if scalingOptions.axisTrafo['y'].logscale
-      then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin
+      then yBaseLine:=scalingOptions.axisTrafo['y'].screenMin*scalingFactor
       else yBaseLine:=round(scalingOptions.axisTrafo['y'].apply(0)*scalingFactor);
       if      yBaseLine<0 then yBaseLine:=0
       else if yBaseLine>=intendedHeight*scalingFactor then yBaseLine:=intendedHeight*scalingFactor-1;
