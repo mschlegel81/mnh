@@ -13,6 +13,7 @@ USES  //basic classes
   SynExportHTML,
   closeDialog,
   mnh_tables,
+  variableTreeViews,
   mnh_plotForm,
   //MNH:
   outlines,
@@ -984,6 +985,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
       if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
     end;
     resetTableForms;
+    resetTreeForms;
     getEditor^.setWorkingDir;
     if debugMode then begin
       updateEditorsByGuiStatus;

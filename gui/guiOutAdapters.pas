@@ -87,6 +87,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
   VAR i,j:longint;
       outputLinesLimit:longint=0;
+      hadDirectPrint:boolean=false;
       wroteToSyn:boolean=false;
       s:string;
       showFormsAfter:boolean=false;
@@ -177,6 +178,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
         else syn.ExecuteCommand(ecChar,c,nil);
       end;
       syn.readonly:=true;
+      hadDirectPrint:=true;
     end;
 
   begin
@@ -256,14 +258,17 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       if not(parentForm.showing) or not(parentForm.visible) then begin
         parentForm.Show;
         parentForm.visible:=true;
-        {$ifdef debugMode}
-        writeln(stdErr,'        DEBUG: mnh form show triggered');
-        {$endif}
       end;
       syn.EndUpdate;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
-    end else syn.EndUpdate;
+    end else begin
+      if hadDirectPrint and (not(parentForm.showing) or not(parentForm.visible)) then begin
+        parentForm.Show;
+        parentForm.visible:=true;
+      end;
+      syn.EndUpdate;
+    end;
     if showFormsAfter then conditionalShowCustomForms(guiAdapters);
     finally
       flushing:=false;
