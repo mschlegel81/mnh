@@ -303,6 +303,10 @@ object plotForm: TplotForm
         ShortCut = 16573
         OnClick = miDecFontSizeClick
       end
+      object miRenderToFile: TMenuItem
+        Caption = 'Render to file...'
+        OnClick = miRenderToFileClick
+      end
     end
     object MenuItem1: TMenuItem
       Caption = '&Quality'

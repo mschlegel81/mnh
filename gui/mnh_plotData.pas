@@ -67,6 +67,7 @@ TYPE
       PROCEDURE clear;
       FUNCTION frameCount:longint;
       PROCEDURE getFrame(CONST target:TImage; CONST frameIndex:longint; CONST quality:byte);
+      PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint);
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
@@ -139,6 +140,17 @@ PROCEDURE T_plotSeries.getFrame(CONST target: TImage; CONST frameIndex: longint;
       frame[frameIndex].quality:=quality;
     end;
     target.Canvas.draw(0,0,frame[frameIndex].image.picture.Bitmap);
+    leaveCriticalSection(seriesCs);
+  end;
+
+PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint);
+  begin
+    enterCriticalSection(seriesCs);
+    if (index<0) or (index>=length(frame)) then begin
+      leaveCriticalSection(seriesCs);
+      exit;
+    end;
+    frame[index].plotData.renderToFile(fileName,width,height,quality);
     leaveCriticalSection(seriesCs);
   end;
 

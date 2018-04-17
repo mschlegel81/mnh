@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="44">
+    <Units Count="45">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -294,6 +294,7 @@
         <Filename Value="variabletreeviews.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="VarTreeViewForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="variableTreeViews"/>
       </Unit41>
@@ -310,6 +311,14 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="editorMetaBase"/>
       </Unit43>
+      <Unit44>
+        <Filename Value="plotexport.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ExportPlotForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="plotExport"/>
+      </Unit44>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

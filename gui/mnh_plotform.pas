@@ -5,10 +5,13 @@ UNIT mnh_plotForm;
 INTERFACE
 {$WARN 5024 OFF}
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Menus, ComCtrls, StdCtrls, mnhFormHandler, mnh_constants, mnh_basicTypes,
+  Classes, sysutils, FileUtil,
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, StdCtrls,
+  mnh_constants, mnh_basicTypes,
+  mnhFormHandler,
   mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
-  mnh_contexts, mnh_evalThread, dynamicPlotting, plotstyles, plotMath;
+  mnh_contexts, mnh_evalThread, dynamicPlotting, plotstyles, plotMath,
+  plotExport;
 
 TYPE
   TplotForm = class(TForm)
@@ -32,6 +35,7 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    miRenderToFile: TMenuItem;
     miAntiAliasing4: TMenuItem;
     miIncFontSize: TMenuItem;
     miDecFontSize: TMenuItem;
@@ -75,6 +79,7 @@ TYPE
     PROCEDURE miLogscaleXClick(Sender: TObject);
     PROCEDURE miLogscaleYClick(Sender: TObject);
     PROCEDURE miPreserveAspectClick(Sender: TObject);
+    PROCEDURE miRenderToFileClick(Sender: TObject);
     PROCEDURE miXFinerGridClick(Sender: TObject);
     PROCEDURE miXGridClick(Sender: TObject);
     PROCEDURE miXTicsClick(Sender: TObject);
@@ -268,6 +273,35 @@ PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
   begin
     miPreserveAspect.checked:=not(miPreserveAspect.checked);
     pushSettingsToPlotContainer;
+  end;
+
+PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
+  VAR frameIndex:longint;
+  begin
+    if exportPlotForm.showModalFor(animation.frameCount>0)=mrOk then begin
+      if (exportPlotForm.rbExportAll.checked) and (animation.frameCount>0) then begin
+        for frameIndex:=0 to animation.frameCount-1 do begin
+          animation.renderFrame(frameIndex,
+                                exportPlotForm.animationFileName(
+                                     frameIndex,
+                                     animation.frameCount),
+                                exportPlotForm.renderWidth,
+                                exportPlotForm.renderHeight,
+                                exportPlotForm.QualityTrackbar.position);
+        end;
+      end else begin
+        if (animation.frameCount>0)
+        then animation.renderFrame          (animationFrameIndex,
+                                             exportPlotForm.OutputFileNameEdit.caption,
+                                             exportPlotForm.renderWidth,
+                                             exportPlotForm.renderHeight,
+                                             exportPlotForm.QualityTrackbar.position)
+        else guiAdapters^.plot^.renderToFile(exportPlotForm.OutputFileNameEdit.caption,
+                                             exportPlotForm.renderWidth,
+                                             exportPlotForm.renderHeight,
+                                             exportPlotForm.QualityTrackbar.position);
+      end;
+    end;
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
