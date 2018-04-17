@@ -240,7 +240,7 @@ object plotForm: TplotForm
         Height = 29
         Top = 0
         Width = 100
-        Position = 1
+        Position = 5
         Align = alLeft
         TabOrder = 2
       end
