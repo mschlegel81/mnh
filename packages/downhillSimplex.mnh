@@ -15,17 +15,23 @@ DEFAULT_DOWNHILL_SIMPLEX_OPTIONS:=downhillSimplexOptions(1,1/2,2,1/2);
 //*To be used with downhillSimplexOptions or DEFAULT_DOWNHILL_SIMPLEX_OPTIONS to provide a specific initial simplex
 withStartSimplex(simplexOptions:Map,simplex:List)->simplexOptions.mergeMaps([['simplex',simplex]].toMap,::orElse);
 
+//@SuppressUnusedWarning
+//*To be used with downhillSimplexOptions or DEFAULT_DOWNHILL_SIMPLEX_OPTIONS to provide an action on new best point
+//*The best point is passed to action in the form [f(x),x];
+withActionOnBestPoint(simplexOptions:Map,action:Expression(1))->simplexOptions.mergeMaps([['onNewBest',action]].toMap,::orElse);
+
 downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0,precision>0.0)->downhillSimplex(toMinimize,startVector,startSpread,precision,DEFAULT_DOWNHILL_SIMPLEX_OPTIONS);
 downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0,precision>0.0,options:Map)->begin
-  local simplex:=[0..startVector.size].each(i,([0..startVector.size-1]=i).ord*startSpread+startVector);
+  local simplex:=void;
+
   options['simplex'].isVoid
   ? begin
-      simplex:=simplex.map({[toMinimize($x),$x]}).sort;
+      simplex:=[0..startVector.size].each(i,([0..startVector.size-1]=i).ord*startSpread+startVector).pMap({[toMinimize($x),$x]}).sort;
       simplex.each(i,i[0].isNumeric,AND) ? void : fail('Invalid function toMinimize; must return a numeric scalar');
     end
   : begin
       note('Using initial simplex from options');
-      simplex:=options['simplex'];
+      simplex:=options['simplex'].sort;
       simplex.size=startVector.size+1 ? void : fail('Simplex has wrong number of elements; expected ',startVector.size+1,' but is ',simplex.size);
     end;
 
@@ -42,23 +48,25 @@ downhillSimplex(toMinimize:Expression(1),startVector:NumericList,startSpread>0.0
     local fr:=toMinimize(xr);
     fr<simplex[0,0]
     ? begin
-        note('New best point ',fr);
         local xe:=(1+gamma)*xc-gamma*(simplex.trailing[1]);
         local fe:=toMinimize(xe);
         simplex[N]:=(fe<fr
                      ? [fe,xe]
                      : [fr,xr]);
+        options['onNewBest'].isVoid
+        ? void
+        : options['onNewBest'](simplex[N]);
       end
     : fr<simplex[N-1,0]
-      ? simplex[N]:=(note('New second best point ',fr) orElse [fr,xr])
+      ? simplex[N]:=[fr,xr]
       : begin
           local xe:=beta*xc+(1-beta)*(fr<simplex[N,0]
                                       ? xr
                                       : simplex[N,1]);
           local fe:=toMinimize(xe);
           fe<simplex[N,0]
-          ? simplex[N]:=(note('New improved point') orElse [fe,xe])
-          : simplex:=note('Contracting') orElse simplex.each(S,index=0 ? S :
+          ? simplex[N]:=[fe,xe]
+          : simplex:=simplex.pEach(S,index=0 ? S :
               begin
                 local p:=simplex[0,1]*sigma+S[1]*(1-sigma);
                 [toMinimize(p),p];
