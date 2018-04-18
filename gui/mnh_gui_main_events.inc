@@ -478,8 +478,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     enableDynamicItems;
     if askForm.displayPending then askForm.Show;
 
-    if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1;
-    if plotFormIsInitialized and plotForm.timerTick then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
+    if plotFormIsInitialized and plotForm.timerTick
+    then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
+    else if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
     flushedMessages:=guiOutAdapter.flushToGui(OutputEdit);
