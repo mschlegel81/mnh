@@ -109,6 +109,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'Leave interactive mode'
       OnClick = ButtonLeaveInteractiveModeClick
+      OnKeyUp = FormKeyUp
       TabOrder = 0
     end
     object InteractiveLabel: TLabel
@@ -129,6 +130,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton0'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 1
     end
     object CustomEventButton1: TButton
@@ -141,6 +143,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton1'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 2
     end
     object CustomEventButton2: TButton
@@ -153,6 +156,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton2'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 3
     end
     object CustomEventButton3: TButton
@@ -165,6 +169,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton3'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 4
     end
     object CustomEventButton4: TButton
@@ -177,6 +182,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton4'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 5
     end
     object CustomEventButton5: TButton
@@ -189,6 +195,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton5'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 6
     end
     object CustomEventButton6: TButton
@@ -201,6 +208,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton6'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 7
     end
     object CustomEventButton7: TButton
@@ -213,6 +221,7 @@ object plotForm: TplotForm
       AutoSize = True
       Caption = 'CustomEventButton7'
       OnClick = CustomEventButton0Click
+      OnKeyUp = FormKeyUp
       TabOrder = 8
     end
     object AnimationGroupBox: TGroupBox
@@ -233,6 +242,7 @@ object plotForm: TplotForm
         Width = 93
         Align = alLeft
         Caption = 'animate'
+        OnKeyUp = FormKeyUp
         TabOrder = 0
       end
       object animationSpeedTrackbar: TTrackBar
@@ -240,8 +250,9 @@ object plotForm: TplotForm
         Height = 29
         Top = 0
         Width = 100
-        Position = 5
+        Position = 6
         Align = alLeft
+        OnKeyUp = FormKeyUp
         TabOrder = 2
       end
       object animationFPSLabel: TLabel
@@ -262,6 +273,7 @@ object plotForm: TplotForm
         OnChange = frameTrackBarChange
         Position = 0
         Align = alLeft
+        OnKeyUp = FormKeyUp
         TabOrder = 3
       end
       object cycleCheckbox: TCheckBox
@@ -271,6 +283,7 @@ object plotForm: TplotForm
         Width = 68
         Align = alLeft
         Caption = 'cycle'
+        OnKeyUp = FormKeyUp
         TabOrder = 1
       end
       object frameIndexLabel: TLabel

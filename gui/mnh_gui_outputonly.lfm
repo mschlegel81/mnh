@@ -9,9 +9,10 @@ object outputOnlyForm: ToutputOnlyForm
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyUp = OutputEditKeyUp
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '1.8.2.0'
   inline OutputEdit: TSynEdit
     Left = 0
     Height = 240
@@ -26,7 +27,7 @@ object outputOnlyForm: ToutputOnlyForm
     ParentFont = False
     TabOrder = 0
     OnKeyUp = OutputEditKeyUp
-    Gutter.Width = 19
+    Gutter.Width = 27
     Gutter.MouseActions = <>
     RightGutter.Width = 0
     RightGutter.MouseActions = <>
@@ -474,7 +475,7 @@ object outputOnlyForm: ToutputOnlyForm
     WantTabs = False
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 17
+        Width = 25
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
