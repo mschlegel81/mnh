@@ -1,11 +1,11 @@
 object outputOnlyForm: ToutputOnlyForm
   Left = 305
-  Height = 240
+  Height = 320
   Top = 248
-  Width = 320
+  Width = 646
   Caption = 'outputOnlyForm'
-  ClientHeight = 240
-  ClientWidth = 320
+  ClientHeight = 320
+  ClientWidth = 646
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -15,9 +15,9 @@ object outputOnlyForm: ToutputOnlyForm
   LCLVersion = '1.8.2.0'
   inline OutputEdit: TSynEdit
     Left = 0
-    Height = 240
+    Height = 320
     Top = 0
-    Width = 320
+    Width = 646
     Align = alClient
     Font.Height = -13
     Font.Name = 'Courier New'
