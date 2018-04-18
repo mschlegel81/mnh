@@ -966,7 +966,10 @@ end}
                     first^.tokType:=tt_literal;
                     resolveElementAccess;
                   end else begin
-                    context.adapters^.raiseError('Cannot resolve variable '+first^.txt,first^.location);
+                    context.adapters^.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
+                    {$ifdef fullVersion}{$ifdef debugMode}
+                    context.valueStore^.writeScopeList;
+                    {$endif}{$endif}
                     didSubstitution:=false;
                   end;
                 end;
@@ -1074,7 +1077,12 @@ end}
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
-          end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
+          end else begin
+            context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
+            {$ifdef fullVersion}{$ifdef debugMode}
+            context.valueStore^.writeScopeList;
+            {$endif}{$endif}
+          end;
         end;
 {cT[0]=}tt_operatorPlus:                 begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_operatorMinus:                begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;

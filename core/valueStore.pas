@@ -36,10 +36,10 @@ TYPE
   T_valueStore=object
     private
       cs:TRTLCriticalSection;
-      scopeStack:array of T_scope;
-      scopeTopIndex:longint;
+      scopeStack     :array of T_scope;
+      scopeTopIndex  :longint;
       PROCEDURE copyDataAsReadOnly(VAR original:T_valueStore);
-      FUNCTION getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
+      FUNCTION getVariable(CONST id:T_idString; CONST ignoreBlocks:boolean; OUT blockEncountered:boolean):P_namedVariable;
     public
       parentStore:P_valueStore;
       CONSTRUCTOR create;
@@ -58,6 +58,7 @@ TYPE
       {$ifdef fullVersion}
       //For debugging:
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
+      PROCEDURE writeScopeList;
       {$endif}
   end;
 
@@ -138,6 +139,7 @@ PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
     i0:=original.scopeTopIndex;
     if i0<0 then i0:=0;
     while (i0>0) and not(original.scopeStack[i0].blockingScope) do dec(i0);
+    i0:=0;
     //copy entries
     scopeTopIndex:=original.scopeTopIndex-i0;
     setLength(scopeStack,scopeTopIndex+1);
@@ -147,6 +149,7 @@ PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
 FUNCTION T_valueStore.readOnlyClone:P_valueStore;
   begin
     new(result,create);
+    result^.parentStore:=parentStore;
     result^.copyDataAsReadOnly(self);
   end;
 
@@ -199,19 +202,30 @@ PROCEDURE T_valueStore.scopePop;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_valueStore.getVariable(CONST id:T_idString; OUT blockEncountered:boolean):P_namedVariable;
+FUNCTION T_valueStore.getVariable(CONST id:T_idString; CONST ignoreBlocks:boolean; OUT blockEncountered:boolean):P_namedVariable;
   VAR i,k:longint;
   begin
     blockEncountered:=false;
     result:=nil;
     for i:=scopeTopIndex downto 0 do with scopeStack[i] do begin
-      for k:=length(v)-1 downto 0 do if v[k]^.getId=id then exit(v[k]);
-      if blockingScope then begin
+      //for k:=length(v)-1 downto 0 do if v[k]^.getId=id then exit(v[k]);
+      for k:=0 to length(v)-1 do if v[k]^.getId=id then begin
+        if k<>0 then begin
+
+        end;
+        exit(v[k]);
+
+      end;
+      if blockingScope and not(ignoreBlocks) then begin
         blockEncountered:=true;
         exit(nil);
       end;
     end;
-    if parentStore<>nil then result:=parentStore^.getVariable(id,blockEncountered);
+    if parentStore<>nil then begin
+      enterCriticalSection(parentStore^.cs);
+      result:=parentStore^.getVariable(id,ignoreBlocks,blockEncountered);
+      leaveCriticalSection(parentStore^.cs);
+    end;
   end;
 
 PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
@@ -219,9 +233,6 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal
   begin
     system.enterCriticalSection(cs);
     with scopeStack[scopeTopIndex] do begin
-      {$ifdef debugMode}
-      for k:=0 to length(v)-1 do if v[k]^.id=id then raise Exception.create('Re-Creating variable with ID "'+id+'"');
-      {$endif}
       k:=length(v);
       setLength(v,k+1);
       new(v[k],create(id,value,readonly));
@@ -242,7 +253,7 @@ FUNCTION T_valueStore.getVariableValue(CONST id: T_idString): P_literal;
       blocked:boolean;
   begin
     system.enterCriticalSection(cs);
-    named:=getVariable(id,blocked);
+    named:=getVariable(id,true,blocked);
     if named<>nil then result:=named^.getValue
     else result:=nil;
     system.leaveCriticalSection(cs);
@@ -253,7 +264,7 @@ PROCEDURE T_valueStore.setVariableValue(CONST id:T_idString; CONST value:P_liter
       blocked:boolean;
   begin
     system.enterCriticalSection(cs);
-    named:=getVariable(id,blocked);
+    named:=getVariable(id,false,blocked);
     if named<>nil then named^.setValue(value)
     else adapters^.raiseError('Cannot assign value to unknown local variable '+id,location);
     system.leaveCriticalSection(cs);
@@ -264,7 +275,7 @@ FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_
       blocked:boolean;
   begin
     system.enterCriticalSection(cs);
-    named:=getVariable(id,blocked);
+    named:=getVariable(id,false,blocked);
     if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^,threadContext)
     else begin
       adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
@@ -291,6 +302,22 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableTreeEntryCat
       for named in v do variableReport.addEntry(named^.id,named^.value,false)
     end;
     system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_valueStore.writeScopeList;
+  VAR i,j:longint;
+  begin
+    if parentStore<>nil then begin
+      parentStore^.writeScopeList;
+      writeln('<       parent end        >')
+    end;
+
+    for i:=0 to scopeTopIndex do begin
+      if scopeStack[i].blockingScope then writeln('===========================')
+                                     else writeln('---------------------------');
+      for j:=0 to length(scopeStack[i].v)-1 do write(scopeStack[i].v[j]^.getId,', ');
+      writeln;
+    end;
   end;
 {$endif}
 
