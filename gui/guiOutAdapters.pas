@@ -233,6 +233,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
           if plotFormIsInitialized and plotForm.InteractionPanel.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
           freeScriptedForms;
           parentForm.onEndOfEvaluation;
+          syn.enabled:=true;
         end;
         mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
         mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
@@ -245,6 +246,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       if messageType in [mt_clearConsole..mt_timing_info] then lastWasDirectPrint:=messageType=mt_printdirect;
     end;
     if length(storedMessages)>0 then clear;
+    syn.enabled:=not(lastWasDirectPrint);
     if wroteToSyn then begin
       flushBuffer;
       if not(parentForm.showing) or not(parentForm.visible) then begin
