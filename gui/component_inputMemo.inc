@@ -25,6 +25,7 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
 PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
+    triggerChange;
     if (config.bindingTo<>'') then begin
       state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);

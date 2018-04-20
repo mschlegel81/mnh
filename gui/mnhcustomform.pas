@@ -10,13 +10,14 @@ USES
   mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase;
 
 TYPE
-  T_definingMapKey=(dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight);
+  T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight);
   T_definingMapKeys=set of T_definingMapKey;
 
 CONST
   key:array[T_definingMapKey] of string=(
     'type',
     'action',
+    'actionOnChange',
     'caption',
     'enabled',
     'bind',
@@ -128,8 +129,11 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 {$I component_label.inc}
 {$I component_checkbox.inc}
 {$I component_splitPanel.inc}
-{$I component_edit.inc}
 {$I component_button.inc}
+
+{$I component_changeListener.inc}
+
+{$I component_edit.inc}
 {$I component_combobox.inc}
 {$I component_outputMemo.inc}
 {$I component_inputMemo.inc}

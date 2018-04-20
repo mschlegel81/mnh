@@ -1,6 +1,6 @@
 TYPE
   P_comboboxMeta=^T_comboboxMeta;
-  T_comboboxMeta=object(T_guiElementMeta)
+  T_comboboxMeta=object(T_changeListeningMeta)
     comboboxPanel:TPanel;
     comboboxLabel:TLabel;
     combobox:TComboBox;
@@ -86,6 +86,7 @@ PROCEDURE T_comboboxMeta.update;
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
+    triggerChange;
     if (config.bindingTo<>'') then begin
       state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);

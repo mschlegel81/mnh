@@ -38,6 +38,9 @@ withCaption(m:Map,caption)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
 withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning
+withActionOnChange(m:Map,action:Expression)->[['actionOnChange',action]].toMap.mergeMaps(m,::orElse);
+
+//@SuppressUnusedWarning
 withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning

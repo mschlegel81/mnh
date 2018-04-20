@@ -1,6 +1,6 @@
 TYPE
   P_outputMemoMeta=^T_outputMemoMeta;
-  T_outputMemoMeta=object(T_guiElementMeta)
+  T_outputMemoMeta=object(T_changeListeningMeta)
     synMeta:T_basicEditorMeta;
     config_hlLang:P_expressionLiteral;
     state_hlLang :string;

@@ -1,6 +1,6 @@
 TYPE
   P_editMeta=^T_editMeta;
-  T_editMeta=object(T_guiElementMeta)
+  T_editMeta=object(T_changeListeningMeta)
     editPanel:TPanel;
     editLabel:TLabel;
     edit:TEdit;
@@ -73,6 +73,7 @@ PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftStat
 PROCEDURE T_editMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
+    triggerChange;
     if (config.bindingTo<>'') then begin
       state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
