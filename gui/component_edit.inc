@@ -1,0 +1,87 @@
+TYPE
+  P_editMeta=^T_editMeta;
+  T_editMeta=object(T_guiElementMeta)
+    editPanel:TPanel;
+    editLabel:TLabel;
+    edit:TEdit;
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    PROCEDURE update; virtual;
+    PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE OnChange(Sender: TObject);
+    FUNCTION getControl:TControl; virtual;
+  end;
+
+CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
+                              CONST location: T_tokenLocation; VAR context: T_threadContext);
+  begin
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
+    editPanel:=TPanel.create(parent^.winControl);
+    editPanel.parent:=parent^.winControl;
+    editPanel.Align:=alTop;
+    editPanel.AutoSize:=true;
+
+    editPanel.BorderWidth:=3;
+    editPanel.BorderStyle:=bsNone;
+    editPanel.BevelInner:=bvNone;
+    editPanel.BevelOuter:=bvNone;
+    editPanel.caption:='';
+
+    editLabel:=TLabel.create(parent^.winControl);
+    editLabel.parent:=editPanel;
+    editLabel.Align:=alLeft;
+    editLabel.caption:=state.caption;
+    editLabel.AutoSize:=true;
+
+    edit:=TEdit.create(parent^.winControl);
+    edit.parent:=editPanel;
+    edit.AnchorToNeighbour(akLeft,10,editLabel);
+    edit.Align:=alClient;
+    edit.enabled:=state.enabled;
+    edit.AutoSize:=true;
+    edit.text:='';
+    if (config.action<>nil) then edit.OnKeyDown:=@OnKeyDown;
+    if (config.bindingTo<>'') then begin
+      edit.OnChange:=@OnChange;
+      if state.bindingValue<>nil then begin
+        if state.bindingValue^.literalType=lt_string
+        then edit.text:=P_stringLiteral(state.bindingValue)^.value
+        else edit.text:=                state.bindingValue^.toString();
+      end;
+    end;
+    edit.OnKeyUp:=@OnKeyUp;
+    parent^.add(@self);
+  end;
+
+PROCEDURE T_editMeta.update;
+  begin
+    if state.evaluating then exit;
+    editLabel.caption:=state.caption;
+    edit.enabled:=state.enabled;
+    if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
+      edit.caption:=P_stringLiteral(state.bindingValue)^.value;
+    end;
+  end;
+
+  
+PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if state.evaluating then exit;
+    if (key<>13) then exit;
+    postAction(newStringLiteral(TEdit(Sender).text));
+  end;
+
+PROCEDURE T_editMeta.OnChange(Sender: TObject);
+  begin
+    if state.evaluating then exit;
+    if (config.bindingTo<>'') then begin
+      state.bindUpdateTriggered:=true;
+      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
+      state.bindingValue:=newStringLiteral(edit.text);
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+    end;
+  end;
+
+FUNCTION T_editMeta.getControl: TControl;
+  begin
+    result:=editPanel;
+  end;
