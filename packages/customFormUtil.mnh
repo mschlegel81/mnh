@@ -1,26 +1,28 @@
 HIGHLIGHTERS:=['mnh','cpp','c','h','hh','css','diff','html','ini','java','js','json','pas','perl','php','py','sh','sql','vb','bat','xml','txt','output'];
 
 //@SuppressUnusedWarning
-
 newButton  ->[['type','button'  ]].toMap;
-//@SuppressUnusedWarning
 
+//@SuppressUnusedWarning
 newEdit    ->[['type','edit'    ]].toMap;
+
 //@SuppressUnusedWarning
 newCheckbox->[['type','checkbox']].toMap;
 
 //@SuppressUnusedWarning
 newInputEditor(highlighter in HIGHLIGHTERS)->[['type','inputEditor'],['highlight',highlighter]].toMap;
-
 //@SuppressUnusedWarning
-newInputEditor(highlighter:Expression(0))->[['type','inputEditor'],['highlight',highlighter]].toMap;
+newInputEditor(highlighter:Expression(0))->[['type','inputEditor'],['highlight',highlighter]].toMap;    #
+
 //@SuppressUnusedWarning
 newOutputEditor(highlighter in HIGHLIGHTERS)->[['type','outputEditor'],['highlight',highlighter]].toMap;
-
 //@SuppressUnusedWarning
 newOutputEditor(highlighter:Expression(0))->[['type','outputEditor'],['highlight',highlighter]].toMap;
+
 //@SuppressUnusedWarning
-newComboBox(options)->[['type','comboBox'],['items',options]].toMap;
+newComboBox(options:StringList)->[['type','comboBox'],['items',options]].toMap;
+//@SuppressUnusedWarning
+newComboBox(options:Expression(0))->[['type','comboBox'],['items',options]].toMap;
 
 //@SuppressUnusedWarning
 newLabel   ->[['type','label'   ]].toMap;
@@ -32,16 +34,25 @@ newPanel(contents:List)->[['type','panel'],['parts',contents]].toMap;
 newSplitPanel(left:List,right:List)->[['type','splitPanel'],['left',left],['right',right]].toMap;
 
 //@SuppressUnusedWarning
-withCaption(m:Map,caption)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
+withCaption(m:Map,caption:String)->[['caption',caption]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
+withCaption(m:Map,caption:Expression(0))->[['caption',caption]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning
-withAction (m:Map,action:Expression)->[['action',action]].toMap.mergeMaps(m,::orElse);
+withAction (m:Map,action:Expression(0))->[['action',action]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
+withAction (m:Map,action:Expression(1))->[['action',action]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning
-withActionOnChange(m:Map,action:Expression)->[['actionOnChange',action]].toMap.mergeMaps(m,::orElse);
+withActionOnChange(m:Map,action:Expression(0))->[['actionOnChange',action]].toMap.mergeMaps(m,::orElse);
+//@SuppressUnusedWarning
+withActionOnChange(m:Map,action:Expression(1))->[['actionOnChange',action]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning
-withEnabledRule(m:Map,enabled)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
+withEnabledRule(m:Map,enabled:Boolean)->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning
-bind(m:Map,id:String)->[['bind',id]].toMap.mergeMaps(m,::orElse);
+withEnabledRule(m:Map,enabled:Expression(0))->[['enabled',enabled]].toMap.mergeMaps(m,::orElse);
+
+//@SuppressUnusedWarning
+bind(m:Map,idOfLocalVariable:String)->[['bind',idOfLocalVariable]].toMap.mergeMaps(m,::orElse);

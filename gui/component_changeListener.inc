@@ -2,9 +2,10 @@ TYPE
   T_changeListeningMeta=object(T_guiElementMeta)
     config_onChange:P_expressionLiteral;
     state_changeTriggered:boolean;
+    state_onChangeParam:P_literal;
 
     CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys);
-    PROCEDURE triggerChange;
+    PROCEDURE triggerChange(CONST changeValue:string);
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     DESTRUCTOR destroy; virtual;
   end;
@@ -24,9 +25,21 @@ CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:
     end;
   end;
   
-PROCEDURE T_changeListeningMeta.triggerChange;
+PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
+  VAR newLit:P_stringLiteral=nil;
   begin
-    if config_onChange<>nil then state_changeTriggered:=true;
+    if (config.bindingTo<>'') then begin
+      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
+      newLit:=newStringLiteral(changeValue);
+      state.bindingValue:=newLit;
+      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
+    end;
+    if config_onChange<>nil then begin
+      state_changeTriggered:=true;
+      if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
+      if newLit<>nil then state_onChangeParam:=newLit^.rereferenced
+                     else state_onChangeParam:=newStringLiteral(changeValue);
+    end;
   end;
 
 DESTRUCTOR T_changeListeningMeta.destroy;
@@ -41,7 +54,10 @@ FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR cont
     result:=inherited evaluate(location,context);
 
     if state_changeTriggered then begin
-      tmp:=config_onChange^.evaluateToLiteral(location,@context);
+      if config_onChange^.canApplyToNumberOfParameters(1) and (state_onChangeParam<>nil)
+      then tmp:=config_onChange^.evaluateToLiteral(location,@context,state_onChangeParam)
+      else tmp:=config_onChange^.evaluateToLiteral(location,@context);
+      if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
       if tmp<>nil then disposeLiteral(tmp);
       state_changeTriggered:=false;
       result:=true;

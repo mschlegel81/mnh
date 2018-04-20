@@ -128,17 +128,16 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
     end;
   end;
 
+//indentation signifies inheritance
 {$I component_label.inc}
 {$I component_checkbox.inc}
 {$I component_splitPanel.inc}
 {$I component_button.inc}
-
 {$I component_changeListener.inc}
-
-{$I component_edit.inc}
-{$I component_combobox.inc}
-{$I component_outputMemo.inc}
-{$I component_inputMemo.inc}
+  {$I component_edit.inc}
+  {$I component_combobox.inc}
+  {$I component_outputMemo.inc}
+    {$I component_inputMemo.inc}
 
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
   VAR index:longint=0;
@@ -284,7 +283,9 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
     state.evaluating:=true;
     result:=false;
     if state.actionTriggered then begin
-      tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter);
+      if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
+      then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter)
+      else tmp:=config.action^.evaluateToLiteral(location,@context);
       if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
       if tmp                  <>nil then disposeLiteral(tmp);
       state.actionTriggered:=false;
@@ -560,6 +561,7 @@ PROCEDURE TscriptedForm.initialize();
     else                                                  initComponent(formMeta,              setupParam           );
     formMeta.alignContents;
     formMeta.destroy;
+    Height:=meta[length(meta)-1]^.getControl.Top+meta[length(meta)-1]^.getControl.Height;
     displayPending:=true;
     leaveCriticalSection(lock);
   end;

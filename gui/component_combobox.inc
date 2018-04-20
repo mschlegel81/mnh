@@ -8,6 +8,7 @@ TYPE
     state_items :T_arrayOfString;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
+    PROCEDURE OnSelect(Sender: TObject);
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
@@ -53,10 +54,11 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
     combobox.AutoSize:=true;
     combobox.AnchorToNeighbour(akLeft,10,comboboxLabel);
     combobox.enabled:=state.enabled;
+    combobox.AutoSelect:=true;
     combobox.text:='';
-    if (config.action<>nil) then combobox.OnSelect:=@OnChange;
-    if (config.bindingTo<>'') then begin
-      combobox.OnSelect:=@OnChange;
+    if (config.action<>nil) then combobox.OnSelect:=@OnSelect;
+    if (config.bindingTo<>'') or (config_onChange<>nil) then begin
+      combobox.OnChange:=@OnChange;
       if state.bindingValue<>nil then begin
         if state.bindingValue^.literalType=lt_string
         then combobox.text:=P_stringLiteral(state.bindingValue)^.value
@@ -85,16 +87,16 @@ PROCEDURE T_comboboxMeta.update;
     end;
   end;
 
+PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
+  begin
+    if state.evaluating then exit;
+    postAction(newStringLiteral(combobox.text));
+  end;
+
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
-    triggerChange;
-    if (config.bindingTo<>'') then begin
-      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
-      state.bindingValue:=newStringLiteral(combobox.text);
-      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
-    end;
-    postAction(newStringLiteral(combobox.text));
+    triggerChange(combobox.Text);
   end;
 
 FUNCTION T_comboboxMeta.getControl: TControl;
@@ -110,7 +112,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
     state.evaluating:=true;
     if config_items<>nil then begin
       oldItems:=state_items;
-      tmp:=config.caption^.evaluateToLiteral(location,@context);
+      tmp:=config_items^.evaluateToLiteral(location,@context);
       if (tmp<>nil) then begin
         if tmp^.literalType in [lt_stringList,lt_emptyList] then begin
           state_items:=P_listLiteral(tmp)^;

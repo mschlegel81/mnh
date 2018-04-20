@@ -40,7 +40,7 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
     edit.AutoSize:=true;
     edit.text:='';
     if (config.action<>nil) then edit.OnKeyDown:=@OnKeyDown;
-    if (config.bindingTo<>'') then begin
+    if (config.bindingTo<>'') or (config_onChange<>nil) then begin
       edit.OnChange:=@OnChange;
       if state.bindingValue<>nil then begin
         if state.bindingValue^.literalType=lt_string
@@ -74,12 +74,7 @@ PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftStat
 PROCEDURE T_editMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
-    triggerChange;
-    if (config.bindingTo<>'') then begin
-      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
-      state.bindingValue:=newStringLiteral(edit.text);
-      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
-    end;
+    triggerChange(edit.text);
   end;
 
 FUNCTION T_editMeta.getControl: TControl;

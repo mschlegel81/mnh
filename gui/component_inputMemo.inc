@@ -11,7 +11,7 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
   begin
     inherited create(parent,def,location,context,[dmk_type,dmk_highlight,dmk_bind,dmk_action]);
     synMeta.editor.readonly:=false;
-    if (config.bindingTo<>'') then begin
+    if (config.bindingTo<>'') or (config_onChange<>nil) then begin
       synMeta.editor.OnChange:=@OnChange;
       if state.bindingValue<>nil then begin
         if state.bindingValue^.literalType=lt_string
@@ -27,12 +27,7 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
 PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
-    triggerChange;
-    if (config.bindingTo<>'') then begin
-      if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
-      state.bindingValue:=newStringLiteral(synMeta.editor.text);
-      propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
-    end;
+    triggerChange(synMeta.editor.Text);
   end;
 
 PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
