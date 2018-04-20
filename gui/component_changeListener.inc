@@ -15,6 +15,7 @@ CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:
   begin
     inherited create(def,location,context,consideredKeys+[dmk_onChange]);
     config_onChange:=nil;
+    state_onChangeParam:=nil;
     state_changeTriggered:=false;
 
     tmp:=mapGet(def,key[dmk_onChange]);
@@ -24,7 +25,7 @@ CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:
       else context.adapters^.raiseError('onChange is: '+tmp^.typeString+'; must be expression',location);
     end;
   end;
-  
+
 PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
   VAR newLit:P_stringLiteral=nil;
   begin
@@ -46,6 +47,7 @@ DESTRUCTOR T_changeListeningMeta.destroy;
   begin
     inherited destroy;
     if config_onChange<>nil then disposeLiteral(config_onChange);
+    if state_onChangeParam<>nil then disposeLiteral(state_onChangeParam);
   end;
 
 FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;

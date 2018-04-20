@@ -1,25 +1,27 @@
 UNIT mnhFormHandler;
 INTERFACE
 USES
-  Classes, sysutils,Forms,
+  sysutils,Forms,
   mnh_constants,
   mnh_basicTypes,
   mnh_funcs,
   mnh_litVar,
   mnh_contexts;
 TYPE
+  T_formType=(ft_main,ft_plot,ft_table,ft_variableView,ft_customForm,ft_askDialog);
+
   P_formMeta=^T_formMeta;
   T_formMeta=object
     form:TForm;
-    isMain:boolean;
-    cyclable:boolean;
+    formType:T_formType;
 
-    CONSTRUCTOR create(CONST form_:TForm; CONST isMain_,cyclable_:boolean);
+    CONSTRUCTOR create(CONST form_:TForm; CONST t:T_formType);
     DESTRUCTOR destroy;
     FUNCTION visible: boolean;
+    FUNCTION cyclable: boolean;
   end;
 
-PROCEDURE registerForm(CONST f:TForm; CONST isMainForm,includeInCycle:boolean);
+PROCEDURE registerForm(CONST f:TForm; CONST formType:T_formType);
 PROCEDURE unregisterForm(CONST f:TForm);
 PROCEDURE formCycle(CONST caller:TForm; CONST cycleForward:boolean);
 FUNCTION anyFormShowing:boolean;
@@ -63,14 +65,14 @@ FUNCTION indexOfForm(CONST f:TForm):longint;
     result:=-1;
   end;
 
-PROCEDURE registerForm(CONST f: TForm; CONST isMainForm, includeInCycle: boolean);
+PROCEDURE registerForm(CONST f: TForm; CONST formType:T_formType);
   VAR i:longint;
   begin
     i:=indexOfForm(f);
     if i<0 then begin
       i:=length(formMeta);
       setLength(formMeta,i+1);
-      new(formMeta[i],create(f,isMainForm,includeInCycle));
+      new(formMeta[i],create(f,formType));
     end;
   end;
 
@@ -87,11 +89,10 @@ PROCEDURE unregisterForm(CONST f: TForm);
     setLength(formMeta,length(formMeta)-1);
   end;
 
-CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST isMain_,cyclable_: boolean);
+CONSTRUCTOR T_formMeta.create(CONST form_: TForm; CONST t:T_formType);
   begin
     form:=form_;
-    isMain:=isMain_;
-    cyclable:=cyclable_;
+    formType:=t;
   end;
 
 DESTRUCTOR T_formMeta.destroy;
@@ -101,6 +102,12 @@ DESTRUCTOR T_formMeta.destroy;
 FUNCTION T_formMeta.visible: boolean;
   begin
     result:=(form<>nil) and (form.visible);
+  end;
+
+FUNCTION T_formMeta.cyclable: boolean;
+  begin
+    if formType in [ft_main,ft_plot,ft_table,ft_variableView] then exit(true);
+    result:=visible;
   end;
 
 {$i mnh_func_defines.inc}

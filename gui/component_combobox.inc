@@ -96,7 +96,7 @@ PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
-    triggerChange(combobox.Text);
+    triggerChange(combobox.text);
   end;
 
 FUNCTION T_comboboxMeta.getControl: TControl;
@@ -114,9 +114,9 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
       oldItems:=state_items;
       tmp:=config_items^.evaluateToLiteral(location,@context);
       if (tmp<>nil) then begin
-        if tmp^.literalType in [lt_stringList,lt_emptyList] then begin
-          state_items:=P_listLiteral(tmp)^;
-        end else context.adapters^.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
+        if tmp^.literalType in [lt_stringList,lt_emptyList]
+        then state_items:=P_listLiteral(tmp)^
+        else context.adapters^.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
         disposeLiteral(tmp);
       end;
       result:=result or not(arrEquals(oldItems,state_items));

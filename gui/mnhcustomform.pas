@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, StdCtrls, mnh_constants, mnh_basicTypes, mnh_contexts,
-  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase;
+  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm;
 
 TYPE
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight);
@@ -163,7 +163,7 @@ FUNCTION createScriptedForm(CONST title:string; CONST definition:P_literal; CONS
   begin
     enterCriticalSection(scriptedFormCs);
     result:=TscriptedForm.create(nil);
-    registerForm(result,false,true);
+    registerForm(result,ft_customForm);
     result.setupLocation:=errorLocation;
     result.setupParam:=definition;
     result.setupContext:=context;
@@ -561,7 +561,7 @@ PROCEDURE TscriptedForm.initialize();
     else                                                  initComponent(formMeta,              setupParam           );
     formMeta.alignContents;
     formMeta.destroy;
-    Height:=meta[length(meta)-1]^.getControl.Top+meta[length(meta)-1]^.getControl.Height;
+    height:=meta[length(meta)-1]^.getControl.top+meta[length(meta)-1]^.getControl.height;
     displayPending:=true;
     leaveCriticalSection(lock);
   end;

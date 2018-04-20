@@ -12,7 +12,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
   end;
 
-
 CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
                                     CONST location: T_tokenLocation; VAR context: T_threadContext;
                                     CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);

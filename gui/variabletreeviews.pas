@@ -57,7 +57,7 @@ FUNCTION newTreeForm:TVarTreeViewForm;
     result:=TVarTreeViewForm.create(nil);
     setLength(treeForms,length(treeForms)+1);
     treeForms[length(treeForms)-1]:=result;
-    registerForm(result,false,true);
+    registerForm(result,ft_variableView);
     leaveCriticalSection(treeFormCs);
   end;
 

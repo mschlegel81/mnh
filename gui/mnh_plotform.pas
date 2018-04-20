@@ -126,7 +126,7 @@ FUNCTION plotForm: TplotForm;
     if myPlotForm=nil then begin
       myPlotForm:=TplotForm.create(nil);
       myPlotForm.pullPlotSettingsToGui();
-      registerForm(myPlotForm,false,true);
+      registerForm(myPlotForm,ft_plot);
     end;
     result:=myPlotForm;
   end;
@@ -142,6 +142,8 @@ PROCEDURE resetPlot;
     myPlotForm.animation.clear;
     myPlotForm.tempPlot.clear;
     myPlotForm.closedByUser:=false;
+    myPlotForm.Hide;
+    unregisterForm(myPlotForm);
   end;
 
 {$R *.lfm}
@@ -207,6 +209,7 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
       InteractionPanel.AutoSize:=false;
       InteractionPanel.AutoSize:=true;
     end;
+    registerForm(myPlotForm,ft_plot);
   end;
 
 PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);

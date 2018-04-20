@@ -27,7 +27,7 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
 PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
   begin
     if state.evaluating then exit;
-    triggerChange(synMeta.editor.Text);
+    triggerChange(synMeta.editor.text);
   end;
 
 PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -44,5 +44,4 @@ PROCEDURE T_inputEditorMeta.update;
     synMeta.editor.enabled:=state.enabled;
     synMeta.activate;
   end;
-
 
