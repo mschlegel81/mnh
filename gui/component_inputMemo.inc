@@ -19,6 +19,8 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
         else synMeta.editor.text:=                state.bindingValue^.toString();
       end;
     end;
+    synMeta.editor.OnEnter:=@onEnter;
+    synMeta.editor.OnExit:=@onExit;
     if (config.action<>nil) then synMeta.editor.OnKeyDown:=@OnKeyDown;
   end;
 
@@ -27,7 +29,6 @@ PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
     if state.evaluating then exit;
     triggerChange;
     if (config.bindingTo<>'') then begin
-      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(synMeta.editor.text);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);

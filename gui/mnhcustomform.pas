@@ -42,7 +42,7 @@ TYPE
       actionParameter:P_literal;
       caption:string;
       enabled:boolean;
-      bindUpdateTriggered:boolean;
+      isFocused:boolean;
       bindingValue:P_literal;
       evaluating:boolean;
     end;
@@ -55,6 +55,8 @@ TYPE
     FUNCTION getControl:TControl; virtual; abstract;
     FUNCTION preferClientAlignment:boolean; virtual;
     PROCEDURE OnKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE onEnter(Sender: TObject);
+    PROCEDURE onExit(Sender: TObject);
   end;
 
   T_panelMeta=object(T_guiElementMeta)
@@ -222,7 +224,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       actionParameter:=nil;
       caption        :='';
       enabled        :=true;
-      bindUpdateTriggered:=false;
+      isFocused:=false;
       evaluating:=false;
     end;
 
@@ -308,7 +310,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
     end;
 
     if (config.bindingTo<>'') then begin
-      if (state.bindingValue<>nil) and (state.bindUpdateTriggered) then begin
+      if (state.bindingValue<>nil) and (state.isFocused) then begin
         tmp:=context.valueStore^.getVariableValue(config.bindingTo);
         if tmp=nil then begin
           result:=true;
@@ -322,8 +324,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
             context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.adapters);
           end;
         end;
-        state.bindUpdateTriggered:=false;
-      end else if not(state.bindUpdateTriggered) then begin
+      end else if not(state.isFocused) then begin
         tmp:=context.valueStore^.getVariableValue(config.bindingTo);
         if tmp<>nil then begin
           if tmp^.equals(state.bindingValue)
@@ -358,6 +359,16 @@ PROCEDURE T_guiElementMeta.OnKeyUp(Sender: TObject; VAR key: word; Shift: TShift
   begin
     if state.evaluating then exit;
     if (key=9) and (Sender is TControl) and (ssCtrl in Shift) then formCycle(TForm(TControl(Sender).GetTopParent),ssShift in Shift);
+  end;
+
+PROCEDURE T_guiElementMeta.onEnter(Sender: TObject);
+  begin
+    state.isFocused:=true;
+  end;
+
+PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
+  begin
+    state.isFocused:=false;
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -574,9 +585,12 @@ PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VA
 PROCEDURE TscriptedForm.updateComponents;
   VAR m:P_guiElementMeta;
   begin
-    for m in meta do m^.update;
-    if processingEvents then propagateCursor(self,crHourGlass)
-                        else propagateCursor(self,crDefault);
+    if processingEvents
+    then propagateCursor(self,crHourGlass)
+    else begin
+      propagateCursor(self,crDefault);
+      for m in meta do m^.update;
+    end;
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);

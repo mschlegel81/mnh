@@ -19,6 +19,8 @@ CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
     if (config.action<>nil) or (config.bindingTo<>'') then checkbox.OnClick:=@OnClick;
     checkbox.checked:=state.bindingValue = @boolLit[true];
     checkbox.OnKeyUp:=@OnKeyUp;
+    checkbox.OnEnter:=@onEnter;
+    checkbox.OnExit:=@onExit;
     parent^.add(@self);
   end;
 
@@ -36,7 +38,6 @@ PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
   begin
     if state.evaluating then exit;
     if (config.bindingTo<>'') then begin
-      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newBoolLiteral(checkbox.checked);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);

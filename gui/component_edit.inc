@@ -49,6 +49,8 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
       end;
     end;
     edit.OnKeyUp:=@OnKeyUp;
+    edit.OnEnter:=@onEnter;
+    edit.OnExit:=@onExit;
     parent^.add(@self);
   end;
 
@@ -62,7 +64,6 @@ PROCEDURE T_editMeta.update;
     end;
   end;
 
-  
 PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if state.evaluating then exit;
@@ -75,7 +76,6 @@ PROCEDURE T_editMeta.OnChange(Sender: TObject);
     if state.evaluating then exit;
     triggerChange;
     if (config.bindingTo<>'') then begin
-      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(edit.text);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);

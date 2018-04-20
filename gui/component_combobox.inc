@@ -64,6 +64,8 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
       end;
     end;
     combobox.OnKeyUp:=@OnKeyUp;
+    combobox.OnEnter:=@onEnter;
+    combobox.OnExit:=@onExit;
     parent^.add(@self);
   end;
 
@@ -88,7 +90,6 @@ PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
     if state.evaluating then exit;
     triggerChange;
     if (config.bindingTo<>'') then begin
-      state.bindUpdateTriggered:=true;
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newStringLiteral(combobox.text);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
