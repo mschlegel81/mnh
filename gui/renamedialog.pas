@@ -7,7 +7,6 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls,
-  mnhFormHandler,
   mnh_constants;
 
 TYPE
@@ -37,10 +36,7 @@ VAR
 
 FUNCTION renameForm: TrenameForm;
   begin
-    if myRenameForm=nil then begin
-      myRenameForm:=TrenameForm.create(nil);
-      registerForm(myRenameForm,false,false);
-    end;
+    if myRenameForm=nil then myRenameForm:=TrenameForm.create(nil);
     result:=myRenameForm;
   end;
 

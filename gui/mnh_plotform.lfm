@@ -33,268 +33,77 @@ object plotForm: TplotForm
     Width = 700
     Panels = <>
   end
-  object InteractionPanel: TFlowPanel
+  object AnimationGroupBox: TGroupBox
     Left = 0
-    Height = 167
+    Height = 59
     Top = 0
     Width = 700
     Align = alTop
+    Anchors = []
     AutoSize = True
-    ControlList = <    
-      item
-        Control = ButtonLeaveInteractiveMode
-        WrapAfter = waAuto
-        Index = 0
-      end    
-      item
-        Control = InteractiveLabel
-        WrapAfter = waAuto
-        Index = 1
-      end    
-      item
-        Control = CustomEventButton0
-        WrapAfter = waAuto
-        Index = 2
-      end    
-      item
-        Control = CustomEventButton1
-        WrapAfter = waAuto
-        Index = 3
-      end    
-      item
-        Control = CustomEventButton2
-        WrapAfter = waAuto
-        Index = 4
-      end    
-      item
-        Control = CustomEventButton3
-        WrapAfter = waAuto
-        Index = 5
-      end    
-      item
-        Control = CustomEventButton4
-        WrapAfter = waAuto
-        Index = 6
-      end    
-      item
-        Control = CustomEventButton5
-        WrapAfter = waAuto
-        Index = 7
-      end    
-      item
-        Control = CustomEventButton6
-        WrapAfter = waAuto
-        Index = 8
-      end    
-      item
-        Control = CustomEventButton7
-        WrapAfter = waAuto
-        Index = 9
-      end    
-      item
-        Control = AnimationGroupBox
-        WrapAfter = waAuto
-        Index = 10
-      end>
-    FlowLayout = tlTop
-    FlowStyle = fsLeftRightTopBottom
+    Caption = 'Animation'
+    ClientHeight = 29
+    ClientWidth = 696
     TabOrder = 1
-    Visible = False
-    object ButtonLeaveInteractiveMode: TButton
-      Left = 1
-      Height = 35
-      Top = 1
-      Width = 207
-      Anchors = []
-      AutoSize = True
-      Caption = 'Leave interactive mode'
-      OnClick = ButtonLeaveInteractiveModeClick
+    object animateCheckBox: TCheckBox
+      Left = 0
+      Height = 29
+      Top = 0
+      Width = 93
+      Align = alLeft
+      Caption = 'animate'
       OnKeyUp = FormKeyUp
       TabOrder = 0
     end
-    object InteractiveLabel: TLabel
-      Left = 208
-      Height = 25
-      Top = 1
-      Width = 17
-      Anchors = []
-      Caption = 'df'
-      ParentColor = False
-    end
-    object CustomEventButton0: TButton
-      Left = 225
-      Height = 35
-      Top = 1
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton0'
-      OnClick = CustomEventButton0Click
-      OnKeyUp = FormKeyUp
-      TabOrder = 1
-    end
-    object CustomEventButton1: TButton
-      Tag = 1
-      Left = 419
-      Height = 35
-      Top = 1
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton1'
-      OnClick = CustomEventButton0Click
+    object animationSpeedTrackbar: TTrackBar
+      Left = 161
+      Height = 29
+      Top = 0
+      Width = 100
+      Position = 6
+      Align = alLeft
       OnKeyUp = FormKeyUp
       TabOrder = 2
     end
-    object CustomEventButton2: TButton
-      Tag = 2
-      Left = 1
-      Height = 35
-      Top = 36
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton2'
-      OnClick = CustomEventButton0Click
+    object animationFPSLabel: TLabel
+      Left = 261
+      Height = 29
+      Top = 0
+      Width = 149
+      Align = alLeft
+      Caption = 'animationFPSLabel'
+      ParentColor = False
+    end
+    object frameTrackBar: TTrackBar
+      Left = 410
+      Height = 29
+      Top = 0
+      Width = 200
+      Frequency = 5
+      OnChange = frameTrackBarChange
+      Position = 0
+      Align = alLeft
       OnKeyUp = FormKeyUp
       TabOrder = 3
     end
-    object CustomEventButton3: TButton
-      Tag = 3
-      Left = 195
-      Height = 35
-      Top = 36
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton3'
-      OnClick = CustomEventButton0Click
+    object cycleCheckbox: TCheckBox
+      Left = 93
+      Height = 29
+      Top = 0
+      Width = 68
+      Align = alLeft
+      Caption = 'cycle'
       OnKeyUp = FormKeyUp
-      TabOrder = 4
+      TabOrder = 1
     end
-    object CustomEventButton4: TButton
-      Tag = 4
-      Left = 389
-      Height = 35
-      Top = 36
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton4'
-      OnClick = CustomEventButton0Click
-      OnKeyUp = FormKeyUp
-      TabOrder = 5
-    end
-    object CustomEventButton5: TButton
-      Tag = 5
-      Left = 1
-      Height = 35
-      Top = 71
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton5'
-      OnClick = CustomEventButton0Click
-      OnKeyUp = FormKeyUp
-      TabOrder = 6
-    end
-    object CustomEventButton6: TButton
-      Tag = 6
-      Left = 195
-      Height = 35
-      Top = 71
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton6'
-      OnClick = CustomEventButton0Click
-      OnKeyUp = FormKeyUp
-      TabOrder = 7
-    end
-    object CustomEventButton7: TButton
-      Tag = 7
-      Left = 389
-      Height = 35
-      Top = 71
-      Width = 194
-      Anchors = []
-      AutoSize = True
-      Caption = 'CustomEventButton7'
-      OnClick = CustomEventButton0Click
-      OnKeyUp = FormKeyUp
-      TabOrder = 8
-    end
-    object AnimationGroupBox: TGroupBox
-      Left = 1
-      Height = 59
-      Top = 106
-      Width = 624
-      Anchors = []
-      AutoSize = True
-      Caption = 'Animation'
-      ClientHeight = 29
-      ClientWidth = 620
-      TabOrder = 9
-      object animateCheckBox: TCheckBox
-        Left = 0
-        Height = 29
-        Top = 0
-        Width = 93
-        Align = alLeft
-        Caption = 'animate'
-        OnKeyUp = FormKeyUp
-        TabOrder = 0
-      end
-      object animationSpeedTrackbar: TTrackBar
-        Left = 161
-        Height = 29
-        Top = 0
-        Width = 100
-        Position = 6
-        Align = alLeft
-        OnKeyUp = FormKeyUp
-        TabOrder = 2
-      end
-      object animationFPSLabel: TLabel
-        Left = 261
-        Height = 29
-        Top = 0
-        Width = 149
-        Align = alLeft
-        Caption = 'animationFPSLabel'
-        ParentColor = False
-      end
-      object frameTrackBar: TTrackBar
-        Left = 410
-        Height = 29
-        Top = 0
-        Width = 200
-        Frequency = 5
-        OnChange = frameTrackBarChange
-        Position = 0
-        Align = alLeft
-        OnKeyUp = FormKeyUp
-        TabOrder = 3
-      end
-      object cycleCheckbox: TCheckBox
-        Left = 93
-        Height = 29
-        Top = 0
-        Width = 68
-        Align = alLeft
-        Caption = 'cycle'
-        OnKeyUp = FormKeyUp
-        TabOrder = 1
-      end
-      object frameIndexLabel: TLabel
-        Left = 610
-        Height = 29
-        Top = 0
-        Width = 10
-        Align = alLeft
-        Caption = '0'
-        ParentColor = False
-      end
+    object frameIndexLabel: TLabel
+      Left = 610
+      Height = 29
+      Top = 0
+      Width = 10
+      Align = alLeft
+      Caption = '0'
+      ParentColor = False
     end
   end
   object MainMenu: TMainMenu

@@ -81,7 +81,7 @@ FUNCTION newTableForm:TtableForm;
     result:=TtableForm.create(nil);
     setLength(tableForms,length(tableForms)+1);
     tableForms[length(tableForms)-1]:=result;
-    registerForm(result,false,true);
+    registerForm(result,ft_table);
     leaveCriticalSection(tableFormCs);
   end;
 

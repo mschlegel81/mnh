@@ -118,7 +118,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: TMnhForm.FormCreate - begin'); {$endif}
     quitPosted:=false;
-    registerForm(self,true,true);
+    registerForm(self,ft_main);
     updateRules; //rules must be updated before splash for correct documentation
     splashOnStartup;
     //Dynamic GUI components:
