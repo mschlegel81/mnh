@@ -7,10 +7,11 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, StdCtrls, mnh_constants, mnh_basicTypes, mnh_contexts,
-  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm;
+  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath;
 
 TYPE
-  T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight);
+  T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,
+                    dmk_mouseMoved,dmk_mouseClicked);
   T_definingMapKeys=set of T_definingMapKey;
 
 CONST
@@ -25,11 +26,12 @@ CONST
     'parts',
     'left',
     'right',
-    'highlight');
+    'highlight',
+    'mouseMoved',
+    'mouseClicked');
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
-  P_panelMeta=^T_panelMeta;
   T_guiElementMeta=object
     config:record
       action :P_expressionLiteral;
@@ -59,19 +61,6 @@ TYPE
     PROCEDURE onExit(Sender: TObject);
   end;
 
-  T_panelMeta=object(T_guiElementMeta)
-    elements:array of P_guiElementMeta;
-    lastControl:TControl;
-    winControl:TWinControl;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
-    CONSTRUCTOR createForExistingForm(CONST form:TForm);
-    PROCEDURE add(CONST meta:P_guiElementMeta);
-    PROCEDURE update; virtual;
-    FUNCTION getControl:TControl; virtual;
-    PROCEDURE alignContents; virtual;
-    DESTRUCTOR destroy; virtual;
-  end;
-
   TscriptedForm = class(TForm)
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -83,6 +72,7 @@ TYPE
     setupLocation:T_tokenLocation;
     setupContext:P_threadContext;
     meta:array of P_guiElementMeta;
+    plotLink:P_guiElementMeta;
     displayPending:boolean;
     lock:TRTLCriticalSection;
     processingEvents:boolean;
@@ -129,6 +119,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
   end;
 
 //indentation signifies inheritance
+{$I component_panel.inc}
 {$I component_label.inc}
 {$I component_checkbox.inc}
 {$I component_splitPanel.inc}
@@ -138,7 +129,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
   {$I component_combobox.inc}
   {$I component_outputMemo.inc}
     {$I component_inputMemo.inc}
-
+{$I component_plotConnector.inc}
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
   VAR index:longint=0;
       k:longint;
@@ -372,69 +363,6 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
     state.isFocused:=false;
   end;
 
-CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                               CONST location: T_tokenLocation; VAR context: T_threadContext;
-                               CONST consideredKeys:T_definingMapKeys);
-  VAR newPanel:TPanel;
-  begin
-    inherited create(def,location,context,consideredKeys);
-    newPanel:=TPanel.create(parent^.winControl);
-    newPanel.parent:=parent^.winControl;
-    newPanel.Align:=alTop;
-    newPanel.AutoSize:=true;
-    newPanel.BorderWidth:=3;
-    newPanel.BorderStyle:=bsNone;
-    newPanel.BevelInner:=bvNone;
-    newPanel.BevelOuter:=bvNone;
-    newPanel.caption:='';
-    setLength(elements,0);
-    lastControl:=nil;
-    winControl:=newPanel;
-    parent^.add(@self);
-  end;
-
-CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TForm);
-  begin
-    setLength(elements,0);
-    lastControl:=nil;
-    winControl:=form;
-  end;
-
-PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
-  begin
-    if lastControl<>nil then begin
-      meta^.getControl.top:=lastControl.top+lastControl.height+10;
-    end;
-    setLength(elements,length(elements)+1);
-    elements[length(elements)-1]:=meta;
-    lastControl:=meta^.getControl;
-  end;
-
-PROCEDURE T_panelMeta.update; begin end;
-
-FUNCTION T_panelMeta.getControl: TControl;
-  begin
-    result:=winControl;
-  end;
-
-PROCEDURE T_panelMeta.alignContents;
-  VAR lastClient:longint;
-      k:longint;
-  begin
-    lastClient:=length(elements)-1;
-    while (lastClient>=0) and not(elements[lastClient]^.preferClientAlignment) do dec(lastClient);
-    if lastClient<0 then exit;
-    for k:=length(elements)-1 downto lastClient+1 do elements[k]^.getControl.Align:=alBottom;
-    elements[lastClient]^.getControl.Align:=alClient;
-    elements[lastClient]^.getControl.AutoSize:=true;
-  end;
-
-DESTRUCTOR T_panelMeta.destroy;
-  begin
-    inherited destroy;
-    setLength(elements,0);
-  end;
-
 PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if TryEnterCriticalsection(lock)=0
@@ -473,8 +401,8 @@ PROCEDURE TscriptedForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftS
   end;
 
 PROCEDURE TscriptedForm.initialize();
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_comboBox);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','comboBox');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_comboBox,tc_plot);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','comboBox','plot');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -534,7 +462,10 @@ PROCEDURE TscriptedForm.initialize();
         tc_inputEditor : begin new(inputEditM  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(inputEditM  ); end;
         tc_outputEditor: begin new(outputEditM ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
         tc_comboBox:     begin new(comboMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
-
+        tc_plot:         if plotLink=nil then begin;
+          new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^));
+          addMeta(plotLink);
+        end else setupContext^.adapters^.raiseError('Only one plot link is allowed per custom form',setupLocation);
         tc_panel:begin
           new(newPanel,create(@container,P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(newPanel);
@@ -627,12 +558,20 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
                          location);
       context.adapters^.logDisplayCustomForm;
 
-      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).Hide;
+      if context.parentCustomForm<>nil then begin
+        TscriptedForm(context.parentCustomForm).Hide;
+        if TscriptedForm(context.parentCustomForm).plotLink<>nil
+        then P_plotConnectorMeta(TscriptedForm(context.parentCustomForm).plotLink)^.disconnect;
+      end;
       while not(form.markedForCleanup) and (context.adapters^.noErrors) do begin
         form.processPendingEvents(location,context);
         sleep(10);
       end;
-      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).Show;
+      if context.parentCustomForm<>nil then begin
+        TscriptedForm(context.parentCustomForm).Show;
+        if TscriptedForm(context.parentCustomForm).plotLink<>nil
+        then P_plotConnectorMeta(TscriptedForm(context.parentCustomForm).plotLink)^.connect;
+      end;
       result:=newVoidLiteral;
     end;
   end;

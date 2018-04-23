@@ -4,7 +4,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
      myStringUtil,myGenerics,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
      mnh_plotForm, mnh_tables,
-     dynamicPlotting,variableTreeViews,mnhCustomForm;
+     variableTreeViews,mnhCustomForm;
 TYPE
   T_abstractMnhForm=class(TForm)
     public
@@ -42,7 +42,6 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     unitIsInitialized:=true;
     mnh_out_adapters.gui_started:=true;
-    initializeDynamicPlotting;
     initializePlotForm;
   end;
 
@@ -230,7 +229,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
             for j:=0 to length(messageText)-1 do processDirectPrint(messageText[j]);
           end;
         mt_endOfEvaluation: begin
-          if plotFormIsInitialized and plotForm.InteractionPanel.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+          if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
           freeScriptedForms;
           parentForm.onEndOfEvaluation;
           syn.enabled:=true;

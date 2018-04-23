@@ -10,25 +10,16 @@ USES
   mnh_constants, mnh_basicTypes,
   mnhFormHandler,
   mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
-  mnh_contexts, mnh_evalThread, dynamicPlotting, plotstyles, plotMath,
+  mnh_contexts, mnh_evalThread, plotstyles, plotMath,
   plotExport;
 
 TYPE
+  PMouseEvent=PROCEDURE(CONST realPoint:T_point) of object;
+
   TplotForm = class(TForm)
     animateCheckBox: TCheckBox;
     cycleCheckbox: TCheckBox;
-    CustomEventButton0: TButton;
-    ButtonLeaveInteractiveMode: TButton;
-    CustomEventButton1: TButton;
-    CustomEventButton2: TButton;
-    CustomEventButton3: TButton;
-    CustomEventButton4: TButton;
-    CustomEventButton5: TButton;
-    CustomEventButton6: TButton;
-    CustomEventButton7: TButton;
     AnimationGroupBox: TGroupBox;
-    InteractionPanel: TFlowPanel;
-    InteractiveLabel: TLabel;
     animationFPSLabel: TLabel;
     frameIndexLabel: TLabel;
     MainMenu: TMainMenu;
@@ -61,8 +52,6 @@ TYPE
     StatusBar: TStatusBar;
     animationSpeedTrackbar: TTrackBar;
     frameTrackBar: TTrackBar;
-    PROCEDURE ButtonLeaveInteractiveModeClick(Sender: TObject);
-    PROCEDURE CustomEventButton0Click(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
@@ -100,6 +89,9 @@ TYPE
     closedByUser:boolean;
     FUNCTION getPlotQuality:byte;
   public
+    onPlotRescale:TNotifyEvent;
+    onPlotMouseMove,
+    onPlotMouseClick:PMouseEvent;
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
     PROCEDURE doPlot(CONST useTemporary:boolean=false);
@@ -143,6 +135,9 @@ PROCEDURE resetPlot;
     myPlotForm.tempPlot.clear;
     myPlotForm.closedByUser:=false;
     myPlotForm.Hide;
+    myPlotForm.onPlotRescale   :=nil;
+    myPlotForm.onPlotMouseClick:=nil;
+    myPlotForm.onPlotMouseMove :=nil;
     unregisterForm(myPlotForm);
   end;
 
@@ -154,7 +149,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
                  else guiAdapters^.plot^.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
       pullPlotSettingsToGui();
       doOrPostPlot();
-      dynamicPlotting.postRescale;
+      if Assigned(onPlotRescale) then onPlotRescale(Sender);
     end;
   end;
 
@@ -167,23 +162,15 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     fpsSamplingStart:=now;
     framesSampled:=0;
     closedByUser:=false;
+    onPlotRescale:=nil;
+    onPlotMouseMove:=nil;
+    onPlotMouseClick:=nil;
   end;
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
   begin
     tempPlot.destroy;
     animation.destroy;
-  end;
-
-PROCEDURE TplotForm.ButtonLeaveInteractiveModeClick(Sender: TObject);
-  begin
-    postEndOfInteractiveMode;
-    doOrPostPlot();
-  end;
-
-PROCEDURE TplotForm.CustomEventButton0Click(Sender: TObject);
-  begin
-    postCustomEvent(TButton(Sender).Tag);
   end;
 
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -194,8 +181,6 @@ PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     plotImage.Align:=alClient;
-    InteractionPanel.Align:=alTop;
-    InteractionPanel.AutoSize:=true;
     doPlot();
   end;
 
@@ -205,10 +190,6 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
     miIncFontSize.ShortCut:=16605;
     {$endif}
     position:=poDefault;
-    if InteractionPanel.visible then begin
-      InteractionPanel.AutoSize:=false;
-      InteractionPanel.AutoSize:=true;
-    end;
     registerForm(myPlotForm,ft_plot);
   end;
 
@@ -347,15 +328,12 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
     pushSettingsToPlotContainer;
   end;
 
-PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
-  VAR p:T_point;
+PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     if ssLeft in Shift then begin
       plotSubsystem.lastMouseX:=x;
       plotSubsystem.lastMouseY:=y;
-      p:=guiAdapters^.plot^.options.screenToReal(x,y);
-      postMouseClick(p[0],p[1]);
+      if Assigned(onPlotMouseClick) then onPlotMouseClick(guiAdapters^.plot^.options.screenToReal(x,y));
     end;
   end;
 
@@ -373,19 +351,18 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
         guiAdapters^.plot^.options:=guiAdapters^.plot^.options;
         mouseUpTriggersPlot:=true;
       end;
-    end else postMouseMove(p[0],p[1]);
+    end else if Assigned(onPlotMouseMove) then onPlotMouseMove(p);
     with plotSubsystem do begin
       lastMouseX:=x;
       lastMouseY:=y;
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
-      dynamicPlotting.postRescale;
+      if Assigned(onPlotRescale) then onPlotRescale(Sender);
       lastMouseX:=x;
       lastMouseY:=y;
       doOrPostPlot();
@@ -394,7 +371,6 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton;
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    postPlotClosed;
     closedByUser:=true;
     animateCheckBox.checked:=false;
   end;
@@ -466,61 +442,9 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
 
 PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
   PROCEDURE updateInteractiveSection;
-    FUNCTION CustomEventButton(CONST index:byte):TButton;
-      begin
-        case index of
-          0: result:=CustomEventButton0;
-          1: result:=CustomEventButton1;
-          2: result:=CustomEventButton2;
-          3: result:=CustomEventButton3;
-          4: result:=CustomEventButton4;
-          5: result:=CustomEventButton5;
-          6: result:=CustomEventButton6;
-        else result:=CustomEventButton7;
-        end;
-      end;
-
-    VAR i:byte;
-        buttonCaption:string;
-        hMax:longint=0;
-    PROCEDURE adaptHeight(CONST component:TControl);
-      VAR h:longint;
-      begin
-        if component.visible then begin
-          h:=component.top+component.height;
-          if h>hMax then hMax:=h;
-        end;
-      end;
-
     begin
-      InteractionPanel.visible:=(isPlotInteractive or (animation.frameCount>0));
-      if not(InteractionPanel.visible) then begin
-        InteractionPanel.height:=0;
-        exit;
-      end;
       AnimationGroupBox.visible:=(animation.frameCount>0);
       AnimationGroupBox.enabled:=(animation.frameCount>0);
-      adaptHeight(AnimationGroupBox);
-
-      ButtonLeaveInteractiveMode.visible:=isPlotInteractive;
-      ButtonLeaveInteractiveMode.enabled:=isPlotInteractive;
-      adaptHeight(ButtonLeaveInteractiveMode);
-
-      InteractiveLabel.visible:=isPlotInteractive;
-      InteractiveLabel.caption:=dynamicPlotLabelText.value;
-      InteractiveLabel.height:=0;
-      InteractiveLabel.Constraints.MinHeight:=0;
-      adaptHeight(InteractiveLabel);
-
-      for i:=0 to 7 do begin
-        CustomEventButton(i).visible:=isCustomEventEnabled(i,buttonCaption);
-        CustomEventButton(i).enabled:=CustomEventButton(i).visible;
-        CustomEventButton(i).caption:=buttonCaption;
-        adaptHeight(CustomEventButton(i));
-      end;
-
-      InteractionPanel.AutoSize:=false;
-      InteractionPanel.height:=hMax;
     end;
 
   begin

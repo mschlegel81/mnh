@@ -56,3 +56,12 @@ withEnabledRule(m:Map,enabled:Expression(0))->[['enabled',enabled]].toMap.mergeM
 
 //@SuppressUnusedWarning
 bind(m:Map,idOfLocalVariable:String)->[['bind',idOfLocalVariable]].toMap.mergeMaps(m,::orElse);
+
+//@SuppressUnusedWarning
+newPlotLink->[['type','plot']].toMap;
+
+//@SuppressUnusedWarning
+withMouseMoved(m:Map,onMouseMove:Expression(2))->[['mouseMoved',onMouseMove]].toMap.mergeMaps(m,::orElse);
+
+//@SuppressUnusedWarning
+withMouseClicked(m:Map,onMouseClick:Expression(2))->[['mouseClicked',onMouseClick]].toMap.mergeMaps(m,::orElse);
