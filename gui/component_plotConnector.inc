@@ -68,6 +68,7 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR contex
       else tmp:=plotConfig.mouseMoved^.evaluateToLiteral(location,@context);
       if tmp<>nil then disposeLiteral(tmp);
       disposeLiteral(plotState.mouseMovedParam);
+      result:=true;
     end;
 
     if plotState.mouseClickedParam<>nil then begin
@@ -76,6 +77,7 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR contex
       else tmp:=plotConfig.mouseClicked^.evaluateToLiteral(location,@context);
       if tmp<>nil then disposeLiteral(tmp);
       disposeLiteral(plotState.mouseClickedParam);
+      result:=true;
     end;
     state.evaluating:=false;
   end;

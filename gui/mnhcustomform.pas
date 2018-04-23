@@ -78,7 +78,7 @@ TYPE
     processingEvents:boolean;
     PROCEDURE initialize();
   public
-    PROCEDURE processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
+    FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
     PROCEDURE updateComponents;
     PROCEDURE conditionalShow(VAR adapters: T_adapters);
   end;
@@ -492,27 +492,35 @@ PROCEDURE TscriptedForm.initialize();
     else                                                  initComponent(formMeta,              setupParam           );
     formMeta.alignContents;
     formMeta.destroy;
-    height:=meta[length(meta)-1]^.getControl.top+meta[length(meta)-1]^.getControl.height;
+    for k:=length(meta)-1 downto 0 do begin
+      if meta[k]^.getControl<>nil then begin
+        height:=meta[k]^.getControl.top+meta[k]^.getControl.height;
+        break;
+      end;
+    end;
     displayPending:=true;
     leaveCriticalSection(lock);
   end;
 
-PROCEDURE TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext);
+FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
   VAR m:P_guiElementMeta;
-      somethingDone:boolean=false;
       customFormBefore:pointer;
   begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.processingEvents - wait for cs'); {$endif}
+    result:=false;
     enterCriticalSection(lock);
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.processingEvents - begin'); {$endif}
     customFormBefore:=context.parentCustomForm;
     context.parentCustomForm:=self;
     processingEvents:=true;
     for m in meta do if context.adapters^.noErrors then begin
-      if m^.evaluate(location,context) then somethingDone:=true;
+      if m^.evaluate(location,context) then result:=true;
     end;
     processingEvents:=false;
     context.parentCustomForm:=customFormBefore;
     leaveCriticalSection(lock);
-    if somethingDone then context.adapters^.logDisplayCustomForm;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.processingEvents - end'); {$endif}
+    if result then context.adapters^.logDisplayCustomForm;
   end;
 
 PROCEDURE TscriptedForm.updateComponents;
@@ -521,29 +529,36 @@ PROCEDURE TscriptedForm.updateComponents;
     if processingEvents
     then propagateCursor(self,crHourGlass)
     else begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.updateComponents - begin'); {$endif}
       propagateCursor(self,crDefault);
       for m in meta do m^.update;
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.updateComponents - end'); {$endif}
     end;
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
   begin
     if TryEnterCriticalsection(lock)=0 then exit;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.conditionalShow - begin'); {$endif}
     if displayPending and adapters.noErrors then begin
       if (setupParam<>nil) and (setupContext<>nil) then begin
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: initializing scripted form...'); {$endif}
         initialize();
         disposeLiteral(setupParam);
         setupContext:=nil;
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: done initializing scripted form'); {$endif}
       end;
       Show;
       displayPending:=false;
     end;
     updateComponents;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.conditionalShow - end'); {$endif}
     leaveCriticalSection(lock);
   end;
 
 FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
   VAR form:TscriptedForm;
+      sleepTime:longint=0;
   begin
     result:=nil;
     if not(gui_started) then begin
@@ -557,6 +572,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
                          @context,
                          location);
       context.adapters^.logDisplayCustomForm;
+      while (form.setupContext<>nil) and (context.adapters^.noErrors) do sleep(10);
 
       if context.parentCustomForm<>nil then begin
         TscriptedForm(context.parentCustomForm).Hide;
@@ -564,8 +580,12 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
         then P_plotConnectorMeta(TscriptedForm(context.parentCustomForm).plotLink)^.disconnect;
       end;
       while not(form.markedForCleanup) and (context.adapters^.noErrors) do begin
-        form.processPendingEvents(location,context);
-        sleep(10);
+        if form.processPendingEvents(location,context)
+        then sleepTime:=0
+        else begin
+          if sleepTime<1000 then inc(sleepTime);
+          sleep(sleepTime);
+        end;
       end;
       if context.parentCustomForm<>nil then begin
         TscriptedForm(context.parentCustomForm).Show;
