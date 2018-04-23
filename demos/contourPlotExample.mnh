@@ -1,0 +1,5 @@
+USE plotUtil;
+
+f(x:Numeric,y:Numeric)->sin(x)+0.5*cos(y*x);
+
+main->contourPlot(::f,-5,5,-5,5,10000,[-2..2]/3,2,true);
