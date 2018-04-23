@@ -49,8 +49,8 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
       end;
     end;
     edit.OnKeyUp:=@OnKeyUp;
-    edit.OnEnter:=@onEnter;
-    edit.OnExit:=@onExit;
+    edit.onEnter:=@onEnter;
+    edit.onExit:=@onExit;
     parent^.add(@self);
   end;
 

@@ -110,7 +110,7 @@ PROCEDURE T_secondaryOutputMemoMeta.update;
       s:string;
   begin
     for m in collector^.storedMessages do begin
-      for s in defaultFormatting(m,true) do synMeta.editor.Append(s);
+      for s in defaultFormatting(m,true) do synMeta.editor.append(s);
     end;
     collector^.clear;
   end;

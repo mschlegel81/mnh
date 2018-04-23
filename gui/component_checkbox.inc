@@ -19,8 +19,8 @@ CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
     if (config.action<>nil) or (config.bindingTo<>'') then checkbox.OnClick:=@OnClick;
     checkbox.checked:=state.bindingValue = @boolLit[true];
     checkbox.OnKeyUp:=@OnKeyUp;
-    checkbox.OnEnter:=@onEnter;
-    checkbox.OnExit:=@onExit;
+    checkbox.onEnter:=@onEnter;
+    checkbox.onExit:=@onExit;
     parent^.add(@self);
   end;
 

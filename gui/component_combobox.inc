@@ -66,8 +66,8 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
       end;
     end;
     combobox.OnKeyUp:=@OnKeyUp;
-    combobox.OnEnter:=@onEnter;
-    combobox.OnExit:=@onExit;
+    combobox.onEnter:=@onEnter;
+    combobox.onExit:=@onExit;
     parent^.add(@self);
   end;
 
