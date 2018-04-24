@@ -19,24 +19,25 @@ TYPE
   T_guiOutAdapter=object(T_collectingOutAdapter)
     flushing:boolean;
     parentForm:T_abstractMnhForm;
+    syn:TSynEdit;
     lastWasDirectPrint:boolean;
-    CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
+    CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST OutputEdit:TSynEdit; CONST displayLogo:boolean);
     DESTRUCTOR destroy; virtual;
-    FUNCTION flushToGui(VAR syn:TSynEdit):T_messageTypeSet;
+    FUNCTION flushToGui:T_messageTypeSet;
     PROCEDURE flushClear;
   end;
 
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
 
-PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
-FUNCTION createSecondaryAdapters:P_adapters;
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST OutputEdit:TSynEdit; CONST displayLogo:boolean);
+FUNCTION createSecondaryAdapters(CONST OutputEdit:TSynEdit):P_adapters;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST OutputEdit:TSynEdit; CONST displayLogo:boolean);
   begin
     if unitIsInitialized then exit;
-    guiOutAdapter.create(parent,displayLogo);
+    guiOutAdapter.create(parent,OutputEdit,displayLogo);
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
@@ -45,21 +46,22 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     initializePlotForm;
   end;
 
-FUNCTION createSecondaryAdapters:P_adapters;
+FUNCTION createSecondaryAdapters(CONST OutputEdit:TSynEdit):P_adapters;
   VAR guiAd:P_guiOutAdapter;
   begin
     result:=nil;
     if not(unitIsInitialized) then exit;
-    new(guiAd,create(guiOutAdapter.parentForm,false));
+    new(guiAd,create(guiOutAdapter.parentForm,OutputEdit,false));
     new(result,create);
     result^.addOutAdapter(guiAd,true);
   end;
 
-CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
+CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST OutputEdit:TSynEdit; CONST displayLogo:boolean);
   VAR i:longint;
       m:T_storedMessage;
   begin
     inherited create(at_gui,C_collectAllOutputBehavior);
+    syn:=OutputEdit;
     parentForm:=owner;
     flushing:=false;
     if not(displayLogo) then exit;
@@ -78,7 +80,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
+FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
   VAR i,j:longint;
       outputLinesLimit:longint=0;
       hadDirectPrint:boolean=false;

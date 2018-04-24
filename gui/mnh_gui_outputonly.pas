@@ -44,7 +44,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
   VAR currentRunnerInfo:T_runnerStateInfo;
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
-    guiOutAdapter.flushToGui(OutputEdit);
+    guiOutAdapter.flushToGui;
     if guiAdapters.isDeferredPlotLogged and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
     if askForm.displayPending then askForm.Show;
     if Timer1.interval<MAX_INTERVAL then Timer1.interval:=Timer1.interval+1;
@@ -78,7 +78,7 @@ PROCEDURE ToutputOnlyForm.triggerFastPolling;
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
     registerForm(self,ft_main);
-    initGuiOutAdapters(outputOnlyForm,false);
+    initGuiOutAdapters(outputOnlyForm,OutputEdit,false);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
