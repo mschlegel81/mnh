@@ -190,6 +190,7 @@ hashFiles:=['3rd_party/blcksock.pas',
             'gui/res_removeAssoc.inc',
             'gui/searchModel.pas',
             'gui/settingsLogic.inc',
+            'gui/synOutAdapter.pas',
             'gui/synhighlightermnh.pas',
             'gui/treeUtil.pas',
             'gui/variabletreeviews.pas'];

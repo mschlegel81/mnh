@@ -58,7 +58,7 @@ PROCEDURE setSpecificMessageType(CONST enable:boolean; CONST messageType:T_messa
 PROCEDURE updateWordWrap;
   begin
     if settings.value^.wordWrapEcho
-    then guiAdapters.preferredEchoLineLength:=MnhForm.OutputEdit.charsInWindow-6
+    then guiAdapters.preferredEchoLineLength:=MnhForm.outputEdit.charsInWindow-6
     else guiAdapters.preferredEchoLineLength:=-1;
     MnhForm.quick.adapters^.preferredEchoLineLength:=guiAdapters.preferredEchoLineLength;
   end;
@@ -66,18 +66,18 @@ PROCEDURE updateWordWrap;
 PROCEDURE processFontSettings;
   begin
     with MnhForm do begin
-      OutputEdit.Font.name:=settings.value^.editorFontname;
-      OutputEdit.Font.size:=SettingsForm.fontSize;
+      outputEdit.Font.name:=settings.value^.editorFontname;
+      outputEdit.Font.size:=SettingsForm.fontSize;
       if SettingsForm.AntialiasCheckbox.checked
-      then OutputEdit.Font.quality:=fqCleartypeNatural
-      else OutputEdit.Font.quality:=fqNonAntialiased;
+      then outputEdit.Font.quality:=fqCleartypeNatural
+      else outputEdit.Font.quality:=fqNonAntialiased;
 
-      quick.meta.editor.Font:=OutputEdit.Font;
-      QuickOutputEdit.Font:=OutputEdit.Font;
-      currentExpressionMemo.Font:=OutputEdit.Font;
-      editorMeta.updateFonts(OutputEdit.Font);
-      helpPopupMemo.Font:=OutputEdit.Font;
-      assistanceSynEdit.Font:=OutputEdit.Font;
+      quick.meta.editor.Font:=outputEdit.Font;
+      QuickOutputEdit.Font:=outputEdit.Font;
+      currentExpressionMemo.Font:=outputEdit.Font;
+      editorMeta.updateFonts(outputEdit.Font);
+      helpPopupMemo.Font:=outputEdit.Font;
+      assistanceSynEdit.Font:=outputEdit.Font;
       updateWordWrap;
     end;
     conditionalShowCustomForms(guiAdapters);
@@ -100,7 +100,7 @@ PROCEDURE initializeSettings;
       MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*formPosition.relativeSplitterPosition);
       MnhForm.StatusBar.top:=MnhForm.BottomPanel.top+MnhForm.BottomPanel.height;
     end else settings.value^.mainForm.relativeSplitterPosition:=MnhForm.BottomPanel.height/MnhForm.ClientHeight;
-    SettingsForm.ensureFont(MnhForm.OutputEdit.Font);
+    SettingsForm.ensureFont(MnhForm.outputEdit.Font);
     initializeOutputSettings;
     processFontSettings;
   end;

@@ -133,7 +133,7 @@ TYPE
     Splitter4:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
-    OutputEdit,
+    outputEdit,
     QuickOutputEdit,
     assistanceSynEdit:         TSynEdit;
     SynExporterHTML:           TSynExporterHTML;
@@ -209,7 +209,7 @@ FUNCTION TMnhForm.focusedEditor: TSynEdit;
       result:=getEditor^.editor;
       if result.Focused then exit(result);
     end;
-    result:=OutputEdit;
+    result:=outputEdit;
   end;
 
 {$i mnh_func_defines.inc}
@@ -271,7 +271,7 @@ VAR currentSnapshot:P_debuggingSnapshot=nil;
 PROCEDURE TMnhForm.onBreakpoint(CONST data: pointer);
   PROCEDURE jumpToFile;
     begin
-      runnerModel.markDebugLine(OutputEdit,-1);
+      runnerModel.markDebugLine(outputEdit,-1);
       if currentSnapshot^.location.package=nil then exit;
       if openLocation(currentSnapshot^.location) then begin
         runnerModel.markDebugLine(getEditor^.editor,currentSnapshot^.location.line);

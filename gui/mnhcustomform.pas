@@ -6,10 +6,17 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  ExtCtrls, StdCtrls, mnh_constants, mnh_basicTypes, mnh_contexts,
-  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath;
+  ExtCtrls, StdCtrls, SynEditKeyCmds,
+  myStringUtil,
+  mnh_constants, mnh_basicTypes, mnh_contexts,
+  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath,synOutAdapter;
 
 TYPE
+  T_outputPair=record
+    outputSyn:TSynEdit;
+    outputForm:TForm;
+  end;
+
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,
                     dmk_mouseMoved,dmk_mouseClicked);
   T_definingMapKeys=set of T_definingMapKey;
@@ -89,6 +96,7 @@ IMPLEMENTATION
 VAR scriptedFormCs:TRTLCriticalSection;
     scriptedForms: array of TscriptedForm;
 {$R *.lfm}
+
 PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
   VAR i:longint;
   begin

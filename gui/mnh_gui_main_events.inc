@@ -128,12 +128,12 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     outputHighlighter:=TSynMnhSyn.create(self,msf_output);
     helpHighlighter  :=TSynMnhSyn.create(self,msf_help  );
     debugHighlighter :=TSynMnhSyn.create(self,msf_debug );
-    OutputEdit           .highlighter:=outputHighlighter;
+    outputEdit           .highlighter:=outputHighlighter;
     QuickOutputEdit      .highlighter:=outputHighlighter;
     assistanceSynEdit    .highlighter:=outputHighlighter;
     helpPopupMemo        .highlighter:=helpHighlighter  ;
     currentExpressionMemo.highlighter:=debugHighlighter ;
-    OutputEdit       .clearAll;
+    outputEdit       .clearAll;
     QuickOutputEdit  .clearAll;
     assistanceSynEdit.clearAll;
 
@@ -147,7 +147,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     //Initialize other units
     setupCallbacks;
 
-    initGuiOutAdapters(MnhForm,OutputEdit,true);
+    initGuiOutAdapters(MnhForm,outputEdit,true);
     quick.adapters:=createSecondaryAdapters(QuickOutputEdit);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
