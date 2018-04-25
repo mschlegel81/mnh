@@ -74,7 +74,11 @@ OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
 
 OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
   begin
-    if x.package=nil then result.fileName:='?' else result.fileName:=x.package^.getPath;
+    try
+      if x.package=nil then result.fileName:='?' else result.fileName:=x.package^.getPath;
+    except
+      result.fileName:='?';
+    end;
     result.column:=x.column;
     result.line:=x.line;
   end;
