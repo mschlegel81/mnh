@@ -150,7 +150,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     initGuiOutAdapters(MnhForm,outputEdit,true);
     quick.adapters:=createSecondaryAdapters(QuickOutputEdit);
     {$ifdef debugMode}
-    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
+    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
     {$endif}
 
     mnh_evalThread.initUnit(@guiAdapters);

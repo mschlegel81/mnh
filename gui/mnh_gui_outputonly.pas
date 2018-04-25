@@ -96,7 +96,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     mnh_out_adapters.gui_started:=true;
     caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - evaluating';
     {$ifdef debugMode}
-    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
+    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
     {$endif}
     setupEditorMetaBase(self,outputHighlighter,nil);
     editorMetaBase.editorFont:=outputEdit.Font;
