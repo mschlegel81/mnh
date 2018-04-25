@@ -6,6 +6,7 @@ TYPE
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_buttonMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -38,5 +39,10 @@ PROCEDURE T_buttonMeta.OnClick(Sender: TObject);
 FUNCTION T_buttonMeta.getControl: TControl;
   begin
     result:=button;
+  end;
+
+FUNCTION T_buttonMeta.getName:string;
+  begin
+    result:='T_buttonMeta "'+button.caption+'"';
   end;
 

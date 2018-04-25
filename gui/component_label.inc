@@ -5,6 +5,7 @@ TYPE
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_labelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -27,4 +28,9 @@ PROCEDURE T_labelMeta.update;
 FUNCTION T_labelMeta.getControl: TControl;
   begin
     result:=mylabel;
+  end;
+
+FUNCTION T_labelMeta.getName:string;
+  begin
+    result:='T_labelMeta "'+mylabel.caption+'"';
   end;

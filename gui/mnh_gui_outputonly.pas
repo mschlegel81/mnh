@@ -16,7 +16,7 @@ USES
 
 TYPE
   ToutputOnlyForm = class(T_abstractMnhForm)
-    OutputEdit: TSynEdit;
+    outputEdit: TSynEdit;
     Timer1: TTimer;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -44,7 +44,7 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
   VAR currentRunnerInfo:T_runnerStateInfo;
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
-    guiOutAdapter.flushToGui(OutputEdit);
+    guiOutAdapter.flushToGui;
     if guiAdapters.isDeferredPlotLogged and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
     if askForm.displayPending then askForm.Show;
     if Timer1.interval<MAX_INTERVAL then Timer1.interval:=Timer1.interval+1;
@@ -78,7 +78,7 @@ PROCEDURE ToutputOnlyForm.triggerFastPolling;
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
     registerForm(self,ft_main);
-    initGuiOutAdapters(outputOnlyForm,false);
+    initGuiOutAdapters(outputOnlyForm,outputEdit,false);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
@@ -86,20 +86,20 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     setupCallbacks;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
-    OutputEdit.highlighter:=outputHighlighter;
-    OutputEdit.Font.name:=settings.value^.editorFontname;
-    OutputEdit.Font.size:=settings.value^.fontSize;
+    outputEdit.highlighter:=outputHighlighter;
+    outputEdit.Font.name:=settings.value^.editorFontname;
+    outputEdit.Font.size:=settings.value^.fontSize;
     if settings.value^.antialiasedFonts
-    then OutputEdit.Font.quality:=fqCleartypeNatural
-    else OutputEdit.Font.quality:=fqNonAntialiased;
+    then outputEdit.Font.quality:=fqCleartypeNatural
+    else outputEdit.Font.quality:=fqNonAntialiased;
 
     mnh_out_adapters.gui_started:=true;
     caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - evaluating';
     {$ifdef debugMode}
-    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole]);
+    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
     {$endif}
     setupEditorMetaBase(self,outputHighlighter,nil);
-    editorMetaBase.editorFont:=OutputEdit.Font;
+    editorMetaBase.editorFont:=outputEdit.Font;
   end;
 
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -128,8 +128,8 @@ PROCEDURE ToutputOnlyForm.FormShow(Sender: TObject);
 PROCEDURE ToutputOnlyForm.OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
-    if ((key=187) or (key=107)) and (ssCtrl in Shift) then OutputEdit.Font.size:=OutputEdit.Font.size+1;
-    if ((key=189) or (key=109)) and (ssCtrl in Shift) then OutputEdit.Font.size:=OutputEdit.Font.size-1;
+    if ((key=187) or (key=107)) and (ssCtrl in Shift) then outputEdit.Font.size:=outputEdit.Font.size+1;
+    if ((key=189) or (key=109)) and (ssCtrl in Shift) then outputEdit.Font.size:=outputEdit.Font.size-1;
   end;
 
 end.

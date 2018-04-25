@@ -5,6 +5,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_out_adapters,mnh_constants,mnh_settings,mnh_basicTypes,
      mnh_plotForm, mnh_tables,
      {$ifdef imig}mnh_imig_form,{$endif}
+     synOutAdapter,
      variableTreeViews,mnhCustomForm;
 
 TYPE
@@ -18,27 +19,25 @@ TYPE
   end;
 
   P_guiOutAdapter=^T_guiOutAdapter;
-  T_guiOutAdapter=object(T_collectingOutAdapter)
+  T_guiOutAdapter=object(T_synOutAdapter)
     flushing:boolean;
     parentForm:T_abstractMnhForm;
-    lastWasDirectPrint:boolean;
-    CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
+    CONSTRUCTOR create(CONST owner:T_abstractMnhForm; CONST outputEdit:TSynEdit; CONST displayLogo:boolean);
     DESTRUCTOR destroy; virtual;
-    FUNCTION flushToGui(VAR syn:TSynEdit):T_messageTypeSet;
-    PROCEDURE flushClear;
+    FUNCTION flushToGui:T_messageTypeSet; virtual;
   end;
 
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
 
-PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
-FUNCTION createSecondaryAdapters:P_adapters;
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TSynEdit; CONST displayLogo:boolean);
+FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_adapters;
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:boolean);
+PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST outputEdit:TSynEdit; CONST displayLogo:boolean);
   begin
     if unitIsInitialized then exit;
-    guiOutAdapter.create(parent,displayLogo);
+    guiOutAdapter.create(parent,outputEdit,displayLogo);
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
     {$ifdef imig}
@@ -50,21 +49,21 @@ PROCEDURE initGuiOutAdapters(CONST parent:T_abstractMnhForm; CONST displayLogo:b
     initializePlotForm;
   end;
 
-FUNCTION createSecondaryAdapters:P_adapters;
+FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_adapters;
   VAR guiAd:P_guiOutAdapter;
   begin
     result:=nil;
     if not(unitIsInitialized) then exit;
-    new(guiAd,create(guiOutAdapter.parentForm,false));
+    new(guiAd,create(guiOutAdapter.parentForm,outputEdit,false));
     new(result,create);
     result^.addOutAdapter(guiAd,true);
   end;
 
-CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST displayLogo:boolean);
+CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST outputEdit:TSynEdit; CONST displayLogo:boolean);
   VAR i:longint;
       m:T_storedMessage;
   begin
-    inherited create(at_gui,C_collectAllOutputBehavior);
+    inherited create(owner,outputEdit,C_collectAllOutputBehavior);
     parentForm:=owner;
     flushing:=false;
     if not(displayLogo) then exit;
@@ -83,43 +82,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
-  VAR i,j:longint;
-      outputLinesLimit:longint=0;
-      hadDirectPrint:boolean=false;
-      wroteToSyn:boolean=false;
-      s:string;
-      showFormsAfter:boolean=false;
-      linesToWrite:T_arrayOfString;
-      bufferOffset:longint=0;
-
-  PROCEDURE appendInternal(CONST s:string);
-    begin
-      if length(linesToWrite)>=outputLinesLimit then begin
-        linesToWrite[bufferOffset]:=s;
-        inc(bufferOffset);
-        if bufferOffset>=outputLinesLimit then bufferOffset:=0;
-      end else myGenerics.append(linesToWrite,s);
-      wroteToSyn:=true;
-    end;
-
-  PROCEDURE flushBuffer;
-    VAR i:longint;
-    begin
-      if length(linesToWrite)>=outputLinesLimit then syn.lines.clear
-      else while syn.lines.count+length(linesToWrite)>outputLinesLimit do syn.lines.delete(0);
-      for i:=bufferOffset to length(linesToWrite)-1+bufferOffset do syn.lines.append(linesToWrite[i mod outputLinesLimit]);
-      linesToWrite:=C_EMPTY_STRING_ARRAY;
-      bufferOffset:=0;
-    end;
-
-  PROCEDURE clearSynAndBuffer;
-    begin
-      linesToWrite:=C_EMPTY_STRING_ARRAY;
-      bufferOffset:=0;
-      syn.lines.clear;
-      wroteToSyn:=true;
-    end;
+FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
 
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
     {$MACRO ON}
@@ -164,22 +127,9 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       end;
     end;
 
-  PROCEDURE processDirectPrint(CONST s:string);
-    VAR c:char;
-    begin
-      syn.readonly:=false;
-      for c in s do case c of
-        #8 : syn.ExecuteCommand(ecDeleteLastChar,c,nil);
-        #13: begin
-               syn.ExecuteCommand(ecLineStart,c,nil);
-               syn.ExecuteCommand(ecOverwriteMode,c,nil);
-             end
-        else syn.ExecuteCommand(ecChar,c,nil);
-      end;
-      syn.readonly:=true;
-      hadDirectPrint:=true;
-    end;
-
+  VAR i:longint;
+      showFormsAfter:boolean=false;
+      s:string;
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
@@ -188,102 +138,50 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): T_messageTypeSet;
       exit([]);
     end;
     try
-    syn.BeginUpdate(false);
-    flushing:=true;
-    result:=[];
-    if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
-    linesToWrite:=C_EMPTY_STRING_ARRAY;
-    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
-      include(result,messageType);
-      case messageType of
-        mt_clearConsole: clearSynAndBuffer;
-        mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
-        mt_plotCreatedWithInstantDisplay: begin
-          plotForm.doPlot(true);
-          parentForm.triggerFastPolling;
-        end;
-        mt_displayTable: conditionalShowTables;
-        mt_displayTreeView: conditionalShowVarTrees;
-        mt_displayCustomDialog: showFormsAfter:=true;
+      flushing:=true;
+      result:=[];
+      if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
+      startOutput;
+      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
+      if not(storedMessages[i].messageType in redirectedMessages) then begin
+        {$ifdef debugMode}writeln(stdErr,'        DEBUG: GUI adapter processes message type ',storedMessages[i].messageType);{$endif}
+        include(result,messageType);
+        case messageType of
+          mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
+          mt_plotCreatedWithInstantDisplay: begin
+            plotForm.doPlot(true);
+            parentForm.triggerFastPolling;
+          end;
+          mt_displayTable: conditionalShowTables;
+          mt_displayTreeView: conditionalShowVarTrees;
+          mt_displayCustomDialog: showFormsAfter:=true;
         {$ifdef imig}
         mt_displayImage: DisplayImageForm.displayCurrentImage;
         {$endif}
-        mt_plotCreatedWithDeferredDisplay: begin end;
-        mt_printline:
-          begin
-            if (length(messageText)>0) and (messageText[0]=C_formFeedChar) then begin
-              clearSynAndBuffer;
-              for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
-            end else if lastWasDirectPrint then begin
-              if length(messageText)>0 then begin
-                processDirectPrint(messageText[0]);
-              end;
-              for j:=1 to length(messageText)-1 do appendInternal(messageText[j]);
-            end else for j:=0 to length(messageText)-1 do appendInternal(messageText[j]);
+          mt_plotCreatedWithDeferredDisplay: begin end;
+          mt_endOfEvaluation: begin
+            if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+            freeScriptedForms;
+            parentForm.onEndOfEvaluation;
+            syn.enabled:=true;
           end;
-        mt_printdirect:
-          begin
-            if wroteToSyn then begin
-              flushBuffer;
-              wroteToSyn:=false;
-              syn.ExecuteCommand(ecEditorBottom,' ',nil);
-              syn.ExecuteCommand(ecLineStart,' ',nil);
-            end;
-            if not(lastWasDirectPrint) then begin
-              syn.append('');
-              syn.ExecuteCommand(ecEditorBottom,' ',nil);
-              syn.ExecuteCommand(ecLineStart,' ',nil);
-            end;
-            for j:=0 to length(messageText)-1 do processDirectPrint(messageText[j]);
-          end;
-        mt_endOfEvaluation: begin
-          if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
-          freeScriptedForms;
-          parentForm.onEndOfEvaluation;
-          syn.enabled:=true;
+          mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
+          mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
+          mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
+          mt_echo_input,
+          mt_echo_declaration,
+          mt_echo_output: writeWrapped(messageType,messageText);
+          else if not(singleMessageOut(storedMessages[i]))
+          then for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
         end;
-        mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
-        mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
-        mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
-        mt_echo_input,
-        mt_echo_declaration,
-        mt_echo_output: writeWrapped(messageType,messageText);
-        else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
       end;
-      if messageType in [mt_clearConsole..mt_timing_info] then lastWasDirectPrint:=messageType=mt_printdirect;
-    end;
-    if length(storedMessages)>0 then clear;
-    syn.enabled:=not(lastWasDirectPrint);
-    if wroteToSyn then begin
-      flushBuffer;
-      if not(parentForm.showing) or not(parentForm.visible) then begin
-        parentForm.Show;
-        parentForm.visible:=true;
-      end;
-      syn.EndUpdate;
-      syn.ExecuteCommand(ecEditorBottom,' ',nil);
-      syn.ExecuteCommand(ecLineStart,' ',nil);
-    end else begin
-      if hadDirectPrint and (not(parentForm.showing) or not(parentForm.visible)) then begin
-        parentForm.Show;
-        parentForm.visible:=true;
-      end;
-      syn.EndUpdate;
-    end;
-    if showFormsAfter then conditionalShowCustomForms(guiAdapters);
+      if length(storedMessages)>0 then clear;
     finally
+      doneOutput;
       flushing:=false;
       system.leaveCriticalSection(cs);
+      if showFormsAfter then conditionalShowCustomForms(guiAdapters);
     end;
-  end;
-
-PROCEDURE T_guiOutAdapter.flushClear;
-  begin
-    system.enterCriticalSection(cs);
-    lastWasDirectPrint:=false;
-    clear;
-    append(clearConsoleMessage);
-    system.leaveCriticalSection(cs);
   end;
 
 FINALIZATION

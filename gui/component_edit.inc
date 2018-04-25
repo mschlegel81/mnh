@@ -9,6 +9,7 @@ TYPE
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -36,8 +37,8 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
     edit.parent:=editPanel;
     edit.AnchorToNeighbour(akLeft,10,editLabel);
     edit.Align:=alClient;
-    edit.enabled:=state.enabled;
     edit.AutoSize:=true;
+    edit.enabled:=state.enabled;
     edit.text:='';
     if (config.action<>nil) then edit.OnKeyDown:=@OnKeyDown;
     if (config.bindingTo<>'') or (config_onChange<>nil) then begin
@@ -49,8 +50,8 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
       end;
     end;
     edit.OnKeyUp:=@OnKeyUp;
-    edit.OnEnter:=@onEnter;
-    edit.OnExit:=@onExit;
+    edit.onEnter:=@onEnter;
+    edit.onExit:=@onExit;
     parent^.add(@self);
   end;
 
@@ -81,3 +82,9 @@ FUNCTION T_editMeta.getControl: TControl;
   begin
     result:=editPanel;
   end;
+
+FUNCTION T_editMeta.getName:string;
+  begin
+    result:='T_editMeta "'+editLabel.caption+'"';
+  end;
+

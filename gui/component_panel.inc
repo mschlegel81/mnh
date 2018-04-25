@@ -4,13 +4,16 @@ TYPE
     elements:array of P_guiElementMeta;
     lastControl:TControl;
     winControl:TWinControl;
+    containedInForm:TForm;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
     PROCEDURE add(CONST meta:P_guiElementMeta);
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
     PROCEDURE alignContents; virtual;
     DESTRUCTOR destroy; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -31,6 +34,7 @@ CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
     setLength(elements,0);
     lastControl:=nil;
     winControl:=newPanel;
+    containedInForm:=parent^.containedInForm;
     parent^.add(@self);
   end;
 
@@ -39,6 +43,7 @@ CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TForm);
     setLength(elements,0);
     lastControl:=nil;
     winControl:=form;
+    containedInForm:=form;
   end;
 
 PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
@@ -50,6 +55,8 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     elements[length(elements)-1]:=meta;
     lastControl:=meta^.getControl;
   end;
+
+FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; begin result:=false; end;
 
 PROCEDURE T_panelMeta.update; begin end;
 
@@ -74,4 +81,9 @@ DESTRUCTOR T_panelMeta.destroy;
   begin
     inherited destroy;
     setLength(elements,0);
+  end;
+
+FUNCTION T_panelMeta.getName:string;
+  begin
+    result:='T_panelMeta holding '+intToStr(length(elements));
   end;
