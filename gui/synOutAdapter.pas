@@ -79,9 +79,7 @@ PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
 
     redirected:=[];
     for k:=0 to length(redirectors)-1 do redirected+=redirectors[k]^.outputBehavior;
-    writeln('REDIRECTED TYPES ARE:');
     for mt in redirected do writeln('  ',mt);
-    writeln(':REDIRECTED TYPES ARE');
   end;
 
 PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
@@ -227,7 +225,7 @@ PROCEDURE T_synOutAdapter.doneOutput;
 
 CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
   begin
-    inherited create(at_gui,messageTypesToInclude*C_synOutDefaultMessageTypes);
+    inherited create(at_gui,messageTypesToInclude);
     id:=interLockedIncrement(lastSynOutId);
     synOwnerForm:=owner;
     syn         :=outputEdit;
