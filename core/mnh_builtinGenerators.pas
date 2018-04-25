@@ -839,6 +839,59 @@ FUNCTION isaacRandomGenerator_impl intFuncSignature;
       new(P_isaacRandomGenerator(result),create(int0^.value,int1^.value,tokenLocation));
   end;
 
+TYPE
+P_vanDerCorputGenerator=^T_vanDerCorputGenerator;
+T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
+  private
+    invTable:array[0..30] of double;
+    base,counter:longint;
+  public
+    CONSTRUCTOR create(CONST base_:longint; CONST loc:T_tokenLocation);
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+end;
+
+CONSTRUCTOR T_vanDerCorputGenerator.create(CONST base_: longint; CONST loc: T_tokenLocation);
+  VAR i:longint;
+      d:double=1;
+  begin
+    inherited create(loc);
+    base:=base_;
+    counter:=0;
+    for i:=0 to length(invTable)-1 do begin
+      d/=base;
+      invTable[i]:=d;
+    end;
+  end;
+
+FUNCTION T_vanDerCorputGenerator.toString(CONST lengthLimit: longint): string;
+  begin
+    result:='vanDerCorputGenerator('+intToStr(base)+')';
+  end;
+
+FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
+  VAR k,rest:longint;
+      i:longint=0;
+      x:double=0;
+  begin
+    k:=counter;
+    inc(counter);
+    while k>0 do begin
+      rest:=k mod base;
+      k:=k div base;
+      x:=x+rest*invTable[i];
+      inc(i);
+    end;
+    result:=newRealLiteral(x);
+  end;
+
+FUNCTION vanDerCorputGenerator_impl intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and int0^.value.isBetween(2,maxLongint) then
+      new(P_vanDerCorputGenerator(result),create(int0^.value.toInt,tokenLocation));
+  end;
+
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
   registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary,'rangeGenerator(i0:int,i1:int);//returns a generator generating the range [i0..i1]');
@@ -852,5 +905,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'randomGenerator',@randomGenerator_impl,ak_unary,'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary,'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)#//The range of the returned generator can be changed by calling it with an integer argument.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary,'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html#//The range of the returned generator can be changed by calling it with an integer argument.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'vanDerCorputGenerator',@vanDerCorputGenerator_impl,ak_unary,'vanDerCorputGenerator(base>=2);//returns a Van der Corput generator for the given base');
   listProcessing.newIterator:=@newIterator;
 end.
