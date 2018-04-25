@@ -8,6 +8,7 @@ TYPE
     PROCEDURE update; virtual;
     PROCEDURE connect; virtual;
     PROCEDURE disconnect; virtual;
+    FUNCTION getName:string; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -49,4 +50,9 @@ DESTRUCTOR T_secondaryOutputMemoMeta.destroy;
     inherited destroy;
     disconnect;
     dispose(collector,destroy);
+  end;
+
+FUNCTION T_secondaryOutputMemoMeta.getName:string;
+  begin
+    result:='T_secondaryOutputMemoMeta';
   end;

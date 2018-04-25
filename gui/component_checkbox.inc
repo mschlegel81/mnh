@@ -6,6 +6,7 @@ TYPE
     PROCEDURE update; virtual;
     PROCEDURE OnClick(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -50,3 +51,7 @@ FUNCTION T_checkboxMeta.getControl: TControl;
     result:=checkbox;
   end;
 
+FUNCTION T_checkboxMeta.getName:string;
+  begin
+    result:='T_checkboxMeta "'+checkbox.caption+'"';
+  end;

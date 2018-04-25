@@ -5,6 +5,7 @@ TYPE
     PROCEDURE update; virtual;
     PROCEDURE OnChange(Sender: TObject);
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_threadContext);
@@ -35,6 +36,11 @@ PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TSh
     if state.evaluating then exit;
     if (key<>13) or not(ssShift in Shift) then exit;
     postAction(newStringLiteral(synMeta.editor.text));
+  end;
+
+FUNCTION T_inputEditorMeta.getName:string;
+  begin
+    result:='T_inputEditorMeta';
   end;
 
 PROCEDURE T_inputEditorMeta.update;

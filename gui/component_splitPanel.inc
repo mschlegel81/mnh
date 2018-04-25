@@ -7,6 +7,7 @@ T_splitPanelMeta=object(T_panelMeta)
   PROCEDURE alignContents; virtual;
   DESTRUCTOR destroy; virtual;
   PROCEDURE OnResize(Sender:TObject);
+  FUNCTION getName:string; virtual;
 end;
 
 CONSTRUCTOR T_splitPanelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
@@ -49,4 +50,9 @@ PROCEDURE T_splitPanelMeta.OnResize(Sender: TObject);
     //leftWidth          = leftW /(leftW+rightW) * totalW
     Left .getControl.AutoSize:=false;
     Left .getControl.width:=round(leftW/(leftW+rightW)*totalW);
+  end;
+
+FUNCTION T_splitPanelMeta.getName:string;
+  begin
+    result:='T_splitPanelMeta';
   end;

@@ -20,6 +20,7 @@ TYPE
     PROCEDURE connect; virtual;
     PROCEDURE disconnect; virtual;
     DESTRUCTOR destroy; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
@@ -130,6 +131,11 @@ PROCEDURE T_plotConnectorMeta.disconnect;
     plotForm.onPlotRescale:=nil;
     plotForm.onPlotMouseClick:=nil;
     plotForm.onPlotMouseMove:=nil;
+  end;
+
+FUNCTION T_plotConnectorMeta.getName:string;
+  begin
+    result:='T_plotConnectorMeta';
   end;
 
 DESTRUCTOR T_plotConnectorMeta.destroy;

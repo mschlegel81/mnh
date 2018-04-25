@@ -139,8 +139,8 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
       startOutput;
       for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
       if not(storedMessages[i].messageType in redirectedMessages) then begin
+        {$ifdef debugMode}writeln(stdErr,'        DEBUG: GUI adapter processes message type ',storedMessages[i].messageType);{$endif}
         include(result,messageType);
-        if not(singleMessageOut(storedMessages[i])) then
         case messageType of
           mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
           mt_plotCreatedWithInstantDisplay: begin
@@ -163,15 +163,16 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
           mt_echo_input,
           mt_echo_declaration,
           mt_echo_output: writeWrapped(messageType,messageText);
-          else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
+          else if not(singleMessageOut(storedMessages[i]))
+          then for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
         end;
       end;
       if length(storedMessages)>0 then clear;
-      if showFormsAfter then conditionalShowCustomForms(guiAdapters);
     finally
       doneOutput;
       flushing:=false;
       system.leaveCriticalSection(cs);
+      if showFormsAfter then conditionalShowCustomForms(guiAdapters);
     end;
   end;
 

@@ -12,6 +12,7 @@ TYPE
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
+    FUNCTION getName:string; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -50,9 +51,9 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
 
     combobox:=TComboBox.create(parent^.winControl);
     combobox.parent:=comboboxPanel;
+    combobox.AnchorToNeighbour(akLeft,10,comboboxLabel);
     combobox.Align:=alClient;
     combobox.AutoSize:=true;
-    combobox.AnchorToNeighbour(akLeft,10,comboboxLabel);
     combobox.enabled:=state.enabled;
     combobox.AutoSelect:=true;
     combobox.text:='';
@@ -122,6 +123,11 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
       result:=result or not(arrEquals(oldItems,state_items));
     end;
     state.evaluating:=false;
+  end;
+
+FUNCTION T_comboboxMeta.getName:string;
+  begin
+    result:='T_comboboxMeta "'+comboboxLabel.caption+'"';
   end;
 
 DESTRUCTOR T_comboboxMeta.destroy;

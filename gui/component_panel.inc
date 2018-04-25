@@ -8,10 +8,12 @@ TYPE
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
     PROCEDURE add(CONST meta:P_guiElementMeta);
+    FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
     PROCEDURE alignContents; virtual;
     DESTRUCTOR destroy; virtual;
+    FUNCTION getName:string; virtual;
   end;
 
 CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
@@ -54,6 +56,8 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     lastControl:=meta^.getControl;
   end;
 
+FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; begin result:=false; end;
+
 PROCEDURE T_panelMeta.update; begin end;
 
 FUNCTION T_panelMeta.getControl: TControl;
@@ -77,4 +81,9 @@ DESTRUCTOR T_panelMeta.destroy;
   begin
     inherited destroy;
     setLength(elements,0);
+  end;
+
+FUNCTION T_panelMeta.getName:string;
+  begin
+    result:='T_panelMeta holding '+intToStr(length(elements));
   end;

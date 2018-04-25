@@ -9,6 +9,7 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION preferClientAlignment:boolean; virtual;
+    FUNCTION getName:string; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 
@@ -57,6 +58,11 @@ FUNCTION T_outputMemoMeta.getControl: TControl;
 FUNCTION T_outputMemoMeta.preferClientAlignment: boolean;
   begin
     result:=true;
+  end;
+
+FUNCTION T_outputMemoMeta.getName:string;
+  begin
+    result:='T_outputMemoMeta';
   end;
 
 FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;

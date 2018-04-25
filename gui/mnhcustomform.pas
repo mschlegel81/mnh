@@ -62,6 +62,7 @@ TYPE
     PROCEDURE onExit(Sender: TObject);
     PROCEDURE connect; virtual;
     PROCEDURE disconnect; virtual;
+    FUNCTION getName:string; virtual; abstract;
   end;
 
   TscriptedForm = class(TForm)
@@ -84,7 +85,6 @@ TYPE
     PROCEDURE hideAndDisconnectAll;
   public
     FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
-    PROCEDURE updateComponents;
     PROCEDURE conditionalShow(VAR adapters: T_adapters);
   end;
 
@@ -126,9 +126,9 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 
 //indentation signifies inheritance
 {$I component_panel.inc}
+  {$I component_splitPanel.inc}
 {$I component_label.inc}
 {$I component_checkbox.inc}
-{$I component_splitPanel.inc}
 {$I component_button.inc}
 {$I component_changeListener.inc}
   {$I component_edit.inc}
@@ -144,16 +144,17 @@ PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
     enterCriticalSection(scriptedFormCs);
     while index<length(scriptedForms) do begin
       if scriptedForms[index].markedForCleanup then begin
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: conditionalShowCustomForms - clearing a form which is registered for cleanup #',index,' ',scriptedForms[index].caption); {$endif}
         unregisterForm(scriptedForms[index]);
         FreeAndNil(    scriptedForms[index]);
         for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
         setLength(scriptedForms,length(scriptedForms)-1);
       end else begin
+        {$ifdef debugMode} writeln(stdErr,'        DEBUG: conditionalShowCustomForms - updating custom form #',index,' ',scriptedForms[index].caption); {$endif}
         scriptedForms[index].conditionalShow(adapters);
         inc(index);
       end;
     end;
-
     leaveCriticalSection(scriptedFormCs);
   end;
 
@@ -280,44 +281,22 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
   begin
     state.evaluating:=true;
     result:=false;
-    if state.actionTriggered then begin
-      if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
-      then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter)
-      else tmp:=config.action^.evaluateToLiteral(location,@context);
-      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
-      if tmp                  <>nil then disposeLiteral(tmp);
-      state.actionTriggered:=false;
-      result:=true;
-    end;
-
-    if config.enabled<>nil then begin
-      oldEnabled:=state.enabled;
-      state.enabled:=config.enabled^.evaluateToBoolean(location,@context);
-      result:=result or (oldEnabled<>state.enabled);
-    end;
-
-    if config.caption<>nil then begin
-      oldCaption:=state.caption;
-      tmp:=config.caption^.evaluateToLiteral(location,@context);
-      if tmp<>nil then begin
-        if tmp^.literalType=lt_string
-        then state.caption:=P_stringLiteral(tmp)^.value
-        else state.caption:=tmp^.toString();
-        disposeLiteral(tmp);
-      end;
-      result:=result or (oldCaption<>state.caption);
-    end;
-
     if (config.bindingTo<>'') then begin
       if (state.bindingValue<>nil) and (state.isFocused) then begin
         tmp:=context.valueStore^.getVariableValue(config.bindingTo);
         if tmp=nil then begin
+          {$ifdef debugMode}
+          writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
+          {$endif}
           result:=true;
           context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.adapters);
         end else begin
           if tmp^.equals(state.bindingValue) then begin
             disposeLiteral(tmp);
           end else begin
+            {$ifdef debugMode}
+            writeln(stdErr,'        DEBUG: evaluating binding (gui leading) for ',getName);
+            {$endif}
             result:=true;
             disposeLiteral(tmp);
             context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.adapters);
@@ -329,6 +308,9 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
           if tmp^.equals(state.bindingValue)
           then  disposeLiteral(tmp)
           else begin
+            {$ifdef debugMode}
+            writeln(stdErr,'        DEBUG: evaluating binding (script leading) for ',getName);
+            {$endif}
             disposeLiteral(state.bindingValue);
             state.bindingValue:=tmp;
             result:=true;
@@ -336,6 +318,44 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
         end;
       end;
     end;
+
+    if state.actionTriggered then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: evaluating action for ',getName);
+      {$endif}
+      if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
+      then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter)
+      else tmp:=config.action^.evaluateToLiteral(location,@context);
+      if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
+      if tmp                  <>nil then disposeLiteral(tmp);
+      state.actionTriggered:=false;
+      result:=true;
+    end;
+
+    if config.enabled<>nil then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
+      {$endif}
+      oldEnabled:=state.enabled;
+      state.enabled:=config.enabled^.evaluateToBoolean(location,@context);
+      result:=result or (oldEnabled<>state.enabled);
+    end;
+
+    if config.caption<>nil then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
+      {$endif}
+      oldCaption:=state.caption;
+      tmp:=config.caption^.evaluateToLiteral(location,@context);
+      if tmp<>nil then begin
+        if tmp^.literalType=lt_string
+        then state.caption:=P_stringLiteral(tmp)^.value
+        else state.caption:=tmp^.toString();
+        disposeLiteral(tmp);
+      end;
+      result:=result or (oldCaption<>state.caption);
+    end;
+
     state.evaluating:=false;
   end;
 
@@ -532,8 +552,12 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
   VAR m:P_guiElementMeta;
       customFormBefore:pointer;
   begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: start processing events'); {$endif}
     result:=false;
-    enterCriticalSection(lock);
+    if TryEnterCriticalsection(lock)=0 then begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Cannot obtain lock in TscriptedForm.processPendingEvents'); {$endif}
+      exit(false);
+    end;
     customFormBefore:=context.parentCustomForm;
     context.parentCustomForm:=self;
     processingEvents:=true;
@@ -544,22 +568,28 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
     context.parentCustomForm:=customFormBefore;
     leaveCriticalSection(lock);
     if result then context.adapters^.logDisplayCustomForm;
-  end;
-
-PROCEDURE TscriptedForm.updateComponents;
-  VAR m:P_guiElementMeta;
-  begin
-    if processingEvents
-    then propagateCursor(self,crHourGlass)
-    else begin
-      propagateCursor(self,crDefault);
-      for m in meta do m^.update;
-    end;
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: done processing events'); {$endif}
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
+  PROCEDURE updateComponents;
+    VAR m:P_guiElementMeta;
+    begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: update components; busy=',processingEvents); {$endif}
+      if processingEvents
+      then propagateCursor(self,crHourGlass)
+      else begin
+        propagateCursor(self,crDefault);
+        for m in meta do m^.update;
+      end;
+    end;
+
   begin
-    if TryEnterCriticalsection(lock)=0 then exit;
+    if TryEnterCriticalsection(lock)=0 then begin
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: Cannot obtain lock in TscriptedForm.conditionalShow'); {$endif}
+      adapters.logDisplayCustomForm;
+      exit;
+    end;
     if displayPending and adapters.noErrors then begin
       if (setupParam<>nil) and (setupContext<>nil) then begin
         {$ifdef debugMode} writeln(stdErr,'        DEBUG: initializing scripted form...'); {$endif}
