@@ -5,18 +5,12 @@ UNIT mnhCustomForm;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  ExtCtrls, StdCtrls, SynEditKeyCmds,
-  myStringUtil,
+  Classes, sysutils, Forms, Controls,
+  ExtCtrls, StdCtrls,
   mnh_constants, mnh_basicTypes, mnh_contexts,
   mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath,synOutAdapter;
 
 TYPE
-  T_outputPair=record
-    outputSyn:TSynEdit;
-    outputForm:TForm;
-  end;
-
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,
                     dmk_mouseMoved,dmk_mouseClicked);
   T_definingMapKeys=set of T_definingMapKey;
@@ -66,6 +60,8 @@ TYPE
     PROCEDURE OnKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE onEnter(Sender: TObject);
     PROCEDURE onExit(Sender: TObject);
+    PROCEDURE connect; virtual;
+    PROCEDURE disconnect; virtual;
   end;
 
   TscriptedForm = class(TForm)
@@ -84,6 +80,8 @@ TYPE
     lock:TRTLCriticalSection;
     processingEvents:boolean;
     PROCEDURE initialize();
+    PROCEDURE showAndConnectAll;
+    PROCEDURE hideAndDisconnectAll;
   public
     FUNCTION processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
     PROCEDURE updateComponents;
@@ -137,6 +135,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
   {$I component_combobox.inc}
   {$I component_outputMemo.inc}
     {$I component_inputMemo.inc}
+    {$I component_outputRedirect.inc}
 {$I component_plotConnector.inc}
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
   VAR index:longint=0;
@@ -371,6 +370,9 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
     state.isFocused:=false;
   end;
 
+PROCEDURE T_guiElementMeta.connect; begin end;
+PROCEDURE T_guiElementMeta.disconnect; begin end;
+
 PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if TryEnterCriticalsection(lock)=0
@@ -409,8 +411,8 @@ PROCEDURE TscriptedForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftS
   end;
 
 PROCEDURE TscriptedForm.initialize();
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_comboBox,tc_plot);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','comboBox','plot');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -439,6 +441,7 @@ PROCEDURE TscriptedForm.initialize();
         comboMeta   :P_comboboxMeta;
         newPanel    :P_panelMeta;
         splitPanel  :P_splitPanelMeta;
+        consoleMeta :P_secondaryOutputMemoMeta;
 
     PROCEDURE addPanelContents(VAR targetPanel:T_panelMeta; panelContents:P_literal);
       VAR iter:T_arrayOfLiteral;
@@ -470,6 +473,7 @@ PROCEDURE TscriptedForm.initialize();
         tc_inputEditor : begin new(inputEditM  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(inputEditM  ); end;
         tc_outputEditor: begin new(outputEditM ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
         tc_comboBox:     begin new(comboMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
+        tc_console:      begin new(consoleMeta ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(consoleMeta ); end;
         tc_plot:         if plotLink=nil then begin;
           new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(plotLink);
@@ -510,14 +514,26 @@ PROCEDURE TscriptedForm.initialize();
     leaveCriticalSection(lock);
   end;
 
+PROCEDURE TscriptedForm.showAndConnectAll;
+  VAR m:P_guiElementMeta;
+  begin
+    Show;
+    for m in meta do m^.connect;
+  end;
+
+PROCEDURE TscriptedForm.hideAndDisconnectAll;
+  VAR m:P_guiElementMeta;
+  begin
+    Hide;
+    for m in meta do m^.disconnect;
+  end;
+
 FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR context: T_threadContext):boolean;
   VAR m:P_guiElementMeta;
       customFormBefore:pointer;
   begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.processingEvents - wait for cs'); {$endif}
     result:=false;
     enterCriticalSection(lock);
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.processingEvents - begin'); {$endif}
     customFormBefore:=context.parentCustomForm;
     context.parentCustomForm:=self;
     processingEvents:=true;
@@ -527,7 +543,6 @@ FUNCTION TscriptedForm.processPendingEvents(CONST location: T_tokenLocation; VAR
     processingEvents:=false;
     context.parentCustomForm:=customFormBefore;
     leaveCriticalSection(lock);
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.processingEvents - end'); {$endif}
     if result then context.adapters^.logDisplayCustomForm;
   end;
 
@@ -537,17 +552,14 @@ PROCEDURE TscriptedForm.updateComponents;
     if processingEvents
     then propagateCursor(self,crHourGlass)
     else begin
-      {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.updateComponents - begin'); {$endif}
       propagateCursor(self,crDefault);
       for m in meta do m^.update;
-      {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.updateComponents - end'); {$endif}
     end;
   end;
 
 PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
   begin
     if TryEnterCriticalsection(lock)=0 then exit;
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.conditionalShow - begin'); {$endif}
     if displayPending and adapters.noErrors then begin
       if (setupParam<>nil) and (setupContext<>nil) then begin
         {$ifdef debugMode} writeln(stdErr,'        DEBUG: initializing scripted form...'); {$endif}
@@ -560,7 +572,6 @@ PROCEDURE TscriptedForm.conditionalShow(VAR adapters: T_adapters);
       displayPending:=false;
     end;
     updateComponents;
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: TscriptedForm.conditionalShow - end'); {$endif}
     leaveCriticalSection(lock);
   end;
 
@@ -582,11 +593,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
       context.adapters^.logDisplayCustomForm;
       while (form.setupContext<>nil) and (context.adapters^.noErrors) do sleep(10);
 
-      if context.parentCustomForm<>nil then begin
-        TscriptedForm(context.parentCustomForm).Hide;
-        if TscriptedForm(context.parentCustomForm).plotLink<>nil
-        then P_plotConnectorMeta(TscriptedForm(context.parentCustomForm).plotLink)^.disconnect;
-      end;
+      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).hideAndDisconnectAll;
       while not(form.markedForCleanup) and (context.adapters^.noErrors) do begin
         if form.processPendingEvents(location,context)
         then sleepTime:=0
@@ -595,11 +602,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
           sleep(sleepTime);
         end;
       end;
-      if context.parentCustomForm<>nil then begin
-        TscriptedForm(context.parentCustomForm).Show;
-        if TscriptedForm(context.parentCustomForm).plotLink<>nil
-        then P_plotConnectorMeta(TscriptedForm(context.parentCustomForm).plotLink)^.connect;
-      end;
+      if context.parentCustomForm<>nil then TscriptedForm(context.parentCustomForm).showAndConnectAll;
       result:=newVoidLiteral;
     end;
   end;

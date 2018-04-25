@@ -37,7 +37,6 @@ TYPE
       autodestruct:boolean;
       messageTypesToInclude:T_messageTypeSet;
       PROCEDURE setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
-      FUNCTION getOutputBehavior:T_messageTypeSet;
     public
     adapterType:T_adapterType;
 
@@ -45,7 +44,7 @@ TYPE
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual; abstract;
     PROCEDURE clear; virtual;
-    PROPERTY outputBehavior:T_messageTypeSet read getOutputBehavior write setOutputBehavior;
+    PROPERTY outputBehavior:T_messageTypeSet read messageTypesToInclude write setOutputBehavior;
     PROCEDURE enableMessageType(CONST enabled:boolean; CONST mt:T_messageTypeSet);
   end;
 
@@ -388,10 +387,6 @@ PROCEDURE T_abstractOutAdapter.setOutputBehavior(
      messageTypesToInclude:=C_includableMessages[adapterType]*messageTypesToInclude_;
   end;
 
-FUNCTION T_abstractOutAdapter.getOutputBehavior: T_messageTypeSet;
-  begin
-    result:=messageTypesToInclude;
-  end;
 //=========================================================:T_abstractOutAdapter
 //T_consoleOutAdapter:==========================================================
 CONSTRUCTOR T_consoleOutAdapter.create(CONST messageTypesToInclude_:T_messageTypeSet);

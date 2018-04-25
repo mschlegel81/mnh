@@ -1,11 +1,11 @@
 UNIT synOutAdapter;
 INTERFACE
 USES
-  Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  ExtCtrls, StdCtrls, SynEditKeyCmds,
+  sysutils, SynEdit, Forms,
+  SynEditKeyCmds,
   myStringUtil,
-  mnh_constants, mnh_basicTypes, mnh_contexts,
-  mnh_litVar, mnhFormHandler,myGenerics,mnh_funcs,mnh_out_adapters,editorMetaBase,mnh_plotForm,plotMath;
+  mnh_constants,
+  myGenerics,mnh_out_adapters;
 CONST
   C_synOutDefaultMessageTypes:T_messageTypeSet=[mt_clearConsole,
                                               mt_printline,
@@ -24,6 +24,8 @@ TYPE
   P_synOutAdapter=^T_synOutAdapter;
   T_synOutAdapter=object(T_collectingOutAdapter)
     private
+      id:longint;
+
       synOwnerForm:TForm;
       linesToWrite:T_arrayOfString;
       bufferOffset:longint;
@@ -58,7 +60,48 @@ TYPE
       PROCEDURE flushClear;
   end;
 
+PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
+PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
+FUNCTION redirectedMessages:T_messageTypeSet;
 IMPLEMENTATION
+VAR lastSynOutId:longint=0;
+    redirectors:array of P_synOutAdapter;
+    redirected:T_messageTypeSet=[];
+
+PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
+  VAR k:longint;
+      mt:T_messageType;
+  begin
+    k:=0;
+    while (k<length(redirectors)) and (redirectors[k]^.id<>syn^.id) do inc(k);
+    if k=length(redirectors) then setLength(redirectors,k+1);
+    redirectors[k]:=syn;
+
+    redirected:=[];
+    for k:=0 to length(redirectors)-1 do redirected+=redirectors[k]^.outputBehavior;
+    writeln('REDIRECTED TYPES ARE:');
+    for mt in redirected do writeln('  ',mt);
+    writeln(':REDIRECTED TYPES ARE');
+  end;
+
+PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);
+  VAR k:longint;
+  begin
+    k:=0;
+    while (k<length(redirectors)) and (redirectors[k]^.id<>syn^.id) do inc(k);
+    if k<length(redirectors) then begin
+      redirectors[k]:=redirectors[length(redirectors)-1];
+      setLength(redirectors,length(redirectors)-1);
+      redirected:=[];
+      for k:=0 to length(redirectors)-1 do redirected+=redirectors[k]^.outputBehavior;
+    end;
+  end;
+
+FUNCTION redirectedMessages:T_messageTypeSet;
+  begin
+    result:=redirected;
+  end;
+
 PROCEDURE T_synOutAdapter.startOutput;
   begin
     setLength(linesToWrite,0);
@@ -184,7 +227,8 @@ PROCEDURE T_synOutAdapter.doneOutput;
 
 CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdit; CONST messageTypesToInclude:T_messageTypeSet);
   begin
-    inherited create(at_gui,messageTypesToInclude);
+    inherited create(at_gui,messageTypesToInclude*C_synOutDefaultMessageTypes);
+    id:=interLockedIncrement(lastSynOutId);
     synOwnerForm:=owner;
     syn         :=outputEdit;
     //----------------------
@@ -218,5 +262,8 @@ PROCEDURE T_synOutAdapter.flushClear;
     append(clearConsoleMessage);
     system.leaveCriticalSection(cs);
   end;
+
+INITIALIZATION
+  setLength(redirectors,0);
 
 end.

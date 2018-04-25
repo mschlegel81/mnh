@@ -20,6 +20,9 @@ newOutputEditor(highlighter in HIGHLIGHTERS)->[['type','outputEditor'],['highlig
 newOutputEditor(highlighter:Expression(0))->[['type','outputEditor'],['highlight',highlighter]].toMap;
 
 //@SuppressUnusedWarning
+newOutputConsole()->[['type','console']].toMap;
+
+//@SuppressUnusedWarning
 newComboBox(options:StringList)->[['type','comboBox'],['items',options]].toMap;
 //@SuppressUnusedWarning
 newComboBox(options:Expression(0))->[['type','comboBox'],['items',options]].toMap;

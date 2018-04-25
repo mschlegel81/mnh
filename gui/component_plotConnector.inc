@@ -17,8 +17,8 @@ TYPE
     PROCEDURE plotMouseMoved(CONST realPoint:T_point);
     PROCEDURE plotMouseClicked(CONST realPoint:T_point);
     PROCEDURE plotRescaled(Sender:TObject);
-    PROCEDURE connect;
-    PROCEDURE disconnect;
+    PROCEDURE connect; virtual;
+    PROCEDURE disconnect; virtual;
     DESTRUCTOR destroy; virtual;
   end;
 

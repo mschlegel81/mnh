@@ -133,40 +133,41 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
       exit([]);
     end;
     try
-    flushing:=true;
-    result:=[];
-    if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
-    startOutput;
-    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
-      include(result,messageType);
-      if not(singleMessageOut(storedMessages[i])) then
-      case messageType of
-        mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
-        mt_plotCreatedWithInstantDisplay: begin
-          plotForm.doPlot(true);
-          parentForm.triggerFastPolling;
+      flushing:=true;
+      result:=[];
+      if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
+      startOutput;
+      for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
+      if not(storedMessages[i].messageType in redirectedMessages) then begin
+        include(result,messageType);
+        if not(singleMessageOut(storedMessages[i])) then
+        case messageType of
+          mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
+          mt_plotCreatedWithInstantDisplay: begin
+            plotForm.doPlot(true);
+            parentForm.triggerFastPolling;
+          end;
+          mt_displayTable: conditionalShowTables;
+          mt_displayTreeView: conditionalShowVarTrees;
+          mt_displayCustomDialog: showFormsAfter:=true;
+          mt_plotCreatedWithDeferredDisplay: begin end;
+          mt_endOfEvaluation: begin
+            if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+            freeScriptedForms;
+            parentForm.onEndOfEvaluation;
+            syn.enabled:=true;
+          end;
+          mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
+          mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
+          mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
+          mt_echo_input,
+          mt_echo_declaration,
+          mt_echo_output: writeWrapped(messageType,messageText);
+          else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
         end;
-        mt_displayTable: conditionalShowTables;
-        mt_displayTreeView: conditionalShowVarTrees;
-        mt_displayCustomDialog: showFormsAfter:=true;
-        mt_plotCreatedWithDeferredDisplay: begin end;
-        mt_endOfEvaluation: begin
-          if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
-          freeScriptedForms;
-          parentForm.onEndOfEvaluation;
-          syn.enabled:=true;
-        end;
-        mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
-        mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
-        mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
-        mt_echo_input,
-        mt_echo_declaration,
-        mt_echo_output: writeWrapped(messageType,messageText);
-        else for s in defaultFormatting(storedMessages[i],true) do appendInternal(s);
       end;
-    end;
-    if length(storedMessages)>0 then clear;
-    if showFormsAfter then conditionalShowCustomForms(guiAdapters);
+      if length(storedMessages)>0 then clear;
+      if showFormsAfter then conditionalShowCustomForms(guiAdapters);
     finally
       doneOutput;
       flushing:=false;

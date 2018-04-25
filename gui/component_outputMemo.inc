@@ -12,15 +12,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
   end;
 
-  P_secondaryOutputMemoMeta=^T_secondaryOutputMemoMeta;
-  T_secondaryOutputMemoMeta=object(T_outputMemoMeta)
-    adaptersHoldingCollector:P_adapters;
-    collector:P_collectingOutAdapter;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
-    PROCEDURE update; virtual;
-    DESTRUCTOR destroy; virtual;
-  end;
-
 CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
                                     CONST location: T_tokenLocation; VAR context: T_threadContext;
                                     CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_caption,dmk_highlight]);
@@ -93,32 +84,5 @@ DESTRUCTOR T_outputMemoMeta.destroy;
     inherited destroy;
     synMeta.destroy;
     if config_hlLang<>nil then disposeLiteral(config_hlLang);
-  end;
-
-CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
-  begin
-    inherited create(parent,def,location,context,[dmk_type]);
-    state_hlLang:=fileTypeMeta[LANG_OUTPUT].extensions[0];
-
-    adaptersHoldingCollector:=context.adapters;
-    new(collector,create(at_gui,defaultOutputBehavior*C_includableMessages[at_console]-[mt_echo_output,mt_echo_continued,mt_echo_input,mt_echo_declaration]));
-    adaptersHoldingCollector^.addOutAdapter(collector,false);
-  end;
-
-PROCEDURE T_secondaryOutputMemoMeta.update;
-  VAR m:T_storedMessage;
-      s:string;
-  begin
-    for m in collector^.storedMessages do begin
-      for s in defaultFormatting(m,true) do synMeta.editor.append(s);
-    end;
-    collector^.clear;
-  end;
-
-DESTRUCTOR T_secondaryOutputMemoMeta.destroy;
-  begin
-    inherited destroy;
-    adaptersHoldingCollector^.removeOutAdapter(collector);
-    dispose(collector,destroy);
   end;
 

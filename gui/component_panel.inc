@@ -4,6 +4,7 @@ TYPE
     elements:array of P_guiElementMeta;
     lastControl:TControl;
     winControl:TWinControl;
+    containedInForm:TForm;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
     PROCEDURE add(CONST meta:P_guiElementMeta);
@@ -31,6 +32,7 @@ CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
     setLength(elements,0);
     lastControl:=nil;
     winControl:=newPanel;
+    containedInForm:=parent^.containedInForm;
     parent^.add(@self);
   end;
 
@@ -39,6 +41,7 @@ CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TForm);
     setLength(elements,0);
     lastControl:=nil;
     winControl:=form;
+    containedInForm:=form;
   end;
 
 PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);

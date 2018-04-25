@@ -9,8 +9,7 @@ T_splitPanelMeta=object(T_panelMeta)
   PROCEDURE OnResize(Sender:TObject);
 end;
 
-CONSTRUCTOR T_splitPanelMeta.create(CONST parent: P_panelMeta;
-  CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+CONSTRUCTOR T_splitPanelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
   VAR context: T_threadContext);
   begin
     inherited create(parent,def,location,context,[dmk_type,dmk_left,dmk_right]);
