@@ -29,7 +29,7 @@ CONSTRUCTOR T_workerMeta.create(CONST def: P_mapLiteral; CONST location: T_token
 PROCEDURE T_workerMeta.update;
   begin
   end;
-  
+
 FUNCTION T_workerMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
   VAR tmp:P_literal;
   begin
@@ -38,7 +38,7 @@ FUNCTION T_workerMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_t
       if tmp<>nil then disposeLiteral(tmp);
       nextInvocation:=now+interval;
       result:=true;
-    end else result:=false;  
+    end else result:=false;
   end;
 
 FUNCTION T_workerMeta.getControl: TControl;

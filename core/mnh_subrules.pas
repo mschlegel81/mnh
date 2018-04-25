@@ -1130,13 +1130,14 @@ FUNCTION T_ruleMetaData.getDocTxt:ansistring;
     end;
 
   VAR att:T_subruleAttribute;
+      s:string;
   begin
     result:='';
     for att in attributes do begin
       addLine('@'+att.key);
       if att.value<>'' then result:=result+'='+att.value;
     end;
-    if comment<>'' then addLine(comment);
+    if comment<>'' then for s in split(comment,C_lineBreakChar) do addLine(s);
     if result<>'' then result:=result+C_lineBreakChar;
   end;
 
