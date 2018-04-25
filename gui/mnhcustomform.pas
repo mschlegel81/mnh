@@ -12,7 +12,7 @@ USES
 
 TYPE
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,
-                    dmk_mouseMoved,dmk_mouseClicked);
+                    dmk_mouseMoved,dmk_mouseClicked,dmk_interval);
   T_definingMapKeys=set of T_definingMapKey;
 
 CONST
@@ -29,7 +29,8 @@ CONST
     'right',
     'highlight',
     'mouseMoved',
-    'mouseClicked');
+    'mouseClicked',
+    'interval');
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
@@ -137,6 +138,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
     {$I component_inputMemo.inc}
     {$I component_outputRedirect.inc}
 {$I component_plotConnector.inc}
+{$I component_worker.inc}
 PROCEDURE conditionalShowCustomForms(VAR adapters:T_adapters);
   VAR index:longint=0;
       k:longint;
@@ -273,8 +275,7 @@ PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
     propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
   end;
 
-FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation;
-  VAR context: T_threadContext): boolean;
+FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_threadContext): boolean;
   VAR tmp:P_literal;
       oldEnabled:boolean;
       oldCaption:string;
@@ -431,8 +432,8 @@ PROCEDURE TscriptedForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftS
   end;
 
 PROCEDURE TscriptedForm.initialize();
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -462,6 +463,7 @@ PROCEDURE TscriptedForm.initialize();
         newPanel    :P_panelMeta;
         splitPanel  :P_splitPanelMeta;
         consoleMeta :P_secondaryOutputMemoMeta;
+        workerMeta  :P_workerMeta;
 
     PROCEDURE addPanelContents(VAR targetPanel:T_panelMeta; panelContents:P_literal);
       VAR iter:T_arrayOfLiteral;
@@ -494,6 +496,7 @@ PROCEDURE TscriptedForm.initialize();
         tc_outputEditor: begin new(outputEditM ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
         tc_comboBox:     begin new(comboMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
         tc_console:      begin new(consoleMeta ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(consoleMeta ); end;
+        tc_worker:       begin new(workerMeta  ,create(           P_mapLiteral(def),setupLocation,setupContext^)); addMeta(workerMeta); end;
         tc_plot:         if plotLink=nil then begin;
           new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(plotLink);

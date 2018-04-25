@@ -64,6 +64,12 @@ bind(m:Map,idOfLocalVariable:String)->[['bind',idOfLocalVariable]].toMap.mergeMa
 newPlotLink->[['type','plot']].toMap;
 
 //@SuppressUnusedWarning
+//*Workers are background tasks without corresponding GUI element
+//*If no interval is given, the worker is invoked in every GUI-evaluation step
+newWorker(alwaysDo:Expression(0))->[['type','worker'],['action',alwaysDo]].toMap;
+newWorker(alwaysDo:Expression(0),intervalInSeconds:Numeric)->[['type','worker'],['action',alwaysDo],['interval',intervalInSeconds]].toMap;
+
+//@SuppressUnusedWarning
 withMouseMoved(m:Map,onMouseMove:Expression(2))->[['mouseMoved',onMouseMove]].toMap.mergeMaps(m,::orElse);
 
 //@SuppressUnusedWarning

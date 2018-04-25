@@ -169,7 +169,13 @@ TYPE
 
   T_taskQueue=object
     private
-      first,last:P_queueTask;
+      subQueues:array of record
+        priority:longint;
+        first,last:P_queueTask;
+      end;
+      highestPrio     :longint;
+      highestPrioIndex:longint;
+
       queuedCount:longint;
       cs:system.TRTLCriticalSection;
       destructionPending:boolean;
@@ -748,8 +754,9 @@ CONSTRUCTOR T_taskQueue.create;
   begin
     system.initCriticalSection(cs);
     destructionPending:=false;
-    first:=nil;
-    last:=nil;
+    highestPrio:=-1;
+    highestPrioIndex:=-1;
+    setLength(subQueues,0);
     queuedCount:=0;
   end;
 
@@ -771,6 +778,8 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadCont
         beginThread(@threadPoolThread,context^.parent);
       end;
     end;
+
+  VAR subQueueIndex:longint=0;
   begin
     enterCriticalSection(task^.taskCs);
     task^.nextToEvaluate:=nil;
@@ -779,27 +788,64 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadCont
     leaveCriticalSection(task^.taskCs);
 
     system.enterCriticalSection(cs);
-    if first=nil then begin
-      queuedCount:=1;
-      first:=task;
-      last:=task;
+    if length(subQueues)=0 then begin
+      setLength(subQueues,1);
+      subQueues[0].priority:=context^.callDepth;
+      subQueues[0].first:=nil;
+      highestPrio:=subQueues[0].priority;
+      highestPrioIndex:=0;
+      queuedCount:=0;
     end else begin
-      inc(queuedCount);
-      last^.nextToEvaluate:=task;
-      last:=task;
+      while (subQueueIndex<length(subQueues)) and (subQueues[subQueueIndex].priority<>context^.callDepth) do inc(subQueueIndex);
+      if subQueueIndex=length(subQueues) then begin
+        setLength(subQueues,subQueueIndex+1);
+        subQueues[subQueueIndex].priority:=context^.callDepth;
+        subQueues[subQueueIndex].first:=nil;
+        if subQueues[subQueueIndex].priority>highestPrio then begin
+          highestPrio:=subQueues[subQueueIndex].priority;
+          highestPrioIndex:=     subQueueIndex;
+        end;
+      end;
+    end;
+    inc(queuedCount);
+    with subQueues[subQueueIndex] do begin
+      if first=nil then begin
+        first:=task;
+        last:=task;
+      end else begin
+        last^.nextToEvaluate:=task;
+        last:=task;
+      end;
     end;
     ensurePoolThreads();
     system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_taskQueue.dequeue: P_queueTask;
+  VAR k:longint;
   begin
     system.enterCriticalSection(cs);
-    if first=nil then result:=nil
+    if highestPrioIndex<0
+    then result:=nil
     else begin
-      dec(queuedCount);
-      result:=first;
-      first:=first^.nextToEvaluate;
+      with subQueues[highestPrioIndex] do begin
+        dec(queuedCount);
+        result:=first;
+        first:=first^.nextToEvaluate;
+      end;
+      //drop subqueue if empty
+      if subQueues[highestPrioIndex].first=nil then begin
+        k:=length(subQueues)-1;
+        subQueues[highestPrioIndex]:=subQueues[k];
+        setLength(subQueues,k);
+        //find new highest prio
+        highestPrio:=-1;
+        highestPrioIndex:=-1;
+        for k:=0 to length(subQueues)-1 do if subQueues[k].priority>highestPrio then begin
+          highestPrio:=subQueues[k].priority;
+          highestPrioIndex:=     k;
+        end;
+      end;
     end;
     system.leaveCriticalSection(cs);
   end;
