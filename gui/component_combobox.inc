@@ -7,6 +7,7 @@ TYPE
     config_items:P_expressionLiteral;
     state_items :T_arrayOfString;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
+    FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE update; virtual;
     PROCEDURE OnSelect(Sender: TObject);
     PROCEDURE OnChange(Sender: TObject);
@@ -70,6 +71,10 @@ CONSTRUCTOR T_comboboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
     combobox.onEnter:=@onEnter;
     combobox.onExit:=@onExit;
     parent^.add(@self);
+  end;
+FUNCTION T_comboboxMeta.leftLabelOrNil:TLabel;
+  begin
+    result:=comboboxLabel;
   end;
 
 PROCEDURE T_comboboxMeta.update;

@@ -56,6 +56,7 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     PROCEDURE update; virtual; abstract;
     DESTRUCTOR destroy; virtual;
+    FUNCTION leftLabelOrNil:TLabel; virtual;
     FUNCTION getControl:TControl; virtual; abstract;
     FUNCTION preferClientAlignment:boolean; virtual;
     PROCEDURE OnKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -370,6 +371,11 @@ DESTRUCTOR T_guiElementMeta.destroy;
     if state.bindingValue   <>nil then disposeLiteral(state.bindingValue);
   end;
 
+FUNCTION T_guiElementMeta.leftLabelOrNil:TLabel;
+  begin
+    result:=nil;
+  end;
+
 FUNCTION T_guiElementMeta.preferClientAlignment: boolean;
   begin
     result:=false;
@@ -452,6 +458,12 @@ PROCEDURE TscriptedForm.initialize();
       disposeLiteral(componentTypeLiteral);
     end;
 
+  PROCEDURE addMeta(CONST m:P_guiElementMeta);
+    begin
+      setLength(meta,length(meta)+1);
+      meta[length(meta)-1]:=m;
+    end;
+
   PROCEDURE initComponent(CONST container:T_panelMeta; CONST def:P_literal);
     VAR labelMeta   :P_labelMeta;
         buttonMeta  :P_buttonMeta;
@@ -478,12 +490,6 @@ PROCEDURE TscriptedForm.initialize();
           setupContext^.adapters^.raiseError('Invalid panel parts type: '+panelContents^.typeString+'; must be a list; context='+panelContents^.toString(100),setupLocation);
           disposeLiteral(panelContents);
         end;
-      end;
-
-    PROCEDURE addMeta(CONST m:P_guiElementMeta);
-      begin
-        setLength(meta,length(meta)+1);
-        meta[length(meta)-1]:=m;
       end;
 
     begin
@@ -517,22 +523,22 @@ PROCEDURE TscriptedForm.initialize();
       end else setupContext^.adapters^.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
     end;
 
-  VAR formMeta:T_panelMeta;
+  VAR formMeta:P_panelMeta;
       k:longint;
   begin
     enterCriticalSection(lock);
-    formMeta.createForExistingForm(self);
+    new(formMeta,createForExistingForm(self));
     if setupParam^.literalType in C_listTypes
-    then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta,P_listLiteral(setupParam)^.value[k])
-    else                                                  initComponent(formMeta,              setupParam           );
-    formMeta.alignContents;
-    formMeta.destroy;
+    then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta^,P_listLiteral(setupParam)^.value[k])
+    else                                                  initComponent(formMeta^,              setupParam           );
+    formMeta^.alignContents;
     for k:=length(meta)-1 downto 0 do begin
       if meta[k]^.getControl<>nil then begin
         height:=meta[k]^.getControl.top+meta[k]^.getControl.height;
         break;
       end;
     end;
+    addMeta(formMeta);
     displayPending:=true;
     leaveCriticalSection(lock);
   end;

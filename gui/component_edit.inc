@@ -6,6 +6,7 @@ TYPE
     edit:TEdit;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     PROCEDURE update; virtual;
+    FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE OnChange(Sender: TObject);
     FUNCTION getControl:TControl; virtual;
@@ -63,6 +64,11 @@ PROCEDURE T_editMeta.update;
     if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
       edit.caption:=P_stringLiteral(state.bindingValue)^.value;
     end;
+  end;
+
+FUNCTION T_editMeta.leftLabelOrNil:TLabel;
+  begin
+    result:=editLabel;
   end;
 
 PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
