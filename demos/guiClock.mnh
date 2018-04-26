@@ -1,0 +1,62 @@
+plain script;
+USE customFormUtil;
+
+fmtT(t:Real)->formatTime('hh:nn:ss',t);
+fmtT()->'';
+
+tryParseTime(s:String)->
+  try({parseTime('hh:nn:ss',s)},
+      {try({parseTime('hh:nn',s)},{void})});
+
+tryParseInterval(s:String)->
+  begin
+    local S:=s.upper.clean(['0'..'9',':','H','M','S'],'');
+    (pos(['H','M','S'],S)>=0).agg(OR)
+    ? try({interpret(S.replace(['H','M','S'],['/24+','/(24*60)+','/(24*60*60)+'])&'0')+systime},void)
+    : (S:=tryParseTime(s)).isVoid
+      ? void
+      : S+systime;
+  end;
+
+begin
+  local formattedTime    :='';
+  local formattedTimeOut :=''; local timeOut:=void;
+  local formattedRemainig:='';
+  local timerAction:='beep';
+
+  local AFTER_METHOD:=
+    [['lock'    ,{(timeOut:=void) orElse execPipeless('rundll32.exe',['User32.dll,LockWorkStation'])}],
+     ['suspend' ,{(timeOut:=void) orElse execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
+     ['restart' ,{(timeOut:=void) orElse execPipeless('Shutdown.exe',['-r','-t','00'])}],
+     ['shutdown',{(timeOut:=void) orElse execPipeless('Shutdown.exe',['-s','-t','00'])}],
+     ['beep'    ,::beep]].toMap;
+
+
+  showDialog('Clock',[
+    newWorker({begin
+        formattedTime    :=fmtT(systime);
+        formattedTimeOut :=fmtT(timeOut);
+        formattedRemainig:=timeOut.isVoid ? '' : fmtT(timeOut-systime);
+
+        timeOut.isVoid OR timeOut>systime
+        ? void
+        : (AFTER_METHOD[timerAction] orElse ::beep)();
+      end},1),
+    newEdit.withEnabledRule(false)
+           .withCaption('Time')
+           .bind('formattedTime'),
+    newEdit.withCaption('Timeout')
+           .bind('formattedTimeOut')
+           .withAction({timeOut:=tryParseTime(formattedTimeOut) orElse timeOut}),
+    newEdit.withCaption('Remaining')
+           .bind('formattedRemainig')
+           .withAction({timeOut:=tryParseInterval(formattedRemainig) orElse timeOut}),
+    newComboBox(AFTER_METHOD.getInner(0).sort)
+           .withCaption('On Timer')
+           .bind('timerAction'),
+    newButton
+           .withCaption('Reset')
+           .withAction({timeOut:=void})
+  ]);
+
+end;
