@@ -516,15 +516,15 @@ PROCEDURE TscriptedForm.initialize();
         end else setupContext^.adapters^.raiseError('Only one plot link is allowed per custom form',setupLocation);
         tc_panel:begin
           new(newPanel,create(@container,P_mapLiteral(def),setupLocation,setupContext^));
-          addMeta(newPanel);
           addPanelContents(newPanel^,mapGet(P_mapLiteral(def),key[dmk_parts]));
+          addMeta(newPanel);
           newPanel^.alignContents;
         end;
         tc_splitPanel:begin
           new(splitPanel,create(@container,P_mapLiteral(def),setupLocation,setupContext^));
-          addMeta(splitPanel);
           addPanelContents(splitPanel^.Left ,mapGet(P_mapLiteral(def),key[dmk_left ]));
           addPanelContents(splitPanel^.Right,mapGet(P_mapLiteral(def),key[dmk_right]));
+          addMeta(splitPanel);
           splitPanel^.alignContents;
         end;
       end else setupContext^.adapters^.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
@@ -541,6 +541,9 @@ PROCEDURE TscriptedForm.initialize();
     formMeta^.alignContents;
     for k:=length(meta)-1 downto 0 do begin
       if meta[k]^.getControl<>nil then begin
+        {$ifdef debug_mnhCustomForm}
+        writeln(stdErr,'        DEBUG: Custom form height by ',meta[k]^.getName);
+        {$endif}
         height:=meta[k]^.getControl.top+meta[k]^.getControl.height;
         break;
       end;
