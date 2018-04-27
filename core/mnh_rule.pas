@@ -367,7 +367,7 @@ exit}
   FUNCTION enterCriticalSectionWithDeadlockDetection:boolean; inline;
     CONST millesecondsBeforeRetry=10;
     begin
-      while (TryEnterCriticalsection(rule_cs)=0) do begin
+      while (tryEnterCriticalsection(rule_cs)=0) do begin
         if not(P_threadContext(threadContextPointer)^.adapters^.noErrors) then exit(false);
         ThreadSwitch;
         sleep(millesecondsBeforeRetry);
@@ -426,7 +426,7 @@ end}
     end;
 
     if (P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT) or
-       (TryEnterCriticalsection(rule_cs)=0) then begin
+       (tryEnterCriticalsection(rule_cs)=0) then begin
       //Work without cache:
       if subrules[0]^.replaces(param,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
         P_threadContext(threadContextPointer)^.reduceExpression(firstRep);

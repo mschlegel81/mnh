@@ -70,7 +70,6 @@ VAR lastSynOutId:longint=0;
 
 PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
   VAR k:longint;
-      mt:T_messageType;
   begin
     k:=0;
     while (k<length(redirectors)) and (redirectors[k]^.id<>syn^.id) do inc(k);
@@ -79,7 +78,6 @@ PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
 
     redirected:=[];
     for k:=0 to length(redirectors)-1 do redirected+=redirectors[k]^.outputBehavior;
-    for mt in redirected do writeln('  ',mt);
   end;
 
 PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);

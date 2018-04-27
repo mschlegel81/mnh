@@ -27,23 +27,25 @@ CONSTRUCTOR T_checkboxMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
 
 PROCEDURE T_checkboxMeta.update;
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     checkbox.caption:=state.caption;
     checkbox.enabled:=state.enabled;
     if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_boolean) then begin
       checkbox.checked:=P_boolLiteral(state.bindingValue)^.value;
     end;
+    leaveCriticalSection(elementCs);
   end;
 
 PROCEDURE T_checkboxMeta.OnClick(Sender: TObject);
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     if (config.bindingTo<>'') then begin
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       state.bindingValue:=newBoolLiteral(checkbox.checked);
       propagateCursor(TWinControl(getControl.GetTopParent),crHourGlass);
     end;
-    postAction(newBoolLiteral(checkbox.checked));
+    if config.action<>nil then postAction(newBoolLiteral(checkbox.checked));
+    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_checkboxMeta.getControl: TControl;

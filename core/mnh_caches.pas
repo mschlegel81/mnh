@@ -47,7 +47,7 @@ PROCEDURE polishAllCaches;
   VAR i:longint;
   begin
     enterCriticalSection(allCacheCs);
-    for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.TryEnterCriticalsection(criticalSection)<>0 then begin
+    for i:=0 to length(allCaches)-1 do with P_cache(allCaches[i])^ do if system.tryEnterCriticalsection(criticalSection)<>0 then begin
       polish;
       system.leaveCriticalSection(criticalSection);
     end;

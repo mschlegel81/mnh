@@ -40,7 +40,7 @@ PROCEDURE T_splitPanelMeta.OnResize(Sender: TObject);
       totalW:longint=0;
       dummy :longint=0;
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     Left .getControl.AutoSize:=true;
     Left .getControl.GetPreferredSize(leftW ,dummy);
     Right.getControl.GetPreferredSize(rightW,dummy);
@@ -50,6 +50,7 @@ PROCEDURE T_splitPanelMeta.OnResize(Sender: TObject);
     //leftWidth          = leftW /(leftW+rightW) * totalW
     Left .getControl.AutoSize:=false;
     Left .getControl.width:=round(leftW/(leftW+rightW)*totalW);
+    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_splitPanelMeta.getName:string;

@@ -27,15 +27,13 @@ CONSTRUCTOR T_inputEditorMeta.create(CONST parent: P_panelMeta; CONST def: P_map
 
 PROCEDURE T_inputEditorMeta.OnChange(Sender: TObject);
   begin
-    if state.evaluating then exit;
     triggerChange(synMeta.editor.text);
   end;
 
 PROCEDURE T_inputEditorMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if state.evaluating then exit;
     if (key<>13) or not(ssShift in Shift) then exit;
-    postAction(newStringLiteral(synMeta.editor.text));
+    if config.action<>nil then postAction(newStringLiteral(synMeta.editor.text));
   end;
 
 FUNCTION T_inputEditorMeta.getName:string;
@@ -45,9 +43,10 @@ FUNCTION T_inputEditorMeta.getName:string;
 
 PROCEDURE T_inputEditorMeta.update;
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     synMeta.setLanguage(state_hlLang,synMeta.language);
     synMeta.editor.enabled:=state.enabled;
     synMeta.activate;
+    leaveCriticalSection(elementCs);
   end;
 

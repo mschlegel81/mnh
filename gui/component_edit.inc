@@ -58,12 +58,13 @@ CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
 
 PROCEDURE T_editMeta.update;
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     editLabel.caption:=state.caption;
     edit.enabled:=state.enabled;
     if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
       edit.caption:=P_stringLiteral(state.bindingValue)^.value;
     end;
+    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_editMeta.leftLabelOrNil:TLabel;
@@ -73,14 +74,12 @@ FUNCTION T_editMeta.leftLabelOrNil:TLabel;
 
 PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if state.evaluating then exit;
     if (key<>13) then exit;
-    postAction(newStringLiteral(TEdit(Sender).text));
+    if config.action<>nil then postAction(newStringLiteral(TEdit(Sender).text));
   end;
 
 PROCEDURE T_editMeta.OnChange(Sender: TObject);
   begin
-    if state.evaluating then exit;
     triggerChange(edit.text);
   end;
 

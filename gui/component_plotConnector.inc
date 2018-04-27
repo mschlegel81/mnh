@@ -61,8 +61,8 @@ PROCEDURE T_plotConnectorMeta.update;
 FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
   VAR tmp:P_literal;
   begin
+    if tryEnterCriticalsection(elementCs)=0 then exit(false);
     result:=inherited evaluate(location,context);
-    state.evaluating:=true;
     if plotState.mouseMovedParam<>nil then begin
       if plotConfig.mouseMoved^.canApplyToNumberOfParameters(2)
       then tmp:=plotConfig.mouseMoved^.evaluate         (location,@context,plotState.mouseMovedParam)
@@ -80,7 +80,7 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; VAR contex
       disposeLiteral(plotState.mouseClickedParam);
       result:=true;
     end;
-    state.evaluating:=false;
+    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_plotConnectorMeta.getControl:TControl;
@@ -90,27 +90,29 @@ FUNCTION T_plotConnectorMeta.getControl:TControl;
 
 PROCEDURE T_plotConnectorMeta.plotMouseMoved(CONST realPoint:T_point);
   begin
-    if state.evaluating or (plotConfig.mouseMoved=nil) then exit;
+    if (plotConfig.mouseMoved=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     with plotState do begin
       if mouseMovedParam<>nil then disposeLiteral(mouseMovedParam);
       mouseMovedParam:=newListLiteral(2);
       mouseMovedParam^.appendReal(realPoint[0])^.appendReal(realPoint[1]);
     end;
+    leaveCriticalSection(elementCs);
   end;
 
 PROCEDURE T_plotConnectorMeta.plotMouseClicked(CONST realPoint:T_point);
   begin
-    if state.evaluating or (plotConfig.mouseClicked=nil) then exit;
+    if (plotConfig.mouseClicked=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     with plotState do begin
       if mouseClickedParam<>nil then disposeLiteral(mouseClickedParam);
       mouseClickedParam:=newListLiteral(2);
       mouseClickedParam^.appendReal(realPoint[0])^.appendReal(realPoint[1]);
     end;
+    leaveCriticalSection(elementCs);
   end;
 
 PROCEDURE T_plotConnectorMeta.plotRescaled(Sender:TObject);
   begin
-    if not state.evaluating then postAction(nil);
+    postAction(nil);
   end;
 
 PROCEDURE T_plotConnectorMeta.connect;

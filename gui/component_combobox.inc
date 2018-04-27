@@ -80,7 +80,7 @@ FUNCTION T_comboboxMeta.leftLabelOrNil:TLabel;
 PROCEDURE T_comboboxMeta.update;
   VAR i:longint;
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     combobox.enabled:=state.enabled;
     comboboxLabel.caption:=state.caption;
 
@@ -91,17 +91,16 @@ PROCEDURE T_comboboxMeta.update;
     if (config.bindingTo<>'') and (state.bindingValue<>nil) and (state.bindingValue^.literalType=lt_string) then begin
       combobox.text:=P_stringLiteral(state.bindingValue)^.value;
     end;
+    leaveCriticalSection(elementCs);
   end;
 
 PROCEDURE T_comboboxMeta.OnSelect(Sender: TObject);
   begin
-    if state.evaluating then exit;
-    postAction(newStringLiteral(combobox.text));
+    if config.action<>nil then postAction(newStringLiteral(combobox.text));
   end;
 
 PROCEDURE T_comboboxMeta.OnChange(Sender: TObject);
   begin
-    if state.evaluating then exit;
     triggerChange(combobox.text);
   end;
 
@@ -114,8 +113,8 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
   VAR oldItems:T_arrayOfString;
       tmp:P_literal;
   begin
+    if tryEnterCriticalsection(elementCs)=0 then exit(false);
     result:=inherited evaluate(location,context);
-    state.evaluating:=true;
     if config_items<>nil then begin
       oldItems:=state_items;
       tmp:=config_items^.evaluateToLiteral(location,@context);
@@ -127,7 +126,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; VAR context: T
       end;
       result:=result or not(arrEquals(oldItems,state_items));
     end;
-    state.evaluating:=false;
+    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_comboboxMeta.getName:string;
