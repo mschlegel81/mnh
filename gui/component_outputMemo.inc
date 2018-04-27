@@ -44,10 +44,12 @@ CONSTRUCTOR T_outputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
 
 PROCEDURE T_outputMemoMeta.update;
   begin
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     synMeta.editor.text:=state.caption;
     synMeta.editor.enabled:=state.enabled;
     synMeta.setLanguage(state_hlLang,synMeta.language);
     synMeta.activate;
+    leaveCriticalSection(elementCs);
   end;
 
 FUNCTION T_outputMemoMeta.getControl: TControl;
@@ -69,8 +71,8 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
   VAR tmp:P_literal;
       oldLang:string;
   begin
+    if tryEnterCriticalsection(elementCs)=0 then exit(false);
     result:=inherited evaluate(location,context);
-    state.evaluating:=true;
     if config_hlLang<>nil then begin
       tmp:=config_hlLang^.evaluateToLiteral(location,@context);
       if tmp<>nil then begin
@@ -82,7 +84,7 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; VAR context:
         disposeLiteral(tmp);
       end;
     end;
-    state.evaluating:=false;
+    leaveCriticalSection(elementCs);
   end;
 
 DESTRUCTOR T_outputMemoMeta.destroy;

@@ -29,6 +29,7 @@ CONSTRUCTOR T_changeListeningMeta.create(CONST def:P_mapLiteral; CONST location:
 PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
   VAR newLit:P_stringLiteral=nil;
   begin
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     if (config.bindingTo<>'') then begin
       if state.bindingValue<>nil then disposeLiteral(state.bindingValue);
       newLit:=newStringLiteral(changeValue);
@@ -41,6 +42,7 @@ PROCEDURE T_changeListeningMeta.triggerChange(CONST changeValue:string);
       if newLit<>nil then state_onChangeParam:=newLit^.rereferenced
                      else state_onChangeParam:=newStringLiteral(changeValue);
     end;
+    leaveCriticalSection(elementCs);
   end;
 
 DESTRUCTOR T_changeListeningMeta.destroy;
@@ -53,6 +55,7 @@ DESTRUCTOR T_changeListeningMeta.destroy;
 FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
   VAR tmp:P_literal;
   begin
+    if tryEnterCriticalsection(elementCs)=0 then exit(false);
     result:=inherited evaluate(location,context);
 
     if state_changeTriggered then begin
@@ -64,4 +67,5 @@ FUNCTION T_changeListeningMeta.evaluate(CONST location:T_tokenLocation; VAR cont
       state_changeTriggered:=false;
       result:=true;
     end;
+    leaveCriticalSection(elementCs);
   end;

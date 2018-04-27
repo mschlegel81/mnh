@@ -25,14 +25,14 @@ CONSTRUCTOR T_buttonMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiter
 
 PROCEDURE T_buttonMeta.update;
   begin
-    if state.evaluating then exit;
+    if tryEnterCriticalsection(elementCs)=0 then exit;
     button.caption:=state.caption;
     button.enabled:=state.enabled;
+    leaveCriticalSection(elementCs);
   end;
 
 PROCEDURE T_buttonMeta.OnClick(Sender: TObject);
   begin
-    if state.evaluating then exit;
     postAction(nil);
   end;
 

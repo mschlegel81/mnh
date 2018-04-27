@@ -40,6 +40,7 @@ CONSTRUCTOR T_panelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLitera
 
 CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TForm);
   begin
+    initCriticalSection(elementCs);
     setLength(elements,0);
     lastControl:=nil;
     winControl:=form;
@@ -58,7 +59,27 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
 
 FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; begin result:=false; end;
 
-PROCEDURE T_panelMeta.update; begin end;
+PROCEDURE T_panelMeta.update;
+  VAR k:longint;
+      maxLabelWidth:longint=0;
+      l:TLabel;
+      pw,ph:longint;
+  begin
+    if tryEnterCriticalsection(elementCs)=0 then exit;
+    for k:=0 to length(elements)-1 do begin
+      l:=elements[k]^.leftLabelOrNil;
+      if (l<>nil) then begin
+        l.AutoSize:=false;
+        l.GetPreferredSize(pw,ph);
+        if pw>maxLabelWidth then maxLabelWidth:=pw;
+      end;
+    end;
+    if maxLabelWidth>0 then for k:=0 to length(elements)-1 do begin
+      l:=elements[k]^.leftLabelOrNil;
+      if (l<>nil) then l.width:=maxLabelWidth;
+    end;
+    leaveCriticalSection(elementCs);
+  end;
 
 FUNCTION T_panelMeta.getControl: TControl;
   begin

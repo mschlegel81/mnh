@@ -48,6 +48,7 @@ skipFile((demosRoot&'helloWorldHttp.mnh'     ),fullVersion)->true;
 skipFile((demosRoot&'ipcDatastore.mnh'       ),fullVersion)->true;
 skipFile((demosRoot&'doublePendulum.mnh'     ),fullVersion)->true;
 skipFile((demosRoot&'galtonBox.mnh'          ),fullVersion)->true;
+skipFile((demosRoot&'guiClock.mnh'           ),fullVersion)->true;
 skipFile((demosRoot&'oeis_sequences.mnh'     ),fullVersion)->true;
 skipFile((demosRoot&'oeis_server.mnh'        ),fullVersion)->true;
 skipFile((demosRoot&'perfectCircles.mnh'     ),fullVersion)->true;

@@ -8,6 +8,10 @@ USES SynEdit,SynEditKeyCmds,Forms,
      synOutAdapter,
      variableTreeViews,mnhCustomForm;
 
+{$ifdef debugMode}
+  {$define debug_guiOutAdapters}
+{$endif}
+
 TYPE
   T_abstractMnhForm=class(TForm)
     public
@@ -133,7 +137,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
   begin
     system.enterCriticalSection(cs);
     if flushing then begin
-      {$ifdef debugMode}writeln(stdErr,'        DEBUG: Already flushing!');{$endif}
+      {$ifdef debug_guiOutAdapters}writeln(stdErr,'        DEBUG: Already flushing!');{$endif}
       system.leaveCriticalSection(cs);
       exit([]);
     end;
@@ -144,7 +148,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
       startOutput;
       for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
       if not(storedMessages[i].messageType in redirectedMessages) then begin
-        {$ifdef debugMode}writeln(stdErr,'        DEBUG: GUI adapter processes message type ',storedMessages[i].messageType);{$endif}
+        {$ifdef debug_guiOutAdapters}writeln(stdErr,'        DEBUG: GUI adapter processes message type ',storedMessages[i].messageType);{$endif}
         include(result,messageType);
         case messageType of
           mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;

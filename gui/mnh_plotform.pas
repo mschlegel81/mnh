@@ -104,7 +104,7 @@ VAR guiAdapters:P_adapters;
 
 FUNCTION plotForm: TplotForm;
 FUNCTION plotFormIsInitialized:boolean;
-PROCEDURE resetPlot;
+PROCEDURE resetPlot(CONST hideWindow:boolean);
 PROCEDURE initializePlotForm;
 IMPLEMENTATION
 VAR plotSubsystem:record
@@ -128,17 +128,19 @@ FUNCTION plotFormIsInitialized:boolean;
     result:=myPlotForm<>nil;
   end;
 
-PROCEDURE resetPlot;
+PROCEDURE resetPlot(CONST hideWindow:boolean);
   begin
     if myPlotForm=nil then exit;
     myPlotForm.animation.clear;
     myPlotForm.tempPlot.clear;
     myPlotForm.closedByUser:=false;
-    myPlotForm.Hide;
     myPlotForm.onPlotRescale   :=nil;
     myPlotForm.onPlotMouseClick:=nil;
     myPlotForm.onPlotMouseMove :=nil;
-    unregisterForm(myPlotForm);
+    if hideWindow then begin
+      myPlotForm.Hide;
+      unregisterForm(myPlotForm);
+    end;
   end;
 
 {$R *.lfm}

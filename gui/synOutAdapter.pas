@@ -49,13 +49,7 @@ TYPE
                                                                        mt_el1_note,
                                                                        mt_el1_userNote,
                                                                        mt_el2_warning,
-                                                                       mt_el2_userWarning,
-                                                                       mt_el3_evalError,
-                                                                       mt_el3_noMatchingMain,
-                                                                       mt_el3_stackTrace,
-                                                                       mt_el3_userDefined,
-                                                                       mt_el4_systemError,
-                                                                       mt_timing_info]);
+                                                                       mt_el2_userWarning]);
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROCEDURE flushClear;
   end;
@@ -70,7 +64,6 @@ VAR lastSynOutId:longint=0;
 
 PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
   VAR k:longint;
-      mt:T_messageType;
   begin
     k:=0;
     while (k<length(redirectors)) and (redirectors[k]^.id<>syn^.id) do inc(k);
@@ -79,7 +72,6 @@ PROCEDURE registerRedirector(CONST syn:P_synOutAdapter);
 
     redirected:=[];
     for k:=0 to length(redirectors)-1 do redirected+=redirectors[k]^.outputBehavior;
-    for mt in redirected do writeln('  ',mt);
   end;
 
 PROCEDURE unregisterRedirector(CONST syn:P_synOutAdapter);

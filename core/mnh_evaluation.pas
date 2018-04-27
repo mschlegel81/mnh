@@ -697,11 +697,6 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
     VAR returnToken:P_token;
         level:longint=1;
     begin
-      if not(stack.hasTokenTypeAnywhere(tt_beginRule)) then begin
-        context.adapters^.raiseError('You cannot return from here (not a subrule)',stack.dat[stack.topIndex]^.location);
-        exit;
-      end;
-
       stack.popDestroy(context.recycler); //pop "return" from stack
       returnToken:=first; //result is first (tt_literal);
       first:=context.recycler.disposeToken(first^.next); //drop semicolon
