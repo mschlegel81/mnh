@@ -181,7 +181,7 @@ PROCEDURE T_microserver.serve;
         requestLiteral.appendString(C_httpRequestMethodName[request.method])^
                       .appendString(request.request)^
                       .appendString(request.protocol);
-        response:=servingExpression^.evaluate(feedbackLocation,context,@requestLiteral);
+        response:=servingExpression^.evaluate(feedbackLocation,context,@requestLiteral).literal;
         requestLiteral.destroy;
         statistics.serveTime:=statistics.serveTime+(context^.wallclockTime-start);
         start:=context^.wallclockTime;

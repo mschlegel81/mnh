@@ -311,7 +311,7 @@ DESTRUCTOR T_editScriptTask.destroy;
 
 PROCEDURE T_editScriptTask.execute(VAR context:T_threadContext);
   begin
-    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@context,input);
+    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@context,input).literal;
     disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
       context.adapters^.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);

@@ -34,7 +34,7 @@ FUNCTION T_workerMeta.evaluate(CONST location: T_tokenLocation; VAR context: T_t
   VAR tmp:P_literal;
   begin
     if (config.action<>nil) and (now>=nextInvocation) then begin
-      tmp:=config.action^.evaluateToLiteral(location,@context);
+      tmp:=config.action^.evaluateToLiteral(location,@context).literal;
       if tmp<>nil then disposeLiteral(tmp);
       nextInvocation:=now+interval;
       result:=true;

@@ -231,6 +231,7 @@ CONST
    10,11);            //list operators
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
+  C_compatibleBegin:array[tt_endBlock..tt_endExpression] of T_tokenType=(tt_beginBlock,tt_beginRule,tt_beginExpression);
   C_tokenInfo:array[T_tokenType] of record
                                  defaultId:string;          defaultHtmlSpan:string; reservedWordClass:T_reservedWordClass;  helpText:string; end=(
 {tt_literal}                    (defaultId:'';              defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'A literal'),

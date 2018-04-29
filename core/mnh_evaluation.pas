@@ -20,7 +20,7 @@ USES sysutils,
      listProcessing;
 
 IMPLEMENTATION
-PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
+FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
   VAR stack:T_TokenStack;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -57,7 +57,54 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
 
   PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation; CONST LHS:P_literal);
     begin
+      result:=rr_fail;
       context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans. Got '+LHS^.typeString,location);
+    end;
+
+  PROCEDURE processReturnStatement;
+    VAR returnToken:P_token;
+        level:longint=1;
+    begin
+      returnToken:=first; //result is first (tt_literal);
+      first:=context.recycler.disposeToken(first^.next); //drop semicolon
+      while not(level=0) and (context.adapters^.noErrors) do begin
+        while not(stack.topType  in [tt_beginRule,tt_beginExpression,tt_beginBlock,
+                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do stack.popDestroy(context.recycler);
+        while (first<>nil) and
+              not(first^.tokType in [tt_beginRule,tt_beginExpression,tt_beginBlock,
+                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do first:=context.recycler.disposeToken(first);
+        if first=nil then begin
+          if level=1
+          then level:=0
+          else context.adapters^.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
+        end else case first^.tokType of
+          tt_beginBlock:            begin stack.push(first); context.valueStore^.scopePush(false); end;
+          tt_beginExpression,
+          tt_beginRule: begin inc(level); stack.push(first); context.valueStore^.scopePush(true);  end;
+          tt_endBlock:
+            if stack.topType=tt_beginBlock
+            then begin
+              context.valueStore^.scopePop;
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endBlock)',errorLocation);
+          tt_endExpression,tt_endRule:
+            if stack.topType=C_compatibleBegin[first^.     tokType]
+            then begin
+              {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
+              context.setSideEffectsByEndToken(first);
+              context.valueStore^.scopePop;
+              stack.popDestroy(context.recycler);
+              first:=context.recycler.disposeToken(first);
+              dec(level);
+            end else context.adapters^.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endRule)',first^.location);
+          else context.adapters^.raiseError('Invalid stack state (processing return statement) - WTF?',first^.location);
+        end;
+      end;
+      if first=nil then result:=rr_okWithReturn;
+      returnToken^.next:=first;
+      first:=returnToken;
+      didSubstitution:=true;
     end;
 
   PROCEDURE resolveEach(eachType:T_tokenType);
@@ -156,8 +203,10 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         first^.data:=aggregator^.getResult;
         first^.txt:='';
         first^.next:=context.recycler.disposeToken(bracketClosingEach);
+        if aggregator^.hasReturn then processReturnStatement;
         dispose(aggregator,destroy);
       end;
+
     begin
       if (eachType=tt_parallelEach) and
          ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
@@ -234,32 +283,43 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       end;
 
     VAR whileLocation:T_tokenLocation;
+        returnValue:T_evaluationResult;
     PROCEDURE evaluateBody; inline;
       VAR toReduce,dummy:P_token;
       begin
         if (bodyRule<>nil) and bodyRule^.replaces(nil,whileLocation,toReduce,dummy,context) then begin
-          reduceExpression(toReduce,context);
-          context.recycler.cascadeDisposeToken(toReduce);
+          if reduceExpression(toReduce,context)=rr_okWithReturn then begin
+            returnValue.literal:=toReduce^.data;
+            returnValue.triggeredByReturn:=true;
+          end else context.recycler.cascadeDisposeToken(toReduce);
         end;
       end;
 
     begin
+      returnValue:=NIL_EVAL_RESULT;
       whileLocation:=first^.location;
       if context.callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseSystemError('Stack overflow in while construct.',whileLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
-      while headRule^.evaluateToBoolean(whileLocation,@context) and (context.adapters^.noErrors) do evaluateBody;
+      while not(returnValue.triggeredByReturn) and headRule^.evaluateToBoolean(whileLocation,@context) and (context.adapters^.noErrors) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
       first^.next:=context.recycler.disposeToken(bracketClosingWhile);
+
       //cleanup----------------------------------------------------------------------
       dispose(headRule,destroy);
       if bodyRule<>nil then
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
+      if returnValue.triggeredByReturn then begin
+        disposeLiteral(first^.data);
+        first^.data:=returnValue.literal;
+        processReturnStatement;
+      end;
+
       didSubstitution:=true;
     end;
 
@@ -324,7 +384,7 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         if P_expressionLiteral(first^.data)^.typ in C_builtinExpressionTypes then begin
-          newLiteral:=P_expressionLiteral(first^.data)^.evaluate(first^.location,@context,parameterListLiteral);
+          newLiteral:=P_expressionLiteral(first^.data)^.evaluate(first^.location,@context,parameterListLiteral).literal;
           if newLiteral<>nil then begin
             firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
             lastReplace:=firstReplace;
@@ -693,59 +753,6 @@ PROCEDURE reduceExpression(VAR first:P_token; VAR context:T_threadContext);
       if first<>nil then context.recycler.cascadeDisposeToken(first);
     end;
 
-  PROCEDURE processReturnStatement;
-    VAR returnToken:P_token;
-        level:longint=1;
-    begin
-      stack.popDestroy(context.recycler); //pop "return" from stack
-      returnToken:=first; //result is first (tt_literal);
-      first:=context.recycler.disposeToken(first^.next); //drop semicolon
-
-      while not(level=0) and (context.adapters^.noErrors) do begin
-        while not(stack.topType  in [tt_beginRule,tt_beginExpression,tt_beginBlock,
-                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do stack.popDestroy(context.recycler);
-        while (first<>nil) and
-              not(first^.tokType in [tt_beginRule,tt_beginExpression,tt_beginBlock,
-                                     tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do first:=context.recycler.disposeToken(first);
-        if first=nil
-        then context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location)
-        else case first^.tokType of
-          tt_beginBlock:            begin stack.push(first); context.valueStore^.scopePush(false); end;
-          tt_beginExpression:       begin stack.push(first); context.valueStore^.scopePush(false); end;
-          tt_beginRule: begin inc(level); stack.push(first); context.valueStore^.scopePush(true);  end;
-          tt_endBlock:
-            if stack.topType=tt_beginBlock
-            then begin
-              context.valueStore^.scopePop;
-              stack.popDestroy(context.recycler);
-              first:=context.recycler.disposeToken(first);
-            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
-          tt_endExpression:
-            if stack.topType=tt_beginExpression
-            then begin
-              {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
-              context.valueStore^.scopePop;
-              stack.popDestroy(context.recycler);
-              first:=context.recycler.disposeToken(first);
-            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
-          tt_endRule:
-            if stack.topType=tt_beginRule
-            then begin
-              {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
-              context.setSideEffectsByEndToken(first);
-              context.valueStore^.scopePop;
-              stack.popDestroy(context.recycler);
-              first:=context.recycler.disposeToken(first);
-              dec(level);
-            end else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
-          else context.adapters^.raiseError('Invalid stack state (processing return statement)',first^.location);
-        end;
-      end;
-      returnToken^.next:=first;
-      first:=returnToken;
-      didSubstitution:=true;
-    end;
-
   PROCEDURE resolveElementAccess;
     begin
       newLit:=newListLiteral;
@@ -820,6 +827,7 @@ end}
   VAR debugRun:boolean=true;
   {$endif}
   begin
+    result:=rr_ok;
     inc(context.callDepth);
     stack.create;
     {$ifndef debugMode}try{$endif}
@@ -1044,7 +1052,10 @@ end}
             COMMON_CASES;
           end;
           tt_return: case cTokType[1] of
-            tt_semicolon: processReturnStatement;
+            tt_semicolon: begin
+              stack.popDestroy(context.recycler); //pop "return" from stack
+              processReturnStatement;
+            end;
             COMMON_CASES;
           end;
           else begin
@@ -1207,6 +1218,7 @@ end}
         cleanupStackAndExpression;
       end;
     end else if (context.adapters^.hasFatalError) then begin
+      result:=rr_fail;
       {$ifdef fullVersion}
       if not(context.adapters^.hasHaltMessage) and
          not(context.adapters^.hasStackTrace) then context.callStackPrint;
@@ -1215,6 +1227,7 @@ end}
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
       if (context.callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
+      result:=rr_fail;
       {$ifdef fullVersion}
       if not(context.adapters^.hasStackTrace) then context.callStackPrint;
       {$endif}

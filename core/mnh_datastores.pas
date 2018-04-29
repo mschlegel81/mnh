@@ -146,8 +146,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
       stmt.firstToken^.setSingleLocationForExpression(location);
       lexer.destroy;
-      context.reduceExpression(stmt.firstToken);
-      result:=context.cascadeDisposeToLiteral(stmt.firstToken);
+      result:=context.reduceToLiteral(stmt.firstToken).literal;
     end;
     fileAge(fileName,fileReadAt);
   end;

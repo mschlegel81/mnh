@@ -353,7 +353,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           se_accessHttp,
           se_accessIpc,
           se_executingExternal]*context.sideEffectWhitelist);
-        temp:=P_expression(formatSubrule)^.evaluate(tokenLocation,@context,fpar);
+        temp:=P_expression(formatSubrule)^.evaluate(tokenLocation,@context,fpar).literal;
         context.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
         disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_listTypes)

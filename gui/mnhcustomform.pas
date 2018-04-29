@@ -331,8 +331,8 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating action for ',getName);
       {$endif}
       if config.action^.canApplyToNumberOfParameters(1) and (state.actionParameter<>nil)
-      then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter)
-      else tmp:=config.action^.evaluateToLiteral(location,@context);
+      then tmp:=config.action^.evaluateToLiteral(location,@context,state.actionParameter).literal
+      else tmp:=config.action^.evaluateToLiteral(location,@context).literal;
       if state.actionParameter<>nil then disposeLiteral(state.actionParameter);
       if tmp                  <>nil then disposeLiteral(tmp);
       state.actionTriggered:=false;
@@ -353,7 +353,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating caption for ',getName);
       {$endif}
       oldCaption:=state.caption;
-      tmp:=config.caption^.evaluateToLiteral(location,@context);
+      tmp:=config.caption^.evaluateToLiteral(location,@context).literal;
       if tmp<>nil then begin
         if tmp^.literalType=lt_string
         then state.caption:=P_stringLiteral(tmp)^.value

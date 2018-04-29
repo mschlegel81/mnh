@@ -178,7 +178,7 @@ FUNCTION time_imp intFuncSignature;
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral=nil):P_literal;
     begin
       t:=context.wallclockTime(true);
-      result:=subruleLiteral^.evaluate(tokenLocation,@context,parameters);
+      result:=subruleLiteral^.evaluate(tokenLocation,@context,parameters).literal;
       t:=context.wallclockTime(true)-t;
     end;
 

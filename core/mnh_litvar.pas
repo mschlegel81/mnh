@@ -168,6 +168,14 @@ CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIte
         'eachBody',
         'whileBody');
 TYPE
+  T_evaluationResult=record
+    literal:P_literal;
+    triggeredByReturn:boolean;
+  end;
+CONST
+  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
+TYPE
+
   P_compoundLiteral  = ^T_compoundLiteral;
   P_listLiteral      = ^T_listLiteral    ;
   P_setLiteral       = ^T_setLiteral     ;
@@ -182,9 +190,9 @@ TYPE
     public
       CONSTRUCTOR create(CONST eType:T_expressionType; CONST location:T_tokenLocation);
       PROPERTY typ:T_expressionType read expressionType;
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;   virtual; abstract;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual; abstract;
-      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;            virtual; abstract;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual; abstract;
+      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;               virtual; abstract;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual; abstract;
       FUNCTION arity:longint; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
@@ -3196,7 +3204,7 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
         entry.key  ^.rereference;
         entry.value^.rereference;
       end else begin
-        M:=merger^.evaluateToLiteral(location,contextPointer,L,entry.value);
+        M:=merger^.evaluateToLiteral(location,contextPointer,L,entry.value).literal;
         if M=nil then begin
           disposeLiteral(result);
           exit(nil);
