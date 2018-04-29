@@ -26,7 +26,7 @@ FUNCTION try_imp intFuncSignature;
       prevAdapters:=context.adapters;
       tryAdapters:=prevAdapters^.getAdaptersForTry(interceptor);
       context.adapters:=tryAdapters;
-      result:=toTry^.evaluateToLiteral(tokenLocation,@context);
+      result:=toTry^.evaluateToLiteral(tokenLocation,@context).literal;
       context.adapters:=prevAdapters;
       if (result=nil) or (interceptor^.hasError) then begin
         if (result<>nil) then disposeLiteral(result);
@@ -35,11 +35,11 @@ FUNCTION try_imp intFuncSignature;
         else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
             messagesLiteral:=messagesToLiteralForSandbox(interceptor^.storedMessages);
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral);
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral).literal;
             if result=nil then context.adapters^.raiseError('Error in catch block of try-statement.',tokenLocation);
             disposeLiteral(messagesLiteral);
           end else begin
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context);
+            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context).literal;
             if result=nil then context.adapters^.raiseError('Error in catch block of try-statement.',tokenLocation);
           end;
         end else result:=inCaseOfFailure^.rereferenced;

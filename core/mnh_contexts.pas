@@ -19,6 +19,8 @@ TYPE
   T_evaluationContextOptions=set of T_evaluationContextOption;
   T_threadContextOptions    =set of T_threadContextOption;
   T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging,ect_debuggingAndProfiling,ect_stackTracing{$endif},ect_silent);
+  T_reduceResult            =(rr_fail,rr_ok,rr_okWithReturn);
+
 CONST
   C_evaluationContextOptions:array[T_evaluationContextType] of T_evaluationContextOptions=(
   {ect_normal}                [eco_spawnWorker,eco_createDetachedTask,eco_beepOnError],
@@ -95,8 +97,8 @@ TYPE
       {$endif}
 
       PROPERTY threadOptions:T_threadContextOptions read options;
-      PROCEDURE reduceExpression(VAR first:P_token); inline;
-      FUNCTION cascadeDisposeToLiteral(VAR p:P_token):P_literal;
+      FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
+      FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
       PROPERTY getParent:P_evaluationContext read parent;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
@@ -154,7 +156,7 @@ TYPE
       taskCs:TRTLCriticalSection;
       env   :T_queueTaskEnvironment;
       state :T_queueTaskState;
-      evaluationResult:P_literal;
+      evaluationResult:T_evaluationResult;
     private
       nextToEvaluate:P_queueTask;
       isVolatile    :boolean;
@@ -163,7 +165,7 @@ TYPE
       CONSTRUCTOR create(CONST environment:T_queueTaskEnvironment; CONST volatile:boolean);
       PROCEDURE reset;
       FUNCTION    canGetResult:boolean;
-      FUNCTION    getResultAsLiteral:P_literal;
+      FUNCTION    getResult:T_evaluationResult;
       DESTRUCTOR  destroy; virtual;
   end;
 
@@ -189,7 +191,7 @@ TYPE
     PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   end;
 
-VAR reduceExpressionCallback:PROCEDURE(VAR first:P_token; VAR context:T_threadContext);
+VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
     suppressBeep:boolean=false;
 {$ifndef fullVersion}
@@ -546,16 +548,18 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntr
   end;
 {$endif}
 
-PROCEDURE T_threadContext.reduceExpression(VAR first:P_token); begin reduceExpressionCallback(first,self); end;
+FUNCTION T_threadContext.reduceExpression(VAR first:P_token):T_reduceResult;
+  begin result:=reduceExpressionCallback(first,self); end;
 
-FUNCTION T_threadContext.cascadeDisposeToLiteral(VAR p:P_token):P_literal;
+FUNCTION T_threadContext.reduceToLiteral(VAR first:P_token):T_evaluationResult;
   begin
-    if adapters^.noErrors and (p<>nil) and (p^.tokType=tt_literal) and (p^.next=nil) then begin
-      result:=P_literal(p^.data)^.rereferenced;
-      recycler.disposeToken(p);
+    result.triggeredByReturn:=reduceExpressionCallback(first,self)=rr_okWithReturn;
+    if adapters^.noErrors and (first<>nil) and (first^.tokType=tt_literal) and (first^.next=nil) then begin
+      result.literal:=P_literal(first^.data)^.rereferenced;
+      recycler.disposeToken(first);
     end else begin
-      result:=nil;
-      recycler.cascadeDisposeToken(p);
+      result.literal:=nil;
+      recycler.cascadeDisposeToken(first);
     end;
   end;
 
@@ -719,7 +723,7 @@ CONSTRUCTOR T_queueTask.create(CONST environment:T_queueTaskEnvironment; CONST v
 PROCEDURE T_queueTask.reset;
   begin
     state :=fts_pending;
-    evaluationResult:=nil;
+    evaluationResult:=NIL_EVAL_RESULT;
     nextToEvaluate  :=nil;
   end;
 
@@ -730,7 +734,7 @@ FUNCTION T_queueTask.canGetResult:boolean;
     leaveCriticalSection(taskCs);
   end;
 
-FUNCTION T_queueTask.getResultAsLiteral: P_literal;
+FUNCTION T_queueTask.getResult:T_evaluationResult;
   VAR sleepTime:longint=0;
   begin
     enterCriticalSection(taskCs);
@@ -784,7 +788,7 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadCont
     enterCriticalSection(task^.taskCs);
     task^.nextToEvaluate:=nil;
     task^.state:=fts_pending;
-    task^.evaluationResult:=nil;
+    task^.evaluationResult:=NIL_EVAL_RESULT;
     leaveCriticalSection(task^.taskCs);
 
     system.enterCriticalSection(cs);

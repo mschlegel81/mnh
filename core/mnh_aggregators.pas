@@ -9,56 +9,53 @@ USES //my libraries
      mnh_litVar;
 TYPE
   T_aggregator=object
-    DESTRUCTOR destroy; virtual; abstract;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual; abstract;
+  private
+    resultLiteral:P_literal;
+    hasReturnLiteral:boolean;
+  public
+    CONSTRUCTOR create(CONST initialValue:P_literal);
+    DESTRUCTOR destroy; virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual; abstract;
     FUNCTION earlyAbort:boolean; virtual;
-    FUNCTION getResult:P_literal; virtual; abstract;
+    FUNCTION getResult:P_literal; virtual;
+    PROPERTY hasReturn:boolean read hasReturnLiteral;
   end;
 
-  T_aggregatorWithResultLiteral=object(T_aggregator)
-    private
-      resultLiteral:P_literal;
-    public
-      CONSTRUCTOR create(CONST initialValue:P_literal);
-      DESTRUCTOR destroy; virtual;
-      FUNCTION getResult:P_literal; virtual;
-  end;
-
-  T_listAggregator=object(T_aggregatorWithResultLiteral)
+  T_listAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_concatAggregator=object(T_aggregatorWithResultLiteral)
+  T_concatAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_concatAltAggregator=object(T_aggregatorWithResultLiteral)
+  T_concatAltAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_headAggregator=object(T_aggregatorWithResultLiteral)
+  T_headAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult:P_literal; virtual;
   end;
 
-  T_minAggregator=object(T_aggregatorWithResultLiteral)
+  T_minAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_maxAggregator=object(T_aggregatorWithResultLiteral)
+  T_maxAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_stringConcatAggregator=object(T_aggregatorWithResultLiteral)
+  T_stringConcatAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
   T_andAggregator=object(T_aggregator)
@@ -66,8 +63,7 @@ TYPE
       boolResult:boolean;
     public
       CONSTRUCTOR create;
-      DESTRUCTOR destroy; virtual;
-      PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult:P_literal; virtual;
   end;
@@ -77,38 +73,37 @@ TYPE
       boolResult:boolean;
     public
       CONSTRUCTOR create;
-      DESTRUCTOR destroy; virtual;
-      PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult:P_literal; virtual;
   end;
 
-  T_opAggregator=object(T_aggregatorWithResultLiteral)
+  T_opAggregator=object(T_aggregator)
     private
       op:T_tokenType;
     public
       CONSTRUCTOR create(CONST operatorToken:T_tokenType);
-      PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_expressionAggregator=object(T_aggregatorWithResultLiteral)
+  T_expressionAggregator=object(T_aggregator)
     private
       aggregator:P_expressionLiteral;
       aggregationContext:pointer;
     public
       CONSTRUCTOR create(CONST ex:P_expressionLiteral; CONST contextPointer:pointer);
       DESTRUCTOR destroy; virtual;
-      PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+      PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_trailingAggregator=object(T_aggregatorWithResultLiteral)
+  T_trailingAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
-  T_setAggregator=object(T_aggregatorWithResultLiteral)
+  T_setAggregator=object(T_aggregator)
     CONSTRUCTOR create;
-    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
+    PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
 
   P_aggregator            =^T_aggregator;
@@ -160,7 +155,7 @@ FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:
     new(result,create(ex,contextPointer));
   end;
 
-CONSTRUCTOR T_aggregatorWithResultLiteral.create(CONST initialValue:P_literal); begin resultLiteral:=initialValue; end;
+CONSTRUCTOR T_aggregator.create(CONST initialValue:P_literal); begin hasReturnLiteral:=false; resultLiteral:=initialValue; end;
 CONSTRUCTOR T_listAggregator     .create; begin inherited create(newListLiteral); end;
 CONSTRUCTOR T_concatAggregator   .create; begin inherited create(newListLiteral); end;
 CONSTRUCTOR T_concatAltAggregator.create; begin inherited create(newListLiteral); end;
@@ -170,13 +165,14 @@ CONSTRUCTOR T_maxAggregator      .create; begin inherited create(newVoidLiteral)
 CONSTRUCTOR T_setAggregator      .create; begin inherited create(newSetLiteral);  end;
 CONSTRUCTOR T_trailingAggregator .create; begin inherited create(newVoidLiteral); end;
 CONSTRUCTOR T_stringConcatAggregator.create; begin inherited create(newStringLiteral('',true)); end;
-CONSTRUCTOR T_andAggregator         .create; begin boolResult:=true;  end;
-CONSTRUCTOR T_orAggregator          .create; begin boolResult:=false; end;
+CONSTRUCTOR T_andAggregator         .create; begin inherited create(nil); boolResult:=true;  end;
+CONSTRUCTOR T_orAggregator          .create; begin inherited create(nil); boolResult:=false; end;
 CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType);
   begin
     inherited create(newVoidLiteral);
     op:=operatorToken;
   end;
+
 CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral; CONST contextPointer: pointer);
   begin
     inherited create(nil);
@@ -184,172 +180,181 @@ CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral; CONST c
     aggregationContext:=contextPointer;
   end;
 
-DESTRUCTOR T_aggregatorWithResultLiteral.destroy; begin if resultLiteral<>nil then disposeLiteral(resultLiteral); end;
-DESTRUCTOR T_expressionAggregator       .destroy; begin disposeLiteral(aggregator); inherited destroy; end;
-DESTRUCTOR T_andAggregator              .destroy; begin end;
-DESTRUCTOR T_orAggregator               .destroy; begin end;
+DESTRUCTOR T_aggregator          .destroy; begin if resultLiteral<>nil then disposeLiteral(resultLiteral); end;
+DESTRUCTOR T_expressionAggregator.destroy; begin disposeLiteral(aggregator); inherited destroy; end;
 
-PROCEDURE T_listAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+{$MACRO ON}
+{$define aggregationDefaultHandling:=
+if (er.literal=nil) or earlyAbort then exit;
+if er.triggeredByReturn then begin
+  if resultLiteral<>nil then dispose(resultLiteral,destroy);
+  resultLiteral:=er.literal;
+  hasReturnLiteral:=true;
+  if not(doDispose) then er.literal^.rereference;
+  exit;
+end}
+
+PROCEDURE T_listAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    P_listLiteral(resultLiteral)^.append(L,not(doDispose));
+    aggregationDefaultHandling;
+    P_listLiteral(resultLiteral)^.append(er.literal,not(doDispose));
   end;
 
-PROCEDURE T_setAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context: P_threadContext);
+PROCEDURE T_setAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    P_setLiteral(resultLiteral)^.append(L,not(doDispose));
+    aggregationDefaultHandling;
+    P_setLiteral(resultLiteral)^.append(er.literal,not(doDispose));
   end;
 
-PROCEDURE T_concatAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_concatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    if L^.literalType in C_compoundTypes
-    then P_listLiteral(resultLiteral)^.appendAll(P_compoundLiteral(L))
-    else P_listLiteral(resultLiteral)^.append(L,true);
-    if doDispose then disposeLiteral(L);
+    aggregationDefaultHandling;
+    if er.literal^.literalType in C_compoundTypes
+    then P_listLiteral(resultLiteral)^.appendAll(P_compoundLiteral(er.literal))
+    else P_listLiteral(resultLiteral)^.append(er.literal,true);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_concatAltAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_concatAltAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    P_listLiteral(resultLiteral)^.append(L,true);
-    if doDispose then disposeLiteral(L);
+    aggregationDefaultHandling;
+    P_listLiteral(resultLiteral)^.append(er.literal,true);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_headAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_headAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
+    aggregationDefaultHandling;
     if not(earlyAbort) then begin
       if resultLiteral<>nil then disposeLiteral(resultLiteral);
-      resultLiteral:=L^.rereferenced;
+      resultLiteral:=er.literal^.rereferenced;
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_trailingAggregator.addToAggregation(L: P_literal; CONST doDispose: boolean; CONST location: T_tokenLocation; CONST context: P_threadContext);
+PROCEDURE T_trailingAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    if L^.literalType=lt_void then begin
-      if doDispose then disposeLiteral(L);
+    aggregationDefaultHandling;
+    if er.literal^.literalType=lt_void then begin
+      if doDispose then disposeLiteral(er.literal);
       exit;
     end;
     disposeLiteral(resultLiteral);
-    resultLiteral:=L;
-    if not(doDispose) then L^.rereference;
+    resultLiteral:=er.literal;
+    if not(doDispose) then er.literal^.rereference;
   end;
 
-PROCEDURE T_minAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_minAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    if (L^.literalType<>lt_void) and ((resultLiteral^.literalType=lt_void) or L^.leqForSorting(resultLiteral)) then begin
+    aggregationDefaultHandling;
+    if (er.literal^.literalType<>lt_void) and ((resultLiteral^.literalType=lt_void) or er.literal^.leqForSorting(resultLiteral)) then begin
       disposeLiteral(resultLiteral);
-      resultLiteral:=L^.rereferenced;
+      resultLiteral:=er.literal^.rereferenced;
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_maxAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_maxAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    if (L^.literalType<>lt_void) and ((resultLiteral^.literalType=lt_void) or not(L^.leqForSorting(resultLiteral))) then begin
+    aggregationDefaultHandling;
+    if (er.literal^.literalType<>lt_void) and ((resultLiteral^.literalType=lt_void) or not(er.literal^.leqForSorting(resultLiteral))) then begin
       disposeLiteral(resultLiteral);
-      resultLiteral:=L^.rereferenced;
+      resultLiteral:=er.literal^.rereferenced;
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_stringConcatAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newResult:P_literal;
   begin
-    if L=nil then exit;
-    if L^.literalType<>lt_void then begin
-      if (resultLiteral^.literalType=lt_string) and (L^.literalType in C_scalarTypes) then begin
-        P_stringLiteral(resultLiteral)^.append(P_scalarLiteral(L)^.stringForm);
+    aggregationDefaultHandling;
+    if er.literal^.literalType<>lt_void then begin
+      if (resultLiteral^.literalType=lt_string) and (er.literal^.literalType in C_scalarTypes) then begin
+        P_stringLiteral(resultLiteral)^.append(P_scalarLiteral(er.literal)^.stringForm);
       end else begin
-        newResult:=resolveOperator(resultLiteral,tt_operatorStrConcat,L,location,context^.adapters^,context);
+        newResult:=resolveOperator(resultLiteral,tt_operatorStrConcat,er.literal,location,context^.adapters^,context);
         disposeLiteral(resultLiteral);
         resultLiteral:=newResult;
       end;
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_andAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_andAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    if L^.literalType=lt_boolean then begin
-      boolResult:=boolResult and P_boolLiteral(L)^.value;
-    end else if L^.literalType<>lt_void then begin
-      context^.adapters^.raiseError('Cannot apply AND-aggregator to element of type '+L^.typeString,location);
+    aggregationDefaultHandling;
+    if er.literal^.literalType=lt_boolean then begin
+      boolResult:=boolResult and P_boolLiteral(er.literal)^.value;
+    end else if er.literal^.literalType<>lt_void then begin
+      context^.adapters^.raiseError('Cannot apply AND-aggregator to element of type '+er.literal^.typeString,location);
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_orAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   begin
-    if L=nil then exit;
-    if L^.literalType=lt_boolean then begin
-      boolResult:=boolResult or P_boolLiteral(L)^.value;
-    end else if L^.literalType<>lt_void then begin
-      context^.adapters^.raiseError('Cannot apply OR-aggregator to element of type '+L^.typeString,location);
+    aggregationDefaultHandling;
+    if er.literal^.literalType=lt_boolean then begin
+      boolResult:=boolResult or P_boolLiteral(er.literal)^.value;
+    end else if er.literal^.literalType<>lt_void then begin
+      context^.adapters^.raiseError('Cannot apply OR-aggregator to element of type '+er.literal^.typeString,location);
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_opAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newResult:P_literal;
   begin
-    if L=nil then exit;
+    if er.literal=nil then exit;
     if resultLiteral=nil
-    then resultLiteral:=L^.rereferenced
-    else if L^.literalType<>lt_void then begin
-      newResult:=resolveOperator(resultLiteral,op,L,location,context^.adapters^,context);
+    then resultLiteral:=er.literal^.rereferenced
+    else if er.literal^.literalType<>lt_void then begin
+      newResult:=resolveOperator(resultLiteral,op,er.literal,location,context^.adapters^,context);
       disposeLiteral(resultLiteral);
       resultLiteral:=newResult;
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
-PROCEDURE T_expressionAggregator.addToAggregation(L:P_literal; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
+PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newValue:P_literal;
   begin
-    if L=nil then exit;
+    if er.literal=nil then exit;
     if resultLiteral=nil
-    then resultLiteral:=L^.rereferenced
-    else if L^.literalType<>lt_void then begin
-      newValue:=aggregator^.evaluateToLiteral(location,aggregationContext,resultLiteral,L);
+    then resultLiteral:=er.literal^.rereferenced
+    else if er.literal^.literalType<>lt_void then begin
+      newValue:=aggregator^.evaluateToLiteral(location,aggregationContext,resultLiteral,er.literal).literal;
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
       if resultLiteral=nil then begin
-        context^.adapters^.raiseError('Aggregation failed for element '+L^.toString(50),location);
+        context^.adapters^.raiseError('Aggregation failed for element '+er.literal^.toString(50),location);
         resultLiteral:=newVoidLiteral;
       end;
     end;
-    if doDispose then disposeLiteral(L);
+    if doDispose then disposeLiteral(er.literal);
   end;
 
 FUNCTION T_aggregator.earlyAbort: boolean;
   begin
-    result:=false;
+    result:=hasReturnLiteral;
   end;
 
 FUNCTION T_headAggregator.earlyAbort: boolean;
   begin
-    result:=(resultLiteral<>nil) and (resultLiteral^.literalType<>lt_void);
+    result:=hasReturnLiteral or (resultLiteral<>nil) and (resultLiteral^.literalType<>lt_void);
   end;
 
 FUNCTION T_andAggregator.earlyAbort: boolean;
   begin
-    result:=not(boolResult);
+    result:=hasReturnLiteral or not(boolResult);
   end;
 
 FUNCTION T_orAggregator.earlyAbort: boolean;
   begin
-    result:=boolResult;
+    result:=hasReturnLiteral or boolResult;
   end;
 
-FUNCTION T_aggregatorWithResultLiteral.getResult: P_literal;
+FUNCTION T_aggregator.getResult: P_literal;
   begin
     if resultLiteral=nil
     then result:=newVoidLiteral
@@ -364,12 +369,16 @@ FUNCTION T_headAggregator.getResult: P_literal;
 
 FUNCTION T_andAggregator.getResult: P_literal;
   begin
-    result:=newBoolLiteral(boolResult);
+    if hasReturnLiteral
+    then result:=resultLiteral^.rereferenced
+    else result:=newBoolLiteral(boolResult);
   end;
 
 FUNCTION T_orAggregator.getResult: P_literal;
   begin
-    result:=newBoolLiteral(boolResult);
+    if hasReturnLiteral
+    then result:=resultLiteral^.rereferenced
+    else result:=newBoolLiteral(boolResult);
   end;
 
 end.

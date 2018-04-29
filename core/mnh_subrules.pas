@@ -35,7 +35,7 @@ TYPE
       FUNCTION getParameterNames:P_listLiteral; virtual; abstract;
     public
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):P_literal; virtual;
+      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
@@ -98,7 +98,7 @@ TYPE
 
       //Evaluation calls:
       FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
-      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;               virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
 
       //Inspection/documentation calls
       FUNCTION toDocString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
@@ -143,7 +143,7 @@ TYPE
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
       CONSTRUCTOR create(CONST f:P_intFuncCallback; CONST location:T_tokenLocation);
-      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;  virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
       FUNCTION arity:longint; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
@@ -157,7 +157,7 @@ TYPE
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
-      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):P_literal;  virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
       FUNCTION arity:longint; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
@@ -246,7 +246,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
             parIdx:=-1;
           end;
           tt_return: begin
-            if not(typ in C_subruleExpressionTypes) then context.adapters^.raiseError('return statements are currently only allowed in subrules',token.location);
+            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.adapters^.raiseError('return statements are currently only allowed in subrules',token.location);
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
@@ -893,7 +893,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
 FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
   begin
-    resultLiteral:=evaluateToLiteral(location,context,a,b);
+    resultLiteral:=evaluateToLiteral(location,context,a,b).literal;
     if (resultLiteral<>nil) and (resultLiteral^.literalType=lt_boolean) then begin
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
@@ -902,33 +902,32 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
     end;
   end;
 
-FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
+FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
   VAR toReduce,dummy:P_token;
   begin
     if replaces(parameters,location,toReduce,dummy,P_threadContext(context)^)
     then begin
-      if (toReduce=nil) or (toReduce^.next<>nil) or (toReduce^.tokType<>tt_literal) then
-        P_threadContext(context)^.reduceExpression(toReduce);
-      result:=P_threadContext(context)^.cascadeDisposeToLiteral(toReduce);
-    end else result:=nil;
+      result:=P_threadContext(context)^.reduceToLiteral(toReduce);
+    end else result.literal:=nil;
   end;
 
-FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
+FUNCTION T_builtinExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
-    result:=func(parameters,location,P_threadContext(context)^);
+    result.literal:=func(parameters,location,P_threadContext(context)^);
+    result.triggeredByReturn:=false;
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
-FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): P_literal;
+FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; CONST context: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
-    if (parameters<>nil) and (parameters^.size<>0) then exit(nil);
+    if (parameters<>nil) and (parameters^.size<>0) then exit(NIL_EVAL_RESULT);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
     result:=evaluateToLiteral(location,context);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
-FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): P_literal;
+FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
@@ -1250,7 +1249,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       params.create(1);
       params.append(TList,true);
-      temp:=f^.evaluate(location,tempcontext.threadContext,@params);
+      temp:=f^.evaluate(location,tempcontext.threadContext,@params).literal;
       params.destroy;
       result:=tempcontext.adapters^.noErrors and
               (temp<>nil) and
@@ -1569,9 +1568,8 @@ FUNCTION interpret_imp intFuncSignature;
       if first=nil then exit(nil);
       previousPrivileges:=context.setAllowedSideEffectsReturningPrevious(
                           context.sideEffectWhitelist - [se_inputViaAsk]);
-      context.reduceExpression(first);
+      result:=context.reduceToLiteral(first).literal;
       context.setAllowedSideEffectsReturningPrevious(previousPrivileges);
-      result:=context.cascadeDisposeToLiteral(first);
     end;
   end;
 

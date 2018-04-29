@@ -43,7 +43,7 @@ begin
      iterator:=P_expressionLiteral(arg0);
      result:=newListLiteral(int1^.value.toInt);
      for i:=1 to int1^.value.toInt do begin
-       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context);
+       valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context).literal;
        if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
        then break
        else listResult^.append(valueToAppend,false);
@@ -418,7 +418,7 @@ FUNCTION group_imp intFuncSignature;
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,@context,resultLiteral,L);
+          newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,@context,resultLiteral,L).literal;
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;

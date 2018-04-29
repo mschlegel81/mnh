@@ -89,7 +89,7 @@ FUNCTION regexValidate_imp intFuncSignature;
     if feedbackMethod=nil then exit(newBoolLiteral(message=''));
     if message<>'' then begin
       feedbackInput:=newStringLiteral(message);
-      result:=feedbackMethod^.evaluateToLiteral(tokenLocation,@context,feedbackInput);
+      result:=feedbackMethod^.evaluateToLiteral(tokenLocation,@context,feedbackInput).literal;
       disposeLiteral(feedbackInput);
       exit(result);
     end;
