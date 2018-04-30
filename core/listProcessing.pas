@@ -651,7 +651,8 @@ PROCEDURE T_futureLiteral.executeInContext(CONST context:P_threadContext);
     end;
 
     resultValue:=func^.evaluate(getLocation,context,param).literal;
-    if resultValue=nil then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation,C_EMPTY_STRING_ARRAY);
+    if (resultValue=nil) and (context^.adapters^.noErrors)
+    then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation,C_EMPTY_STRING_ARRAY);
 
     enterCriticalSection(criticalSection);
     state:=fls_done;

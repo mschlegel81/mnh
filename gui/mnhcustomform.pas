@@ -645,6 +645,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
         if form.processPendingEvents(location,context)
         then sleepTime:=0
         else begin
+          if sleepTime<100 then sleepTime:=100;
           if sleepTime<1000 then inc(sleepTime);
           sleep(sleepTime);
         end;
