@@ -37,11 +37,20 @@ PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
     while registry.anyMatch(@serverIsAssociatedWithPackage,package) do sleep(1);
   end;
 
+FUNCTION cleanPath(CONST s:string):string;
+  begin
+    {$ifdef UNIX}
+    result:=cleanString(replaceAll(s,'/','_'),['a'..'z','A'..'Z','0'..'9','_'],'_');
+    {$else}
+    result:=s;
+    {$endif}
+  end;
+
 FUNCTION isServerRunning(CONST serverId:string):boolean;
   begin
     registry.enterCs;
     if not(Assigned(checkingClient)) then checkingClient:=TSimpleIPCClient.create(nil);
-    checkingClient.serverId:=serverId;
+    checkingClient.serverId:=cleanPath(serverId);
     result:=checkingClient.ServerRunning;
     registry.leaveCs;
   end;
@@ -65,7 +74,7 @@ FUNCTION newServer(CONST serverId:string=''):TSimpleIPCServer;
     registry.enterCs;
     result:=TSimpleIPCServer.create(nil);
     try
-      if serverId<>'' then result.serverId:=serverId
+      if serverId<>'' then result.serverId:=cleanPath(serverId)
                       else result.serverId:=getNewServerId;
       result.Global:=true;
       result.StartServer;
@@ -84,7 +93,7 @@ PROCEDURE disposeServer(VAR server:TSimpleIPCServer);
   end;
 
 VAR messageHashTally:T_hashInt=0;
-PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
+PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boolean; CONST payload:P_literal;
                       CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR messageHash:T_hashInt);
   VAR streamWrapper:T_outputStreamWrapper;
       memoryStream:TMemoryStream;
@@ -92,6 +101,8 @@ PROCEDURE sendMessage(CONST senderServerId,receiverServerId:string; CONST status
       sendStatusOk:boolean;
       serializationOk:boolean=true;
   begin
+    senderServerId  :=cleanPath(senderServerId);
+    receiverServerId:=cleanPath(receiverServerId);
     if messageHash=0 then begin
       {$Q-}{$R-}
       interLockedIncrement(messageHashTally);
@@ -268,10 +279,7 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
     if ((params=nil) or (params^.size=0)) and context.checkSideEffects('assertUniqueInstance',tokenLocation,[se_alterContextState,se_accessIpc,se_server,se_detaching]) then begin
       registry.enterCs;
       try
-        normalizedPath:=expandFileName(tokenLocation.package^.getPath);
-        {$ifdef UNIX}
-        normalizedPath:=cleanString(replaceAll(normalizedPath,'/','_'),['a'..'z','A'..'Z','0'..'9','_'],'_');
-        {$endif}
+        normalizedPath:=cleanPath(expandFileName(tokenLocation.package^.getPath));
         if isServerRunning(normalizedPath)
         then context.adapters^.raiseError('There already is an instance of this script running',tokenLocation)
         else begin

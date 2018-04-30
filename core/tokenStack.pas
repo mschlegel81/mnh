@@ -207,8 +207,8 @@ PROCEDURE T_callStack.push(CONST wallclockTime:double; CONST parameters:P_variab
 
 FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):T_tokenLocation;
   begin
+    initialize(result);
     if fill<1 then begin
-      initialize(result);
       result.package:=nil;
       result.column:=-1;
       result.line:=-1;
