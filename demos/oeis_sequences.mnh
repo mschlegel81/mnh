@@ -258,7 +258,7 @@ A004001->hofstaderConwayGen;
 
 USE hamming;
 //@SuppressUnusedWarning
-A051037->listIterator(hamming.H);
+A051037->hammingGenerator;
 
 USE harshad;
 //@SuppressUnusedWarning
