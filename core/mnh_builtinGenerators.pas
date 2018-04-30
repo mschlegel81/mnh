@@ -17,7 +17,7 @@ TYPE
   P_listIterator=^T_listIterator;
   T_listIterator=object(T_builtinGeneratorExpression)
     index:longint;
-    id:string;
+    underlying:P_literal;
     values:T_arrayOfLiteral;
     CONSTRUCTOR create(CONST v:P_compoundLiteral);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
@@ -39,13 +39,13 @@ CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
   begin
     init(lt_expression);
     index:=0;
-    id:='listIterator('+v^.toString(20)+')';
+    underlying:=v^.rereferenced;
     values:=v^.iteratableList;
   end;
 
 FUNCTION T_listIterator.toString(CONST lengthLimit:longint=maxLongint):string;
   begin
-    result:=id;
+    result:='listIterator('+underlying^.toString(lengthLimit-14)+')';
   end;
 
 FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
@@ -59,6 +59,7 @@ FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
 
 DESTRUCTOR T_listIterator.destroy;
   begin
+    disposeLiteral(underlying);
     disposeLiteral(values);
   end;
 
@@ -146,8 +147,8 @@ TYPE
   P_permutationIterator=^T_permutationIterator;
   T_permutationIterator=object(T_builtinGeneratorExpression)
     private
+      underlying:P_literal;
       nextPermutation:T_arrayOfLiteral;
-      id:string;
       first:boolean;
     public
       CONSTRUCTOR create(CONST i:int64; CONST loc:T_tokenLocation);
@@ -161,7 +162,7 @@ CONSTRUCTOR T_permutationIterator.create(CONST i: int64; CONST loc: T_tokenLocat
   VAR k:longint;
   begin
     inherited create(loc);
-    id:='permutationIterator('+intToStr(i)+')';
+    underlying:=newIntLiteral(i);
     first:=true;
     setLength(nextPermutation,i);
     for k:=0 to i-1 do nextPermutation[k]:=newIntLiteral(k);
@@ -171,7 +172,7 @@ CONSTRUCTOR T_permutationIterator.create(CONST arr: P_compoundLiteral; CONST loc
   VAR sorted:P_listLiteral;
   begin
     inherited create(loc);
-    id:='permutationIterator('+arr^.toString(20)+')';
+    underlying:=arr^.rereferenced;
     first:=true;
     sorted:=newListLiteral();
     sorted^.appendAll(arr);
@@ -182,7 +183,7 @@ CONSTRUCTOR T_permutationIterator.create(CONST arr: P_compoundLiteral; CONST loc
 
 FUNCTION T_permutationIterator.toString(CONST lengthLimit:longint=maxLongint):string;
   begin
-    result:=id;
+    result:='permutationIterator('+underlying^.toString(lengthLimit-21)+')';
   end;
 
 FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;
@@ -227,6 +228,7 @@ FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation;
 
 DESTRUCTOR T_permutationIterator.destroy;
   begin
+    disposeLiteral(underlying);
     disposeLiteral(nextPermutation);
   end;
 
