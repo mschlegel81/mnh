@@ -16,4 +16,4 @@ end}.toGenerator;
 //@demo_for=list construction
 //*See http://rosettacode.org/wiki/Hamming_numbers
 main->print('The first 20 Hamming numbers are: ',hammingGenerator.head(20))|
-      print('The 1691st Hamming number is    : ',hammingGenerator.head(1690).trailing);
+      print('The 1691st Hamming number is    : ',hammingGenerator.head(1691).trailing);

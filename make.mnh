@@ -140,7 +140,7 @@ private cleanup->begin
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
    files('gui/res_*.inc')|
-   files('regText/testFailures.log')|
+   files('regTest/testFailures.log')|
    allFiles('versions','*.exe')|
    files(BUILDS.getInner(5))|
    files('build.log'))
