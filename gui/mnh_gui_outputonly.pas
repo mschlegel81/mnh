@@ -77,7 +77,6 @@ PROCEDURE ToutputOnlyForm.triggerFastPolling;
 
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
-    registerForm(self,ft_main);
     initGuiOutAdapters(outputOnlyForm,outputEdit,false);
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
@@ -122,7 +121,7 @@ PROCEDURE ToutputOnlyForm.FormShow(Sender: TObject);
       runEvaluator.reEvaluateWithGUI;
       firstShow:=false;
       Hide;
-    end;
+    end else registerForm(self,ft_main);
   end;
 
 PROCEDURE ToutputOnlyForm.OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
