@@ -63,7 +63,8 @@ PROCEDURE T_panelMeta.update;
   VAR k:longint;
       maxLabelWidth:longint=0;
       l:TLabel;
-      pw,ph:longint;
+      pw:longint=0;
+      ph:longint=0;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     for k:=0 to length(elements)-1 do begin

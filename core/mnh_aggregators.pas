@@ -305,7 +305,7 @@ PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
 PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newResult:P_literal;
   begin
-    if er.literal=nil then exit;
+    aggregationDefaultHandling;
     if resultLiteral=nil
     then resultLiteral:=er.literal^.rereferenced
     else if er.literal^.literalType<>lt_void then begin
@@ -319,7 +319,7 @@ PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
 PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newValue:P_literal;
   begin
-    if er.literal=nil then exit;
+    aggregationDefaultHandling;
     if resultLiteral=nil
     then resultLiteral:=er.literal^.rereferenced
     else if er.literal^.literalType<>lt_void then begin

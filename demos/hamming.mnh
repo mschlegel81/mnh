@@ -1,8 +1,19 @@
-private H(nMax)->unique(flatten((2^[0..floor(ln(nMax      )/ln(2))]).each(i,
-                        flatten((3^[0..floor(ln(nMax/ i   )/ln(3))]).each(j,
-                                 5^[0..floor(ln(nMax/(i*j))/ln(5))]*i*j))))).sort;
-H:=H(2^31);
+hammingGenerator->{begin
+  local P5:=[1,2,3,5].toSet;
+  local H:=[1]; //generated Hamming numbers
+  local i:=-1;  //previous output index
+  local lastReliableEntry:= 1;  //Value of last relieable entry in H
+save;
+  (local r:=H[i+=1])>=lastReliableEntry
+  ? begin
+      H:=(H.toSet*P5).sort;
+      lastReliableEntry*=2;
+    end
+  : void;
+  r;
+end}.toGenerator;
+
 //@demo_for=list construction
 //*See http://rosettacode.org/wiki/Hamming_numbers
-main->print('The first 20 Hamming numbers are: ',head(H,20))|
-      print('The 1691st Hamming number is    : ',H.get(1690));
+main->print('The first 20 Hamming numbers are: ',hammingGenerator.head(20))|
+      print('The 1691st Hamming number is    : ',hammingGenerator.head(1691).trailing);

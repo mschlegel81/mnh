@@ -38,6 +38,8 @@ TYPE T_language=(LANG_MNH   = 0,
                  LANG_TXT   =17,
                  LANG_OUTPUT=18);
 
+  T_lineRange=array[0..1] of longint;
+
   P_basicEditorMeta=^T_basicEditorMeta;
   T_basicEditorMeta=object(T_codeProvider)
     protected
@@ -48,6 +50,7 @@ TYPE T_language=(LANG_MNH   = 0,
       highlighter : TSynMnhSyn;
       PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
       PROCEDURE setLanguage(CONST languageIndex:T_language);
+      FUNCTION currentBlockOrLine:T_lineRange;
     public
       CONSTRUCTOR createWithParent(CONST parent:TWinControl);
       DESTRUCTOR destroy; virtual;
@@ -428,6 +431,19 @@ PROCEDURE T_basicEditorMeta.setCaret(CONST location: T_searchTokenLocation);
     editor.CaretXY:=newCaret;
   end;
 
+FUNCTION T_basicEditorMeta.currentBlockOrLine:T_lineRange;
+  begin
+    initialize(result);
+    if editor.BlockBegin.y<1 then begin
+      result[0]:=editor.CaretY;
+      result[1]:=editor.CaretY;
+    end else begin
+      result[0]:=editor.BlockBegin.y;
+      result[1]:=editor.BlockEnd.y;
+      if (result[1]>result[0]) and (editor.BlockEnd.x=1) then dec(result[1]);
+    end;
+  end;
+
 PROCEDURE T_basicEditorMeta.toggleComment;
   PROCEDURE commentLine(CONST CaretY:longint);
     VAR c0,c1:TPoint;
@@ -456,24 +472,20 @@ PROCEDURE T_basicEditorMeta.toggleComment;
 
   VAR cy:longint;
       commented:boolean=true;
+      range:T_lineRange;
   begin
     if editor.readonly then exit;
     editor.BeginUndoBlock;
-    if (editor.BlockBegin.y<1) then begin
-      if lineIsCommented(editor.CaretY)
-      then uncommentLine(editor.CaretY)
-      else   commentLine(editor.CaretY);
-    end else begin
-      for cy:=editor.BlockBegin.y to editor.BlockEnd.y do commented:=commented and lineIsCommented(cy);
-      if commented then for cy:=editor.BlockBegin.y to editor.BlockEnd.y do uncommentLine(cy)
-                   else for cy:=editor.BlockBegin.y to editor.BlockEnd.y do   commentLine(cy);
-    end;
+    range:=currentBlockOrLine;
+
+    for cy:=range[0] to range[1] do commented:=commented and lineIsCommented(cy);
+    if commented then for cy:=range[0] to range[1] do uncommentLine(cy)
+                 else for cy:=range[0] to range[1] do   commentLine(cy);
     editor.EndUndoBlock;
   end;
 
 PROCEDURE T_basicEditorMeta.moveLine(CONST up: boolean);
-  VAR first,last:longint;
-      oldBegin,oldEnd:TPoint;
+  VAR range:T_lineRange;
       blockDelta:longint=0;
   PROCEDURE moveUp;
     VAR oldLineText:string;
@@ -481,13 +493,13 @@ PROCEDURE T_basicEditorMeta.moveLine(CONST up: boolean);
         oldLineEnd  :TPoint;
         newLineStart:TPoint;
     begin
-      if first-2<0 then exit;
-      oldLineText:=editor.lines[first-2];
-      oldLineStart.y:=first-1; oldLineStart.x:=0;
-      oldLineEnd  .y:=first  ; oldLineEnd  .x:=0;
+      if (range[0]-2<0) or (range[1]>=editor.lines.count) then exit;
+      oldLineText:=editor.lines[range[0]-2];
+      oldLineStart.y:=range[0]-1; oldLineStart.x:=1;
+      oldLineEnd  .y:=range[0]  ; oldLineEnd  .x:=1;
       editor.SetTextBetweenPoints(oldLineStart,oldLineEnd,'');
-      newLineStart.y:=last;
-      newLineStart.x:=0;
+      newLineStart.y:=range[1];
+      newLineStart.x:=1;
       editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
       blockDelta:=-1;
     end;
@@ -498,34 +510,34 @@ PROCEDURE T_basicEditorMeta.moveLine(CONST up: boolean);
         oldLineEnd  :TPoint;
         newLineStart:TPoint;
     begin
-      if last>=editor.lines.count then exit;
-      oldLineText:=editor.lines[last];
-      oldLineStart.y:=last+1; oldLineStart.x:=0;
-      oldLineEnd  .y:=last+2; oldLineEnd  .x:=0;
+      if range[1]>=editor.lines.count-1 then exit;
+      oldLineText:=editor.lines[range[1]];
+      oldLineStart.y:=range[1]+1; oldLineStart.x:=1;
+      oldLineEnd  .y:=range[1]+2; oldLineEnd  .x:=1;
       editor.SetTextBetweenPoints(oldLineStart,oldLineEnd,'');
-      newLineStart.y:=first;
-      newLineStart.x:=0;
+      newLineStart.y:=range[0];
+      newLineStart.x:=1;
       editor.TextBetweenPoints[newLineStart,newLineStart]:=oldLineText+LineEnding;
       blockDelta:=1;
     end;
 
+  VAR oldBegin,oldEnd,oldCaret:TPoint;
   begin
     if editor.readonly then exit;
     oldBegin:=editor.BlockBegin;
     oldEnd  :=editor.BlockEnd;
-    if editor.BlockBegin.y<1 then begin
-      first:=editor.CaretY;
-      last :=first;
-    end else begin
-      first:=editor.BlockBegin.y;
-      last :=editor.BlockEnd  .y;
-    end;
+    oldCaret:=editor.CaretXY;
+    range:=currentBlockOrLine;
     editor.BeginUndoBlock;
+    //move lines
     if up then moveUp else moveDown;
+    //update caret
+     editor.CaretXY:=oldCaret;
+    editor.CaretY:=editor.CaretY+blockDelta;
+    //update selection range
     if (oldBegin.y>=1) then begin
       inc(oldBegin.y,blockDelta); editor.BlockBegin:=oldBegin;
       inc(oldEnd  .y,blockDelta); editor.BlockEnd  :=oldEnd;
-      editor.CaretY:=editor.CaretY+blockDelta;
     end;
     editor.EndUndoBlock;
   end;

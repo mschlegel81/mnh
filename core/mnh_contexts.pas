@@ -578,7 +578,7 @@ PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token:P_token);
   end;
 
 FUNCTION T_threadContext.getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token;
-  VAR data:pointer;
+  VAR data:pointer=nil;
   begin
     move(allowedSideEffects,data,sizeOf(data));
     if blocking then result:=recycler.newToken(location,'',tt_endRule,data)
