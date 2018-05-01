@@ -1016,6 +1016,29 @@ FUNCTION bitShift_impl intFuncSignature;
     end;
   end;
 
+FUNCTION divMod_impl intFuncSignature;
+  VAR i ,j ,
+      q ,r :T_bigInt;
+      II,jj:int64;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
+      i:=int0^.value;
+      j:=int1^.value;
+      if (j.isZero) then exit(newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
+      if i.canBeRepresentedAsInt64 and j.canBeRepresentedAsInt64 then begin
+        II:=i.toInt;
+        jj:=j.toInt;
+        exit(newListLiteral(2)^.appendInt(II div jj)
+                              ^.appendInt(II mod jj));
+      end else begin
+        i.divMod(j,q,r);
+        result:=newListLiteral(2)^.append(newIntLiteral(q),false)
+                                 ^.append(newIntLiteral(r),false);
+      end;
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary,'sqrt(n);//Returns the square root of numeric or expression parameter n');
@@ -1066,5 +1089,6 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'bitAnd'        ,@bitAnd_imp         ,ak_variadic_2,'bitAnd(x,y,relevantBits);//Returns bitwise x and y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
   registerRule(MATH_NAMESPACE,'bitOr'         ,@bitOr_imp          ,ak_variadic_2,'bitOr(x,y,relevantBits);//Returns bitwise x or y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
   registerRule(MATH_NAMESPACE,'bitXor'        ,@bitXor_imp         ,ak_variadic_2,'bitXor(x,y,relevantBits);//Returns bitwise x xor y assuming relevantBits, or the maximum number of bits in x and y if relevantBits are void or negative');
-  registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary,'bitShift(x:Int,bitsToShift);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed');
+  registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary,'bitShift(x:Int,bitsToShift:Int);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed');
+  registerRule(MATH_NAMESPACE,'divMod'        ,@divMod_impl        ,ak_binary,'divMod(x:Int,y:Int);//Returns a pair [x div y, x mod y]');
 end.
