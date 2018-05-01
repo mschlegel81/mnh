@@ -275,3 +275,6 @@ main('cleanup')->begin
              printf('Dropped timing values for "%s" because there is no corresponding script',caseWithoutTest);
            end);
 end;
+
+//*Return the MNH representation of the latest run times for a specific flavour
+main('lastTimes',flavour)->runTimes.pEach(caseEntry,[caseEntry[0],caseEntry[1,'FOWin64'].trailing[1]]).toMap.print;
