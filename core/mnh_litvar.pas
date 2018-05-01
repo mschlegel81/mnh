@@ -973,6 +973,7 @@ FUNCTION T_setLiteral.appendAll(CONST L:P_compoundLiteral):P_collectionLiteral;
       for E in P_setLiteral(L)^.dat.keyValueList do
       if dat.putNew(E,prevBool) then begin
         E.key^.rereference;
+        modifyType(E.key);
       end;
     end else for x in L^.iteratableList do append(x,false);
     result:=@self;
