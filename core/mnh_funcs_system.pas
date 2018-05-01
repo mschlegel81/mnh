@@ -18,7 +18,7 @@ FUNCTION resetRandom_impl intFuncSignature;
     if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
     result:=nil;
     if (params= nil) or  (params^.size=0) then begin context.getParent^.prng.resetSeed(0); result:=newVoidLiteral; end else
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin context.getParent^.prng.resetSeed(int0^.value.toInt); result:=newVoidLiteral; end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin context.getParent^.prng.resetSeed(int0^.value.getRawBytes); result:=newVoidLiteral; end;
   end;
 
 FUNCTION random_imp intFuncSignature;
