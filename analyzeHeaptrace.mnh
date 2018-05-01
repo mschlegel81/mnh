@@ -1,0 +1,37 @@
+private cleanline(s)->regex.replace(s,'\$\w+','').trim;
+
+main(inputFile)->begin
+  local block:=[];
+  inputFile.fileLineIterator.each(line,
+  begin
+    line=''
+    ? begin
+        local prevBlock:=block;
+        block:=[];
+        prevBlock.filter({$s<>''});
+      end
+    : begin
+        line.matches('^Call trace')
+        ? begin
+            local prevBlock:=block;
+            block:=[cleanline(line)];
+            prevBlock.filter({$s<>''});
+          end
+        : begin
+            block|=cleanline(line);
+            void;
+          end;
+      end;
+   end)|[block.filter({$s<>''})];
+end
+.elementFrequency
+//.each(e,print(e));
+.each(e,(e[0,0] orElse '').matches('^Call trace') AND e[0].size>1
+         ? [(e[0].head.split(' ').trailing.softCast)*e[1],e[1],e[0]]
+         : void)
+.sort
+.each(e,
+  begin
+    print(e[2].head,' x',e[1],' (',e[0],')');
+    printf('  %s',e[2].tail);
+  end);
