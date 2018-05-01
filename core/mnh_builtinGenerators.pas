@@ -138,9 +138,13 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
 
 FUNCTION rangeGenerator intFuncSignature;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      new(P_rangeGenerator(result),create(int0^.value.toInt,int1^.value.toInt,tokenLocation));
-    end else result:=nil;
+      if int0^.value.canBeRepresentedAsInt64() and
+         int1^.value.canBeRepresentedAsInt64()
+      then new(P_rangeGenerator(result),create(int0^.value.toInt,int1^.value.toInt,tokenLocation))
+      else context.adapters^.raiseError('rangeGenerator only accepts ranges in 64bit range',tokenLocation);
+    end;
   end;
 
 TYPE
