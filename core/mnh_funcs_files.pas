@@ -5,7 +5,7 @@ USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$end
      myGenerics,mySys,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_litVar,
      mnh_funcs,mnh_out_adapters,mnh_fileWrappers,
-     mnh_contexts;
+     mnh_contexts,mnh_datastores;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
@@ -122,6 +122,21 @@ FUNCTION fileContents_impl intFuncSignature;
         context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newStringLiteral('');
+      end;
+    end;
+  end;
+
+FUNCTION readDatastore_impl intFuncSignature;
+  VAR meta:T_datastoreMeta;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string) then begin
+      meta.create(str0^.value,str1^.value);
+      result:=meta.readValue(tokenLocation,context);
+      meta.destroy;
+      if (result=nil) and (context.adapters^.noErrors) then begin
+        result:=newVoidLiteral;
+        context.adapters^.raiseWarning('Datastore for script '+str0^.toString()+' and rule '+str1^.toString()+' does not exist',tokenLocation);
       end;
     end;
   end;
@@ -506,34 +521,35 @@ FUNCTION relativeFilename_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  registerRule(FILES_BUILTIN_NAMESPACE,'files'          ,@files_impl         ,ak_unary     ,'files(searchPattern:string);//Returns a list of files matching the given search pattern');
+  registerRule(FILES_BUILTIN_NAMESPACE,'files'          ,@files_impl         ,ak_unary     ,'files(searchPattern:String);//Returns a list of files matching the given search pattern');
   registerRule(FILES_BUILTIN_NAMESPACE,'allFiles'       ,@allFiles_impl      ,ak_variadic_1,'allFiles(root);//Returns a list of all files below root (string or stringList)#'+
                                                                                             'allFiles(root,pattern);//Returns a list of all files matching pattern(s) (string or stringList)#'+
                                                                                             'allFiles(root,pattern,recurse=false);//As above but without recursing subfolders');
-  registerRule(FILES_BUILTIN_NAMESPACE,'folders'        ,@folders_impl       ,ak_unary     ,'folders(searchPattern:string);//Returns a list of folders matching the given search pattern');
-  registerRule(FILES_BUILTIN_NAMESPACE,'allFolders'     ,@allFolders_impl    ,ak_unary     ,'allFolders(rootFolder:string);//Returns a list of all folders below and including a given root directory');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileExists'     ,@fileExists_impl    ,ak_unary     ,'fileExists(filename:string);//Returns true if the specified file exists and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'folderExists'   ,@folderExists_impl  ,ak_unary     ,'folderExists(foldername:string);//Returns true if the specified folder exists and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,ak_unary     ,'fileContents(filename:string);//Returns the contents of the specified file as one string');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileLines'      ,@fileLines_impl     ,ak_unary     ,'fileLines(filename:string);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost');
-  registerRule(FILES_BUILTIN_NAMESPACE,'writeFile'      ,@writeFile_impl     ,ak_binary    ,'writeFile(filename:string, content:string);//Writes the specified content to the specified file and returns true');
-  registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines' ,@writeFileLines_impl,ak_variadic_2,'writeFileLines(filename:string, content:stringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
-                                                                                                           'writeFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending');
-  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,ak_variadic_2,'appendFileLines(filename:string, content:stringList);//Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
-                                                                              'appendFileLines(filename:string, content:stringList, lineEnding:string);//As above with specified line ending (will be used only if a new file is created)');
+  registerRule(FILES_BUILTIN_NAMESPACE,'folders'        ,@folders_impl       ,ak_unary     ,'folders(searchPattern:String);//Returns a list of folders matching the given search pattern');
+  registerRule(FILES_BUILTIN_NAMESPACE,'allFolders'     ,@allFolders_impl    ,ak_unary     ,'allFolders(rootFolder:String);//Returns a list of all folders below and including a given root directory');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileExists'     ,@fileExists_impl    ,ak_unary     ,'fileExists(filename:String);//Returns true if the specified file exists and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'folderExists'   ,@folderExists_impl  ,ak_unary     ,'folderExists(foldername:String);//Returns true if the specified folder exists and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,ak_unary     ,'fileContents(filename:String);//Returns the contents of the specified file as one string');
+  registerRule(FILES_BUILTIN_NAMESPACE,'readDatastore'  ,@readDatastore_impl  ,ak_binary   ,'readDatastore(scriptPath:String,ruleName:String);//Tries to read the specified datastore; returns void if the datastore does not exist');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileLines'      ,@fileLines_impl     ,ak_unary     ,'fileLines(filename:String);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost');
+  registerRule(FILES_BUILTIN_NAMESPACE,'writeFile'      ,@writeFile_impl     ,ak_binary    ,'writeFile(filename:String, content:String);//Writes the specified content to the specified file and returns true');
+  registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines' ,@writeFileLines_impl,ak_variadic_2,'writeFileLines(filename:String, content:StringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                                                           'writeFileLines(filename:String, content:StringList, lineEnding:String);//As above with specified line ending');
+  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,ak_variadic_2,'appendFileLines(filename:String, content:StringList);//Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                              'appendFileLines(filename:String, content:StringList, lineEnding:String);//As above with specified line ending (will be used only if a new file is created)');
   registerRule(FILES_BUILTIN_NAMESPACE,'exec'           ,@execSync_impl,ak_variadic_1,
-                                       'exec(programPath:string);//Executes the specified program and returns the text output including stdErr output and the exitcode as a nested list: [[output,...],exitCode]#'+
-                                       'exec(programPath:string,parameters:flatList);//Executes the specified program with given command line parameters#'+
-                                       'exec(programPath:string,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
-                                       'exec(programPath:string,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output');
-  registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,ak_variadic_1,'execAsync(programPath:string,parameters ...);//Starts the specified program and returns void');
-  registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless'        ,@execPipeless_impl,ak_variadic_1,'execPipeless(programPath:string,parameters ...);//Executes the specified program, waiting for exit and returns the exit code');
-  registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,ak_unary     ,'deleteFile(filename:string);//Deletes the given file, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir'           ,@deleteDir_imp    ,ak_unary     ,'deleteDir(directoryname:string);//Deletes the given directory, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'copyFile'            ,@copyFile_imp     ,ak_binary    ,'copyFile(source:string,dest:string);//Copies a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'moveFile'            ,@moveFile_imp     ,ak_binary    ,'moveFile(source:string,dest:string);//Moves a file from source to dest, returning true on success and false otherwise');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo'            ,@fileInfo_imp     ,ak_unary     ,'fileInfo(filenameOrPattern:string);//Retuns file info as a key-value-list#fileInfo(filenameOrPattern:stringList);');
-  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats'           ,@fileStats_imp    ,ak_unary     ,'fileStats(filename:string);//Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:stringList);');
+                                       'exec(programPath:String);//Executes the specified program and returns the text output including stdErr output and the exitcode as a nested list: [[output,...],exitCode]#'+
+                                       'exec(programPath:String,parameters:flatList);//Executes the specified program with given command line parameters#'+
+                                       'exec(programPath:String,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
+                                       'exec(programPath:String,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output');
+  registerRule(FILES_BUILTIN_NAMESPACE,'execAsync'           ,@execAsync_impl   ,ak_variadic_1,'execAsync(programPath:String,parameters ...);//Starts the specified program and returns void');
+  registerRule(FILES_BUILTIN_NAMESPACE,'execPipeless'        ,@execPipeless_impl,ak_variadic_1,'execPipeless(programPath:String,parameters ...);//Executes the specified program, waiting for exit and returns the exit code');
+  registerRule(FILES_BUILTIN_NAMESPACE,'deleteFile'          ,@deleteFile_imp   ,ak_unary     ,'deleteFile(filename:String);//Deletes the given file, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'deleteDir'           ,@deleteDir_imp    ,ak_unary     ,'deleteDir(directoryname:String);//Deletes the given directory, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'copyFile'            ,@copyFile_imp     ,ak_binary    ,'copyFile(source:String,dest:String);//Copies a file from source to dest, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'moveFile'            ,@moveFile_imp     ,ak_binary    ,'moveFile(source:String,dest:String);//Moves a file from source to dest, returning true on success and false otherwise');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo'            ,@fileInfo_imp     ,ak_unary     ,'fileInfo(filenameOrPattern:String);//Retuns file info as a key-value-list#fileInfo(filenameOrPattern:StringList);');
+  registerRule(FILES_BUILTIN_NAMESPACE,'fileStats'           ,@fileStats_imp    ,ak_unary     ,'fileStats(filename:String);//Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:StringList);');
   registerRule(FILES_BUILTIN_NAMESPACE,'expandedFileName'    ,@expandedFileName_imp    ,ak_unary ,'expandedFileName(F);//Returns the expanded file name of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileDirectory',@extractFileDirectory_imp,ak_unary ,'extractFileDirectory(F);//Returns the expanded file directories of file(s) given by string or stringList F');
   registerRule(FILES_BUILTIN_NAMESPACE,'extractFileName'     ,@extractFileName_imp     ,ak_unary ,'extractFileName(F);//Returns the expanded file names (without path) of file(s) given by string or stringList F');
