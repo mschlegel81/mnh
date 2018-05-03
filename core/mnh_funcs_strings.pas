@@ -1,7 +1,7 @@
 UNIT mnh_funcs_strings;
 INTERFACE
 {$WARN 5024 OFF}
-USES sysutils,
+USES sysutils,math,
      LazUTF8,base64,LConvEncoding,
      synacode,
      diff,
@@ -14,13 +14,17 @@ IMPLEMENTATION
 {$i mnh_func_defines.inc}
 
 FUNCTION pos_imp intFuncSignature;
-  FUNCTION posInt(x,y:P_literal):P_intLiteral;
+  FUNCTION posInt(x,y:P_literal):P_literal;
+    VAR i:int64;
     begin
       if P_stringLiteral(x)^.getEncoding=se_utf8
-      then result:=newIntLiteral(int64(UTF8Pos(P_stringLiteral(x)^.value,
-                                               P_stringLiteral(y)^.value))-int64(1))
-      else result:=newIntLiteral(int64(    pos(P_stringLiteral(x)^.value,
-                                               P_stringLiteral(y)^.value))-int64(1));
+      then i:=int64(UTF8Pos(P_stringLiteral(x)^.value,
+                            P_stringLiteral(y)^.value))
+      else i:=int64(    pos(P_stringLiteral(x)^.value,
+                            P_stringLiteral(y)^.value));
+      i-=1;
+      if i<0 then result:=newRealLiteral(infinity)
+             else result:=newIntLiteral(i);
     end;
 
   VAR i:longint;
@@ -906,7 +910,7 @@ INITIALIZATION
   //Functions on Strings:
   registerRule(STRINGS_NAMESPACE,'length'        ,@length_imp        ,ak_unary     ,'length(S:string);//Returns the number of characters in string S');
   registerRule(STRINGS_NAMESPACE,'byteLength'    ,@byteLength_imp    ,ak_unary     ,'byteLength(S:string);//Returns the number of bytes in string S');
-  registerRule(STRINGS_NAMESPACE,'pos'           ,@pos_imp           ,ak_binary    ,'pos(subString,searchInString);//Returns the index of the first occurence of subString in searchInString or -1 if there is none');
+  registerRule(STRINGS_NAMESPACE,'pos'           ,@pos_imp           ,ak_binary    ,'pos(subString,searchInString);//Returns the index of the first occurence of subString in searchInString or Infinity if there is none');
   registerRule(STRINGS_NAMESPACE,'copy'          ,@copy_imp          ,ak_ternary   ,'copy(S,start,length)://Returns the substring of S starting at index start and having specified length');
   registerRule(STRINGS_NAMESPACE,'chars'         ,@chars_imp         ,ak_unary     ,'chars(S);//Returns the characters in S as a list#chars;//Returns all possible single-byte characters in natural ordering');
   registerRule(STRINGS_NAMESPACE,'charSet'       ,@charSet_imp       ,ak_unary     ,'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)');
