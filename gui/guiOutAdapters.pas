@@ -128,6 +128,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
 
   VAR i:longint;
       showFormsAfter:boolean=false;
+      evaluationEnded:boolean=false;
       s:string;
   begin
     system.enterCriticalSection(cs);
@@ -155,12 +156,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
           mt_displayTreeView: conditionalShowVarTrees;
           mt_displayCustomDialog: showFormsAfter:=true;
           mt_plotCreatedWithDeferredDisplay: begin end;
-          mt_endOfEvaluation: begin
-            if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
-            freeScriptedForms;
-            parentForm.onEndOfEvaluation;
-            syn.enabled:=true;
-          end;
+          mt_endOfEvaluation: evaluationEnded:=true;
           mt_gui_editScriptSucceeded  : parentForm.onEditFinished(data,true);
           mt_gui_editScriptFailed     : parentForm.onEditFinished(data,false);
           mt_gui_breakpointEncountered: parentForm.onBreakpoint  (data);
@@ -177,6 +173,13 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
       flushing:=false;
       system.leaveCriticalSection(cs);
       if showFormsAfter then conditionalShowCustomForms(guiAdapters);
+      if evaluationEnded then begin
+        if plotFormIsInitialized and plotForm.AnimationGroupBox.visible or guiAdapters.isDeferredPlotLogged then plotForm.doPlot();
+        freeScriptedForms;
+        if directPrintFlag then append(message(mt_printline,'',C_nilTokenLocation));
+        syn.enabled:=true;
+        parentForm.onEndOfEvaluation;
+      end;
     end;
   end;
 

@@ -51,6 +51,7 @@ TYPE
                                                                        mt_el2_warning,
                                                                        mt_el2_userWarning]);
       FUNCTION flushToGui:T_messageTypeSet; virtual;
+      PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
       PROCEDURE flushClear;
   end;
 

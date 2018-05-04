@@ -241,6 +241,10 @@ VAR
 FUNCTION defaultFormatting(CONST message:T_storedMessage; CONST includeGuiMarker:boolean): T_arrayOfString;
 OPERATOR :=(s:string):T_messageTypeSet;
 FUNCTION clearConsoleMessage:T_storedMessage;
+FUNCTION message(CONST messageType: T_messageType;
+                 CONST messageText: T_arrayOfString;
+                 CONST location   : T_searchTokenLocation;
+                 CONST data       : pointer=nil):T_storedMessage;
 IMPLEMENTATION
 VAR globalLockCs:TRTLCriticalSection;
 
