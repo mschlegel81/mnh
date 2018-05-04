@@ -598,43 +598,46 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
   VAR i:longint;
       r:P_inlineExpression;
       embrace:boolean;
+      preparedBodyLength:longint=0;
 
   PROCEDURE appendToExpression(VAR T:T_preparedToken);
     begin
-      setLength(preparedBody,length(preparedBody)+1);
-      with preparedBody[length(preparedBody)-1] do begin
+      with preparedBody[preparedBodyLength] do begin
         token.create;
         token.define(T.token);
         parIdx:=T.parIdx;
         if parIdx>=0 then token.txt:=pattern.idForIndexInline(parIdx);
       end;
+      inc(preparedBodyLength);
     end;
 
   PROCEDURE appendToExpression(CONST L:P_literal);
     begin
-      setLength(preparedBody,length(preparedBody)+1);
       L^.rereference;
-      with preparedBody[length(preparedBody)-1] do begin
+      with preparedBody[preparedBodyLength] do begin
         token.create;
         token.define(opLocation,'',tt_literal,L);
         parIdx:=-1;
       end;
+      inc(preparedBodyLength);
     end;
 
   PROCEDURE appendToExpression(CONST op:T_tokenType);
     begin
-      setLength(preparedBody,length(preparedBody)+1);
-      with preparedBody[length(preparedBody)-1] do begin
+      with preparedBody[preparedBodyLength] do begin
         token.create;
         token.define(opLocation,'',op);
         parIdx:=-1;
       end;
+      inc(preparedBodyLength);
     end;
 
   begin
     init(et_inline,opLocation);
+    preparedBodyLength:=1;
     //Pattern (including final parameter names)
     if LHS^.literalType=lt_expression then begin
+      //Lenght of prepared body of LHS, maybe brackets
       if RHS^.literalType=lt_expression
       then pattern.combineForInline(P_subruleExpression(LHS)^.pattern,
                                     P_subruleExpression(RHS)^.pattern,
@@ -645,6 +648,17 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
       then pattern.clone(P_subruleExpression(RHS)^.pattern)
       else pattern.create;
     end;
+    //calculate needed tokens
+    preparedBodyLength:=1;
+    if RHS^.literalType=lt_expression
+    then inc(preparedBodyLength,length(P_inlineExpression(RHS)^.preparedBody)+2)
+    else inc(preparedBodyLength);
+    if LHS^.literalType=lt_expression
+    then inc(preparedBodyLength,length(P_inlineExpression(LHS)^.preparedBody)+2)
+    else inc(preparedBodyLength);
+    setLength(preparedBody,preparedBodyLength);
+    preparedBodyLength:=0;
+    //construct
     if LHS^.literalType=lt_expression then begin
       r:=P_inlineExpression(LHS);
       if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
@@ -664,6 +678,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
       for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
       if embrace then appendToExpression(tt_braceClose);
     end else appendToExpression(RHS);
+    setLength(preparedBody,preparedBodyLength);
   end;
 
 FUNCTION newIdentityRule(VAR context:T_threadContext; CONST location:T_tokenLocation):P_subruleExpression;
