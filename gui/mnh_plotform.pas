@@ -447,6 +447,12 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
     begin
       AnimationGroupBox.visible:=(animation.frameCount>0);
       AnimationGroupBox.enabled:=(animation.frameCount>0);
+      if animation.frameCount>0 then begin
+        AnimationGroupBox.AutoSize:=true;
+      end else begin
+        AnimationGroupBox.AutoSize:=false;
+        AnimationGroupBox.height:=0;
+      end;
     end;
 
   begin
