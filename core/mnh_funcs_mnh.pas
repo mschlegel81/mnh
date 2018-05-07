@@ -11,8 +11,7 @@ USES sysutils,
      mnh_funcs;
 FUNCTION getMnhInfo:string;
 {$i mnh_func_defines.inc}
-VAR intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
-    BUILTIN_MYPATH:P_intFuncCallback;
+VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
 FUNCTION sleep_imp intFuncSignature;
   VAR sleepUntil:double;
@@ -185,52 +184,6 @@ FUNCTION getMnhInfo:string;
     disposeLiteral(L);
   end;
 
-{$MACRO ON}
-{$define funcForOp:=begin if (params<>nil) and (params^.size=2) then result:=resolveOperator(arg0,OP,arg1,tokenLocation,context.adapters^,@context) else result:=nil; end}
-{$define OP:=tt_comparatorEq     } FUNCTION funcFor_comparatorEq      intFuncSignature; funcForOp;
-{$define OP:=tt_comparatorNeq    } FUNCTION funcFor_comparatorNeq     intFuncSignature; funcForOp;
-{$define OP:=tt_comparatorLeq    } FUNCTION funcFor_comparatorLeq     intFuncSignature; funcForOp;
-{$define OP:=tt_comparatorGeq    } FUNCTION funcFor_comparatorGeq     intFuncSignature; funcForOp;
-{$define OP:=tt_comparatorLss    } FUNCTION funcFor_comparatorLss     intFuncSignature; funcForOp;
-{$define OP:=tt_comparatorGrt    } FUNCTION funcFor_comparatorGrt     intFuncSignature; funcForOp;
-{$define OP:=tt_comparatorListEq } FUNCTION funcFor_comparatorListEq  intFuncSignature; funcForOp;
-{$define OP:=tt_operatorAnd      } FUNCTION funcFor_operatorAnd       intFuncSignature; funcForOp;
-{$define OP:=tt_operatorOr       } FUNCTION funcFor_operatorOr        intFuncSignature; funcForOp;
-{$define OP:=tt_operatorXor      } FUNCTION funcFor_operatorXor       intFuncSignature; funcForOp;
-FUNCTION funcFor_operatorLazyAnd intFuncSignature;
-  begin
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_boolean) then begin
-      if bool0^.value then result:=arg1 else result:=arg0;
-      result^.rereference;
-    end else result:=nil;
-  end;
-
-FUNCTION funcFor_operatorLazyOr  intFuncSignature;
-  begin
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_boolean) then begin
-      if bool0^.value then result:=arg0 else result:=arg1;
-      result^.rereference;
-    end else result:=nil;
-  end;
-{$define OP:=tt_operatorPlus     } FUNCTION funcFor_operatorPlus      intFuncSignature; funcForOp;
-{$define OP:=tt_operatorMinus    } FUNCTION funcFor_operatorMinus     intFuncSignature; funcForOp;
-{$define OP:=tt_operatorMult     } FUNCTION funcFor_operatorMult      intFuncSignature; funcForOp;
-{$define OP:=tt_operatorDivReal  } FUNCTION funcFor_operatorDivReal   intFuncSignature; funcForOp;
-{$define OP:=tt_operatorDivInt   } FUNCTION funcFor_operatorDivInt    intFuncSignature; funcForOp;
-{$define OP:=tt_operatorMod      } FUNCTION funcFor_operatorMod       intFuncSignature; funcForOp;
-{$define OP:=tt_operatorPot      } FUNCTION funcFor_operatorPot       intFuncSignature; funcForOp;
-{$define OP:=tt_operatorStrConcat} FUNCTION funcFor_operatorStrConcat intFuncSignature; funcForOp;
-FUNCTION funcFor_operatorOrElse intFuncSignature;
-  begin
-    if (params<>nil) and ((params^.size=1) or (params^.size=2)) then begin
-      result:=arg0;
-      result^.rereference;
-    end else result:=nil;
-  end;
-{$define OP:=tt_operatorConcat   } FUNCTION funcFor_operatorConcat intFuncSignature; funcForOp;
-{$define OP:=tt_operatorIn       } FUNCTION funcFor_operatorIn     intFuncSignature; funcForOp;
-{$undef OP}
-{$undef funcForOp}
 INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'       ,@sleep_imp       ,ak_unary  ,'sleep(seconds:number);//Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleepUntil'  ,@sleepUntil_imp  ,ak_unary  ,'sleepUntil(wallClockSeconds:number);//Sleeps until the wallclock reaches the given value');
@@ -242,28 +195,4 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,ak_nullary,'listKeywords;//Returns a list of all keywords by category');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'         ,@ord_imp         ,ak_unary  ,'ord(x);//Returns the ordinal value of x');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo'     ,@mnhInfo_imp     ,ak_nullary,'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH');
-  intFuncForOperator[tt_comparatorEq     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::='     ,@funcFor_comparatorEq     ,ak_binary,'//Function wrapper for operator =');
-  intFuncForOperator[tt_comparatorNeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::!='    ,@funcFor_comparatorNeq    ,ak_binary,'//Function wrapper for operator !=');
-  intFuncForOperator[tt_comparatorLeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::<='    ,@funcFor_comparatorLeq    ,ak_binary,'//Function wrapper for operator <=');
-  intFuncForOperator[tt_comparatorGeq    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::>='    ,@funcFor_comparatorGeq    ,ak_binary,'//Function wrapper for operator >=');
-  intFuncForOperator[tt_comparatorLss    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::<'     ,@funcFor_comparatorLss    ,ak_binary,'//Function wrapper for operator <');
-  intFuncForOperator[tt_comparatorGrt    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::>'     ,@funcFor_comparatorGrt    ,ak_binary,'//Function wrapper for operator >');
-  intFuncForOperator[tt_comparatorListEq ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::=='    ,@funcFor_comparatorListEq ,ak_binary,'//Function wrapper for operator ==');
-  intFuncForOperator[tt_operatorAnd      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::and'   ,@funcFor_operatorAnd      ,ak_binary,'//Function wrapper for operator and');
-  intFuncForOperator[tt_operatorOr       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::or'    ,@funcFor_operatorOr       ,ak_binary,'//Function wrapper for operator or');
-  intFuncForOperator[tt_operatorXor      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::xor'   ,@funcFor_operatorXor      ,ak_binary,'//Function wrapper for operator xor');
-  intFuncForOperator[tt_operatorLazyAnd  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::AND'   ,@funcFor_operatorLazyAnd  ,ak_binary,'//Function wrapper for operator AND#');
-  intFuncForOperator[tt_operatorLazyOr   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::OR'    ,@funcFor_operatorLazyOr   ,ak_binary,'//Function wrapper for operator OR'    );
-  intFuncForOperator[tt_operatorPlus     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::+'     ,@funcFor_operatorPlus     ,ak_binary,'//Function wrapper for operator +'     );
-  intFuncForOperator[tt_operatorMinus    ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::-'     ,@funcFor_operatorMinus    ,ak_binary,'//Function wrapper for operator -'     );
-  intFuncForOperator[tt_operatorMult     ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::*'     ,@funcFor_operatorMult     ,ak_binary,'//Function wrapper for operator *'     );
-  intFuncForOperator[tt_operatorDivReal  ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::/'     ,@funcFor_operatorDivReal  ,ak_binary,'//Function wrapper for operator /'     );
-  intFuncForOperator[tt_operatorDivInt   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::div'   ,@funcFor_operatorDivInt   ,ak_binary,'//Function wrapper for operator div'   );
-  intFuncForOperator[tt_operatorMod      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::mod'   ,@funcFor_operatorMod      ,ak_binary,'//Function wrapper for operator mod'   );
-  intFuncForOperator[tt_operatorPot      ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::^'     ,@funcFor_operatorPot      ,ak_binary,'//Function wrapper for operator ^'     );
-  intFuncForOperator[tt_operatorStrConcat]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::&'     ,@funcFor_operatorStrConcat,ak_binary,'//Function wrapper for operator &'     );
-  intFuncForOperator[tt_operatorOrElse   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::orElse',@funcFor_operatorOrElse   ,ak_binary,'//Function wrapper for operator orElse');
-  intFuncForOperator[tt_operatorConcat   ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::|'     ,@funcFor_operatorConcat   ,ak_binary,'//Function wrapper for operator |'     );
-  intFuncForOperator[tt_operatorIn       ]:=registerRule(DEFAULT_BUILTIN_NAMESPACE,'::in'    ,@funcFor_operatorIn       ,ak_binary,'//Function wrapper for operator in'    );
-
 end.

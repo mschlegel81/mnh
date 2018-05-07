@@ -10,6 +10,7 @@ USES sysutils,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
      mnh_funcs,
+     mnh_operators,
      mnh_funcs_mnh,
      mnh_funcs_math,
      mnh_funcs_list,

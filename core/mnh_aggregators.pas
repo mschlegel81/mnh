@@ -6,7 +6,8 @@ USES //my libraries
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
      mnh_contexts,
-     mnh_litVar;
+     mnh_litVar,
+     mnh_operators;
 TYPE
   T_aggregator=object
   private

@@ -18,7 +18,8 @@ USES //basic classes
      mnh_debuggingVar,
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
-     mnh_patterns;
+     mnh_patterns,
+     mnh_operators;
 TYPE
   T_subruleAttribute=record
     key,value:string;
