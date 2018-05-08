@@ -15,12 +15,13 @@ TYPE
   P_rule=^T_rule;
   T_ruleList=array of P_rule;
   T_rule=object(T_abstractRule)
+    hiddenRule:P_intFuncCallback;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
     {$ifdef fullVersion}
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
     {$endif}
-    FUNCTION isCurryFallbackPossible(CONST ruleTokenType:T_tokenType; CONST commonArity:longint; CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
+    FUNCTION isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST commonArity:longint; CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
   end;
 
   P_ruleWithSubrules=^T_ruleWithSubrules;
@@ -122,11 +123,20 @@ TYPE
   end;
 
 IMPLEMENTATION
-FUNCTION T_rule.isCurryFallbackPossible(CONST ruleTokenType:T_tokenType; CONST commonArity:longint; CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
+FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST commonArity:longint; CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
   VAR tempToken:P_token;
       tempInline:P_inlineExpression;
       parHead,parTail:P_listLiteral;
+      tempLiteral:P_literal;
   begin
+    if hiddenRule<>nil then begin
+      tempLiteral:=hiddenRule(givenParameters,callLocation,context);
+      if tempLiteral<>nil then begin
+        firstRep:=context.recycler.newToken(callLocation,'',tt_literal,tempLiteral);
+        lastRep:=firstRep;
+        exit(true);
+      end;
+    end;
     if (givenParameters=nil) or (commonArity<0) then exit(false);
     result:=false;
     if (givenParameters^.size<commonArity) then begin
@@ -177,6 +187,7 @@ PROCEDURE T_ruleWithSubrules.checkParameters(VAR context:T_threadContext);
 CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST ruleTyp: T_ruleType);
   begin
     inherited create(ruleId,startAt,ruleTyp);
+    hiddenRule:=nil;
     setLength(subrules,0);
   end;
 
@@ -200,6 +211,7 @@ CONSTRUCTOR T_typecheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tok
 CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate: boolean; CONST ruleType: T_ruleType);
   begin
     inherited create(ruleId,startAt,ruleType);
+    hiddenRule:=nil;
     meta.create;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);
@@ -325,7 +337,7 @@ FUNCTION T_ruleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; CONST call
     result:=false;
     for sub in subrules do if ((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or (sub^.isPublic)) and sub^.replaces(param,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then exit(true);
     if (getId<>MAIN_RULE_ID)
-    then result:=isCurryFallbackPossible(ruleTokenType,commonArity,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
+    then result:=isFallbackPossible(ruleTokenType,commonArity,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
   end;
 
 FUNCTION T_protectedRuleWithSubrules.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
@@ -404,7 +416,7 @@ exit}
       end;
       CLEAN_EXIT(true);
     end;
-    if isCurryFallbackPossible(ruleTokenType,commonArity,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^)
+    if isFallbackPossible(ruleTokenType,commonArity,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^)
     then begin CLEAN_EXIT(true); end
     else begin CLEAN_EXIT(false); end;
   end;
@@ -483,7 +495,7 @@ FUNCTION T_mutableRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocat
       system.leaveCriticalSection(rule_cs);
       lastRep:=firstRep;
       called:=true;
-    end else result:=isCurryFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
+    end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
   end;
 
 FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
@@ -495,7 +507,7 @@ FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
       firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
       lastRep:=firstRep;
       system.leaveCriticalSection(rule_cs);
-    end else result:=isCurryFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
+    end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
   end;
 
 FUNCTION T_typecheckRule.getFirstParameterTypeWhitelist:T_literalTypeSet;

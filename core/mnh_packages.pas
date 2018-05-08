@@ -1498,9 +1498,6 @@ DESTRUCTOR T_package.destroy;
   end;
 
 FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_adapters): P_rule;
-  VAR ruleType:T_ruleType=rt_normal;
-      i:longint;
-      op:T_tokenType;
   PROCEDURE raiseModifierComplaint;
     VAR m:T_modifier;
         s:string='';
@@ -1509,6 +1506,10 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
       adapters.raiseError('Invalid combination of modifiers: '+s,ruleDeclarationStart);
     end;
 
+  VAR ruleType:T_ruleType=rt_normal;
+      i:longint;
+      op:T_tokenType;
+      hidden:P_intFuncCallback;
   begin
     i:=0;
     while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers) do inc(i);
@@ -1537,16 +1538,18 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
       packageRules.put(ruleId,result);
-      if intrinsicRuleMap.containsKey(ruleId) then begin
-        for op in overridableOperators do if operatorName[op]=ruleId
+      if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
+        for op in allOperators do if operatorName[op]=ruleId
         then begin
-          customOperatorRules[op]:=result;
-          adapters.raiseWarning('Overriding operator '+C_tokenInfo[op].defaultId,ruleDeclarationStart);
+          if op in overridableOperators then begin
+            customOperatorRules[op]:=result;
+            adapters.raiseNote('Overloading operator '+C_tokenInfo[op].defaultId,ruleDeclarationStart);
+          end else adapters.raiseError('Operator '+C_tokenInfo[op].defaultId+' cannot be overridden',ruleDeclarationStart);
           exit(result);
         end;
-        adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
-
-      end;
+        result^.hiddenRule:=hidden;
+        adapters.raiseNote('Overloading builtin rule "'+ruleId+'"',ruleDeclarationStart);
+      end else result^.hiddenRule:=nil;
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
