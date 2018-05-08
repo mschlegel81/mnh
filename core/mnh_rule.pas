@@ -16,6 +16,7 @@ TYPE
   T_ruleList=array of P_rule;
   T_rule=object(T_abstractRule)
     hiddenRule:P_intFuncCallback;
+    allowCurrying:boolean;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
     FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
     {$ifdef fullVersion}
@@ -137,7 +138,7 @@ FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST common
         exit(true);
       end;
     end;
-    if (givenParameters=nil) or (commonArity<0) then exit(false);
+    if not(allowCurrying) or (givenParameters=nil) or (commonArity<0) then exit(false);
     result:=false;
     if (givenParameters^.size<commonArity) then begin
       //CURRY
@@ -188,6 +189,7 @@ CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T
   begin
     inherited create(ruleId,startAt,ruleTyp);
     hiddenRule:=nil;
+    allowCurrying:=true;
     setLength(subrules,0);
   end;
 
@@ -212,6 +214,7 @@ CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_toke
   begin
     inherited create(ruleId,startAt,ruleType);
     hiddenRule:=nil;
+    allowCurrying:=true;
     meta.create;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);

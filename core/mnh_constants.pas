@@ -471,7 +471,8 @@ TYPE
     modifier_plain,
     modifier_synchronized,
     modifier_local,
-    modifier_customType);
+    modifier_customType,
+    modifier_noCurry);
   T_modifierSet=set of T_modifier;
 CONST
   C_modifierInfo:array[T_modifier] of record
@@ -484,7 +485,8 @@ CONST
        (name:'plain';         helpText:'Modifies a datastore to use plain text instead of default binary format'        ; isRuleModifier:true ),
        (name:'synchronized';  helpText:'Protects the rule from concurrent execution.'                                   ; isRuleModifier:true ),
        (name:'local';         helpText:'Used for declaring block-local variables'                                       ; isRuleModifier:false),
-       (name:'type';          helpText:'Used for declaring custom type checks'                                          ; isRuleModifier:true ));
+       (name:'type';          helpText:'Used for declaring custom type checks'                                          ; isRuleModifier:true ),
+       (name:'nocurry';       helpText:'Used to suppress currying/uncurrying'                                           ; isRuleModifier:true ));
 
   C_specialWordInfo:array[0..5] of record
     txt:string;
