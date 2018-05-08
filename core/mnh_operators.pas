@@ -15,7 +15,8 @@ USES math,
 
 {$i mnh_func_defines.inc}
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
-CONST overridableOperators:T_tokenTypeSet=[
+CONST allOperators:T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
+      overridableOperators:T_tokenTypeSet=[
       tt_comparatorEq     ,
       tt_comparatorNeq    ,
       tt_comparatorLeq    ,
@@ -25,8 +26,6 @@ CONST overridableOperators:T_tokenTypeSet=[
       tt_operatorAnd      ,
       tt_operatorOr       ,
       tt_operatorXor      ,
-      tt_operatorLazyAnd  ,
-      tt_operatorLazyOr   ,
       tt_operatorPlus     ,
       tt_operatorMinus    ,
       tt_operatorMult     ,
@@ -834,11 +833,11 @@ INITIALIZATION
   registerOperator(tt_comparatorLss    ,@comparator_Lss    ,@perform_lss);
   registerOperator(tt_comparatorGrt    ,@comparator_Grt    ,@perform_grt);
   registerOperator(tt_comparatorListEq ,@comparator_ListEq ,@perform_listEq);
+  registerOperator(tt_operatorLazyAnd  ,@operator_And      ,@perform_and      );
+  registerOperator(tt_operatorLazyOr   ,@operator_Or       ,@perform_or       );
   registerOperator(tt_operatorAnd      ,@operator_And      ,@perform_and      );
   registerOperator(tt_operatorOr       ,@operator_Or       ,@perform_or       );
   registerOperator(tt_operatorXor      ,@operator_Xor      ,@perform_xor      );
-  registerOperator(tt_operatorLazyAnd  ,@operator_And      ,@perform_and      );
-  registerOperator(tt_operatorLazyOr   ,@operator_Or       ,@perform_or       );
   registerOperator(tt_operatorPlus     ,@operator_Plus     ,@perform_plus     );
   registerOperator(tt_operatorMinus    ,@operator_Minus    ,@perform_minus    );
   registerOperator(tt_operatorMult     ,@operator_Mult     ,@perform_mult     );
