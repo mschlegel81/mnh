@@ -10,6 +10,7 @@ USES sysutils,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
      mnh_funcs,
+     mnh_operators,
      mnh_funcs_mnh,
      mnh_funcs_math,
      mnh_funcs_list,
@@ -585,7 +586,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
                                     cTokType[-1],
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
-                                    context.adapters^,
                                     @context);
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
@@ -604,7 +604,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
                                     cTokType[-1],
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
-                                    context.adapters^,
                                     @context);
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
@@ -881,7 +880,6 @@ end}
                                       stack.topType,
                                       first^.data,
                                       stack.dat[stack.topIndex]^.location,
-                                      context.adapters^,
                                       @context);
               //LHS literal is now result of first comparison (still a literal)
               disposeLiteral(stack.dat[stack.topIndex-1]^.data);

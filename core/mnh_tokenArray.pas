@@ -13,13 +13,17 @@ USES sysutils,math,
      {$endif}
      mnh_tokens,mnh_out_adapters;
 TYPE
+  T_customOperatorArray=array[tt_comparatorEq..tt_operatorConcatAlt] of P_abstractRule;
   P_abstractPackage=^T_abstractPackage;
   T_abstractPackage=object(T_objectWithPath)
     private
       codeProvider:P_codeProvider;
       readyForCodeState:T_hashInt;
     protected
+      customOperatorRules:T_customOperatorArray;
       PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
+      PROCEDURE clearCustomOperators;
+      PROCEDURE mergeCustomOps(CONST other:T_customOperatorArray);
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
@@ -31,6 +35,7 @@ TYPE
       FUNCTION getPath:ansistring; virtual;
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
+      PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
       {$ifdef fullVersion}
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -315,7 +320,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       then doc:=functionDocMap.get(copy(tokenText,2,length(tokenText)-1))
       else doc:=functionDocMap.get(tokenText);
       if doc=nil then exit('');
-      result:='Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
+      result:='builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
   begin
     result.infoText:='(eol)';
@@ -367,7 +372,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
-         result.infoText+='hides '+getBuiltinRuleInfo;
+         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo;
       end;
       tt_type,tt_typeCheck:
         result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
@@ -889,10 +894,25 @@ FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhanced
 
 {$endif}
 
+PROCEDURE T_abstractPackage.clearCustomOperators;
+  VAR op:T_tokenType;
+  begin
+    for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do customOperatorRules[op]:=nil;
+  end;
+
+PROCEDURE T_abstractPackage.mergeCustomOps(CONST other:T_customOperatorArray);
+  VAR op:T_tokenType;
+  begin
+    for op:=low(T_customOperatorArray) to high(T_customOperatorArray)
+    do if customOperatorRules[op] =nil
+     then customOperatorRules[op]:=other[op];
+  end;
+
 CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);
   begin
     codeProvider:=provider;
     readyForCodeState:=0;
+    clearCustomOperators;
   end;
 
 CONSTRUCTOR T_extendedPackage.create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);

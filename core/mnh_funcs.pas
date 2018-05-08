@@ -51,6 +51,7 @@ TYPE
   end;
 
 VAR
+  intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
   intrinsicRuleMap:specialize G_stringKeyMap<P_intFuncCallback>;
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;

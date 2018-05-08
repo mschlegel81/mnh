@@ -231,9 +231,8 @@ A list of allowed side effects can given in a comma separated manner, e.g. <code
   <li><h3><a href="types.html">Types</a></h4></li>
   <li><h3><a href="operators.html">Operators</a></h4></li>
 <ul>
-<li>
-<h4><a href="#overview"> Overview</a></h4></li>
-<h4><a href="#scalarOps"> Scalar operators</a></h4></li>
+<li><h4><a href="#overview"> Overview</a></h4></li>
+<li><h4><a href="#scalarOps"> Scalar operators</a></h4></li>
 <ul>
   <li><h5><a href="#arithOps"> Arithmetic operators</a></h5></li>
   <li><h5><a href="#compOps"> Comparators </a></h5></li>
@@ -246,6 +245,7 @@ A list of allowed side effects can given in a comma separated manner, e.g. <code
 <li><h4><a href="#assignmentOps"> Assignment operators</a></h4></li>
 <li><h4><a href="#cStyleOps"> C-Style operators</a></h4></li>
 <li><h4><a href="#funcToExp"> Function-to-Expression</a></h4></li>
+<li><h4><a href="#opOverloading"> Operator overloading</a></h4></li>
 </ul>
   <li><h3><a href="functions.html">Functions</a></h4></li>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
@@ -258,44 +258,44 @@ A list of allowed side effects can given in a comma separated manner, e.g. <code
 <div class="docContent">
 <h3><a name="overview"> Overview<a></h3>
 <table>
-  <tr><td>Op.</td><td>Precedence</td><td>Name</td></tr>
-<tr><td><code>|</code></td><td>1</td><td> list concatenation</td></tr>
-<tr><td><code>^</code></td><td>2</td><td> potentiation</td></tr>
-<tr><td><code>**</code></td><td>2</td><td> potentiation (alias)</td></tr>
-<tr><td><code>*</code></td><td>3</td><td> multiplication</td></tr>
-<tr><td><code>/</code></td><td>3</td><td> division</td></tr>
-<tr><td><code>div</code></td><td>3</td><td> integer division</td></tr>
-<tr><td><code>mod</code></td><td>3</td><td> modulo</td></tr>
-<tr><td><code>+</code></td><td>4</td><td> plus</td></tr>
-<tr><td><code>-</code></td><td>4</td><td> minus</td></tr>
-<tr><td><code>&</code></td><td>5</td><td> string concatenation</td></tr>
-<tr><td><code>=</code></td><td>6</td><td> equals (mathematical)</td></tr>
-<tr><td><code><></code></td><td>6</td><td> not equals</td></tr>
-<tr><td><code>!=</code></td><td>6</td><td> not equals</td></tr>
-<tr><td><code><=</code></td><td>6</td><td> lesser/equals</td></tr>
-<tr><td><code>>=</code></td><td>6</td><td> greater/equals</td></tr>
-<tr><td><code><</code></td><td>6</td><td> lesser</td></tr>
-<tr><td><code>></code></td><td>6</td><td> greater</td></tr>
-<tr><td><code>==</code></td><td>6</td><td> equals (technical)</td></tr>
-<tr><td><code>in</code></td><td>7</td><td> in</td></tr>
-<tr><td><code>+</code></td><td>8</td><td> unary plus</td></tr>
-<tr><td><code>-</code></td><td>8</td><td> unary minus</td></tr>
-<tr><td><code>and</code></td><td>8</td><td> bitwise and</td></tr>
-<tr><td><code>AND</code></td><td>8</td><td> lazy and</td></tr>
-<tr><td><code>orElse </code></td><td>9</td><td> orElse</td></tr>
-<tr><td><code>or</code></td><td>9</td><td> bitwise or</td></tr>
-<tr><td><code>xor</code></td><td>9</td><td> bitwise exclusive or</td></tr>
-<tr><td><code>OR</code></td><td>9</td><td> lazy or</td></tr>
-<tr><td><code>? :</code></td><td>n/a</td><td> ternary inline if operator</td></tr>
-<tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td></tr>
-<tr><td><code>+=</code></td><td>n/a</td><td> increment</td></tr>
-<tr><td><code>-=</code></td><td>n/a</td><td> decrement</td></tr>
-<tr><td><code>*=</code></td><td>n/a</td><td> assign-multiply</td></tr>
-<tr><td><code>/=</code></td><td>n/a</td><td> assign-divide</td></tr>
-<tr><td><code>&=</code></td><td>n/a</td><td> assign-string-concat</td></tr>
-<tr><td><code>|=</code></td><td>n/a</td><td> append</td></tr>
-<tr><td><code>>></code></td><td>n/a</td><td> map/set drop</td></tr>
-<tr><td><code>::</code></td><td>n/a</td><td> function-to-expression</td></tr>
+  <tr><td>Op.</td><td>Precedence</td><td>Name</td><td>Function</td><td>Overridable</td></tr>
+<tr><td><code>|</code></td><td>1</td><td> list concatenation</td><td><code><span class="builtin">mnh.OPERATOR_CONCAT</span></code></td><td>no</td></tr>
+<tr><td><code>^</code></td><td>2</td><td> potentiation</td><td><code><span class="builtin">mnh.OPERATOR_POT</span></code></td><td>yes</td></tr>
+<tr><td><code>**</code></td><td>2</td><td> potentiation (alias)</td><td><code><span class="builtin">mnh.OPERATOR_POT</span></code></td><td>yes</td></tr>
+<tr><td><code>*</code></td><td>3</td><td> multiplication</td><td><code><span class="builtin">mnh.OPERATOR_MULT</span></code></td><td>yes</td></tr>
+<tr><td><code>/</code></td><td>3</td><td> division</td><td><code><span class="builtin">mnh.OPERATOR_DIVREAL</span></code></td><td>yes</td></tr>
+<tr><td><code>div</code></td><td>3</td><td> integer division</td><td><code><span class="builtin">mnh.OPERATOR_DIVINT</span></code></td><td>yes</td></tr>
+<tr><td><code>mod</code></td><td>3</td><td> modulo</td><td><code><span class="builtin">mnh.OPERATOR_MOD</span></code></td><td>yes</td></tr>
+<tr><td><code>+</code></td><td>4</td><td> plus</td><td><code><span class="builtin">mnh.OPERATOR_PLUS</span></code></td><td>yes</td></tr>
+<tr><td><code>-</code></td><td>4</td><td> minus</td><td><code><span class="builtin">mnh.OPERATOR_MINUS</span></code></td><td>yes</td></tr>
+<tr><td><code>&</code></td><td>5</td><td> string concatenation</td><td><code><span class="builtin">mnh.OPERATOR_STRCONCAT</span></code></td><td>yes</td></tr>
+<tr><td><code>=</code></td><td>6</td><td> equals (mathematical)</td><td><code><span class="builtin">mnh.COMPARATOR_EQ</span></code></td><td>yes</td></tr>
+<tr><td><code><></code></td><td>6</td><td> not equals</td><td><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></td><td>yes</td></tr>
+<tr><td><code>!=</code></td><td>6</td><td> not equals (alias)</td><td><code><span class="builtin">mnh.COMPARATOR_NEQ</span></code></td><td>yes</td></tr>
+<tr><td><code><=</code></td><td>6</td><td> lesser/equals</td><td><code><span class="builtin">mnh.COMPARATOR_LEQ</span></code></td><td>yes</td></tr>
+<tr><td><code>>=</code></td><td>6</td><td> greater/equals</td><td><code><span class="builtin">mnh.COMPARATOR_GEQ</span></code></td><td>yes</td></tr>
+<tr><td><code><</code></td><td>6</td><td> lesser</td><td><code><span class="builtin">mnh.COMPARATOR_LSS</span></code></td><td>yes</td></tr>
+<tr><td><code>></code></td><td>6</td><td> greater</td><td><code><span class="builtin">mnh.COMPARATOR_GRT</span></code></td><td>yes</td></tr>
+<tr><td><code>==</code></td><td>6</td><td> equals (technical)</td><td><code><span class="builtin">mnh.COMPARATOR_LISTEQ</span></code></td><td>no</td></tr>
+<tr><td><code>in</code></td><td>7</td><td> in</td><td><code><span class="builtin">mnh.OPERATOR_IN</span></code></td><td>no</td></tr>
+<tr><td><code>+</code></td><td>8</td><td> unary plus</td><td>-</td><td>no</td></tr>
+<tr><td><code>-</code></td><td>8</td><td> unary minus</td><td>-</td><td>no</td></tr>
+<tr><td><code>and</code></td><td>8</td><td> bitwise and</td><td><code><span class="builtin">mnh.OPERATOR_AND</span></code></td><td>yes</td></tr>
+<tr><td><code>AND</code></td><td>8</td><td> lazy and</td><td><code><span class="builtin">mnh.OPERATOR_LAZYAND</span></code></td><td>no</td></tr>
+<tr><td><code>orElse </code></td><td>9</td><td> orElse</td><td><code><span class="builtin">mnh.OPERATOR_ORELSE</span></code></td><td>no</td></tr>
+<tr><td><code>or</code></td><td>9</td><td> bitwise or</td><td><code><span class="builtin">mnh.OPERATOR_OR</span></code></td><td>yes</td></tr>
+<tr><td><code>xor</code></td><td>9</td><td> bitwise exclusive or</td><td><code><span class="builtin">mnh.OPERATOR_XOR</span></code></td><td>yes</td></tr>
+<tr><td><code>OR</code></td><td>9</td><td> lazy or</td><td><code><span class="builtin">mnh.OPERATOR_LAZYOR</span></code></td><td>no</td></tr>
+<tr><td><code>? :</code></td><td>n/a</td><td> ternary inline if operator</td><td>-</td><td>no</td></tr>
+<tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td><td>-</td><td>no</td></tr>
+<tr><td><code>+=</code></td><td>n/a</td><td> increment</td><td>-</td><td>no</td></tr>
+<tr><td><code>-=</code></td><td>n/a</td><td> decrement</td><td>-</td><td>no</td></tr>
+<tr><td><code>*=</code></td><td>n/a</td><td> assign-multiply</td><td>-</td><td>no</td></tr>
+<tr><td><code>/=</code></td><td>n/a</td><td> assign-divide</td><td>-</td><td>no</td></tr>
+<tr><td><code>&=</code></td><td>n/a</td><td> assign-string-concat</td><td>-</td><td>no</td></tr>
+<tr><td><code>|=</code></td><td>n/a</td><td> append</td><td>-</td><td>no</td></tr>
+<tr><td><code>>></code></td><td>n/a</td><td> map/set drop</td><td>-</td><td>no</td></tr>
+<tr><td><code>::</code></td><td>n/a</td><td> function-to-expression</td><td>-</td><td>no</td></tr>
 </table>
 
 <h3><br><a name="scalarOps"> Scalar operators<a></h3>
@@ -329,7 +329,7 @@ For expression-literals, all operators will be used to expand the expression to 
 {<span class="identifier">expr</span>} <span class="operator">o</span> <span class="identifier">X</span> <span class="operator">-></span> {(<span class="identifier">expr</span> <span class="operator">o</span> <span class="identifier">X</span>)}
 </code>
 
-<h4><br><a name="#arithOps"> Arithmetic operators</a></h4>
+<h4><br><a name="arithOps"> Arithmetic operators</a></h4>
 <table border="0">
 <tr><td><code>+</code></td><td><h5>Addition</h5></td></tr><tr><td></td><td>
 This is the common addition operator, which also doubles as an unary "neutral" operator.<br> As in many modern languages, the operator is overloaded for string concatenation.
@@ -748,6 +748,13 @@ For built-in rules:<code>
 <!--end-->
 </code>
 
+<h3><br><a name="opOverloading"> Operator overloading</a></h3>
+
+<i>Operator overloading</i> is supported for most operators via overloading of the corresponding functions, see <a href="#overview">overview table</a>.
+<br>If an operator is redefined, then the redefinition with a matching pattern is applied. If no such redefinition exists, the builtin operator is 
+used as a fallback.
+<br>Note that overriding <code>=</code> does <b>not</b> implicitly override <code>!=</code> etc. so you must take care of common symmetries yourself. 
+
 </div>
 <!--commonFoot-->
 <!--file functions.html-->
@@ -765,7 +772,8 @@ For built-in rules:<code>
     <li><h4><a href="#variadic">Variadic functions</a></h4></li>
     <li><h4><a href="#beginEnd">Begin-End-Blocks</a></h4></li>
     <li><h4><a href="#beginSaveEnd">Begin-Save-End-Blocks</a></h4></li>
-    <li><h4><a href="#modifiers">Modifiers</a></h4><ul>
+    <li><h4><a href="#funcOverride">Overloading builtin functions</a></h4></li>	
+	<li><h4><a href="#modifiers">Modifiers</a></h4><ul>
       <li><h5><a href="#privateMod">private</a></h5></li>
       <li><h5><a href="#memoizedMod">memoized</a></h5></li>
       <li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
@@ -983,7 +991,7 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
 Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End-Blocks if block local variables are reassigned.
 
-<h3><br><a name="beginEnd">Begin-Save-End-Blocks</a></h3>
+<h3><br><a name="beginSaveEnd">Begin-Save-End-Blocks</a></h3>
 
 <i>Begin-Save-End-Blocks</i> are an extension to begin-end-blocks inspired by FORTRAN's "SAVE" keyword. <br>
 These blocks allow to store an internal state of an expression. The <code><span class="builtin">save</span></code> keyword is interpreted on the same level
@@ -1049,6 +1057,15 @@ And the helper functions:<code>
   nextPermutation()->void;
 <!--end-->
 </code>
+
+<h3><br><a name="funcOverride">Overloading builtin functions</a></h3>
+You can override builtin functions by declaring a function of the same name. If a function is overridden, the evaluation order is as follows:
+<ul>
+<li>Try to apply the user defined function as is</li>
+<li>Try to apply the builtin function</li>
+<li>Try to curry/uncurry the user defined function</li>
+</ul>
+If the overridden function is a wrapper for an operator, the operator is overridden (see <a href="operators.html#opOverloading">Operator overloading</a>).
 
 <h3><br><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
