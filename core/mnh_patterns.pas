@@ -643,6 +643,9 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.customTypeCheck:=parts[i].first^.data;
+              {$ifdef fullVersion}
+              rulePatternElement.customTypeCheck^.setIdResolved;
+              {$endif}
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
               assertNil(parts[i].first);

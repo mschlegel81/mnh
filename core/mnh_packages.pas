@@ -88,7 +88,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
@@ -1512,7 +1512,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
       hidden:P_intFuncCallback;
   begin
     i:=0;
-    while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers) do inc(i);
+    while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers-[modifier_noCurry]) do inc(i);
     if i<length(C_validModifierCombinations) then ruleType:=C_validModifierCombinations[i].ruleType
     else begin
       raiseModifierComplaint;
@@ -1537,6 +1537,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
+      if modifier_noCurry in modifiers then result^.allowCurrying:=false;
       packageRules.put(ruleId,result);
       if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
         for op in allOperators do if operatorName[op]=ruleId
@@ -1544,6 +1545,10 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
           if op in overridableOperators then begin
             customOperatorRules[op]:=result;
             adapters.raiseNote('Overloading operator '+C_tokenInfo[op].defaultId,ruleDeclarationStart);
+            result^.allowCurrying:=false;
+            {$ifdef fullVersion}
+            result^.setIdResolved;
+            {$endif}
           end else adapters.raiseError('Operator '+C_tokenInfo[op].defaultId+' cannot be overridden',ruleDeclarationStart);
           exit(result);
         end;
@@ -1705,7 +1710,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   end;
 
 PROCEDURE T_package.resolveId(VAR token: T_token;
-  CONST adaptersOrNil: P_adapters);
+  CONST adaptersOrNil: P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
@@ -1714,7 +1719,7 @@ PROCEDURE T_package.resolveId(VAR token: T_token;
       token.tokType:=tt;
       token.data:=userRule;
       {$ifdef fullVersion}
-      userRule^.setIdResolved;
+      if markAsUsed then userRule^.setIdResolved;
       {$endif}
     end;
 

@@ -28,7 +28,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION replaceCodeProvider(CONST newProvider:P_codeProvider):boolean;
       FUNCTION codeChanged:boolean;
       FUNCTION getId:T_idString; virtual;
@@ -49,7 +49,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
   end;
 
   T_enhancedStatement=record
@@ -138,7 +138,11 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR re
       case t^.tokType of
         tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
-          if t^.tokType=tt_identifier then inPackage^.resolveId(t^,nil);
+          if t^.tokType=tt_identifier
+          then inPackage^.resolveId(t^,nil)
+          {$ifdef fullVersion}
+          else P_abstractRule(t^.data)^.setIdResolved
+          {$endif};
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_mut_nested_assign..tt_mut_nestedDrop]) then begin
             if t^.tokType<>tt_identifier then begin
               if (t^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
@@ -683,21 +687,21 @@ FUNCTION T_lexer.fetchNext(VAR recycler: T_tokenRecycler; VAR adapters: T_adapte
             n[2]:=fetch;
             if (n[2]<>nil) and (n[2]^.tokType=tt_identifier) then begin
               nextToken^.txt:=nextToken^.txt+ID_QUALIFY_CHARACTER+n[2]^.txt;
-              BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil);
+              associatedPackage^.resolveId(nextToken^,nil);
               recycler.disposeToken(n[1]);
               recycler.disposeToken(n[2]);
             end else begin
-              BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil);
+              associatedPackage^.resolveId(nextToken^,nil{$ifdef fullVersion},false{$endif});
               appendToken(nextToken);
               appendToken(n[1]);
               nextToken:=n[2];
             end;
           end else begin
-            BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil);
+            associatedPackage^.resolveId(nextToken^,nil{$ifdef fullVersion},false{$endif});
             appendToken(nextToken);
             nextToken:=n[1];
           end;
-        end else BLANK_ABSTRACT_PACKAGE.resolveId(nextToken^,nil);
+        end else associatedPackage^.resolveId(nextToken^,nil{$ifdef fullVersion},false{$endif});
         //This is a hack to ensure that "myPath" behaves nicely when including
         if (nextToken<>nil) and (nextToken^.tokType=tt_intrinsicRule) and (nextToken^.data=pointer(BUILTIN_MYPATH)) then nextToken^.location.package:=associatedPackage;
       end;
@@ -939,7 +943,7 @@ FUNCTION T_extendedPackage.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=extender^.isImportedOrBuiltinPackage(id);
   end;
 
-PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_adapters);
+PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   VAR intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;
   begin
@@ -952,9 +956,9 @@ PROCEDURE T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P
     if adaptersOrNil<>nil then adaptersOrNil^.raiseError('Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
+PROCEDURE T_extendedPackage.resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   begin
-    extender^.resolveId(token,adaptersOrNil);
+    extender^.resolveId(token,adaptersOrNil{$ifdef fullVersion},markAsUsed{$endif});
   end;
 
 FUNCTION T_abstractPackage.replaceCodeProvider(CONST newProvider: P_codeProvider):boolean;
