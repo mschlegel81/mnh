@@ -320,7 +320,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       then doc:=functionDocMap.get(copy(tokenText,2,length(tokenText)-1))
       else doc:=functionDocMap.get(tokenText);
       if doc=nil then exit('');
-      result:='Builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
+      result:='builtin rule'+C_lineBreakChar+doc^.getPlainText(C_lineBreakChar)+';';
     end;
   begin
     result.infoText:='(eol)';
@@ -372,7 +372,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         result.infoText+=C_lineBreakChar
                         +replaceAll(P_abstractRule(token^.data)^.getDocTxt,C_tabChar,' ');
         if intrinsicRuleMap.containsKey(tokenText) then
-         result.infoText+='hides '+getBuiltinRuleInfo;
+         result.infoText+=C_lineBreakChar+'overloads '+getBuiltinRuleInfo;
       end;
       tt_type,tt_typeCheck:
         result.infoText+=C_lineBreakChar+replaceAll(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
