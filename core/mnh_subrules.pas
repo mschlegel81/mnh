@@ -1205,11 +1205,17 @@ PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
       for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
         case token.tokType of
           tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(@token);
-          tt_braceClose:bracketStack.quietPop;
-        end;
-        if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
-          P_abstractPackage(token.location.package)^.resolveId(token,adapters);
-          functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
+          tt_braceClose: bracketStack.quietPop;
+          tt_identifier: if (parIdx<0) and not(isEachIdentifier(token.txt)) then begin
+            P_abstractPackage(token.location.package)^.resolveId(token,adapters);
+            functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
+          end;
+          {$ifdef fullVersion}
+          tt_localUserRule,
+          tt_customTypeRule,
+          tt_customTypeCheck,
+          tt_importedUserRule:P_abstractRule(token.data)^.setIdResolved;
+          {$endif}
         end;
       end;
       bracketStack.destroy;
