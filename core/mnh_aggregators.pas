@@ -3,6 +3,7 @@ INTERFACE
 USES //my libraries
      myGenerics,
      //MNH:
+     mnh_funcs,
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
      mnh_contexts,
@@ -82,6 +83,7 @@ TYPE
   T_opAggregator=object(T_aggregator)
     private
       op:T_tokenType;
+      opPointer:P_intFuncCallback;
     public
       CONSTRUCTOR create(CONST operatorToken:T_tokenType);
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
@@ -172,6 +174,7 @@ CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType);
   begin
     inherited create(newVoidLiteral);
     op:=operatorToken;
+    opPointer:=intFuncForOperator[op];
   end;
 
 CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral; CONST contextPointer: pointer);
@@ -267,13 +270,16 @@ PROCEDURE T_maxAggregator.addToAggregation(er:T_evaluationResult; CONST doDispos
 
 PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newResult:P_literal;
+      param:P_listLiteral;
   begin
     aggregationDefaultHandling;
     if er.literal^.literalType<>lt_void then begin
       if (resultLiteral^.literalType=lt_string) and (er.literal^.literalType in C_scalarTypes) then begin
         P_stringLiteral(resultLiteral)^.append(P_scalarLiteral(er.literal)^.stringForm);
       end else begin
-        newResult:=resolveOperator(resultLiteral,tt_operatorStrConcat,er.literal,location,context^.adapters^,context);
+        param:=P_listLiteral(newListLiteral(2)^.append(resultLiteral,true)^.append(er.literal,true));
+        newResult:=operator_StrConcat(param,location,P_threadContext(context)^);
+        disposeLiteral(param);
         disposeLiteral(resultLiteral);
         resultLiteral:=newResult;
       end;
@@ -305,12 +311,15 @@ PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
 
 PROCEDURE T_opAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext);
   VAR newResult:P_literal;
+      param:P_listLiteral;
   begin
     aggregationDefaultHandling;
     if resultLiteral=nil
     then resultLiteral:=er.literal^.rereferenced
     else if er.literal^.literalType<>lt_void then begin
-      newResult:=resolveOperator(resultLiteral,op,er.literal,location,context^.adapters^,context);
+      param:=P_listLiteral(newListLiteral(2)^.append(resultLiteral,true)^.append(er.literal,true));
+      newResult:=opPointer(param,location,P_threadContext(context)^);
+      disposeLiteral(param);
       disposeLiteral(resultLiteral);
       resultLiteral:=newResult;
     end;

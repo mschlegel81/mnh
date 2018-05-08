@@ -586,7 +586,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
                                     cTokType[-1],
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
-                                    context.adapters^,
                                     @context);
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
@@ -605,7 +604,6 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
                                     cTokType[-1],
                                     first^.data,
                                     stack.dat[stack.topIndex]^.location,
-                                    context.adapters^,
                                     @context);
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
@@ -882,7 +880,6 @@ end}
                                       stack.topType,
                                       first^.data,
                                       stack.dat[stack.topIndex]^.location,
-                                      context.adapters^,
                                       @context);
               //LHS literal is now result of first comparison (still a literal)
               disposeLiteral(stack.dat[stack.topIndex-1]^.data);

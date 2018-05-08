@@ -18,8 +18,7 @@ USES //basic classes
      mnh_debuggingVar,
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
-     mnh_patterns,
-     mnh_operators;
+     mnh_patterns;
 TYPE
   T_subruleAttribute=record
     key,value:string;
@@ -1531,12 +1530,12 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.adapters^.noErrors) then begin
       context.recycler.cascadeDisposeToken(first);
-      exit(newErrorLiteral);
+      exit(nil);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
       context.recycler.disposeToken(first);
       context.adapters^.raiseSystemError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
-      exit(newErrorLiteral);
+      exit(nil);
     end;
     result:=P_expressionLiteral(first^.data);
     first^.tokType:=tt_EOL;

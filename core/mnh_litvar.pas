@@ -373,7 +373,7 @@ TYPE
 
 VAR
   subruleApplyOpCallback: FUNCTION(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
-  resolveOperator: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
+  resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:pointer): P_literal;
 FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef debugMode} inline; {$endif}
@@ -390,7 +390,6 @@ FUNCTION newListLiteral  (CONST a:P_literal;
 FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;        inline;
 FUNCTION newMapLiteral                                : P_mapLiteral;        inline;
 FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
-FUNCTION newErrorLiteral                              : P_literal; inline;
 
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
@@ -414,7 +413,6 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
 VAR emptyStringSingleton: T_stringLiteral;
 VAR boolLit       : array[false..true] of T_boolLiteral;
     charLit       : array[#0..#255] of T_stringLiteral;
-    errLit : T_literal;
 CONST maxSingletonInt=4000;
 IMPLEMENTATION
 VAR
@@ -524,7 +522,6 @@ FUNCTION newListLiteral(CONST a:P_literal; CONST b:P_literal=nil): P_listLiteral
 FUNCTION newSetLiteral(CONST expectedSize:longint=0): P_setLiteral;        begin new(result,create); if expectedSize>0 then result^.dat.rehashForExpectedSize(expectedSize); end;
 FUNCTION newMapLiteral                              : P_mapLiteral;        begin new(result,create);              end;
 FUNCTION newVoidLiteral                             : P_voidLiteral;       begin result:=P_voidLiteral(voidLit       .rereferenced); end;
-FUNCTION newErrorLiteral                            : P_literal;           begin result:=              errLit        .rereferenced ; end;
 FUNCTION newBoolLiteral(CONST value: boolean)       : P_boolLiteral;       begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
@@ -2567,7 +2564,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
   FUNCTION simpleMutate(VAR toMutate:P_literal; CONST op:T_tokenType; CONST RHS:P_literal):boolean;
     VAR newValue:P_literal;
     begin
-      newValue:=resolveOperator(toMutate,op,RHS,location,adapters,threadContext);
+      newValue:=resolveOperatorCallback(toMutate,op,RHS,location,threadContext);
       if newValue<>nil then begin
         result:=newValue^.literalType<>toMutate^.literalType;
         disposeLiteral(toMutate);
@@ -3143,7 +3140,6 @@ FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CO
 
 VAR i: longint;
 INITIALIZATION
-  errLit.init(lt_error);
   initialize(boolLit);
   boolLit[false].create(false);
   boolLit[true ].create(true);
@@ -3158,7 +3154,6 @@ INITIALIZATION
   stringSingletons.create(@disposeLiteral);
 
 FINALIZATION
-  errLit.destroy;
   boolLit[false].destroy;
   boolLit[true ].destroy;
   voidLit.destroy;

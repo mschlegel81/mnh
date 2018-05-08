@@ -21,6 +21,7 @@ USES //basic classes
        mySys,
      {$endif}
      mnh_funcs,
+     mnh_operators,
      mnh_funcs_mnh,   mnh_funcs_types, mnh_funcs_math,  mnh_funcs_strings,
      mnh_funcs_list,  mnh_funcs_system, mnh_funcs_files,
      mnh_funcs_format,
@@ -931,13 +932,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           end else inc(i);
         end;
         if context.adapters^.noErrors then for i:=length(packageUses)-1 downto 0 do begin
-           rulesSet:=packageUses[i].pack^.packageRules.entrySet;
-           for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
-             if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
-             then importedRules.put(rulesSet[j].key,rulesSet[j].value);
-             importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
-           end;
+          rulesSet:=packageUses[i].pack^.packageRules.entrySet;
+          for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
+            if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
+            then importedRules.put(rulesSet[j].key,rulesSet[j].value);
+            importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
+          end;
         end;
+        for i:=0 to length(packageUses)-1 do mergeCustomOps(packageUses[i].pack^.customOperatorRules);
       end;
 
     begin
@@ -1448,6 +1450,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     for i:=0 to length(extendedPackages)-1 do dispose(extendedPackages[i],destroy);
     setLength(extendedPackages,0);
     for i:=0 to length(packageUses)-1 do packageUses[i].destroy; setLength(packageUses,0);
+    clearCustomOperators;
     packageRules.clear;
     importedRules.clear;
     readyForUsecase:=lu_NONE;
@@ -1494,11 +1497,10 @@ DESTRUCTOR T_package.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString;
-  CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation;
-  VAR adapters: T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
+      op:T_tokenType;
   PROCEDURE raiseModifierComplaint;
     VAR m:T_modifier;
         s:string='';
@@ -1535,7 +1537,16 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString;
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
       packageRules.put(ruleId,result);
-      if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
+      if intrinsicRuleMap.containsKey(ruleId) then begin
+        for op in overridableOperators do if operatorName[op]=ruleId
+        then begin
+          customOperatorRules[op]:=result;
+          adapters.raiseWarning('Overriding operator '+C_tokenInfo[op].defaultId,ruleDeclarationStart);
+          exit(result);
+        end;
+        adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
+
+      end;
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseError('Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.getRuleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
