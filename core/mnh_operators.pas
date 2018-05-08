@@ -796,11 +796,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
   begin
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
-      writeln('Found custom rule');
-      writeln(rule^.getId);
-      writeln(ansistring(rule^.getLocation));
       parList:=P_listLiteral(newListLiteral(2)^.append(LHS,true)^.append(RHS,true));
-     // writeln(rule^.getId,' ',ansistring(rule^.getLocation));
       if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context) then begin
         disposeLiteral(parList);
         exit(P_threadContext(context)^.reduceToLiteral(ruleOut).literal);
