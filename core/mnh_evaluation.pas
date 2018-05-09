@@ -214,7 +214,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
          not(tco_spawnWorker in context.threadOptions) or
          (workerThreadCount<=0))
       then eachType:=tt_each;
-      eachLocation:=first^.location;
+      eachLocation:=first^.next^.location;
       initialize(bodyRule);
 
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_void]) then begin
