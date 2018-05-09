@@ -92,7 +92,7 @@ TYPE
     public
       PROPERTY metaData:T_ruleMetaData read meta;
 
-      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST isPrivate:boolean; CONST ruleType:T_ruleType=rt_mutable);
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; VAR meta_:T_ruleMetaData; CONST isPrivate:boolean; CONST ruleType:T_ruleType=rt_mutable);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
       PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean); virtual;
@@ -114,7 +114,7 @@ TYPE
       encodeAsText:boolean;
       PROCEDURE readDataStore(VAR context:T_threadContext);
     public
-      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST datastorePackage:P_objectWithPath; CONST isPrivate,usePlainTextEncoding:boolean);
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST datastorePackage:P_objectWithPath; VAR meta_:T_ruleMetaData; CONST isPrivate,usePlainTextEncoding:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal; virtual;
       PROCEDURE writeBack(VAR adapters:T_adapters);
@@ -131,7 +131,9 @@ FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST common
       tempLiteral:P_literal;
   begin
     if hiddenRule<>nil then begin
+      inc(context.callDepth);
       tempLiteral:=hiddenRule(givenParameters,callLocation,context);
+      dec(context.callDepth);
       if tempLiteral<>nil then begin
         firstRep:=context.recycler.newToken(callLocation,'',tt_literal,tempLiteral);
         lastRep:=firstRep;
@@ -210,20 +212,20 @@ CONSTRUCTOR T_typecheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tok
     inherited create(ruleId,startAt,rt_customTypeCheck);
   end;
 
-CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST isPrivate: boolean; CONST ruleType: T_ruleType);
+CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; VAR meta_:T_ruleMetaData; CONST isPrivate: boolean; CONST ruleType:T_ruleType=rt_mutable);
   begin
     inherited create(ruleId,startAt,ruleType);
     hiddenRule:=nil;
     allowCurrying:=true;
-    meta.create;
+    meta:=meta_;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);
     initCriticalSection(rule_cs);
   end;
 
-CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST datastorePackage:P_objectWithPath; CONST isPrivate,usePlainTextEncoding: boolean);
+CONSTRUCTOR T_datastoreRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; CONST datastorePackage:P_objectWithPath; VAR meta_:T_ruleMetaData; CONST isPrivate,usePlainTextEncoding: boolean);
   begin
-    inherited create(ruleId,startAt,isPrivate,rt_datastore);
+    inherited create(ruleId,startAt,meta_,isPrivate,rt_datastore);
     encodeAsText:=usePlainTextEncoding;
     dataStoreMeta.create(datastorePackage^.getPath,ruleId);
   end;

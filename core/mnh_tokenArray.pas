@@ -926,10 +926,10 @@ CONSTRUCTOR T_extendedPackage.create(CONST provider:P_codeProvider; CONST extend
   end;
 
 DESTRUCTOR T_abstractPackage.destroy;
-begin
-  if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
-  codeProvider:=nil;
-end;
+  begin
+    if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+    codeProvider:=nil;
+  end;
 
 FUNCTION T_abstractPackage.isImportedOrBuiltinPackage(CONST id: string): boolean;
   VAR ns:T_namespace;

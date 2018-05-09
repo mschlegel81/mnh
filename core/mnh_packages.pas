@@ -77,7 +77,7 @@ TYPE
 
       PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
       PROCEDURE clear(CONST includeSecondaries:boolean);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters; VAR metaData:T_ruleMetaData):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
@@ -1007,6 +1007,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         {$endif}
         //rule meta data
         ruleModifiers:T_modifierSet=[];
+        metaData:T_ruleMetaData;
         ruleId:T_idString='';
         evaluateBody:boolean;
         rulePattern:T_pattern;
@@ -1090,13 +1091,15 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then context.reduceExpression(ruleBody);
 
       if context.adapters^.noErrors then begin
-        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^);
+        metaData.create;
+        metaData.setComment(join(statement.comments,C_lineBreakChar));
+        metaData.setAttributes(statement.attributes,ruleDeclarationStart,context.adapters^);
+        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.adapters^,metaData);
+
         if (context.adapters^.noErrors) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
         then context.adapters^.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
         if context.adapters^.noErrors then begin
-          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,context));
-          subRule^.metaData.setComment(join(statement.comments,C_lineBreakChar));
-          subRule^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
+          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,context,metaData));
           //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
           if (ruleGroup^.getRuleType in C_mutableRuleTypes)
           then begin
@@ -1107,8 +1110,6 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
                    inlineValue^.unreference;
                  end
             else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
-            P_mutableRule(ruleGroup)^.metaData.setComment(join(statement.comments,C_lineBreakChar));
-            P_mutableRule(ruleGroup)^.metaData.setAttributes(statement.attributes,subRule^.getLocation,context.adapters^);
             {$ifdef fullVersion}
             if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
               if (modifier_private in ruleModifiers)
@@ -1135,6 +1136,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
   PROCEDURE parseDataStore;
     VAR ruleModifiers:T_modifierSet=[];
         loc:T_tokenLocation;
+        metaData:T_ruleMetaData;
     begin
       if (getCodeProvider^.isPseudoFile) then begin
         context.adapters^.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
@@ -1153,9 +1155,12 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         context.recycler.cascadeDisposeToken(statement.firstToken);
         exit;
       end;
+      metaData.create;
+      metaData.setComment(join(statement.comments,C_lineBreakChar));
+      metaData.setAttributes(statement.attributes,statement.firstToken^.location,context.adapters^);
       ensureRuleId(statement.firstToken^.txt,
                    ruleModifiers,
-                   statement.firstToken^.location,context.adapters^);
+                   statement.firstToken^.location,context.adapters^,metaData);
     end;
 
   FUNCTION getDeclarationOrAssignmentToken: P_token;
@@ -1497,7 +1502,7 @@ DESTRUCTOR T_package.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_adapters; VAR metaData:T_ruleMetaData): P_rule;
   PROCEDURE raiseModifierComplaint;
     VAR m:T_modifier;
         s:string='';
@@ -1532,8 +1537,8 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
       case ruleType of
         rt_memoized       : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
         rt_customTypeCheck: new(P_typecheckRule            (result),create(ruleId,ruleDeclarationStart));
-        rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      modifier_private in modifiers));
-        rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,modifier_private in modifiers,modifier_plain in modifiers));
+        rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      metaData,modifier_private in modifiers));
+        rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,metaData,modifier_private in modifiers,modifier_plain in modifiers));
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
@@ -1544,7 +1549,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         then begin
           if op in overridableOperators then begin
             customOperatorRules[op]:=result;
-            adapters.raiseNote('Overloading operator '+C_tokenInfo[op].defaultId,ruleDeclarationStart);
+            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.raiseNote('Overloading operator '+C_tokenInfo[op].defaultId,ruleDeclarationStart);
             result^.allowCurrying:=false;
             {$ifdef fullVersion}
             result^.setIdResolved;
@@ -1553,7 +1558,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
           exit(result);
         end;
         result^.hiddenRule:=hidden;
-        adapters.raiseNote('Overloading builtin rule "'+ruleId+'"',ruleDeclarationStart);
+        if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.raiseNote('Overloading builtin rule "'+ruleId+'"',ruleDeclarationStart);
       end else result^.hiddenRule:=nil;
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)

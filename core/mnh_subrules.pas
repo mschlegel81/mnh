@@ -115,7 +115,7 @@ TYPE
     public
       PROPERTY metaData:T_ruleMetaData read meta;
 
-      CONSTRUCTOR create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext);
+      CONSTRUCTOR create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
       FUNCTION hasValidValidCustomTypeCheckPattern:boolean;
@@ -289,9 +289,11 @@ CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: 
     resolveIds(nil);
   end;
 
-CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext);
+CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
   begin
     init(et_subrule,declAt);
+    meta.destroy;
+    meta:=meta_;
     publicSubrule:=not(isPrivate);
     pattern:=pat;
     constructExpression(rep,context);
