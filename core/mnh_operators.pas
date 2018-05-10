@@ -90,6 +90,43 @@ IMPLEMENTATION
 TYPE P_op=FUNCTION(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
 VAR OP_IMPL:array[tt_comparatorEq..tt_operatorConcatAlt] of P_op;
 
+FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
+  VAR parList:P_listLiteral;
+      rule   :P_abstractRule =nil;
+      ruleOut:P_token=nil;
+      dummy  :P_token=nil;
+  begin
+    rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
+    if (rule<>nil) then begin
+      if P_threadContext(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
+        P_threadContext(context)^.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        exit(newVoidLiteral);
+      end;
+      parList:=newListLiteral(2);
+      parList^.append(LHS,true)^.append(RHS,true);
+      inc(P_threadContext(context)^.callDepth);
+      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context) then begin
+        result:=P_threadContext(context)^.reduceToLiteral(ruleOut).literal;
+        dec(P_threadContext(context)^.callDepth);
+        disposeLiteral(parList);
+        if result=nil
+        then exit(newVoidLiteral)
+        else exit(result);
+      end;
+      dec(P_threadContext(context)^.callDepth);
+      disposeLiteral(parList);
+    end;
+    result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_threadContext(context)^);
+    if result=nil then begin
+      P_threadContext(context)^.adapters^.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      result:=newVoidLiteral;
+    end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
+      P_threadContext(context)^.adapters^.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      disposeLiteral(result);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 FUNCTION perform_listEq(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   begin
     result:=newBoolLiteral(LHS^.isInRelationTo(tt_comparatorListEq,RHS));
@@ -202,9 +239,19 @@ FUNCTION outerFunc_id intFuncSignature;
       dummy  :P_token=nil;
   begin
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) and rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context)
-    then exit(context.reduceToLiteral(ruleOut).literal)
-    else if (params<>nil) and (params^.size=2)
+    if (rule<>nil) then begin
+      if context.callDepth>=STACK_DEPTH_LIMIT then begin
+        context.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        exit(nil);
+      end;
+      inc(context.callDepth);
+      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context) then begin
+        result:=context.reduceToLiteral(ruleOut).literal;
+        dec(context.callDepth);
+        exit(result);
+      end else dec(context.callDepth);
+    end;
+    if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
       if result=nil then context.adapters^.raiseError('Incompatible comparands '+arg0^.typeString+' and '+arg1^.typeString,tokenLocation);
@@ -281,9 +328,19 @@ FUNCTION outerFunc_id intFuncSignature;
       dummy  :P_token=nil;
   begin
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) and rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context)
-    then exit(context.reduceToLiteral(ruleOut).literal)
-    else if (params<>nil) and (params^.size=2)
+    if (rule<>nil) then begin
+      if context.callDepth>=STACK_DEPTH_LIMIT then begin
+        context.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        exit(nil);
+      end;
+      inc(context.callDepth);
+      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context) then begin
+        result:=context.reduceToLiteral(ruleOut).literal;
+        dec(context.callDepth);
+        exit(result);
+      end else dec(context.callDepth);
+    end;
+    if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
       if result=nil then context.adapters^.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
@@ -318,10 +375,19 @@ boolIntOperator;
       dummy  :P_token=nil;
   begin
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) and rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context)
-    then exit(context.reduceToLiteral(ruleOut).literal)
-    else if (params<>nil) and (params^.size=2)
-    then begin
+    if (rule<>nil) then begin
+      if context.callDepth>=STACK_DEPTH_LIMIT then begin
+        context.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        exit(nil);
+      end;
+      inc(context.callDepth);
+      if rule^.replaces(tt_localUserRule,tokenLocation,params,ruleOut,dummy,@context) then begin
+        result:=context.reduceToLiteral(ruleOut).literal;
+        dec(context.callDepth);
+        exit(result);
+      end else dec(context.callDepth);
+    end;
+    if (params<>nil) and (params^.size=2) then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
       if result=nil then context.adapters^.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
@@ -787,35 +853,6 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
   end;
 genericOuter;
 {$undef OP}
-
-FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST context:pointer): P_literal;
-  VAR parList:P_listLiteral;
-      rule   :P_abstractRule =nil;
-      ruleOut:P_token=nil;
-      dummy  :P_token=nil;
-  begin
-    rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
-    if (rule<>nil) then begin
-      writeln('Found custom rule');
-      writeln(rule^.getId);
-      writeln(ansistring(rule^.getLocation));
-      parList:=P_listLiteral(newListLiteral(2)^.append(LHS,true)^.append(RHS,true));
-     // writeln(rule^.getId,' ',ansistring(rule^.getLocation));
-      if rule^.replaces(tt_localUserRule,tokenLocation,parList,ruleOut,dummy,context) then begin
-        disposeLiteral(parList);
-        exit(P_threadContext(context)^.reduceToLiteral(ruleOut).literal);
-      end else disposeLiteral(parList);
-    end;
-    result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_threadContext(context)^);
-    if result=nil then begin
-      P_threadContext(context)^.adapters^.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
-      result:=newVoidLiteral;
-    end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      P_threadContext(context)^.adapters^.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
-      disposeLiteral(result);
-      result:=newVoidLiteral;
-    end;
-  end;
 
 PROCEDURE registerOperator(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONST internal:P_op);
   begin

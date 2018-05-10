@@ -781,7 +781,8 @@ used as a fallback.
       <li><h5><a href="#datastoreMod">datastore</a></h5></li>
       <li><h5><a href="#plainMod">plain</a></h5></li>
       <li><h5><a href="#localMod">local</a></h5></li>
-      <li><h5><a href="#typeMod">type</a></h5></li></ul></li></ul>
+      <li><h5><a href="#typeMod">type</a></h5></li>
+	  <li><h5><a href="#nocurryMod">nocurry</a></h5></li></ul></li></ul>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
@@ -838,6 +839,7 @@ Examples:<code>
   out> 5
 <!--end-->
 </code>
+Currying and Uncurrying can be suppressed using the <a href="#nocurryMod">nocurry modifier</a>.
 </li>
 </li><li><b>Visibility</b><br>
 Visibility is handled as in Pascal, i.e. a local function definition hides all imported functions with the same name. <br>
@@ -1140,7 +1142,8 @@ It is recommended that type rules begin with an uppercase letter.<br><code>
    in> [[1, 0],[2, 3]].determinant;
   out> 3
 <!--end-->
-
+<h4><br><a name="nocurryMod">nocurry</a></h4>
+The <i>nocurry</i> modifier can be used to suppress currying on rule level.
 </div>
 <!--commonFoot-->
 <!--file types.html-->
