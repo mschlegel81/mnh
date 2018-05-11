@@ -271,7 +271,9 @@ FUNCTION execSync_impl intFuncSignature;
         if arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList] then begin
           setLength(cmdLinePar,list1^.size);
           for i:=0 to list1^.size-1 do begin
-            cmdLinePar[i]:=P_scalarLiteral(list1^.value[i])^.stringForm;
+            if list1^.value[i]^.literalType=lt_string
+            then cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
+            else cmdLinePar[i]:=list1^.value[i]^.toString();
           end;
         end else if (arg1^.literalType=lt_boolean) then includeStdErr:=bool1^.value
         else exit(nil);
@@ -302,8 +304,9 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
       executable:=str0^.value;
       if params^.size=2 then begin
         setLength(cmdLinePar,list1^.size);
-        for i:=0 to list1^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(list1^.value[i])^.stringForm;
+        for i:=0 to list1^.size-1 do if list1^.value[i]^.literalType=lt_string
+          then cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
+          else cmdLinePar[i]:=list1^.value[i]^.toString();
       end;
       showConsole;
       processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch);

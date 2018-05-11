@@ -149,8 +149,8 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
       fmtCat_decimal: if l^.literalType=lt_int then begin txt+=pad(P_intLiteral(l)^.value.toString   ,true); exit; end;
       fmtCat_hex    : if l^.literalType=lt_int then begin txt+=pad(P_intLiteral(l)^.value.toHexString,true); exit; end;
     end;
-    if l^.literalType in C_scalarTypes
-    then txt:=txt+sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
+    if l^.literalType=lt_string
+    then txt:=txt+sysutils.format(strFmt,[P_stringLiteral(l)^.value])
     else txt:=txt+sysutils.format(strFmt,[l^.toString]                   );
   end;
 

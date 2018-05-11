@@ -657,7 +657,7 @@ genericOuter;
 {$define outerFunc_id:=operator_pot}
 {$define op:=tt_operatorPot}
 FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
-  FUNCTION pot_int_int(CONST x, y: T_bigInt): P_scalarLiteral;
+  FUNCTION pot_int_int(CONST x, y: T_bigInt): P_literal;
     VAR exponent:int64;
         tx, rx: T_myFloat;
     begin
@@ -681,7 +681,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
       end;
     end;
 
-  FUNCTION pot_real_int(x: T_myFloat; CONST y: T_bigInt): P_scalarLiteral;
+  FUNCTION pot_real_int(x: T_myFloat; CONST y: T_bigInt): P_literal;
     VAR exponent:int64;
         resultVal:T_myFloat=1;
     begin
@@ -746,9 +746,16 @@ FUNCTION perform_strConcat(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
   begin
     case LHS^.literalType of
       defaultLHScases;
-      lt_boolean..lt_string: case RHS^.literalType of
+      lt_string: case RHS^.literalType of
         defaultRHSCases;
-        lt_boolean..lt_string: exit(newStringLiteral(P_scalarLiteral(LHS)^.stringForm+P_scalarLiteral(RHS)^.stringForm));
+        lt_boolean..lt_real: exit(newStringLiteral(P_stringLiteral(LHS)^.value+RHS^.toString));
+        lt_string:           exit(newStringLiteral(P_stringLiteral(LHS)^.value+P_stringLiteral(RHS)^.value));
+        lt_list..lt_emptySet:  exit(recurse_SL);
+      end;
+      lt_boolean..lt_real: case RHS^.literalType of
+        defaultRHSCases;
+        lt_boolean..lt_real: exit(newStringLiteral(LHS^.toString+RHS^.toString));
+        lt_string:           exit(newStringLiteral(LHS^.toString+P_stringLiteral(RHS)^.value));
         lt_list..lt_emptySet:  exit(recurse_SL);
       end;
       lt_list..lt_emptySet: case RHS^.literalType of

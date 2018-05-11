@@ -10,142 +10,18 @@ USES sysutils, math, typinfo,
 
 CONST HASH_GROWTH_THRESHOLD_FACTOR=2;
       HASH_SHRINK_THRESHOLD_FACTOR=0.5;
-TYPE
-  P_literal = ^T_literal;
-  PP_literal = ^P_literal;
-  P_setOfPointer=^T_setOfPointer;
-  T_arrayOfLiteral=array of P_literal;
-  T_literal = object(T_objectWithIdAndLocation)
-  private
-    numberOfReferences: longint;
-  public
-    literalType:T_literalType;
-    CONSTRUCTOR init(CONST lt:T_literalType);
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE rereference; inline;
-    FUNCTION rereferenced:P_literal; inline;
-    FUNCTION unreference: longint; inline;
-    PROPERTY getReferenceCount: longint read numberOfReferences;
+TYPE T_expressionType=(et_builtin          ,
+                       et_builtinIteratable,
+                       et_builtinFuture    ,
+                       et_subrule          ,
+                       et_inline           ,
+                       et_subruleIteratable,
+                       et_inlineIteratable ,
+                       et_subruleStateful  ,
+                       et_inlineStateful   ,
+                       et_eachBody         ,
+                       et_whileBody        );
 
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
-    FUNCTION hash: T_hashInt; virtual;
-    FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    FUNCTION typeString:string; virtual;
-
-    FUNCTION getId:T_idString; virtual;
-    FUNCTION getLocation:T_tokenLocation; virtual;
-  end;
-
-  P_scalarLiteral = ^T_scalarLiteral;
-  T_scalarLiteral = object(T_literal)
-    FUNCTION stringForm: ansistring; virtual;
-  end;
-
-  P_voidLiteral = ^T_voidLiteral;
-  T_voidLiteral = object(T_scalarLiteral)
-    private
-      CONSTRUCTOR create();
-    public
-    //from T_literal:
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-  end;
-
-  P_boolLiteral = ^T_boolLiteral;
-  T_boolLiteral = object(T_scalarLiteral)
-  private
-    val: boolean;
-    CONSTRUCTOR create(CONST value: boolean);
-  public
-    PROPERTY value:boolean read val;
-    //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    //from T_literal:
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
-    FUNCTION hash: T_hashInt; virtual;
-    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-  end;
-
-  P_intLiteral = ^T_intLiteral;
-  T_intLiteral = object(T_scalarLiteral)
-  private
-    val: T_bigInt;
-    CONSTRUCTOR create(CONST value: T_bigInt);
-    CONSTRUCTOR create(CONST value: int64);
-  public
-    DESTRUCTOR destroy; virtual;
-    PROPERTY value:T_bigInt read val;
-    //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    //from T_literal:
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
-    FUNCTION hash: T_hashInt; virtual;
-    FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-  end;
-
-  P_realLiteral = ^T_realLiteral;
-  T_realLiteral = object(T_scalarLiteral)
-  private
-    val: T_myFloat;
-    CONSTRUCTOR create(CONST value: T_myFloat);
-  public
-    PROPERTY value:T_myFloat read val;
-    //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    //from T_literal:
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
-    FUNCTION hash: T_hashInt; virtual;
-    FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-  end;
-
-  P_stringLiteral = ^T_stringLiteral;
-  T_stringLiteral = object(T_scalarLiteral)
-  private
-    enc: T_stringEncoding;
-    val: ansistring;
-    CONSTRUCTOR create(CONST value: ansistring);
-  public
-    DESTRUCTOR destroy; virtual;
-    PROPERTY value:ansistring read val;
-    FUNCTION softCast: P_scalarLiteral;
-    FUNCTION trim: P_stringLiteral;
-    FUNCTION trimLeft: P_stringLiteral;
-    FUNCTION trimRight: P_stringLiteral;
-    FUNCTION upper: P_stringLiteral;
-    FUNCTION lower: P_stringLiteral;
-    FUNCTION unbrace: P_stringLiteral;
-    FUNCTION escape: P_stringLiteral;
-    FUNCTION getEncoding: T_stringEncoding;
-    PROCEDURE append(CONST suffix:ansistring);
-    //from T_scalarLiteral:
-    FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    //from T_literal:
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
-    FUNCTION hash: T_hashInt; virtual;
-    FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-  end;
-
-  T_expressionType=(et_builtin          ,
-                    et_builtinIteratable,
-                    et_builtinFuture    ,
-                    et_subrule          ,
-                    et_inline           ,
-                    et_subruleIteratable,
-                    et_inlineIteratable ,
-                    et_subruleStateful  ,
-                    et_inlineStateful   ,
-                    et_eachBody         ,
-                    et_whileBody        );
 CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIteratable,et_builtinFuture];
       C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIteratable,et_subruleStateful];
       C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIteratable,et_inlineStateful];
@@ -167,14 +43,133 @@ CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIte
         'inline stateful',
         'eachBody',
         'whileBody');
+
 TYPE
+  P_typedef=^T_typedef;
+  P_literal = ^T_literal;
+  PP_literal = ^P_literal;
+  P_setOfPointer=^T_setOfPointer;
+  T_arrayOfLiteral=array of P_literal;
+  T_literal = object(T_objectWithIdAndLocation)
+  private
+    numberOfReferences: longint;
+  public
+    customType:P_typedef;
+    literalType:T_literalType;
+    CONSTRUCTOR init(CONST lt:T_literalType);
+    DESTRUCTOR destroy; virtual;
+    PROCEDURE rereference; inline;
+    FUNCTION rereferenced:P_literal; inline;
+    FUNCTION unreference: longint; inline;
+    PROPERTY getReferenceCount: longint read numberOfReferences;
+
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
+    FUNCTION hash: T_hashInt; virtual;
+    FUNCTION equals(CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    FUNCTION typeString:string; virtual;
+
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION getLocation:T_tokenLocation; virtual;
+  end;
+
+  P_voidLiteral = ^T_voidLiteral;
+  T_voidLiteral = object(T_literal)
+    private
+      CONSTRUCTOR create();
+    public
+    //from T_literal:
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+  end;
+
+  P_boolLiteral = ^T_boolLiteral;
+  T_boolLiteral = object(T_literal)
+  private
+    val: boolean;
+    CONSTRUCTOR create(CONST value: boolean);
+  public
+    PROPERTY value:boolean read val;
+    //from T_scalarLiteral:
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    //from T_literal:
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
+    FUNCTION hash: T_hashInt; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+  end;
+
+  P_intLiteral = ^T_intLiteral;
+  T_intLiteral = object(T_literal)
+  private
+    val: T_bigInt;
+    CONSTRUCTOR create(CONST value: T_bigInt);
+    CONSTRUCTOR create(CONST value: int64);
+    FUNCTION clone:P_intLiteral;
+  public
+    DESTRUCTOR destroy; virtual;
+    PROPERTY value:T_bigInt read val;
+    //from T_scalarLiteral:
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    //from T_literal:
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
+    FUNCTION hash: T_hashInt; virtual;
+    FUNCTION equals(CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+  end;
+
+  P_realLiteral = ^T_realLiteral;
+  T_realLiteral = object(T_literal)
+  private
+    val: T_myFloat;
+    CONSTRUCTOR create(CONST value: T_myFloat);
+  public
+    PROPERTY value:T_myFloat read val;
+    //from T_scalarLiteral:
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    //from T_literal:
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
+    FUNCTION hash: T_hashInt; virtual;
+    FUNCTION equals(CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+  end;
+
+  P_stringLiteral = ^T_stringLiteral;
+  T_stringLiteral = object(T_literal)
+  private
+    enc: T_stringEncoding;
+    val: ansistring;
+    CONSTRUCTOR create(CONST value: ansistring);
+  public
+    DESTRUCTOR destroy; virtual;
+    PROPERTY value:ansistring read val;
+    FUNCTION softCast: P_literal;
+    FUNCTION trim: P_stringLiteral;
+    FUNCTION trimLeft: P_stringLiteral;
+    FUNCTION trimRight: P_stringLiteral;
+    FUNCTION upper: P_stringLiteral;
+    FUNCTION lower: P_stringLiteral;
+    FUNCTION unbrace: P_stringLiteral;
+    FUNCTION escape: P_stringLiteral;
+    FUNCTION getEncoding: T_stringEncoding;
+    PROCEDURE append(CONST suffix:ansistring);
+    //from T_scalarLiteral:
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    //from T_literal:
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
+    FUNCTION hash: T_hashInt; virtual;
+    FUNCTION equals(CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+  end;
+
   T_evaluationResult=record
     literal:P_literal;
     triggeredByReturn:boolean;
   end;
-CONST
-  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
-TYPE
 
   P_compoundLiteral  = ^T_compoundLiteral;
   P_listLiteral      = ^T_listLiteral    ;
@@ -182,7 +177,7 @@ TYPE
   P_mapLiteral       = ^T_mapLiteral     ;
   P_expressionLiteral = ^T_expressionLiteral;
   T_expressionList = array of P_expressionLiteral;
-  T_expressionLiteral = object(T_scalarLiteral)
+  T_expressionLiteral = object(T_literal)
     private
       expressionType:T_expressionType;
       declaredAt:T_tokenLocation;
@@ -208,6 +203,20 @@ TYPE
       FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual; abstract;
+  end;
+
+  T_typedef=object
+    private
+      name:T_idString;
+      super:P_typedef;
+      builtinsuper:T_literalType;
+      ducktyperule:P_expressionLiteral;
+    public
+    CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalType; CONST super_:P_typedef; CONST typerule:P_expressionLiteral);
+    DESTRUCTOR destroy;
+    FUNCTION matchesTypecheck(CONST customCheck:P_typedef):boolean;
+    FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -371,6 +380,9 @@ TYPE
       FUNCTION putAll(CONST map:P_mapLiteral):P_mapLiteral;
   end;
 
+CONST
+  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
+
 VAR
   subruleApplyOpCallback: FUNCTION(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:pointer): P_literal;
@@ -391,7 +403,7 @@ FUNCTION newSetLiteral(CONST expectedSize:longint=0)  : P_setLiteral;        inl
 FUNCTION newMapLiteral                                : P_mapLiteral;        inline;
 FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 
-FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
+FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_literal; inline;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
@@ -583,7 +595,7 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
     if length(altRes)<length(result) then exit(altRes);
   end;
 
-FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
+FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_literal;
   VAR i: longint;
       allZeroes:boolean=true;
       atLeastOneDigit:boolean=false;
@@ -630,6 +642,44 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
+CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinType:T_literalType; CONST super_: P_typedef; CONST typerule: P_expressionLiteral);
+  begin
+    name:=id;
+    super:=super_;
+    builtinsuper:=builtinType;
+    ducktyperule:=typerule;
+  end;
+
+DESTRUCTOR T_typedef.destroy;
+  begin
+    disposeLiteral(ducktyperule);
+  end;
+
+FUNCTION T_typedef.matchesTypecheck(CONST customCheck: P_typedef): boolean;
+  begin
+    if (customCheck=@self) then exit(true);
+    if (customCheck^.super=nil) then exit(false);
+    result:=matchesTypecheck(customCheck^.super);
+  end;
+
+FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+  begin
+    if L^.customType=@self then exit(L^.rereferenced);
+    if ducktyperule^.evaluateToBoolean(location,threadContext,L) then begin
+      result:=nil;
+      case L^.literalType of
+        lt_boolean   : new(P_boolLiteral(result),create(P_boolLiteral(L)^.val));
+        lt_int       : result:=P_intLiteral(L)^.clone;
+        lt_real      : result:=newRealLiteral(P_realLiteral(L)^.val);
+        lt_string    : result:=newStringLiteral(P_stringLiteral(L)^.val,true);
+        lt_expression: result:=P_expressionLiteral(L)^.clone(location,threadContext);
+        //all compound types:
+        lt_list..lt_emptyMap: result:=P_compoundLiteral(L)^.clone;
+      end;
+      if result<>nil then result^.customType:=@self;
+    end else result:=nil;
+    if result=nil then adapters^.raiseError('Cannot cast literal to custom type '+name,location);
+  end;
 //=====================================================================================================================
 
 CONSTRUCTOR G_literalKeyMap.create();
@@ -866,7 +916,7 @@ FUNCTION T_literal.getLocation:T_tokenLocation; begin result.package:=nil; resul
 FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declaredAt; end;
 //CONSTRUCTORS:=================================================================
 {$MACRO ON}
-{$define inline_init:=numberOfReferences:=1; literalType:=}
+{$define inline_init:=numberOfReferences:=1; customType:=nil; literalType:=}
 CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
@@ -880,6 +930,13 @@ CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST loca
     myHash:=0;
     expressionType:=eType;
     declaredAt:=location;
+  end;
+
+FUNCTION T_intLiteral.clone:P_intLiteral;
+  VAR valCopy:T_bigInt;
+  begin
+    valCopy.create(val);
+    new(result,create(valCopy));
   end;
 
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
@@ -1197,10 +1254,6 @@ FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: bool
                             else exit('(');
   end;
 
-//?.stringForm:=================================================================
-FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
-FUNCTION T_stringLiteral.stringForm: ansistring; begin result:=val;      end;
-//=================================================================:?.stringForm
 //?.isInRelationTo:=============================================================
 FUNCTION T_literal.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   begin
@@ -1342,10 +1395,23 @@ FUNCTION T_setLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:
     result:=res;
   end;
 //=====================================================================:?.negate
-FUNCTION T_literal          .typeString:string; begin result:=C_typeInfo[literalType].name; end;
-FUNCTION T_compoundLiteral  .typeString:string; begin result:=C_typeInfo[literalType].name+'('+intToStr(size)+')';  end;
+FUNCTION T_literal          .typeString:string;
+  begin
+    if customType<>nil
+    then result:=customType^.name
+    else result:=C_typeInfo[literalType].name;
+  end;
+
+FUNCTION T_compoundLiteral  .typeString:string;
+  begin
+    if customType<>nil
+    then result:=customType^.name
+    else result:=C_typeInfo[literalType].name+'('+intToStr(size)+')';
+  end;
+
 FUNCTION T_expressionLiteral.typeString:string;
   begin
+    if customType<>nil then exit(customType^.name);
     if expressionType in C_iteratableExpressionTypes then exit(C_typeCheckInfo[tc_typeCheckIteratableExpression].name)
     else if expressionType in C_statefulExpressionTypes
     then result:=C_typeCheckInfo[tc_typeCheckStatefulExpression].name
@@ -1366,14 +1432,14 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
-FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor val.lowDigit; if val.isNegative then inc(result); {$R+} end;
+FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean) xor T_hashInt(customType); if val then inc(result); end;
+FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor val.lowDigit xor T_hashInt(customType); if val.isNegative then inc(result); {$R+} end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}{$R-}
     result:=0;
     move(val, result, sizeOf(result));
-    result:=result xor longint(lt_real);
+    result:=result xor longint(lt_real) xor T_hashInt(customType);
     {$Q+}{$R+}
   end;
 
@@ -1381,7 +1447,7 @@ FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}{$R-}
-    result:=T_hashInt(lt_string)+T_hashInt(length(val));
+    result:=T_hashInt(lt_string)+T_hashInt(length(val))+T_hashInt(customType);
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
     {$Q+}{$R+}
   end;
@@ -1393,7 +1459,7 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
     s:= toString;
-    result:=T_hashInt(lt_expression)+T_hashInt(length(s));
+    result:=T_hashInt(lt_expression)+T_hashInt(length(s))+T_hashInt(customType);
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}{$R+}
     if result=0 then result:=1;
@@ -1405,7 +1471,7 @@ FUNCTION T_listLiteral.hash: T_hashInt;
   begin
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_list)+T_hashInt(fill);
+    result:=T_hashInt(lt_list)+T_hashInt(fill)+T_hashInt(customType);
     for i:=0 to fill-1 do result:=result*31+dat[i]^.hash;
     {$Q+}{$R+}
     if result=0 then result:=1;
@@ -1417,7 +1483,7 @@ FUNCTION T_setLiteral.hash: T_hashInt;
   begin
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_set)+T_hashInt(dat.fill);
+    result:=T_hashInt(lt_set)+T_hashInt(dat.fill)+T_hashInt(customType);
     result:=result*31;
     for entry in dat.keyValueList do result:=result+entry.keyHash;
     {$Q+}{$R+}
@@ -1430,7 +1496,7 @@ FUNCTION T_mapLiteral.hash: T_hashInt;
   begin
     if myHash>0 then exit(myHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_map)+T_hashInt(dat.fill);
+    result:=T_hashInt(lt_map)+T_hashInt(dat.fill)+T_hashInt(customType);
     result:=result*31;
     for entry in dat.keyValueList do result:=result+entry.keyHash+entry.value^.hash*37;
     {$Q+}{$R+}
@@ -1488,7 +1554,8 @@ FUNCTION T_stringLiteral.equals(CONST other: P_literal): boolean;
 FUNCTION T_expressionLiteral.equals(CONST other: P_literal): boolean;
   begin
     if @self=other then exit(true);
-    if (other^.literalType<>lt_expression) or (P_expressionLiteral(other)^.expressionType<>expressionType) then exit(false);
+    if (other^.literalType<>lt_expression) or (P_expressionLiteral(other)^.expressionType<>expressionType)
+                                           or (P_expressionLiteral(other)^.customType    <>customType) then exit(false);
     case typ of
       et_subrule ,
       et_inline  ,
@@ -1807,7 +1874,7 @@ FUNCTION T_mapLiteral.leqForSorting(CONST other: P_literal): boolean;
   end;
 
 //?.leqForSorting:==============================================================
-FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
+FUNCTION T_stringLiteral.softCast: P_literal;
   VAR
     len: longint;
     otherVal: ansistring;
@@ -2295,7 +2362,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
     setLength(temp1, fill);
     setLength(temp2, fill);
     for i:=0 to fill-1 do with temp1[i] do begin
-      v:=P_scalarLiteral(dat[i]);
+      v:=dat[i];
       index:=i;
     end;
     scale:=1;
@@ -2363,7 +2430,7 @@ FUNCTION T_listLiteral.clone: P_compoundLiteral;
 FUNCTION T_setLiteral.clone: P_compoundLiteral;
   VAR bin,i:longint;
   begin
-    result:=newSetLiteral;
+    result:=newSetLiteral();
     setLength(P_setLiteral(result)^.dat.dat,
                              length(dat.dat));
     P_setLiteral(result)^.dat.fill:=dat.fill;
@@ -2584,7 +2651,9 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
   FUNCTION mutateStringAppend(VAR toMutate:P_literal; CONST RHS:P_literal):boolean;
     begin
       if (toMutate^.literalType=lt_string) and (toMutate^.numberOfReferences=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
-        P_stringLiteral(toMutate)^.append(P_scalarLiteral(RHS)^.stringForm);
+        if RHS^.literalType=lt_string
+        then P_stringLiteral(toMutate)^.append(P_stringLiteral(RHS)^.val)
+        else P_stringLiteral(toMutate)^.append(RHS^.toString());
         result:=false;
       end else result:=simpleMutate(toMutate,tt_operatorStrConcat,RHS);
       return(toMutate^.rereferenced);
@@ -2609,6 +2678,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         toMutate^.myHash:=0;
         exit;
       end;
+      if toMutate^.customType<>nil then adapters.raiseNote('Mutating resets type of variable from '+toMutate^.customType^.name+' to '+C_typeInfo[toMutate^.literalType].name,location);
       old:=toMutate;
       toMutate:=old^.clone;
       old^.unreference;
@@ -3069,11 +3139,13 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
         k:longint;
         sortedTemp:P_listLiteral=nil;
     begin
-      case L^.literalType of
-        lt_boolean,lt_int,lt_string,lt_real,lt_void: appendPart(L^.toString());
+      if L^.customType<>nil then begin
+        if adapters<>nil then adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
+      end else case L^.literalType of
+        lt_boolean,lt_int,lt_string,lt_real,lt_void: appendPart(L^.toString);
         lt_expression: begin
           P_expressionLiteral(L)^.validateSerializability(adapters);
-          if (adapters=nil) or (adapters^.noErrors) then appendPart(L^.toString());
+          if (adapters=nil) or (adapters^.noErrors) then appendPart(L^.toString);
         end;
         lt_list..lt_emptyList,
         lt_set ..lt_emptySet,

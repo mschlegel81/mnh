@@ -275,7 +275,9 @@ PROCEDURE T_stringConcatAggregator.addToAggregation(er:T_evaluationResult; CONST
     aggregationDefaultHandling;
     if er.literal^.literalType<>lt_void then begin
       if (resultLiteral^.literalType=lt_string) and (er.literal^.literalType in C_scalarTypes) then begin
-        P_stringLiteral(resultLiteral)^.append(P_scalarLiteral(er.literal)^.stringForm);
+        if er.literal^.literalType=lt_string
+        then P_stringLiteral(resultLiteral)^.append(P_stringLiteral(er.literal)^.value)
+        else P_stringLiteral(resultLiteral)^.append(er.literal^.toString());
       end else begin
         param:=P_listLiteral(newListLiteral(2)^.append(resultLiteral,true)^.append(er.literal,true));
         newResult:=operator_StrConcat(param,location,P_threadContext(context)^);
