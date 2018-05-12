@@ -210,13 +210,18 @@ TYPE
     private
       name:T_idString;
       super:P_typedef;
-      builtinsuper:T_literalType;
+      builtinsuper:T_literalTypeSet;
       ducktyperule:P_expressionLiteral;
+      ducktyping:boolean;
     public
-    CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalType; CONST super_:P_typedef; CONST typerule:P_expressionLiteral);
-    DESTRUCTOR destroy;
-    FUNCTION matchesTypecheck(CONST customCheck:P_typedef):boolean;
-    FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+      CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_:boolean);
+      DESTRUCTOR destroy;
+      FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
+      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+      PROPERTY getName:T_idString read name;
+      PROPERTY getSuper:P_typedef read super;
+      PROPERTY getWhitelist:T_literalTypeSet read builtinsuper;
+      PROPERTY isDucktyping:boolean read ducktyping;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -642,12 +647,13 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
-CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinType:T_literalType; CONST super_: P_typedef; CONST typerule: P_expressionLiteral);
+CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinType:T_literalTypeSet; CONST super_: P_typedef; CONST typerule: P_expressionLiteral; CONST ducktyping_:boolean);
   begin
-    name:=id;
-    super:=super_;
+    name        :=id;
+    super       :=super_;
     builtinsuper:=builtinType;
     ducktyperule:=typerule;
+    ducktyping  :=ducktyping_;
   end;
 
 DESTRUCTOR T_typedef.destroy;
@@ -655,11 +661,17 @@ DESTRUCTOR T_typedef.destroy;
     disposeLiteral(ducktyperule);
   end;
 
-FUNCTION T_typedef.matchesTypecheck(CONST customCheck: P_typedef): boolean;
+FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
+  VAR t:P_typedef;
   begin
-    if (customCheck=@self) then exit(true);
-    if (customCheck^.super=nil) then exit(false);
-    result:=matchesTypecheck(customCheck^.super);
+    result:=false;
+    if L^.customType<>nil then begin
+      t:=@self;
+      while(t<>nil) do
+      if L^.customType=t
+      then exit(true) else t:=t^.super;
+    end;
+    if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,L);
   end;
 
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;

@@ -472,6 +472,7 @@ TYPE
     modifier_synchronized,
     modifier_local,
     modifier_customType,
+    modifier_customDuckType,
     modifier_noCurry);
   T_modifierSet=set of T_modifier;
 CONST
@@ -485,7 +486,8 @@ CONST
        (name:'plain';         helpText:'Modifies a datastore to use plain text instead of default binary format'        ; isRuleModifier:true ),
        (name:'synchronized';  helpText:'Protects the rule from concurrent execution.'                                   ; isRuleModifier:true ),
        (name:'local';         helpText:'Used for declaring block-local variables'                                       ; isRuleModifier:false),
-       (name:'type';          helpText:'Used for declaring custom type checks'                                          ; isRuleModifier:true ),
+       (name:'type';          helpText:'Used for declaring custom types'                                                ; isRuleModifier:true ),
+       (name:'ducktype';      helpText:'Used for declaring custom duck type checks'                                     ; isRuleModifier:true ),
        (name:'nocurry';       helpText:'Used to suppress currying/uncurrying'                                           ; isRuleModifier:true ));
 
   C_specialWordInfo:array[0..5] of record
@@ -512,17 +514,23 @@ TYPE
               rt_mutable,
               rt_datastore,
               rt_synchronized,
-              rt_customTypeCheck);
+              rt_customTypeCheck,
+              rt_duckTypeCheck,
+              rt_customTypeCast,
+              rt_customOperator);
 CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
-      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable,rt_datastore,rt_customTypeCheck];
+      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable,rt_datastore,rt_customTypeCheck,rt_duckTypeCheck];
       C_ruleTypeText:array[T_ruleType] of string=(
       '',
       'memoized ',
       'mutable ',
       'datastore ',
       'synchronized ',
-      'type ');
-      C_validModifierCombinations:array[0..15] of record
+      'type ',
+      'ducktype ',
+      'typecast ',
+      'custom operator ');
+      C_validModifierCombinations:array[0..17] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
       end=((modifiers:[];                                                   ruleType:rt_normal),
@@ -540,7 +548,9 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
            (modifiers:[modifier_synchronized];                              ruleType:rt_synchronized),
            (modifiers:[modifier_synchronized,modifier_private];             ruleType:rt_synchronized),
            (modifiers:[modifier_customType];                                ruleType:rt_customTypeCheck),
-           (modifiers:[modifier_customType,modifier_private];               ruleType:rt_customTypeCheck));
+           (modifiers:[modifier_customType,modifier_private];               ruleType:rt_customTypeCheck),
+           (modifiers:[modifier_customDuckType];                            ruleType:rt_duckTypeCheck),
+           (modifiers:[modifier_customDuckType,modifier_private];           ruleType:rt_duckTypeCheck));
 
 TYPE
   T_messageClass=(mc_echo   ,

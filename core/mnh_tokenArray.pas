@@ -23,7 +23,7 @@ TYPE
       customOperatorRules:T_customOperatorArray;
       PROCEDURE logReady(CONST stateHashAtLoad:T_hashInt);
       PROCEDURE clearCustomOperators;
-      PROCEDURE mergeCustomOps(CONST other:T_customOperatorArray);
+      FUNCTION mergeCustomOps(CONST importedPackage:P_abstractPackage; VAR adapters:T_adapters):boolean;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       DESTRUCTOR destroy; virtual;
@@ -904,12 +904,19 @@ PROCEDURE T_abstractPackage.clearCustomOperators;
     for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do customOperatorRules[op]:=nil;
   end;
 
-PROCEDURE T_abstractPackage.mergeCustomOps(CONST other:T_customOperatorArray);
+FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackage; VAR adapters:T_adapters):boolean;
   VAR op:T_tokenType;
   begin
-    for op:=low(T_customOperatorArray) to high(T_customOperatorArray)
-    do if customOperatorRules[op] =nil
-     then customOperatorRules[op]:=other[op];
+    result:=false;
+    for op:=low(T_customOperatorArray) to high(T_customOperatorArray) do
+    if customOperatorRules[op] =nil then begin
+      customOperatorRules[op]:=importedPackage^.customOperatorRules[op];
+      result:=result or (customOperatorRules[op]<>nil);
+    end else if importedPackage^.customOperatorRules[op]<>nil then begin
+      adapters.raiseWarning('Custom operator '+C_tokenInfo[op].defaultId+' hides operator defined '
+        + ansistring(importedPackage^.customOperatorRules[op]^.getLocation),
+                                      customOperatorRules[op]^.getLocation);
+    end;
   end;
 
 CONSTRUCTOR T_abstractPackage.create(CONST provider: P_codeProvider);

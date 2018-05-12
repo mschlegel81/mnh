@@ -34,7 +34,8 @@ BUILDS:=[[false,'LOWin64','./mnh_light.exe'          ,Lazarus64Path&'\lazbuild.e
          [false,'FDWin32','bin32/mnh_debug.exe'      ,Lazarus32Path&'\lazbuild.exe',['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug.exe'           ,true],
          [true ,'LDLinux','./mnh_light_debug'        ,               'lazbuild'    ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
          [true ,'LPLinux','./mnh_prof'               ,               'lazbuild'    ,['-B','--bm=profiling' ,'consoles/mnh_light.lpi'],'consoles/mnh_prof'           ,true],
-         [true ,'FDLinux','./mnh_debug'              ,               'lazbuild'    ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]];
+         [true ,'FDLinux','./mnh_debug'              ,               'lazbuild'    ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true]]
+         .map(::toBuildConfig);
 
 //@SuppressUnusedWarning
 DISTRO_BUILDS:=BUILDS.filter({not($b[6])});

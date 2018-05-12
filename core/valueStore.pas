@@ -38,12 +38,13 @@ TYPE
       cs:TRTLCriticalSection;
       scopeStack     :array of T_scope;
       scopeTopIndex  :longint;
-      PROCEDURE copyDataAsReadOnly(VAR original:T_valueStore);
+      PROCEDURE copyData(VAR original:T_valueStore; CONST readonly:boolean);
       FUNCTION getVariable(CONST id:T_idString; CONST ignoreBlocks:boolean; OUT blockEncountered:boolean):P_namedVariable;
     public
       parentStore:P_valueStore;
       CONSTRUCTOR create;
       FUNCTION readOnlyClone:P_valueStore;
+      FUNCTION clone:P_valueStore;
       DESTRUCTOR destroy;
       PROCEDURE clear;
       FUNCTION isEmpty:boolean;
@@ -123,14 +124,16 @@ CONSTRUCTOR T_valueStore.create;
     scopeTopIndex:=-1;
   end;
 
-PROCEDURE T_valueStore.copyDataAsReadOnly(VAR original:T_valueStore);
+PROCEDURE T_valueStore.copyData(VAR original:T_valueStore; CONST readonly:boolean);
   VAR i,i0:longint;
   PROCEDURE copyScope(CONST source:T_scope; OUT dest:T_scope);
     VAR k:longint;
     begin
       dest.blockingScope:=source.blockingScope;
       setLength(dest.v,length(source.v));
-      for k:=0 to length(dest.v)-1 do dest.v[k]:=source.v[k]^.readOnlyClone;
+      if readonly
+      then for k:=0 to length(dest.v)-1 do dest.v[k]:=source.v[k]^.readOnlyClone
+      else for k:=0 to length(dest.v)-1 do new(dest.v[k],create(source.v[k]^.id,source.v[k]^.value,source.v[k]^.readonly));
     end;
 
   begin
@@ -150,7 +153,14 @@ FUNCTION T_valueStore.readOnlyClone:P_valueStore;
   begin
     new(result,create);
     result^.parentStore:=parentStore;
-    result^.copyDataAsReadOnly(self);
+    result^.copyData(self,true);
+  end;
+
+FUNCTION T_valueStore.clone:P_valueStore;
+  begin
+    new(result,create);
+    result^.parentStore:=parentStore;
+    result^.copyData(self,false);
   end;
 
 DESTRUCTOR T_valueStore.destroy;

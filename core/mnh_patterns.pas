@@ -18,7 +18,7 @@ TYPE
       typeWhitelist    :T_literalTypeSet;
       restrictionId    :T_idString;
       builtinTypeCheck :T_typeCheck;
-      customTypeCheck  :P_abstractRule;
+      customTypeCheck  :P_typedef;
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
@@ -31,6 +31,8 @@ TYPE
       CONSTRUCTOR createAnonymous(CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST parameterId:T_idString; CONST loc:T_tokenLocation);
       DESTRUCTOR destroy;
+      PROPERTY getCustomTypeCheck:P_typedef read customTypeCheck;
+      PROPERTY getWhitelist:T_literalTypeSet read typeWhitelist;
   end;
 
   T_patternElementLocation=object
@@ -79,6 +81,8 @@ TYPE
       PROCEDURE complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint; VAR context:T_threadContext; CONST subruleLocation:T_tokenLocation);
       {$endif}
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
+      FUNCTION getFirst:T_patternElement;
+      FUNCTION usesDucktyping:boolean;
   end;
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
@@ -136,7 +140,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     if not(L^.literalType in typeWhitelist) then exit(false);
     result:=true;
     case restrictionType of
-      tt_customTypeCheck:    exit(customTypeCheck^.evaluateToBoolean(tt_customTypeRule,location,L,@context,@context.recycler));
+      tt_customTypeCheck:    exit(customTypeCheck^.matchesLiteral(L,location,@context));
       tt_typeCheck:          exit(typeCheckAccept(L,builtinTypeCheck,restrictionIdx));
       tt_comparatorEq..tt_comparatorListEq,tt_operatorIn:begin
         if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
@@ -151,7 +155,7 @@ FUNCTION T_patternElement.toString: ansistring;
     result:='';
     case restrictionType of
       tt_literal: result:=id;
-      tt_customTypeCheck    : result:=id+':'+customTypeCheck^.getId;
+      tt_customTypeCheck    : result:=id+':'+customTypeCheck^.getName;
       tt_typeCheck: if C_typeCheckInfo[builtinTypeCheck].modifiable and (restrictionIdx>=0)
                     then result:=id+':'+C_typeCheckInfo[builtinTypeCheck].name+'('+intToStr(restrictionIdx)+')'
                     else result:=id+':'+C_typeCheckInfo[builtinTypeCheck].name;
@@ -222,7 +226,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
     if restrictionType = tt_customTypeCheck then begin
-      typeWhitelist:=customTypeCheck^.getFirstParameterTypeWhitelist;
+      typeWhitelist:=customTypeCheck^.getWhitelist;
       exit;
     end;
     if restrictionType = tt_typeCheck then typeWhitelist:=C_typeCheckInfo[builtinTypeCheck].matching;
@@ -642,9 +646,12 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
 
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
-              rulePatternElement.customTypeCheck:=parts[i].first^.data;
+              rulePatternElement.customTypeCheck:=P_abstractRule(parts[i].first^.data)^.getTypedef;
+              {$ifdef debugMode}
+              if rulePatternElement.customTypeCheck=nil then raise Exception.create('Rule '+P_abstractRule(parts[i].first^.data)^.getId+' did not return a type definition');
+              {$endif}
               {$ifdef fullVersion}
-              rulePatternElement.customTypeCheck^.setIdResolved;
+              P_abstractRule(parts[i].first^.data)^.setIdResolved;
               {$endif}
               parts[i].first:=context.recycler.disposeToken(parts[i].first);
 
@@ -707,6 +714,18 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
 FUNCTION T_pattern.getFirstParameterTypeWhitelist:T_literalTypeSet;
   begin
     if length(sig)>=1 then result:=sig[0].typeWhitelist else result:=[];
+  end;
+
+FUNCTION T_pattern.getFirst:T_patternElement;
+  begin
+    result:=sig[0];
+  end;
+
+FUNCTION T_pattern.usesDucktyping:boolean;
+  VAR s:T_patternElement;
+  begin
+    result:=false;
+    for s in sig do if (s.customTypeCheck<>nil) and (s.customTypeCheck^.isDucktyping) then exit(true);
   end;
 
 end.

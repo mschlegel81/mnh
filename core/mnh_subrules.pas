@@ -803,7 +803,10 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
       appendToExpression(tt_braceOpen);
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
+    indexOfSave:=original^.indexOfSave;
+    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.clone;
     if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
+    meta:=original^.meta;
     updatePatternForInline;
   end;
 
@@ -911,8 +914,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
     else                         result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation;
-  CONST context: pointer; CONST a: P_literal; CONST b: P_literal): boolean;
+FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
   begin
     resultLiteral:=evaluateToLiteral(location,context,a,b).literal;
@@ -950,8 +952,7 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
   end;
 
 FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation;
-  CONST context: pointer; CONST a: P_literal; CONST b: P_literal
-  ): T_evaluationResult;
+  CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
@@ -974,6 +975,7 @@ FUNCTION T_expression.getParentId: T_idString; begin result:=''; end;
 
 FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: pointer): P_expressionLiteral;
   begin
+    raise Exception.create('Clone is not implemented for expressions of type '+C_expressionTypeString[typ]);
     result:=nil;
   end;
 
