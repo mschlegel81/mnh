@@ -29,6 +29,7 @@ USES //basic classes
      mnh_builtinGenerators,
      mnh_patterns,
      mnh_subrules,
+     mnh_datastores,
      mnh_rule,
      mnh_tokenArray;
 
@@ -1323,13 +1324,20 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             {$ifdef fullVersion}
             if (statement.firstToken<>nil) and
                (statement.firstToken^.next=nil) and
-               (statement.firstToken^.tokType=tt_literal) and
-               (context.adapters^.preferredEchoLineLength>10) then begin
-              context.adapters^.echoOutput(
-                serializeToStringList(P_literal(statement.firstToken^.data),
-                                      statement.firstToken^.location,
-                                      nil,
-                                      context.adapters^.preferredEchoLineLength));
+               (statement.firstToken^.tokType=tt_literal) then begin
+            if (context.adapters^.preferredEchoLineLength>10)
+            then context.adapters^.echoOutput(
+                   serializeToStringList(P_literal(statement.firstToken^.data),
+                                         statement.firstToken^.location,
+                                         nil,
+                                         context.adapters^.preferredEchoLineLength,
+                                         @self))
+            else context.adapters^.echoOutput(
+                   serializeToStringList(P_literal(statement.firstToken^.data),
+                                         statement.firstToken^.location,
+                                         nil,
+                                         maxlongint,
+                                         @self))
             end else {$endif}
               context.adapters^.echoOutput(tokensToString(statement.firstToken));
           end;

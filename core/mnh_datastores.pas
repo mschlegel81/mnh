@@ -2,7 +2,7 @@ UNIT mnh_datastores;
 INTERFACE
 USES sysutils,
      serializationUtil, myGenerics, myStringUtil,
-     mnh_basicTypes,
+     mnh_basicTypes, mnh_constants,
      mnh_out_adapters, mnh_fileWrappers,
      mnh_litVar,
      mnh_tokenArray,mnh_contexts;
@@ -24,7 +24,78 @@ TYPE
   end;
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128; CONST package:P_abstractPackage=nil):T_arrayOfString;
 IMPLEMENTATION
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128; CONST package:P_abstractPackage=nil):T_arrayOfString;
+  VAR indent:longint=0;
+      prevLines:T_arrayOfString;
+      nextLine:ansistring;
+
+  PROCEDURE appendSeparator;
+    begin
+      nextLine:=nextLine+',';
+    end;
+
+  PROCEDURE appendPart(CONST part:string);
+    begin
+      if length(nextLine)+length(part)>maxLineLength then begin
+        append(prevLines,nextLine);
+        nextLine:=StringOfChar(' ',indent);
+      end;
+      nextLine:=nextLine+part;
+    end;
+
+  PROCEDURE ser(CONST L:P_literal; CONST outerIndex:longint);
+    VAR iter:T_arrayOfLiteral;
+        k:longint;
+        sortedTemp:P_listLiteral=nil;
+    begin
+      if (L^.customType<>nil) and (package<>nil) then appendPart(package^.literalToString(L,true))
+      else case L^.literalType of
+        lt_boolean,lt_int,lt_string,lt_real,lt_void: appendPart(L^.toString());
+        lt_expression: begin
+          P_expressionLiteral(L)^.validateSerializability(adapters);
+          if (adapters=nil) or (adapters^.noErrors) then appendPart(L^.toString());
+        end;
+        lt_list..lt_emptyList,
+        lt_set ..lt_emptySet,
+        lt_map ..lt_emptyMap:
+        begin
+          if outerIndex>0 then begin
+            append(prevLines,nextLine);
+            nextLine:=StringOfChar(' ',indent);
+          end;
+          appendPart('[');
+          inc(indent);
+          if L^.literalType in [lt_set..lt_emptySet,lt_map..lt_emptyMap] then begin
+            sortedTemp:=P_compoundLiteral(L)^.toList;
+            sortedTemp^.sort;
+            iter:=sortedTemp^.iteratableList;
+            disposeLiteral(sortedTemp);
+          end else iter:=P_compoundLiteral(L)^.iteratableList;
+          for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.noErrors) then begin
+            ser(iter[k],k);
+            if k<length(iter)-1 then appendSeparator;
+          end;
+          disposeLiteral(iter);
+          dec(indent);
+          case L^.literalType of
+            lt_list..lt_emptyList: appendPart(']');
+            lt_set ..lt_emptySet : appendPart('].toSet');
+            lt_map ..lt_emptyMap : appendPart('].toMap');
+          end;
+        end;
+        else if adapters<>nil then adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
+      end;
+    end;
+
+  begin
+    setLength(prevLines,0);
+    nextLine:='';
+    ser(L,0);
+    if length(nextLine)>0 then append(prevLines,nextLine);
+    result:=prevLines;
+  end;
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
   VAR wrapper:T_bufferedInputStreamWrapper;

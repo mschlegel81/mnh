@@ -414,7 +414,6 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLite
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128):T_arrayOfString;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
@@ -1174,13 +1173,14 @@ PROCEDURE T_listLiteral.removeElement(CONST index:longint);
 //?.toString:===================================================================
 FUNCTION T_literal          .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:='<ERR>';           end;
 FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_TEXT_VOID;        end;
-FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val];   end;
-FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;     end;
-FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
+FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val]; if customType<>nil then result+='.to'+customType^.name; end;
+FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;      if customType<>nil then result:='to'+customType^.name+'('+result+')'; end;
+FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); if customType<>nil then result:='to'+customType^.name+'('+result+')'; end;
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   begin
     if lengthLimit>=length(val)+2 then result:=escapeString(val,es_pickShortest)
                                   else result:=escapeString(UTF8Copy(val,1,lengthLimit-5)+'...',es_pickShortest);
+    if customType<>nil then result+='.to'+customType^.name;
   end;
 
 FUNCTION T_listLiteral.toString(CONST lengthLimit: longint): ansistring;
@@ -1199,6 +1199,7 @@ FUNCTION T_listLiteral.toString(CONST lengthLimit: longint): ansistring;
       end;
       result:=result+']';
     end;
+    if customType<>nil then result+='.to'+customType^.name;
   end;
 
 FUNCTION T_setLiteral.toString(CONST lengthLimit: longint): ansistring;
@@ -1221,6 +1222,7 @@ FUNCTION T_setLiteral.toString(CONST lengthLimit: longint): ansistring;
       result:=result+']';
     end;
     result:=result+'.toSet';
+    if customType<>nil then result+='.to'+customType^.name;
   end;
 
 FUNCTION T_mapLiteral.toString(CONST lengthLimit: longint): ansistring;
@@ -1243,6 +1245,7 @@ FUNCTION T_mapLiteral.toString(CONST lengthLimit: longint): ansistring;
       result:=result+']';
     end;
     result:=result+'.toMap';
+    if customType<>nil then result+='.to'+customType^.name;
   end;
 
 FUNCTION T_listLiteral.listConstructorToString(CONST lengthLimit: longint): string;
@@ -3132,78 +3135,6 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     stream^.writeByte(254);
     writeLiteral(L);
     reusableMap.destroy;
-  end;
-
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128):T_arrayOfString;
-  VAR indent:longint=0;
-      prevLines:T_arrayOfString;
-      nextLine:ansistring;
-
-  PROCEDURE appendSeparator;
-    begin
-      nextLine:=nextLine+',';
-    end;
-
-  PROCEDURE appendPart(CONST part:string);
-    begin
-      if length(nextLine)+length(part)>maxLineLength then begin
-        append(prevLines,nextLine);
-        nextLine:=StringOfChar(' ',indent);
-      end;
-      nextLine:=nextLine+part;
-    end;
-
-  PROCEDURE ser(CONST L:P_literal; CONST outerIndex:longint);
-    VAR iter:T_arrayOfLiteral;
-        k:longint;
-        sortedTemp:P_listLiteral=nil;
-    begin
-      if L^.customType<>nil then begin
-        if adapters<>nil then adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
-      end else case L^.literalType of
-        lt_boolean,lt_int,lt_string,lt_real,lt_void: appendPart(L^.toString);
-        lt_expression: begin
-          P_expressionLiteral(L)^.validateSerializability(adapters);
-          if (adapters=nil) or (adapters^.noErrors) then appendPart(L^.toString);
-        end;
-        lt_list..lt_emptyList,
-        lt_set ..lt_emptySet,
-        lt_map ..lt_emptyMap:
-        begin
-          if outerIndex>0 then begin
-            append(prevLines,nextLine);
-            nextLine:=StringOfChar(' ',indent);
-          end;
-          appendPart('[');
-          inc(indent);
-          if L^.literalType in [lt_set..lt_emptySet,lt_map..lt_emptyMap] then begin
-            sortedTemp:=P_compoundLiteral(L)^.toList;
-            sortedTemp^.sort;
-            iter:=sortedTemp^.iteratableList;
-            disposeLiteral(sortedTemp);
-          end else iter:=P_compoundLiteral(L)^.iteratableList;
-          for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.noErrors) then begin
-            ser(iter[k],k);
-            if k<length(iter)-1 then appendSeparator;
-          end;
-          disposeLiteral(iter);
-          dec(indent);
-          case L^.literalType of
-            lt_list..lt_emptyList: appendPart(']');
-            lt_set ..lt_emptySet : appendPart('].toSet');
-            lt_map ..lt_emptyMap : appendPart('].toMap');
-          end;
-        end;
-        else if adapters<>nil then adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
-      end;
-    end;
-
-  begin
-    setLength(prevLines,0);
-    nextLine:='';
-    ser(L,0);
-    if length(nextLine)>0 then append(prevLines,nextLine);
-    result:=prevLines;
   end;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;

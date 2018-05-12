@@ -1,8 +1,13 @@
 UNIT mnh_funcs;
 INTERFACE
 {$i mnh_func_defines.inc}
-USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_basicTypes,mnh_contexts,
-     myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
+USES sysutils,Classes,
+     myGenerics,myStringUtil,
+     mnh_constants,mnh_basicTypes,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_contexts
+     {$ifdef fullVersion},mnh_doc{$endif};
 TYPE
   T_arityKind=(ak_nullary,
                ak_unary,
