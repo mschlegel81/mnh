@@ -684,9 +684,16 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
         lt_int       : result:=P_intLiteral(L)^.clone;
         lt_real      : result:=newRealLiteral(P_realLiteral(L)^.val);
         lt_string    : result:=newStringLiteral(P_stringLiteral(L)^.val,true);
-        lt_expression: result:=P_expressionLiteral(L)^.clone(location,threadContext);
-        //all compound types:
-        lt_list..lt_emptyMap: result:=P_compoundLiteral(L)^.clone;
+        lt_expression: begin
+          if L^.numberOfReferences<=1
+          then result:=L^.rereferenced
+          else result:=P_expressionLiteral(L)^.clone(location,threadContext);
+        end;
+        lt_list..lt_emptyMap: begin
+          if L^.numberOfReferences<=1
+          then result:=L^.rereferenced
+          else result:=P_compoundLiteral(L)^.clone;
+        end;
       end;
       if result<>nil then result^.customType:=@self;
     end else result:=nil;
