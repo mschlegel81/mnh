@@ -151,7 +151,7 @@ FUNCTION operator_OrElse   intFuncSignature;
     else exit(arg0^.rereferenced);
   end;
 
-FUNCTION perform_in(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+FUNCTION perform_In(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   begin
     exit(newBoolLiteral(LHS^.isInRelationTo(tt_operatorIn,RHS)));
   end;

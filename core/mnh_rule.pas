@@ -77,7 +77,7 @@ TYPE
   P_typeCastRule=^T_typeCastRule;
   T_typeCastRule=object(T_ruleWithSubrules)
     private
-      typeDef:P_typedef;
+      typedef:P_typedef;
     public
       CONSTRUCTOR create(CONST def:P_typedef; CONST startAt:T_tokenLocation);
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
@@ -229,7 +229,7 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
 CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST startAt:T_tokenLocation);
   begin
     inherited create('to'+def^.getName,startAt,rt_customTypeCast);
-    typeDef:=def;
+    typedef:=def;
     allowCurrying:=false;
     {$ifdef fullVersion}
     if def^.isDucktyping then setIdResolved;
@@ -512,7 +512,7 @@ FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoca
     then raw:=param^.value[0]
     else exit(false);
 
-    cast:=typeDef^.cast(raw,callLocation,threadContextPointer,P_threadContext(threadContextPointer)^.adapters);
+    cast:=typedef^.cast(raw,callLocation,threadContextPointer,P_threadContext(threadContextPointer)^.adapters);
     if cast=nil then exit(false)
     else begin
       result:=true;
@@ -608,7 +608,7 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
     result^.put(newSingletonString('function'),getFunctionPointer(context,tt_localUserRule,getLocation),false);
   end;
 
-FUNCTION T_typecastrule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
+FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
   begin
     result:=newMapLiteral^
       .put(newSingletonString('type'    ),newSingletonString(C_ruleTypeText[getRuleType]),false)^

@@ -29,7 +29,6 @@ USES //basic classes
      mnh_builtinGenerators,
      mnh_patterns,
      mnh_subrules,
-     mnh_datastores,
      mnh_rule,
      mnh_tokenArray;
 
@@ -614,7 +613,6 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     end;
   VAR newLocalIdInfos:P_localIdInfos;
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - reset');
     {$endif}
@@ -669,7 +667,6 @@ DESTRUCTOR T_sandbox.destroy;
 
 FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword): T_storedMessages;
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
@@ -681,7 +678,6 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
 
 FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
@@ -692,7 +688,6 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
 FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
     else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
@@ -721,12 +716,11 @@ FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST 
       parameters:P_listLiteral;
       stringOut:P_literal=nil;
   begin
-
     if inPack^.packageRules .containsKey('toString',toStringRule)
     or inPack^.importedRules.containsKey('toString',toStringRule)
     then begin
       adapters.clearAll({$ifdef fullVersion}true{$endif});
-      evaluationContext.resetForEvaluation(inPack,ect_silent,C_EMPTY_STRING_ARRAY);
+      evaluationContext.resetForEvaluation({$ifdef fullVersion}inPack,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
       evaluationContext.threadContext^.setAllowedSideEffectsReturningPrevious([]);
       parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
       if toStringRule^.replaces(tt_localUserRule,packageTokenLocation(inPack),parameters,toReduce,dummy,evaluationContext.threadContext)
@@ -744,6 +738,7 @@ FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST 
       else result:=stringOut^.toString();
       disposeLiteral(stringOut);
     end;
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
 {$ifdef fullVersion}
@@ -1068,7 +1063,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           message:T_arrayOfString;
       begin
         new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup^.getLocation));
-        if packageRules.containsKey(castrule^.getId,otherRule) then begin
+        if packageRules.containsKey(castRule^.getId,otherRule) then begin
           setLength(message,3);
           message[0]:='Cannot declare implicit typecast rule '+castRule^.getId;
           message[1]:='because a rule of the same name already exists '+ansistring(otherRule^.getLocation);
@@ -1324,20 +1319,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             {$ifdef fullVersion}
             if (statement.firstToken<>nil) and
                (statement.firstToken^.next=nil) and
-               (statement.firstToken^.tokType=tt_literal) then begin
-            if (context.adapters^.preferredEchoLineLength>10)
-            then context.adapters^.echoOutput(
-                   serializeToStringList(P_literal(statement.firstToken^.data),
-                                         statement.firstToken^.location,
-                                         nil,
-                                         context.adapters^.preferredEchoLineLength,
-                                         @self))
-            else context.adapters^.echoOutput(
-                   serializeToStringList(P_literal(statement.firstToken^.data),
-                                         statement.firstToken^.location,
-                                         nil,
-                                         maxlongint,
-                                         @self))
+               (statement.firstToken^.tokType=tt_literal) and
+               (context.adapters^.preferredEchoLineLength>10) then begin
+              context.adapters^.echoOutput(
+                serializeToStringList(P_literal(statement.firstToken^.data),
+                                      statement.firstToken^.location,
+                                      nil,
+                                      context.adapters^.preferredEchoLineLength));
             end else {$endif}
               context.adapters^.echoOutput(tokensToString(statement.firstToken));
           end;
