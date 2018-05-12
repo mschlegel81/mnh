@@ -1,4 +1,4 @@
-type NumericOrList(x)->x.isNumeric OR x.isNumericList;
+ducktype NumericOrList(x)->x.isNumeric OR x.isNumericList;
 
 //@SuppressUnusedWarning
 //*Returns the year of the given time

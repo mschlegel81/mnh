@@ -1,6 +1,7 @@
-//Definition
-type Queue(x:StatefulExpression(1))->x.toString==newQueue.toString;
-newQueue->{
+//Marker type
+//@SuppressUnusedParameterWarning
+type Queue(x:StatefulExpression(1))->true;
+nocurry newQueue->{
   begin
     local q:=[];
     local op:=[['empty',{q.size=0}],
@@ -8,7 +9,7 @@ newQueue->{
                ['pop'  ,{begin local result:=q[0]; q.size>0 ? q[0]:=void : void; result; end}]].toMap;
   save;
     op[$p[0]]($p[1]);
-  end};
+  end}.toQueue;
 
 pop  (queue:Queue      )->queue(['pop']);
 push (queue:Queue,value)->queue(['push',value]);

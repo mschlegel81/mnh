@@ -1,6 +1,6 @@
 //@SuppressUnusedParameterWarning
-type CoordPair(P:NumericList(2))->true;
-type CoordCollection(C:Collection)->C.each(c,c.isCoordPair,AND);
+ducktype CoordPair(P:NumericList(2))->true;
+ducktype CoordCollection(C:Collection)->C.each(c,c.isCoordPair,AND);
 //*Returns all coordinates reachable from P (ignoring board boundaries)
 private memoized neighbors(P:CoordPair)->
   [[2,1],[2,-1],[-2,1],[-2,-1],

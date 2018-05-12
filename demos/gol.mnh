@@ -43,10 +43,10 @@ private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=tru
 //*Conway's Game Of Life
 //*Play the game in the given resolution until a key is pressed
 //@demo_for=animation
-main(width,height)->playTheGame([width.toInt,height.toInt],0.05,2^62,true);
+main(width,height)->playTheGame([width.toInt,height.toInt].toWorldSize,0.05,2^62,true);
 
 //*Play the game for the given number of steps
-main(width,height,stepCount)->playTheGame([width.toInt,height.toInt],0.05,stepCount.toInt,false);
+main(width,height,stepCount)->playTheGame([width.toInt,height.toInt].toWorldSize,0.05,stepCount.toInt,false);
 
 //*Play the game for the given number of steps without delay between generations
-main(width,height,stepCount,"fast")->playTheGame([width.toInt,height.toInt],0,stepCount.toInt,false);
+main(width,height,stepCount,"fast")->playTheGame([width.toInt,height.toInt].toWorldSize,0,stepCount.toInt,false);
