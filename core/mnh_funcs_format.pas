@@ -3,6 +3,7 @@ INTERFACE
 USES sysutils,
      myGenerics,myStringUtil,
      mnh_basicTypes,mnh_constants,
+     mnh_tokenArray,
      mnh_litVar,
      mnh_subrules,
      mnh_contexts,
@@ -20,7 +21,7 @@ TYPE
     realFmt,strFmt:string;
     lengthPar1,lengthPar2:longint;
     CONSTRUCTOR create(CONST formatString:ansistring);
-    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal);
+    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST package:P_abstractPackage);
     DESTRUCTOR destroy;
   end;
 
@@ -126,7 +127,7 @@ CONSTRUCTOR T_format.create(CONST formatString: ansistring);
     end;
   end;
 
-PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
+PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST package:P_abstractPackage);
   FUNCTION pad(CONST s:string; CONST numberFormat:boolean):string;
     VAR leadingMinus:byte=0;
     begin
@@ -149,9 +150,7 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
       fmtCat_decimal: if l^.literalType=lt_int then begin txt+=pad(P_intLiteral(l)^.value.toString   ,true); exit; end;
       fmtCat_hex    : if l^.literalType=lt_int then begin txt+=pad(P_intLiteral(l)^.value.toHexString,true); exit; end;
     end;
-    if l^.literalType=lt_string
-    then txt:=txt+sysutils.format(strFmt,[P_stringLiteral(l)^.value])
-    else txt:=txt+sysutils.format(strFmt,[l^.toString]                   );
+    txt+=sysutils.format(strFmt,[package^.literalToString(L)]);
   end;
 
 DESTRUCTOR T_format.destroy;
@@ -325,7 +324,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
-            then formats[i].formatAppend(result,p.value[k])
+            then formats[i].formatAppend(result,p.value[k],P_abstractPackage(tokenLocation.package))
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
@@ -370,7 +369,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   VAR i:longint;
       listSize:longint=-1;
   begin
-    for i:=1 to params^.size-1 do if params^.value[i]^.literalType in C_compoundTypes then begin
+    for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (params^.value[i]^.customType=nil) then begin
       if listSize=-1 then listSize:=P_compoundLiteral(params^.value[i])^.size
                   else if listSize<>P_compoundLiteral(params^.value[i])^.size then begin
         context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^.value[i])^.size)+' for formatting.',tokenLocation);
@@ -379,7 +378,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     end;
     if listSize=-1 then listSize:=1;
     setLength(iter,params^.size);
-    for i:=1 to params^.size-1 do if params^.value[i]^.literalType in C_compoundTypes
+    for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (params^.value[i]^.customType=nil)
     then iter[i]:=P_compoundLiteral(params^.value[i])^.iteratableList
     else begin setLength(iter[i],1); iter[i][0]:=params^.value[i]^.rereferenced; end;
 

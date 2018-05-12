@@ -92,6 +92,7 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
+      FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
 
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -185,6 +186,7 @@ TYPE
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -711,6 +713,38 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
+
+FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
+  VAR toStringRule:P_rule;
+      toReduce,dummy:P_token;
+      parameters:P_listLiteral;
+      stringOut:P_literal=nil;
+  begin
+
+    if inPack^.packageRules .containsKey('toString',toStringRule)
+    or inPack^.importedRules.containsKey('toString',toStringRule)
+    then begin
+      adapters.clearAll({$ifdef fullVersion}true{$endif});
+      evaluationContext.resetForEvaluation(inPack,ect_silent,C_EMPTY_STRING_ARRAY);
+      evaluationContext.threadContext^.setAllowedSideEffectsReturningPrevious([]);
+      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
+      if toStringRule^.replaces(tt_localUserRule,packageTokenLocation(inPack),parameters,toReduce,dummy,evaluationContext.threadContext)
+      then stringOut:=evaluationContext.threadContext^.reduceToLiteral(toReduce).literal;
+      disposeLiteral(parameters);
+    end;
+
+    if stringOut=nil then begin
+      if (L^.literalType=lt_string) and not(escape)
+      then result:=P_stringLiteral(L)^.value
+      else result:=L^.toString();
+    end else begin
+      if stringOut^.literalType=lt_string
+      then result:=P_stringLiteral(stringOut)^.value
+      else result:=stringOut^.toString();
+      disposeLiteral(stringOut);
+    end;
+  end;
+
 {$ifdef fullVersion}
 PROCEDURE T_sandbox.runInstallScript;
   {$i res_ensureAssoc.inc}
@@ -1506,6 +1540,11 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     for i:=0 to length(ruleList)-1 do
       if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(context.adapters^);
     setLength(ruleList,0);
+  end;
+
+FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
+  begin
+    result:=sandbox^.runToString(L,@self,forOutput);
   end;
 
 DESTRUCTOR T_package.destroy;
