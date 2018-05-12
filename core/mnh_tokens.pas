@@ -47,7 +47,7 @@ TYPE
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
-      FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
+      FUNCTION getTypedef:P_typedef; virtual;
   end;
 
   T_token=object
@@ -221,9 +221,10 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST
     disposeLiteral(parList);
   end;
 
-FUNCTION T_abstractRule.getFirstParameterTypeWhitelist:T_literalTypeSet;
+FUNCTION T_abstractRule.getTypedef:P_typedef;
   begin
-    result:=[];
+    raise Exception.create('getTypeDef is not implemented for this rule type');
+    result:=nil;
   end;
 
 CONSTRUCTOR T_token.create;

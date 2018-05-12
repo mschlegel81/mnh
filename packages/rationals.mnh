@@ -1,0 +1,161 @@
+//@SuppressUnusedParameterWarning
+type Rational(x:IntList(2))->true;
+type RegularContinuedFraction(x:IntList)->x.size>=1;
+
+//*Returns rational number r in canonical form
+private shortenRational(r:IntList)->begin
+  local x:=abs(r);
+  x:=x div gcd@x;
+  (r[0]<0 xor r[1]<0
+   ? [-x[0],x[1]]
+   : x).toRational;
+end;
+
+//@Override
+nocurry toReal(rat:Rational)->toReal(rat[0])/toReal(rat[1]);
+//*Converts continued fraction f to a real number
+private toReal(f:RegularContinuedFraction)->begin
+  local r:=0;
+  f.reverseList.each(i,index=0 ? r:=i : r:=i+1.0/r);
+  r;
+end;
+
+//@Override
+nocurry toRational(i:Int)->[i,1];
+//@Override
+nocurry toRational(x:Real)->.toRegularContinuedFraction.toRational;
+//*Converts continued fraction f to a rational number (represented as IntList(2))
+//@Override
+nocurry toRational(f:RegularContinuedFraction)->begin
+  local r:=void;
+  f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
+  r.shortenRational;
+end;
+
+//@Override
+toString(r:Rational)->r.join("/");
+
+//@Override
+//*The result always is a rational number
+OPERATOR_PLUS(a:Rational,b:Rational)->[a[0]*b[1]+b[0]*a[1],a[1]*b[1]].shortenRational;
+OPERATOR_PLUS(a:Rational,b:Int     )->[a[0]+b*a[1],a[1]].toRational;
+OPERATOR_PLUS(a:Rational,b:Real    )->a.toReal+b;
+OPERATOR_PLUS(a:Int     ,b:Rational)->[a*b[1]+b[0],b[1]].toRational;
+OPERATOR_PLUS(a:Real    ,b:Rational)->a+b.toReal;
+
+//@Override
+OPERATOR_MINUS(a:Rational,b:Rational)->[a[0]*b[1]-b[0]*a[1],a[1]*b[1]].shortenRational;
+OPERATOR_MINUS(a:Rational,b:Int     )->[a[0]-b*a[1],a[1]].toRational;
+OPERATOR_MINUS(a:Rational,b:Real    )->a.toReal-b;
+OPERATOR_MINUS(a:Int     ,b:Rational)->[a*b[1]-b[0],b[1]].toRational;
+OPERATOR_MINUS(a:Real    ,b:Rational)->a-b.toReal;
+
+//@Override
+OPERATOR_MULT(a:Rational,b:Rational)->shortenRational(a*b);
+OPERATOR_MULT(a:Rational,b:Int     )->shortenRational(a*[b,1]);
+OPERATOR_MULT(a:Rational,b:Real    )->a.toReal*b;
+OPERATOR_MULT(a:Int     ,b:Rational)->shortenRational([a,1]*b);
+OPERATOR_MULT(a:Real    ,b:Rational)->a*b.toReal;
+
+//@Override
+OPERATOR_DIVREAL(a:Rational,b:Rational)->shortenRational(a*b.reverseList);
+OPERATOR_DIVREAL(a:Int     ,b:Int     )->shortenRational([a,b]);
+OPERATOR_DIVREAL(a:Rational,b:Int     )->shortenRational(a*[1,b]);
+OPERATOR_DIVREAL(a:Rational,b:Real    )->a.toReal/b;
+OPERATOR_DIVREAL(a:Int     ,b:Rational)->shortenRational([a,1]*b.reverseList);
+OPERATOR_DIVREAL(a:Real    ,b:Rational)->a/b.toReal;
+
+//*Helper function returning adjacent values representable as a double
+private nextReal(x:Real,sig in [-1,1])->begin
+  local increment:=sig*2^(floor(ln(abs(x))/ln(2.0))-53);
+  while(x+increment==x,increment*=2);
+  x+increment;
+end;
+private nextReal(x:Real,0)->x;
+
+//*Converts r to a continued fraction with max. 1000 entries
+toRegularContinuedFraction(r:Real)->
+  [0,-1,1].each(i,
+  begin
+    local x0:=
+    local x:=r.nextReal(i);
+    local cf:=[];
+    //Trace reconstruction of r from the generated continued fraction
+    //in order to abort as soon as r is perfectly reconstructable
+    local reconstruct:=[0,Inf];
+    while(x<Inf AND (reconstruct[0]!=reconstruct[1]!=x0) AND cf.size<1000,begin
+      cf|=(local trunc:=floor(x));
+      reconstruct:=reconstruct.tail|(cf.toRegularContinuedFraction.toReal);
+      x:=1/(x-trunc);
+    end);
+    cf[cf.size-1]==1
+    ? begin
+        cf[cf.size-2]+=1;
+        cf[cf.size-1]:=void;
+      end
+    : void;
+    cf;
+  end).sort({size($x)<=size($y)}).head.toRegularContinuedFraction;
+
+
+//*Converts rational number r to a continued fraction
+toRegularContinuedFraction(r:Rational)->begin
+  local x:=r;
+  local cf:=[];
+  while(x[1]!=0,begin
+    local integerPart:=x[0] div x[1];
+    x[0]-=x[1]*integerPart;
+    x:=x.reverseList;
+    cf|=integerPart;
+  end);
+  cf;
+end;
+
+//*Returns a decimal representation of the given rational number
+//*Periodic parts are shown in round brackets; periods longer than 200 will not be found
+decimalForm(rat:Rational)->begin
+  local enum:=rat[1];
+  local r:=divMod(rat[0],rat[1]);
+  local first:=r[0]; r:=r[1]*10;
+  local result:=[];
+  local hist:=[];
+  while(not(r in hist) AND result.size<200,begin
+    hist|=r;
+    local q:=divMod(r,enum);
+    r:=q[1]*10;
+    result|=q[0];
+  end);
+  local h:=indexOf(hist=r)[0];
+  h.isVoid
+  ? first&'.'&result.join
+  : begin
+      local periodicPart:=result.tail(h);
+      first&'.'&result.head(h).join&
+      (periodicPart==[0]
+       ? ''
+       : '('&periodicPart.join&')');
+    end;
+end;
+
+decimalForm(r:Real                     )->r.toRational.decimalForm;
+decimalForm(cf:RegularContinuedFraction)->cf.toRational.decimalForm;
+
+//*Lists the first 30 approximations for r
+//@SuppressUnusedWarning
+listApprox(cf:RegularContinuedFraction)->begin
+  local r:=cf.toReal;
+  [2..min(30,cf.size)].each(k,cf.head(k).toRegularContinuedFraction)
+  .pMap({begin
+      local rat:=$cf.toRational;
+      "["&abs(rat[1]*r-rat[0])& "]\t"&rat.toString&"\t=\t"&$cf.toString;
+    end})
+  .join("\n")
+  .print;
+end;
+
+memoized private cfFormat(count=1)->'%s';
+memoized private cfFormat(count=2)->'%s+1/%s';
+memoized private cfFormat(count>1)->'%s+1/('+cfFormat(count-1)+')';
+
+//*Returns a continued fraction in the form cf[0]+1/(cf[0]+1/(...))
+toString(cf:RegularContinuedFraction)->cfFormat(cf.size).format@cf;

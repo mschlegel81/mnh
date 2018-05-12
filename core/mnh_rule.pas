@@ -8,6 +8,7 @@ USES sysutils,math,
      mnh_funcs,
      mnh_tokens,
      mnh_contexts,
+     mnh_patterns,
      mnh_datastores, mnh_caches, mnh_subrules;
 TYPE
   T_subruleArray=array of P_subruleExpression;
@@ -73,11 +74,29 @@ TYPE
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
   end;
 
+  P_typeCastRule=^T_typeCastRule;
+  T_typeCastRule=object(T_ruleWithSubrules)
+    private
+      typedef:P_typedef;
+    public
+      CONSTRUCTOR create(CONST def:P_typedef; CONST startAt:T_tokenLocation);
+      PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
+      FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
+      FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
+      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
+  end;
+
   P_typecheckRule=^T_typecheckRule;
-  T_typecheckRule=object(T_memoizedRule)
-    CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation);
-    FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
-    FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
+  T_typecheckRule=object(T_ruleWithSubrules)
+    private
+      typedef:P_typedef;
+    public
+      CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ducktyping:boolean);
+      PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
+      FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
+      FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
+      FUNCTION getTypedef:P_typedef; virtual;
+      DESTRUCTOR destroy; virtual;
   end;
 
   P_mutableRule=^T_mutableRule;
@@ -207,9 +226,23 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
     cache.create(rule_cs);
   end;
 
-CONSTRUCTOR T_typecheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation);
+CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST startAt:T_tokenLocation);
   begin
-    inherited create(ruleId,startAt,rt_customTypeCheck);
+    inherited create('to'+def^.getName,startAt,rt_customTypeCast);
+    typedef:=def;
+    allowCurrying:=false;
+    {$ifdef fullVersion}
+    if def^.isDucktyping then setIdResolved;
+    {$endif}
+  end;
+
+CONSTRUCTOR T_typecheckRule.create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ducktyping:boolean);
+  begin
+    if ducktyping
+    then inherited create(ruleId,startAt,rt_duckTypeCheck)
+    else inherited create(ruleId,startAt,rt_customTypeCheck);
+    typedef:=nil;
+    allowCurrying:=false;
   end;
 
 CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_tokenLocation; VAR meta_:T_ruleMetaData; CONST isPrivate: boolean; CONST ruleType:T_ruleType=rt_mutable);
@@ -272,7 +305,10 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
   VAR i,j:longint;
   begin
     if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
-    if (getRuleType=rt_customTypeCheck) and not(rule^.hasValidValidCustomTypeCheckPattern) then context.adapters^.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one parameter.',rule^.getLocation);
+    if (getRuleType=rt_customOperator) then begin
+      if not(rule^.canApplyToNumberOfParameters(2)) then context.adapters^.raiseError('Overloaded operators must accept two parameters',rule^.getLocation);
+      if rule^.getPattern.usesDucktyping then context.adapters^.raiseWarning('Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.',rule^.getLocation);
+    end;
     i:=0;
     while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);
     if i>=length(subrules) then begin
@@ -290,6 +326,36 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
        rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
     {$endif}
     clearCache;
+  end;
+
+PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
+  begin
+    inherited addOrReplaceSubRule(rule,context);
+    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.adapters^.raiseWarning('Overloading implicit typecast rule',rule^.getLocation);
+  end;
+
+PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
+  VAR rulePattern:T_patternElement;
+  begin
+    if (getRuleType=rt_customTypeCheck) and not(rule^.hasValidValidCustomTypeCheckPattern) then context.adapters^.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one parameter.',rule^.getLocation);
+    if length(subrules)>0 then begin
+      context.adapters^.raiseError('Type definitions must have only one subrule and may not be overridden',rule^.getLocation);
+      exit;
+    end;
+    setLength(subrules,1);
+    subrules[0]:=rule;
+    {$ifdef fullVersion}
+    if rule^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) or
+       rule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then setIdResolved;
+    {$endif}
+    if typedef=nil then begin
+      rulePattern:=rule^.getPattern.getFirst;
+      new(typedef,create(getId,
+                         rulePattern.getWhitelist,
+                         rulePattern.getCustomTypeCheck,
+                         P_expressionLiteral(rule^.rereferenced),
+                         getRuleType=rt_duckTypeCheck));
+    end;
   end;
 
 PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_adapters);
@@ -426,69 +492,45 @@ exit}
     else begin CLEAN_EXIT(false); end;
   end;
 
-FUNCTION T_typecheckRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
-{$MACRO ON}
-{$define prepareFallbackResult:=begin
-  lit:=newBoolLiteral(false);
-  firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,lit);
-  lastRep:=firstRep;
-end}
-  VAR lit:P_literal;
-
+FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
+  VAR cast:P_literal;
+      raw :P_literal;
   begin
-    result:=true; //Typechecks always match and return true or false
-    if param=nil then begin
-      prepareFallbackResult;
-      exit(true);
-    end;
-
-    if (P_threadContext(threadContextPointer)^.callDepth>=STACK_DEPTH_LIMIT) or
-       (tryEnterCriticalsection(rule_cs)=0) then begin
-      //Work without cache:
-      if subrules[0]^.replaces(param,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
-        P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
-        if (firstRep<>nil) and
-           (firstRep^.next=nil) and //single token, which is a boolean literal
-           (firstRep^.tokType=tt_literal) and
-           (P_literal(firstRep^.data)^.literalType=lt_boolean)
-        then lastRep:=firstRep
-        else begin
-          P_threadContext(threadContextPointer)^.recycler.cascadeDisposeToken(firstRep);
-          prepareFallbackResult;
-        end;
-      end else prepareFallbackResult;
-      //:Work without cache
-    end else begin
-      //Work with cache:
-      lit:=cache.get(param);
-      if lit<>nil then begin
-        //cache hit:
-        lit^.rereference;
-        firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,lit);
-        lastRep:=firstRep;
-        //:cache hit
-      end else begin
-        //cache miss:
-        if subrules[0]^.replaces(param,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
-          P_threadContext(threadContextPointer)^.reduceExpression(firstRep);
-          if (firstRep<>nil) and
-             (firstRep^.next=nil) and //single token, which is a boolean literal
-             (firstRep^.tokType=tt_literal) and
-             (P_literal(firstRep^.data)^.literalType=lt_boolean)
-          then begin
-            lastRep:=firstRep;
-            lit:=firstRep^.data;
-          end else begin
-            P_threadContext(threadContextPointer)^.recycler.cascadeDisposeToken(firstRep);
-            prepareFallbackResult;
-          end;
-        end else prepareFallbackResult;
-        cache.put(param,lit);
-        //:cache miss
+    if inherited replaces(ruleTokenType,callLocation,param,firstRep,lastRep,threadContextPointer) then begin
+      if P_threadContext(threadContextPointer)^.callDepth>STACK_DEPTH_LIMIT then begin
+        P_threadContext(threadContextPointer)^.adapters^.raiseSystemError('Stack overflow in typecast rule',callLocation);
+        exit(false);
       end;
-      leaveCriticalSection(rule_cs);
-      //:Work with cache
+      inc(P_threadContext(threadContextPointer)^.callDepth);
+      raw:=P_threadContext(threadContextPointer)^.reduceToLiteral(firstRep).literal;
+      dec(P_threadContext(threadContextPointer)^.callDepth);
+      if not(P_threadContext(threadContextPointer)^.adapters^.noErrors) then begin
+        if raw<>nil then disposeLiteral(raw);
+        exit(false);
+      end;
+    end else if (param<>nil) and (param^.size=1)
+    then raw:=param^.value[0]
+    else exit(false);
+
+    cast:=typedef^.cast(raw,callLocation,threadContextPointer,P_threadContext(threadContextPointer)^.adapters);
+    if cast=nil then exit(false)
+    else begin
+      result:=true;
+      firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,cast);
+      lastRep:=firstRep;
     end;
+  end;
+
+FUNCTION T_typecheckRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
+  VAR boolResult:boolean=false;
+  begin
+    boolResult:=(param<>nil)
+            and (param^.size=1)
+            and (typedef<>nil)
+            and (typedef^.matchesLiteral(param^.value[0],callLocation,threadContextPointer));
+    firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,newBoolLiteral(boolResult));
+    lastRep:=firstRep;
+    result:=true;
   end;
 
 FUNCTION T_mutableRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
@@ -520,6 +562,17 @@ FUNCTION T_typecheckRule.getFirstParameterTypeWhitelist:T_literalTypeSet;
     result:=subrules[0]^.getPattern.getFirstParameterTypeWhitelist;
   end;
 
+FUNCTION T_typecheckRule.getTypedef:P_typedef;
+  begin
+    result:=typedef;
+  end;
+
+DESTRUCTOR T_typecheckRule.destroy;
+  begin
+    if typedef<>nil then dispose(typedef,destroy);
+    inherited destroy;
+  end;
+
 FUNCTION T_mutableRule.getValue(VAR context:T_threadContext):P_literal;
   begin
     system.enterCriticalSection(rule_cs);
@@ -548,6 +601,19 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
       .put(newSingletonString('type'    ),newSingletonString(C_ruleTypeText[getRuleType]),false)^
       .put(newSingletonString('location'),newStringLiteral(getLocation                  ),false)^
       .put(newSingletonString('subrules'),subrulesList               ,false)
+      {$ifdef fullVersion}
+      ^.put(newSingletonString('used'),newBoolLiteral(isIdResolved),false)
+      {$endif};
+    if includeFunctionPointer then
+    result^.put(newSingletonString('function'),getFunctionPointer(context,tt_localUserRule,getLocation),false);
+  end;
+
+FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
+  begin
+    result:=newMapLiteral^
+      .put(newSingletonString('type'    ),newSingletonString(C_ruleTypeText[getRuleType]),false)^
+      .put(newSingletonString('location'),newStringLiteral(getLocation                  ),false)
+    //  ^.put(newSingletonString('subrules'),subrulesList               ,false)
       {$ifdef fullVersion}
       ^.put(newSingletonString('used'),newBoolLiteral(isIdResolved),false)
       {$endif};
@@ -623,6 +689,15 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadCon
     end;
     tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
+    new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
+  end;
+
+FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
+  VAR sub:P_subruleExpression;
+      tempToken:P_token=nil;
+  begin
+    tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
+    tempToken^.next      :=getParametersForPseudoFuncPtr(1,false,location,context);
     new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
 

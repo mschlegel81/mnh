@@ -5826,7 +5826,7 @@ expectations:=
    ['IOWin64',
     ['png hash: 3264FE9D']]].toMap],
  ['rsa',
-  ['Creating key pair',' private key: [128143,593]','  public key: [128143,65537]','',
+  ['Creating key pair',' private key: [128143,593].toKey','  public key: [128143,65537].toKey','',
    'Cipher: 102030405060708090 with public...','        104399454243902252327','Decipher with private...',
    '        102030405060708090','','Cipher: 102030405060708090 with private...','        33852323349932410086',
    'Decipher with public...','        102030405060708090']],

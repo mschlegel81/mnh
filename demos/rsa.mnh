@@ -28,8 +28,9 @@ private constructKeyPairFrom(p>2,q!=p)->begin
   local lambda:=(p-1)*(q-1) div gcd(p-1,q-1);
   local e:=65537;//intRandomGenerator(intRandom(2^64),2^17).filter({gcd(lambda,$e)==1}).head(1)[0];
   local d:=modularInverse(e,lambda);
-  cryptoWorks([p*q,d],[p*q,e])
-  ?          [[p*q,d],[p*q,e]]
+  local keyPair:=[[p*q,d].toKey,[p*q,e].toKey];
+  cryptoWorks@keyPair
+  ?           keyPair
   : void;
 end;
 

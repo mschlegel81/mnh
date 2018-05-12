@@ -1,8 +1,13 @@
 UNIT mnh_funcs;
 INTERFACE
 {$i mnh_func_defines.inc}
-USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_basicTypes,mnh_contexts,
-     myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
+USES sysutils,Classes,
+     myGenerics,myStringUtil,
+     mnh_constants,mnh_basicTypes,
+     mnh_out_adapters,
+     mnh_litVar,
+     mnh_contexts
+     {$ifdef fullVersion},mnh_doc{$endif};
 TYPE
   T_arityKind=(ak_nullary,
                ak_unary,
@@ -132,8 +137,10 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
       setLength(resultParts,params^.size);
       for i:=0 to params^.size-1 do begin
         case params^.value[i]^.literalType of
-          lt_boolean,lt_int,lt_real,lt_string,lt_expression:
-            resultParts[i]:=P_scalarLiteral(params^.value[i])^.stringForm;
+          lt_boolean,lt_int,lt_real,lt_expression:
+            resultParts[i]:=params^.value[i]^.toString();
+          lt_string:
+            resultParts[i]:=P_stringLiteral(params^.value[i])^.value;
           lt_list..lt_emptyMap:
             resultParts[i]:=params^.value[i]^.toString;
         end;

@@ -311,11 +311,11 @@ FUNCTION join_impl intFuncSignature;
   FUNCTION stringOfLit(CONST L:P_literal):ansistring;
     begin
       case L^.literalType of
+        lt_string: result:=P_stringLiteral(L)^.value;
         lt_boolean,
         lt_int,
         lt_real,
-        lt_string,
-        lt_expression: result:= P_scalarLiteral(L)^.stringForm;
+        lt_expression,
         lt_list..lt_emptyMap: result:=L^.toString;
         else result:='';
       end;

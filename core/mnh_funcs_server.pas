@@ -186,8 +186,8 @@ PROCEDURE T_microserver.serve;
         statistics.serveTime:=statistics.serveTime+(context^.wallclockTime-start);
         start:=context^.wallclockTime;
         if (response<>nil) then begin
-          if response^.literalType in C_scalarTypes
-          then socket.SendString(P_scalarLiteral(response)^.stringForm)
+          if response^.literalType=lt_string
+          then socket.SendString(P_stringLiteral(response)^.value)
           else socket.SendString(response^.toString);
           disposeLiteral(response);
         end else begin
@@ -229,7 +229,7 @@ FUNCTION extractParameters_impl intFuncSignature;
         c:byte;
         i:longint;
         value:P_stringLiteral;
-        castValue:P_scalarLiteral;
+        castValue:P_literal;
     begin
       keyAndValue:=split(pair,'=');
       while length(keyAndValue)<2 do append(keyAndValue,'');

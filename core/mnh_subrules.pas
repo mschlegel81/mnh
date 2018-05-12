@@ -39,6 +39,7 @@ TYPE
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual;
   end;
 
   T_ruleMetaData=object
@@ -95,6 +96,7 @@ TYPE
       //Literal routines:
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+      FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual;
 
       //Evaluation calls:
       FUNCTION replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
@@ -763,7 +765,7 @@ PROCEDURE T_inlineExpression.validateSerializability(CONST adapters: P_adapters)
     if (typ<>et_inline) then adapters^.raiseError('Expression literal '+toString(20)+' is not serializable',getLocation);
   end;
 
-PROCEDURE T_expression.validateSerializability(CONST adapters:P_adapters);
+PROCEDURE T_expression.validateSerializability(CONST adapters: P_adapters);
   begin
     if adapters<>nil then adapters^.raiseError('Expression '+toString()+' cannot be serialized',getLocation);
   end;
@@ -795,11 +797,16 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
   begin
     init(original^.typ,funcLocation);
     pattern.create;
-    setLength(preparedBody,1);
-    with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
-    appendToExpression(tt_braceOpen);
+    if intrinsicRuleId<>'' then begin
+      setLength(preparedBody,1);
+      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+      appendToExpression(tt_braceOpen);
+    end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
-    appendToExpression(tt_braceClose);
+    indexOfSave:=original^.indexOfSave;
+    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.clone;
+    if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
+    meta:=original^.meta;
     updatePatternForInline;
   end;
 
@@ -944,7 +951,8 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
-FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation;
+  CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
@@ -963,7 +971,19 @@ FUNCTION T_subruleExpression.getInlineValue: P_literal;
     end else result:=nil;
   end;
 
-FUNCTION T_expression       .getParentId: T_idString; begin result:=''; end;
+FUNCTION T_expression.getParentId: T_idString; begin result:=''; end;
+
+FUNCTION T_expression.clone(CONST location: T_tokenLocation; CONST context: pointer): P_expressionLiteral;
+  begin
+    raise Exception.create('Clone is not implemented for expressions of type '+C_expressionTypeString[typ]);
+    result:=nil;
+  end;
+
+FUNCTION T_inlineExpression.clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral;
+  begin
+    new(P_inlineExpression(result),createFromInlineWithOp(@self,'',location));
+  end;
+
 FUNCTION T_subruleExpression.getParentId: T_idString; begin if parent=nil then result:='' else result:=parent^.getId; end;
 
 FUNCTION T_subruleExpression.getCmdLineHelpText: ansistring;

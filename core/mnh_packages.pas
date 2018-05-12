@@ -92,6 +92,7 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
+      FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
 
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -185,6 +186,7 @@ TYPE
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -611,7 +613,6 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     end;
   VAR newLocalIdInfos:P_localIdInfos;
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - reset');
     {$endif}
@@ -666,7 +667,6 @@ DESTRUCTOR T_sandbox.destroy;
 
 FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword): T_storedMessages;
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
@@ -678,7 +678,6 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
 
 FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     adapters.clearAll;
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext.threadContext^,C_EMPTY_STRING_ARRAY);
@@ -689,7 +688,6 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
 FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
   begin
-    enterCriticalSection(cs); busy:=true; leaveCriticalSection(cs);
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
     else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
@@ -711,6 +709,38 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
+
+FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
+  VAR toStringRule:P_rule;
+      toReduce,dummy:P_token;
+      parameters:P_listLiteral;
+      stringOut:P_literal=nil;
+  begin
+    if inPack^.packageRules .containsKey('toString',toStringRule)
+    or inPack^.importedRules.containsKey('toString',toStringRule)
+    then begin
+      adapters.clearAll({$ifdef fullVersion}true{$endif});
+      evaluationContext.resetForEvaluation({$ifdef fullVersion}inPack,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+      evaluationContext.threadContext^.setAllowedSideEffectsReturningPrevious([]);
+      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
+      if toStringRule^.replaces(tt_localUserRule,packageTokenLocation(inPack),parameters,toReduce,dummy,evaluationContext.threadContext)
+      then stringOut:=evaluationContext.threadContext^.reduceToLiteral(toReduce).literal;
+      disposeLiteral(parameters);
+    end;
+
+    if stringOut=nil then begin
+      if (L^.literalType=lt_string) and not(escape)
+      then result:=P_stringLiteral(L)^.value
+      else result:=L^.toString();
+    end else begin
+      if stringOut^.literalType=lt_string
+      then result:=P_stringLiteral(stringOut)^.value
+      else result:=stringOut^.toString();
+      disposeLiteral(stringOut);
+    end;
+    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+  end;
+
 {$ifdef fullVersion}
 PROCEDURE T_sandbox.runInstallScript;
   {$i res_ensureAssoc.inc}
@@ -939,7 +969,8 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
           end;
         end;
-        for i:=0 to length(packageUses)-1 do mergeCustomOps(packageUses[i].pack^.customOperatorRules);
+        for i:=0 to length(packageUses)-1 do if mergeCustomOps(packageUses[i].pack,context.adapters^)
+        then {$ifdef fullVersion} packageUses[i].pack^.anyCalled:=true; {$else} begin end;{$endif}
       end;
 
     begin
@@ -1024,6 +1055,22 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         setLength(runAfter,length(runAfter)+1);
         runAfter[length(runAfter)-1]:=ex;
         ex^.rereference;
+      end;
+
+    PROCEDURE declareTypeCastRule;
+      VAR castRule:P_typeCastRule;
+          otherRule:P_rule;
+          message:T_arrayOfString;
+      begin
+        new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup^.getLocation));
+        if packageRules.containsKey(castRule^.getId,otherRule) then begin
+          setLength(message,3);
+          message[0]:='Cannot declare implicit typecast rule '+castRule^.getId;
+          message[1]:='because a rule of the same name already exists '+ansistring(otherRule^.getLocation);
+          message[2]:='Please overload the implicit typecast rule after the type definition';
+          context.adapters^.raiseError(message,ruleGroup^.getLocation);
+          dispose(castRule,destroy);
+        end else packageRules.put(castRule^.getId,castRule);
       end;
 
     begin
@@ -1121,6 +1168,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           end else begin
             if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
             P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
+            if P_ruleWithSubrules(ruleGroup)^.getRuleType=rt_customTypeCheck then declareTypeCastRule;
           end;
           statement.firstToken:=nil;
         end else begin
@@ -1490,6 +1538,11 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     setLength(ruleList,0);
   end;
 
+FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
+  begin
+    result:=sandbox^.runToString(L,@self,forOutput);
+  end;
+
 DESTRUCTOR T_package.destroy;
   {$ifdef fullVersion}VAR c:T_profileCategory;{$endif}
   begin
@@ -1514,7 +1567,8 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
       op:T_tokenType;
-      hidden:P_intFuncCallback;
+      hidden:P_intFuncCallback=nil;
+      m:T_modifier;
   begin
     i:=0;
     while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers-[modifier_noCurry]) do inc(i);
@@ -1530,13 +1584,31 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
           exit;
         end;
       end;
+      if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
+        for op in allOperators do if operatorName[op]=ruleId then ruleType:=rt_customOperator;
+      if ruleType=rt_customOperator then begin
+        for m in [modifier_mutable,
+                  modifier_datastore,
+                  modifier_plain,
+                  modifier_synchronized,
+                  modifier_customType,
+                  modifier_customDuckType] do if m in modifiers then adapters.raiseError('modifier '+C_modifierInfo[m].name+' is not allowed when overriding operators',ruleDeclarationStart);
+        if modifier_noCurry in modifiers then adapters.raiseNote('nocurry modifier is implicit when overloading operators',ruleDeclarationStart);
+        if modifier_private in modifiers then adapters.raiseWarning('private modifier is ignored when overloading operators',ruleDeclarationStart);
+        if modifier_memoized in modifiers then adapters.raiseWarning('memoized modifier is ignored when overloading operators',ruleDeclarationStart);
+      end;
+
       if (ruleType=rt_customTypeCheck) and not(ruleId[1] in ['A'..'Z']) then
         adapters.raiseWarning('Type rules should begin with an uppercase letter',ruleDeclarationStart);
+      end;
       if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
         adapters.raiseWarning('Rule '+ruleId+' hides implicit typecheck rule',ruleDeclarationStart);
+
       case ruleType of
         rt_memoized       : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
-        rt_customTypeCheck: new(P_typecheckRule            (result),create(ruleId,ruleDeclarationStart));
+        rt_customTypeCheck,
+        rt_duckTypeCheck  : new(P_typecheckRule            (result),create(ruleId,ruleDeclarationStart,ruleType=rt_duckTypeCheck));
+        rt_customTypeCast : raise Exception.create('Custom type casts should not be created this way.');
         rt_mutable        : new(P_mutableRule              (result),create(ruleId,ruleDeclarationStart,      metaData,modifier_private in modifiers));
         rt_datastore      : new(P_datastoreRule            (result),create(ruleId,ruleDeclarationStart,@self,metaData,modifier_private in modifiers,modifier_plain in modifiers));
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
@@ -1595,11 +1667,11 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
     userDefinedRules.clear;
     for rule in packageRules.valueSet do begin
       userDefinedRules.put(rule^.getId);
-      if rule^.getRuleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.getId));
+      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then userDefinedRules.put(typeToIsType(rule^.getId));
     end;
     for rule in importedRules.valueSet do  begin
       userDefinedRules.put(rule^.getId);
-      if rule^.getRuleType=rt_customTypeCheck then userDefinedRules.put(typeToIsType(rule^.getId));
+      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then userDefinedRules.put(typeToIsType(rule^.getId));
     end;
   end;
 
@@ -1703,7 +1775,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
       key:string;
   begin
     setLength(result,0);
-    for rule in packageRules.valueSet do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck]) then
+    for rule in packageRules.valueSet do if (rule^.getRuleType in [rt_normal,rt_synchronized,rt_memoized,rt_customTypeCheck,rt_duckTypeCheck,rt_customTypeCast]) then
     for subRule in P_ruleWithSubrules(rule)^.getSubrules do begin
       matchesAll:=true;
       for key in attributeKeys do matchesAll:=matchesAll and subRule^.metaData.hasAttribute(key,caseSensitive);
@@ -1741,13 +1813,13 @@ PROCEDURE T_package.resolveId(VAR token: T_token;
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
-      if userRule^.getRuleType=rt_customTypeCheck
+      if userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]
       then assignLocalRule(tt_customTypeRule)
       else assignLocalRule(tt_localUserRule );
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
-      if userRule^.getRuleType=rt_customTypeCheck
+      if userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]
       then assignImportedRule(tt_customTypeRule  )
       else assignImportedRule(tt_importedUserRule);
       exit;
@@ -1759,11 +1831,11 @@ PROCEDURE T_package.resolveId(VAR token: T_token;
     end;
     ruleId:=isTypeToType(ruleId);
     if ruleId<>'' then begin
-      if packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
+      if packageRules.containsKey(ruleId,userRule) and (userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) then begin
         assignLocalRule(tt_customTypeRule);
         exit;
       end;
-      if importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType=rt_customTypeCheck) then begin
+      if importedRules.containsKey(ruleId,userRule) and (userRule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) then begin
         assignImportedRule(tt_customTypeRule);
         exit;
       end;
