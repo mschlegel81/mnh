@@ -781,7 +781,7 @@ used as a fallback.
       <li><h5><a href="#datastoreMod">datastore</a></h5></li>
       <li><h5><a href="#plainMod">plain</a></h5></li>
       <li><h5><a href="#localMod">local</a></h5></li>
-      <li><h5><a href="#typeMod">type</a></h5></li>
+      <li><h5><a href="#typeMod">(duck)type</a></h5></li>
 	  <li><h5><a href="#nocurryMod">nocurry</a></h5></li></ul></li></ul>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
@@ -1116,32 +1116,44 @@ It changes the representation of the persisted file to "plain text".
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.
 It is only allowed in this context. Local variables are always mutable.
 
-<h4><br><a name="typeMod">type</a></h4>
-The <i>type modifier</i> allowes for the declaration of custom typechecks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
+<h4><br><a name="typeMod">(duck)type</a></h4>
+The <i>type and ducktype modifier</i> allow the declaration of custom typechecks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
 The rule must contain exactly one subrule accepting one parameter and returning a boolean.<br>
 The following restrictions apply:<ul>
   <li> A type rule cannot be private </li>
   <li> A type rule must have exactly one subrule</li>
 </ul>
-For each type <code><b>T</b></code>, an additional rule <code>is<b>T</b></code> is automatically created.<br>
-It is recommended that type rules begin with an uppercase letter.<br><code>
+For each type <code><b>T</b></code>, two additional rules are crated:<ul>
+<li>A typecheck rule <code>is<b>T</b></code> and</li>
+<li>A typecast rule <code>to<b>T></b></code></li></ul><br>
+It is recommended that type rules begin with an uppercase letter.<br>
+Types declared with <code><span class="modifier">ducktype</span></code> always match when the typecheck returns true while 
+types declared with <code><span class="modifier">type</span></code> only match after explicit casting. <br>However you may use explicit 
+casting with ducktypes as well. After explicit casting, <code><span class="builtin">typeOf</span></code> will return the name of the custom type.
+<br>
+Note that casting returns a literal that is not "equal" to the input literal. This has effects on the behavior of various builtin types and functions as Sets and Maps, <code><span class="builtin">unique</span></code> or the operator <code><span class="operator">==</span></code>.
+<code>
 <!--mnh-->
-   in> type SquareMatrix(M:List)->M.each(row,row.isNumList(M.size),AND);
-   in> determinant(M:SquareMatrix)->
-         M.size=1 ? M[0,0] :
-         M.size=2 ? M[0,0]*M[1,1]-M[1,0]*M[0,1] :
-                    [0..M.size-1].each(i,-1^(i)*M[i,0]*M.subMatrix(i,0).determinant,+);
-
-   in> private subMatrix(M:SquareMatrix,skipRow,skipCol)->
-         M.each(row,index=skipRow
-                    ? void
-                    : row.each(cell,index=skipCol ? void : cell));   
-
-   in> [[1, 0],[2, 3]].isSquareMatrix;
+   in> ducktype SquareMatrix(M:List)->M.size>=1 AND M.each(row,row.isNumList(M.size),AND);
+  
+   in> [[1, 0],[2, 3]].isSquareMatrix;   
   out> true
-   in> [[1, 0],[2, 3]].determinant;
-  out> 3
+   in> typeOf([[1, 0],[2, 3]]);
+  out> 'List(2)'
+   in> typeOf([[1, 0],[2, 3]].toSquareMatrix);
+  out> 'SquareMatrix'
+    
+   in> type Matrix(M:List)->M.size>=1 AND M.each(row,row.isNumList(M[0].size),AND);
+
+   in>  [[1, 0],[2, 3]].isMatrix;
+  out> false 
+   in>  [[1, 0],[2, 3]].toMatrix.isMatrix;
+  out> true
+   in> typeOf([[1, 0],[2, 3]].toMatrix);
+  out> 'Matrix'
 <!--end-->
+</code>
+
 <h4><br><a name="nocurryMod">nocurry</a></h4>
 The <i>nocurry</i> modifier can be used to suppress currying on rule level.
 </div>
