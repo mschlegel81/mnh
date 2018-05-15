@@ -41,6 +41,17 @@ FUNCTION softCast_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then result:=softCastRecurse(arg0);
   end;
 
+FUNCTION toBuiltin_imp intFuncSignature;
+  begin
+    if (params=nil) or (params^.size=0)
+    then exit(newVoidLiteral)
+    else if (params^.size=1) then begin
+      if arg0^.customType=nil
+      then exit(arg0^.rereferenced)
+      else exit(arg0^.customType^.uncast(arg0,tokenLocation,@context,context.adapters));
+    end else result:=nil;
+  end;
+
 FUNCTION toString_imp intFuncSignature;
   begin
     result:=nil;
@@ -224,6 +235,7 @@ FUNCTION typeOf_imp intFuncSignature;
 
 INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'softCast'      ,@softCast_imp  ,ak_unary,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
+  registerRule(TYPECAST_NAMESPACE,'toBuiltin'     ,@toBuiltin_imp ,ak_unary,'toBuiltin(X);#Returns X without custom type info');
   registerRule(TYPECAST_NAMESPACE,'toString'      ,@toString_imp  ,ak_unary,'toString(X);#Casts X to string');
   registerRule(TYPECAST_NAMESPACE,'toBoolean'     ,@toBoolean_imp ,ak_unary,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
   registerRule(TYPECAST_NAMESPACE,'toInt'         ,@toInt_imp     ,ak_unary,'toInt(X);#Casts X to int or throws an error if not possible');
