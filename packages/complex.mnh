@@ -76,4 +76,3 @@ sin(x:Complex)->begin
   local result:=exp(i*x);
   (1/result-result)*0.5*i;
 end;
-
