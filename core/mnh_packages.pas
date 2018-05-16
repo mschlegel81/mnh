@@ -62,6 +62,7 @@ TYPE
       mainPackage:P_package;
       secondaryPackages:T_packageList;
       extendedPackages:array of P_extendedPackage;
+
       runAfter:array of P_subruleExpression;
 
       isPlainScript:boolean;
@@ -1168,7 +1169,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           end else begin
             if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
             P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
-            if P_ruleWithSubrules(ruleGroup)^.getRuleType=rt_customTypeCheck then declareTypeCastRule;
+            if P_ruleWithSubrules(ruleGroup)^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then declareTypeCastRule;
           end;
           statement.firstToken:=nil;
         end else begin

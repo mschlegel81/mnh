@@ -23,7 +23,7 @@ end;
 //@Override
 nocurry toRational(i:Int)->[i,1];
 //@Override
-nocurry toRational(x:Real)->.toRegularContinuedFraction.toRational;
+nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
 //*Converts continued fraction f to a rational number (represented as IntList(2))
 //@Override
 nocurry toRational(f:RegularContinuedFraction)->begin
@@ -74,6 +74,7 @@ end;
 private nextReal(x:Real,0)->x;
 
 //*Converts r to a continued fraction with max. 1000 entries
+//@Override
 toRegularContinuedFraction(r:Real)->
   [0,-1,1].each(i,
   begin
@@ -99,6 +100,7 @@ toRegularContinuedFraction(r:Real)->
 
 
 //*Converts rational number r to a continued fraction
+//@Override
 toRegularContinuedFraction(r:Rational)->begin
   local x:=r;
   local cf:=[];
@@ -159,3 +161,7 @@ memoized private cfFormat(count>1)->'%s+1/('+cfFormat(count-1)+')';
 
 //*Returns a continued fraction in the form cf[0]+1/(cf[0]+1/(...))
 toString(cf:RegularContinuedFraction)->cfFormat(cf.size).format@cf;
+
+
+
+pi.toRegularContinuedFraction.listApprox;

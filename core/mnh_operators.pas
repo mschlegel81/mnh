@@ -517,7 +517,11 @@ FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
                    exit(newIntLiteral (P_intLiteral(LHS)^.value.mult(P_intLiteral (RHS)^.value)));
         lt_real:   exit(newRealLiteral(P_intLiteral(LHS)^.value.toFloat*P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
-        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_SL);
+        lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet:
+          {$ifndef debugMode}
+          if P_intLiteral(LHS)^.value.isOne then exit(RHS^.rereferenced) else
+          {$endif}
+          exit(recurse_SL);
       end;
       lt_real: case RHS^.literalType of
         defaultRHSCases;
@@ -529,7 +533,11 @@ FUNCTION perform_mult(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocati
       lt_intList,lt_realList,lt_numList,
       lt_intSet ,lt_realSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_int,lt_real: exit(recurse_LS);
+        lt_int : {$ifndef debugMode}
+                 if P_intLiteral(RHS)^.value.isOne then exit(LHS^.rereferenced) else
+                 {$endif}
+                 exit(recurse_LS);
+        lt_real: exit(recurse_LS);
         lt_list,lt_intList,lt_realList,lt_numList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_LL);
       end;
@@ -603,7 +611,10 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
       lt_intList,lt_numList,
       lt_intSet ,lt_numSet: case RHS^.literalType of
         defaultRHSCases;
-        lt_int: exit(recurse_LS);
+        lt_int: {$ifndef debugMode}
+                if P_intLiteral(RHS)^.value.isOne then exit(LHS^.rereferenced) else
+                {$endif}
+                exit(recurse_LS);
         lt_list,lt_intList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_LL);
       end;

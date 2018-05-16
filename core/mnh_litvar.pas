@@ -213,11 +213,13 @@ TYPE
       builtinsuper:T_literalTypeSet;
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
+      FUNCTION cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_literal;
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
       FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
       PROPERTY getWhitelist:T_literalTypeSet read builtinsuper;
@@ -674,30 +676,44 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
     if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,L);
   end;
 
+FUNCTION T_typedef.cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_literal;
+  begin
+    result:=nil;
+    case L^.literalType of
+      lt_boolean   : if forUncasting
+                     then result:=newBoolLiteral(P_boolLiteral(L)^.val)
+                     else new(P_boolLiteral(result),create(P_boolLiteral(L)^.val));
+      lt_int       : result:=P_intLiteral(L)^.clone;
+      lt_real      : result:=newRealLiteral(P_realLiteral(L)^.val);
+      lt_string    : result:=newStringLiteral(P_stringLiteral(L)^.val,not(forUncasting));
+      lt_expression: begin
+        if L^.numberOfReferences<=1
+        then result:=L^.rereferenced
+        else result:=P_expressionLiteral(L)^.clone(location,threadContext);
+      end;
+      lt_list..lt_emptyMap: begin
+        if L^.numberOfReferences<=1
+        then result:=L^.rereferenced
+        else result:=P_compoundLiteral(L)^.clone;
+      end;
+    end;
+  end;
+
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
   begin
     if L^.customType=@self then exit(L^.rereferenced);
     if ducktyperule^.evaluateToBoolean(location,threadContext,L) then begin
-      result:=nil;
-      case L^.literalType of
-        lt_boolean   : new(P_boolLiteral(result),create(P_boolLiteral(L)^.val));
-        lt_int       : result:=P_intLiteral(L)^.clone;
-        lt_real      : result:=newRealLiteral(P_realLiteral(L)^.val);
-        lt_string    : result:=newStringLiteral(P_stringLiteral(L)^.val,true);
-        lt_expression: begin
-          if L^.numberOfReferences<=1
-          then result:=L^.rereferenced
-          else result:=P_expressionLiteral(L)^.clone(location,threadContext);
-        end;
-        lt_list..lt_emptyMap: begin
-          if L^.numberOfReferences<=1
-          then result:=L^.rereferenced
-          else result:=P_compoundLiteral(L)^.clone;
-        end;
-      end;
+      result:=cloneLiteral(L,location,threadContext,false);
       if result<>nil then result^.customType:=@self;
     end else result:=nil;
     if result=nil then adapters^.raiseError('Cannot cast literal to custom type '+name,location);
+  end;
+
+FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+  begin
+    if L^.customType=nil then exit(L^.rereferenced);
+    result:=cloneLiteral(L,location,threadContext,true);
+    if result<>nil then result^.customType:=nil;
   end;
 //=====================================================================================================================
 
