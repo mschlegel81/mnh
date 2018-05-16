@@ -683,12 +683,21 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocatio
   end;
 
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+  VAR temp:P_literal;
   begin
     if L^.customType=@self then exit(L^.rereferenced);
+    result:=nil;
     if ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
       result:=cloneLiteral(L,location,threadContext,false);
       if result<>nil then result^.customType:=@self;
-    end else result:=nil;
+    end else if (super<>nil) then begin
+      result:=super^.cast(L,location,threadContext,adapters);
+      if (result<>nil) then begin
+        if ducktyperule^.evaluateToBoolean(location,threadContext,false,result)
+        then result^.customType:=@self
+        else disposeLiteral(result);
+      end;
+    end;
     if (result=nil) and (adapters<>nil) then adapters^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
