@@ -1,6 +1,11 @@
 //@SuppressUnusedParameterWarning
 type Complex(x:NumericList(2))->true;
 
+i:=[0,1].toComplex;
+
+//@Override
+toString(x:Complex)->x[1]=0 ? x[0].toString : format("(%{$re}s%{$im<0 ? '' : '+'}s%{$im}s*i)",x[0],x[1]);
+
 //@SuppressUnusedWarning
 //*Returns the real part of a complex number x
 Re(x:Complex)->x[0];
@@ -12,45 +17,63 @@ Im(x:Complex)->x[1];
 //@SuppressUnusedWarning
 //@Override
 //*Returns the absolute value of a complex number
-abs(x:Complex)->x.sqr.agg(+).sqrt;
+abs(x:Complex)->x.toBuiltin.sqr.agg(+).sqrt;
+
 //*Returns the argument of x
 arg(x:Complex)->arctan2(x[1],x[0]);
 
 //@Override
 OPERATOR_MULT(x:Complex,y:Complex)->[x[0]*y[0]-x[1]*y[1],x[0]*y[1]+x[1]*y[0]].toComplex;
+OPERATOR_MULT(x:Numeric,y:Complex)->[x*y[0],x*y[1]].toComplex;
+OPERATOR_MULT(x:Complex,y:Numeric)->[x[0]*y,x[1]*y].toComplex;
 
+//@Override
+OPERATOR_DIVREAL(x:Complex,y:Complex)->[x[0]*y[0]+x[1]*y[1],x[1]*y[0]-x[0]*y[1]]./(sqr(x[0])+sqr(x[1])).toComplex;
+OPERATOR_DIVREAL(x:Complex,y:Numeric)->[x[0]/y,x[1]/y].toComplex;
+OPERATOR_DIVREAL(x:Numeric,y:Complex)->[x,0].toComplex/y;
 
-//*Returns the square of complex number x
-cSqr(x:NumericList(2))->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]];
-//*Returns 1/x for a complex number x
-cInv(x:NumericList(2))->[x[0],-x[1]]/(sqr(x[0])+sqr(x[1]));
-//@SuppressUnusedWarning
-//*Returns x/y for complex numbers x and y
-cDiv(x:NumericList(2),y:NumericList(2))->x*y.cInv;
+//@Override
+OPERATOR_PLUS(x:Complex,y:Complex)->[x[0]+y[0],x[1]+y[1]].toComplex;
+OPERATOR_PLUS(x:Numeric,y:Complex)->[x+y[0],y[1]].toComplex;
+OPERATOR_PLUS(x:Complex,y:Numeric)->[x[0]+y,x[1]].toComplex;
+
+//@Override
+OPERATOR_MINUS(x:Complex,y:Complex)->[x[0]-y[0],x[1]-y[1]].toComplex;
+OPERATOR_MINUS(x:Numeric,y:Complex)->[x-y[0],y[1]].toComplex;
+OPERATOR_MINUS(x:Complex,y:Numeric)->[x[0]-y,x[1]].toComplex;
+
+//@Override
+sqr(x:Complex)->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]].toComplex;
+
 //*Returns exponential of complex x
-cExp(x:NumericList(2))->exp(x[0])*[cos(x[1]),sin(x[1])];
+//@Override
+exp(x:Complex)->(exp(x[0])*[cos(x[1]),sin(x[1])]).toComplex;
 //*Returns the natural logarithm of complex x
-cLn(x:NumericList(2))->[0.5*(x.sqr.agg(+)).ln,arg(x)];
-//*Returns the k-th power of complex x
-cPot(x:NumericList(2),k<0  )->x.cInv.cPot(-k);
-cPot(x:NumericList(2),k=0  )->[1,0];
-cPot(x:NumericList(2),k:Int)->(k and 1)=1 ? x.cPot(k-1)*x
-                                          : x.cSqr.cPot(k div 2);
-cPot(x:NumericList(2),k:Real)->k=0 ? [1,0] : (x.cLn*k).cExp;
-cPot(x:NumericList(2),k:NumericList(2))->k=0 ? [1,0] : (x.cLn*k).cExp;
+//@Override
+ln(x:Complex)->[0.5*(x.toBuiltin.sqr.agg(+)).ln,arg(x)].toComplex;
 
+//@Override
+OPERATOR_POT(x:Complex,y=0)->[1,0].toComplex;
+OPERATOR_POT(x:Complex,y<0)->1/(x^(-y));
+OPERATOR_POT(x:Complex,y>0)->(y and 1)=1 ? x^(y-1)*x : sqr(x)^(y div 2);
+OPERATOR_POT(x:Complex,y:Real)->y=0 ? [1,0].toComplex :exp(ln(x)*y);
+OPERATOR_POT(x:Complex,y:Complex)->exp(ln(x)*y);
+
+//@Override
 //@SuppressUnusedWarning
 //*Returns cosinus of complex x
-cCos(x:NumericList(2))->begin
+cos(x:Complex)->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
-  local result:=cExp([0, 1]*x);
-  (result+cInv(result))*0.5;
+  local result:=exp(i*x);
+  (result+1/result)*0.5;
 end;
 
+//@Override
 //@SuppressUnusedWarning
 //*Returns sinus of complex x
-cSin(x:NumericList(2))->begin
-  //sin(x)=(e^(ix)-e^(-ix))/2
-  local result:=cExp([0, 1]*x);
-  (result-cInv(result))*0.5;
+sin(x:Complex)->begin
+  //sin(x)=(e^(ix)-e^(-ix))/2i
+  local result:=exp(i*x);
+  (1/result-result)*0.5*i;
 end;
+
