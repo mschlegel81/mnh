@@ -402,7 +402,6 @@ FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
 FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
 FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
-FUNCTION newSingletonString(CONST value: ansistring): P_stringLiteral;     inline;
 FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral;       inline;
 FUNCTION newListLiteral  (CONST a:P_literal;
                           CONST b:P_literal=nil)      : P_listLiteral; inline;
@@ -437,8 +436,6 @@ IMPLEMENTATION
 VAR
   intLit : array[-100..maxSingletonInt] of T_intLiteral;
   voidLit: T_voidLiteral;
-  stringSingletons:specialize G_stringKeyMap<P_literal>;
-  singletonCs:TRTLCriticalSection;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
   FUNCTION headByMessageType(CONST messageType:T_messageType):P_collectionLiteral;
@@ -511,20 +508,6 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
       if length(value)=1 then result:=P_stringLiteral(charLit[value[1]]   .rereferenced)
                          else result:=P_stringLiteral(emptyStringSingleton.rereferenced);
     end else new(result, create(value));
-  end;
-
-FUNCTION newSingletonString(CONST value: ansistring): P_stringLiteral;     inline;
-  VAR r:P_literal;
-  begin
-    enterCriticalSection(singletonCs);
-    if stringSingletons.containsKey(value,r) then begin
-      leaveCriticalSection(singletonCs);
-      exit(P_stringLiteral(r^.rereferenced));
-    end;
-    new(result,create(value));
-    result^.rereference;
-    stringSingletons.put(value,result);
-    leaveCriticalSection(singletonCs);
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;       begin new(result,create(value));       end;
@@ -3259,9 +3242,6 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
-  initialize(singletonCs);
-  initCriticalSection(singletonCs);
-  stringSingletons.create(@disposeLiteral);
 
 FINALIZATION
   boolLit[false].destroy;
@@ -3270,5 +3250,4 @@ FINALIZATION
   emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
-  doneCriticalSection(singletonCs);
 end.
