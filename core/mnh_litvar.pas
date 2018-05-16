@@ -185,7 +185,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST eType:T_expressionType; CONST location:T_tokenLocation);
       PROPERTY typ:T_expressionType read expressionType;
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;            virtual; abstract;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean;            virtual; abstract;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual; abstract;
       FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;               virtual; abstract;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual; abstract;
@@ -664,16 +664,16 @@ DESTRUCTOR T_typedef.destroy;
   end;
 
 FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
-  VAR t:P_typedef;
+  VAR T:P_typedef;
   begin
     result:=false;
-    if L^.customType<>nil then begin
-      t:=@self;
-      while(t<>nil) do
-      if L^.customType=t
-      then exit(true) else t:=t^.super;
+    T:=L^.customType;
+    while(t<>nil) do begin
+      if T=@self
+      then exit(true)
+      else T:=T^.super;
     end;
-    if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,L);
+    if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,false,L);
   end;
 
 FUNCTION T_typedef.cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_literal;
@@ -702,11 +702,11 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocatio
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
   begin
     if L^.customType=@self then exit(L^.rereferenced);
-    if ducktyperule^.evaluateToBoolean(location,threadContext,L) then begin
+    if ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
       result:=cloneLiteral(L,location,threadContext,false);
       if result<>nil then result^.customType:=@self;
     end else result:=nil;
-    if result=nil then adapters^.raiseError('Cannot cast literal to custom type '+name,location);
+    if (result=nil) and (adapters<>nil) then adapters^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
 FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
@@ -2345,7 +2345,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
-  FUNCTION isLeq(CONST a,b:P_literal):boolean; inline; begin result:=leqExpression^.evaluateToBoolean(location,context,a,b); end;
+  FUNCTION isLeq(CONST a,b:P_literal):boolean; inline; begin result:=leqExpression^.evaluateToBoolean(location,context,true,a,b); end;
 
   begin
     if fill<=1 then exit;

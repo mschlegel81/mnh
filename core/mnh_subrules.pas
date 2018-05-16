@@ -34,7 +34,7 @@ TYPE
     private
       FUNCTION getParameterNames:P_listLiteral; virtual; abstract;
     public
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
+      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
@@ -914,7 +914,7 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
     else                         result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): boolean;
+FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: pointer; CONST allowRaiseError:boolean; CONST a: P_literal; CONST b: P_literal): boolean;
   VAR resultLiteral:P_literal;
   begin
     resultLiteral:=evaluateToLiteral(location,context,a,b).literal;
@@ -922,7 +922,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
       result:=false;
-      P_threadContext(context)^.adapters^.raiseError('Expression does not return a boolean.',location);
+      if allowRaiseError then P_threadContext(context)^.adapters^.raiseError('Expression does not return a boolean.',location);
     end;
   end;
 

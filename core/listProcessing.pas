@@ -469,7 +469,7 @@ PROCEDURE T_filterTask.evaluate(VAR context: T_threadContext);
       if context.adapters^.noErrors then with mapPayload do begin
         context.attachWorkerContext(env);
         evaluationResult.triggeredByReturn:=false;
-        if mapRule^.evaluateToBoolean(mapRule^.getLocation,@context,mapParameter)
+        if mapRule^.evaluateToBoolean(mapRule^.getLocation,@context,true,mapParameter)
         then evaluationResult.literal:=mapParameter
         else evaluationResult.literal:=nil;
         context.detachWorkerContext;

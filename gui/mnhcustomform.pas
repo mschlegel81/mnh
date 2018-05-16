@@ -344,7 +344,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
       {$endif}
       oldEnabled:=state.enabled;
-      state.enabled:=config.enabled^.evaluateToBoolean(location,@context);
+      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,true);
       result:=result or (oldEnabled<>state.enabled);
     end;
 
