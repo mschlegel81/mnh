@@ -46,6 +46,7 @@ CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinIte
 
 TYPE
   P_typedef=^T_typedef;
+  T_typeMap=specialize G_stringKeyMap<P_typedef>;
   P_literal = ^T_literal;
   PP_literal = ^P_literal;
   P_setOfPointer=^T_setOfPointer;
@@ -413,12 +414,12 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
-FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
 FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128):T_arrayOfString;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
-FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 
@@ -2863,8 +2864,8 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
     result:=returnValue;
   end;
 
-FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-  VAR reusableLiterals:{$ifdef Windows}array[0..2097151] of P_literal;{$else}^P_literal;{$endif}
+FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
+  VAR reusableLiterals:PP_literal;
       reusableFill:longint=0;
       encodingMethod:byte=0;
   PROCEDURE errorOrException(CONST message:string);
@@ -3051,22 +3052,117 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
     end;
 
+  FUNCTION literalFromStream253:P_literal;
+    VAR literalType:T_literalType;
+        customTypeName:T_idString='';
+        customType:P_typedef=nil;
+        reusableIndex:longint=-1;
+        listSize:longint;
+        i:longint;
+        mapKey,mapValue:P_literal;
+        tempInt:T_bigInt;
+    begin
+      reusableIndex:=stream^.readNaturalNumber;
+      if reusableIndex shr 1<=byte(high(T_literalType)) then begin
+        literalType:=T_literalType(byte(reusableIndex) shr 1);
+        if odd(reusableIndex)
+        then customTypeName:=stream^.readAnsiString
+        else customTypeName:='';
+      end
+      else begin
+        dec(reusableIndex,2*byte(high(T_literalType))+2);
+        if (reusableIndex<reusableFill) then begin
+          result:=reusableLiterals[reusableIndex];
+          result^.rereference;
+        end else begin
+          result:=newVoidLiteral;
+          stream^.logWrongTypeError;
+          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
+        end;
+        exit(result);
+      end;
+      case literalType of
+        lt_boolean  : if customTypeName=''
+                      then result:=newBoolLiteral          (stream^.readBoolean)
+                      else new(P_boolLiteral(result),create(stream^.readBoolean));
+        lt_int      : begin
+                        tempInt.readFromStream(stream);
+                        if customTypeName=''
+                        then result:=newIntLiteral          (tempInt)
+                        else new(P_intLiteral(result),create(tempInt));
+                      end;
+        lt_real     : result:=newRealLiteral  (stream^.readDouble    );
+        lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
+        lt_emptyList: result:=newListLiteral;
+        lt_emptySet : result:=newSetLiteral;
+        lt_emptyMap : result:=newMapLiteral;
+        lt_void     : result:=newVoidLiteral;
+        lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
+        lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
+          listSize:=stream^.readNaturalNumber;
+          if literalType in C_setTypes
+          then result:=newSetLiteral(listSize)
+          else result:=newListLiteral(listSize);
+          case literalType of
+            lt_booleanList,lt_booleanSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+            lt_intList,lt_intSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then begin
+                tempInt.readFromStream(stream);
+                P_collectionLiteral(result)^.append(newIntLiteral(tempInt),false);
+              end;
+            lt_realList,lt_realSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+            lt_stringList,lt_stringSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+            else
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream253(),false);
+          end;
+          if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
+        end;
+        lt_map: begin
+          result:=newMapLiteral;
+          listSize:=stream^.readNaturalNumber;
+          for i:=0 to listSize-1 do if stream^.allOkay then begin
+            mapKey  :=literalFromStream253();
+            mapValue:=literalFromStream253();
+            P_mapLiteral(result)^.dat.put(mapKey,mapValue);
+          end;
+          result^.literalType:=lt_map;
+        end;
+        else begin
+          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(reusableIndex)+') ! Abort.');
+          stream^.logWrongTypeError;
+          exit(newVoidLiteral);
+        end;
+      end;
+      if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
+      if customTypeName<>'' then begin
+        if typeMap.containsKey(customTypeName,customType) then begin
+          result^.customType:=customType;
+        end else errorOrException('Read unknown custom type '+customTypeName);
+      end;
+
+      if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
+      if ((literalType=lt_string) or (literalType in C_compoundTypes) or (customTypeName<>'')) and (reusableFill<2097151) then begin
+        reusableLiterals[reusableFill]:=result;
+        inc(reusableFill);
+      end;
+    end;
+
   begin
-    {$ifndef Windows}
     getMem(reusableLiterals,sizeOf(P_literal)*2097151);
-    {$endif}
     encodingMethod:=stream^.readByte;
     case encodingMethod of
       255: result:=literalFromStream255;
       254: result:=literalFromStream254;
+      253: result:=literalFromStream253;
       else begin
         errorOrException('Invalid literal encoding type '+intToStr(encodingMethod));
         result:=newVoidLiteral;
       end;
     end;
-    {$ifndef Windows}
     freeMem(reusableLiterals,sizeOf(P_literal)*2097151);
-    {$endif}
   end;
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
@@ -3074,18 +3170,25 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
       previousMapValueDummy:longint;
       mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
 
- PROCEDURE writeLiteral(CONST L:P_literal);
+  PROCEDURE writeLiteral(CONST L:P_literal);
     VAR reusableIndex:longint;
         x:P_literal;
         iter:T_arrayOfLiteral;
+    FUNCTION typeByte:byte;
+      begin
+        result:=byte(L^.literalType)*2;
+        if L^.customType<>nil then inc(result);
+      end;
+
     begin
       reusableIndex:=reusableMap.get(L,2097151);
       if reusableIndex<2097151 then begin
-        inc(reusableIndex,byte(high(T_literalType))+1);
+        inc(reusableIndex,2*byte(high(T_literalType))+2);
         stream^.writeNaturalNumber(reusableIndex);
         exit;
       end;
-      stream^.writeNaturalNumber(byte(L^.literalType));
+      stream^.writeNaturalNumber(typeByte);
+      if L^.customType<>nil then stream^.writeAnsiString(L^.customType^.name);
       case L^.literalType of
         lt_boolean:stream^.writeBoolean   (P_boolLiteral  (L)^.val);
         lt_int:    P_intLiteral(L)^.val.writeToStream(stream);
@@ -3135,13 +3238,13 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
                            else raise Exception.create('Cannot represent '+L^.typeString+' literal in binary form!');
         end;
       end;
-      if (reusableMap.fill<2097151) and ((L^.literalType=lt_string) or (L^.literalType in C_compoundTypes)) then
+      if (reusableMap.fill<2097151) and ((L^.literalType=lt_string) or (L^.literalType in C_compoundTypes) or (L^.customType<>nil)) then
         reusableMap.putNew(L,reusableMap.fill,previousMapValueDummy);
     end;
 
   begin
     reusableMap.create();
-    stream^.writeByte(254);
+    stream^.writeByte(253);
     writeLiteral(L);
     reusableMap.destroy;
   end;
@@ -3229,14 +3332,14 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
     wrapper.destroy; //implicitly destroys stream
   end;
 
-FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
   VAR wrapper:T_inputStreamWrapper;
       stream:TStringStream;
   begin
     stream:=TStringStream.create(source);
     wrapper.create(stream);
     stream.position:=0;
-    result:=newLiteralFromStream(@wrapper,location,adapters);
+    result:=newLiteralFromStream(@wrapper,location,adapters,typeMap);
     wrapper.destroy; //implicitly destroys stream
   end;
 

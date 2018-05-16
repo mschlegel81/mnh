@@ -31,6 +31,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       id:string;
       literal:P_literal=nil;
       dummyLocation:T_tokenLocation;
+      dummyTypeMap:T_typeMap;
   begin
     wrapper.createToReadFromFile(fileName);
     id:=wrapper.readAnsiString;
@@ -38,7 +39,9 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
     if result then begin
       try
         initialize(dummyLocation);
-        literal:=newLiteralFromStream(@wrapper,dummyLocation,nil);
+        dummyTypeMap.create();
+        literal:=newLiteralFromStream(@wrapper,dummyLocation,nil,dummyTypeMap);
+        dummyTypeMap.destroy;
         if wrapper.allOkay and (literal<>nil) then begin
           dataAsStringList:=id+':=';
           append(dataAsStringList,serializeToStringList(literal,dummyLocation,nil));
@@ -124,6 +127,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       fileLines:T_arrayOfString;
       accessed:boolean;
       stmt:T_enhancedStatement;
+      typeMap:T_typeMap;
   begin
     tryObtainName(false);
     if fileName='' then exit(nil);
@@ -131,7 +135,9 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       wrapper.createToReadFromFile(fileName);
       wrapper.readAnsiString;
       result:=nil;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.adapters);
+      typeMap:=P_abstractPackage(location.package)^.getTypeMap;
+      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.adapters,typeMap);
+      typeMap.destroy;
       if not(wrapper.allOkay) then begin
         if result<>nil then disposeLiteral(result);
         result:=nil;

@@ -4,7 +4,7 @@ INTERFACE
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}lclintf,LazFileUtils,LazUTF8,
      myGenerics,mySys,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_litVar,
-     mnh_funcs,mnh_out_adapters,mnh_fileWrappers,
+     mnh_funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
      mnh_contexts,mnh_datastores;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
@@ -139,6 +139,24 @@ FUNCTION readDatastore_impl intFuncSignature;
         context.adapters^.raiseWarning('Datastore for script '+str0^.toString()+' and rule '+str1^.toString()+' does not exist',tokenLocation);
       end;
     end;
+  end;
+
+FUNCTION serialize_impl intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=1)
+    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters))
+    else result:=nil;
+  end;
+
+FUNCTION deserialize_impl intFuncSignature;
+  VAR typeMap:T_typeMap;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then begin
+      typeMap:=P_abstractPackage(tokenLocation.package)^.getTypeMap;
+      result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context.adapters,typeMap);
+      typeMap.destroy;
+    end else result:=nil;
   end;
 
 FUNCTION fileLines_impl intFuncSignature;
@@ -534,6 +552,8 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'folderExists'   ,@folderExists_impl  ,ak_unary     ,'folderExists(foldername:String);//Returns true if the specified folder exists and false otherwise');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,ak_unary     ,'fileContents(filename:String);//Returns the contents of the specified file as one string');
   registerRule(FILES_BUILTIN_NAMESPACE,'readDatastore'  ,@readDatastore_impl  ,ak_binary   ,'readDatastore(scriptPath:String,ruleName:String);//Tries to read the specified datastore; returns void if the datastore does not exist');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,ak_unary   ,'serialize(x);//Returns a string representing x.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileLines'      ,@fileLines_impl     ,ak_unary     ,'fileLines(filename:String);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost');
   registerRule(FILES_BUILTIN_NAMESPACE,'writeFile'      ,@writeFile_impl     ,ak_binary    ,'writeFile(filename:String, content:String);//Writes the specified content to the specified file and returns true');
   registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines' ,@writeFileLines_impl,ak_variadic_2,'writeFileLines(filename:String, content:StringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
