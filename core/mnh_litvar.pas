@@ -55,7 +55,6 @@ TYPE
   private
     numberOfReferences: longint;
   public
-    customType:P_typedef;
     literalType:T_literalType;
     CONSTRUCTOR init(CONST lt:T_literalType);
     DESTRUCTOR destroy; virtual;
@@ -171,6 +170,10 @@ TYPE
     literal:P_literal;
     triggeredByReturn:boolean;
   end;
+  P_typableLiteral   = ^T_typableLiteral;
+  T_typableLiteral=object(T_literal)
+    customType:P_typedef;
+  end;
 
   P_compoundLiteral  = ^T_compoundLiteral;
   P_listLiteral      = ^T_listLiteral    ;
@@ -178,7 +181,7 @@ TYPE
   P_mapLiteral       = ^T_mapLiteral     ;
   P_expressionLiteral = ^T_expressionLiteral;
   T_expressionList = array of P_expressionLiteral;
-  T_expressionLiteral = object(T_literal)
+  T_expressionLiteral = object(T_typableLiteral)
     private
       expressionType:T_expressionType;
       declaredAt:T_tokenLocation;
@@ -214,12 +217,12 @@ TYPE
       builtinsuper:T_literalTypeSet;
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
-      FUNCTION cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_literal;
+      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_typableLiteral;
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
-      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
       FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
@@ -260,7 +263,7 @@ TYPE
   P_stringKeyLiteralValueMap=^T_stringKeyLiteralValueMap;
   T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
 
-  T_compoundLiteral=object(T_literal)
+  T_compoundLiteral=object(T_typableLiteral)
     private
       myHash:T_hashInt;
     public
@@ -651,45 +654,42 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
   VAR T:P_typedef;
   begin
     result:=false;
-    T:=L^.customType;
-    while(t<>nil) do begin
-      if T=@self
-      then exit(true)
-      else T:=T^.super;
+    if (L^.literalType in C_typables) then begin
+      T:=P_typableLiteral(L)^.customType;
+      while(t<>nil) do begin
+        if T=@self
+        then exit(true)
+        else T:=T^.super;
+      end;
     end;
     if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,false,L);
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_literal;
+FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
-      lt_boolean   : if forUncasting
-                     then result:=newBoolLiteral(P_boolLiteral(L)^.val)
-                     else new(P_boolLiteral(result),create(P_boolLiteral(L)^.val));
-      lt_int       : result:=P_intLiteral(L)^.clone;
-      lt_real      : result:=newRealLiteral(P_realLiteral(L)^.val);
-      lt_string    : result:=newStringLiteral(P_stringLiteral(L)^.val,not(forUncasting));
       lt_expression: begin
         if L^.numberOfReferences<=1
-        then result:=L^.rereferenced
+        then result:=P_typableLiteral(L^.rereferenced)
         else result:=P_expressionLiteral(L)^.clone(location,threadContext);
       end;
       lt_list..lt_emptyMap: begin
         if L^.numberOfReferences<=1
-        then result:=L^.rereferenced
+        then result:=P_typableLiteral(L^.rereferenced)
         else result:=P_compoundLiteral(L)^.clone;
       end;
     end;
   end;
 
-FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
   VAR temp:P_literal;
   begin
-    if L^.customType=@self then exit(L^.rereferenced);
     result:=nil;
+    if not(L^.literalType in C_typables) then adapters^.raiseError('Cannot cast primitive scalar',location);
+    if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
     if ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
-      result:=cloneLiteral(L,location,threadContext,false);
+      result:=cloneLiteral(P_typableLiteral(L),location,threadContext,false);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
       result:=super^.cast(L,location,threadContext,adapters);
@@ -704,9 +704,9 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
 
 FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
   begin
-    if L^.customType=nil then exit(L^.rereferenced);
-    result:=cloneLiteral(L,location,threadContext,true);
-    if result<>nil then result^.customType:=nil;
+    if not(L^.literalType in C_typables) or (P_typableLiteral(L)^.customType=nil) then exit(L^.rereferenced);
+    result:=cloneLiteral(P_typableLiteral(L),location,threadContext,true);
+    if result<>nil then P_typableLiteral(result)^.customType:=nil;
   end;
 //=====================================================================================================================
 
@@ -944,7 +944,7 @@ FUNCTION T_literal.getLocation:T_tokenLocation; begin result.package:=nil; resul
 FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declaredAt; end;
 //CONSTRUCTORS:=================================================================
 {$MACRO ON}
-{$define inline_init:=numberOfReferences:=1; customType:=nil; literalType:=}
+{$define inline_init:=numberOfReferences:=1; literalType:=}
 CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
@@ -952,6 +952,7 @@ CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherite
 CONSTRUCTOR T_intLiteral       .create(CONST value: T_bigInt);   begin {inherited init}inline_init(lt_int);     val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherited init}inline_init(lt_real);    val:=value; end;
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
+{$define inline_init:=numberOfReferences:=1; customType:=nil;literalType:=}
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
   begin
     inline_init(lt_expression);
@@ -1183,14 +1184,13 @@ PROCEDURE T_listLiteral.removeElement(CONST index:longint);
 //?.toString:===================================================================
 FUNCTION T_literal          .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:='<ERR>';           end;
 FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_TEXT_VOID;        end;
-FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val]; if customType<>nil then result+='.to'+customType^.name; end;
-FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;      if customType<>nil then result:='to'+customType^.name+'('+result+')'; end;
-FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); if customType<>nil then result:='to'+customType^.name+'('+result+')'; end;
+FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val]; end;
+FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;      end;
+FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   begin
     if lengthLimit>=length(val)+2 then result:=escapeString(val,es_pickShortest)
                                   else result:=escapeString(UTF8Copy(val,1,lengthLimit-5)+'...',es_pickShortest);
-    if customType<>nil then result+='.to'+customType^.name;
   end;
 
 FUNCTION T_listLiteral.toString(CONST lengthLimit: longint): ansistring;
@@ -1427,11 +1427,9 @@ FUNCTION T_setLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:
     result:=res;
   end;
 //=====================================================================:?.negate
-FUNCTION T_literal          .typeString:string;
+FUNCTION T_literal.typeString:string;
   begin
-    if customType<>nil
-    then result:=customType^.name
-    else result:=C_typeInfo[literalType].name;
+    result:=C_typeInfo[literalType].name;
   end;
 
 FUNCTION T_compoundLiteral  .typeString:string;
@@ -1464,14 +1462,14 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
-FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean) xor T_hashInt(customType); if val then inc(result); end;
-FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor val.lowDigit xor T_hashInt(customType); if val.isNegative then inc(result); {$R+} end;
+FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
+FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor val.lowDigit; if val.isNegative then inc(result); {$R+} end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}{$R-}
     result:=0;
     move(val, result, sizeOf(result));
-    result:=result xor longint(lt_real) xor T_hashInt(customType);
+    result:=result xor longint(lt_real);
     {$Q+}{$R+}
   end;
 
@@ -1479,7 +1477,7 @@ FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}{$R-}
-    result:=T_hashInt(lt_string)+T_hashInt(length(val))+T_hashInt(customType);
+    result:=T_hashInt(lt_string)+T_hashInt(length(val));
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
     {$Q+}{$R+}
   end;
@@ -3138,9 +3136,11 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
       if customTypeName<>'' then begin
-        if typeMap.containsKey(customTypeName,customType) then begin
-          result^.customType:=customType;
-        end else errorOrException('Read unknown custom type '+customTypeName);
+        if literalType in C_typables then begin
+          if typeMap.containsKey(customTypeName,customType) then begin
+            P_compoundLiteral(result)^.customType:=customType;
+          end else errorOrException('Read unknown custom type '+customTypeName);
+        end else errorOrException('Read invalid custom for literal of type '+C_typeInfo[literalType].name);
       end;
 
       if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
@@ -3177,7 +3177,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     FUNCTION typeByte:byte;
       begin
         result:=byte(L^.literalType)*2;
-        if L^.customType<>nil then inc(result);
+        if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then inc(result);
       end;
 
     begin
@@ -3188,7 +3188,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         exit;
       end;
       stream^.writeNaturalNumber(typeByte);
-      if L^.customType<>nil then stream^.writeAnsiString(L^.customType^.name);
+      if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then stream^.writeAnsiString(P_typableLiteral(L)^.customType^.name);
       case L^.literalType of
         lt_boolean:stream^.writeBoolean   (P_boolLiteral  (L)^.val);
         lt_int:    P_intLiteral(L)^.val.writeToStream(stream);
@@ -3238,7 +3238,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
                            else raise Exception.create('Cannot represent '+L^.typeString+' literal in binary form!');
         end;
       end;
-      if (reusableMap.fill<2097151) and ((L^.literalType=lt_string) or (L^.literalType in C_compoundTypes) or (L^.customType<>nil)) then
+      if (reusableMap.fill<2097151) and ((L^.literalType=lt_string) or (L^.literalType in C_typables)) then
         reusableMap.putNew(L,reusableMap.fill,previousMapValueDummy);
     end;
 
@@ -3306,7 +3306,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
             lt_set ..lt_emptySet : appendPart('].toSet');
             lt_map ..lt_emptyMap : appendPart('].toMap');
           end;
-          if L^.customType<>nil then appendPart('.to'+L^.customType^.name);
+          if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then appendPart('.to'+P_typableLiteral(L)^.customType^.name);
         end;
         else if adapters<>nil then adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
       end;

@@ -62,7 +62,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean;
       PROPERTY isVariadic:boolean read hasOptionals;
       FUNCTION isValidMainPattern:boolean;
-      FUNCTION isValidCustomTypeCheckPattern:boolean;
+      FUNCTION isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
       FUNCTION isValidMutablePattern:boolean;
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -510,7 +510,12 @@ FUNCTION T_pattern.isValidMainPattern:boolean;
     for i:=0 to length(sig)-1 do result:=result and (lt_string in sig[i].typeWhitelist);
   end;
 
-FUNCTION T_pattern.isValidCustomTypeCheckPattern:boolean; begin result:=(length(sig)=1) and not(hasOptionals); end;
+FUNCTION T_pattern.isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
+  begin
+    result:=(length(sig)=1) and not(hasOptionals)
+            and (forDuckTyping or
+                 (sig[0].typeWhitelist-C_typables=[]));
+  end;
 FUNCTION T_pattern.isValidMutablePattern        :boolean; begin result:=(length(sig)=0) and not(hasOptionals); end;
 FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;
 PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);

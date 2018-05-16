@@ -345,6 +345,7 @@ TYPE
   T_literalTypeSet=set of T_literalType;
 
 CONST
+  C_typables:T_literalTypeSet=[lt_expression..lt_emptyMap];
   C_typeInfo:array[T_literalType] of record
     name:string;
     containedIn,
