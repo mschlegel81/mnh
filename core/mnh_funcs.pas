@@ -199,20 +199,6 @@ FUNCTION fail_impl intFuncSignature;
     result:=nil;
   end;
 
-FUNCTION serialize_impl intFuncSignature;
-  begin
-    if (params<>nil) and (params^.size=1)
-    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters))
-    else result:=nil;
-  end;
-
-FUNCTION deserialize_impl intFuncSignature;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context.adapters)
-    else result:=nil;
-  end;
-
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
   begin end;
 
@@ -261,8 +247,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic,'note(...);//Raises a note of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic,'warn(...);//Raises a warning of out the given parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,ak_unary   ,'serialize(x);//Returns a string representing x.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,ak_unary   ,'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)');
   system.initCriticalSection(print_cs);
 FINALIZATION
   builtinMetaMap.destroy;

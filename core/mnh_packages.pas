@@ -94,7 +94,7 @@ TYPE
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
       FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
-
+      FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
       FUNCTION declaredRules:T_ruleList;
@@ -1542,6 +1542,19 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
   begin
     result:=sandbox^.runToString(L,@self,forOutput);
+  end;
+
+FUNCTION T_package.getTypeMap:T_typeMap;
+  VAR r:P_rule;
+
+  PROCEDURE addDef(CONST def:P_typedef);
+    begin
+      result.put(def^.getName,def);
+    end;
+  begin
+    result.create();
+    for r in importedRules.valueSet do if r^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then addDef(r^.getTypedef);
+    for r in packageRules .valueSet do if r^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then addDef(r^.getTypedef);
   end;
 
 DESTRUCTOR T_package.destroy;

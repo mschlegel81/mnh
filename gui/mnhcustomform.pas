@@ -112,7 +112,7 @@ PROCEDURE propagateCursor(CONST c:TWinControl; CONST Cursor:TCursor);
 FUNCTION mapGet(CONST map:P_mapLiteral; CONST key:string):P_literal;
   VAR keyLit:P_literal;
   begin
-    keyLit:=newSingletonString(key);
+    keyLit:=newStringLiteral(key);
     result:=map^.get(keyLit);
     disposeLiteral(keyLit);
     if result^.literalType=lt_void then disposeLiteral(result);
@@ -344,7 +344,7 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
       writeln(stdErr,'        DEBUG: evaluating enabled for ',getName);
       {$endif}
       oldEnabled:=state.enabled;
-      state.enabled:=config.enabled^.evaluateToBoolean(location,@context);
+      state.enabled:=config.enabled^.evaluateToBoolean(location,@context,true);
       result:=result or (oldEnabled<>state.enabled);
     end;
 

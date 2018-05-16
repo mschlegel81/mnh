@@ -304,7 +304,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         exit;
       end;
       if not(parseBodyOk) then exit;
-      while not(returnValue.triggeredByReturn) and headRule^.evaluateToBoolean(whileLocation,@context) and (context.adapters^.noErrors) do evaluateBody;
+      while not(returnValue.triggeredByReturn)
+            and headRule^.evaluateToBoolean(whileLocation,@context,true)
+            and (context.adapters^.noErrors) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;

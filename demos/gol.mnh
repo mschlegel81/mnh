@@ -3,7 +3,16 @@ type WorldSize(i:IntList(2))->i[0]>0<i[1];
 private initWorld(s:WorldSize)->intRandom(2,s.agg(*));
 
 //*Prints out the given world (including a clearprint)
-private printWorld(w:IntList,s:WorldSize)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
+private printWorld(s:WorldSize,w:IntList)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
+
+private plotWorld(worldWidth:Int,world:IntList)->
+begin
+  indexOf(world=1).pEach(i,begin
+    local o:=i.divMod(worldWidth);
+    [o,o+1];
+  end,|).plot('box');
+  display;
+end;
 
 //*Shifts - this returns a list of intLists, indicating adjacent cells
 private memoized shifts(s:WorldSize)->
@@ -13,7 +22,7 @@ private memoized shifts(s:WorldSize)->
 
 
 //*Returns a list of integers with the number of living neighbors per cell
-private neighbors(w:IntList,s:WorldSize)->shifts(s).each(sh,w[sh],+);
+private neighbors(w:IntList,s:WorldSize)->shifts(s).pEach(sh,w[sh],+);
 
 //*The Transision table
 private TRANSITION:=[0,0,0,1,0,0,0,0,0,
@@ -22,31 +31,56 @@ private TRANSITION:=[0,0,0,1,0,0,0,0,0,
 //*Computes the following generation based on current generation w
 private step(w:IntList,s:WorldSize)->TRANSITION[w.neighbors(s)+9*w];
 
-private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=false)->
+private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=false,outputMethod:Expression(1))->
   begin
     local W:=initWorld(S);
     local stepCounter:=0;
     while(stepCounter<=stepLimit,begin
       stepCounter+=1;
-      W.printWorld(S);
+      outputMethod(W);
       W:=W.step(S);
       sleep(delaySeconds);
     end);
   end;
 
-private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=true)->
+private playTheGame(S:WorldSize,delaySeconds:Numeric,stepLimit:Int,exitByKey=true,outputMethod:Expression(1))->
   begin
-    async({playTheGame(S,delaySeconds,stepLimit,false)});
+    async({playTheGame(S,delaySeconds,stepLimit,false,outputMethod)});
     ask('Press enter to quit');
   end;
 
 //*Conway's Game Of Life
 //*Play the game in the given resolution until a key is pressed
 //@demo_for=animation
-main(width,height)->playTheGame([width.toInt,height.toInt].toWorldSize,0.05,2^62,true);
+main(width,height)->begin
+  local worldSize:=[width.toInt,height.toInt].toWorldSize;
+  playTheGame(worldSize,0.05,2^62,true,printWorld(worldSize));
+end;
+
+main(width,height,'graphic')->begin
+  local worldSize:=[width.toInt,height.toInt].toWorldSize;
+  [['autoscaleX',false],
+   ['autoscaleY',false],
+   ['axisStyleX',0],
+   ['axisStyleY',0],
+   ['logscaleX',false],
+   ['logscaleY',false],
+   ['preserveAspect',true],
+   ['x0',0],
+   ['x1',worldSize[0]+1],
+   ['y0',0],
+   ['y1',worldSize[1]+1]].toMap.setOptions;
+  playTheGame(worldSize,0.05,2^62,true,plotWorld(worldSize[0]));
+end;
 
 //*Play the game for the given number of steps
-main(width,height,stepCount)->playTheGame([width.toInt,height.toInt].toWorldSize,0.05,stepCount.toInt,false);
+main(width,height,stepCount)->begin
+  local worldSize:=[width.toInt,height.toInt].toWorldSize;
+  playTheGame(worldSize,0.05,stepCount.toInt,false,printWorld(worldSize));
+end;
 
 //*Play the game for the given number of steps without delay between generations
-main(width,height,stepCount,"fast")->playTheGame([width.toInt,height.toInt].toWorldSize,0,stepCount.toInt,false);
+main(width,height,stepCount,"fast")->begin
+  local worldSize:=[width.toInt,height.toInt].toWorldSize;
+  playTheGame(worldSize,0,stepCount.toInt,false,printWorld(worldSize));
+end;

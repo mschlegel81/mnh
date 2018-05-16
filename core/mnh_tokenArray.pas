@@ -37,6 +37,7 @@ TYPE
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
       FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -989,6 +990,11 @@ FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST forOutput:bo
     if not(forOutput) and (L^.literalType=lt_string)
     then result:=P_stringLiteral(L)^.value
     else result:=L^.toString();
+  end;
+
+FUNCTION T_abstractPackage.getTypeMap:T_typeMap;
+  begin
+    result.create();
   end;
 
 {$ifdef fullVersion}

@@ -282,7 +282,7 @@ FUNCTION T_filterGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CON
     repeat
       nextUnfiltered:=sourceGenerator^.evaluateToLiteral(location,context);
       if (nextUnfiltered.literal<>nil) and (nextUnfiltered.literal^.literalType<>lt_void) then begin
-        if filterExpression^.evaluateToBoolean(location,context,nextUnfiltered.literal)
+        if filterExpression^.evaluateToBoolean(location,context,true,nextUnfiltered.literal)
         then exit          (nextUnfiltered)
         else disposeLiteral(nextUnfiltered.literal);
       end else begin
@@ -312,7 +312,7 @@ FUNCTION filter_imp intFuncSignature;
         lt_map:begin
           result:=newMapLiteral;
           iter:=map0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,x) then
+          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,true,x) then
             mapResult^.put(P_listLiteral(x)^.value[0],P_listLiteral(x)^.value[1],true);
           disposeLiteral(iter);
         end;
@@ -320,7 +320,7 @@ FUNCTION filter_imp intFuncSignature;
         lt_set ..lt_stringSet: begin
           result:=collection0^.newOfSameType(false);
           iter:=collection0^.iteratableList;
-          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,x) then
+          for x in iter do if P_expressionLiteral(arg1)^.evaluateToBoolean(tokenLocation,@context,true,x) then
             collResult^.append(x,true);
           disposeLiteral(iter);
         end;

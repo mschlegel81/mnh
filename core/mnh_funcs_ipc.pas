@@ -6,6 +6,7 @@ USES sysutils, Classes, simpleipc, //RTL
      mnh_basicTypes,mnh_constants,
      mnh_out_adapters,
      mnh_contexts,mnh_litVar,
+     mnh_tokenArray,
      mnh_funcs;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
@@ -155,6 +156,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
                      CONST location:T_tokenLocation; CONST adapters:P_adapters):boolean;
   VAR streamWrapper:T_inputStreamWrapper;
       memoryStream:TMemoryStream;
+      typeMap:T_typeMap;
   begin
     if not(receiver.PeekMessage(1,true)) then exit(false);
     memoryStream:=TMemoryStream.create;
@@ -164,8 +166,10 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     senderId:=streamWrapper.readAnsiString;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
-    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters)
+    typeMap:=P_abstractPackage(location.package)^.getTypeMap;
+    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
+    typeMap.destroy;
     streamWrapper.destroy;
     result:=true;
   end;
