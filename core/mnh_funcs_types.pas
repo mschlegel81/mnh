@@ -46,9 +46,9 @@ FUNCTION toBuiltin_imp intFuncSignature;
     if (params=nil) or (params^.size=0)
     then exit(newVoidLiteral)
     else if (params^.size=1) then begin
-      if arg0^.customType=nil
+      if not(arg0^.literalType in C_typables) or (P_typableLiteral(arg0)^.customType=nil)
       then exit(arg0^.rereferenced)
-      else exit(arg0^.customType^.uncast(arg0,tokenLocation,@context,context.adapters));
+      else exit(P_typableLiteral(arg0)^.customType^.uncast(arg0,tokenLocation,@context,context.adapters));
     end else result:=nil;
   end;
 

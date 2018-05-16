@@ -120,7 +120,7 @@ TYPE
       CONSTRUCTOR create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
-      FUNCTION hasValidValidCustomTypeCheckPattern:boolean;
+      FUNCTION hasValidValidCustomTypeCheckPattern(CONST forDucktyping:boolean):boolean;
       FUNCTION hasEquivalentPattern(CONST s:P_subruleExpression):boolean;
       FUNCTION hidesSubrule(CONST s:P_subruleExpression):boolean;
       //Inspection/documentation calls
@@ -407,7 +407,7 @@ FUNCTION T_builtinGeneratorExpression.canApplyToNumberOfParameters(CONST parCoun
 
 FUNCTION T_inlineExpression.isVariadic: boolean; begin result:=pattern.isVariadic;                             end;
 FUNCTION T_subruleExpression.hasValidMainPattern                                 :boolean; begin result:=pattern.isValidMainPattern;                     end;
-FUNCTION T_subruleExpression.hasValidValidCustomTypeCheckPattern                 :boolean; begin result:=pattern.isValidCustomTypeCheckPattern;          end;
+FUNCTION T_subruleExpression.hasValidValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean; begin result:=pattern.isValidCustomTypeCheckPattern(forDuckTyping) end;
 FUNCTION T_subruleExpression.hasEquivalentPattern(CONST s:P_subruleExpression)   :boolean; begin result:=pattern.isEquivalent(s^.pattern);               end;
 FUNCTION T_subruleExpression.hidesSubrule        (CONST s:P_subruleExpression)   :boolean; begin result:=pattern.hides(s^.pattern);                      end;
 

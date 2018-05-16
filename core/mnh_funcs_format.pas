@@ -369,7 +369,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   VAR i:longint;
       listSize:longint=-1;
   begin
-    for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (params^.value[i]^.customType=nil) then begin
+    for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (P_compoundLiteral(params^.value[i])^.customType=nil) then begin
       if listSize=-1 then listSize:=P_compoundLiteral(params^.value[i])^.size
                   else if listSize<>P_compoundLiteral(params^.value[i])^.size then begin
         context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^.value[i])^.size)+' for formatting.',tokenLocation);
@@ -378,7 +378,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     end;
     if listSize=-1 then listSize:=1;
     setLength(iter,params^.size);
-    for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (params^.value[i]^.customType=nil)
+    for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (P_compoundLiteral(params^.value[i])^.customType=nil)
     then iter[i]:=P_compoundLiteral(params^.value[i])^.iteratableList
     else begin setLength(iter[i],1); iter[i][0]:=params^.value[i]^.rereferenced; end;
 
