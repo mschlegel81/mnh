@@ -7,7 +7,7 @@ TYPE
     containedInForm:TForm;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext; CONST consideredKeys:T_definingMapKeys=[dmk_type,dmk_parts]);
     CONSTRUCTOR createForExistingForm(CONST form:TForm);
-    PROCEDURE add(CONST meta:P_guiElementMeta);
+    PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;

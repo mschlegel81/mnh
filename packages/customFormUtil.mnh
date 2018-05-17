@@ -74,3 +74,6 @@ withMouseMoved(m:Map,onMouseMove:Expression(2))->[['mouseMoved',onMouseMove]].to
 
 //@SuppressUnusedWarning
 withMouseClicked(m:Map,onMouseClick:Expression(2))->[['mouseClicked',onMouseClick]].toMap.mergeMaps(m,::orElse);
+
+//@SuppressUnusedWarning
+newGrid(colCount>=0,contents:List)->[['type','grid'],['colCount',colCount],['parts',contents]].toMap;
