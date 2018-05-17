@@ -1,5 +1,5 @@
 type Matrix(M:List)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
-type SquareMatrix(M:List)->M.each(row,row.isNumericList(M.size),AND);
+type SquareMatrix(M:Matrix)->M.each(row,row.isNumericList(M.size),AND);
 
 private subMatrix(M:List,skipRow,skipCol)->
   M.each(row,index=skipRow
@@ -13,7 +13,7 @@ mult(x:Matrix,y:Matrix)->begin
   local dimX:=matrixDimensions(x);
   local dimY:=matrixDimensions(y);
   (dimX[1]==dimY[0]) ? [0..dimX[0]-1].each(i,
-                       [0..dimY[1]-1].each(k,(x.get(i)*y.getInner(k)).agg(+)))
+                       [0..dimY[1]-1].each(k,(x.get(i)*y.getInner(k)).agg(+))).toMatrix
                      : fail('Matrices must have compatible sizes for multiplication.');
 end;
 //*Matrix+vector multiplication
@@ -69,16 +69,17 @@ end;
 
 //@SuppressUnusedWarning
 isUnitMatrix(M:SquareMatrix)->M.each(row,begin local rowIndex:=index; row.each(x,index=rowIndex ? x=1 : x=0,AND); end,AND);
+isUnitMatrix(M:Matrix)->false;
 
 //@SuppressUnusedWarning
 rotZ(angle)->[[ cos(angle),sin(angle),0],
               [-sin(angle),cos(angle),0],
-              [         0 ,        0 ,1]];
+              [         0 ,        0 ,1]].toSquareMatrix;
 //@SuppressUnusedWarning
 rotY(angle)->[[ cos(angle),0,sin(angle)],
               [         0 ,1,        0 ],
-              [-sin(angle),0,cos(angle)]];
+              [-sin(angle),0,cos(angle)]].toSquareMatrix;
 //@SuppressUnusedWarning
 rotX(angle)->[[1,         0 ,        0 ],
               [0, cos(angle),sin(angle)],
-              [0,-sin(angle),cos(angle)]];
+              [0,-sin(angle),cos(angle)]].toSquareMatrix;

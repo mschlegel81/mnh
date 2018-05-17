@@ -81,17 +81,17 @@ PROCEDURE T_gridMeta.update;
       end;
     end;
     setLength(widths ,0);
-    SetLength(heights,0);
+    setLength(heights,0);
     for k:=0 to length(elements)-1 do begin
       colIdx:=k mod ColCount;
       rowIdx:=k div ColCount;
       elements[k]^.getControl.GetPreferredSize(pw,ph);
       if rowIdx>=length(heights) then begin
-        SetLength(heights,rowIdx+1);
+        setLength(heights,rowIdx+1);
         heights[rowIdx]:=ph;
       end else if ph>heights[rowIdx] then heights[rowIdx]:=ph;
       if colIdx>=length(widths) then begin
-        SetLength(widths,colIdx+1);
+        setLength(widths,colIdx+1);
         widths[colIdx]:=pw;
       end else if pw>widths[colIdx] then widths[colIdx]:=pw;
     end;
