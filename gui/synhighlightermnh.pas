@@ -241,7 +241,6 @@ PROCEDURE TSynMnhSyn.next;
       fTokenId:=tkNull;
       exit;
     end;
-    while (run<RUN_LIMIT) and (fLine[run]=' ') do inc(run);
 
     if (run = 0) and (flavour in [msf_output,msf_help]) then begin
       specialLineCase:=mc_print;
@@ -258,7 +257,7 @@ PROCEDURE TSynMnhSyn.next;
         end else inc(run,3);
       end else while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
-    end;
+    end else while (run<RUN_LIMIT) and (fLine[run]=' ') do inc(run);
     if (flavour<>msf_debug) and (blobEnder<>#0) then begin
       if fLine[run]=#0 then begin
         fTokenId := tkNull;
