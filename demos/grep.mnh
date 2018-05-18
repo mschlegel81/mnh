@@ -10,7 +10,7 @@ private showIndex(matchMask:BooleanList, additional:Int)->begin
      lineIndex]);
 end;
 
-//@demo_for=regex
+@demo_for=regex
 //*Usage: grep pattern [options] [filePattern1,[filePattern2,...]]
 //*if no file pattern is given, * is assumed
 //*Options: -i  case insensitive matching

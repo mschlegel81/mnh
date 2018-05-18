@@ -2,7 +2,7 @@
 plain script;
 USE GUI;
 
-//@demo_for=plotting, animation
+@demo_for=plotting, animation
 private rollAt(t:Numeric,doPlot:Boolean)->begin
   local center:=[t,1];
   local line:=[center,center+[-sin(t),-cos(t)]];

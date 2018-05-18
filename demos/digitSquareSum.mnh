@@ -1,4 +1,4 @@
-//@demo_for=memoization
+@demo_for=memoization
 memoized
 private sumsTo89(89)->true;
 private sumsTo89(1)->false;

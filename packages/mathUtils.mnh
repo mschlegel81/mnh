@@ -5,23 +5,23 @@ iterate(x0,function:Expression(1),stepCount>=1,lastOnly=false)->begin
   [1..stepCount].each(step,x:=function(x));
 end;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 sum(L:NumericList)->L.agg(+) orElse 0;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 prod(L:NumericList)->L.agg(*) orElse 1;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 factorial(i=0)->1;
 factorial(i>=21)->2.43290200817664E18*(1.0*[21..i]).agg(*);
 factorial(i in [1..20])->[1..i].agg(*);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 binomCoeff(n>0,0)->1;
 binomCoeff(n>0,n)->1;
 binomCoeff(n>0,k<n)->k<=0 ? 1 : [1..min(k,n-k)].each(i,(n-k+i)/i,*).round;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*An approximation to the Gamma function
 Gamma(x>50.0)->exp(0.5*ln(2*pi)+(x-0.5)*(ln(x-0.5)-1)-1/(24*(x-1/2)));
 Gamma(x>0.0)->Gamma(x+1)/x;

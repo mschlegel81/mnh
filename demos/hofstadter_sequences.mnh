@@ -21,7 +21,7 @@ memoized M(0):=0; M(n>0)->n-F(M(n-1));
 memoized Q(n<=2):=1;
 Q(n)->Q(n-Q(n-1))+Q(n-Q(n-2));
 
-//@demo_for=memoization, math
+@demo_for=memoization, math
 main->begin
   print('(OEIS A005228) R: ',[1..20].map(::R).join(', '));
   print('(OEIS A030124) S: ',[1..20].map(::S).join(', '));

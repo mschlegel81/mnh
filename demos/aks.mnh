@@ -1,6 +1,6 @@
 USE pascal;
 memoized private AKSPoly(n>=0)->pascalTriangleRow(n)*(-1^[0..n]);
-//@SuppressUnusedWarning=Used in formatted print
+@SuppressUnusedWarning=Used in formatted print
 private AKSPolyString(n>=0)->
   "(x-1)^"&n&" = "&
   format("%{$0>0<$1?'+':''}s%{$0=1?'':$0=-1?'-':$0}s%{$2}s",
@@ -10,7 +10,7 @@ private AKSPolyString(n>=0)->
   .join;
 
 private AKS_isPrime(n)->trueCount(AKSPoly(n)[[1..n-1]] mod n<>0)=0;
-//@demo_for=formatting, math, memoization
+@demo_for=formatting, math, memoization
 //*See http://rosettacode.org/wiki/AKS_test_for_primes
 main->print('Polynomial expansions:') |
       printf("%{AKSPolyString($0)}s",[0..7])|

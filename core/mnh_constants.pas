@@ -63,7 +63,7 @@ CONST
   COMMENT_PREFIX                ='//';
   BLOCK_COMMENT_DELIMITER       ='#';
   DOC_COMMENT_INFIX             ='*';
-  ATTRIBUTE_COMMENT_INFIX       ='@';
+  ATTRIBUTE_PREFIX              ='@';
   SPECIAL_COMMENT_BLOB_BEGIN_INFIX='!';
   {$ifdef fullVersion}
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';

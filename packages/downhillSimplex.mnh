@@ -11,11 +11,11 @@ downhillSimplexOptions(alpha,beta,gamma,sigma)->
 
 DEFAULT_DOWNHILL_SIMPLEX_OPTIONS:=downhillSimplexOptions(1,1/2,2,1/2);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*To be used with downhillSimplexOptions or DEFAULT_DOWNHILL_SIMPLEX_OPTIONS to provide a specific initial simplex
 withStartSimplex(simplexOptions:Map,simplex:List)->simplexOptions.mergeMaps([['simplex',simplex]].toMap,::orElse);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*To be used with downhillSimplexOptions or DEFAULT_DOWNHILL_SIMPLEX_OPTIONS to provide an action on new best point
 //*The best point is passed to action in the form [f(x),x];
 withActionOnBestPoint(simplexOptions:Map,action:Expression(1))->simplexOptions.mergeMaps([['onNewBest',action]].toMap,::orElse);

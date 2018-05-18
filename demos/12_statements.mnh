@@ -13,8 +13,8 @@ private txt:=split(
 11. "Exactly 1 of statements 7, 8 and 9 are true."
 12. "Exactly 4 of the preceding statements are true."~,"\n");
 
-//@demo_for=boolean operations, each/lazy evaluation
-//@AllowOnly=pure
+@demo_for=boolean operations, each/lazy evaluation
+@AllowOnly=pure
 private
 check(T:BooleanList(13))->T==[false,                      //0. (dummy)
                           true,                           //1.

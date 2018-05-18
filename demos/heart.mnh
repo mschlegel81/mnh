@@ -1,6 +1,6 @@
 h(x)->[12*sin(x)-4*sin(3*x),
        13*cos(x)-5*cos(2*x)-2*cos(3*x)-cos(4*x)-4];
-//@demo_for=plotting
+@demo_for=plotting
 main->begin
   setOptions([['axisStyleX',0],['axisStyleY',0],['autoscaleFactor',0.95]]);
   plot(::h,0,2*pi,1000,'red p fs');

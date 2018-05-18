@@ -1,4 +1,4 @@
-//@demo_for=memoization
+@demo_for=memoization
 private memoized change(amount>0,set)->
 begin
   local restSet:=set.get(set<=amount); //only work with coins >= amount
@@ -12,7 +12,7 @@ end;
 private change(amount<=0,set)->1;
 
 //*Returns the number of ways <amount> can be represented as a sum of integers in <set>
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 countPartitions(amount:Int,set:IntCollection)->
   set.size=0 ? 0 : change(amount,set.sort.reverseList);
 

@@ -2,7 +2,7 @@ type Key(k:IntList(2))->(k[0]>0) and (k[1]>0);
 
 compositeSeed(...)->([getEnv,systime,time]|...).serialize.sha256;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns a list: [private key,public key] to be used with function crypt
 //*Optional arguments are used for randomization
 generateKeyPair(keyLength>=16,...)->begin

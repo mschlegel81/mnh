@@ -2,7 +2,7 @@ plain datastore log;
 
 maxLoggedBuildNumber->try({max(log.getInner(1))},0);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized getBuildNumber(codeHash:String)->begin
   isVoid(log)
   ? begin

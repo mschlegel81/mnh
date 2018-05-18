@@ -317,7 +317,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     end else begin
       disposeLiteral(subrules[i]);
       if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE))
-      then context.adapters^.raiseWarning('Overriding rule '+rule^.getId+'; you can suppress this warning with '+COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+OVERRIDE_ATTRIBUTE,rule^.getLocation);
+      then context.adapters^.raiseWarning('Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE,rule^.getLocation);
     end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);

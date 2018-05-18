@@ -31,7 +31,7 @@ splitL2(sumOfP5:Int)->
            .toSet;
 
 //*See http://rosettacode.org/wiki/Euler%27s_sum_of_powers_conjecture
-//@demo_for=math, list processing
+@demo_for=math, list processing
 main->
   fifthSet.pEach(p5,p5.splitL1,head)
           .flatten

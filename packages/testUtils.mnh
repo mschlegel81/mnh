@@ -1,4 +1,4 @@
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 testExpression(...)->... .each(e,e.isExpression
                                  ? void
                                  : fail(e.toString&' is no expression'),head) orElse
@@ -6,10 +6,10 @@ testExpression(...)->... .each(e,e.isExpression
                             ... .each(e,e.toString.unbrace.unbrace),
                             ... .each(e,toString(e())));
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns true if the given list of sandbox messages contain an error
 messagesContainError(sandboxMessages:List)->sandboxMessages.each(m,m.size>0 AND m[0].matches('Error'),OR);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the created printout as a list of strings
 extractPrintout(sandboxMessages:List)->sandboxMessages.each(m,m.size=3 AND m[0]=='printline' ? m[2].split("\n") : void,|);

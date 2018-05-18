@@ -18,7 +18,7 @@ private testGray(i:Int)->begin
   [i,b.ord.join,g.ord.join];
 end;
 
-//@demo_for=transcoding
+@demo_for=transcoding
 //*See http://rosettacode.org/wiki/Gray_code
 main->[0..16].map(::testGray)
       .formatTable(['decimal','binary','Gray code'])

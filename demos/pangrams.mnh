@@ -59,7 +59,7 @@ checkForPangram(s:String)->begin
   : print(escape(s),' is not a pangram. Missing letters are ',missing.join(","));
 end;
 
-//@demo_for=strings, memoization, map operations
+@demo_for=strings, memoization, map operations
 //*Checks if the given input is pangram
 //*See http://rosettacode.org/wiki/Pangram_checker
 main('check',...)->checkForPangram(join(...,' '));

@@ -2,6 +2,6 @@ private P64:=math.primes(62).toSet;
 isPernicious(n:Int)->digits(n,2).agg(+) in P64;
 private pernicousInRange(iMin,iMax)->[iMin..iMax].pEach(i,isPernicious(i) ? i : void);
 //*See http://rosettacode.org/wiki/Pernicious_numbers
-//@demo_for=each/filter, bitwise
+@demo_for=each/filter, bitwise
 main->print(head(pernicousInRange(0,50),25),"\n",
             pernicousInRange(888888877,888888888));

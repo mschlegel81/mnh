@@ -1,6 +1,6 @@
 private lengthLimit:=18;
 
-//@demo_for=string arithmetics
+@demo_for=string arithmetics
 plus(x:String,y:String)->begin
   local result:='';
   local maxLen:=max(length(x),length(y));

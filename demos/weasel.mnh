@@ -25,6 +25,6 @@ private evolve(mutationFalloff,offspringCount,generationLimit)->begin
   printf('%4d %s',generationCount,parent);
 end;
 
-//@demo_for=evolutionary algorithm
+@demo_for=evolutionary algorithm
 //*See http://rosettacode.org/wiki/Evolutionary_algorithm
 main->evolve(0.9,20,10000);

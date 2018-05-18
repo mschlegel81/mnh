@@ -1,7 +1,7 @@
-//@SuppressUnusedWarning=Used in printf
+@SuppressUnusedWarning=Used in printf
 private monteCarloPi(sampleSize>0)->4*trueCount(random(sampleSize)^2+random(sampleSize)^2<1)/sampleSize;
 
-//@demo_for=math/monte carlo
+@demo_for=math/monte carlo
 //*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
 main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
       printf("n=%{$0}7d pi approximated as %{monteCarloPi($0)}-9.7g",10^[1..6]);

@@ -59,7 +59,7 @@ end;
 
 USE customFormUtil;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,qualityLevel>=0,interactive:Boolean)->begin
   local geometry:=prepareGeometry(F,x0,x1,y0,y1,triangleCount);
   local nodes    :=geometry[0];
@@ -129,7 +129,7 @@ contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:Num
   end})]);
 end;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 densityPlot(f:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->begin
   local xSamples:=sqrt((x1-x0)/(y1-y0)*sampleCount).round.max(1);
   local ySamples:=sqrt((y1-y0)/(x1-x0)*sampleCount).round.max(1);

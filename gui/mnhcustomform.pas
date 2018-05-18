@@ -15,7 +15,7 @@ USES
 
 TYPE
   T_definingMapKey=(dmk_type,dmk_action,dmk_onChange,dmk_caption,dmk_enabled,dmk_bind,dmk_items,dmk_parts,dmk_left,dmk_right,dmk_highlight,
-                    dmk_mouseMoved,dmk_mouseClicked,dmk_interval);
+                    dmk_mouseMoved,dmk_mouseClicked,dmk_interval,dmk_colCount);
   T_definingMapKeys=set of T_definingMapKey;
 
 CONST
@@ -33,7 +33,8 @@ CONST
     'highlight',
     'mouseMoved',
     'mouseClicked',
-    'interval');
+    'interval',
+    'colCount');
 
 TYPE
   P_guiElementMeta=^T_guiElementMeta;
@@ -132,6 +133,7 @@ OPERATOR:=(x:T_listLiteral):T_arrayOfString;
 //indentation signifies inheritance
 {$I component_panel.inc}
   {$I component_splitPanel.inc}
+  {$I component_grid.inc}
 {$I component_label.inc}
 {$I component_checkbox.inc}
 {$I component_button.inc}
@@ -445,8 +447,8 @@ PROCEDURE TscriptedForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftS
   end;
 
 PROCEDURE TscriptedForm.initialize();
-  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker);
-  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker');
+  TYPE  T_componentType=(tc_error,tc_button,tc_label,tc_checkbox,tc_textBox,tc_panel,tc_splitPanel,tc_inputEditor,tc_outputEditor,tc_console,tc_comboBox,tc_plot,tc_worker,tc_grid);
+  CONST C_componentType:array[T_componentType] of string=('','button','label','checkbox','edit','panel','splitPanel','inputEditor','outputEditor','console','comboBox','plot','worker','grid');
 
   FUNCTION componentTypeOf(CONST def:P_mapLiteral):T_componentType;
     VAR tc:T_componentType;
@@ -461,7 +463,7 @@ PROCEDURE TscriptedForm.initialize();
       result:=tc_error;
       for tc in T_componentType do if C_componentType[tc]=P_stringLiteral(componentTypeLiteral)^.value then result:=tc;
       if result=tc_error then
-        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","inputEditor","outputEditor","checkbox","splitPanel"]',setupLocation);
+        setupContext^.adapters^.raiseError('Invalid type: '+componentTypeLiteral^.toString()+'; must be one of ["panel","button","edit","comboBox","label","inputEditor","outputEditor","checkbox","splitPanel","grid"]',setupLocation);
       disposeLiteral(componentTypeLiteral);
     end;
 
@@ -471,7 +473,7 @@ PROCEDURE TscriptedForm.initialize();
       meta[length(meta)-1]:=m;
     end;
 
-  PROCEDURE initComponent(CONST container:T_panelMeta; CONST def:P_literal);
+  PROCEDURE initComponent(CONST container:P_panelMeta; CONST def:P_literal);
     VAR labelMeta   :P_labelMeta;
         buttonMeta  :P_buttonMeta;
         checkboxMeta:P_checkboxMeta;
@@ -483,8 +485,9 @@ PROCEDURE TscriptedForm.initialize();
         splitPanel  :P_splitPanelMeta;
         consoleMeta :P_secondaryOutputMemoMeta;
         workerMeta  :P_workerMeta;
+        gridMeta    :P_gridMeta;
 
-    PROCEDURE addPanelContents(VAR targetPanel:T_panelMeta; panelContents:P_literal);
+    PROCEDURE addPanelContents(CONST targetPanel:P_panelMeta; panelContents:P_literal);
       VAR iter:T_arrayOfLiteral;
       begin
         if panelContents=nil then begin end
@@ -501,31 +504,37 @@ PROCEDURE TscriptedForm.initialize();
 
     begin
       if def^.literalType in C_mapTypes then case componentTypeOf(P_mapLiteral(def)) of
-        tc_label:        begin new(labelMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(labelMeta   ); end;
-        tc_button:       begin new(buttonMeta  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(buttonMeta  ); end;
-        tc_checkbox:     begin new(checkboxMeta,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(checkboxMeta); end;
-        tc_textBox:      begin new(editMeta    ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(editMeta    ); end;
-        tc_inputEditor : begin new(inputEditM  ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(inputEditM  ); end;
-        tc_outputEditor: begin new(outputEditM ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
-        tc_comboBox:     begin new(comboMeta   ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
-        tc_console:      begin new(consoleMeta ,create(@container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(consoleMeta ); end;
-        tc_worker:       begin new(workerMeta  ,create(           P_mapLiteral(def),setupLocation,setupContext^)); addMeta(workerMeta); end;
+        tc_label:        begin new(labelMeta   ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(labelMeta   ); end;
+        tc_button:       begin new(buttonMeta  ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(buttonMeta  ); end;
+        tc_checkbox:     begin new(checkboxMeta,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(checkboxMeta); end;
+        tc_textBox:      begin new(editMeta    ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(editMeta    ); end;
+        tc_inputEditor : begin new(inputEditM  ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(inputEditM  ); end;
+        tc_outputEditor: begin new(outputEditM ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(outputEditM ); end;
+        tc_comboBox:     begin new(comboMeta   ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(comboMeta   ); end;
+        tc_console:      begin new(consoleMeta ,create(container,P_mapLiteral(def),setupLocation,setupContext^)); addMeta(consoleMeta ); end;
+        tc_worker:       begin new(workerMeta  ,create(          P_mapLiteral(def),setupLocation,setupContext^)); addMeta(workerMeta); end;
         tc_plot:         if plotLink=nil then begin;
           new(P_plotConnectorMeta(plotLink),create(P_mapLiteral(def),setupLocation,setupContext^));
           addMeta(plotLink);
         end else setupContext^.adapters^.raiseError('Only one plot link is allowed per custom form',setupLocation);
         tc_panel:begin
-          new(newPanel,create(@container,P_mapLiteral(def),setupLocation,setupContext^));
-          addPanelContents(newPanel^,mapGet(P_mapLiteral(def),key[dmk_parts]));
+          new(newPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
+          addPanelContents(newPanel,mapGet(P_mapLiteral(def),key[dmk_parts]));
           addMeta(newPanel);
           newPanel^.alignContents;
         end;
         tc_splitPanel:begin
-          new(splitPanel,create(@container,P_mapLiteral(def),setupLocation,setupContext^));
-          addPanelContents(splitPanel^.Left ,mapGet(P_mapLiteral(def),key[dmk_left ]));
-          addPanelContents(splitPanel^.Right,mapGet(P_mapLiteral(def),key[dmk_right]));
+          new(splitPanel,create(container,P_mapLiteral(def),setupLocation,setupContext^));
+          addPanelContents(@splitPanel^.Left ,mapGet(P_mapLiteral(def),key[dmk_left ]));
+          addPanelContents(@splitPanel^.Right,mapGet(P_mapLiteral(def),key[dmk_right]));
           addMeta(splitPanel);
           splitPanel^.alignContents;
+        end;
+        tc_grid:begin
+          new(gridMeta,create(container,P_mapLiteral(def),setupLocation,setupContext^));
+          addPanelContents(gridMeta,mapGet(P_mapLiteral(def),key[dmk_parts]));
+          gridMeta^.doneAdding;
+          addMeta(gridMeta);
         end;
       end else setupContext^.adapters^.raiseError('Invalid component definition type: '+def^.typeString+'; must be a map',setupLocation);
     end;
@@ -536,8 +545,8 @@ PROCEDURE TscriptedForm.initialize();
     enterCriticalSection(lock);
     new(formMeta,createForExistingForm(self));
     if setupParam^.literalType in C_listTypes
-    then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta^,P_listLiteral(setupParam)^.value[k])
-    else                                                  initComponent(formMeta^,              setupParam           );
+    then for k:=0 to P_listLiteral(setupParam)^.size-1 do initComponent(formMeta,P_listLiteral(setupParam)^.value[k])
+    else                                                  initComponent(formMeta,              setupParam           );
     formMeta^.alignContents;
     for k:=length(meta)-1 downto 0 do begin
       if meta[k]^.getControl<>nil then begin

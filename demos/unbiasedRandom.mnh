@@ -8,6 +8,6 @@ private
 testUnbiasing(n:Int)->printf('%d %5.2f%% %5.2f%%',N:=n,
                              [1..10000].each(i,  biasedRandom,+)/100,
                              [1..10000].each(i,unbiasedRandom,+)/100);
-//@demo_for=each/aggregation, statistics/simple
+@demo_for=each/aggregation, statistics/simple
 //*See http://rosettacode.org/wiki/Unbias_a_random_generator
 main->print('I biased unbiased') and [3..6].each(i,testUnbiasing(i));

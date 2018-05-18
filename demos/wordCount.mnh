@@ -15,7 +15,7 @@ private processLinesInChunks(lines:StringList,chunkSize)->
   .flatten
   .elementFrequency;
 
-//@demo_for=string processing, list processing, file processing
+@demo_for=string processing, list processing, file processing
 private analyze(lines:StringList)->begin
   local wordCount:=processLinesInChunks(lines,100).sort(1).reverseList;
   print('Words total:    ',local total:=wordCount.getInner(1).agg(+));

@@ -2,7 +2,7 @@ memoized
 pascalTriangleRow(n<1)->1;
 pascalTriangleRow(n)->(pascalTriangleRow(n-1)|0)+(0|pascalTriangleRow(n-1));
 
-//@demo_for=memoization
+@demo_for=memoization
 memoized
 private printTri(n:Int)->printf("%s",[0..n-1].each(i,repeat("\v",n-i)&pascalTriangleRow(i).join("\v\v")));
 

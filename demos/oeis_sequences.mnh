@@ -42,230 +42,230 @@ private isPermutablePrime(p:Int)->(p.digits).permutations.each(d,d.composeDigits
 
 private naturalNumbers(lowerBound:Int)->rangeGenerator(lowerBound,2^63-1);
 //-------------------------------------------------------------
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000002->listIterator(Kolakoski_1_2(10000));
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000005->naturalNumbers(1).lazyMap({$n<=1 ? 1 : factorize($n).subSets.map({$x.agg(*)}).size+1});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000006->primeGenerator.sqrt.floor;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000007->ord(naturalNumbers(0)=0);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000010->naturalNumbers(1).lazyMap(::EulerPhi);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000027->naturalNumbers(1);
 USE sequenceOfNonSquares;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000037->naturalNumbers(1).lazyMap(::nonSquares);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000040->primeGenerator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000108->rangeGenerator(0,13).lazyMap(::Catalan);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000124->naturalNumbers(0).lazyMap(::LazyCaterer);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000203->naturalNumbers(1).lazyMap(::DivisorFunction);
 USE semiprime;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001358->naturalNumbers(1).filter(::isSemiprime);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A003459->listIterator(primes(991)).filter(::isPermutablePrime);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A025426->naturalNumbers(0).lazyMap({size(by2Squares($i))});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A061358->naturalNumbers(0).lazyMap({size(by2Primes($i))});
 USE generators,ludic;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A003309->listIterator(LudicSieve);
 USE pernicousNumbers;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A052294->naturalNumbers(1).filter(::isPernicious);
 USE smithNumbers;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A006753->naturalNumbers(1).filter(::isSmithNumber);
 USE thueMorseSequence;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010060->listIterator(thueMorseSequence(10000).ord);
 USE truncatablePrimes;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A024785->listIterator(leftTruncatablePrimes (1000000));
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A024770->listIterator(rightTruncatablePrimes(1000000));
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A020994->listIterator(leftTruncatablePrimes (1000000).intersect(rightTruncatablePrimes(1000000)).sort);
 USE hofstadter_sequences;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005228->naturalNumbers(1).lazyMap(::hofstadter_sequences.R);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A030124->naturalNumbers(1).lazyMap(::hofstadter_sequences.S);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005206->naturalNumbers(0).lazyMap(::hofstadter_sequences.G);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005374->naturalNumbers(0).lazyMap(::hofstadter_sequences.H);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005378->naturalNumbers(0).lazyMap(::hofstadter_sequences.F);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005379->naturalNumbers(0).lazyMap(::hofstadter_sequences.M);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005185->naturalNumbers(1).lazyMap(::hofstadter_sequences.Q);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A007947->naturalNumbers(1).lazyMap({$n.factorize.unique.agg(*)});
 
 USE countTheCoins;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000041->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001156->naturalNumbers(0).lazyMap({countPartitions($i,[1..ceil($i^(1/2))]^2)});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A003108->naturalNumbers(0).lazyMap({countPartitions($i,[1..ceil($i^(1/3))]^3)});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A018819->naturalNumbers(0).lazyMap({countPartitions($i,2^[0..20])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A062051->naturalNumbers(0).lazyMap({countPartitions($i,3^[0..20])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001996->naturalNumbers(0).lazyMap({countPartitions($i,[2, 3, 4, 5, 6, 7])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000607->naturalNumbers(0).lazyMap({$i=0?1:countPartitions($i,primes($i))});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A002095->naturalNumbers(0).lazyMap({countPartitions($i,[1..$i].minus(primes($i)))});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000008->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001299->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001300->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001301->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001302->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 25, 50])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001306->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 20, 50, 100])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001310->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 10, 20, 40, 100])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001312->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 50, 100])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001313->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 5, 10, 20, 50])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001362->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 10])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001364->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 4, 12, 24, 48, 96, 120])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A067996->naturalNumbers(0).lazyMap({countPartitions($i,[1, 2, 3, 5, 10, 20, 25, 50, 100])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A169718->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10, 25, 50, 100])});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A187243->naturalNumbers(0).lazyMap({countPartitions($i,[1, 5, 10])});
 
 USE vampire;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A014575->naturalNumbers(1260).filter(::isVampire);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A018900->naturalNumbers(0).filter({$x.hammingWeight=2});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A014311->naturalNumbers(0).filter({$x.hammingWeight=3});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A014312->naturalNumbers(0).filter({$x.hammingWeight=4});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A014313->naturalNumbers(0).filter({$x.hammingWeight=5});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A023688->naturalNumbers(0).filter({$x.hammingWeight=6});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A023689->naturalNumbers(0).filter({$x.hammingWeight=7});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A023690->naturalNumbers(0).filter({$x.hammingWeight=8});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A023691->naturalNumbers(0).filter({$x.hammingWeight=9});
 
 USE multifactorial;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A000142->multifactorialGenerator(1);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A006882->multifactorialGenerator(2);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A007661->multifactorialGenerator(3);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A007662->multifactorialGenerator(4);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A085157->multifactorialGenerator(5);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A085158->multifactorialGenerator(6);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A114799->multifactorialGenerator(7);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A114800->multifactorialGenerator(8);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A114806->multifactorialGenerator(9);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A288327->multifactorialGenerator(10);
 
 USE pascal;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010926->pascalTriangleRow(10).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010927->pascalTriangleRow(11).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010928->pascalTriangleRow(12).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010929->pascalTriangleRow(13).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010930->pascalTriangleRow(14).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010931->pascalTriangleRow(15).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010932->pascalTriangleRow(16).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010933->pascalTriangleRow(17).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010934->pascalTriangleRow(18).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010935->pascalTriangleRow(19).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010936->pascalTriangleRow(20).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010937->pascalTriangleRow(21).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010938->pascalTriangleRow(22).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010939->pascalTriangleRow(23).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010940->pascalTriangleRow(24).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010941->pascalTriangleRow(25).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010942->pascalTriangleRow(26).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010943->pascalTriangleRow(27).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010944->pascalTriangleRow(28).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010945->pascalTriangleRow(29).listIterator;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A010946->pascalTriangleRow(30).listIterator;
 
 USE perfectPowers;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A001597->perfectPowers(10^6).listIterator;
 
 USE sternBrocot;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A002487->sternBrocotGenerator;
 
 USE hofstadterConway;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A004001->hofstaderConwayGen;
 
 USE hamming;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A051037->hammingGenerator;
 
 USE harshad;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A005349->naturalNumbers(1).filter(::isHarshadNumber);
 
 USE kaprekar;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A006886->naturalNumbers(1).filter(::isKaprekar);
 
 scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
@@ -283,16 +283,16 @@ scanFiboMod(stepsBack in [2..5],modulus>=1)->begin
   groupCount;
 end;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A015134->naturalNumbers(1).lazyMap({scanFiboMod(2,$n)});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A106285->naturalNumbers(1).lazyMap({scanFiboMod(3,$n)});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A106286->naturalNumbers(1).lazyMap({scanFiboMod(4,$n)});
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 A106287->naturalNumbers(1).lazyMap({scanFiboMod(5,$n)});
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized implemented->
   inspect['declares']
   .filter({$x[0].matches('^A\d{6}$')})
@@ -383,7 +383,7 @@ findPeriodicParam(L:IntList)->L.size<10 ? void :
     ? "rangeGenerator(0,"&(2^63-1)&").lazyMap({"&L.head(shift).toString&'[$i mod '&shift&']})'
     : void,orElse);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 guessImplementation([])->void;
 guessImplementation(sequence:IntList)->
   findPolyParam(sequence) orElse
@@ -391,7 +391,7 @@ guessImplementation(sequence:IntList)->
   findPeriodicParam(sequence) orElse
   findFibonacciParam(sequence);
 
-//@demo_for=expressions/construction, expressions, generators
+@demo_for=expressions/construction, expressions, generators
 classifyImplementation(imp:Expression)->classifyImplementation(imp.toString);
 classifyImplementation(imp:String)->
   imp.matches('multifactorialGenerator')                    ? 'multifactorialGenerator' :

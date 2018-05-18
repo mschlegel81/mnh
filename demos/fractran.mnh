@@ -58,7 +58,7 @@ main(fractions,n)->Fractran(::printAll      ,parseFractions(fractions),rational(
                    print('----------------------------------')|
                    Fractran(::printPowersOf2,parseFractions(fractions),rational(softCast(n),1),428553);
 //*See http://rosettacode.org/wiki/Fractran
-//@demo_for=esoteric language, math/alternative numeric representations
+@demo_for=esoteric language, math/alternative numeric representations
 main('rosetta')->main(Conway_primes_algorithm,'2');
 //*As above but abridged for regression test
 main->Fractran(::printAll,parseFractions(Conway_primes_algorithm),rational(2,1),30);

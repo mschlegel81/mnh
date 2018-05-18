@@ -4,7 +4,7 @@ private rd(P:List(1))->P[0,1];
 private rd(P:List(2))->P.agg(-).agg(/);
 private rd(P:List)->(P.head[0]-P.trailing[0])/(rd(P.leading)-rd(P.tail))+rd(P.tail.leading);
 
-//@demo_for=expressions
+@demo_for=expressions
 //*Returns an expression representing the Thiele interpolation throught the given points
 ThieleInterpolation(points:List)->begin
   local result:=({$x}-points.trailing[0])*(1/(points.rd-points.tail(2).rd));

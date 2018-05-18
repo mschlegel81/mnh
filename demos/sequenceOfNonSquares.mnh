@@ -1,5 +1,5 @@
 nonSquares(n)->n + floor(1/2 + sqrt(n));
-//@demo_for=math, list processing
+@demo_for=math, list processing
 main-> begin
   print('OEIS: A000037 starts with ',nonSquares([1..22]).join(", "),", ...");
   local seriesElements:=nonSquares([1..1000000]);

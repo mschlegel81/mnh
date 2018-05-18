@@ -11,7 +11,7 @@ end;
 private op:=['','+','-'];
 private INPUT:=['1'..'9'];
 
-//@demo_for=list processing, expressions
+@demo_for=list processing, expressions
 //*See http://rosettacode.org/wiki/Sum_to_100
 main->begin
   //Generate a list of all formulas (13122 items)

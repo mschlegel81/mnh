@@ -1,4 +1,4 @@
-//@demo_for=system_calls, formatting, date/time formatting
+@demo_for=system_calls, formatting, date/time formatting
 formatTimeNoDate(t<1)->formatTime('hhnnss',t);
 formatTimeNoDate(t<100/24)->begin
   local rest:=t*24;

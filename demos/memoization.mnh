@@ -1,5 +1,5 @@
 mutable fibMCallCount:=0;
-//@demo_for=memoization
+@demo_for=memoization
 memoized fibM(i:Int)->begin
   fibMCallCount+=1;
   i<=1 ? 1 : fibM(i-1)+fibM(i-2);

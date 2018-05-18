@@ -1,4 +1,4 @@
-//@AllowOnly=alter context state
+@AllowOnly=alter context state
 private barnsleyFern(sampleCount)->begin
   local x:=random(1);
   local y:=random(1);
@@ -20,7 +20,7 @@ private main_impl(filename:String,xRes:Int,yRes:Int)->begin
   plot.renderToFile(filename,xRes,yRes,1);
 end;
 
-//@demo_for=fractal, plotting
+@demo_for=fractal, plotting
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x").get(0)),softCast(split(resolution,"x").get(1)));
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution

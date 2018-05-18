@@ -1,7 +1,7 @@
 longest(A,B)->A.size>B.size ? A : B;
 
-//@Algorithm Name=Longest Common Subsequence (recursive)
-//@demo_for=memoization
+@Algorithm Name=Longest Common Subsequence (recursive)
+@demo_for=memoization
 memoized
 LCS([],B)->[];
 LCS(A,[])->[];

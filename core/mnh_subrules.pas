@@ -120,7 +120,7 @@ TYPE
       CONSTRUCTOR create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
-      FUNCTION hasValidValidCustomTypeCheckPattern(CONST forDucktyping:boolean):boolean;
+      FUNCTION hasValidValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
       FUNCTION hasEquivalentPattern(CONST s:P_subruleExpression):boolean;
       FUNCTION hidesSubrule(CONST s:P_subruleExpression):boolean;
       //Inspection/documentation calls

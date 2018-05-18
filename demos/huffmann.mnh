@@ -24,6 +24,6 @@ main(filename)->print('See http://rosettacode.org/wiki/Huffman_coding') and
                 print(" code\tchar\n "&
                       huffman(charactersInFile(filename)).each(e,
                            e[0]&"\t"&e[1].escape).join("\n "));
-//@demo_for=tree operations, transcoding
+@demo_for=tree operations, transcoding
 //*Calls main with unixdict.txt as input
 main->main(inputs.dict);

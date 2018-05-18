@@ -1,4 +1,4 @@
-//@demo for=local variables
+@demo for=local variables
 runningSum([])->[];
 runningSum(L)->begin
   local sum:=L.head;
@@ -6,7 +6,7 @@ runningSum(L)->begin
 end;
 
 kochCurve(depth)->kochCurve(depth,1,0);
-//@demo_for=fractal, plotting
+@demo_for=fractal, plotting
 private kochCurve(depth>=0,LX,LY)->kochCurve(depth-1,
   (LX*0.333)|(LX*0.167-LY*0.288)|(LX*0.167+LY*0.288)|(LX*0.333),
   (LY*0.333)|(LY*0.167+LX*0.288)|(LY*0.167-LX*0.288)|(LY*0.333));

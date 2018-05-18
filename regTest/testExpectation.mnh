@@ -7,7 +7,7 @@ private testRootWindows:=testRootLinux.replace('/','\');
 private testRootPlaceholder:='<#>';
 private pathDependentScripts:=['diff','grep',EXAMPLES_LOG_NAME];
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized runTimesAsFlatList->runTimes.each(e0,e0[1].each(e1,e1[1].each(e2,[e0[0],e1[0],e2[1]]),|),|);
 
 private flavourDependentScripts:=
@@ -25,7 +25,7 @@ private flavourDependentScripts:=
    EXAMPLES_LOG_NAME].union(plotters.map(::extractFileNameOnly));
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 private plausibilizeExpectationsOnStartup:=
   expectations.each(entry,
     begin
@@ -67,12 +67,12 @@ logSmokeTestRunTime(script:String,runTime:Numeric,doLog:Boolean)->begin
   true;
 end;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 isTestAlreadyPassed(script)->isTestAlreadyPassed(script,myFlavour,myCodeVersion);
 private isTestAlreadyPassed(script,flavour,codeVersion)->codeVersion in (runTimes[script,flavour] orElse []).getInner(0);
 
 private mutable failedTests:=[];
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 getFailedTests->failedTests;
 
 synchronized checkExpectation(script:String,testRunOutput:StringList,runTime:Numeric,doLog:Boolean)->begin
@@ -83,7 +83,7 @@ synchronized checkExpectation(script:String,testRunOutput:StringList,runTime:Num
   resultOk;
 end;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 private checkExpectation(script:String,testRunOutput:StringList)->begin
   local outputToCheck:=script in pathDependentScripts
                        ? testRunOutput.replace(testRootLinux  ,testRootPlaceholder)
@@ -132,7 +132,7 @@ private memoized averageRunTimes->runTimes.each(caseEntry,begin
   [case,times];
 end).toMap;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 showTestTimeInfo->timesOfThisRun.size=0 ? void : begin
   local thisRunTotalTime:=timesOfThisRun.getInner(1).agg(+);
   local myFlavourGroup:=copy(myFlavour,1,1);
@@ -152,11 +152,11 @@ private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|
              not(skipFile($case,copy(flavour,0,1)=='F'))})
     .extractFileNameOnly;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 allTestsPassed(flavour:String,codeHash:String)->
   expectationNamesForFlavour(flavour).each(t,t.isTestAlreadyPassed(flavour,codeHash),AND);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 timeForFullTest(flavour:String,codeHash:String)->begin
   local groupedTimes:=runTimes.getAll(expectationNamesForFlavour(flavour))
                               .map({($x[flavour] orElse []).filter({$z[0]==codeHash}).getInner(1)});

@@ -1,39 +1,46 @@
 ducktype NumericOrList(x)->x.isNumeric OR x.isNumericList;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the year of the given time
 year(time:NumericOrList)->formatTime('yyyy',time).softCast;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the month of the given time
 month(time:NumericOrList)->formatTime('mm',time).softCast;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the day of month of the given time
 dayOfMonth(time:NumericOrList)->formatTime('dd',time).softCast;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the day of week of the given time
 dayOfWeek(time:NumericOrList)->(time.floor+5) mod 7;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# SATURDAY :=5;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# SUNDAY   :=6;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# MONDAY   :=0;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# TUESDAY  :=1;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# WEDNESDAY:=2;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# THURSDAY :=3;
-#@SuppressUnusedWarning##*Constant to be used in conjunction with dayOfWeek# FRIDAY   :=4;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# SATURDAY :=5;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# SUNDAY   :=6;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# MONDAY   :=0;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# TUESDAY  :=1;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# WEDNESDAY:=2;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# THURSDAY :=3;
+@SuppressUnusedWarning
+#*Constant to be used in conjunction with dayOfWeek# FRIDAY   :=4;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Constructs a date from year, month and day of month
 dateOf(year>0,month in [1..12],dayOfMonth in [1..31])->parseTime('yyyymmdd',format('%4.4d%2.2d%2.2d',year,month,dayOfMonth)).round;
 
 //*Format used in fmtTime
 mutable defaultTimeFormat:='c';
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Quick time format using defaultTimeFormat
 fmtTime(time:NumericOrList)->formatTime(defaultTimeFormat,time);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the day of the year (with 1.1.yyyy having zero index)
 dayOfYear(time:NumericOrList)->floor(time-dateOf(time.year,1,1));
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the calendar week (cf. ISO8601)
 calendarWeek(time:NumericOrList)->(time.dayOfYear-3) div 7+1;

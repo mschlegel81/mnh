@@ -1,4 +1,4 @@
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 jaroDistance("","")->1;
 jaroDistance(A:String,B:String)->begin
   local matchDistance:=max(A.length,B.length) div 2-1;
@@ -23,7 +23,7 @@ end;
 
 private testJaro(A,B)->printf("The Jaro distance\v of\t%{$0.escape}s\t\n\vand\t%{$1.escape}s\tis\t%{jaroDistance($0,$1)}",A,B);
 
-//@demo_for=strings, local variables/mutation
+@demo_for=strings, local variables/mutation
 //*See http://rosettacode.org/wiki/Jaro_distance
 main->testJaro(   "MARTHA",      "MARHTA") orElse
       testJaro(    "DIXON",    "DICKSONX") orElse

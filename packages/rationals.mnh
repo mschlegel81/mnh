@@ -1,4 +1,4 @@
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 type Rational(x:IntList(2))->true;
 type RegularContinuedFraction(x:IntList)->x.size>=1;
 
@@ -11,7 +11,7 @@ private shortenRational(r:IntList)->begin
    : x).toRational;
 end;
 
-//@Override
+@Override
 nocurry toReal(rat:Rational)->toReal(rat[0])/toReal(rat[1]);
 //*Converts continued fraction f to a real number
 private toReal(f:RegularContinuedFraction)->begin
@@ -20,22 +20,22 @@ private toReal(f:RegularContinuedFraction)->begin
   r;
 end;
 
-//@Override
+@Override
 nocurry toRational(i:Int)->[i,1];
-//@Override
+@Override
 nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
 //*Converts continued fraction f to a rational number (represented as IntList(2))
-//@Override
+@Override
 nocurry toRational(f:RegularContinuedFraction)->begin
   local r:=void;
   f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
   r.shortenRational;
 end;
 
-//@Override
+@Override
 toString(r:Rational)->r.join("/");
 
-//@Override
+@Override
 //*The result always is a rational number
 OPERATOR_PLUS(a:Rational,b:Rational)->[a[0]*b[1]+b[0]*a[1],a[1]*b[1]].shortenRational;
 OPERATOR_PLUS(a:Rational,b:Int     )->[a[0]+b*a[1],a[1]].toRational;
@@ -43,21 +43,21 @@ OPERATOR_PLUS(a:Rational,b:Real    )->a.toReal+b;
 OPERATOR_PLUS(a:Int     ,b:Rational)->[a*b[1]+b[0],b[1]].toRational;
 OPERATOR_PLUS(a:Real    ,b:Rational)->a+b.toReal;
 
-//@Override
+@Override
 OPERATOR_MINUS(a:Rational,b:Rational)->[a[0]*b[1]-b[0]*a[1],a[1]*b[1]].shortenRational;
 OPERATOR_MINUS(a:Rational,b:Int     )->[a[0]-b*a[1],a[1]].toRational;
 OPERATOR_MINUS(a:Rational,b:Real    )->a.toReal-b;
 OPERATOR_MINUS(a:Int     ,b:Rational)->[a*b[1]-b[0],b[1]].toRational;
 OPERATOR_MINUS(a:Real    ,b:Rational)->a-b.toReal;
 
-//@Override
+@Override
 OPERATOR_MULT(a:Rational,b:Rational)->shortenRational(a*b);
 OPERATOR_MULT(a:Rational,b:Int     )->shortenRational(a*[b,1]);
 OPERATOR_MULT(a:Rational,b:Real    )->a.toReal*b;
 OPERATOR_MULT(a:Int     ,b:Rational)->shortenRational([a,1]*b);
 OPERATOR_MULT(a:Real    ,b:Rational)->a*b.toReal;
 
-//@Override
+@Override
 OPERATOR_DIVREAL(a:Rational,b:Rational)->shortenRational(a*b.reverseList);
 OPERATOR_DIVREAL(a:Int     ,b:Int     )->shortenRational([a,b]);
 OPERATOR_DIVREAL(a:Rational,b:Int     )->shortenRational(a*[1,b]);
@@ -74,7 +74,7 @@ end;
 private nextReal(x:Real,0)->x;
 
 //*Converts r to a continued fraction with max. 1000 entries
-//@Override
+@Override
 toRegularContinuedFraction(r:Real)->
   [0,-1,1].each(i,
   begin
@@ -100,7 +100,7 @@ toRegularContinuedFraction(r:Real)->
 
 
 //*Converts rational number r to a continued fraction
-//@Override
+@Override
 toRegularContinuedFraction(r:Rational)->begin
   local x:=r;
   local cf:=[];
@@ -143,7 +143,7 @@ decimalForm(r:Real                     )->r.toRational.decimalForm;
 decimalForm(cf:RegularContinuedFraction)->cf.toRational.decimalForm;
 
 //*Lists the first 30 approximations for r
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 listApprox(cf:RegularContinuedFraction)->begin
   local r:=cf.toReal;
   [2..min(30,cf.size)].each(k,cf.head(k).toRegularContinuedFraction)
@@ -161,7 +161,3 @@ memoized private cfFormat(count>1)->'%s+1/('+cfFormat(count-1)+')';
 
 //*Returns a continued fraction in the form cf[0]+1/(cf[0]+1/(...))
 toString(cf:RegularContinuedFraction)->cfFormat(cf.size).format@cf;
-
-
-
-pi.toRegularContinuedFraction.listApprox;

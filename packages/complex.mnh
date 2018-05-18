@@ -1,66 +1,66 @@
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 type Complex(x:NumericList(2))->true;
 
 i:=[0,1].toComplex;
 
-//@Override
+@Override
 toString(x:Complex)->x[1]=0 ? x[0].toString : format("(%{$re}s%{$im<0 ? '' : '+'}s%{$im}s*i)",x[0],x[1]);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the real part of a complex number x
 Re(x:Complex)->x[0];
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Returns the imaginary part of a complex number x
 Im(x:Complex)->x[1];
 
-//@SuppressUnusedWarning
-//@Override
+@SuppressUnusedWarning
+@Override
 //*Returns the absolute value of a complex number
 abs(x:Complex)->x.toBuiltin.sqr.agg(+).sqrt;
 
 //*Returns the argument of x
 arg(x:Complex)->arctan2(x[1],x[0]);
 
-//@Override
+@Override
 OPERATOR_MULT(x:Complex,y:Complex)->[x[0]*y[0]-x[1]*y[1],x[0]*y[1]+x[1]*y[0]].toComplex;
 OPERATOR_MULT(x:Numeric,y:Complex)->[x*y[0],x*y[1]].toComplex;
 OPERATOR_MULT(x:Complex,y:Numeric)->[x[0]*y,x[1]*y].toComplex;
 
-//@Override
+@Override
 OPERATOR_DIVREAL(x:Complex,y:Complex)->[x[0]*y[0]+x[1]*y[1],x[1]*y[0]-x[0]*y[1]]./(sqr(x[0])+sqr(x[1])).toComplex;
 OPERATOR_DIVREAL(x:Complex,y:Numeric)->[x[0]/y,x[1]/y].toComplex;
 OPERATOR_DIVREAL(x:Numeric,y:Complex)->[x,0].toComplex/y;
 
-//@Override
+@Override
 OPERATOR_PLUS(x:Complex,y:Complex)->[x[0]+y[0],x[1]+y[1]].toComplex;
 OPERATOR_PLUS(x:Numeric,y:Complex)->[x+y[0],y[1]].toComplex;
 OPERATOR_PLUS(x:Complex,y:Numeric)->[x[0]+y,x[1]].toComplex;
 
-//@Override
+@Override
 OPERATOR_MINUS(x:Complex,y:Complex)->[x[0]-y[0],x[1]-y[1]].toComplex;
 OPERATOR_MINUS(x:Numeric,y:Complex)->[x-y[0],y[1]].toComplex;
 OPERATOR_MINUS(x:Complex,y:Numeric)->[x[0]-y,x[1]].toComplex;
 
-//@Override
+@Override
 sqr(x:Complex)->[sqr(x[0])-sqr(x[1]),2*x[0]*x[1]].toComplex;
 
 //*Returns exponential of complex x
-//@Override
+@Override
 exp(x:Complex)->(exp(x[0])*[cos(x[1]),sin(x[1])]).toComplex;
 //*Returns the natural logarithm of complex x
-//@Override
+@Override
 ln(x:Complex)->[0.5*(x.toBuiltin.sqr.agg(+)).ln,arg(x)].toComplex;
 
-//@Override
+@Override
 OPERATOR_POT(x:Complex,y=0)->[1,0].toComplex;
 OPERATOR_POT(x:Complex,y<0)->1/(x^(-y));
 OPERATOR_POT(x:Complex,y>0)->(y and 1)=1 ? x^(y-1)*x : sqr(x)^(y div 2);
 OPERATOR_POT(x:Complex,y:Real)->y=0 ? [1,0].toComplex :exp(ln(x)*y);
 OPERATOR_POT(x:Complex,y:Complex)->exp(ln(x)*y);
 
-//@Override
-//@SuppressUnusedWarning
+@Override
+@SuppressUnusedWarning
 //*Returns cosinus of complex x
 cos(x:Complex)->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
@@ -68,8 +68,8 @@ cos(x:Complex)->begin
   (result+1/result)*0.5;
 end;
 
-//@Override
-//@SuppressUnusedWarning
+@Override
+@SuppressUnusedWarning
 //*Returns sinus of complex x
 sin(x:Complex)->begin
   //sin(x)=(e^(ix)-e^(-ix))/2i

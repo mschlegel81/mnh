@@ -5,7 +5,7 @@ isKaprekar(i:Int)->begin
   (i2 mod POWERS_OF_TEN+i2 div POWERS_OF_TEN=i).agg(OR);
 end;
 
-//@demo_for=math, filter
+@demo_for=math, filter
 //*Short run - for regression test
 main->print('The Kaprekar numbers up to 10000 are ',[1..10000].filter(::isKaprekar));
 

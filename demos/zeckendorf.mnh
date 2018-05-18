@@ -31,7 +31,7 @@ private memoized avgLen(bits)->zeckendorfEncode([2^(bits-1)..2^bits-1]).pEach(i,
 
 //*Displays examples for Zeckendorf-encoding
 //*and average lengths compared to binary representation
-//@demo_for=transcoding
+@demo_for=transcoding
 main->
 printf('%8d %8d %12d',
   'decimal'|examples,

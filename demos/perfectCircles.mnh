@@ -63,7 +63,7 @@ main('animate')->begin
   display;
 end;
 
-//@demo_for=animation, datastores, math, numerics/optimization
+@demo_for=animation, datastores, math, numerics/optimization
 main(anim in ['zoomin','zoomout'],K)->
 begin
   local k:=K.toInt;

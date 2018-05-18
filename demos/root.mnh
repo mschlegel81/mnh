@@ -1,4 +1,4 @@
-//@Algorithm Name=Regula Falsi
+@Algorithm Name=Regula Falsi
 regulaFalsi(F:Expression(1),x0input:Numeric,x1input<>x0input,epsilonF>0.0,epsilonX>0.0)->begin
   local x0:=x0input;
   local f0:=F(x0);
@@ -41,7 +41,7 @@ end;
 roots(F:Expression(1))->print("Analyzing ",F.toString.unbrace.unbrace) and
                         roots(F,-6,6).each(r,print("Root found ",r[1] ? "at   ":"near ",r[0]));
 main(F)->roots(F.toExpression);
-//@demo_for=math, numerics/root finding
+@demo_for=math, numerics/root finding
 //*Solves the "Roots of a function" task from http://rosettacode.org/wiki/Roots_of_a_function
 main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and
       main("$x^3-3*$x^2+2*$x");

@@ -5,5 +5,5 @@ private Josephus(n:Int,k:Int,survivors:Int)->print("Prisoners: ",n,
                                                  "\nSurvivors: ",tail(Josephus(n,k),n-survivors));
 //*See http://rosettacode.org/wiki/Josephus_problem
 //*Call from console with n prisoners a step size of k and a given number of survivors
-//@demo_for=recursion
+@demo_for=recursion
 main(n,k,survivors)->Josephus(softCast(n),softCast(k),softCast(survivors));

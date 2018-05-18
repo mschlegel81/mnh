@@ -24,6 +24,6 @@ ethiopianMultiplication(a_>=1,b_>=1,doPrint:Boolean)->begin
   result;
 end;
 
-//@demo_for=math, formatting
+@demo_for=math, formatting
 //*See http://rosettacode.org/wiki/Ethiopian_multiplication
 main->ethiopianMultiplication(17,34,true);

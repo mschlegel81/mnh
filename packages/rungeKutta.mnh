@@ -1,9 +1,9 @@
 //*Butcher Tableau of an explicit Runge-Kutta method (ERK)
 type ERK_ButcherTableau(T:List)->T.each(row,row.isNumericList AND row.size<=index+1,AND);
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 absNorm(x:NumericList)->x.abs.agg(+)/x.size;
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 absNorm(l:List)->begin
   local f:=l.flatten;
   f.isNumericList ? absNorm(f) : fail;
@@ -52,7 +52,7 @@ end;
 
 //*Explicit Runge-Kutta Method RK4, a.k.a. "The" Runge-Kutta Method
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized RK4->rungeKuttaStepper(
   [[1/2            ],
    [ 0 ,1/2        ],
@@ -61,7 +61,7 @@ memoized RK4->rungeKuttaStepper(
 
 //*Explicit Runge-Kutta Method RK4b
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized RK4b->rungeKuttaStepper(
   [[ 1/3            ],
    [-1/3, 1         ],
@@ -70,7 +70,7 @@ memoized RK4b->rungeKuttaStepper(
 
 //*Explicit Runge-Kutta Method RK32 (3-stage 2nd order)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized RK32->rungeKuttaStepper(
   [[ 1         ],
    [1/2,1/2    ],
@@ -78,19 +78,19 @@ memoized RK32->rungeKuttaStepper(
 
 //*Family of 2-stage 2nd order Runge-Kutta Methods
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized RK2(a)->rungeKuttaStepper(
   [[a               ],
    [1-1/(2*a),1/2*a]].toERK_ButcherTableau);
 
 //*Euler Forward, as Runge-Kutta Method
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized RK1->rungeKuttaStepper([[1]].toERK_ButcherTableau);
 
 //*Heun-Euler embedded explicit Runge-Kutta Method (Order 2)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized HEUN_EULER->embeddedRungeKuttaStepper(
   [[ 1     ],
    [1/2,1/2],
@@ -98,7 +98,7 @@ memoized HEUN_EULER->embeddedRungeKuttaStepper(
 
 //*Fehlberg RK1(2) embedded explicit Runge-Kutta Method (Order 2)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized FEHLBERG_RK12->embeddedRungeKuttaStepper(
   [[1/2                ],
    [1/256,255/256      ],
@@ -107,7 +107,7 @@ memoized FEHLBERG_RK12->embeddedRungeKuttaStepper(
 
 //*Bogacki-Shampine embedded explicit Runge-Kutta Method (Order 3)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized BOGACKI_SHAMPINE->embeddedRungeKuttaStepper(
   [[1/2              ],
    [ 0  ,3/4         ],
@@ -117,7 +117,7 @@ memoized BOGACKI_SHAMPINE->embeddedRungeKuttaStepper(
 
 //*Fehlberg embedded explicit Runge-Kutta Method (Order 5)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized FEHLBERG->embeddedRungeKuttaStepper(
   [[   1/4                                                  ],
    [   3/32  ,    9/32                                      ],
@@ -129,7 +129,7 @@ memoized FEHLBERG->embeddedRungeKuttaStepper(
 
 //*Cash-Carp embedded explicit Runge-Kutta Method (Order 5)
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 memoized CASH_KARP->embeddedRungeKuttaStepper(
 [[   1/5                                                        ],
  [   3/40   ,  9/40                                             ],
@@ -140,19 +140,19 @@ memoized CASH_KARP->embeddedRungeKuttaStepper(
  [2825/27648,   0   ,18575/48384,13525/55296 ,277/14336,  1/4   ]].toERK_ButcherTableau,5);
 
 //*Returns an integrator based on an explicit Runge-Kutta method
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 integrator(ERK :Expression(3),df:Expression(1),dt:Numeric              )->{ERK($0,df,dt)};
 //*Returns an integrator based on an embedded explicit Runge-Kutta method
 integrator(EERK:Expression(4),df:Expression(1),dt:Numeric,tolerance>0.0)->{EERK($0,df,dt,tolerance)};
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 //*Iterates, returning all results
 iterate(initialValue,f:Expression(1),stepCount>=1)->begin
   [local y:=initialValue]| rangeGenerator(1,stepCount).each(step,y:=f(y));
 end;
 
 //*Iterates, returning only the last value
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 iterateLast(initialValue,f:Expression(1),stepCount>=1)->begin
   local y:=initialValue;
   rangeGenerator(1,stepCount).each(step,y:=f(y),trailing);
