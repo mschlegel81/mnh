@@ -17,7 +17,7 @@ json:=//!~{
   }
 }~;
 
-//@demo_for=json
+@demo_for=json
 main->begin
   local struct:=json.parseJson('-');
   print(struct['Inhaber','Hobbys']);

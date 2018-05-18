@@ -1,4 +1,4 @@
-//@demo_for=stateful expressions
+@demo_for=stateful expressions
 fibonacciGenerator(n>=1)->{begin
   local state:=[1..n]*0+1; //current state - initially a list of n 1s
 save;

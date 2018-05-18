@@ -18,7 +18,7 @@ rightTruncatablePrimes(maxPrime>10)->
             .pFilter({$x div 10 in SUB}),|));   //filter all primes which right-truncated are in SUB
   end;
 
-//@demo_for=list processing
+@demo_for=list processing
 //*See http://rosettacode.org/wiki/Truncatable_primes
 main->begin
   local ltp:=leftTruncatablePrimes (1000000);

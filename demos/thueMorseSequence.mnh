@@ -4,5 +4,5 @@ thueMorseSequence(targetLength:Int)->begin
   head(result,targetLength);
 end;
 //*See http://rosettacode.org/wiki/Thue-Morse
-//@demo_for=list construction
+@demo_for=list construction
 main->thueMorseSequence(100).ord.join.print;

@@ -9,7 +9,7 @@ save;
   end;
 end}.toGenerator;
 
-//@demo_for=generators, expressions/stateful
+@demo_for=generators, expressions/stateful
 //*See http://rosettacode.org/wiki/Stern-Brocot_sequence
 main->begin
   print('Stern-Brocot seqence');

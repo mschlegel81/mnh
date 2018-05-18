@@ -86,24 +86,24 @@ private sendRequest(data)->begin
   sendIpcRequest(IPC_ID,[PID,data]);
 end;
 
- //@SuppressUnusedWarning
+ @SuppressUnusedWarning
 //*Requests insert of the given data item; returns true on success
 //*Note that you have to call commit in order to persist this request
 insert(data)->sendRequest([INSERT,data]);
- //@SuppressUnusedWarning
+ @SuppressUnusedWarning
 //*Requests delete of the given data item; returns true on success
 //*Note that you have to call commit in order to persist this request
 delete(data)->sendRequest([DELETE,data]);
- //@SuppressUnusedWarning
+ @SuppressUnusedWarning
 //*Requests persisting of the stage for the curren PID; returns true on success
 commit->sendRequest(COMMIT);
- //@SuppressUnusedWarning
+ @SuppressUnusedWarning
 //*Requests rollback of the stage for the curren PID; returns true on success
 rollback->sendRequest(ROLLBACK);
 
 //*Starts an IPC server instance.
 //*Implicitly called in a new, standalone instance of MNH if needed.
-//@demo_for=Inter Process Communication, datastores
+@demo_for=Inter Process Communication, datastores
 main->begin
   startIpcServer(IPC_ID,::serve);
   ask("IPC server started: "&myPath&"\nPress enter to shutdown");

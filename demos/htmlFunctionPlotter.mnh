@@ -76,7 +76,7 @@ serve(method,request,protocol)->begin
   orElse unhandled@$params;
 end;
 
-//@demo_for=httpServer, plotting
+@demo_for=httpServer, plotting
 main->begin
   local URL:='localhost:43210';
   startHttpServer(URL,::serve,0);

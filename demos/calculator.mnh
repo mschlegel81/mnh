@@ -17,7 +17,7 @@ private prettyExecute(input:String)->
                        .formatTabs
                        .join("\n");
 
-//@demo_for=custom forms
+@demo_for=custom forms
 main->begin
   local inputText:='';
   showDialog('Calculator',

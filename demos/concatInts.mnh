@@ -1,4 +1,4 @@
-//@demo_for=custom sorting
+@demo_for=custom sorting
 private f(I)->sort(I,{$a&$b>=$b&$a}).join.softCast;
 //*See http://rosettacode.org/wiki/Largest_int_from_concatenated_ints
 main->print(f([1, 34, 3, 98, 9, 76, 45, 4])) and

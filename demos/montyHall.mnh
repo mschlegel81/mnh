@@ -10,7 +10,7 @@ private myRandomGenerator(seed:Int)->{
 
 //*Accepts an expression returning a pseudo random number
 //*Returns a booleanList(2): [win without switching, win with switching]
-//@demo_for=stateful expressions
+@demo_for=stateful expressions
 private montyHallCustomRun(rand:Expression(1))->begin
   local doors:=rand(3)=[0..2];
   local firstPick:=rand(3);

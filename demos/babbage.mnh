@@ -1,4 +1,4 @@
-//@demo_for=verbose coding
+@demo_for=verbose coding
 squareEndsWith269696(n:Int)->n          //take the input
                             .sqr        //compute the square
                             mod 1000000 //take the last 6 digits

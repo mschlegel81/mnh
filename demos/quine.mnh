@@ -1,2 +1,2 @@
-//@demo_for=textbook problems
+@demo_for=textbook problems
 main->print('main',::main,';');

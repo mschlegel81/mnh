@@ -3,7 +3,7 @@ private datastore allTasks:=[].toMap;
 //*Format is [name,startedAt]
 private datastore runningTask:=[];
 
-//@demo_for=datastores
+@demo_for=datastores
 private endTask->runningTask==[] ? void : //If there is no running task, there is nothing to do
 begin
   local timeSpentNow   :=systime- runningTask[1];

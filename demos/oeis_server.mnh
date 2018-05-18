@@ -225,7 +225,7 @@ serve(parameters)->begin
   result.resetTimeout;
 end;
 
-//@demo_for=Inter Process Communication, datastores
+@demo_for=Inter Process Communication, datastores
 main()->begin
   startIpcServer(ipcId,::serve);
   print('IPC Server started. ',ipcId);

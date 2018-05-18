@@ -18,6 +18,6 @@ arabic(s:String)->interpret(replace(s,['CM'  ,'CD'  ,'M'    ,'D',
                                        '+9'  ,'+4'  ,'+10'  ,'+5','+1']));
 private roman_input:=['MMXV','MCMXC','MMVIII','MDCLXVI'];
 private arabic_input:=[2000,1989,23,1666];
-//@demo_for=formatting, transcoding
+@demo_for=formatting, transcoding
 main->printf('%-10s (roman)  = %10d (arabic)',roman_input,arabic(roman_input)) |
       printf('%10d (arabic) = %-10s (roman)',arabic_input,roman(arabic_input));

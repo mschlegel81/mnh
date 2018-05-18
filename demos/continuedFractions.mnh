@@ -8,7 +8,7 @@ private cfString(A:Numeric,B,depth>0)->cfString(zero+A,B,depth);
 private cfString(A,B:Numeric,depth>0)->cfString(A,zero+B,depth);
 private cfValue(A,B,depth>0)->cfString(A,B,depth).replace('...','0').interpret;
 
-//@demo_for=math
+@demo_for=math
 //*See http://rosettacode.org/wiki/Continued_fraction
 main->[[          1,            1],
        [{$n=0?1:2 },            1],

@@ -1,10 +1,10 @@
 USE '../demos/inputs/inputs.mnh';
 
 private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 allDemos:=files(demosRoot&'*.mnh').sort;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 EXAMPLES_LOG_NAME:='examples_from_file';
 
 plotters:=demosRoot&[
@@ -17,7 +17,7 @@ plotters:=demosRoot&[
 'turtleGfx.mnh',
 'heart.mnh'];
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 testParameters((demosRoot&'24.mnh'             ))->['demo'];
 testParameters((demosRoot&'aliquotSequence.mnh'))->[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488].map(::toString);
 testParameters((demosRoot&'asciiCalendar.mnh'  ))->['1966'];
@@ -59,17 +59,17 @@ skipFile((demosRoot&'contourPlotExample.mnh' ),fullVersion)->true;
 skipFile(file in plotters                     ,false      )->true;
 skipFile(scriptFileName:String                ,fullVersion)->false;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 testsToExecuteForFlavour(flavourString)->begin
   local fullVersion:=copy(flavourString,0,1)='F';
   allDemos.filter({not(skipFile($script,fullVersion))});
 end;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 testsToExecuteForAnyFlavour->
   allDemos.filter({not(skipFile($script,true) and skipFile($script,false))});
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 isSmokeTest((demosRoot&'task.mnh'          ))->true;
 isSmokeTest((demosRoot&'findDuplicates.mnh'))->true;
 isSmokeTest((demosRoot&'clock.mnh'         ))->true;
@@ -77,6 +77,6 @@ isSmokeTest((demosRoot&'emptyFolders.mnh'  ))->true;
 isSmokeTest((demosRoot&'timedExamples.mnh' ))->true;
 isSmokeTest(scriptFileName:String)->false;
 
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png').fileStats[3]);
 checkAfterTest(file)->void;

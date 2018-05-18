@@ -1,4 +1,4 @@
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 ducktype CoordPair(P:NumericList(2))->true;
 ducktype CoordCollection(C:Collection)->C.each(c,c.isCoordPair,AND);
 //*Returns all coordinates reachable from P (ignoring board boundaries)
@@ -74,6 +74,6 @@ main(boardSize,startX,startY)->
   findTour(boardSize.toInt,[startX.toInt,startY.toInt])
   .printTour;
 
-//@demo_for=recursion, plotting, formatting, textbook problems
+@demo_for=recursion, plotting, formatting, textbook problems
 main(boardSize,startX,startY,'plot')->
   main(boardSize,startX,startY).plotTour;

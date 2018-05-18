@@ -106,7 +106,7 @@ end;
 //*For regression test: create a random riddle and print it out
 main->randomRiddle.printBoard;
 
-//@demo_for=puzzle
+@demo_for=puzzle
 //*Create count riddles
 main(count)->begin
   local iCount:=count.toInt;

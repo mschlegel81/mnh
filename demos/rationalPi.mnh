@@ -1,5 +1,5 @@
 USE rationals;
 
 private arctanSeries(n:Int)->([0..n].each(i,[(-1)^i,2*i+1].toRational,aggregator(+))*4);
-//@demo_for=math, custom types, rational numbers
+@demo_for=math, custom types, rational numbers
 main->printf("%{$x.join('/')}s\t=\t%{$x.toReal}1.6d",[0..21].each(i,arctanSeries(i)));

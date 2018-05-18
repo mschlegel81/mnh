@@ -5,7 +5,7 @@
 //  - find the last element via findG and accept if it is in the allowed range
 private isPartialSolution(a,b,c,d      )-> a+b = b+c+d;
 private isPartialSolution(a,b,c,d,e,f  )-> a+b = b+c+d = d+e+f;
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 private findG            (a,b,c,d,e,f  )-> a+b-f;
 private isSolution       (a,b,c,d,e,f,g)-> a+b = b+c+d = d+e+f = f+g;
 

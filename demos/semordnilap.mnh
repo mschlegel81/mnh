@@ -1,5 +1,5 @@
 USE anagram,inputs;
-//@demo_for=string processing, list processing, file processing
+@demo_for=string processing, list processing, file processing
 private findSemordnilaps(dictionaryFile:String)->
   readDict(dictionaryFile)
   .group(0)

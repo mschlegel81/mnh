@@ -1,5 +1,5 @@
 //Marker type
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 type Queue(x:StatefulExpression(1))->true;
 nocurry newQueue->{
   begin
@@ -13,13 +13,13 @@ nocurry newQueue->{
 
 pop  (queue:Queue      )->queue(['pop']);
 push (queue:Queue,value)->queue(['push',value]);
-//@SuppressUnusedWarning
+@SuppressUnusedWarning
 empty(queue:Queue      )->queue(['empty']);
 
 dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end}.toGenerator;
 enqueueConsumer(queue:Queue)->{begin local q:=queue; save; q.push($0); end};
 
-//@demo_for=expressions/stateful, custom types
+@demo_for=expressions/stateful, custom types
 main->begin
   local Q:=newQueue;
   local deq:=dequeueIterator(Q);

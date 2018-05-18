@@ -8,7 +8,7 @@ private oyako(a,b,c,perimeter)->
 
 private oyako(perimeter)->format@("In perimeter <=%7d there are %6d pythagorean triplets, %5d of which are primitive"|perimeter|oyako(3,4,5,perimeter));
 
-//@demo_for=math, recursion/parallel
+@demo_for=math, recursion/parallel
 //*See http://rosettacode.org/wiki/Pythagorean_triples
 main('rosetta')->(10^[1..6]).each(i,print(oyako(i)));
 //*As above, but abridged for reg test

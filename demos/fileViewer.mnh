@@ -11,7 +11,7 @@ private synchronized logHlAssoc(filename,assoc)->
 
 main->main('');
 
-//@demo_for=custom forms
+@demo_for=custom forms
 main(fileToOpen)->begin
   local filename:='';
   local lines   :='';

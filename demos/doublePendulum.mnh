@@ -18,10 +18,10 @@ private g:=9.81;
 private F1fak:=-m2/(m1+m2)*l2/l1;
 private F2fak:=-l1/l2;
 //*phi1'', dependent on phi2''
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 private F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
 //*phi2'', dependent on phi1''
-//@SuppressUnusedParameterWarning
+@SuppressUnusedParameterWarning
 private F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
 //*Returns an expression F1(F2($x))-$x (for Regula Falsi)
 private F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
@@ -32,7 +32,7 @@ private accel(state:NumericList(4))->accel@state;
 private quickRoot(F:Expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
 
 //*Returns first derivative in time for given state
-//@demo_for=numerics, simulation, animation, plain script, future
+@demo_for=numerics, simulation, animation, plain script, future
 private accel(phi1,phi2,phi1dt,phi2dt)->
   begin
     [phi1dt,

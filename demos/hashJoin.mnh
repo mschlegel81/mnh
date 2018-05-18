@@ -23,7 +23,7 @@ private TabToMap(Table:List,KeyIndex:Int)->begin
   map;
 end;
 
-//@Algorithm name=Inner hash join
+@Algorithm name=Inner hash join
 innerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
   begin
     local Map2:=TabToMap(Tab2,KeyIndex2);
@@ -34,7 +34,7 @@ innerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
     end,|);
   end;
 
-//@Algorithm name=Outer hash join
+@Algorithm name=Outer hash join
 outerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
   begin
     local tab1Substitute:=[1..Tab1.each(row,row.size,max)].each(n,'');
@@ -50,7 +50,7 @@ outerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
       Map2[key].each(row2,tab1Substitute|row2),|);
   end;
 
-//@demo_for=map operations
+@demo_for=map operations
 //*See https://rosettacode.org/wiki/Hash_join
 main->begin
   print('Table A:');

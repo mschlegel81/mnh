@@ -1,5 +1,5 @@
 USE lindenmayer;
-//@demo_for=fractal, plotting
+@demo_for=fractal, plotting
 //*Draws a fractal plant
 main->begin
   setOptions([['axisStyleX',0],['axisStyleY',0]]); //Show no grid and no tics

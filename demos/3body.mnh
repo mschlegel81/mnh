@@ -30,7 +30,7 @@ end};
 private timeStepSize:=2E-2;
 private aimFPS:=30;
 
-//@demo_for=plotting, animation
+@demo_for=plotting, animation
 main->begin
   plot.setOptions([['axisStyleX',3],['axisStyleY',3],['autoscaleX',false],['autoscaleY',false]]);
   local state:=initialState;

@@ -1,5 +1,5 @@
 USE fibonacci;
-//@demo_for=each, grouping/elementFrequency
+@demo_for=each, grouping/elementFrequency
 //*See http://rosettacode.org/wiki/Benford%27s_law
 main->printf('%6d %8.2f',
              'actual'|fibonacciGenerator(2).lazyMap({$x.digits.head}).head(1001).tail.elementFrequency.sort.getInner(1),

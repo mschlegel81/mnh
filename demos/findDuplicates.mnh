@@ -1,4 +1,4 @@
-//@demo_for=file processing
+@demo_for=file processing
 main(rootFolder,...)->begin
   print('Root folder: ',rootFolder);
   //First find all files to check

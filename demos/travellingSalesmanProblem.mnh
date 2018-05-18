@@ -1,4 +1,4 @@
-//@demo_for=datastore
+@demo_for=datastore
 //points is quite expensive to obtain, so this is a datastore to allow reusing the input
 datastore points;
 //*Returns the contents of datastore points.
@@ -98,7 +98,7 @@ polish(L)->begin
 end;
 
 //*Approximately solves the Travelling Salesman Problem using sorting by Sierpinski-Curve
-//@demo_for=datastores, plotting, textbook problems
+@demo_for=datastores, plotting, textbook problems
 main->begin
   resetRandom;
   plot.setOptions([['axisStyleX',0],['axisStyleY',0]]);

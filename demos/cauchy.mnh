@@ -16,7 +16,7 @@ private EPSILONS:=(10^[0..-10]);
 
 private guessLimit(samples:NumericList)->(samples.trailing(4)*[1..4]*0.1).agg(+);
 
-//@demo_for=UTF-8 output, numerics
+@demo_for=UTF-8 output, numerics
 private guessEpsilons(samples:NumericList)->begin
   local Max:=
   local Min:=samples.trailing;
