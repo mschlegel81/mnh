@@ -433,12 +433,12 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
   PROCEDURE handleComment(CONST commentText:ansistring; CONST commentOpener:string);
     begin
       result^.tokType:=tt_EOL;
-      if copy(commentText,1,length(DOC_COMMENT_INFIX))=DOC_COMMENT_INFIX then begin
+      if commentOpener=ATTRIBUTE_PREFIX then begin
+        result^.txt:=trimRight(copy(commentText,length(ATTRIBUTE_PREFIX)+1,length(commentText)));
+        result^.tokType:=tt_attributeComment;
+      end else if copy(commentText,1,length(DOC_COMMENT_INFIX))=DOC_COMMENT_INFIX then begin
         result^.txt:=trimRight(copy(commentText,length(DOC_COMMENT_INFIX)+1,length(commentText)));
         result^.tokType:=tt_docComment;
-      end else if copy(commentText,1,length(ATTRIBUTE_COMMENT_INFIX))=ATTRIBUTE_COMMENT_INFIX then begin
-        result^.txt:=trimRight(copy(commentText,length(ATTRIBUTE_COMMENT_INFIX)+1,length(commentText)));
-        result^.tokType:=tt_attributeComment;
       end else if copy(commentText,1,length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX))=SPECIAL_COMMENT_BLOB_BEGIN_INFIX then begin
         result^.txt:=SPECIAL_COMMENT_BLOB_BEGIN_INFIX;
         blob.start:=inputLocation;
@@ -455,7 +455,9 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
       tt:T_tokenType;
       tc:T_typeCheck;
       md:T_modifier;
+      firstInLine:boolean;
   begin
+    firstInLine:=inputLocation.column=1;
     result:=recycler.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
       {$ifdef fullVersion}
@@ -585,7 +587,11 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
       '[':                                            apply(tt_listBraceOpen);
       '?':                                            apply(tt_iifCheck);
       ',':                                            apply(tt_separatorComma);
-      '@':                                            apply(tt_listToParameterList);
+      '@': if firstInLine then begin
+             parsedLength:=1;
+             while (parsedLength+inputLocation.column<=length(line)) and not(line[parsedLength+inputLocation.column] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
+             handleComment(copy(line,inputLocation.column,parsedLength),'@');
+          end else apply(tt_listToParameterList);
       ')':                                            apply(tt_braceClose);
       '(':                                            apply(tt_braceOpen);
       '|': if startsWith(tt_mut_assignAppend)    then apply(tt_mut_assignAppend) else

@@ -696,7 +696,7 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
     begin
       setLength(result,2);
       result[0]:=s;
-      result[1]:='You can suppress this warning with '+COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE;
+      result[1]:='You can suppress this warning with '+ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE;
     end;
 
   begin

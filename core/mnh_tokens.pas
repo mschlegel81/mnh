@@ -197,7 +197,7 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
     if result then adapters.raiseWarning('Unused rule '+id+
     '; you can suppress this warning with '+
-    COMMENT_PREFIX+ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE,
+    ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE,
     lineLocation(declarationStart));
   end;
 {$endif}

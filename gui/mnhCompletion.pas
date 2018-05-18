@@ -62,6 +62,14 @@ PROCEDURE initIntrinsicRuleList;
       intrinsicRulesForCompletion.put(C_modifierInfo[m].name);
     for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
       intrinsicRulesForCompletion.put(C_specialWordInfo[i].txt);
+
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE);
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE);
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE);
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+EXECUTE_AFTER_ATTRIBUTE);
+    intrinsicRulesForCompletion.put(ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
+
     intrinsicRulesForCompletion.put('?');
     intrinsicRulesForCompletion_ready:=true;
   end;
@@ -69,8 +77,6 @@ PROCEDURE initIntrinsicRuleList;
 PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   VAR caret:TPoint;
       isUseClause:boolean;
-      isComment:boolean;
-      k:longint;
   PROCEDURE collectAllIdentifiers;
     VAR i:longint;
     begin
@@ -84,27 +90,15 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
     wordsInEditor.clear;
     if relatedAssistant<>nil then begin
       //Completion for assistant...
-      k:= pos(COMMENT_PREFIX,editor.lines[caret.y-1]);
-      isComment:=(k>0) and (k<caret.x);
-      if not(isComment) then for k:=1 to length(editor.lines[caret.y-1]) do if (editor.lines[caret.y-1][k]=BLOCK_COMMENT_DELIMITER) and (k<caret.x) then isComment:=not(isComment);
-      if isComment then begin
-        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE);
-        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
-        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_NO_SIDE_EFFECTS_ATTRIBUTE_VALUE);
-        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+ALLOW_SIDE_EFFECT_ATTRIBUTE+'='+ALLOW_ALL_SIDE_EFFECTS_ATTRIBUTE_VALUE);
-        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+EXECUTE_AFTER_ATTRIBUTE);
-        wordsInEditor.put(ATTRIBUTE_COMMENT_INFIX+OVERRIDE_ATTRIBUTE);
-      end else begin
-        isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
-                  or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
-        if isUseClause
-        then wordsInEditor.put(relatedAssistant^.getImportablePackages)
-        else begin
-          initIntrinsicRuleList;
-          wordsInEditor.put(intrinsicRulesForCompletion);
-          if not(relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x))
-          then collectAllIdentifiers;
-        end;
+      isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
+                or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
+      if isUseClause
+      then wordsInEditor.put(relatedAssistant^.getImportablePackages)
+      else begin
+        initIntrinsicRuleList;
+        wordsInEditor.put(intrinsicRulesForCompletion);
+        if not(relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x))
+        then collectAllIdentifiers;
       end;
     end else collectAllIdentifiers;
   end;
@@ -118,7 +112,7 @@ CONSTRUCTOR T_completionLogic.create;
     SynCompletion.OnCodeCompletion:=@SynCompletionCodeCompletion;
     SynCompletion.OnExecute       :=@SynCompletionExecute;
     SynCompletion.OnSearchPosition:=@SynCompletionSearchPosition;
-    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:<>=@';
+    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:<>=';
   end;
 
 DESTRUCTOR T_completionLogic.destroy;
@@ -162,6 +156,7 @@ PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
   VAR s:string;
       w:string;
       i:longint;
+      words:T_arrayOfString;
   begin
     s:=SynCompletion.CurrentString;
     i:=LastDelimiter('.',s);
@@ -181,20 +176,31 @@ PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
 
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
-    for w in wordsInEditor.values do if (s='') or (pos(s,w)=1) then SynCompletion.ItemList.add(w);
 
+    words:=wordsInEditor.values;
+    if s<>'' then begin
+      sortByTypingSimilarity(s,words);
+      if length(words)>32 then setLength(words,32);
+    end;
+    for w in words do SynCompletion.ItemList.add(w);
   end;
 
 PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
   VAR s:string;
       w:string;
+      words:T_arrayOfString;
   begin
     s:=SynCompletion.CurrentString;
 
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
-    for w in wordsInEditor.values do if pos(s,w)=1 then SynCompletion.ItemList.add(w);
 
+    words:=wordsInEditor.values;
+    if s<>'' then begin
+      sortByTypingSimilarity(s,words);
+      if length(words)>32 then setLength(words,32);
+    end;
+    for w in words do SynCompletion.ItemList.add(w);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
