@@ -531,9 +531,9 @@ FUNCTION newVoidLiteral                             : P_voidLiteral;       begin
 FUNCTION newBoolLiteral(CONST value: boolean)       : P_boolLiteral;       begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
-  FUNCTION exponentRepresentation:shortString;
+  FUNCTION exponentRepresentation:shortstring;
     VAR ePos:longint;
-        exponentPart:shortString;
+        exponentPart:shortstring;
     begin
       str(x,result);
       result:=trim(result);
@@ -559,7 +559,7 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
       result:=result+exponentPart;
     end;
 
-  FUNCTION simpleRepresentation:shortString;
+  FUNCTION simpleRepresentation:shortstring;
     begin
       str(x:50:50,result);
       result:=trim(result);
@@ -567,7 +567,7 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
         and ((strToFloatDef(copy(result,1,ord(result[0])-1),Nan)=x)) do dec(result[0]);
     end;
 
-  VAR altRes:shortString;
+  VAR altRes:shortstring;
   begin
     //Special representation for special values:
     if isNan(x) then exit(LITERAL_NAN_TEXT);

@@ -121,7 +121,7 @@ DESTRUCTOR T_style.destroy;
 
 PROCEDURE T_style.parseStyle(CONST styleString: ansistring; VAR transparentCount:longint);
   VAR givenTransparentIndex:longint=-1;
-  FUNCTION parseColorOption(colorOption: shortString; OUT r, g, b: byte): boolean;
+  FUNCTION parseColorOption(colorOption: shortstring; OUT r, g, b: byte): boolean;
     PROCEDURE HSV2RGB(H,S,V: single; OUT r,g,b: byte);
       VAR hi,p,q,t: byte;
       begin

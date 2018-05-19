@@ -197,19 +197,19 @@ FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterA
 
 PROCEDURE TSynMnhSyn.next;
   CONST RUN_LIMIT=10000;
-  VAR localId: shortString;
+  VAR localId: shortstring;
       i: longint;
       lc: T_messageClass;
       specialLineCase:T_messageClass;
 
-  FUNCTION continuesWith(CONST part:shortString; CONST offset:longint):boolean;
+  FUNCTION continuesWith(CONST part:shortstring; CONST offset:longint):boolean;
     VAR k:longint;
     begin
       result:=length(part)>0;
       for k:=1 to length(part) do if fLine[k-1+offset]<>part[k] then exit(false);
     end;
 
-  FUNCTION startsWith(CONST prefix:shortString):boolean;
+  FUNCTION startsWith(CONST prefix:shortstring):boolean;
     begin
       result:=continuesWith(prefix,0);
     end;
