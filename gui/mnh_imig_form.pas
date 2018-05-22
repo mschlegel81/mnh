@@ -61,6 +61,9 @@ PROCEDURE TDisplayImageForm.FormResize(Sender: TObject);
 PROCEDURE TDisplayImageForm.FormShow(Sender: TObject);
   begin
     position:=poDefault;
+    if anyFormShowing(ft_main)
+    then ShowInTaskBar:=stDefault
+    else ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TDisplayImageForm.displayCurrentImage;

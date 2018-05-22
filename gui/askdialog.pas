@@ -10,9 +10,6 @@ USES
   mnh_constants, mnh_out_adapters, myGenerics, mnh_contexts;
 TYPE
   {$WARN 5024 OFF}
-
-  { TaskForm }
-
   TaskForm = class(TForm)
     Button10: TButton;
     Button11: TButton;
@@ -93,6 +90,7 @@ PROCEDURE TaskForm.FormCreate(Sender: TObject);
   begin
     ownerThread := 0;
     for i:=0 to length(previousAnswers)-1 do previousAnswers[i]:='';
+    if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TaskForm.FormShow(Sender: TObject);
@@ -101,6 +99,9 @@ PROCEDURE TaskForm.FormShow(Sender: TObject);
     position:=poDefault;
     AutoSize:=false;
     AutoSize:=true;
+    if anyFormShowing(ft_main)
+    then ShowInTaskBar:=stDefault
+    else ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TaskForm.ButtonClick(Sender: TObject);
