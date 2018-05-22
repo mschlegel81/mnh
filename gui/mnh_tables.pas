@@ -134,6 +134,7 @@ PROCEDURE setupCallbacks;
 PROCEDURE TtableForm.FormCreate(Sender: TObject);
   begin
     literal:=nil;
+    if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);

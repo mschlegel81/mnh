@@ -9,9 +9,6 @@ USES
   mnh_debuggingVar,treeUtil, mnh_litVar,mnh_constants,mnh_basicTypes,mnh_contexts,mnh_funcs,mnh_out_adapters,mnhFormHandler;
 
 TYPE
-
-  { TVarTreeViewForm }
-
   TVarTreeViewForm = class(TForm)
     VarTreeView: TTreeView;
     PROCEDURE FormCreate(Sender: TObject);
@@ -94,6 +91,7 @@ PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
     displayPending:=false;
     model.create(VarTreeView);
     rootNode:=nil;
+    if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption: string);

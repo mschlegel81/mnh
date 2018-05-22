@@ -25,6 +25,7 @@ PROCEDURE registerForm(CONST f:TForm; CONST formType:T_formType);
 PROCEDURE unregisterForm(CONST f:TForm);
 PROCEDURE formCycle(CONST caller:TForm; CONST cycleForward:boolean);
 FUNCTION anyFormShowing:boolean;
+FUNCTION anyFormShowing(CONST formType:T_formType):boolean;
 IMPLEMENTATION
 VAR formMeta:array of P_formMeta;
 
@@ -52,9 +53,16 @@ PROCEDURE formCycle(CONST caller: TForm; CONST cycleForward: boolean);
   end;
 
 FUNCTION anyFormShowing: boolean;
-  VAR i:longint;
+VAR m:P_formMeta;
   begin
-    for i:=0 to length(formMeta)-1 do if formMeta[i]^.visible then exit(true);
+    for m in formMeta do if m^.visible then exit(true);
+    result:=false;
+  end;
+
+FUNCTION anyFormShowing(CONST formType:T_formType):boolean;
+  VAR m:P_formMeta;
+  begin
+    for m in formMeta do if m^.visible and (m^.formType=formType) then exit(true);
     result:=false;
   end;
 

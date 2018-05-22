@@ -167,6 +167,7 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
+    if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
@@ -193,6 +194,9 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
     {$endif}
     position:=poDefault;
     registerForm(myPlotForm,ft_plot);
+    if anyFormShowing(ft_main)
+    then ShowInTaskBar:=stDefault
+    else ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);

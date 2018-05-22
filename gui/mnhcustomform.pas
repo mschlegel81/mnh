@@ -428,6 +428,7 @@ PROCEDURE TscriptedForm.FormCreate(Sender: TObject);
     displayPending:=false;
     leaveCriticalSection(lock);
     markedForCleanup:=false;
+    if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TscriptedForm.FormDestroy(Sender: TObject);

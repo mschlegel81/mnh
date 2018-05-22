@@ -5,7 +5,7 @@ object SplashForm: TSplashForm
   Width = 768
   AutoSize = True
   BorderStyle = bsToolWindow
-  Caption = 'SplashForm'
+  Caption = 'MNH5 - Splash'
   ClientHeight = 381
   ClientWidth = 768
   Color = clWhite
