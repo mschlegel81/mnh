@@ -27,6 +27,7 @@ TYPE
 
 FUNCTION splashForm:TSplashForm;
 PROCEDURE splashOnStartup;
+FUNCTION isDocThreadRunning:boolean;
 IMPLEMENTATION
 VAR mySplashForm: TSplashForm=nil;
 FUNCTION splashForm:TSplashForm;
@@ -48,6 +49,11 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   end;
 
 VAR docThreadsRunning:longint=0;
+FUNCTION isDocThreadRunning:boolean;
+  begin
+    result:=docThreadsRunning>0;
+  end;
+
 FUNCTION prepareDoc(p:pointer):ptrint;
   begin
     makeHtmlFromTemplate();

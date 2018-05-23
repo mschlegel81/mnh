@@ -91,6 +91,7 @@ PROCEDURE callStackListSelectionChange(Sender: TObject; User: boolean);
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR mr:integer=mrClose;
   begin
+    while isDocThreadRunning do begin ThreadSwitch; sleep(1); end;
     if runEvaluator.evaluationRunning or quick.task.processing
     then mr:=closeDialogForm.showOnQuitWhileEvaluating;
     if mr<>mrClose then begin
