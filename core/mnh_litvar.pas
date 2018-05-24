@@ -237,9 +237,14 @@ TYPE
            value:VALUE_TYPE;
          end;
          P_CACHE_ENTRY=^CACHE_ENTRY;
+         BIN_ENTRY=record
+           binFill,binAlloc:longint;
+           entry:P_CACHE_ENTRY;
+         end;
+         P_BIN_ENTRY=^BIN_ENTRY;
          KEY_VALUE_LIST=array of CACHE_ENTRY;
          MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
-    VAR dat:array of KEY_VALUE_LIST;
+    VAR bin:array of BIN_ENTRY;
         fill:longint;
     CONSTRUCTOR create();
     CONSTRUCTOR createClone(VAR map:MY_TYPE);
@@ -247,13 +252,17 @@ TYPE
     PROCEDURE rehash(CONST grow:boolean);
     PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
     PROCEDURE rehashForExpectedSize(CONST expectedFill:longint);
-    FUNCTION putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
+    FUNCTION putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
     FUNCTION getEntry(CONST key:P_literal):P_CACHE_ENTRY;
     FUNCTION drop(CONST key:P_literal):CACHE_ENTRY;
     FUNCTION keyValueList:KEY_VALUE_LIST;
     FUNCTION keySet:T_arrayOfLiteral;
+
+    {$ifdef debugMode}
+    PROCEDURE writeDump;
+    {$endif}
   end;
 
   P_literalKeyBooleanValueMap=^T_literalKeyBooleanValueMap;
@@ -341,6 +350,7 @@ TYPE
     private
       dat:T_literalKeyBooleanValueMap;
       CONSTRUCTOR create;
+      CONSTRUCTOR createClone(VAR original:T_setLiteral);
       PROCEDURE modifyType(CONST L:P_literal); inline;
     public
       DESTRUCTOR destroy; virtual;
@@ -366,6 +376,7 @@ TYPE
     private
       dat:T_literalKeyLiteralValueMap;
       CONSTRUCTOR create;
+      CONSTRUCTOR createClone(VAR original:T_mapLiteral);
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -683,7 +694,6 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_token
   end;
 
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
-  VAR temp:P_literal;
   begin
     result:=nil;
     if not(L^.literalType in C_typables) then adapters^.raiseError('Cannot cast primitive scalar',location);
@@ -711,196 +721,214 @@ FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CON
 //=====================================================================================================================
 
 CONSTRUCTOR G_literalKeyMap.create();
-  VAR i:longint;
   begin
-    setLength(dat,1);
-    for i:=0 to length(dat)-1 do setLength(dat[i],0);
+    setLength(bin,1);
+    bin[0].binAlloc:=2;
+    bin[0].binFill:=0;
+    getMem(bin[0].entry,bin[0].binAlloc*sizeOf(CACHE_ENTRY));
     fill:=0;
   end;
 
 CONSTRUCTOR G_literalKeyMap.createClone(VAR map:MY_TYPE);
   VAR i,j:longint;
   begin
-    fill:=0;
-    setLength(dat,length(map.dat));
-    for i:=0 to length(dat)-1 do begin
-      setLength(dat[i],length(map.dat[i]));
-      inc(fill,length(dat[i]));
-      for j:=0 to length(dat[i])-1 do dat[i,j]:=map.dat[i,j];
+    fill:=map.fill;
+    setLength(bin,length(map.bin));
+    for i:=0 to length(bin)-1 do begin
+      bin[i].binFill :=map.bin[i].binFill;
+      bin[i].binAlloc:=map.bin[i].binFill;
+      getMem(bin[i].entry,sizeOf(CACHE_ENTRY)*bin[i].binAlloc);
+      for j:=0 to bin[i].binFill-1 do bin[i].entry[j]:=
+                                  map.bin[i].entry[j];
     end;
   end;
 
 DESTRUCTOR G_literalKeyMap.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(dat)-1 do setLength(dat[i],0);
-    setLength(dat,0);
+    for i:=0 to length(bin)-1 do with bin[i] do freeMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+    setLength(bin,0);
   end;
 
 PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
-  VAR i,i0,j,k,c0,c1:longint;
-      temp:KEY_VALUE_LIST;
+  VAR i,i0,j,c0,c1:longint;
   begin
     if grow then begin
-      i0:=length(dat);
-      setLength(dat,i0+i0);
+      i0:=length(bin);
+      setLength(bin,i0+i0);
       for i:=0 to i0-1 do begin
-        temp:=dat[i];
-        setLength(dat[i+i0],length(dat[i]));
+        bin[i+i0].binAlloc:=bin[i].binFill;
+        getMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
         c0:=0;
         c1:=0;
-        for j:=0 to length(temp)-1 do begin
-          k:=temp[j].keyHash and (length(dat)-1);
-          if k=i then begin
-            dat[i][c0]:=temp[j];
-            inc(c0);
-          end else begin
-            dat[k][c1]:=temp[j];
-            inc(c1);
-          end;
+        for j:=0 to bin[i].binFill-1 do begin
+          if (bin[i].entry[j].keyHash and (length(bin)-1)=i)
+          then begin bin[i   ].entry[c0]:=bin[i].entry[j]; inc(c0); end
+          else begin bin[i+i0].entry[c1]:=bin[i].entry[j]; inc(c1); end;
         end;
-        setLength(dat[i   ],c0);
-        setLength(dat[i+i0],c1);
-        setLength(temp,0);
+        bin[i   ].binFill:=c0; bin[i   ].binAlloc:=max(2,bin[i   ].binFill); ReAllocMem(bin[i   ].entry,bin[i   ].binAlloc*sizeOf(CACHE_ENTRY));
+        bin[i+i0].binFill:=c1; bin[i+i0].binAlloc:=max(2,bin[i+i0].binFill); ReAllocMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
       end;
-    end else if length(dat)>1 then begin
-      i0:=length(dat) shr 1;
-      for i:=0 to i0-1 do
-      for j:=0 to length(dat[i0+i])-1 do begin
-        setLength(dat[i],length(dat[i])+1);
-        dat[i][length(dat[i])-1]:=dat[i0+i][j];
+    end else if length(bin)>1 then begin
+      i0:=length(bin) shr 1;
+      for i:=0 to i0-1 do begin
+        bin[i].binAlloc:=bin[i].binFill+bin[i+i0].binFill;
+        ReAllocMem(bin[i].entry,bin[i].binAlloc*sizeOf(CACHE_ENTRY));
+        for j:=0 to bin[i+i0].binFill-1 do begin
+          bin[i].entry[bin[i].binFill]:=bin[i+i0].entry[j];
+          inc(bin[i].binFill);
+        end;
+        freeMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
       end;
-      setLength(dat,i0);
+      setLength(bin,i0);
     end;
   end;
 
 PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
   VAR hash:T_hashInt;
-      binIdx:longint;
-      j:longint;
+      j:longint=0;
   begin
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    j:=0;
-    while (j<length(dat[binIdx])) and not(dat[binIdx,j].key^.equals(key)) do inc(j);
-    if j>=length(dat[binIdx]) then begin
-      setLength(dat[binIdx],j+1);
-      dat[binIdx,j].key:=key;
-      dat[binIdx,j].keyHash:=hash;
-      inc(fill);
+    with bin[hash and (length(bin)-1)] do begin
+      while (j<binFill) and not((entry[j].keyHash=hash) and (entry[j].key^.equals(key))) do inc(j);
+      if j>=binFill then begin
+        if j>=binAlloc then begin
+          inc(binAlloc,binAlloc+1);
+          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        entry[j].key    :=key;
+        entry[j].keyHash:=hash;
+        inc(binFill);
+        inc(fill);
+      end;
+      entry[j].value:=value;
     end;
-    dat[binIdx,j].value:=value;
-    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
   VAR targetSize:longint;
+      i:longint;
   begin
     if fill=0 then begin
-      targetSize:=length(dat);
+      i:=length(bin);
+      targetSize:=i;
       while expectedFill>=targetSize*HASH_GROWTH_THRESHOLD_FACTOR do inc(targetSize,targetSize);
-      setLength(dat,targetSize);
-    end else while expectedFill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
+      setLength(bin,targetSize);
+      while (i<length(bin)) do begin
+        with bin[i] do begin
+          binAlloc:=2;
+          binFill:=0;
+          getMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        inc(i);
+      end;
+    end else while expectedFill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
   end;
 
-FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
-  VAR binIdx:longint;
-      j:longint;
+FUNCTION G_literalKeyMap.putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
+  VAR j:longint=0;
   begin
     initialize(previousValue);
-    binIdx:=entry.keyHash and (length(dat)-1);
-    j:=0;
-    while (j<length(dat[binIdx])) and not((entry.keyHash=dat[binIdx,j].keyHash) and dat[binIdx,j].key^.equals(entry.key)) do inc(j);
-    if j>=length(dat[binIdx]) then begin
-      setLength(dat[binIdx],j+1);
-      dat[binIdx,j].key:=entry.key;
-      dat[binIdx,j].keyHash:=entry.keyHash;
-      result:=true;
-      inc(fill);
-    end else begin
-      result:=false;
-      previousValue:=dat[binIdx,j].value;
+    with bin[newEntry.keyHash and (length(bin)-1)] do begin
+      while (j<binFill) and not((newEntry.keyHash=entry[j].keyHash) and entry[j].key^.equals(newEntry.key)) do inc(j);
+      if j>=binFill then begin
+        if j>=binAlloc then begin
+          inc(binAlloc,binAlloc+1);
+          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        entry[j].key    :=newEntry.key;
+        entry[j].keyHash:=newEntry.keyHash;
+        entry[j].value  :=newEntry.value;
+        inc(binFill);
+        inc(fill);
+        result:=true;
+      end else begin
+        previousValue:=entry[j].value;
+        entry[j].value:=newEntry.value;
+        result:=false;
+      end;
     end;
-    dat[binIdx,j].value:=entry.value;
-    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
   VAR hash:T_hashInt;
-      binIdx:longint;
-      j:longint;
+      j:longint=0;
   begin
     initialize(previousValue);
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    j:=0;
-    while (j<length(dat[binIdx])) and not((hash=dat[binIdx,j].keyHash) and dat[binIdx,j].key^.equals(key)) do inc(j);
-    if j>=length(dat[binIdx]) then begin
-      setLength(dat[binIdx],j+1);
-      dat[binIdx,j].key:=key;
-      dat[binIdx,j].keyHash:=hash;
-      result:=true;
-      inc(fill);
-    end else begin
-      result:=false;
-      previousValue:=dat[binIdx,j].value;
+    with bin[hash and (length(bin)-1)] do begin
+      while (j<binFill) and not((hash=entry[j].keyHash) and entry[j].key^.equals(key)) do inc(j);
+      if j>=binFill then begin
+        if j>=binAlloc then begin
+          inc(binAlloc,binAlloc+1);
+          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        entry[j].key    :=key;
+        entry[j].keyHash:=hash;
+        entry[j].value  :=value;
+        inc(binFill);
+        inc(fill);
+        result:=true;
+      end else begin
+        previousValue:=entry[j].value;
+        entry[j].value:=value;
+        result:=false;
+      end;
     end;
-    dat[binIdx,j].value:=value;
-    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
   VAR hash:T_hashInt;
-      binIdx:longint;
       j:longint;
   begin
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
     result:=fallbackIfNotFound;
-    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and (dat[binIdx,j].key^.equals(key)) then exit(dat[binIdx,j].value);
+    with bin[hash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and (entry[j].key^.equals(key)) then exit(entry[j].value);
   end;
 
 FUNCTION G_literalKeyMap.getEntry(CONST key:P_literal):P_CACHE_ENTRY;
   VAR hash:T_hashInt;
-      binIdx:longint;
       j:longint;
   begin
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and (dat[binIdx,j].key^.equals(key)) then exit(@(dat[binIdx,j]));
+    with bin[hash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and (entry[j].key^.equals(key)) then exit(entry+j);
     result:=nil;
   end;
 
 FUNCTION G_literalKeyMap.drop(CONST key:P_literal):CACHE_ENTRY;
   VAR hash:T_hashInt;
-      binIdx:longint;
       j,i:longint;
   begin
     result.key:=nil;
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and dat[binIdx,j].key^.equals(key) then begin
-      result:=dat[binIdx,j];
-      i:=length(dat[binIdx])-1;
-      if (j<i) then dat[binIdx,j]:=dat[binIdx,i];
-      setLength(dat[binIdx],i);
+    with bin[hash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and entry[j].key^.equals(key) then begin
+      result:=entry[j];
+      i:=binFill-1;
+      if (j<i) then entry[j]:=entry[i];
+      dec(binFill);
       dec(fill);
-      if fill<length(dat)*HASH_SHRINK_THRESHOLD_FACTOR then rehash(false);
+      if fill<length(bin)*HASH_SHRINK_THRESHOLD_FACTOR then rehash(false);
       exit(result);
     end;
   end;
 
 FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
-  VAR i,j,k:longint;
+  VAR i,j:longint;
+      k  :longint=0;
   begin
     setLength(result,fill);
-    k:=0;
-    for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
-      if k>=length(result) then setLength(result,k+1);
-      result[k]:=dat[i,j];
+    for i:=0 to length(bin)-1 do
+    with bin[i] do
+    for j:=0 to binFill-1 do begin
+      result[k]:=entry[j];
       inc(k);
     end;
-    if k<length(result) then setLength(result,k);
   end;
 
 FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
@@ -908,11 +936,11 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
   begin
     setLength(result,fill);
     k:=0;
-    for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
+    for i:=0 to length(bin)-1 do with bin[i] do for j:=0 to binFill-1 do begin
       {$ifdef debugMode}
       try
       {$endif}
-        result[k]:=dat[i,j].key;
+        result[k]:=entry[j].key;
       {$ifdef debugMode}
       except
         raise Exception.create('Trying to set result ['+intToStr(k)+'] in list of length '+intToStr(length(result)));
@@ -921,6 +949,26 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
       inc(k);
     end;
   end;
+
+{$ifdef debugMode}
+PROCEDURE G_literalKeyMap.writeDump;
+  VAR i,j:longint;
+      f:longint=0;
+  begin
+    for i:=0 to length(bin)-1 do begin
+      if i=0 then write('[[') else write(' [');
+      with bin[i] do begin
+        f+=binFill;
+        for j:=0 to binFill-1 do begin
+          if j>0 then write(', ');
+          write(entry[j].key^.toString())
+        end;
+      end;
+      if i=length(bin)-1 then writeln(']]') else writeln('],');
+    end;
+    if f<>fill then writeln('FILL MISMATCH; fill=',fill,'; sum of binFill=',f);
+  end;
+{$endif}
 
 PROCEDURE T_literal.rereference;
   begin
@@ -994,12 +1042,39 @@ CONSTRUCTOR T_setLiteral.create;
     dat.create();
   end;
 
+CONSTRUCTOR T_setLiteral.createClone(VAR original:T_setLiteral);
+  VAR key:P_literal;
+  begin
+    inline_init(original.literalType);
+    myHash  :=original.myHash  ;
+    ints    :=original.ints    ;
+    reals   :=original.reals   ;
+    strings :=original.strings ;
+    booleans:=original.booleans;
+    others  :=original.others  ;
+    dat.createClone(original.dat);
+    for key in dat.keySet do key^.rereference;
+  end;
+
 CONSTRUCTOR T_mapLiteral.create;
   begin
     inline_init(lt_emptyMap);
     myHash:=0;
     dat.create();
   end;
+
+CONSTRUCTOR T_mapLiteral.createClone(VAR original:T_mapLiteral);
+  VAR entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+  begin
+    inline_init(original.literalType);
+    myHash:=original.myHash;
+    dat.createClone(original.dat);
+    for entry in dat.keyValueList do begin
+      entry.key  ^.rereference;
+      entry.value^.rereference;
+    end;
+  end;
+
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
@@ -2458,42 +2533,13 @@ FUNCTION T_listLiteral.clone: P_compoundLiteral;
   end;
 
 FUNCTION T_setLiteral.clone: P_compoundLiteral;
-  VAR bin,i:longint;
   begin
-    result:=newSetLiteral();
-    setLength(P_setLiteral(result)^.dat.dat,
-                             length(dat.dat));
-    P_setLiteral(result)^.dat.fill:=dat.fill;
-    for bin:=0 to length(dat.dat)-1 do begin
-      setLength(P_setLiteral(result)^.dat.dat[bin],
-                               length(dat.dat[bin]));
-      for i:=0 to length(dat.dat[bin])-1 do begin
-        P_setLiteral(result)^.dat.dat[bin,i]:=
-                              dat.dat[bin,i];
-        dat.dat[bin,i].key^.rereference;
-      end;
-    end;
-    result^.literalType:=literalType;
+    new(P_setLiteral(result),createClone(self));
   end;
 
 FUNCTION T_mapLiteral.clone: P_compoundLiteral;
-  VAR bin,i:longint;
   begin
-    result:=newMapLiteral;
-    result^.literalType:=literalType;
-    P_mapLiteral(result)^.dat.fill:=dat.fill;
-    setLength(P_mapLiteral(result)^.dat.dat,
-                             length(dat.dat));
-    for bin:=0 to length(dat.dat)-1 do begin
-      setLength(P_mapLiteral(result)^.dat.dat[bin],
-                               length(dat.dat[bin]));
-      for i:=0 to length(dat.dat[bin])-1 do begin
-        P_mapLiteral(result)^.dat.dat[bin,i]:=
-                              dat.dat[bin,i];
-        dat.dat[bin,i].key  ^.rereference;
-        dat.dat[bin,i].value^.rereference;
-      end;
-    end;
+    new(P_mapLiteral(result),createClone(self));
   end;
 
 FUNCTION T_listLiteral.iteratableList: T_arrayOfLiteral;
@@ -2583,8 +2629,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       disposeLiteral(iter);
       inc(acceptMask,bit[i]);
     end;
-    result:=newSetLiteral;
-    result^.dat.rehashForExpectedSize(maxSubsetSize);
+    result:=newSetLiteral(maxSubsetSize);
     for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(entry.key,true);
     counterSet.destroy;
   end;
@@ -2616,7 +2661,8 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
   VAR map1,map2:P_mapLiteral;
       merger:P_expressionLiteral;
       entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
-      L,M:P_literal;
+      pTargetEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
+      M:P_literal;
   begin
     if (params=nil) or (params^.size<>3) or
        not(params^.value[0]^.literalType in [lt_map,lt_emptyMap]) or
@@ -2628,22 +2674,22 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
 
     if map2^.size=0 then exit(P_mapLiteral(map1^.rereferenced));
-    result:=P_mapLiteral(map1^.clone);
+    new(result,createClone(map1^));
 
     for entry in map2^.dat.keyValueList do begin
-      L:=result^.dat.get(entry.key,nil);
-      if L=nil then begin
-        result^.dat.putNew(entry,L);
+      pTargetEntry:=result^.dat.getEntry(entry.key);
+      if pTargetEntry=nil then begin
+        result^.dat.putNew(entry,M);
         entry.key  ^.rereference;
         entry.value^.rereference;
       end else begin
-        M:=merger^.evaluateToLiteral(location,contextPointer,L,entry.value).literal;
+        M:=merger^.evaluateToLiteral(location,contextPointer,pTargetEntry^.value,entry.value).literal;
         if M=nil then begin
           disposeLiteral(result);
           exit(nil);
         end;
-        disposeLiteral(L);
-        result^.dat.putNew(entry.key,M,L);
+        disposeLiteral(pTargetEntry^.value);
+        pTargetEntry^.value:=M;
       end;
     end;
     if result^.dat.fill>0 then result^.literalType:=lt_map

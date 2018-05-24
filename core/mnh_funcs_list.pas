@@ -137,6 +137,7 @@ FUNCTION getElementFreqency intFuncSignature;
   TYPE T_freqMap=specialize G_literalKeyMap<longint>;
   VAR freqMap:T_freqMap;
       freqList:T_freqMap.KEY_VALUE_LIST;
+      freqEntry:T_freqMap.P_CACHE_ENTRY;
       i:longint;
       list:P_listLiteral;
       iter:T_arrayOfLiteral;
@@ -153,8 +154,12 @@ FUNCTION getElementFreqency intFuncSignature;
     list:=list0;
 
     freqMap.create;
-    for i:=0 to list^.size-1 do freqMap.put(list^.value[i],
-                                freqMap.get(list^.value[i],0)+1);
+    for i:=0 to list^.size-1 do begin
+      freqEntry:=freqMap.getEntry(list^.value[i]);
+      if freqEntry=nil
+      then freqMap.put(list^.value[i],1)
+      else inc(freqEntry^.value);
+    end;
     if not(context.adapters^.noErrors) then begin
       freqMap.destroy;
       exit(nil);
@@ -405,14 +410,17 @@ FUNCTION group_imp intFuncSignature;
       disposeLiteral(dummy);
     end;
 
-  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); inline;
+  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR newLit:P_literal;
         resultLiteral:P_literal;
     begin
-      resultLiteral:=groupMap.get(groupKey,nil);
 
+      resultLiteral:=groupMap.get(groupKey,nil);
       if aggregator=nil then begin
-        if resultLiteral=nil then resultLiteral:=newListLiteral;
+        if resultLiteral=nil then begin
+          resultLiteral:=newListLiteral;
+          groupMap.put(groupKey,resultLiteral);
+        end;
         P_listLiteral(resultLiteral)^.append(L,true);
       end else begin
         if resultLiteral=nil then begin
@@ -427,8 +435,8 @@ FUNCTION group_imp intFuncSignature;
             exit;
           end;
         end;
+        groupMap.put(groupKey,resultLiteral);
       end;
-      groupMap.put(groupKey,resultLiteral);
     end;
 
   VAR inputIndex:longint;
