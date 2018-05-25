@@ -3,7 +3,7 @@ tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
 private needBuild(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
 
-private delp->(isLinux ? 'delp' : DelpPath).execPipeless(
+private delp->(isLinux ? 'delp' : DelpPath).exec(
        ['gui/lib/i386-win32',
         'gui/lib/x86_64-linux',
         'gui/lib/x86_64-win64',
@@ -133,7 +133,12 @@ private showStatus->
                               : timeForFullTest(B[1],ensureCodeHash  )).roundToRelevantDigits(4) orElse '.']))).formatTable.join("\n").print
   orElse print;
 
-private verboseDelete(file)->fileExists(file) ? tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!') : void;
+private verboseDelete(file)->
+  fileExists(file)
+  ? deleteFile(file)
+    ? void
+    : fail('Could not delete ',file)
+  : void;
 
 private cleanup->begin
   allFolders('.')

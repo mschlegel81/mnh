@@ -18,8 +18,7 @@ CONSTRUCTOR T_workerMeta.create(CONST def: P_mapLiteral; CONST location: T_token
     interval:=0;
     if tmp<>nil then begin
       case tmp^.literalType of
-        lt_int : interval:=P_intLiteral (tmp)^.value.toFloat/(24*60*60);
-        lt_real: interval:=P_realLiteral(tmp)^.value        /(24*60*60);
+        lt_smallint,lt_bigint,lt_real: interval:=P_numericLiteral(tmp)^.floatValue/(24*60*60);
         else context.adapters^.raiseError('interval is: '+tmp^.typeString+'; must be boolean or expression',location);
       end;
     end;

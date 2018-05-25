@@ -13,7 +13,7 @@ queens(H:IntList,[].toSet)->[H];
 queens(H:IntList,C:IntCollection)->C.pEach(c,isValid(H,c)
                                              ? queens(H|c,C.minus([c]))
                                              : void,|);
-queens(numberOfQueens>1)->queens([],[1..numberOfQueens]) orElse [];
+queens(numberOfQueens>1)->sort(queens([],[1..numberOfQueens]) orElse []);
 
 fmtSolution(solution:IntList)->solution.each(k,['A'..'Z'][index],k,' ',&);
 

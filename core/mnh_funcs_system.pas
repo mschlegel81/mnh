@@ -18,7 +18,8 @@ FUNCTION resetRandom_impl intFuncSignature;
     if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
     result:=nil;
     if (params= nil) or  (params^.size=0) then begin context.getParent^.prng.resetSeed(0); result:=newVoidLiteral; end else
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin context.getParent^.prng.resetSeed(int0^.value.getRawBytes); result:=newVoidLiteral; end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_bigint)   then begin context.getParent^.prng.resetSeed(P_bigIntLiteral(arg0)^.value.getRawBytes); result:=newVoidLiteral; end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin context.getParent^.prng.resetSeed(P_smallIntLiteral(arg0)^.value          ); result:=newVoidLiteral; end;
   end;
 
 FUNCTION random_imp intFuncSignature;
@@ -26,8 +27,8 @@ FUNCTION random_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('random',tokenLocation,[se_alterContextState])) then exit(nil);
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getParent^.prng.realRandom))
-    else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      count:=int0^.value.toInt;
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
+      count:=int0^.intValue;
       if count>0 then begin
         result:=newListLiteral;
         for i:=1 to count do listResult^.appendReal(context.getParent^.prng.realRandom);
@@ -39,14 +40,23 @@ FUNCTION random_imp intFuncSignature;
 
 FUNCTION intRandom_imp intFuncSignature;
   VAR i,count:longint;
+  FUNCTION singleIntRandom:P_abstractIntLiteral;
+    begin
+      if arg0^.literalType=lt_bigint
+      then result:=newIntLiteral(randomInt(@(context.getParent^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
+      else result:=newIntLiteral(context.getParent^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
+    end;
+
   begin
     if not(context.checkSideEffects('intRandom',tokenLocation,[se_alterContextState])) then exit(nil);
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(randomInt(@(context.getParent^.prng.dwordRandom),int0^.value)))
-    else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      count:=int1^.value.toInt;
+
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint])
+    then exit(singleIntRandom)
+    else if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
+      count:=int1^.intValue;
       if count>=0 then begin
         result:=newListLiteral;
-        for i:=1 to count do listResult^.append(newIntLiteral(randomInt(@(context.getParent^.prng.dwordRandom),int0^.value)),false);
+        for i:=1 to count do listResult^.append(singleIntRandom,false);
         exit(result);
       end;
     end;
@@ -164,8 +174,8 @@ FUNCTION printTo_impl intFuncSignature;
 
 FUNCTION setExitCode_impl intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
-      ExitCode:=int0^.value.toInt;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
+      ExitCode:=int0^.intValue;
       context.adapters^.setUserDefinedExitCode(ExitCode);
       result:=newVoidLiteral;
     end else result:=nil;

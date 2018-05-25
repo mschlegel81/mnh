@@ -83,17 +83,17 @@ FUNCTION copy_imp intFuncSignature;
 
   FUNCTION safeStart(CONST index:longint):longint; inline;
     begin
-      if arg1^.literalType=lt_int
-        then result:=int1^.value.toInt
-        else result:=P_intLiteral(list1^.value[index])^.value.toInt;
+      if arg1^.literalType in [lt_smallint,lt_bigint]
+        then result:=int1^.intValue
+        else result:=P_abstractIntLiteral(list1^.value[index])^.intValue;
       inc(result);
     end;
 
   FUNCTION safeLen(CONST index:longint):longint; inline;
     begin
-      if arg2^.literalType=lt_int
-        then result:=int2^.value.toInt
-        else result:=P_intLiteral(list2^.value[index])^.value.toInt;
+      if arg2^.literalType in [lt_smallint,lt_bigint]
+        then result:=int2^.intValue
+        else result:=P_abstractIntLiteral(list2^.value[index])^.intValue;
     end;
 
   FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):string; inline;
@@ -105,8 +105,8 @@ FUNCTION copy_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList])
-                                          and (arg1^.literalType in [lt_int   ,lt_intList   ,lt_emptyList])
-                                          and (arg2^.literalType in [lt_int   ,lt_intList   ,lt_emptyList]) then begin
+                                          and (arg1^.literalType in [lt_smallint,lt_bigint,lt_intList   ,lt_emptyList])
+                                          and (arg2^.literalType in [lt_smallint,lt_bigint,lt_intList   ,lt_emptyList]) then begin
       anyList:=false;
       if arg0^.literalType in [lt_stringList,lt_emptyList] then checkLength(arg0);
       if arg1^.literalType in [lt_intList   ,lt_emptyList] then checkLength(arg1);
@@ -114,8 +114,8 @@ FUNCTION copy_imp intFuncSignature;
       if not(allOkay) then exit(nil)
       else if not(anyList) then
         result:=newStringLiteral(myCopy(str0,
-                           P_intLiteral(arg1)^.value.toInt+1,
-                           P_intLiteral(arg2)^.value.toInt))
+                           P_abstractIntLiteral(arg1)^.intValue+1,
+                           P_abstractIntLiteral(arg2)^.intValue))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
@@ -173,15 +173,18 @@ FUNCTION chars_imp intFuncSignature;
   end;
 
 FUNCTION byteToChar_imp intFuncSignature;
-  FUNCTION charOf(CONST i:T_bigInt):P_literal;
+  FUNCTION charOf(CONST i:P_abstractIntLiteral):P_literal;
     VAR ib:longint;
     begin
       result:=nil;
-      if i.canBeRepresentedAsInt32() then begin
-        ib:=i.toInt;
+      if i^.literalType=lt_smallint then begin
+        ib:=P_smallIntLiteral(i)^.value;
+        if (ib>=0) and (ib<=255) then exit(charLit[chr(ib)].rereferenced);
+      end else if (i^.literalType=lt_bigint) and P_bigIntLiteral(i)^.value.canBeRepresentedAsInt32 then begin
+        ib:=P_bigIntLiteral(i)^.intValue;
         if (ib>=0) and (ib<=255) then exit(charLit[chr(ib)].rereferenced);
       end;
-      context.adapters^.raiseError('Value '+i.toString+' is not a valid byte; must be in range [0..255]',tokenLocation);
+      context.adapters^.raiseError('Value '+i^.toString+' is not a valid byte; must be in range [0..255]',tokenLocation);
     end;
 
   VAR k:longint;
@@ -189,11 +192,11 @@ FUNCTION byteToChar_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
-        lt_int: result:=charOf(int0^.value);
+        lt_smallint,lt_bigint: result:=charOf(P_abstractIntLiteral(int0));
         lt_emptyList: result:=newListLiteral(0);
         lt_intList: begin
           result:=list0^.newOfSameType(true);
-          for k:=0 to list0^.size-1 do listResult^.append(charOf(P_intLiteral(list0^.value[k])^.value),false);
+          for k:=0 to list0^.size-1 do listResult^.append(charOf(P_abstractIntLiteral(list0^.value[k])),false);
         end;
       end;
     end;
@@ -313,7 +316,8 @@ FUNCTION join_impl intFuncSignature;
       case L^.literalType of
         lt_string: result:=P_stringLiteral(L)^.value;
         lt_boolean,
-        lt_int,
+        lt_smallint,
+        lt_bigint,
         lt_real,
         lt_expression,
         lt_list..lt_emptyMap: result:=L^.toString;
@@ -478,10 +482,10 @@ FUNCTION repeat_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and
        (arg0^.literalType = lt_string) and
-       (arg1^.literalType = lt_int) then begin
+       (arg1^.literalType = lt_smallint) then begin
       res:='';
       sub:=str0^.value;
-      for i:=1 to int1^.value.toInt do res:=res+sub;
+      for i:=1 to int1^.intValue do res:=res+sub;
       result:=newStringLiteral(res);
     end;
   end;
@@ -750,12 +754,11 @@ FUNCTION diffStats_impl intFuncSignature;
   VAR diff:TDiff;
   begin
     result:=nil;
-    if (params<>nil) and ((params^.size=2) or (params^.size=3)) and
+    if (params<>nil) and (params^.size=2) and
        ((arg0^.literalType in [lt_stringList,lt_emptyList]) and
         (arg1^.literalType in [lt_stringList,lt_emptyList]) or
         (arg0^.literalType=lt_string) and
-        (arg1^.literalType=lt_string)) and
-       ((params^.size=2) or (arg2^.literalType=lt_int) and (int2^.value.toInt>=0)) then begin
+        (arg1^.literalType=lt_string)) then begin
       result:=prepareDiff(arg0,arg1,diff);
       diff.destroy;
     end;
@@ -808,8 +811,8 @@ FUNCTION compress_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newStringLiteral(compressString(str0^.value,0))
-    else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_int)
-      then result:=newStringLiteral(compressString(str0^.value,int1^.value.toInt))
+    else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_bigint,lt_smallint])
+      then result:=newStringLiteral(compressString(str0^.value,int1^.intValue))
   end;
 
 FUNCTION decompress_impl intFuncSignature;

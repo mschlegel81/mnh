@@ -39,8 +39,13 @@ testFile(scriptFileName:String,doLog:Boolean)->
         doLog);
   end;
 
+private shorter(s:String)->
+  s.length<30 ? s : copy(s,0,27)&'...';
+private shorter([])->void;
+
 private sbExecute([])->void;
 private sbExecute(code:StringList)->begin
+  printCase(EXAMPLES_LOG_NAME&' '&shorter(code.head));
   local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
   out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2])).split("\n").flatten;
 end;

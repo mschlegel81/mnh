@@ -18,12 +18,14 @@ FUNCTION sleep_imp intFuncSignature;
       sleepInt:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_smallint,lt_bigint]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
       sleepUntil:=context.wallclockTime(true);
       result:=newVoidLiteral;
-      if arg0^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (arg0)^.value.toFloat
-      else sleepUntil:=sleepUntil+P_realLiteral(arg0)^.value;
+      case arg0^.literalType of
+        lt_smallint: sleepUntil:=sleepUntil+P_smallIntLiteral(arg0)^.value;
+        lt_bigint  : sleepUntil:=sleepUntil+P_bigIntLiteral  (arg0)^.value.toFloat;
+        lt_real    : sleepUntil:=sleepUntil+P_realLiteral    (arg0)^.value;
+      end;
       while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
         if sleepInt>1000 then sleepInt:=1000;
@@ -37,11 +39,13 @@ FUNCTION sleepUntil_imp intFuncSignature;
       sleepInt:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_int]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_real,lt_smallint,lt_bigint]) and context.checkSideEffects('sleep',tokenLocation,[se_sleep]) then begin
       result:=newVoidLiteral;
-      if arg0^.literalType=lt_int
-      then sleepUntil:=P_intLiteral (arg0)^.value.toFloat
-      else sleepUntil:=P_realLiteral(arg0)^.value;
+      case arg0^.literalType of
+        lt_smallint: sleepUntil:=P_smallIntLiteral(arg0)^.value;
+        lt_bigint  : sleepUntil:=P_bigIntLiteral  (arg0)^.value.toFloat;
+        lt_real    : sleepUntil:=P_realLiteral    (arg0)^.value;
+      end;
       while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
         if sleepInt>1000 then sleepInt:=1000;
@@ -129,7 +133,7 @@ FUNCTION ord_imp intFuncSignature;
         lt_boolean: if P_boolLiteral(x)^.value
                     then exit(newIntLiteral(1))
                     else exit(newIntLiteral(0));
-        lt_int: begin x^.rereference; exit(x); end;
+        lt_smallint,lt_bigint: exit(x^.rereferenced);
         lt_string : if length(P_stringLiteral(x)^.value)=1
                     then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(newIntLiteral(-1));

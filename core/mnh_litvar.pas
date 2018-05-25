@@ -100,28 +100,63 @@ TYPE
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
-  P_intLiteral = ^T_intLiteral;
-  T_intLiteral = object(T_literal)
+  P_numericLiteral=^T_numericLiteral;
+  T_numericLiteral=object(T_literal)
+    FUNCTION floatValue:T_myFloat; virtual; abstract;
+  end;
+
+  P_abstractIntLiteral=^T_abstractIntLiteral;
+  T_abstractIntLiteral=object(T_numericLiteral)
+    FUNCTION intValue:int64;                                              virtual; abstract;
+    FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual; abstract;
+    PROCEDURE writeToStream(CONST stream:P_outputStreamWrapper);          virtual; abstract;
+    FUNCTION toHexString:string;                                          virtual; abstract;
+  end;
+
+  P_bigIntLiteral = ^T_bigIntLiteral;
+  T_bigIntLiteral = object(T_abstractIntLiteral)
   private
     val: T_bigInt;
     CONSTRUCTOR create(CONST value: T_bigInt);
     CONSTRUCTOR create(CONST value: int64);
-    FUNCTION clone:P_intLiteral;
   public
     DESTRUCTOR destroy; virtual;
     PROPERTY value:T_bigInt read val;
-    //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    //from T_literal:
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+    FUNCTION intValue:int64;                                              virtual;
+    FUNCTION floatValue:T_myFloat;                                        virtual;
+    FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual;
+    PROCEDURE writeToStream(CONST stream:P_outputStreamWrapper);          virtual;
+    FUNCTION toHexString:string;                                          virtual;
+  end;
+
+  P_smallIntLiteral = ^T_smallIntLiteral;
+  T_smallIntLiteral = object(T_abstractIntLiteral)
+  private
+    val: longint;
+    CONSTRUCTOR create(CONST value: longint);
+  public
+    PROPERTY value:longint read val;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
+    FUNCTION hash: T_hashInt; virtual;
+    FUNCTION equals(CONST other: P_literal): boolean; virtual;
+    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+    FUNCTION intValue:int64;                                              virtual;
+    FUNCTION floatValue:T_myFloat;                                        virtual;
+    FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual;
+    PROCEDURE writeToStream(CONST stream:P_outputStreamWrapper);          virtual;
+    FUNCTION toHexString:string;                                          virtual;
   end;
 
   P_realLiteral = ^T_realLiteral;
-  T_realLiteral = object(T_literal)
+  T_realLiteral = object(T_numericLiteral)
   private
     val: T_myFloat;
     CONSTRUCTOR create(CONST value: T_myFloat);
@@ -135,6 +170,7 @@ TYPE
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+    FUNCTION floatValue:T_myFloat;                           virtual;
   end;
 
   P_stringLiteral = ^T_stringLiteral;
@@ -237,9 +273,14 @@ TYPE
            value:VALUE_TYPE;
          end;
          P_CACHE_ENTRY=^CACHE_ENTRY;
+         BIN_ENTRY=record
+           binFill,binAlloc:longint;
+           entry:P_CACHE_ENTRY;
+         end;
+         P_BIN_ENTRY=^BIN_ENTRY;
          KEY_VALUE_LIST=array of CACHE_ENTRY;
          MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
-    VAR dat:array of KEY_VALUE_LIST;
+    VAR bin:array of BIN_ENTRY;
         fill:longint;
     CONSTRUCTOR create();
     CONSTRUCTOR createClone(VAR map:MY_TYPE);
@@ -247,13 +288,17 @@ TYPE
     PROCEDURE rehash(CONST grow:boolean);
     PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
     PROCEDURE rehashForExpectedSize(CONST expectedFill:longint);
-    FUNCTION putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
+    FUNCTION putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
     FUNCTION getEntry(CONST key:P_literal):P_CACHE_ENTRY;
     FUNCTION drop(CONST key:P_literal):CACHE_ENTRY;
     FUNCTION keyValueList:KEY_VALUE_LIST;
     FUNCTION keySet:T_arrayOfLiteral;
+
+    {$ifdef debugMode}
+    PROCEDURE writeDump;
+    {$endif}
   end;
 
   P_literalKeyBooleanValueMap=^T_literalKeyBooleanValueMap;
@@ -341,6 +386,7 @@ TYPE
     private
       dat:T_literalKeyBooleanValueMap;
       CONSTRUCTOR create;
+      CONSTRUCTOR createClone(VAR original:T_setLiteral);
       PROCEDURE modifyType(CONST L:P_literal); inline;
     public
       DESTRUCTOR destroy; virtual;
@@ -366,6 +412,7 @@ TYPE
     private
       dat:T_literalKeyLiteralValueMap;
       CONSTRUCTOR create;
+      CONSTRUCTOR createClone(VAR original:T_mapLiteral);
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -402,8 +449,9 @@ FUNCTION exp(CONST x:double):double; inline;
 PROCEDURE disposeLiteral(VAR l: P_literal); {$ifndef debugMode} inline; {$endif}
 PROCEDURE disposeLiteral(VAR l: T_arrayOfLiteral); inline;
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;       inline;
-FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
-FUNCTION newIntLiteral   (CONST value: int64         ): P_intLiteral;        inline;
+FUNCTION newBigIntLiteral(value: T_bigInt): P_bigIntLiteral;
+FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; inline;
+FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral; inline;
 FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral;       inline;
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;     inline;
 FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral;       inline;
@@ -438,7 +486,7 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
 CONST maxSingletonInt=4000;
 IMPLEMENTATION
 VAR
-  intLit : array[-100..maxSingletonInt] of T_intLiteral;
+  intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
   voidLit: T_voidLiteral;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
@@ -488,22 +536,38 @@ PROCEDURE disposeLiteralWithoutResettingPointer(l:P_literal); inline;
     if l^.unreference<=0 then dispose(l,destroy);
   end;
 
-FUNCTION newIntLiteral(value: T_bigInt): P_intLiteral;
+FUNCTION newBigIntLiteral(value: T_bigInt): P_bigIntLiteral;
   VAR iv:int64;
   begin
     if value.isBetween(low(intLit),high(intLit)) then begin
       iv:=value.toInt;
       value.destroy;
-      exit(P_intLiteral(intLit[iv].rereferenced));
+      exit(P_bigIntLiteral(intLit[iv].rereferenced));
     end;
     new(result,create(value));
   end;
 
-FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
+FUNCTION newIntLiteral(CONST value: int64): P_abstractIntLiteral;
   begin
     if (value>=low(intLit)) and (value<=high(intLit))
-    then result:=P_intLiteral(intLit[value].rereferenced)
-    else new(result, create(value));
+    then result:=P_smallIntLiteral(intLit[value].rereferenced)
+    else if (value>=-maxLongint) and (value<=maxLongint)
+    then new(P_smallIntLiteral(result),create(value))
+    else new(P_bigIntLiteral  (result),create(value));
+  end;
+
+FUNCTION newIntLiteral(CONST value: T_bigInt): P_abstractIntLiteral;
+  VAR iv:int64;
+  begin
+    if value.isBetween(low(intLit),high(intLit)) then begin
+      iv:=value.toInt;
+      value.destroy;
+      exit(P_bigIntLiteral(intLit[iv].rereferenced));
+    end else if value.canBeRepresentedAsInt32 then begin
+      iv:=value.toInt;
+      value.destroy;
+      new(P_smallIntLiteral(result),create(iv));
+    end else new(P_bigIntLiteral(result),create(value));
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral;
@@ -630,7 +694,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         intResult:=StrToInt64Def(copy(input, offset, parsedLength), 0);
         if (intResult=0) and not(allZeroes) then begin
           big.fromString(copy(input, offset, parsedLength));
-          result:=newIntLiteral(big);
+          result:=newBigIntLiteral(big);
         end else result:=newIntLiteral(intResult);
       end;
     end;
@@ -683,7 +747,6 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_token
   end;
 
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
-  VAR temp:P_literal;
   begin
     result:=nil;
     if not(L^.literalType in C_typables) then adapters^.raiseError('Cannot cast primitive scalar',location);
@@ -711,196 +774,214 @@ FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CON
 //=====================================================================================================================
 
 CONSTRUCTOR G_literalKeyMap.create();
-  VAR i:longint;
   begin
-    setLength(dat,1);
-    for i:=0 to length(dat)-1 do setLength(dat[i],0);
+    setLength(bin,1);
+    bin[0].binAlloc:=2;
+    bin[0].binFill:=0;
+    getMem(bin[0].entry,bin[0].binAlloc*sizeOf(CACHE_ENTRY));
     fill:=0;
   end;
 
 CONSTRUCTOR G_literalKeyMap.createClone(VAR map:MY_TYPE);
   VAR i,j:longint;
   begin
-    fill:=0;
-    setLength(dat,length(map.dat));
-    for i:=0 to length(dat)-1 do begin
-      setLength(dat[i],length(map.dat[i]));
-      inc(fill,length(dat[i]));
-      for j:=0 to length(dat[i])-1 do dat[i,j]:=map.dat[i,j];
+    fill:=map.fill;
+    setLength(bin,length(map.bin));
+    for i:=0 to length(bin)-1 do begin
+      bin[i].binFill :=map.bin[i].binFill;
+      bin[i].binAlloc:=map.bin[i].binFill;
+      getMem(bin[i].entry,sizeOf(CACHE_ENTRY)*bin[i].binAlloc);
+      for j:=0 to bin[i].binFill-1 do bin[i].entry[j]:=
+                                  map.bin[i].entry[j];
     end;
   end;
 
 DESTRUCTOR G_literalKeyMap.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(dat)-1 do setLength(dat[i],0);
-    setLength(dat,0);
+    for i:=0 to length(bin)-1 do with bin[i] do freeMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+    setLength(bin,0);
   end;
 
 PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
-  VAR i,i0,j,k,c0,c1:longint;
-      temp:KEY_VALUE_LIST;
+  VAR i,i0,j,c0,c1:longint;
   begin
     if grow then begin
-      i0:=length(dat);
-      setLength(dat,i0+i0);
+      i0:=length(bin);
+      setLength(bin,i0+i0);
       for i:=0 to i0-1 do begin
-        temp:=dat[i];
-        setLength(dat[i+i0],length(dat[i]));
+        bin[i+i0].binAlloc:=bin[i].binFill;
+        getMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
         c0:=0;
         c1:=0;
-        for j:=0 to length(temp)-1 do begin
-          k:=temp[j].keyHash and (length(dat)-1);
-          if k=i then begin
-            dat[i][c0]:=temp[j];
-            inc(c0);
-          end else begin
-            dat[k][c1]:=temp[j];
-            inc(c1);
-          end;
+        for j:=0 to bin[i].binFill-1 do begin
+          if (bin[i].entry[j].keyHash and (length(bin)-1)=i)
+          then begin bin[i   ].entry[c0]:=bin[i].entry[j]; inc(c0); end
+          else begin bin[i+i0].entry[c1]:=bin[i].entry[j]; inc(c1); end;
         end;
-        setLength(dat[i   ],c0);
-        setLength(dat[i+i0],c1);
-        setLength(temp,0);
+        bin[i   ].binFill:=c0; bin[i   ].binAlloc:=max(2,bin[i   ].binFill); ReAllocMem(bin[i   ].entry,bin[i   ].binAlloc*sizeOf(CACHE_ENTRY));
+        bin[i+i0].binFill:=c1; bin[i+i0].binAlloc:=max(2,bin[i+i0].binFill); ReAllocMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
       end;
-    end else if length(dat)>1 then begin
-      i0:=length(dat) shr 1;
-      for i:=0 to i0-1 do
-      for j:=0 to length(dat[i0+i])-1 do begin
-        setLength(dat[i],length(dat[i])+1);
-        dat[i][length(dat[i])-1]:=dat[i0+i][j];
+    end else if length(bin)>1 then begin
+      i0:=length(bin) shr 1;
+      for i:=0 to i0-1 do begin
+        bin[i].binAlloc:=bin[i].binFill+bin[i+i0].binFill;
+        ReAllocMem(bin[i].entry,bin[i].binAlloc*sizeOf(CACHE_ENTRY));
+        for j:=0 to bin[i+i0].binFill-1 do begin
+          bin[i].entry[bin[i].binFill]:=bin[i+i0].entry[j];
+          inc(bin[i].binFill);
+        end;
+        freeMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
       end;
-      setLength(dat,i0);
+      setLength(bin,i0);
     end;
   end;
 
 PROCEDURE G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE);
   VAR hash:T_hashInt;
-      binIdx:longint;
-      j:longint;
+      j:longint=0;
   begin
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    j:=0;
-    while (j<length(dat[binIdx])) and not(dat[binIdx,j].key^.equals(key)) do inc(j);
-    if j>=length(dat[binIdx]) then begin
-      setLength(dat[binIdx],j+1);
-      dat[binIdx,j].key:=key;
-      dat[binIdx,j].keyHash:=hash;
-      inc(fill);
+    with bin[hash and (length(bin)-1)] do begin
+      while (j<binFill) and not((entry[j].keyHash=hash) and (entry[j].key^.equals(key))) do inc(j);
+      if j>=binFill then begin
+        if j>=binAlloc then begin
+          inc(binAlloc,binAlloc+1);
+          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        entry[j].key    :=key;
+        entry[j].keyHash:=hash;
+        inc(binFill);
+        inc(fill);
+      end;
+      entry[j].value:=value;
     end;
-    dat[binIdx,j].value:=value;
-    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 PROCEDURE G_literalKeyMap.rehashForExpectedSize(CONST expectedFill:longint);
   VAR targetSize:longint;
+      i:longint;
   begin
     if fill=0 then begin
-      targetSize:=length(dat);
+      i:=length(bin);
+      targetSize:=i;
       while expectedFill>=targetSize*HASH_GROWTH_THRESHOLD_FACTOR do inc(targetSize,targetSize);
-      setLength(dat,targetSize);
-    end else while expectedFill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
+      setLength(bin,targetSize);
+      while (i<length(bin)) do begin
+        with bin[i] do begin
+          binAlloc:=2;
+          binFill:=0;
+          getMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        inc(i);
+      end;
+    end else while expectedFill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR do rehash(true);
   end;
 
-FUNCTION G_literalKeyMap.putNew(CONST entry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
-  VAR binIdx:longint;
-      j:longint;
+FUNCTION G_literalKeyMap.putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
+  VAR j:longint=0;
   begin
     initialize(previousValue);
-    binIdx:=entry.keyHash and (length(dat)-1);
-    j:=0;
-    while (j<length(dat[binIdx])) and not((entry.keyHash=dat[binIdx,j].keyHash) and dat[binIdx,j].key^.equals(entry.key)) do inc(j);
-    if j>=length(dat[binIdx]) then begin
-      setLength(dat[binIdx],j+1);
-      dat[binIdx,j].key:=entry.key;
-      dat[binIdx,j].keyHash:=entry.keyHash;
-      result:=true;
-      inc(fill);
-    end else begin
-      result:=false;
-      previousValue:=dat[binIdx,j].value;
+    with bin[newEntry.keyHash and (length(bin)-1)] do begin
+      while (j<binFill) and not((newEntry.keyHash=entry[j].keyHash) and entry[j].key^.equals(newEntry.key)) do inc(j);
+      if j>=binFill then begin
+        if j>=binAlloc then begin
+          inc(binAlloc,binAlloc+1);
+          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        entry[j].key    :=newEntry.key;
+        entry[j].keyHash:=newEntry.keyHash;
+        entry[j].value  :=newEntry.value;
+        inc(binFill);
+        inc(fill);
+        result:=true;
+      end else begin
+        previousValue:=entry[j].value;
+        entry[j].value:=newEntry.value;
+        result:=false;
+      end;
     end;
-    dat[binIdx,j].value:=entry.value;
-    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
   VAR hash:T_hashInt;
-      binIdx:longint;
-      j:longint;
+      j:longint=0;
   begin
     initialize(previousValue);
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    j:=0;
-    while (j<length(dat[binIdx])) and not((hash=dat[binIdx,j].keyHash) and dat[binIdx,j].key^.equals(key)) do inc(j);
-    if j>=length(dat[binIdx]) then begin
-      setLength(dat[binIdx],j+1);
-      dat[binIdx,j].key:=key;
-      dat[binIdx,j].keyHash:=hash;
-      result:=true;
-      inc(fill);
-    end else begin
-      result:=false;
-      previousValue:=dat[binIdx,j].value;
+    with bin[hash and (length(bin)-1)] do begin
+      while (j<binFill) and not((hash=entry[j].keyHash) and entry[j].key^.equals(key)) do inc(j);
+      if j>=binFill then begin
+        if j>=binAlloc then begin
+          inc(binAlloc,binAlloc+1);
+          ReAllocMem(entry,binAlloc*sizeOf(CACHE_ENTRY));
+        end;
+        entry[j].key    :=key;
+        entry[j].keyHash:=hash;
+        entry[j].value  :=value;
+        inc(binFill);
+        inc(fill);
+        result:=true;
+      end else begin
+        previousValue:=entry[j].value;
+        entry[j].value:=value;
+        result:=false;
+      end;
     end;
-    dat[binIdx,j].value:=value;
-    if fill>length(dat)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
+    if fill>length(bin)*HASH_GROWTH_THRESHOLD_FACTOR then rehash(true);
   end;
 
 FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
   VAR hash:T_hashInt;
-      binIdx:longint;
       j:longint;
   begin
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
     result:=fallbackIfNotFound;
-    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and (dat[binIdx,j].key^.equals(key)) then exit(dat[binIdx,j].value);
+    with bin[hash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and (entry[j].key^.equals(key)) then exit(entry[j].value);
   end;
 
 FUNCTION G_literalKeyMap.getEntry(CONST key:P_literal):P_CACHE_ENTRY;
   VAR hash:T_hashInt;
-      binIdx:longint;
       j:longint;
   begin
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and (dat[binIdx,j].key^.equals(key)) then exit(@(dat[binIdx,j]));
+    with bin[hash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and (entry[j].key^.equals(key)) then exit(entry+j);
     result:=nil;
   end;
 
 FUNCTION G_literalKeyMap.drop(CONST key:P_literal):CACHE_ENTRY;
   VAR hash:T_hashInt;
-      binIdx:longint;
       j,i:longint;
   begin
     result.key:=nil;
     hash:=key^.hash;
-    binIdx:=hash and (length(dat)-1);
-    for j:=0 to length(dat[binIdx])-1 do if (dat[binIdx,j].keyHash=hash) and dat[binIdx,j].key^.equals(key) then begin
-      result:=dat[binIdx,j];
-      i:=length(dat[binIdx])-1;
-      if (j<i) then dat[binIdx,j]:=dat[binIdx,i];
-      setLength(dat[binIdx],i);
+    with bin[hash and (length(bin)-1)] do
+    for j:=0 to binFill-1 do if (entry[j].keyHash=hash) and entry[j].key^.equals(key) then begin
+      result:=entry[j];
+      i:=binFill-1;
+      if (j<i) then entry[j]:=entry[i];
+      dec(binFill);
       dec(fill);
-      if fill<length(dat)*HASH_SHRINK_THRESHOLD_FACTOR then rehash(false);
+      if fill<length(bin)*HASH_SHRINK_THRESHOLD_FACTOR then rehash(false);
       exit(result);
     end;
   end;
 
 FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
-  VAR i,j,k:longint;
+  VAR i,j:longint;
+      k  :longint=0;
   begin
     setLength(result,fill);
-    k:=0;
-    for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
-      if k>=length(result) then setLength(result,k+1);
-      result[k]:=dat[i,j];
+    for i:=0 to length(bin)-1 do
+    with bin[i] do
+    for j:=0 to binFill-1 do begin
+      result[k]:=entry[j];
       inc(k);
     end;
-    if k<length(result) then setLength(result,k);
   end;
 
 FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
@@ -908,11 +989,11 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
   begin
     setLength(result,fill);
     k:=0;
-    for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
+    for i:=0 to length(bin)-1 do with bin[i] do for j:=0 to binFill-1 do begin
       {$ifdef debugMode}
       try
       {$endif}
-        result[k]:=dat[i,j].key;
+        result[k]:=entry[j].key;
       {$ifdef debugMode}
       except
         raise Exception.create('Trying to set result ['+intToStr(k)+'] in list of length '+intToStr(length(result)));
@@ -921,6 +1002,26 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
       inc(k);
     end;
   end;
+
+{$ifdef debugMode}
+PROCEDURE G_literalKeyMap.writeDump;
+  VAR i,j:longint;
+      f:longint=0;
+  begin
+    for i:=0 to length(bin)-1 do begin
+      if i=0 then write('[[') else write(' [');
+      with bin[i] do begin
+        f+=binFill;
+        for j:=0 to binFill-1 do begin
+          if j>0 then write(', ');
+          write(entry[j].key^.toString())
+        end;
+      end;
+      if i=length(bin)-1 then writeln(']]') else writeln('],');
+    end;
+    if f<>fill then writeln('FILL MISMATCH; fill=',fill,'; sum of binFill=',f);
+  end;
+{$endif}
 
 PROCEDURE T_literal.rereference;
   begin
@@ -948,8 +1049,9 @@ FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declared
 CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin {inherited init}inline_init(lt_int);     val.fromInt(value); end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: T_bigInt);   begin {inherited init}inline_init(lt_int);     val:=value; end;
+CONSTRUCTOR T_bigIntLiteral    .create(CONST value: int64);      begin {inherited init}inline_init(lt_bigint);  val.fromInt(value); end;
+CONSTRUCTOR T_smallIntLiteral  .create(CONST value: longint);    begin {inherited init}inline_init(lt_smallint);val:=value; end;
+CONSTRUCTOR T_bigIntLiteral    .create(CONST value: T_bigInt);   begin {inherited init}inline_init(lt_bigint);  val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherited init}inline_init(lt_real);    val:=value; end;
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
 {$define inline_init:=numberOfReferences:=1; customType:=nil;literalType:=}
@@ -959,13 +1061,6 @@ CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST loca
     myHash:=0;
     expressionType:=eType;
     declaredAt:=location;
-  end;
-
-FUNCTION T_intLiteral.clone:P_intLiteral;
-  VAR valCopy:T_bigInt;
-  begin
-    valCopy.create(val);
-    new(result,create(valCopy));
   end;
 
 CONSTRUCTOR T_listLiteral.create(CONST initialSize: longint);
@@ -994,16 +1089,43 @@ CONSTRUCTOR T_setLiteral.create;
     dat.create();
   end;
 
+CONSTRUCTOR T_setLiteral.createClone(VAR original:T_setLiteral);
+  VAR key:P_literal;
+  begin
+    inline_init(original.literalType);
+    myHash  :=original.myHash  ;
+    ints    :=original.ints    ;
+    reals   :=original.reals   ;
+    strings :=original.strings ;
+    booleans:=original.booleans;
+    others  :=original.others  ;
+    dat.createClone(original.dat);
+    for key in dat.keySet do key^.rereference;
+  end;
+
 CONSTRUCTOR T_mapLiteral.create;
   begin
     inline_init(lt_emptyMap);
     myHash:=0;
     dat.create();
   end;
+
+CONSTRUCTOR T_mapLiteral.createClone(VAR original:T_mapLiteral);
+  VAR entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+  begin
+    inline_init(original.literalType);
+    myHash:=original.myHash;
+    dat.createClone(original.dat);
+    for entry in dat.keyValueList do begin
+      entry.key  ^.rereference;
+      entry.value^.rereference;
+    end;
+  end;
+
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
-DESTRUCTOR T_intLiteral.destroy; begin val.destroy; end;
+DESTRUCTOR T_bigIntLiteral.destroy; begin val.destroy; end;
 DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i:longint;
@@ -1168,7 +1290,8 @@ PROCEDURE T_listLiteral.removeElement(CONST index:longint);
     myHash:=0;
     case dat[index]^.literalType of
       lt_boolean: dec(booleans);
-      lt_int    : dec(ints);
+      lt_smallint,
+      lt_bigint : dec(ints);
       lt_real   : dec(reals);
       lt_string : dec(strings);
       else        dec(others);
@@ -1185,7 +1308,8 @@ PROCEDURE T_listLiteral.removeElement(CONST index:longint);
 FUNCTION T_literal          .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:='<ERR>';           end;
 FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_TEXT_VOID;        end;
 FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val]; end;
-FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;      end;
+FUNCTION T_bigIntLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=val.toString;      end;
+FUNCTION T_smallIntLiteral  .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=intToStr(val);     end;
 FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   begin
@@ -1264,6 +1388,23 @@ FUNCTION T_listLiteral.listConstructorToString(CONST lengthLimit: longint): stri
     setLength(result,length(result)-1);
   end;
 
+FUNCTION T_smallIntLiteral.toHexString:string;
+  VAR digits:longint=0;
+      v:longint=0;
+  begin
+    v:=val;
+    while v>0 do begin
+      inc(digits);
+      v:=v shr 4;
+    end;
+    result:=IntToHex(val,digits);
+  end;
+
+FUNCTION T_bigIntLiteral.toHexString:string;
+  begin
+    result:=val.toHexString;
+  end;
+
 //===================================================================:?.toString
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
   VAR i,remainingLength: longint;
@@ -1306,16 +1447,22 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
          or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+FUNCTION T_bigIntLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR cr:T_comparisonResult;
   begin
     case relation of
-      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_int].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_bigint].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
-      lt_int: begin
-        cr:=val.compare(P_intLiteral(other)^.val);
+      lt_smallint: begin
+        cr:=val.compare(P_smallIntLiteral(other)^.val);
+        result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+      end;
+      lt_bigint: begin
+        cr:=val.compare(P_bigIntLiteral(other)^.val);
         result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
              or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
              or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
@@ -1330,17 +1477,56 @@ FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P
     end;
   end;
 
+FUNCTION T_smallIntLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+  VAR cr:T_comparisonResult;
+      i:longint;
+      f:T_myFloat;
+  begin
+    case relation of
+      tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_smallint].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
+      tt_comparatorListEq: exit(equals(other));
+    end;
+    case other^.literalType of
+      lt_smallint: begin
+        i:=P_smallIntLiteral(other)^.val;
+        result:=(val=i) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (val<i) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>i) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+      end;
+      lt_bigint: begin
+        cr:=C_FLIPPED[P_bigIntLiteral(other)^.val.compare(val)];
+        result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+      end;
+      lt_real: begin
+        f:=P_realLiteral(other)^.val;
+        result:=(val=f) and (relation in [tt_comparatorEq, tt_comparatorLeq, tt_comparatorGeq])
+             or (val<f) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>f) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+      end;
+      else result:=false;
+    end;
+  end;
+
 FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR cr:T_comparisonResult;
       ovr: T_myFloat;
+      i:longint;
   begin
     case relation of
       tt_operatorIn      : exit((other^.literalType in C_typeInfo[lt_real].containedIn) and (P_compoundLiteral(other)^.contains(@self)));
       tt_comparatorListEq: exit(equals(other));
     end;
     case other^.literalType of
-      lt_int: begin
-        cr:=C_FLIPPED[P_intLiteral(other)^.val.compare(val)];
+      lt_smallint: begin
+        i:=P_smallIntLiteral(other)^.val;
+        result:=(val=i) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
+             or (val<i) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+             or (val>i) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+      end;
+      lt_bigint: begin
+        cr:=C_FLIPPED[P_bigIntLiteral(other)^.val.compare(val)];
         result:=(cr=CR_EQUAL  ) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
              or (cr=CR_LESSER ) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
              or (cr=CR_GREATER) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
@@ -1403,8 +1589,10 @@ FUNCTION T_expressionLiteral.negate(CONST minusLocation: T_tokenLocation; VAR ad
     result:=subruleApplyOpCallback(@intLit[-1],tt_operatorMult,@self,minusLocation,threadContext);
   end;
 
-FUNCTION T_intLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newIntLiteral(value.negated); end;
+FUNCTION T_bigIntLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
+  begin result:=newBigIntLiteral(value.negated); end;
+FUNCTION T_smallIntLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
+  begin result:=newIntLiteral(-value); end;
 FUNCTION T_realLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
   begin result:=newRealLiteral(-value); end;
 FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
@@ -1463,7 +1651,8 @@ FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=longint(literalType); end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor val.lowDigit; if val.isNegative then inc(result); {$R+} end;
+FUNCTION T_smallIntLiteral.hash: T_hashInt; begin {$R-} result:=val;                                                        result:=result xor T_hashInt(lt_bigint); {$R+} end;
+FUNCTION T_bigIntLiteral  .hash: T_hashInt; begin {$R-} result:=val.lowDigit; if val.isNegative then result:=not(result)+1; result:=result xor T_hashInt(lt_bigint); {$R+} end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}{$R-}
@@ -1563,9 +1752,16 @@ PROCEDURE T_expressionLiteral.makeIteratable(CONST adapters:P_adapters; CONST lo
 FUNCTION T_literal.equals(CONST other: P_literal): boolean;
   begin result:=(@self = other) or (other^.literalType = literalType) and (other^.toString=toString);  end;
 
-FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
+FUNCTION T_bigIntLiteral.equals(CONST other: P_literal): boolean;
   begin
-    result:=(@self = other) or (other^.literalType = lt_int) and (P_intLiteral(other)^.val.equals(val));
+    result:=(@self = other) or (other^.literalType = lt_bigint) and (P_bigIntLiteral(other)^.val.equals(val))
+                            or (other^.literalType = lt_smallint) and (val.compare(P_smallIntLiteral(other)^.val)=CR_EQUAL);
+  end;
+
+FUNCTION T_smallIntLiteral.equals(CONST other: P_literal): boolean;
+  begin
+    result:=(@self = other) or (other^.literalType = lt_smallint) and (P_smallIntLiteral(other)^.val=val)
+                            or (other^.literalType = lt_bigint) and (P_bigIntLiteral(other)^.val.compare(val)=CR_EQUAL);
   end;
 
 FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
@@ -1683,16 +1879,16 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
   begin
     result:=nil;
     case accessor^.literalType of
-      lt_int: begin
-        i:=P_intLiteral(accessor)^.val.toInt;
-        if (i>=0) and (i<fill) then exit(dat[i]^.rereferenced)
-                               else exit(newVoidLiteral);
+      lt_bigint,lt_smallint: begin
+        if            P_abstractIntLiteral(accessor)^.isBetween(0,fill-1)
+        then exit(dat[P_abstractIntLiteral(accessor)^.intValue]^.rereferenced)
+        else exit(newVoidLiteral);
       end;
       lt_intList, lt_emptyList: begin
         result:=newListLiteral(P_listLiteral(accessor)^.fill);
         for j:=0 to P_listLiteral(accessor)^.fill-1 do begin
-          i:=P_intLiteral(P_listLiteral(accessor)^.dat[j])^.val.toInt;
-          if (i>=0) and (i<fill) then P_listLiteral(result)^.append(dat[i],true);
+          if                                     P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.isBetween(0,fill-1)
+          then P_listLiteral(result)^.append(dat[P_abstractIntLiteral(P_listLiteral(accessor)^.dat[j])^.intValue],true);
         end;
         exit(result);
       end;
@@ -1701,8 +1897,8 @@ FUNCTION T_listLiteral.get(CONST accessor:P_literal):P_literal;
         P_setLiteral(result)^.dat.rehashForExpectedSize(P_setLiteral(accessor)^.size);
         iter:=P_setLiteral(accessor)^.iteratableList;
         for idx in iter do begin
-          i:=P_intLiteral(idx)^.val.toInt;
-          if (i>=0) and (i<fill) then P_setLiteral(result)^.append(dat[i],true);
+          if                                    P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
+          then P_setLiteral(result)^.append(dat[P_abstractIntLiteral(idx)^.intValue],true);
         end;
         disposeLiteral(iter);
         exit(result);
@@ -1780,9 +1976,15 @@ FUNCTION T_mapLiteral.getInner(CONST accessor:P_literal):P_literal;
       sub       :P_collectionLiteral;
   begin
     case accessor^.literalType of
-      lt_int: begin
-        wantKeys  :=(P_intLiteral(accessor)^.val.toInt=0);
-        wantValues:=(P_intLiteral(accessor)^.val.toInt=1);
+      lt_bigint: begin
+        wantKeys  :=P_bigIntLiteral(accessor)^.val.isZero;
+        wantValues:=P_bigIntLiteral(accessor)^.val.isOne;
+        validCase :=true;
+
+      end;
+      lt_smallint: begin
+        wantKeys  :=(P_smallIntLiteral(accessor)^.val=0);
+        wantValues:=(P_smallIntLiteral(accessor)^.val=1);
         validCase :=true;
       end;
       lt_intList, lt_intSet,lt_emptyList,lt_emptySet: begin
@@ -1833,21 +2035,34 @@ FUNCTION T_boolLiteral.leqForSorting(CONST other: P_literal): boolean;
     else result:=(literalType<=other^.literalType);
   end;
 
-FUNCTION T_intLiteral.leqForSorting(CONST other: P_literal): boolean;
+FUNCTION T_smallIntLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  result:=val.compare(P_intLiteral (other)^.val) in [CR_LESSER,CR_EQUAL];
-      lt_real: result:=val.compare(P_realLiteral(other)^.val) in [CR_LESSER,CR_EQUAL];
+      lt_real    : result:=not(isNan(  P_realLiteral    (other)^.val)) and
+                          (val<=P_realLiteral    (other)^.val);
+      lt_smallint: result:=val<=P_smallIntLiteral(other)^.val;
+      lt_bigint  : result:=P_bigIntLiteral(other)^.val.compare(val) in [CR_GREATER,CR_EQUAL];
+    else result:=(literalType<=other^.literalType); end;
+  end;
+
+FUNCTION T_bigIntLiteral.leqForSorting(CONST other: P_literal): boolean;
+  begin
+    case other^.literalType of
+      lt_real    : result:=not(isNan(  P_realLiteral    (other)^.val)) and
+                          (val.compare(P_realLiteral    (other)^.val) in [CR_LESSER,CR_EQUAL]);
+      lt_bigint  : result:=val.compare(P_bigIntLiteral  (other)^.val) in [CR_LESSER,CR_EQUAL];
+      lt_smallint: result:=val.compare(P_smallIntLiteral(other)^.val) in [CR_LESSER,CR_EQUAL];
     else result:=(literalType<=other^.literalType); end;
   end;
 
 FUNCTION T_realLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  result:=P_intLiteral(other)^.val.compare(val) in [CR_EQUAL,CR_GREATER];
-      lt_real: if isNan(val) then result:=not(isNan(P_realLiteral(other)^.val))
-               else if isNan(P_realLiteral(other)^.val) then result:=false
-               else result:=val<=P_realLiteral(other)^.val;
+      lt_bigint  : result:=P_bigIntLiteral(other)^.val.compare(val) in [CR_EQUAL,CR_GREATER];
+      lt_smallint: result:=isNan(val) or (val<=P_smallIntLiteral(other)^.val);
+      lt_real    : if isNan(val) then result:=not(isNan(P_realLiteral(other)^.val))
+                   else if isNan(P_realLiteral(other)^.val) then result:=false
+                   else result:=val<=P_realLiteral(other)^.val;
     else result:=(literalType<=other^.literalType);  end;
   end;
 
@@ -1904,6 +2119,23 @@ FUNCTION T_mapLiteral.leqForSorting(CONST other: P_literal): boolean;
   end;
 
 //?.leqForSorting:==============================================================
+FUNCTION T_smallIntLiteral.intValue:int64; begin result:=val; end;
+FUNCTION T_bigIntLiteral  .intValue:int64; begin result:=val.toInt; end;
+
+FUNCTION T_smallIntLiteral.floatValue:T_myFloat; begin result:=val; end;
+FUNCTION T_bigIntLiteral  .floatValue:T_myFloat; begin result:=val.toFloat; end;
+FUNCTION T_realLiteral    .floatValue:T_myFloat; begin result:=val; end;
+
+FUNCTION T_smallIntLiteral.isBetween(CONST lowInclusive,highInclusive:longint):boolean;
+  begin result:=(lowInclusive<=val) and (val<=highInclusive); end;
+FUNCTION T_bigIntLiteral  .isBetween(CONST lowInclusive,highInclusive:longint):boolean;
+  begin result:=val.isBetween(lowInclusive,highInclusive) end;
+
+PROCEDURE T_smallIntLiteral.writeToStream(CONST stream:P_outputStreamWrapper);
+  begin writeLongintToStream(val,stream); end;
+PROCEDURE T_bigIntLiteral  .writeToStream(CONST stream:P_outputStreamWrapper);
+  begin val.writeToStream(stream); end;
+
 FUNCTION T_stringLiteral.softCast: P_literal;
   VAR
     len: longint;
@@ -2011,7 +2243,8 @@ PROCEDURE T_listLiteral.modifyType(CONST L: P_literal);
     case L^.literalType of
       lt_error     : begin inc(others); containsError:=true; literalType:=lt_list; end;
       lt_boolean   : begin inc(booleans); if literalType in [lt_emptyList,lt_booleanList] then literalType:=lt_booleanList                                      else literalType:=lt_list; end;
-      lt_int       : begin inc(ints);     case literalType of lt_emptyList,lt_intList: literalType:=lt_intList; lt_realList,lt_numList:literalType:=lt_numList; else literalType:=lt_list; end; end;
+      lt_bigint,
+      lt_smallint  : begin inc(ints);     case literalType of lt_emptyList,lt_intList: literalType:=lt_intList; lt_realList,lt_numList:literalType:=lt_numList; else literalType:=lt_list; end; end;
       lt_real      : begin inc(reals);    case literalType of lt_emptyList,lt_realList:literalType:=lt_realList;lt_intList ,lt_numList:literalType:=lt_numList; else literalType:=lt_list; end; end;
       lt_string    : begin inc(strings);  if literalType in [lt_emptyList,lt_stringList] then literalType:=lt_stringList                                        else literalType:=lt_list; end;
       lt_expression,
@@ -2026,7 +2259,8 @@ PROCEDURE T_setLiteral.modifyType(CONST L: P_literal);
     case L^.literalType of
       lt_error     : begin inc(others); containsError:=true; literalType:=lt_set; end;
       lt_boolean   : begin inc(booleans); if literalType in [lt_emptySet,lt_booleanSet] then literalType:=lt_booleanSet                                   else literalType:=lt_set; end;
-      lt_int       : begin inc(ints);     case literalType of lt_emptySet,lt_intSet: literalType:=lt_intSet; lt_realSet,lt_numSet:literalType:=lt_numSet; else literalType:=lt_set; end; end;
+      lt_bigint,
+      lt_smallint  : begin inc(ints);     case literalType of lt_emptySet,lt_intSet: literalType:=lt_intSet; lt_realSet,lt_numSet:literalType:=lt_numSet; else literalType:=lt_set; end; end;
       lt_real      : begin inc(reals);    case literalType of lt_emptySet,lt_realSet:literalType:=lt_realSet;lt_intSet ,lt_numSet:literalType:=lt_numSet; else literalType:=lt_set; end; end;
       lt_string    : begin inc(strings);  if literalType in [lt_emptySet,lt_stringSet] then literalType:=lt_stringSet                                     else literalType:=lt_set; end;
       lt_expression,
@@ -2081,9 +2315,10 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
       exit;
     end;
     last:=dat[fill-1];
-    if (last^.literalType = lt_int) and (L^.literalType = lt_int) then begin
-      i0:=P_intLiteral(last)^.val.toInt;
-      i1:=P_intLiteral(L   )^.val.toInt;
+    if (last^.literalType in [lt_bigint,lt_smallint]) and P_abstractIntLiteral(last)^.isBetween(-maxLongint,maxLongint) and
+       (L   ^.literalType in [lt_bigint,lt_smallint]) and P_abstractIntLiteral(L   )^.isBetween(-maxLongint,maxLongint) then begin
+      i0:=P_abstractIntLiteral(last)^.intValue;
+      i1:=P_abstractIntLiteral(L   )^.intValue;
       newLen:=fill+abs(i1-i0)+1;
       if newLen>alloc then begin
         ReAllocMem(dat,sizeOf(P_literal)*newLen);
@@ -2221,7 +2456,8 @@ PROCEDURE T_setLiteral.drop(CONST L:P_literal);
     disposeLiteral(dropped.key);
     case L^.literalType of
       lt_boolean: dec(booleans);
-      lt_int    : dec(ints);
+      lt_smallint,
+      lt_bigint : dec(ints);
       lt_real   : dec(reals);
       lt_string : dec(strings);
       else        dec(others);
@@ -2458,42 +2694,13 @@ FUNCTION T_listLiteral.clone: P_compoundLiteral;
   end;
 
 FUNCTION T_setLiteral.clone: P_compoundLiteral;
-  VAR bin,i:longint;
   begin
-    result:=newSetLiteral();
-    setLength(P_setLiteral(result)^.dat.dat,
-                             length(dat.dat));
-    P_setLiteral(result)^.dat.fill:=dat.fill;
-    for bin:=0 to length(dat.dat)-1 do begin
-      setLength(P_setLiteral(result)^.dat.dat[bin],
-                               length(dat.dat[bin]));
-      for i:=0 to length(dat.dat[bin])-1 do begin
-        P_setLiteral(result)^.dat.dat[bin,i]:=
-                              dat.dat[bin,i];
-        dat.dat[bin,i].key^.rereference;
-      end;
-    end;
-    result^.literalType:=literalType;
+    new(P_setLiteral(result),createClone(self));
   end;
 
 FUNCTION T_mapLiteral.clone: P_compoundLiteral;
-  VAR bin,i:longint;
   begin
-    result:=newMapLiteral;
-    result^.literalType:=literalType;
-    P_mapLiteral(result)^.dat.fill:=dat.fill;
-    setLength(P_mapLiteral(result)^.dat.dat,
-                             length(dat.dat));
-    for bin:=0 to length(dat.dat)-1 do begin
-      setLength(P_mapLiteral(result)^.dat.dat[bin],
-                               length(dat.dat[bin]));
-      for i:=0 to length(dat.dat[bin])-1 do begin
-        P_mapLiteral(result)^.dat.dat[bin,i]:=
-                              dat.dat[bin,i];
-        dat.dat[bin,i].key  ^.rereference;
-        dat.dat[bin,i].value^.rereference;
-      end;
-    end;
+    new(P_mapLiteral(result),createClone(self));
   end;
 
 FUNCTION T_listLiteral.iteratableList: T_arrayOfLiteral;
@@ -2583,8 +2790,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
       disposeLiteral(iter);
       inc(acceptMask,bit[i]);
     end;
-    result:=newSetLiteral;
-    result^.dat.rehashForExpectedSize(maxSubsetSize);
+    result:=newSetLiteral(maxSubsetSize);
     for entry in counterSet.keyValueList do if (entry.value=acceptMask) then result^.append(entry.key,true);
     counterSet.destroy;
   end;
@@ -2616,7 +2822,8 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
   VAR map1,map2:P_mapLiteral;
       merger:P_expressionLiteral;
       entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
-      L,M:P_literal;
+      pTargetEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
+      M:P_literal;
   begin
     if (params=nil) or (params^.size<>3) or
        not(params^.value[0]^.literalType in [lt_map,lt_emptyMap]) or
@@ -2628,22 +2835,22 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
 
     if map2^.size=0 then exit(P_mapLiteral(map1^.rereferenced));
-    result:=P_mapLiteral(map1^.clone);
+    new(result,createClone(map1^));
 
     for entry in map2^.dat.keyValueList do begin
-      L:=result^.dat.get(entry.key,nil);
-      if L=nil then begin
-        result^.dat.putNew(entry,L);
+      pTargetEntry:=result^.dat.getEntry(entry.key);
+      if pTargetEntry=nil then begin
+        result^.dat.putNew(entry,M);
         entry.key  ^.rereference;
         entry.value^.rereference;
       end else begin
-        M:=merger^.evaluateToLiteral(location,contextPointer,L,entry.value).literal;
+        M:=merger^.evaluateToLiteral(location,contextPointer,pTargetEntry^.value,entry.value).literal;
         if M=nil then begin
           disposeLiteral(result);
           exit(nil);
         end;
-        disposeLiteral(L);
-        result^.dat.putNew(entry.key,M,L);
+        disposeLiteral(pTargetEntry^.value);
+        pTargetEntry^.value:=M;
       end;
     end;
     if result^.dat.fill>0 then result^.literalType:=lt_map
@@ -2723,9 +2930,9 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
       end else if (toMutate^.literalType in C_mapTypes) then begin
         ensureExclusiveAccess(P_mapLiteral(toMutate));
         P_mapLiteral(toMutate)^.drop(RHS);
-      end else if (toMutate^.literalType in C_listTypes) and (RHS^.literalType=lt_int) then begin
+      end else if (toMutate^.literalType in C_listTypes) and (RHS^.literalType in [lt_bigint,lt_smallint]) then begin
         ensureExclusiveAccess(P_listLiteral(toMutate));
-        P_listLiteral(toMutate)^.removeElement(P_intLiteral(RHS)^.val.toInt);
+        P_listLiteral(toMutate)^.removeElement(P_abstractIntLiteral(RHS)^.intValue);
       end else adapters.raiseError('Cannot drop from literal of type '+toMutate^.typeString,location);
       return(newVoidLiteral);
     end;
@@ -2751,8 +2958,8 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
       accessorTail:=accessor^.tail;
       result:=false;
       if toMutate^.literalType in C_listTypes then begin
-        if accessor^.value[0]^.literalType=lt_int then begin
-          listIndex:=P_intLiteral(accessor^.value[0])^.val.toInt;
+        if accessor^.value[0]^.literalType in [lt_bigint,lt_smallint] then begin
+          listIndex:=P_abstractIntLiteral(accessor^.value[0])^.intValue;
           if (listIndex>=0) and (listIndex<P_listLiteral(toMutate)^.fill) then begin
             ensureExclusiveAccess(P_listLiteral(toMutate));
             prevType:=P_listLiteral(toMutate)^.dat[listIndex]^.literalType;
@@ -2760,14 +2967,16 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
               if prevType<>P_listLiteral(toMutate)^.dat[listIndex]^.literalType then begin
                 case prevType of
                   lt_boolean: dec(P_listLiteral(toMutate)^.booleans);
-                  lt_int:     dec(P_listLiteral(toMutate)^.ints);
+                  lt_smallint,
+                  lt_bigint:  dec(P_listLiteral(toMutate)^.ints);
                   lt_real:    dec(P_listLiteral(toMutate)^.reals);
                   lt_string:  dec(P_listLiteral(toMutate)^.strings);
                   else        dec(P_listLiteral(toMutate)^.others);
                 end;
                 case P_listLiteral(toMutate)^.dat[listIndex]^.literalType of
                   lt_boolean: inc(P_listLiteral(toMutate)^.booleans);
-                  lt_int:     inc(P_listLiteral(toMutate)^.ints);
+                  lt_smallint,
+                  lt_bigint:  inc(P_listLiteral(toMutate)^.ints);
                   lt_real:    inc(P_listLiteral(toMutate)^.reals);
                   lt_string:  inc(P_listLiteral(toMutate)^.strings);
                   else        inc(P_listLiteral(toMutate)^.others);
@@ -2877,98 +3086,6 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       if (t>=low(T_literalType)) and (t<=high(T_literalType)) then result:=C_typeInfo[t].name else result:='';
     end;
 
-  FUNCTION literalFromStream255:P_literal;
-    VAR literalType:T_literalType;
-        reusableIndex:longint;
-        literalByte:byte;
-        listSize:longint;
-        i:longint;
-        mapKey,mapValue:P_literal;
-    begin
-      literalByte:=stream^.readByte;
-      if literalByte=255 then begin
-        reusableIndex:=stream^.readNaturalNumber;
-        if (reusableIndex<reusableFill) then begin
-          result:=reusableLiterals[reusableIndex];
-          result^.rereference;
-        end else begin
-          result:=newVoidLiteral;
-          stream^.logWrongTypeError;
-          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
-        end;
-        exit(result);
-      end;
-      literalType:=T_literalType(literalByte);
-      case literalType of
-        lt_boolean:result:=newBoolLiteral  (stream^.readBoolean   );
-        lt_int    :result:=newIntLiteral   (stream^.readInt64     );
-        lt_real   :result:=newRealLiteral  (stream^.readDouble    );
-        lt_string :result:=newStringLiteral(stream^.readAnsiString);
-        lt_booleanList,lt_booleanSet: begin
-          listSize:=stream^.readNaturalNumber;
-          if literalType in C_setTypes
-          then result:=newSetLiteral(listSize)
-          else result:=newListLiteral(listSize);
-          for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
-        end;
-        lt_intList,lt_intSet: begin
-          listSize:=stream^.readNaturalNumber;
-          if literalType in C_setTypes
-          then result:=newSetLiteral(listSize)
-          else result:=newListLiteral(listSize);
-          for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendInt(stream^.readInt64);
-        end;
-        lt_realList,lt_realSet: begin
-          listSize:=stream^.readNaturalNumber;
-          if literalType in C_setTypes
-          then result:=newSetLiteral(listSize)
-          else result:=newListLiteral(listSize);
-          for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
-        end;
-        lt_stringList,lt_stringSet: begin
-          listSize:=stream^.readNaturalNumber;
-          if literalType in C_setTypes
-          then result:=newSetLiteral(listSize)
-          else result:=newListLiteral(listSize);
-          for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
-        end;
-        lt_emptyList: result:=newListLiteral(0);
-        lt_emptySet:  result:=newSetLiteral;
-        lt_emptyMap:  result:=newMapLiteral;
-        lt_void    :  result:=newVoidLiteral;
-        lt_list,lt_set,
-        lt_numList,lt_numSet:begin
-          listSize:=stream^.readNaturalNumber;
-          case literalType of
-            lt_set,lt_numSet: result:=newSetLiteral(listSize);
-            else              result:=newListLiteral(listSize);
-          end;
-          for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream255(),false);
-        end;
-        lt_map: begin
-          listSize:=stream^.readNaturalNumber;
-          result:=newMapLiteral;
-          for i:=0 to listSize-1 do if stream^.allOkay then begin
-            mapKey  :=literalFromStream255();
-            mapValue:=literalFromStream255();
-            P_mapLiteral(result)^.dat.put(mapKey,mapValue);
-          end;
-          result^.literalType:=lt_map;
-        end;
-        else begin
-          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(literalByte)+') ! Abort.');
-          stream^.logWrongTypeError;
-          exit(newVoidLiteral);
-        end;
-      end;
-      if (result^.literalType<>literalType) and (adapters<>nil) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
-      if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
-      if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (reusableFill<2097151) then begin
-        reusableLiterals[reusableFill]:=result;
-        inc(reusableFill);
-      end;
-    end;
-
   FUNCTION literalFromStream254:P_literal;
     VAR literalType:T_literalType;
         reusableIndex:longint;
@@ -2976,11 +3093,40 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         i:longint;
         mapKey,mapValue:P_literal;
         tempInt:T_bigInt;
+
+    FUNCTION byteToType(CONST b:byte):T_literalType;
+      begin
+        case b of
+          1: result:=lt_boolean    ;
+          2: result:=lt_smallint   ;
+          3: result:=lt_real       ;
+          4: result:=lt_string     ;
+          6: result:=lt_list       ;
+          7: result:=lt_booleanList;
+          8: result:=lt_intList    ;
+          9: result:=lt_realList   ;
+         10: result:=lt_numList    ;
+         11: result:=lt_stringList ;
+         12: result:=lt_emptyList  ;
+         13: result:=lt_set        ;
+         14: result:=lt_booleanSet ;
+         15: result:=lt_intSet     ;
+         16: result:=lt_realSet    ;
+         17: result:=lt_numSet     ;
+         18: result:=lt_stringSet  ;
+         19: result:=lt_emptySet   ;
+         20: result:=lt_map        ;
+         21: result:=lt_emptyMap   ;
+         22: result:=lt_void       ;
+        else result:=lt_error;
+        end;
+      end;
+
     begin
       reusableIndex:=stream^.readNaturalNumber;
-      if reusableIndex<=byte(high(T_literalType)) then literalType:=T_literalType(byte(reusableIndex))
+      if reusableIndex<=22 then literalType:=byteToType(byte(reusableIndex))
       else begin
-        dec(reusableIndex,byte(high(T_literalType))+1);
+        dec(reusableIndex,23);
         if (reusableIndex<reusableFill) then begin
           result:=reusableLiterals[reusableIndex];
           result^.rereference;
@@ -2993,9 +3139,9 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
       case literalType of
         lt_boolean  : result:=newBoolLiteral  (stream^.readBoolean   );
-        lt_int      : begin
+        lt_smallint : begin
                         tempInt.readFromStream(stream);
-                        result:=newIntLiteral(tempInt);
+                        result:=newBigIntLiteral(tempInt);
                       end;
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString);
@@ -3015,7 +3161,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
             lt_intList,lt_intSet:
               for i:=0 to listSize-1 do if stream^.allOkay then begin
                 tempInt.readFromStream(stream);
-                P_collectionLiteral(result)^.append(newIntLiteral(tempInt),false);
+                P_collectionLiteral(result)^.append(newBigIntLiteral(tempInt),false);
               end;
             lt_realList,lt_realSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
@@ -3059,16 +3205,45 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         i:longint;
         mapKey,mapValue:P_literal;
         tempInt:T_bigInt;
+
+      FUNCTION byteToType(CONST b:byte):T_literalType;
+        begin
+          case b of
+            2, 3: result:=lt_boolean    ;
+            4, 5: result:=lt_bigint     ;
+            6, 7: result:=lt_real       ;
+            8, 9: result:=lt_string     ;
+           12,13: result:=lt_list       ;
+           14,15: result:=lt_booleanList;
+           16,17: result:=lt_intList    ;
+           18,19: result:=lt_realList   ;
+           20,21: result:=lt_numList    ;
+           22,23: result:=lt_stringList ;
+           24,25: result:=lt_emptyList  ;
+           26,27: result:=lt_set        ;
+           28,29: result:=lt_booleanSet ;
+           30,31: result:=lt_intSet     ;
+           32,33: result:=lt_realSet    ;
+           34,35: result:=lt_numSet     ;
+           36,37: result:=lt_stringSet  ;
+           38,39: result:=lt_emptySet   ;
+           40,41: result:=lt_map        ;
+           42,43: result:=lt_emptyMap   ;
+           44,45: result:=lt_void       ;
+          else result:=lt_error;
+          end;
+        end;
+
     begin
       reusableIndex:=stream^.readNaturalNumber;
-      if reusableIndex shr 1<=byte(high(T_literalType)) then begin
-        literalType:=T_literalType(byte(reusableIndex) shr 1);
+      if reusableIndex<=45 then begin
+        literalType:=byteToType(reusableIndex);
         if odd(reusableIndex)
         then customTypeName:=stream^.readAnsiString
         else customTypeName:='';
       end
       else begin
-        dec(reusableIndex,2*byte(high(T_literalType))+2);
+        dec(reusableIndex,46);
         if (reusableIndex<reusableFill) then begin
           result:=reusableLiterals[reusableIndex];
           result^.rereference;
@@ -3083,11 +3258,9 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         lt_boolean  : if customTypeName=''
                       then result:=newBoolLiteral          (stream^.readBoolean)
                       else new(P_boolLiteral(result),create(stream^.readBoolean));
-        lt_int      : begin
+        lt_bigint   : begin
                         tempInt.readFromStream(stream);
-                        if customTypeName=''
-                        then result:=newIntLiteral          (tempInt)
-                        else new(P_intLiteral(result),create(tempInt));
+                        result:=newBigIntLiteral(tempInt);
                       end;
         lt_real     : result:=newRealLiteral  (stream^.readDouble    );
         lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
@@ -3107,7 +3280,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
             lt_intList,lt_intSet:
               for i:=0 to listSize-1 do if stream^.allOkay then begin
                 tempInt.readFromStream(stream);
-                P_collectionLiteral(result)^.append(newIntLiteral(tempInt),false);
+                P_collectionLiteral(result)^.append(newBigIntLiteral(tempInt),false);
               end;
             lt_realList,lt_realSet:
               for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
@@ -3150,13 +3323,123 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
       end;
     end;
 
+  FUNCTION nextIntFromStream:P_abstractIntLiteral;
+    VAR markerByte:byte;
+        big:T_bigInt;
+        small:longint;
+    begin
+      markerByte:=stream^.readByte;
+      if markerByte>=253 then begin
+        big.readFromStream(markerByte,stream);
+        new(P_bigIntLiteral(result),create(big));
+      end else begin
+        small:=readLongintFromStream(markerByte,stream);
+        result:=newIntLiteral(small);
+      end;
+    end;
+
+  FUNCTION literalFromStream252:P_literal;
+    VAR literalType:T_literalType;
+        customTypeName:T_idString='';
+        customType:P_typedef=nil;
+        reusableIndex:longint=-1;
+        listSize:longint;
+        i:longint;
+        mapKey,mapValue:P_literal;
+
+      FUNCTION byteToType(CONST b:byte):T_literalType;
+        begin
+          result:=T_literalType(b shr 1);
+        end;
+
+    begin
+      reusableIndex:=stream^.readNaturalNumber;
+      if reusableIndex<=47 then begin
+        literalType:=byteToType(reusableIndex);
+        if odd(reusableIndex)
+        then customTypeName:=stream^.readAnsiString
+        else customTypeName:='';
+      end
+      else begin
+        dec(reusableIndex,48);
+        if (reusableIndex<reusableFill) then begin
+          result:=reusableLiterals[reusableIndex];
+          result^.rereference;
+        end else begin
+          result:=newVoidLiteral;
+          stream^.logWrongTypeError;
+          errorOrException('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
+        end;
+        exit(result);
+      end;
+      case literalType of
+        lt_boolean  : result:=newBoolLiteral          (stream^.readBoolean);
+        lt_smallint,lt_bigint: result:=nextIntFromStream;
+        lt_real     : result:=newRealLiteral  (stream^.readDouble    );
+        lt_string   : result:=newStringLiteral(stream^.readAnsiString,customTypeName<>'');
+        lt_emptyList: result:=newListLiteral;
+        lt_emptySet : result:=newSetLiteral;
+        lt_emptyMap : result:=newMapLiteral;
+        lt_void     : result:=newVoidLiteral;
+        lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
+        lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
+          listSize:=stream^.readNaturalNumber;
+          if literalType in C_setTypes
+          then result:=newSetLiteral(listSize)
+          else result:=newListLiteral(listSize);
+          case literalType of
+            lt_booleanList,lt_booleanSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendBool(stream^.readBoolean);
+            lt_intList,lt_intSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(nextIntFromStream,false);
+            lt_realList,lt_realSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendReal(stream^.readDouble);
+            lt_stringList,lt_stringSet:
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.appendString(stream^.readAnsiString);
+            else
+              for i:=0 to listSize-1 do if stream^.allOkay then P_collectionLiteral(result)^.append(literalFromStream252(),false);
+          end;
+          if P_collectionLiteral(result)^.size<>listSize then errorOrException('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
+        end;
+        lt_map: begin
+          result:=newMapLiteral;
+          listSize:=stream^.readNaturalNumber;
+          for i:=0 to listSize-1 do if stream^.allOkay then begin
+            mapKey  :=literalFromStream252();
+            mapValue:=literalFromStream252();
+            P_mapLiteral(result)^.dat.put(mapKey,mapValue);
+          end;
+          result^.literalType:=lt_map;
+        end;
+        else begin
+          errorOrException('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(reusableIndex)+') ! Abort.');
+          stream^.logWrongTypeError;
+          exit(newVoidLiteral);
+        end;
+      end;
+      if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
+      if customTypeName<>'' then begin
+        if literalType in C_typables then begin
+          if typeMap.containsKey(customTypeName,customType) then begin
+            P_compoundLiteral(result)^.customType:=customType;
+          end else errorOrException('Read unknown custom type '+customTypeName);
+        end else errorOrException('Read invalid custom for literal of type '+C_typeInfo[literalType].name);
+      end;
+
+      if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
+      if ((literalType=lt_string) or (literalType in C_compoundTypes) or (customTypeName<>'')) and (reusableFill<2097151) then begin
+        reusableLiterals[reusableFill]:=result;
+        inc(reusableFill);
+      end;
+    end;
+
   begin
     getMem(reusableLiterals,sizeOf(P_literal)*2097151);
     encodingMethod:=stream^.readByte;
     case encodingMethod of
-      255: result:=literalFromStream255;
       254: result:=literalFromStream254;
       253: result:=literalFromStream253;
+      252: result:=literalFromStream252;
       else begin
         errorOrException('Invalid literal encoding type '+intToStr(encodingMethod));
         result:=newVoidLiteral;
@@ -3190,8 +3473,8 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
       stream^.writeNaturalNumber(typeByte);
       if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then stream^.writeAnsiString(P_typableLiteral(L)^.customType^.name);
       case L^.literalType of
-        lt_boolean:stream^.writeBoolean   (P_boolLiteral  (L)^.val);
-        lt_int:    P_intLiteral(L)^.val.writeToStream(stream);
+        lt_boolean : stream^.writeBoolean   (P_boolLiteral  (L)^.val);
+        lt_smallint,lt_bigint  : P_abstractIntLiteral(L)^.writeToStream(stream);
         lt_real:   stream^.writeDouble    (P_realLiteral  (L)^.val);
         lt_string: stream^.writeAnsiString(P_stringLiteral(L)^.val);
         lt_booleanList,lt_booleanSet:begin
@@ -3203,7 +3486,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_intList,lt_intSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then P_intLiteral(x)^.val.writeToStream(stream);
+          for x in iter do if (adapters=nil) or (adapters^.noErrors) then P_abstractIntLiteral(x)^.writeToStream(stream);
           disposeLiteral(iter);
         end;
         lt_realList,lt_realSet:begin
@@ -3244,7 +3527,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
 
   begin
     reusableMap.create();
-    stream^.writeByte(253);
+    stream^.writeByte(252);
     writeLiteral(L);
     reusableMap.destroy;
   end;
@@ -3274,7 +3557,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
         sortedTemp:P_listLiteral=nil;
     begin
       case L^.literalType of
-        lt_boolean,lt_int,lt_string,lt_real,lt_void: appendPart(L^.toString);
+        lt_boolean,lt_smallint,lt_bigint,lt_string,lt_real,lt_void: appendPart(L^.toString);
         lt_expression: begin
           P_expressionLiteral(L)^.validateSerializability(adapters);
           if (adapters=nil) or (adapters^.noErrors) then appendPart(L^.toString);

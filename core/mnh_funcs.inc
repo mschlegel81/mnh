@@ -70,8 +70,8 @@ FUNCTION runScript_imp intFuncSignature;
        (arg1^.literalType in [lt_emptyList,lt_stringList])
     then begin
       for i:=2 to params^.size-1 do case params^.value[i]^.literalType of
-        lt_int: begin
-          connect:=P_intLiteral(params^.value[i])^.value.toInt;
+        lt_smallint: begin
+          connect:=P_smallIntLiteral(params^.value[i])^.value;
           if (connect<0) or (connect>3) then exit(nil);
         end;
         lt_boolean: enforceDeterminism:=P_boolLiteral(params^.value[i])^.value;

@@ -251,7 +251,7 @@ PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:P_literal
   end;
 
 PROCEDURE T_valueStore.createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean);
-  VAR lit:P_intLiteral;
+  VAR lit:P_abstractIntLiteral;
   begin
     lit:=newIntLiteral(value);
     createVariable(id,lit,readonly);

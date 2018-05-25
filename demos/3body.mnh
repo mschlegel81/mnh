@@ -32,29 +32,20 @@ private aimFPS:=30;
 
 @demo_for=plotting, animation
 main->begin
-  plot.setOptions([['axisStyleX',3],['axisStyleY',3],['autoscaleX',false],['autoscaleY',false]]);
+  plot.setOptions([['axisStyleX',3],['axisStyleY',3],['autoscaleX',true],['autoscaleY',true]]);
   local state:=initialState;
-  local stateLimits:=[['x0',-1.2],['y0',-1.2],['x1',1.2],['y1',1.2]].toMap;
   local plotter:=[newTrailPlotter('red'),
                   newTrailPlotter('green'),
                   newTrailPlotter('blue')];
 
-  local stepForward:=integrator(BOGACKI_SHAMPINE,F,timeStepSize,1E-5);
+  local stepForward:=integrator(CASH_KARP,F,timeStepSize,1E-6);
   local nextFrameAt:=time;
   local stepCounter:=-1;
   while(not(plotClosed),begin
-    local positions:=state[[0,2,4]];
     local stateFuture:=future(stepForward,[state]);
     plot();
-    positions.each(position,begin
-      plotter[index](position);
-      stateLimits['x0']:=min(stateLimits['x0'],position[0]);
-      stateLimits['x1']:=max(stateLimits['x1'],position[0]);
-      stateLimits['y0']:=min(stateLimits['y0'],position[1]);
-      stateLimits['y1']:=max(stateLimits['y1'],position[1]);
-    end);
-    setOptions(stateLimits);
-    plot.drawTextAbsolute(0.5,1,format('t=%6.2f',(stepCounter+=1)*timeStepSize),'T');
+    state[[0,2,4]].each(position,plotter[index](position));
+    plot.drawTextAbsolute(0.05,1,format('t=%6.2f',(stepCounter+=1)*timeStepSize),'TL');
     display;
     state:=stateFuture();
     sleepUntil(nextFrameAt+=1/aimFPS);

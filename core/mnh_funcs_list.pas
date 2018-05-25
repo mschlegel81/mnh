@@ -22,7 +22,7 @@ begin
   if (params<>nil) and (params^.size>=1) then begin
     if arg0^.literalType in C_listTypes then begin
       if      (params^.size=1) then result:=list0^.CALL_MACRO
-      else if (params^.size=2) and (arg1^.literalType=lt_int) then result:=list0^.CALL_MACRO(int1^.value.toInt);
+      else if (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint]) then result:=list0^.CALL_MACRO(int1^.intValue);
     end else if arg0^.literalType in C_scalarTypes then SCALAR_FALLBACK;
   end;
 end}
@@ -38,12 +38,12 @@ begin
      and (params^.size=2)
      and (arg0^.literalType=lt_expression)
      and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
-     and (arg1^.literalType=lt_int)
-     and (int1^.value.toInt>=0) then begin
-     if int1^.value.toInt=0 then exit(newListLiteral());
+     and (arg1^.literalType in [lt_smallint,lt_bigint])
+     and (int1^.intValue>=0) then begin
+     if int1^.intValue=0 then exit(newListLiteral());
      iterator:=P_expressionLiteral(arg0);
-     result:=newListLiteral(int1^.value.toInt);
-     for i:=1 to int1^.value.toInt do begin
+     result:=newListLiteral(int1^.intValue);
+     for i:=1 to int1^.intValue do begin
        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,@context).literal;
        if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
        then break
@@ -96,11 +96,11 @@ FUNCTION sort_imp intFuncSignature;
       {$endif}
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_compoundTypes)
-            and (arg1^.literalType=lt_int) then begin
+            and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
       if arg0^.literalType in C_listTypes
       then cloneOrCopyList0
       else result:=compound0^.toList;
-      P_listLiteral(result)^.sortBySubIndex(int1^.value.toInt,tokenLocation,context.adapters^);
+      P_listLiteral(result)^.sortBySubIndex(int1^.intValue,tokenLocation,context.adapters^);
     end
   end;
 
@@ -138,6 +138,7 @@ FUNCTION getElementFreqency intFuncSignature;
   TYPE T_freqMap=specialize G_literalKeyMap<longint>;
   VAR freqMap:T_freqMap;
       freqList:T_freqMap.KEY_VALUE_LIST;
+      freqEntry:T_freqMap.P_CACHE_ENTRY;
       i:longint;
       list:P_listLiteral;
       iter:T_arrayOfLiteral;
@@ -154,8 +155,12 @@ FUNCTION getElementFreqency intFuncSignature;
     list:=list0;
 
     freqMap.create;
-    for i:=0 to list^.size-1 do freqMap.put(list^.value[i],
-                                freqMap.get(list^.value[i],0)+1);
+    for i:=0 to list^.size-1 do begin
+      freqEntry:=freqMap.getEntry(list^.value[i]);
+      if freqEntry=nil
+      then freqMap.put(list^.value[i],1)
+      else inc(freqEntry^.value);
+    end;
     if not(context.adapters^.noErrors) then begin
       freqMap.destroy;
       exit(nil);
@@ -406,14 +411,17 @@ FUNCTION group_imp intFuncSignature;
       disposeLiteral(dummy);
     end;
 
-  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); inline;
+  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR newLit:P_literal;
         resultLiteral:P_literal;
     begin
-      resultLiteral:=groupMap.get(groupKey,nil);
 
+      resultLiteral:=groupMap.get(groupKey,nil);
       if aggregator=nil then begin
-        if resultLiteral=nil then resultLiteral:=newListLiteral;
+        if resultLiteral=nil then begin
+          resultLiteral:=newListLiteral;
+          groupMap.put(groupKey,resultLiteral);
+        end;
         P_listLiteral(resultLiteral)^.append(L,true);
       end else begin
         if resultLiteral=nil then begin
@@ -428,8 +436,8 @@ FUNCTION group_imp intFuncSignature;
             exit;
           end;
         end;
+        groupMap.put(groupKey,resultLiteral);
       end;
-      groupMap.put(groupKey,resultLiteral);
     end;
 
   VAR inputIndex:longint;
@@ -437,15 +445,15 @@ FUNCTION group_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
        (arg0^.literalType in C_listTypes) and
-      ((arg1^.literalType in C_listTypes) and (list1^.size=list0^.size) or (arg1^.literalType=lt_int)) and
+      ((arg1^.literalType in C_listTypes) and (list1^.size=list0^.size) or (arg1^.literalType in [lt_smallint,lt_bigint])) and
       ((params^.size=2) or (arg2^.literalType=lt_expression))
     then begin
       listToGroup:=P_listLiteral(arg0);
 
-      if arg1^.literalType=lt_int
+      if arg1^.literalType in [lt_smallint,lt_bigint]
       then begin
         initialize(keyList);
-        makeKeysByIndex(P_intLiteral(arg1)^.value.toInt);
+        makeKeysByIndex(int1^.intValue);
       end else keyList:=list1^.iteratableList;
 
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)

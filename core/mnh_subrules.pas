@@ -1592,7 +1592,7 @@ FUNCTION toExpression_imp intFuncSignature;
     if (params<>nil) and (params^.size=1)
     then case arg0^.literalType of
       lt_expression:  begin result:=arg0; arg0^.rereference; end;
-      lt_boolean,lt_int,lt_real: result:=primitiveExpression(arg0);
+      lt_boolean,lt_smallint,lt_bigint,lt_real: result:=primitiveExpression(arg0);
       else result:=stringOrListToExpression(arg0,tokenLocation,context);
     end;
   end;
