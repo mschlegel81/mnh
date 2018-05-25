@@ -554,7 +554,7 @@ PROCEDURE T_eachTask.define(CONST expr: P_expressionLiteral; CONST idx: longint;
   end;
 
 PROCEDURE T_eachTask.evaluate(VAR context: T_threadContext);
-  VAR idxLit:P_intLiteral;
+  VAR idxLit:P_abstractIntLiteral;
   begin
     enterCriticalSection(taskCs);
     state:=fts_evaluating;

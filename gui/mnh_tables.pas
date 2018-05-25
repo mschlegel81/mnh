@@ -149,7 +149,7 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
-    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
+    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=rect(0,1,StringGrid.colCount-1,StringGrid.RowCount-1);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
@@ -197,7 +197,7 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
       setLength(content,StringGrid.RowCount-1);
       for i:=1 to StringGrid.RowCount-1 do begin
         row:='';
-        for j:=0 to StringGrid.ColCount-1 do row:=row+StringGrid.Cells[j,i]+C_tabChar;
+        for j:=0 to StringGrid.colCount-1 do row:=row+StringGrid.Cells[j,i]+C_tabChar;
         content[i-1]:=row;
       end;
       content:=formatTabs(content);
@@ -346,7 +346,7 @@ PROCEDURE TtableForm.fillTable;
 
     if firstIsHeader and mi_transpose.checked then begin
       StringGrid.RowCount:=dataRows+1;
-      StringGrid.ColCount:=dataColumns+1;
+      StringGrid.colCount:=dataColumns+1;
       StringGrid.FixedCols:=1;
       StringGrid.FixedRows:=1;
       for i:=0 to length(cellContents)-1 do
@@ -355,13 +355,13 @@ PROCEDURE TtableForm.fillTable;
       for i:=1 to StringGrid.RowCount-1 do StringGrid.Cells[0,i]:=getHeaderCell(i-1);
     end else begin
       StringGrid.RowCount:=dataRows+1;
-      StringGrid.ColCount:=dataColumns;
+      StringGrid.colCount:=dataColumns;
       StringGrid.FixedCols:=0;
       StringGrid.FixedRows:=1;
       for i:=0 to length(cellContents)-1 do
       for j:=0 to length(cellContents[i])-1 do
       StringGrid.Cells[j,i+1]:=cellContents[i,j];
-      for i:=0 to StringGrid.ColCount-1 do StringGrid.Cells[i,0]:=getHeaderCell(i);
+      for i:=0 to StringGrid.colCount-1 do StringGrid.Cells[i,0]:=getHeaderCell(i);
     end;
     StringGrid.AutoSizeColumns;
   end;

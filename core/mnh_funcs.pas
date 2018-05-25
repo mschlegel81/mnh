@@ -137,7 +137,7 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
       setLength(resultParts,params^.size);
       for i:=0 to params^.size-1 do begin
         case params^.value[i]^.literalType of
-          lt_boolean,lt_int,lt_real,lt_expression:
+          lt_boolean,lt_smallint,lt_bigint,lt_real,lt_expression:
             resultParts[i]:=params^.value[i]^.toString();
           lt_string:
             resultParts[i]:=P_stringLiteral(params^.value[i])^.value;

@@ -71,8 +71,10 @@ FUNCTION toBoolean_imp intFuncSignature;
         lt_boolean: begin result:=arg0; result^.rereference; exit(result); end;
         lt_string: if lowercase(str0^.value) = LITERAL_BOOL_TEXT[false] then exit(newBoolLiteral(false))
               else if lowercase(str0^.value) = LITERAL_BOOL_TEXT[true]  then exit(newBoolLiteral(true));
-        lt_int: if int0^.value.isZero              then exit(newBoolLiteral(false))
-           else if int0^.value.compare(1)=CR_EQUAL then exit(newBoolLiteral(true));
+        lt_bigint: if P_bigIntLiteral(arg0)^.value.isZero then exit(newBoolLiteral(false))
+              else if P_bigIntLiteral(arg0)^.value.isOne  then exit(newBoolLiteral(true));
+        lt_smallint: if P_smallIntLiteral(arg0)^.value=0 then exit(newBoolLiteral(false))
+                else if P_smallIntLiteral(arg0)^.value=1 then exit(newBoolLiteral(true));
         lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
             else if real0^.value=1 then exit(newBoolLiteral(true));
       end;
@@ -87,12 +89,13 @@ FUNCTION toInt_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
-        lt_int: begin result:=arg0; result^.rereference; exit(result); end;
+        lt_smallint,
+        lt_bigint: exit(arg0^.rereferenced);
         lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
         lt_real: if real0^.value=round(real0^.value) then exit(newIntLiteral(round(real0^.value)));
         lt_string: begin
           result:=parseNumber(str0^.value,1,false,len);
-          if (result=nil) or (result^.literalType=lt_int) then exit(result);
+          if (result=nil) or (result^.literalType in [lt_smallint,lt_bigint]) then exit(result);
           //parsed a real number
           if P_realLiteral(result)^.value=round(P_realLiteral(result)^.value) then begin
             i:=round(P_realLiteral(result)^.value);
@@ -117,12 +120,12 @@ FUNCTION toReal_imp intFuncSignature;
       case arg0^.literalType of
         lt_real: begin result:=arg0; result^.rereference; exit(result); end;
         lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-        lt_int: exit(newRealLiteral(int0^.value.toFloat));
+        lt_smallint,lt_bigint: exit(newRealLiteral(int0^.floatValue));
         lt_string: begin
           result:=parseNumber(str0^.value,1,false,len);
           if (result=nil) or (result^.literalType=lt_real) then exit(result);
           //parsed an integer
-          x:=P_intLiteral(result)^.value.toFloat;
+          x:=P_abstractIntLiteral(result)^.floatValue;
           disposeLiteral(result);
           exit(newRealLiteral(x));
         end;
@@ -185,8 +188,8 @@ FUNCTION toGenerator_imp intFuncSignature;
     if (params=nil) or (params^.size=0) then exit(newBoolLiteral(false));
     if (params<>nil) and (params^.size=1) then
     result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK))
-    else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType=lt_int) then
-    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK,int1^.value.toInt));
+    else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint]) then
+    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK,int1^.intValue));
   end}
 
 {$define TYPE_CHECK:=tc_typeCheckScalar          } {$define FUNC_ID:=isScalar           } GENERIC_TYPE_CHECK;

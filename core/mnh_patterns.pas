@@ -234,8 +234,9 @@ PROCEDURE T_patternElement.thinOutWhitelist;
        and (restrictionValue<>nil)
     then begin
       case restrictionValue^.literalType of
-        lt_int      : typeWhitelist:=[lt_int];
-        lt_real     : typeWhitelist:=[lt_int,lt_real];
+        lt_smallint,
+        lt_bigint   : typeWhitelist:=[lt_smallint,lt_bigint];
+        lt_real     : typeWhitelist:=[lt_smallint,lt_bigint,lt_real];
         lt_string   : typeWhitelist:=[lt_string];
         lt_boolean  : typeWhitelist:=[lt_boolean];
         lt_emptyList: if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
@@ -608,22 +609,22 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                 if (parts[i].first^.tokType=tt_braceOpen) then begin
                   if (parts[i].first^.next<>nil) and
                      (parts[i].first^.next^.tokType=tt_literal) and
-                     (P_literal   (parts[i].first^.next^.data)^.literalType=lt_int) and
-                     (P_intLiteral(parts[i].first^.next^.data)^.value.toInt>=0) and
+                     (P_literal   (parts[i].first^.next^.data)^.literalType in [lt_smallint,lt_bigint]) and
+                     (P_abstractIntLiteral(parts[i].first^.next^.data)^.intValue>=0) and
                      (parts[i].first^.next^.next<>nil) and
                      (parts[i].first^.next^.next^.tokType=tt_braceClose) and
                      (parts[i].first^.next^.next^.next=nil) then begin
-                      rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.next^.data)^.value.toInt;
+                      rulePatternElement.restrictionIdx:=P_abstractIntLiteral(parts[i].first^.next^.data)^.intValue;
                       context.recycler.cascadeDisposeToken(parts[i].first);
                   end else begin
                     context.reduceExpression(parts[i].first);
                     if (context.adapters^.noErrors) and
                        (parts[i].first<>nil) and
                        (parts[i].first^.tokType=tt_literal) and
-                       (P_literal   (parts[i].first^.data)^.literalType=lt_int) and
-                       (P_intLiteral(parts[i].first^.data)^.value.toInt>=0)
+                       (P_literal   (parts[i].first^.data)^.literalType in [lt_smallint,lt_bigint]) and
+                       (P_abstractIntLiteral(parts[i].first^.data)^.intValue>=0)
                     then begin
-                      rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.data)^.value.toInt;
+                      rulePatternElement.restrictionIdx:=P_abstractIntLiteral(parts[i].first^.data)^.intValue;
                       context.recycler.cascadeDisposeToken(parts[i].first);
                     end else fail(parts[i].first);
                   end;

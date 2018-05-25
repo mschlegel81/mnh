@@ -60,7 +60,7 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
 
 FUNCTION httpError_impl intFuncSignature;
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint)
     then result:=newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
     else if (params=nil) or (params^.size=0)
     then result:=newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
@@ -85,11 +85,10 @@ FUNCTION startServer_impl intFuncSignature;
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(3)) and
-       (arg2^.literalType in [lt_int,lt_real])  and
+       (arg2^.literalType in [lt_smallint,lt_bigint,lt_real])  and
        context.checkSideEffects('startHttpServer',tokenLocation,[se_alterContextState,se_server,se_detaching]) then begin
 
-      if arg2^.literalType=lt_int then timeout:=int2^.value.toFloat/(24*60*60)
-                                  else timeout:=real2^.value       /(24*60*60);
+      timeout:=P_numericLiteral(arg2)^.floatValue/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
       servingExpression^.rereference;
       childContext:=context.getNewAsyncContext;

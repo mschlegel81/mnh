@@ -28,10 +28,10 @@
 {$define str1:=P_stringLiteral(params^.value[1])}
 {$define str2:=P_stringLiteral(params^.value[2])}
 {$define str3:=P_stringLiteral(params^.value[3])}
-{$define int0:=P_intLiteral(params^.value[0])}
-{$define int1:=P_intLiteral(params^.value[1])}
-{$define int2:=P_intLiteral(params^.value[2])}
-{$define int3:=P_intLiteral(params^.value[3])}
+{$define int0:=P_abstractIntLiteral(params^.value[0])}
+{$define int1:=P_abstractIntLiteral(params^.value[1])}
+{$define int2:=P_abstractIntLiteral(params^.value[2])}
+{$define int3:=P_abstractIntLiteral(params^.value[3])}
 {$define real0:=P_realLiteral(params^.value[0])}
 {$define real1:=P_realLiteral(params^.value[1])}
 {$define real2:=P_realLiteral(params^.value[2])}

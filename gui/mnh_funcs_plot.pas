@@ -25,7 +25,7 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
         if isInfinite(result) then
           result:=Nan;
         end;
-      lt_int: result:=P_intLiteral(x)^.value.toInt;
+      lt_smallint,lt_bigint: result:=P_abstractIntLiteral(x)^.floatValue;
       else result:=Nan;
     end;
   end;
@@ -88,13 +88,13 @@ FUNCTION addPlot intFuncSignature;
       end;
       if (sizeWithoutOptions = 4) and
          (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
-         (arg1^.literalType in [lt_int,lt_real]) and
-         (arg2^.literalType in [lt_int,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
-         (arg3^.literalType=lt_int) and (int3^.value.toInt>=2) then begin
+         (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
+         (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
+         (arg3^.literalType in [lt_smallint,lt_bigint]) and (int3^.isBetween(2,maxLongint)) then begin
         context.adapters^.plot^.addRow(options,generateRow(P_expressionLiteral(arg0),
                                                           fReal(arg1),
                                                           fReal(arg2),
-                                                          int3^.value.toInt,
+                                                          int3^.intValue,
                                                           tokenLocation,
                                                           context));
         if context.adapters^.noErrors then context.adapters^.logDeferredPlot;
@@ -147,22 +147,22 @@ FUNCTION setOptions intFuncSignature;
 
     VAR f:double;
     begin
-      if (key='x0'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+      if (key='x0'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['x'].worldMin:=f;
       end else
-      if (key='x1'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+      if (key='x1'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['x'].worldMax:=f;
       end else
-      if (key='y0'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+      if (key='y0'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['y'].worldMin:=f;
       end else
-      if (key='y1'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+      if (key='y1'            ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.axisTrafo['y'].worldMax:=f;
       end else
-      if (key='fontsize'      ) and (value^.literalType in [lt_int,lt_real]) then begin
+      if (key='fontsize'      ) and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.relativeFontSize:=f;
       end else
-      if (key='autoscaleFactor') and (value^.literalType in [lt_int,lt_real]) then begin
+      if (key='autoscaleFactor') and (value^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
         f:=fReal(value); if isNan(f) or (f<1E-3) then fail else opt.autoscaleFactor:=f;
       end else
       if (key='preserveAspect') and (value^.literalType=lt_boolean) then begin
@@ -180,11 +180,11 @@ FUNCTION setOptions intFuncSignature;
       if (key='logscaleY'     ) and (value^.literalType=lt_boolean) then begin
         opt.axisTrafo['y'].logscale:=P_boolLiteral(value)^.value;
       end else
-      if (key='axisStyleX'    ) and (value^.literalType=lt_int) then begin
-        opt.axisStyle['x']:=P_intLiteral(value)^.value.lowDigit and 7;
+      if (key='axisStyleX'    ) and (value^.literalType in [lt_smallint,lt_bigint]) then begin
+        opt.axisStyle['x']:=P_abstractIntLiteral(value)^.intValue and 7;
       end else
-      if (key='axisStyleY'    ) and (value^.literalType=lt_int) then begin
-        opt.axisStyle['y']:=P_intLiteral(value)^.value.lowDigit and 7;
+      if (key='axisStyleY'    ) and (value^.literalType in [lt_smallint,lt_bigint]) then begin
+        opt.axisStyle['y']:=P_abstractIntLiteral(value)^.intValue and 7;
       end else fail;
     end;
 
@@ -204,7 +204,7 @@ FUNCTION setOptions intFuncSignature;
         matchKey(P_stringLiteral(P_listLiteral(pair)^.value[0])^.value,P_listLiteral(pair)^.value[1]);
       disposeLiteral(iter);
       result:=newBoolLiteral(allOkay);
-    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_int,lt_boolean]) then begin
+    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_smallint,lt_bigint,lt_boolean]) then begin
       matchKey(str0^.value,arg1);
       result:=newBoolLiteral(allOkay);
     end else allOkay:=false;
@@ -231,14 +231,14 @@ FUNCTION renderToFile_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=3) and
       (arg0^.literalType = lt_string) and
-      (arg1^.literalType = lt_int) and
-      (arg2^.literalType = lt_int) and
+      (arg1^.literalType in [lt_smallint,lt_bigint]) and
+      (arg2^.literalType in [lt_smallint,lt_bigint]) and
       ((params^.size = 3) or (params^.size = 4) and
-      (arg3^.literalType = lt_int)) then begin
+      (arg3^.literalType in [lt_smallint,lt_bigint])) then begin
       fileName:=str0^.value;
-      width:=int1^.value.toInt;
-      height:=int2^.value.toInt;
-      if params^.size>3 then quality:=int3^.value.lowDigit
+      width :=int1^.intValue;
+      height:=int2^.intValue;
+      if params^.size>3 then quality:=int3^.intValue
                         else quality:=0;
       if (fileName = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       try
@@ -260,13 +260,13 @@ FUNCTION renderToString_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and
-      (arg0^.literalType = lt_int) and
-      (arg1^.literalType = lt_int) and
+      (arg0^.literalType in [lt_smallint,lt_bigint]) and
+      (arg1^.literalType in [lt_smallint,lt_bigint]) and
       ((params^.size = 2) or (params^.size = 3) and
-      (arg2^.literalType = lt_int)) then begin
-      width:=int0^.value.toInt;
-      height:=int1^.value.toInt;
-      if params^.size>2 then quality:=int2^.value.lowDigit
+      (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
+      width:=int0^.intValue;
+      height:=int1^.intValue;
+      if params^.size>2 then quality:=int2^.intValue
                         else quality:=0;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       result:=newStringLiteral(context.adapters^.plot^.renderToString(width,height,quality));
@@ -278,8 +278,8 @@ FUNCTION removePlot_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
-       (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and (int0^.value.toInt>0) then begin
-      if (params<>nil) and (params^.size=1) then toDrop:=int0^.value.toInt;
+       (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
+      if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
       context.adapters^.plot^.removeRows(toDrop);
       context.adapters^.logDeferredPlot;
       result:=newVoidLiteral;
@@ -296,8 +296,8 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=3) and
-       (arg0^.literalType in [lt_int,lt_real]) and
-       (arg1^.literalType in [lt_int,lt_real]) and
+       (arg0^.literalType in [lt_smallint,lt_bigint,lt_real]) and
+       (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
        (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       initialize(lines);
       case arg2^.literalType of
@@ -313,7 +313,7 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
       txt.absolutePosition:=abspos;
       for i:=3 to params^.size-1 do begin
         case params^.value[i]^.literalType of
-          lt_real,lt_int: txt.fontSize:=fReal(params^.value[i]);
+          lt_real,lt_smallint,lt_bigint: txt.fontSize:=fReal(params^.value[i]);
           lt_string: if hasAnchor then txt.fontName:=P_stringLiteral(params^.value[i])^.value
                                   else begin
                                     txt.setAnchor(P_stringLiteral(params^.value[i])^.value);

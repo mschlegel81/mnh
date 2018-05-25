@@ -21,7 +21,7 @@ IMPLEMENTATION
     result:=nil;
     case x^.literalType of
       lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(ID_MACRO,tokenLocation,@context);
-      lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value.toFloat)); except result:=newRealLiteral(Nan) end;
+      lt_smallint,lt_bigint: try result:=newRealLiteral(CALL_MACRO(P_abstractIntLiteral (x)^.floatValue)); except result:=newRealLiteral(Nan) end;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value        )); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
       lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
@@ -99,17 +99,18 @@ FUNCTION not_imp intFuncSignature;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR y:P_literal;
         iter:T_arrayOfLiteral;
-        zero:T_bigInt;
+        temp:T_bigInt;
     begin
       result:=nil;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('not',tokenLocation,@context);
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
-        lt_int:     begin
-                      zero.createZero;
-                      result:=newIntLiteral (P_intLiteral (x)^.value.bitNegate(consideredBits));
-                      zero.destroy;
-                    end;
+        lt_bigint:  result:=newIntLiteral (P_bigIntLiteral (x)^.value.bitNegate(consideredBits));
+        lt_smallint: begin
+          temp.fromInt(P_smallIntLiteral(x)^.value);
+          result:=newIntLiteral(temp.bitNegate(consideredBits));
+          temp.destroy;
+        end;
         lt_list,lt_booleanList,lt_intList,lt_emptyList,
         lt_set ,lt_booleanSet ,lt_intSet ,lt_emptySet: begin
           result:=P_collectionLiteral(x)^.newOfSameType(true);
@@ -127,9 +128,11 @@ FUNCTION not_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_int) and (int1^.value.canBeRepresentedAsInt32))
+    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (
+      (arg1^.literalType=lt_smallint) or
+      (arg1^.literalType=lt_bigint) and (P_bigIntLiteral(arg1)^.value.canBeRepresentedAsInt32)))
     then begin
-      if params^.size=2 then consideredBits:=int1^.value.toInt;
+      if params^.size=2 then consideredBits:=int1^.intValue;
       result:=not_rec(arg0);
     end;
   end;
@@ -138,12 +141,44 @@ FUNCTION not_imp intFuncSignature;
   FUNCTION recurse(CONST x,y:P_literal):P_literal;
     VAR xIter,yIter:T_arrayOfLiteral;
         xSub ,ySub ,rSub:P_literal;
+        tempX,tempY:T_bigInt;
         i:longint;
     begin
       result:=nil;
       case x^.literalType of
-        lt_int: case y^.literalType of
-          lt_int: exit(newIntLiteral(P_intLiteral(x)^.value.BIGINT_OP(P_intLiteral(y)^.value,consideredBits)));
+        lt_bigint: case y^.literalType of
+          lt_bigint:  exit(newIntLiteral(P_bigIntLiteral(x)^.value.BIGINT_OP(P_bigIntLiteral(y)^.value,consideredBits)));
+          lt_smallint: begin
+            tempY.fromInt(P_smallIntLiteral(y)^.value);
+            result:=newIntLiteral(P_bigIntLiteral(x)^.value.BIGINT_OP(tempY,consideredBits));
+            tempY.destroy;
+            exit(result);
+          end;
+          lt_emptyList,lt_intList,lt_list,
+          lt_emptySet ,lt_intSet ,lt_set: begin
+            result:=P_collectionLiteral(y)^.newOfSameType(true);
+            yIter :=P_collectionLiteral(y)^.iteratableList;
+            for ySub in yIter do if context.adapters^.noErrors then
+              P_collectionLiteral(result)^.append(recurse(x,ySub),false);
+            disposeLiteral(yIter);
+            exit(result);
+          end;
+        end;
+        lt_smallint: case y^.literalType of
+          lt_bigint: begin
+            tempX.fromInt(P_smallIntLiteral(x)^.value);
+            result:=newIntLiteral(tempX.BIGINT_OP(P_bigIntLiteral(y)^.value,consideredBits));
+            tempX.destroy;
+            exit(result);
+          end;
+          lt_smallint: begin
+            tempX.fromInt(P_smallIntLiteral(x)^.value);
+            tempY.fromInt(P_smallIntLiteral(y)^.value);
+            result:=newIntLiteral(tempX.BIGINT_OP(tempY,consideredBits));
+            tempX.destroy;
+            tempY.destroy;
+            exit(result);
+          end;
           lt_emptyList,lt_intList,lt_list,
           lt_emptySet ,lt_intSet ,lt_set: begin
             result:=P_collectionLiteral(y)^.newOfSameType(true);
@@ -155,7 +190,7 @@ FUNCTION not_imp intFuncSignature;
           end;
         end;
         lt_emptyList,lt_intList,lt_list: case y^.literalType of
-          lt_int: begin
+          lt_smallint,lt_bigint: begin
             result:=P_collectionLiteral(x)^.newOfSameType(true);
             xIter :=P_collectionLiteral(x)^.iteratableList;
             for xSub in xIter do if context.adapters^.noErrors then
@@ -174,7 +209,7 @@ FUNCTION not_imp intFuncSignature;
           end else context.adapters^.raiseError('Incompatible list sizes in '+FUNC_NAME+': '+intToStr(P_listLiteral(x)^.size)+' != '+intToStr(P_listLiteral(y)^.size),tokenLocation);
         end;
         lt_emptySet ,lt_intSet ,lt_set: case y^.literalType of
-          lt_int: begin
+          lt_smallint,lt_bigint: begin
             result:=P_collectionLiteral(x)^.newOfSameType(true);
             xIter :=P_collectionLiteral(x)^.iteratableList;
             for xSub in xIter do if context.adapters^.noErrors then
@@ -201,8 +236,10 @@ FUNCTION not_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) or ((params^.size=3) and (arg2^.literalType=lt_int) and (int2^.value.canBeRepresentedAsInt32)) then begin
-      if params^.size=3 then consideredBits:=int2^.value.toInt;
+    if (params<>nil) and (params^.size=2) or (params^.size=3) and (
+      (arg2^.literalType=lt_smallint) or
+      (arg2^.literalType=lt_bigint) and (P_bigIntLiteral(arg2)^.value.canBeRepresentedAsInt32)) then begin
+      if params^.size=3 then consideredBits:=int2^.intValue;
       result:=recurse(arg0,arg1);
       if (result<>nil) and not(context.adapters^.noErrors) then disposeLiteral(result);
     end;
@@ -232,9 +269,12 @@ FUNCTION abs_imp intFuncSignature;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('abs',tokenLocation,@context);
         lt_error: begin result:=x; result^.rereference; end;
-        lt_int : if P_intLiteral(x)^.value.isNegative
-                 then result:=newIntLiteral(P_intLiteral(x)^.value.negated)
-                 else result:=x^.rereferenced;
+        lt_smallint: if P_smallIntLiteral(x)^.value<0
+                     then result:=newIntLiteral(-P_smallIntLiteral(x)^.value)
+                     else result:=x^.rereferenced;
+        lt_bigint : if P_bigIntLiteral(x)^.value.isNegative
+                    then result:=newIntLiteral(P_bigIntLiteral(x)^.value.negated)
+                    else result:=x^.rereferenced;
         lt_real: if P_realLiteral(x)^.value<0
                  then result:=newRealLiteral(-P_realLiteral(x)^.value)
                  else result:=x^.rereferenced;
@@ -268,7 +308,9 @@ FUNCTION sqr_imp intFuncSignature;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sqr',tokenLocation,@context);
         lt_error: begin result:=x; result^.rereference; end;
-        lt_int : result:=newIntLiteral (P_intLiteral (x)^.value.mult(P_intLiteral (x)^.value));
+        lt_smallint : result:=newIntLiteral(sqr(P_smallIntLiteral (x)^.value));
+        lt_bigint   : result:=newIntLiteral(P_bigIntLiteral(x)^.value.mult(
+                                            P_bigIntLiteral(x)^.value));
         lt_real: result:=newRealLiteral(sqr(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
@@ -312,18 +354,18 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
         end;
       end;
 
-  FUNCTION myRound(CONST x:P_intLiteral; CONST y:int64):P_literal; inline;
+  FUNCTION myRound(CONST x:P_abstractIntLiteral; CONST y:int64):P_literal; inline;
     VAR i   :longint=0;
         pot :digitType=1;
         xv  :int64;
     begin
       if y>=0 then exit(x^.rereferenced);
       while (i>y) and (i>-19) do begin pot:=pot*10; dec(i); end;
-      if not(x^.value.canBeRepresentedAsInt64()) then begin
+      if not((x^.literalType=lt_smallint) or P_bigIntLiteral(x)^.value.canBeRepresentedAsInt64()) then begin
         context.adapters^.raiseError('Cannot apply custom rounding to big integers',location);
         exit(newVoidLiteral);
       end;
-      xv:=x^.value.toInt;
+      xv:=x^.intValue;
       result:=newIntLiteral((xv div pot) * pot);
     end;
 
@@ -336,7 +378,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       result:=nil;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction(funcName[roundingMode],location,@context);
-        lt_error,lt_int: result:=x^.rereferenced;
+        lt_error,lt_smallint,lt_bigint: result:=x^.rereferenced;
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
                  then begin
                    big.fromFloat(P_realLiteral(x)^.value,roundingMode);
@@ -359,7 +401,7 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
       result:=nil;
       case x^.literalType of
         lt_error: result:=x^.rereferenced;
-        lt_int : result:=myRound(P_intLiteral(x),relevantDigits);
+        lt_smallint,lt_bigint : result:=myRound(P_abstractIntLiteral(x),relevantDigits);
         lt_real: if not(isNan(P_realLiteral(x)^.value)) and not(isInfinite(P_realLiteral(x)^.value))
                  then result:=myRound(P_realLiteral(x)^.value,relevantDigits)
                  else raiseNotApplicableError(funcName[roundingMode],x,location,context.adapters^);
@@ -391,18 +433,13 @@ FUNCTION customRound(CONST x:P_literal; CONST relevantDigits:longint; CONST roun
     end;
   end;
 
-{
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=recurse1(arg0) else
-    if (params<>nil) and (params^.size=2) then result:=recurse2(arg0,arg1);
-  end}
-
 FUNCTION round_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)                                then result:=customRound(arg0,0                ,RM_DEFAULT,tokenLocation,context) else
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_int) then result:=customRound(arg0,int1^.value.toInt,RM_DEFAULT,tokenLocation,context);
+    if (params<>nil) and (params^.size=1)
+    then result:=customRound(arg0,0             ,RM_DEFAULT,tokenLocation,context) else
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    then result:=customRound(arg0,int1^.intValue,RM_DEFAULT,tokenLocation,context);
   end;
 
 FUNCTION floor64(CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)<0 then dec(result); end;
@@ -411,15 +448,19 @@ FUNCTION ceil64 (CONST d:T_myFloat):int64; begin result:=trunc(d); if frac(d)>0 
 FUNCTION ceil_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)                                then result:=customRound(arg0,0                ,RM_UP,tokenLocation,context) else
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_int) then result:=customRound(arg0,int1^.value.toInt,RM_UP,tokenLocation,context);
+    if (params<>nil) and (params^.size=1)
+    then result:=customRound(arg0,0             ,RM_UP,tokenLocation,context) else
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    then result:=customRound(arg0,int1^.intValue,RM_UP,tokenLocation,context);
   end;
 
 FUNCTION floor_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)                                then result:=customRound(arg0,0                ,RM_DOWN,tokenLocation,context) else
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_int) then result:=customRound(arg0,int1^.value.toInt,RM_DOWN,tokenLocation,context);
+    if (params<>nil) and (params^.size=1)
+    then result:=customRound(arg0,0             ,RM_DOWN,tokenLocation,context) else
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint])
+    then result:=customRound(arg0,int1^.intValue,RM_DOWN,tokenLocation,context);
   end;
 
 FUNCTION sign_imp intFuncSignature;
@@ -431,7 +472,10 @@ FUNCTION sign_imp intFuncSignature;
       case x^.literalType of
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('sign',tokenLocation,@context);
         lt_error: result:=x^.rereferenced;
-        lt_int : result:=newIntLiteral(P_intLiteral (x)^.value.sign);
+        lt_bigint: result:=newIntLiteral(P_bigIntLiteral (x)^.value.sign);
+        lt_smallint: if P_smallIntLiteral(x)^.value=0 then result:=x^.rereferenced
+                     else if P_smallIntLiteral(x)^.value>0 then result:=newIntLiteral(1)
+                     else result:=newIntLiteral(-1);
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: begin
@@ -537,19 +581,19 @@ FUNCTION argMin_imp intFuncSignature;
     end;
   end;
 
-{$define nan_or_inf_impl:=
-  VAR i:longint;
+{$define nan_or_inf_impl:=VAR
+      i:longint;
       x:P_literal;
       iter:T_arrayOfLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-       (arg0^.literalType in [lt_real,lt_int,
+       (arg0^.literalType in [lt_real,lt_smallint,lt_bigint,
                               lt_realList,lt_intList,lt_numList,lt_emptyList,
                               lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet]) then begin
       case arg0^.literalType of
         lt_real: exit(newBoolLiteral(PREDICATE(real0^.value)));
-        lt_int:  exit(newBoolLiteral(false));
+        lt_smallint,lt_bigint:  exit(newBoolLiteral(false));
         lt_emptyList,lt_emptySet: exit(arg0^.rereferenced);
         lt_intList: begin
           result:=newListLiteral(list0^.size);
@@ -665,8 +709,8 @@ FUNCTION subSets_impl intFuncSignature;
       tempList:P_listLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.size<=2) and ((params^.size=1) or (arg1^.literalType=lt_int)) then begin
-      if params^.size=2 then acceptOnlySetsOfSize:=int1^.value.toInt;
+    if (params<>nil) and (params^.size>=1) and (params^.size<=2) and ((params^.size=1) or (arg1^.literalType in [lt_smallint,lt_bigint])) then begin
+      if params^.size=2 then acceptOnlySetsOfSize:=int1^.intValue;
       if (arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes) then begin
         sets.create;
         setLength(mustContain,0);
@@ -736,10 +780,16 @@ FUNCTION permutations_impl intFuncSignature;
 FUNCTION factorize_impl intFuncSignature;
   VAR factors:T_factorizationResult;
       i:longint;
+      temp:T_bigInt;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      factors:=bigint.factorize(int0^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then begin
+      if arg0^.literalType=lt_smallint
+      then temp.fromInt(P_smallIntLiteral(arg0)^.value)
+      else temp:=P_bigIntLiteral(arg0)^.value;
+      factors:=bigint.factorize(temp);
+      if arg0^.literalType=lt_smallint
+      then temp.destroy;
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
@@ -748,10 +798,16 @@ FUNCTION factorize_impl intFuncSignature;
   end;
 
 FUNCTION isPrime_impl intFuncSignature;
+  VAR temp:T_bigInt;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      result:=newBoolLiteral(millerRabinTest(int0^.value));
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_bigint: result:=newBoolLiteral(millerRabinTest(P_bigIntLiteral(arg0)^.value));
+      lt_smallint: begin
+        temp.fromInt(P_smallIntLiteral(arg0)^.value);
+        result:=newBoolLiteral(millerRabinTest(temp));
+        temp.destroy;
+      end;
     end;
   end;
 
@@ -782,8 +838,8 @@ FUNCTION primes_impl intFuncSignature;
     end;
 
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and (int0^.value.canBeRepresentedAsInt32)
-    then result:=sievePrimes(int0^.value.toInt)
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint)
+    then result:=sievePrimes(int0^.intValue)
     else result:=nil;
   end;
 
@@ -801,6 +857,26 @@ FUNCTION digits_impl intFuncSignature;
       setLength(digits,0);
     end;
 
+  FUNCTION smallDigitsOf(i:longint):P_listLiteral;
+    VAR digits:T_arrayOfLongint;
+        digit:longint;
+        k:longint=0;
+    begin
+      if i=0 then exit(P_listLiteral(newListLiteral(1)^.appendInt(0)));
+      if i<0 then i:=-i;
+      setLength(digits,32);
+      while (i>0) do begin
+        digit:=i mod smallBase;
+        i    :=i div smallBase;
+        digits[k]:=digit;
+        inc(k);
+      end;
+      setLength(digits,k);
+      result:=newListLiteral(k);
+      for k:=length(digits)-1 downto 0 do result^.appendInt(digits[k]);
+      setLength(digits,0);
+    end;
+
   FUNCTION digitsOf(CONST i:T_bigInt):P_listLiteral;
     VAR digits:T_arrayOfBigint;
         k:longint;
@@ -811,39 +887,63 @@ FUNCTION digits_impl intFuncSignature;
       setLength(digits,0);
     end;
 
-  VAR j:longint;
+  VAR temp:T_bigInt;
+      i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) and
-      (arg0^.literalType in [lt_int,lt_emptyList,lt_intList]) and
-      ((params^.size<2) or (arg1^.literalType=lt_int))  then begin
+      (arg0^.literalType in [lt_smallint,lt_bigint,lt_emptyList,lt_intList]) and
+      ((params^.size<2) or (arg1^.literalType in [lt_smallint,lt_bigint]))  then begin
       if params^.size=2 then begin
-        bigBase:=int1^.value;
-        if (bigBase.compare(1) in [CR_LESSER,CR_EQUAL]) then begin
-          context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
-          exit(nil);
-        end;
-        if bigBase.canBeRepresentedAsInt32()
-        then smallBase:=bigBase.toInt
-        else smallBase:=-1;
-      end;
-
-      if smallBase>0 then begin
-        if arg0^.literalType=lt_int
-        then result:=smallDigitsOf(int0^.value)
-        else begin
-          result:=collection0^.newOfSameType(true);
-          for j:=0 to list0^.size-1 do collResult^.append(smallDigitsOf(P_intLiteral(list0^.value[j])^.value),false);
-        end;
-      end else begin
-        if arg0^.literalType=lt_int
-        then result:=digitsOf(int0^.value)
-        else begin
-          result:=collection0^.newOfSameType(true);
-          for j:=0 to list0^.size-1 do collResult^.append(digitsOf(P_intLiteral(list0^.value[j])^.value),false);
+        if arg1^.literalType=lt_bigint then begin
+          bigBase:=P_bigIntLiteral(arg1)^.value;
+          if (bigBase.compare(1) in [CR_LESSER,CR_EQUAL]) then begin
+            context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
+            exit(nil);
+          end;
+          if bigBase.canBeRepresentedAsInt32()
+          then smallBase:=bigBase.toInt
+          else smallBase:=-1;
+        end else begin
+          smallBase:=P_smallIntLiteral(arg1)^.value;
+          if (smallBase<=1) then begin
+            context.adapters^.raiseError('Cannot determine digits with base '+arg1^.toString+'; must be >=2',tokenLocation);
+            exit(nil);
+          end;
         end;
       end;
 
+      if smallBase>0 then case arg0^.literalType of
+        lt_smallint: result:=smallDigitsOf(P_smallIntLiteral(arg0)^.value);
+        lt_bigint  : result:=smallDigitsOf(P_bigIntLiteral  (arg0)^.value);
+        lt_emptyList: result:=arg0^.rereferenced;
+        lt_intList: begin
+          result:=newListLiteral(list0^.size);
+          for i:=0 to list0^.size-1 do case list0^.value[i]^.literalType of
+            lt_bigint  : listResult^.append(smallDigitsOf(P_bigIntLiteral  (list0^.value[i])^.value),false);
+            lt_smallint: listResult^.append(smallDigitsOf(P_smallIntLiteral(list0^.value[i])^.value),false);
+          end;
+        end;
+      end else case arg0^.literalType of
+        lt_bigint: result:=digitsOf(P_bigIntLiteral(arg0)^.value);
+        lt_smallint: begin
+          temp.fromInt(P_smallIntLiteral(arg0)^.value);
+          result:=digitsOf(temp);
+          temp.destroy;
+        end;
+        lt_emptyList: result:=arg0^.rereferenced;
+        lt_intList: begin
+          result:=newListLiteral(list0^.size);
+          for i:=0 to list0^.size-1 do case list0^.value[i]^.literalType of
+            lt_bigint  : listResult^.append(digitsOf(P_bigIntLiteral  (list0^.value[i])^.value),false);
+            lt_smallint: begin
+              temp.fromInt(P_smallIntLiteral(list0^.value[i])^.value);
+              listResult^.append(digitsOf(temp),false);
+              temp.destroy;
+            end;
+          end;
+        end;
+      end;
     end;
   end;
 
@@ -883,14 +983,22 @@ FUNCTION composeDigits_imp intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and
        (arg0^.literalType in [lt_emptyList,lt_intList]) then begin
       if params^.size>=2 then begin
-        if arg1^.literalType<>lt_int then exit(nil) else base:=int1^.value;
+        case arg1^.literalType of
+          lt_bigint: base:=P_bigIntLiteral(arg1)^.value;
+          lt_smallint: begin
+            base.fromInt(P_smallIntLiteral(arg1)^.value);
+            markAsGarbage(base);
+          end;
+          else exit(nil);
+        end;
       end else begin
         base.fromInt(10);
         markAsGarbage(base);
       end;
       if params^.size=3 then begin
-        if arg2^.literalType<>lt_int then exit(nil) else Shift:=int2^.value.toInt;
-        if not(int2^.value.canBeRepresentedAsInt32()) then begin
+        if (arg2^.literalType in [lt_smallint,lt_bigint]) and (int2^.isBetween(-maxLongint,maxLongint))
+        then Shift:=int2^.intValue
+        else begin
           context.adapters^.raiseError('Shift argument is out of bounds',tokenLocation);
           clearGarbage;
           exit(nil);
@@ -903,7 +1011,13 @@ FUNCTION composeDigits_imp intFuncSignature;
 
       if list0^.size>Shift then begin
         setLength(digits,list0^.size-Shift);
-        for k:=0 to min(length(digits),list0^.size)-1 do digits[k]:=P_intLiteral(list0^.value[k])^.value;
+        for k:=0 to min(length(digits),list0^.size)-1 do begin
+          if list0^.value[k]^.literalType=lt_smallint
+          then begin
+            digits[k].fromInt(P_smallIntLiteral(list0^.value[k])^.value);
+            markAsGarbage(digits[k]);
+          end else digits[k]:=P_bigIntLiteral(list0^.value[k])^.value;
+        end;
         for k:=list0^.size to length(digits)-1 do digits[k]:=newTempZero;
         intPart:=newFromBigDigits(digits,base);
       end else intPart.createZero;
@@ -911,7 +1025,7 @@ FUNCTION composeDigits_imp intFuncSignature;
         fracPart:=0;
         invFloatBase:=1/base.toFloat;
         for k:=list0^.size-1 downto list0^.size-Shift do begin
-          if k>=0 then fracPart+=P_intLiteral(list0^.value[k])^.value.toInt;
+          if k>=0 then fracPart+=P_abstractIntLiteral(list0^.value[k])^.floatValue;
           fracPart*=invFloatBase;
         end;
         result:=newRealLiteral(intPart.toFloat+fracPart);
@@ -922,86 +1036,145 @@ FUNCTION composeDigits_imp intFuncSignature;
   end;
 
 FUNCTION arctan2_impl intFuncSignature;
-  VAR x,y:T_myFloat;
   begin
     if (params<>nil) and (params^.size=2) and
-       (arg0^.literalType in [lt_int,lt_real]) and
-       (arg1^.literalType in [lt_int,lt_real]) then begin
-      if arg0^.literalType=lt_int then x:=int0^.value.toFloat
-                                  else x:=real0^.value;
-      if arg1^.literalType=lt_int then y:=int1^.value.toFloat
-                                  else y:=real1^.value;
-      result:=newRealLiteral(arctan2(x,y));
+       (arg0^.literalType in [lt_smallint,lt_bigint,lt_real]) and
+       (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) then begin
+      result:=newRealLiteral(arctan2(P_numericLiteral(arg0)^.floatValue,P_numericLiteral(arg1)^.floatValue));
     end else result:=nil;
   end;
 
 FUNCTION gcd_impl intFuncSignature;
-  VAR ir,temp:T_bigInt;
+  FUNCTION smallGcd(x,y:int64):int64; inline;
+    begin
+      result:=x;
+      while (y<>0) do begin
+        x:=result mod y; result:=y; y:=x;
+      end;
+    end;
+
+  VAR bigR,bigTemp:T_bigInt;
+      r:int64;
+      workingSmall:boolean;
       k:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
-      for k:=0 to params^.size-1 do if params^.value[k]^.literalType<>lt_int then exit(nil);
+      for k:=0 to params^.size-1 do if not(params^.value[k]^.literalType in [lt_smallint,lt_bigint]) then exit(nil);
       if params^.size=1 then exit(arg0^.rereferenced);
-      ir:=int0^.value.greatestCommonDivider(int1^.value);
-      for k:=2 to params^.size-1 do begin
-        temp:=ir.greatestCommonDivider(P_intLiteral(params^.value[k])^.value);
-        ir.destroy; ir:=temp;
-      end;
-      result:=newIntLiteral(ir);
-    end;
-  end;
 
-FUNCTION iSqrt_impl intFuncSignature;
-  VAR r:T_bigInt;
-      isSquare:boolean;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      r:=int0^.value.iSqrt(isSquare);
-      if isSquare
-      then result:=newIntLiteral(r)
-      else begin
-        r.destroy;
-        result:=newRealLiteral(Nan);
+      if arg0^.literalType=lt_smallint then begin
+        r:=P_smallIntLiteral(arg0)^.value;
+        workingSmall:=true;
+      end else begin
+        bigR.create(P_bigIntLiteral(arg0)^.value);
+        workingSmall:=false;
       end;
+
+      for k:=1 to params^.size-1 do case params^.value[k]^.literalType of
+        lt_bigint: if workingSmall
+        then r:=P_bigIntLiteral(params^.value[k])^.value.greatestCommonDivider(r)
+        else begin
+          bigTemp:=bigR.greatestCommonDivider(P_bigIntLiteral(params^.value[k])^.value);
+          bigR.destroy;
+          if bigTemp.canBeRepresentedAsInt64 then begin
+            r:=bigTemp.toInt;
+            workingSmall:=true;
+          end else bigR:=bigTemp;
+          bigTemp.destroy;
+        end;
+        lt_smallint: if workingSmall
+        then r:=smallGcd(r,P_smallIntLiteral(params^.value[k])^.value)
+        else begin
+          r:=bigR.greatestCommonDivider(P_smallIntLiteral(params^.value[k])^.value);
+          bigR.destroy;
+          workingSmall:=true;
+        end;
+      end;
+      if workingSmall then result:=newIntLiteral(r)
+                      else result:=newIntLiteral(bigR);
     end;
   end;
 
 FUNCTION hammingWeight_impl intFuncSignature;
+  VAR i:longint;
+      r:longint=0;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
-      result:=newIntLiteral(int0^.value.hammingWeight);
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_bigint: result:=newIntLiteral(P_bigIntLiteral(arg0)^.value.hammingWeight);
+      lt_smallint: begin
+        i:=P_smallIntLiteral(arg0)^.value;
+        while i>0 do begin
+          if odd(i) then inc(r);
+          i:=i shr 1;
+        end;
+        result:=newIntLiteral(r);
+      end;
     end;
   end;
 
+PROCEDURE ensure(CONST L:P_literal; OUT v:T_bigInt; OUT created:boolean);
+  begin
+    if L^.literalType=lt_bigint then begin
+      v:=P_bigIntLiteral(L)^.value;
+      created:=false;
+    end else begin
+      v.fromInt(P_smallIntLiteral(L)^.value);
+      created:=true;
+    end;
+  end;
+
+FUNCTION isPositiveInt(CONST L:P_literal; CONST allowZero:boolean):boolean;
+  begin
+    result:=(L^.literalType=lt_smallint)
+        and ((P_smallIntLiteral(L)^.value>0) or allowZero and (P_smallIntLiteral(L)^.value=0)) or
+            (L^.literalType=lt_bigint)
+        and (not(P_bigIntLiteral(L)^.value.isNegative) and allowZero or not(P_bigIntLiteral(L)^.value.isZero));
+  end;
+
 FUNCTION powMod_impl intFuncSignature;
+  VAR bx,by,bz:T_bigInt;
+      ux:boolean=false;
+      uy:boolean=false;
+      uz:boolean=false;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-       (arg0^.literalType=lt_int) and not(int0^.value.isNegative) and
-       (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and
-       (arg2^.literalType=lt_int) and not(int2^.value.isNegative) then begin
-      result:=newIntLiteral(int0^.value.powMod(int1^.value,int2^.value));
+       isPositiveInt(arg0,true) and
+       isPositiveInt(arg1,true) and
+       isPositiveInt(arg2,false) then begin
+      ensure(arg0,bx,ux);
+      ensure(arg1,by,uy);
+      ensure(arg2,bz,uz);
+      result:=newIntLiteral(bx.powMod(by,bz));
+      if ux then bx.destroy;
+      if uy then by.destroy;
+      if uz then bz.destroy;
     end;
   end;
 
 FUNCTION modularInverse_impl intFuncSignature;
   VAR intResult:T_bigInt;
       validResult:boolean;
+      bx,by:T_bigInt;
+      ux,uy:boolean;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
-       (arg0^.literalType=lt_int) and not(int0^.value.isNegative) and not(int0^.value.isZero) and
-       (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and not(int1^.value.isZero) then begin
-      intResult:=int0^.value.modularInverse(int1^.value,validResult);
+       isPositiveInt(arg0,false) and
+       isPositiveInt(arg1,false) then begin
+      ensure(arg0,bx,ux);
+      ensure(arg1,by,uy);
+      intResult:=bx.modularInverse(by,validResult);
       if validResult
       then result:=newIntLiteral(intResult)
       else begin
         intResult.destroy;
         result:=newRealLiteral(Nan);
       end;
+      if ux then bx.destroy;
+      if uy then by.destroy;
     end;
   end;
 
@@ -1009,32 +1182,54 @@ FUNCTION bitShift_impl intFuncSignature;
   VAR res:T_bigInt;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      res.create(int0^.value);
-      res.shiftRight(int1^.value.toInt);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType=lt_smallint) then begin
+      if arg0^.literalType=lt_bigint
+      then res.create (P_bigIntLiteral  (arg0)^.value)
+      else res.fromInt(P_smallIntLiteral(arg0)^.value);
+      res.shiftRight(int1^.intValue);
       result:=newIntLiteral(res);
     end;
   end;
 
 FUNCTION divMod_impl intFuncSignature;
-  VAR i ,j ,
-      q ,r :T_bigInt;
-      II,jj:int64;
+  VAR q ,r :T_bigInt;
+      temp :T_bigInt;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      i:=int0^.value;
-      j:=int1^.value;
-      if (j.isZero) then exit(newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
-      if i.canBeRepresentedAsInt64 and j.canBeRepresentedAsInt64 then begin
-        II:=i.toInt;
-        jj:=j.toInt;
-        exit(newListLiteral(2)^.appendInt(II div jj)
-                              ^.appendInt(II mod jj));
-      end else begin
-        i.divMod(j,q,r);
-        result:=newListLiteral(2)^.append(newIntLiteral(q),false)
-                                 ^.append(newIntLiteral(r),false);
+    if (params<>nil) and (params^.size=2) then
+    case arg1^.literalType of
+      lt_smallint: begin
+        if P_smallIntLiteral(arg1)^.value=0
+        then exit(newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
+        case arg0^.literalType of
+          lt_smallint:
+            result:=newListLiteral(2)^.appendInt(int0^.intValue div int1^.intValue)
+                                     ^.appendInt(int0^.intValue mod int1^.intValue);
+          lt_bigint: begin
+            temp.fromInt(P_smallIntLiteral(arg1)^.value);
+            P_bigIntLiteral(arg0)^.value.divMod(temp,q,r);
+            temp.destroy;
+            result:=newListLiteral(2)^.append(newIntLiteral(q),false)
+                                     ^.append(newIntLiteral(r),false);
+          end;
+        end;
+      end;
+      lt_bigint: begin
+        if P_bigIntLiteral(arg1)^.value.isZero
+        then exit(newListLiteral(2)^.appendReal(Nan)^.appendReal(Nan));
+        case arg0^.literalType of
+          lt_smallint: begin
+            temp.fromInt(P_smallIntLiteral(arg0)^.value);
+            temp.divMod(P_bigIntLiteral(arg1)^.value,q,r);
+            result:=newListLiteral(2)^.append(newIntLiteral(q),false)
+                                     ^.append(newIntLiteral(r),false);
+          end;
+          lt_bigint: begin
+            P_bigIntLiteral(arg0)^.value.divMod(P_bigIntLiteral(arg1)^.value,q,r);
+            result:=newListLiteral(2)^.append(newIntLiteral(q),false)
+                                     ^.append(newIntLiteral(r),false);
+          end;
+        end;
       end;
     end;
   end;
@@ -1082,7 +1277,6 @@ INITIALIZATION
                                                                                   'composeDigits(digits:intList,base:int,shift:int);//Returns a number constructed from digits with given base and shift');
   registerRule(MATH_NAMESPACE,'arctan2'       ,@arctan2_impl       ,ak_binary    ,'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant');
   registerRule(MATH_NAMESPACE,'gcd'           ,@gcd_impl           ,ak_variadic_1,'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)');
-  registerRule(MATH_NAMESPACE,'iSqrt'         ,@iSqrt_impl         ,ak_unary     ,'iSqrt(x:Int);//Returns the integer square root of x or NaN if x is no square');
   registerRule(MATH_NAMESPACE,'hammingWeight' ,@hammingWeight_impl ,ak_unary     ,'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x');
   registerRule(MATH_NAMESPACE,'powMod'        ,@powMod_impl        ,ak_ternary   ,'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z');
   registerRule(MATH_NAMESPACE,'modularInverse',@modularInverse_impl,ak_binary    ,'modularInverse(x>0,m>0);//Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists');

@@ -139,11 +139,8 @@ FUNCTION T_rangeGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONS
 FUNCTION rangeGenerator intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
-      if int0^.value.canBeRepresentedAsInt64() and
-         int1^.value.canBeRepresentedAsInt64()
-      then new(P_rangeGenerator(result),create(int0^.value.toInt,int1^.value.toInt,tokenLocation))
-      else context.adapters^.raiseError('rangeGenerator only accepts ranges in 64bit range',tokenLocation);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
+      new(P_rangeGenerator(result),create(int0^.intValue,int1^.intValue,tokenLocation))
     end;
   end;
 
@@ -240,8 +237,8 @@ FUNCTION permutationIterator intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if arg0^.literalType=lt_int then begin
-        new(P_permutationIterator(result),create(int0^.value.toInt,tokenLocation));
+      if arg0^.literalType=lt_smallint then begin
+        new(P_permutationIterator(result),create(int0^.intValue,tokenLocation));
       end else if arg0^.literalType in C_compoundTypes then begin
         new(P_permutationIterator(result),create(compound0,tokenLocation));
       end;
@@ -674,8 +671,8 @@ FUNCTION stringIterator intFuncSignature;
   begin
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType in [lt_stringList,lt_stringSet]) and
-       (arg1^.literalType=lt_int) and (int1^.value.toInt>=0) and
-       (arg2^.literalType=lt_int) and (int2^.value.toInt>=int1^.value.toInt) then begin
+       (arg1^.literalType=lt_smallint) and (int1^.intValue>=0) and
+       (arg2^.literalType=lt_smallint) and (int2^.intValue>=int1^.intValue) then begin
       charSet:=[];
       iter:=collection0^.iteratableList;
       for c in iter do begin
@@ -693,7 +690,7 @@ FUNCTION stringIterator intFuncSignature;
       end;
       disposeLiteral(iter);
       if err then result:=nil
-             else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.value.toInt,int2^.value.toInt));
+             else new(P_stringIterator(result),create(tokenLocation,charSet,int1^.intValue,int2^.intValue));
     end else result:=nil;
   end;
 
@@ -703,7 +700,7 @@ TYPE
     private
       XOS:T_xosPrng;
     public
-      CONSTRUCTOR create(CONST seed:T_bigInt; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST seed:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
@@ -713,7 +710,7 @@ TYPE
     private
       range:T_bigInt;
     public
-      CONSTRUCTOR create(CONST maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST maxValExclusive:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
       DESTRUCTOR destroy; virtual;
@@ -724,7 +721,7 @@ TYPE
     private
       XOS:T_xosPrng;
     public
-      CONSTRUCTOR create(CONST seed,maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST seed,maxValExclusive:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
@@ -735,16 +732,18 @@ TYPE
     private
       isaac:T_ISAAC;
     public
-      CONSTRUCTOR create(CONST seed,maxValExclusive:T_bigInt; CONST loc:T_tokenLocation);
+      CONSTRUCTOR create(CONST seed,maxValExclusive:P_abstractIntLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_abstractRandomGenerator.create(CONST maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_abstractRandomGenerator.create(CONST maxValExclusive: P_abstractIntLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
-    range.create(maxValExclusive);
+    if maxValExclusive^.literalType=lt_bigint
+    then range.create(P_bigIntLiteral(maxValExclusive)^.value)
+    else range.fromInt(maxValExclusive^.intValue);
   end;
 
 FUNCTION T_abstractRandomGenerator.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
@@ -758,9 +757,11 @@ FUNCTION T_abstractRandomGenerator.evaluate(CONST location: T_tokenLocation; CON
     result.literal:=nil;
     if (parameters=nil) or (parameters^.size=0) then begin
       result:=evaluateToLiteral(location,context);
-    end else if (parameters<>nil) and (parameters^.size=1) and (parameters^.value[0]^.literalType=lt_int) and (P_intLiteral(parameters^.value[0])^.value.compare(1)=CR_GREATER) then begin
+    end else if (parameters<>nil) and (parameters^.size=1) and (parameters^.value[0]^.literalType in [lt_smallint,lt_bigint]) then begin
       range.destroy;
-      range.create(P_intLiteral(parameters^.value[0])^.value);
+      if parameters^.value[0]^.literalType=lt_smallint
+      then range.fromInt(P_smallIntLiteral(parameters^.value[0])^.value)
+      else range.create (P_bigIntLiteral  (parameters^.value[0])^.value);
       result.literal:=newStringLiteral('random range altered to '+parameters^.value[0]^.toString());
     end else begin
       P_threadContext(context)^.adapters^.raiseError('Cannot alter range by paramters '+toParameterListString(parameters,true),location);
@@ -773,25 +774,31 @@ DESTRUCTOR T_abstractRandomGenerator.destroy;
     range.destroy;
   end;
 
-CONSTRUCTOR T_realRandomGenerator.create(CONST seed: T_bigInt; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_realRandomGenerator.create(CONST seed: P_abstractIntLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(loc);
     XOS.create;
-    XOS.resetSeed(seed.getRawBytes);
+    if seed^.literalType=lt_bigint
+    then XOS.resetSeed(P_bigIntLiteral(seed)^.value.getRawBytes)
+    else XOS.resetSeed(seed^.intValue);
   end;
 
-CONSTRUCTOR T_isaacRandomGenerator.create(CONST seed, maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_isaacRandomGenerator.create(CONST seed, maxValExclusive: P_abstractIntLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(maxValExclusive,loc);
     isaac.create;
-    isaac.setSeed(seed.getRawBytes);
+    if seed^.literalType=lt_bigint
+    then isaac.setSeed(P_bigIntLiteral(seed)^.value.getRawBytes)
+    else isaac.setSeed(seed^.intValue);
   end;
 
-CONSTRUCTOR T_intRandomGenerator.create(CONST seed, maxValExclusive: T_bigInt; CONST loc: T_tokenLocation);
+CONSTRUCTOR T_intRandomGenerator.create(CONST seed, maxValExclusive: P_abstractIntLiteral; CONST loc: T_tokenLocation);
   begin
     inherited create(maxValExclusive,loc);
     XOS.create;
-    XOS.resetSeed(seed.getRawBytes);
+    if seed^.literalType=lt_bigint
+    then XOS.resetSeed(P_bigIntLiteral(seed)^.value.getRawBytes)
+    else XOS.resetSeed(seed^.intValue);
   end;
 
 DESTRUCTOR T_realRandomGenerator.destroy;
@@ -847,22 +854,28 @@ FUNCTION T_isaacRandomGenerator.evaluateToLiteral(CONST location: T_tokenLocatio
 FUNCTION randomGenerator_impl intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then
-      new(P_realRandomGenerator(result),create(int0^.value,tokenLocation));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then
+      new(P_realRandomGenerator(result),create(int0,tokenLocation));
+  end;
+
+FUNCTION isValidIntRandomRange(CONST l:P_literal):boolean;
+  begin
+    result:=(l^.literalType=lt_smallint) and (P_smallIntLiteral(l)^.value>0) or
+            (l^.literalType=lt_bigint) and not(P_bigIntLiteral(l)^.value.isNegative) and not(P_bigIntLiteral(l)^.value.isZero);
   end;
 
 FUNCTION intRandomGenerator_impl intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and not(int1^.value.isZero) then
-      new(P_intRandomGenerator(result),create(int0^.value,int1^.value,tokenLocation));
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and isValidIntRandomRange(arg1) then
+      new(P_intRandomGenerator(result),create(int0,int1,tokenLocation));
   end;
 
 FUNCTION isaacRandomGenerator_impl intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) and not(int1^.value.isNegative) and not(int1^.value.isZero) then
-      new(P_isaacRandomGenerator(result),create(int0^.value,int1^.value,tokenLocation));
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_smallint,lt_bigint]) and isValidIntRandomRange(arg1) then
+      new(P_isaacRandomGenerator(result),create(int0,int1,tokenLocation));
   end;
 
 TYPE
@@ -915,8 +928,8 @@ FUNCTION T_vanDerCorputGenerator.evaluateToLiteral(CONST location: T_tokenLocati
 FUNCTION vanDerCorputGenerator_impl intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) and int0^.value.isBetween(2,maxLongint) then
-      new(P_vanDerCorputGenerator(result),create(int0^.value.toInt,tokenLocation));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and int0^.isBetween(2,maxLongint) then
+      new(P_vanDerCorputGenerator(result),create(int0^.intValue,tokenLocation));
   end;
 
 INITIALIZATION
