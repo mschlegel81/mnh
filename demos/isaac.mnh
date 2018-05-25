@@ -15,5 +15,5 @@ end;
 
 main->begin
   isaacEncrypt(1423,'This is a test').base64encode      .print;
-  isaacDecrypt(1423,'yaIJRrxEM+WRKIInxBw='.base64decode).print;
+  isaacDecrypt(1423,'cx8OW1Z3GUIwLXegL2g='.base64decode).print;
 end;

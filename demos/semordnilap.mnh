@@ -7,7 +7,7 @@ private findSemordnilaps(dictionaryFile:String)->
      begin
        local semordnilapGroup:=anagramGroup.getInner(1);
        semordnilapGroup:=intersect(semordnilapGroup,reverseString(semordnilapGroup));
-       size(semordnilapGroup)==0 ? void : semordnilapGroup.toList.join("\v, ");
+       size(semordnilapGroup)<=1 ? void : semordnilapGroup.toList.join("\v, ");
      end);
 
 private sortByLength(L:List)->L[L.length.sortPerm];
