@@ -3074,6 +3074,12 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
         end;
       end;
 
+    FUNCTION isSameType(CONST a,b:T_literalType):boolean;
+      begin
+        result:=(a=b) or (a in [lt_smallint,lt_bigint])
+                     and (b in [lt_smallint,lt_bigint]);
+      end;
+
     begin
       reusableIndex:=stream^.readNaturalNumber;
       if reusableIndex<=22 then literalType:=byteToType(byte(reusableIndex))
@@ -3140,7 +3146,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           exit(newVoidLiteral);
         end;
       end;
-      if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
+      if not(isSameType(result^.literalType,literalType)) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
       if not(stream^.allOkay) then errorOrException('Unknown error during deserialization.');
       if ((literalType=lt_string) or (literalType in C_compoundTypes)) and (reusableFill<2097151) then begin
         reusableLiterals[reusableFill]:=result;
@@ -3184,6 +3190,12 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
            44,45: result:=lt_void       ;
           else result:=lt_error;
           end;
+        end;
+
+      FUNCTION isSameType(CONST a,b:T_literalType):boolean;
+        begin
+          result:=(a=b) or (a in [lt_smallint,lt_bigint])
+                       and (b in [lt_smallint,lt_bigint]);
         end;
 
     begin
@@ -3259,7 +3271,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
           exit(newVoidLiteral);
         end;
       end;
-      if (result^.literalType<>literalType) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
+      if not(isSameType(result^.literalType,literalType)) then errorOrException('Deserializaion result has other type ('+typeStringOrNone(result^.literalType)+') than expected ('+typeStringOrNone(literalType)+').');
       if customTypeName<>'' then begin
         if literalType in C_typables then begin
           if typeMap.containsKey(customTypeName,customType) then begin
