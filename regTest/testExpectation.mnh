@@ -148,8 +148,8 @@ end;
 
 private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|
   testsToExecuteForFlavour(flavour)
-    .filter({not(isSmokeTest($case)) and
-             not(skipFile($case,copy(flavour,0,1)=='F'))})
+    .filter({!isSmokeTest($case) and
+             !skipFile($case,copy(flavour,0,1)=='F')})
     .extractFileNameOnly;
 
 @SuppressUnusedWarning
@@ -166,7 +166,7 @@ timeForFullTest(flavour:String,codeHash:String)->begin
 end;
 
 private allScripts->expectations.getInner(0);
-private allFlavours->BUILDS.filter({not(buildBlindly($B))}).getInner(1);
+private allFlavours->BUILDS.filter({!buildBlindly($B)}).getInner(1);
 
 matching(L:StringCollection,pattern)->
   pattern.matches('\*|\|')
@@ -199,7 +199,7 @@ main('remove',Script)->
 
 //*List information on all test expectations
 main->begin
-  local allFlavours:=BUILDS.filter({not(buildBlindly($B))}).getInner(1);
+  local allFlavours:=BUILDS.filter({!buildBlindly($B)}).getInner(1);
   local testsByFlavour:=allFlavours.each(flavour,
     [flavour,
      flavour.expectationNamesForFlavour

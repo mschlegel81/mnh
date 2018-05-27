@@ -2,7 +2,7 @@
 isaacEncrypt(seed:Int,message:String)->begin
   local gen:=isaacRandomGenerator(seed,256);
   message.bytes.ord
-  .map({$b.bitXor(gen(),8)})
+  .map({$b xor gen()})
   .byteToChar
   .join;
 end;
@@ -10,7 +10,7 @@ end;
 //*Returns a tuple [decryptedMessage,validationOk]
 isaacDecrypt(seed:Int,message:String)->begin
   local gen:=isaacRandomGenerator(seed,256);
-  message.bytes.ord.map({$b.bitXor(gen(),8)}).byteToChar.join;
+  message.bytes.ord.map({$b xor gen()}).byteToChar.join;
 end;
 
 main->begin

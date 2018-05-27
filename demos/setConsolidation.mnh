@@ -13,7 +13,8 @@ private consolidate(ListOfSets,consolidationPoints)->
   ? ListOfSets
   : begin
       local mask:=ListOfSets.each(set,consolidationPoints.head in set);
-      consolidate([ListOfSets.get(mask).flatten.unique.sort]|ListOfSets.get(not(mask)),consolidationPoints.tail);
+      consolidate([ListOfSets.get( mask).flatten.unique.sort]|
+                   ListOfSets.get(!mask),consolidationPoints.tail);
     end;
 
 private examples:=["[{A,B} {C,D}]","[{A,B} {B,C}]","[{A,B} {C,D} {D,B}]","[{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]"];

@@ -15,7 +15,7 @@ private memoized components(i)->COMPONENTS.each(c,i in c ? drop(c,i) : void);
 //*A board is solved when all components contain numbers [1..9]
 private isSolved(Board)->COMPONENTS.each(c,Board[c].sort==[1..9],AND);
 //*A board is valid when all components may contain all numbers [1..9]
-private isValid(Board)->Board.each(cell,not(cell==[]),AND) AND
+private isValid(Board)->Board.each(cell,!(cell==[]),AND) AND
                         COMPONENTS.each(c,Board[c].flatten.unique.sort==[1..9],AND);
 //*A board's difficulty is given by the number of cells to fill
 private difficulty(Board)->Board.each(cell,cell.isInt ? 0 : 1,+);
@@ -83,9 +83,9 @@ end;
 randomSolution->begin
   local foundSolution:=false;
   local Board:=void;
-  while(not(foundSolution),begin
+  while(!foundSolution,begin
     Board:=initialBoard.restrictRandom.solve;
-    while(isValid(Board) AND not(Board.isSolved),Board:=Board.restrictRandom.solve);
+    while(isValid(Board) AND !(Board.isSolved),Board:=Board.restrictRandom.solve);
     foundSolution:=Board.isSolved;
   end);
   Board;

@@ -20,7 +20,7 @@ private synchronized persistStage(stage:List)->
       end
     : stageElement.head==DELETE
       ? begin
-          store:=store.filter({not($storeElement==stageElement.trailing)});
+          store:=store.filter({!($storeElement==stageElement.trailing)});
           void;
         end
       : warn('Invalid element on stage: ',stageElement)

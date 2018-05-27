@@ -9,7 +9,7 @@ series(i:Int)->begin
   local s:=toString(i);
   s:=sort(copy(s,[0..length(s)-1],1)).join;
   local result:=[];
-  while(not(s in result),begin
+  while(!(s in result),begin
     result|=s;
     s:=step(s);
   end);

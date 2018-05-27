@@ -21,8 +21,8 @@ private doAnalysis()->begin
       local debugSamples:=runTimesAsFlatList[runTimesAsFlatList.getInner(0)=testCase];
       local debugMask:=debugSamples.getInner(1).matches('^[F|L|I]D');
             debugSamples:=debugSamples.getInner(2);
-      local optSamples  :=debugSamples[not(debugMask)];
-            debugSamples:=debugSamples[    debugMask ];
+      local optSamples  :=debugSamples[!debugMask];
+            debugSamples:=debugSamples[ debugMask];
       [testCase,'|',
        optSamples.size,
        local optQ:=optSamples.quartiles.round(4),'|',

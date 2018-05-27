@@ -1,6 +1,6 @@
 private unescapeKey(s:String)->begin
   local result:=s.softCast;
-  (result==s) OR not(result.isString)
+  (result==s) OR !result.isString
   ? fail('Invalid json key ',escape(s))
   : void;
   result;
@@ -13,7 +13,7 @@ private traverseList(L:StringList,insteadOfNull:Scalar)->begin
   local toParse:=L;
   local listFinished:=false;
   toParse.head==']' ? toParse:=toParse.tail :
-  while(toParse.size>0 AND not(listFinished),begin
+  while(toParse.size>0 AND !listFinished,begin
     local value:=toParse.head;
     value='[' ? begin
       local sub:=traverseList(toParse.tail(3));
@@ -43,7 +43,7 @@ private traverseObject(L:StringList,insteadOfNull:Scalar)->begin
   local parsed:=[].toMap;
   local toParse:=L;
   local objectFinished:=false;
-  while(toParse.size>0 AND not(objectFinished),begin
+  while(toParse.size>0 AND !objectFinished,begin
     local key:=unescapeKey(toParse[0]);
     local value:=toParse[2];
     toParse[1]==':' ? void : fail('Expected key-value-separator ":" but got ',escape(toParse[1]));

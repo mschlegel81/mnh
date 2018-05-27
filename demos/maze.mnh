@@ -18,7 +18,7 @@ begin
   local visited:=[];
   local position:=randomUnvisitedCell(width,height,visited);
 
-  while(not(position==[]),begin
+  while(!(position==[]),begin
     visited|=position;
     local continue:=true;
     while(continue,begin

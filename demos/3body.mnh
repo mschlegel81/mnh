@@ -41,7 +41,7 @@ main->begin
   local stepForward:=integrator(CASH_KARP,F,timeStepSize,1E-6);
   local nextFrameAt:=time;
   local stepCounter:=-1;
-  while(not(plotClosed),begin
+  while(!plotClosed,begin
     local stateFuture:=future(stepForward,[state]);
     plot();
     state[[0,2,4]].each(position,plotter[index](position));

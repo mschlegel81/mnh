@@ -7,7 +7,7 @@ ALL_PACKED_FILES     :=DEV_ROOT&'\mnh5\versions\mnh5_'&maxLoggedBuildNumber&'*.z
 WEB_PAGE_FOLDER      :=DEV_ROOT&'\web\page\mnh\';
 EDITOR_CALL          :='C:\Program Files (x86)\Notepad++\notepad++.exe';
 
-NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'] and not(filename.matches('3rd_party'));
+NeedLicense(filename:String)->filename.extractFileExt.upper in ['.PAS','.INC','.LPR'] AND !(filename.matches('3rd_party'));
 License:=//!~
 //
 // This file is part of the MNH project.
@@ -85,9 +85,9 @@ main('copy')->begin
 
   print('Copying MNH sources');
   allFiles('',['*.inc','*.pas','*.lfm','*.lpi','*.lpr','*.txt','*.mnh','make.bat','make.sh','*.expected','testExpectation.datastore0','distroLog.datastore0'])
-    .filter({not($0.matches('/lib/|core/res_.*inc$|core/build_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
+    .filter({!($0.matches('/lib/|core/res_.*inc$|core/build_number.inc$|core/code_hash.inc$|demos/inputs/.*txt$')) AND
              $0.expandedFileName<>myPath.expandedFileName})
-    .filter({not($0.matches('^common/')) OR $0 in hashFiles})
+    .filter({!($0.matches('^common/')) OR $0 in hashFiles})
     .pMap({copyWithLicense($0,DEFAULT_TARGET_FOLDER&$0)});
 
   print('Creating readme');

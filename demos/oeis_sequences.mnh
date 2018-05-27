@@ -339,7 +339,7 @@ end;
 
 private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   //zero based index
-  local base:=(ln(sequence)/ln([0..sequence.size-1])).filter({not(isNan($x)) AND not(isInfinite($x))});
+  local base:=(ln(sequence)/ln([0..sequence.size-1])).filter({!isNan($x) AND !isInfinite($x)});
   base:=(base.agg(+)/base.size);
   sequence==          round([0..sequence.size-1]^base)
   ? return format(sequence==[0..sequence.size-1]^round(base)
@@ -348,7 +348,7 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   : void;
 
   //one based index
-  base:=(ln(sequence)/ln([1..sequence.size])).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=(ln(sequence)/ln([1..sequence.size])).filter({!isNan($x) AND !isInfinite($x)});
   base:=(base.agg(+)/base.size);
   sequence==          round([1..sequence.size]^base)
   ? return format(sequence==[1..sequence.size]^round(base)
@@ -357,7 +357,7 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   : void;
 
   //zero based index
-  base:=(ln(sequence)/[0..sequence.size-1]).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=(ln(sequence)/[0..sequence.size-1]).filter({!isNan($x) AND !isInfinite($x)});
   base:=base.exp.sort[base.size div 2];
 
   sequence==                round(base^ [0..sequence.size-1])
@@ -367,7 +367,7 @@ private findPowerParam(sequence:IntList)->sequence.size<10 ? void : begin
   : void;
 
   //one based index
-  base:=(ln(sequence)/[1..sequence.size]).filter({not(isNan($x)) AND not(isInfinite($x))});
+  base:=(ln(sequence)/[1..sequence.size]).filter({!isNan($x) AND !isInfinite($x)});
   base:=base.exp.sort[base.size div 2];
 
   sequence==                round(base^ [1..sequence.size])

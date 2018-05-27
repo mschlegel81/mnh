@@ -164,8 +164,8 @@ private serve_('statistics')->begin
   begin
     local allNumbers:=sequences.flatten.toSet;
     join(["Largest  integer                                       : ",allNumbers.max,
-        "\nSmallest positive integer not contained in any sequence: ",rangeGenerator(0,  2^60 ).filter({not($x in allNumbers)}).head(1).head,
-        "\nLargest  negative integer not contained in any sequence: ",rangeGenerator(0,-(2^60)).filter({not($x in allNumbers)}).head(1).head,
+        "\nSmallest positive integer not contained in any sequence: ",rangeGenerator(0,  2^60 ).filter({!($x in allNumbers)}).head(1).head,
+        "\nLargest  negative integer not contained in any sequence: ",rangeGenerator(0,-(2^60)).filter({!($x in allNumbers)}).head(1).head,
         "\nSmallest integer                                       : ",allNumbers.min]);
   end&
   "\n\nMost frequent integers:\n"&(sequences.flatten.top10.formatTabs.join("\n"))&
