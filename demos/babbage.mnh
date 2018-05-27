@@ -7,7 +7,7 @@ squareEndsWith269696(n:Int)->n          //take the input
 //*See http://rosettacode.org/wiki/Babbage_problem
 main->begin
   local intToCheck:=1;
-  while(not(squareEndsWith269696(intToCheck)),
+  while(!squareEndsWith269696(intToCheck),
     intToCheck+=1);
   print(intToCheck);
 end;

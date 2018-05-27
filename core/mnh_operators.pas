@@ -11,6 +11,7 @@ USES math,
      mnh_contexts,
      mnh_litVar,
      mnh_tokens,
+     mnh_subrules,
      mnh_funcs;
 
 {$i mnh_func_defines.inc}
@@ -164,11 +165,11 @@ FUNCTION operator_In       intFuncSignature;
   end;
 
 {$define defaultLHScases:=
-  lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,@context));
+  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
   lt_void:       exit(RHS^.rereferenced);
   lt_error:      exit(LHS^.rereferenced)}
 {$define defaultRHSCases:=
-  lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,@context));
+  lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
   lt_void:       exit(LHS^.rereferenced);
   lt_error:      exit(RHS^.rereferenced)}
 {$define generic_recursions:=
@@ -300,11 +301,13 @@ comparator_implementation;
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: exit(newIntLiteral(P_smallIntLiteral(LHS)^.value boolOp P_smallIntLiteral(RHS)^.value));
+        lt_bigint  : exit(newIntLiteral(P_bigIntLiteral(RHS)^.value.bitOp(P_smallIntLiteral(LHS)^.value)));
         lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: exit(recurse_SL);
       end;
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_bigint: exit(newBigIntLiteral(P_bigIntLiteral(LHS)^.value.bitOp(P_bigIntLiteral(RHS)^.value,-1)));
+        lt_smallint: exit(newIntLiteral   (P_bigIntLiteral(LHS)^.value.bitOp(P_smallIntLiteral(RHS)^.value)));
+        lt_bigint:   exit(newBigIntLiteral(P_bigIntLiteral(LHS)^.value.bitOp(P_bigIntLiteral  (RHS)^.value)));
         lt_set,lt_emptySet,lt_list,lt_emptyList,lt_map,lt_emptyMap,lt_intList,lt_intSet: exit(recurse_SL);
       end;
       lt_set ,lt_emptySet ,
@@ -921,7 +924,7 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
     case LHS^.literalType of
       defaultLHScases;
       lt_list..lt_emptyList: case RHS^.literalType of
-        lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,@context));
+        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
         lt_error:      exit(RHS^.rereferenced)
         else
         exit(newListLiteral(P_listLiteral(LHS)^.size+1)^
@@ -929,7 +932,7 @@ FUNCTION perform_concatAlt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenL
              .append(RHS,true,true));
       end;
       lt_set ..lt_emptySet : case RHS^.literalType of
-        lt_expression: exit(subruleApplyOpCallback(LHS, op, RHS, tokenLocation,@context));
+        lt_expression: exit(subruleApplyOpImpl(LHS, op, RHS, tokenLocation,@context));
         lt_error:      exit(RHS^.rereferenced)
         else exit(newSetLiteral^
              .appendAll(P_setLiteral(LHS))^

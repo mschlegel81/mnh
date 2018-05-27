@@ -14,28 +14,6 @@ toExpression("$x-$x^2+$x^3");
 
 toExpression("");
 
-not(true);
-
-not([true, false, true]);
-
-not({$x});
-
-not(7);
-
-not(7,4);
-
-bitAnd(1,3);
-
-bitAnd(1,3,8);
-
-bitOr(3,200);
-
-bitOr(3,200,4);
-
-bitXor(2,3);
-
-bitXor(2,3,8);
-
 parameterNames({3});
 
 //#mnh.parameterNames

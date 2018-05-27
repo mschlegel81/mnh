@@ -75,7 +75,7 @@ begin
   local frameTime:=time;
   state1:=future(step,[state1]);
   state2:=future(step,[state2]);
-  while(not(plotClosed),begin
+  while(!plotClosed,begin
     sleepUntil(frameTime+=secondsPerFrame);
     frameTime:=time;
     p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=future(step,[state1]);

@@ -8,7 +8,7 @@ jaroDistance(A:String,B:String)->begin
   aChars.each(a,
     [max(0      ,index-matchDistance  )..
      min(bChars.size-1,index+matchDistance-1)].each(k,
-       bChars[k]==a AND not(bMatches[k])
+       bChars[k]==a AND !bMatches[k]
        ? bMatches[k]:=true
        : false
     ,OR)

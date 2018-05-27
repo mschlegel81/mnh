@@ -1,7 +1,7 @@
 LudicSieve->begin
   local candidates:=[2..21511];
   local L:=[1];
-  while(not(candidates==[]),begin
+  while(!(candidates==[]),begin
     local next:=head(candidates);
     next>candidates.size
     ? begin
@@ -20,7 +20,7 @@ end;
 @demo_for=math, list construction
 main->begin
   local LUDICS:=LudicSieve;
-  local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);
+  local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6).sort;
   print("Ludic Numbers",
       "\n  The first 25 are: ",LUDICS.head(25),'.',
       "\n  There are ",LUDICS[LUDICS<=1000].size,' lesser or equal to 1000.',

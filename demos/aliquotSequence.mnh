@@ -9,7 +9,7 @@ private classify(n:Int)->
   begin
     local seq:=[n];
     local k:=dividerSum(n);
-    while(size(seq)<=16 and not(k in seq),begin
+    while(size(seq)<=16 and !(k in seq),begin
       seq|=k;
       k:=dividerSum(k);
     end);

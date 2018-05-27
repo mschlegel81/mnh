@@ -13,7 +13,7 @@ ethiopianMultiplication(a_>=1,b_>=1,doPrint:Boolean)->begin
     bColumn|=(b:=double(b));
   end);
   local strikeOut:=aColumn.each(v,isEven(v));
-  local result:=bColumn[not(strikeOut)].agg(+);
+  local result:=bColumn[!strikeOut].agg(+);
 
   doPrint ? begin
     //Pretty printing:

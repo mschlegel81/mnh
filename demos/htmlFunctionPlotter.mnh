@@ -1,6 +1,6 @@
 private FIELD_FMT:='<tr><td>%s:</td><td><INPUT TYPE="text" NAME="%s" VALUE="%s" SIZE=50 onkeydown="if (event.keyCode == 13) { this.form.submit(); return false; }"></td></tr>';
 
-private isValidReal(x)->x.isNumeric AND not(x.isNan) and not(x.isInfinite);
+private isValidReal(x)->x.isNumeric AND !x.isNan and !x.isInfinite;
 memoized
 pageSet(rawParameters,parameters)->begin
   //extract parameters in string form

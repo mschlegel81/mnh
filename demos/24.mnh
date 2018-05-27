@@ -9,7 +9,7 @@ private findSolution(set:IntList(4))->
   set.permutationIterator.each(N,
                OP_TRIPLET.each(O,testSolution(N,O),head),head);
 
-private canSolve(set:IntList(4))->not(isVoid(findSolution(set)));
+private canSolve(set:IntList(4))->!isVoid(findSolution(set));
 
 private getRiddle->rangeGenerator(0,1000).each(i,
   begin
@@ -31,7 +31,7 @@ private isCorrectSolution(set:IntList(4),text:String)->text.trim=="" ? false : b
   : return errPrint("The input does not use the given numbers.\n  got     : ",usedNumbers
                                                             ,"\n  expected: ",set);
   local expressionResult:=try({interpret(text)},{$0});
-  not(expressionResult==24)
+  !(expressionResult==24)
   ? return errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
   : print('The solution is valid.');
   true;
@@ -43,7 +43,7 @@ private playARound->begin
   local answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.');
   local retrying:=true;
   local solutionOk:=false;
-  while(retrying and not(solutionOk:=isCorrectSolution(set,answer)),
+  while(retrying and !(solutionOk:=isCorrectSolution(set,answer)),
   begin
     retrying:=ask('Retry?',['yes','no'])='yes';
     retrying

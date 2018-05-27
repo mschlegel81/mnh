@@ -46,7 +46,7 @@ setOptions([['autoscaleY',false],['axisStyleX',0],
             ['x0',-8],['x1',8],
             ['preserveAspect',true]]);
 
-while(not(plotClosed),begin
+while(!plotClosed,begin
   stepState;
   plotState;
   sleep(0.01);

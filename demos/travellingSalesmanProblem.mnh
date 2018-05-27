@@ -49,8 +49,8 @@ scSort(L)->begin
   local y1:=yr+h;
   local mask:=sqr(x-x0)+sqr(y-y1)<
               sqr(x-x1)+sqr(y-y0);
-  local result:=scSort_(x0,y0,x0,y1,x1,y1,x.get(    mask ),y.get(    mask ))|
-                scSort_(x1,y1,x1,y0,x0,y0,x.get(not(mask)),y.get(not(mask)));
+  local result:=scSort_(x0,y0,x0,y1,x1,y1,x.get( mask),y.get( mask))|
+                scSort_(x1,y1,x1,y0,x0,y0,x.get(!mask),y.get(!mask));
   print('Path length after construction is ',round(pathLength(result),3));
   result;
 end;
@@ -61,8 +61,8 @@ private scSort_(ax:Numeric,ay:Numeric,bx:Numeric,by:Numeric,cx:Numeric,cy:Numeri
     ? begin
         local mask:=sqr(x-ax)+sqr(y-ay) <
                     sqr(x-cx)+sqr(y-cy);
-        scSort_(ax,ay,(ax+cx)/2,(ay+cy)/2,bx,by,x.get(    mask ),y.get(    mask )) |
-        scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x.get(not(mask)),y.get(not(mask)));
+        scSort_(ax,ay,(ax+cx)/2,(ay+cy)/2,bx,by,x.get( mask),y.get( mask)) |
+        scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x.get(!mask),y.get(!mask));
       end
     : begin
         print('Aborting at ',ax,'  ',ay,' | ',

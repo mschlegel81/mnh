@@ -1,7 +1,7 @@
 USE mnhInfo,formattingUtils,make_config,distroLog,testExpectation;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
-private needBuild(B:BuildConfig)->B.canBuild AND (not(B.binName.fileExists) OR not([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
+private needBuild(B:BuildConfig)->B.canBuild AND (!(B.binName.fileExists) OR !([B[2].flavour,B[2].codeVersion]==[B[1],ensureCodeHash]));
 
 private delp->(isLinux ? 'delp' : DelpPath).exec(
        ['gui/lib/i386-win32',
@@ -112,7 +112,7 @@ private buildExe(B:BuildConfig)->
   : void;
 
 private testExe(B:BuildConfig,...)->
-  not(B.canBuild) OR B.buildBlindly
+  !(B.canBuild) OR B.buildBlindly
   ? void
   : (B[6] ? void : B.buildExe) orElse (...==[]) and allTestsPassed(B[1],ensureCodeHash) or needBuild(B)
     ? true

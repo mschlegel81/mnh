@@ -2,7 +2,7 @@ UNIT mnh_imig;
 INTERFACE
 USES sysutils,   //system
      ExtCtrls,
-     myGenerics,myTools,bigint, //common
+     myGenerics,myTools, //common
      //mnh:
      mnh_constants, mnh_basicTypes,
      mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,mnh_plotData,

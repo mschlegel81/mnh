@@ -121,7 +121,7 @@ decimalForm(rat:Rational)->begin
   local first:=r[0]; r:=r[1]*10;
   local result:=[];
   local hist:=[];
-  while(not(r in hist) AND result.size<200,begin
+  while(!(r in hist) AND result.size<200,begin
     hist|=r;
     local q:=divMod(r,enum);
     r:=q[1]*10;

@@ -62,12 +62,12 @@ skipFile(scriptFileName:String                ,fullVersion)->false;
 @SuppressUnusedWarning
 testsToExecuteForFlavour(flavourString)->begin
   local fullVersion:=copy(flavourString,0,1)='F';
-  allDemos.filter({not(skipFile($script,fullVersion))});
+  allDemos.filter({!(skipFile($script,fullVersion))});
 end;
 
 @SuppressUnusedWarning
 testsToExecuteForAnyFlavour->
-  allDemos.filter({not(skipFile($script,true) and skipFile($script,false))});
+  allDemos.filter({!(skipFile($script,true) and skipFile($script,false))});
 
 @SuppressUnusedWarning
 isSmokeTest((demosRoot&'task.mnh'          ))->true;

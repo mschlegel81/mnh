@@ -64,7 +64,6 @@ TYPE
     PROPERTY getReferenceCount: longint read numberOfReferences;
 
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -95,7 +94,6 @@ TYPE
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
@@ -124,7 +122,6 @@ TYPE
     PROPERTY value:T_bigInt read val;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -144,7 +141,6 @@ TYPE
     PROPERTY value:longint read val;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -166,7 +162,6 @@ TYPE
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -196,7 +191,6 @@ TYPE
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
-    FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -237,7 +231,6 @@ TYPE
 
       FUNCTION getParentId:T_idString; virtual; abstract;
       PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
-      FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
       FUNCTION typeString:string; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
@@ -354,7 +347,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
-      FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
       FUNCTION isKeyValuePair:boolean;
       FUNCTION isKeyValueCollection:boolean; virtual;
       FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual;
@@ -395,7 +387,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION equals(CONST other: P_literal): boolean; virtual;
-      FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal; virtual;
       FUNCTION newOfSameType(CONST initSize:boolean):P_collectionLiteral; virtual;
       FUNCTION size:longint;        virtual;
       FUNCTION contains(CONST other:P_literal):boolean; virtual;
@@ -442,7 +433,6 @@ CONST
   NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; triggeredByReturn:false);
 
 VAR
-  subruleApplyOpCallback: FUNCTION(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:pointer): P_literal;
 FUNCTION exp(CONST x:double):double; inline;
 
@@ -1577,44 +1567,6 @@ FUNCTION T_compoundLiteral.isInRelationTo(CONST relation: T_tokenType; CONST oth
 //=============================================================:?.isInRelationTo
 FUNCTION T_listLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin if initSize then result:=newListLiteral(fill) else result:=newListLiteral(); end;
 FUNCTION T_setLiteral.newOfSameType(CONST initSize:boolean): P_collectionLiteral; begin result:=newSetLiteral; if initSize then P_setLiteral(result)^.dat.rehashForExpectedSize(dat.fill); end;
-//?.negate:=====================================================================
-FUNCTION T_literal.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=@self; rereference; end;
-FUNCTION T_stringLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newVoidLiteral; adapters.raiseError('Cannot negate string.', minusLocation); end;
-FUNCTION T_boolLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newVoidLiteral; adapters.raiseError('Cannot negate boolean.', minusLocation); end;
-FUNCTION T_expressionLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin
-    result:=subruleApplyOpCallback(@intLit[-1],tt_operatorMult,@self,minusLocation,threadContext);
-  end;
-
-FUNCTION T_bigIntLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newBigIntLiteral(value.negated); end;
-FUNCTION T_smallIntLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newIntLiteral(-value); end;
-FUNCTION T_realLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  begin result:=newRealLiteral(-value); end;
-FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  VAR res: P_listLiteral;
-      i  : longint;
-  begin
-    res:=newListLiteral(size);
-    for i:=0 to size-1 do res^.append(dat[i]^.negate(minusLocation,adapters,threadContext),false);
-    result:=res;
-  end;
-FUNCTION T_setLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer): P_literal;
-  VAR res: P_setLiteral;
-      iter:T_arrayOfLiteral;
-      x:P_literal;
-  begin
-    res:=newSetLiteral(dat.fill);
-    iter:=iteratableList;
-    for x in iter do res^.append(x^.negate(minusLocation,adapters,threadContext),false);
-    disposeLiteral(iter);
-    result:=res;
-  end;
-//=====================================================================:?.negate
 FUNCTION T_literal.typeString:string;
   begin
     result:=C_typeInfo[literalType].name;

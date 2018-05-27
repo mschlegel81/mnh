@@ -81,10 +81,10 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
   assertUniqueInstance;
   sandBoxExecute('1');
   local toRun:=allDemos
-           .filter({not(skipFile($f))})
-           .filter({forceRun OR not(isTestAlreadyPassed(extractFileNameOnly($script)))});
+           .filter({!skipFile($f)})
+           .filter({forceRun OR !isTestAlreadyPassed(extractFileNameOnly($script))});
   local allPassed:=
-  (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR not(isTestAlreadyPassed(EXAMPLES_LOG_NAME))) ? executeExamples(logging) : void)).agg(AND);
+  (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR !isTestAlreadyPassed(EXAMPLES_LOG_NAME)) ? executeExamples(logging) : void)).agg(AND);
   printCase("");
   printDirect("\r");
   printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",

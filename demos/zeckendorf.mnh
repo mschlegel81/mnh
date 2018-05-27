@@ -16,13 +16,6 @@ zeckendorfEncode(I:IntList)->I.pMap(::zeckendorfEncode);
 zeckendorfDecode(i:Int)->i.digits(2).reverseList.each(b,b*fib(index),+);
 zeckendorfDecode(I:IntList)->I.pMap(::zeckendorfDecode);
 
-//*Validates encoded i
-zeckendorfValidate(i:Int)->begin
-  local D:=i.digits(2);
-  not((D.tail=1) and (D.leading=1)).agg(AND);
-end;
-zeckendorfValidate(I:IntList)->I.pMap(::zeckendorfValidate);
-
 private examples:=[1,2,3,4,5,17,100,255];
 //*Returns string of i in binary representation
 private binString(i:Int)->i.digits(2).join;

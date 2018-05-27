@@ -617,12 +617,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
            if startsWith(tt_comparatorLeq)       then apply(tt_comparatorLeq)
                                                  else apply(tt_comparatorLss);
       '!': if startsWith('!=')                   then apply(2,tt_comparatorNeq)
-           else begin
-             fail('Cannot parse: '+copy(line,inputLocation.column,20)+' (first char is "'+line[inputLocation.column]+'"=#'+intToStr(ord(line[inputLocation.column]))+')');
-             inputLocation.column:=length(line)+1;
-             recycler.disposeToken(result);
-             exit(nil);
-           end;
+                                                 else apply(tt_unaryOpNegate);
       else begin
         fail('Cannot parse: '+copy(line,inputLocation.column,20)+' (first char is "'+line[inputLocation.column]+'"=#'+intToStr(ord(line[inputLocation.column]))+')');
         inputLocation.column:=length(line)+1;

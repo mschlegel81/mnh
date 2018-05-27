@@ -127,6 +127,8 @@ TYPE
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor, tt_list_constructor_ranging,
     tt_expBraceOpen, tt_expBraceClose,
+    //inline if: (<condition>?<then>:<else>)
+    tt_iifCheck, tt_iifElse,
     //separators
     tt_separatorComma, tt_separatorCnt,
     //comparators
@@ -143,11 +145,10 @@ TYPE
     tt_operatorStrConcat, tt_operatorOrElse,
     //list operators:
     tt_operatorConcat, tt_operatorConcatAlt,
-    //inline if: (<condition>?<then>:<else>)
-    tt_iifCheck, tt_iifElse,
-    tt_listToParameterList,
-    //partially evaluated operators
+    //unary operators
+    tt_unaryOpNegate,
     tt_unaryOpPlus, tt_unaryOpMinus,
+    tt_listToParameterList,
     //assignment operators:
     tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
                             tt_mut_nested_assign,
@@ -192,6 +193,7 @@ CONST
 
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat,tt_operatorConcatAlt];
   C_operators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
+  C_unaryOperators: T_tokenTypeSet=[tt_unaryOpNegate,tt_unaryOpPlus,tt_unaryOpMinus];
   C_comparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
@@ -218,17 +220,18 @@ CONST
     {tt_list_constructor}   tt_listBraceClose,
                             tt_listBraceClose,
     {tt_expBraceOpen}       tt_expBraceClose,
-    {tt_expBraceClose..tt_operatorIn} tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,
+    {tt_expBraceClose}      tt_EOL,
     {tt_iifCheck}           tt_iifElse);
 
-  C_opPrecedence: array[tt_comparatorEq..tt_operatorConcatAlt] of byte =
+  C_opPrecedence: array[tt_comparatorEq..tt_unaryOpMinus] of byte =
    (6, 6, 6, 6, 6, 6, 6, //comparators
     7,                   //in
     8, 9, 9,             //logical operators
     8, 9,                //lazy logical operators
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     5, 9,                //special: string concatenation
-   10,11);            //list operators
+   10,11,
+   1,1,1);               //unary (prefix) operators
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_compatibleBegin:array[tt_endBlock..tt_endExpression] of T_tokenType=(tt_beginBlock,tt_beginRule,tt_beginExpression);
@@ -269,6 +272,8 @@ CONST
 {tt_list_Constructor_ranging}   (defaultId:'';              defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'A list constructor'),
 {tt_expBraceOpen}               (defaultId:'{';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Curly opening bracket#Delimits an expression'),
 {tt_expBraceClose}              (defaultId:'}';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Curly closing bracket#Delimits an expression'),
+{tt_iifCheck}                   (defaultId:'?';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
+{tt_iifElse}                    (defaultId:':';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
 {tt_separatorComma}             (defaultId:',';             defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator comma'),
 {tt_separatorCnt}               (defaultId:'..';            defaultHtmlSpan:'';           reservedWordClass:rwc_not_reserved;     helpText:'Separator ..#Used for constructing ranges and only allowed in that context'),
 {tt_comparatorEq}               (defaultId:'=';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Equals operator#Returns true if the scalar comparands are type-compatible#and equal#For list operands a list of booleans is returned'),
@@ -295,11 +300,10 @@ CONST
 {tt_operatorOrElse}             (defaultId:'orElse';        defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Or-Else operator#Employed to provide a fallback to void literals'),
 {tt_operatorConcat}             (defaultId:'|';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List concatenation operator#Applies to all literals'),
 {tt_operatorConcatAlt}          (defaultId:'||';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List concatenation operator#Applies to all literals'),
-{tt_iifCheck}                   (defaultId:'?';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
-{tt_iifElse}                    (defaultId:':';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Inline-if-operator'),
-{tt_listToParameterList}        (defaultId:'@';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List-to-parameter-list operator'),
+{tt_unaryOpNegate}              (defaultId:'!';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Logical negation'),
 {tt_unaryOpPlus}                (defaultId:'+';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Unary plus operator#Neutral'),
 {tt_unaryOpMinus}               (defaultId:'-';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Unary minus operator#Negates the operand'),
+{tt_listToParameterList}        (defaultId:'@';             defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'List-to-parameter-list operator'),
 {tt_declare}                    (defaultId:'->';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Declaration operator'),
 {tt_assign}                     (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Assignment operator'),
 {tt_mutate}                     (defaultId:':=';            defaultHtmlSpan:'operator';   reservedWordClass:rwc_operator;         helpText:'Mutate-assign operator'),

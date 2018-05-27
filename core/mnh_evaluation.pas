@@ -21,6 +21,66 @@ USES sysutils,
      listProcessing;
 
 IMPLEMENTATION
+FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  VAR y,yNeg:P_literal;
+      iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpNegate,x,opLocation,@context);
+      lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
+      lt_list,lt_booleanList,lt_emptyList,
+      lt_set ,lt_booleanSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
+        iter:=P_collectionLiteral(x)^.iteratableList;
+        for y in iter do begin
+          yNeg:=logicalNegationOf(y,opLocation,context);
+          if yNeg=nil
+          then P_collectionLiteral(result)^.containsError:=true
+          else P_collectionLiteral(result)^.append(yNeg,false);
+        end;
+        disposeLiteral(iter);
+        if P_collectionLiteral(result)^.containsError then begin
+          raiseNotApplicableError('! (logical negation)',x,opLocation,context.adapters^);
+          disposeLiteral(result);
+        end;
+      end;
+      else raiseNotApplicableError('! (logical negation)',x,opLocation,context.adapters^);
+    end;
+    if result=nil then result:=newVoidLiteral;
+  end;
+
+FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
+  VAR y,yNeg:P_literal;
+      iter:T_arrayOfLiteral;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=subruleApplyOpImpl(nil,tt_unaryOpMinus,x,opLocation,@context);
+      lt_bigint    : result:=newIntLiteral (P_bigIntLiteral (x)^.value.negated);
+      lt_smallint  : result:=newIntLiteral(-P_smallIntLiteral(x)^.value);
+      lt_real      : result:=newRealLiteral(-P_realLiteral(x)^.value);
+      lt_list,lt_realList,lt_intList,lt_numList,lt_emptyList,
+      lt_set ,lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet: begin
+        result:=P_collectionLiteral(x)^.newOfSameType(true);
+        iter:=P_collectionLiteral(x)^.iteratableList;
+        for y in iter do begin
+          yNeg:=logicalNegationOf(y,opLocation,context);
+          if yNeg=nil
+          then P_collectionLiteral(result)^.containsError:=true
+          else P_collectionLiteral(result)^.append(yNeg,false);
+        end;
+        disposeLiteral(iter);
+        if P_collectionLiteral(result)^.containsError then begin
+          raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.adapters^);
+          disposeLiteral(result);
+        end;
+      end;
+      else raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.adapters^);
+    end;
+    if result=nil then result:=newVoidLiteral;
+  end;
+
 FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
   VAR stack:T_TokenStack;
       newLit:P_literal;
@@ -584,16 +644,21 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       case cTokType[1] of
         tt_comparatorEq..tt_operatorConcatAlt:
           if C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]] then begin
-            newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    cTokType[-1],
-                                    first^.data,
-                                    stack.dat[stack.topIndex]^.location,
-                                    @context);
+            case cTokType[-1] of
+              tt_unaryOpMinus : newLit:=arithmeticNegationOf(first^.data,stack.dat[stack.topIndex]^.location,context);
+              tt_unaryOpNegate: newLit:=logicalNegationOf   (first^.data,stack.dat[stack.topIndex]^.location,context);
+              tt_unaryOpPlus  : newLit:=P_literal(first^.data)^.rereferenced;
+              else newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                                           cTokType[-1],
+                                           first^.data,
+                                           stack.dat[stack.topIndex]^.location,
+                                           @context);
+            end;
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
             stack.popDestroy(context.recycler); //pop operator from stack
-            stack.popDestroy(context.recycler); //pop LHS-Literal from stack
+            if not(cTokType[-1] in C_unaryOperators) then stack.popDestroy(context.recycler); //pop LHS-Literal from stack
             didSubstitution:=true;
           end else begin
             stack.push(first);
@@ -602,16 +667,21 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           end;
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
           begin
-            newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
-                                    cTokType[-1],
-                                    first^.data,
-                                    stack.dat[stack.topIndex]^.location,
-                                    @context);
+            case cTokType[-1] of
+              tt_unaryOpMinus : newLit:=arithmeticNegationOf(first^.data,stack.dat[stack.topIndex]^.location,context);
+              tt_unaryOpNegate: newLit:=logicalNegationOf   (first^.data,stack.dat[stack.topIndex]^.location,context);
+              tt_unaryOpPlus  : newLit:=P_literal(first^.data)^.rereferenced;
+              else newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                                           cTokType[-1],
+                                           first^.data,
+                                           stack.dat[stack.topIndex]^.location,
+                                           @context);
+            end;
             disposeLiteral(first^.data);
             first^.data:=newLit; //store new literal in head
             first^.location:=stack.dat[stack.topIndex]^.location;
             stack.popDestroy(context.recycler); //pop operator from stack
-            stack.popDestroy(context.recycler); //pop LHS-Literal from stack
+            if not(cTokType[-1] in C_unaryOperators) then stack.popDestroy(context.recycler); //pop LHS-Literal from stack
             didSubstitution:=true;
           end;
         tt_parList:
@@ -864,17 +934,6 @@ end}
             end;
             didSubstitution:=true;
           end;
-          tt_unaryOpPlus: begin
-            stack.popDestroy(context.recycler);
-            didSubstitution:=true;
-          end;
-          tt_unaryOpMinus: begin
-            newLit:=P_literal(first^.data)^.negate(stack.dat[stack.topIndex]^.location,context.adapters^,@context);
-            disposeLiteral(first^.data);
-            first^.data:=newLit;
-            stack.popDestroy(context.recycler);
-            didSubstitution:=true;
-          end;
           tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
             if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
@@ -892,7 +951,8 @@ end}
               didSubstitution:=true;
             end else process_op_lit;
           end;
-          tt_operatorIn..tt_operatorConcatAlt: process_op_lit;
+          tt_operatorIn..tt_operatorConcatAlt,
+          tt_unaryOpPlus,tt_unaryOpMinus,tt_unaryOpNegate: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack.popDestroy(context.recycler);
@@ -1090,9 +1150,11 @@ end}
             {$endif}{$endif}
           end;
         end;
-{cT[0]=}tt_operatorPlus:                 begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
-{cT[0]=}tt_operatorMinus:                begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
-{cT[0]=}tt_unaryOpPlus, tt_unaryOpMinus: begin                                  stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_operatorPlus:     begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_operatorMinus:    begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
+{cT[0]=}tt_unaryOpPlus,
+        tt_unaryOpMinus,
+        tt_unaryOpNegate:    begin                                  stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_comparatorEq..tt_operatorLazyOr,
         tt_operatorMult..tt_operatorConcatAlt:
           context.adapters^.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);

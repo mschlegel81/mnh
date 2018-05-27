@@ -5,8 +5,8 @@ Lazarus32Path:='..\lazarus32';
 DelpPath     :='..\lazarus64\fpc\3.0.4\bin\x86_64-win64\delp.exe';
 @SuppressUnusedWarning
 projectSLOC->hashFiles
-             .filter({not($file.matches('3rd_party'))})
-             .pMap({$file.fileLines.trim.filter({$line!='' and not($line.matches('^//'))})})
+             .filter({!($file.matches('3rd_party'))})
+             .pMap({$file.fileLines.trim.filter({$line!='' AND !($line.matches('^//'))})})
              .flatten;
 
 isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
@@ -57,7 +57,7 @@ binName(B:BuildConfig)->B[2];
 //*Prints out code size (excluding 3rd party code)
 main->printf@("Code Size:\v%s\tkLOC\n\v%s\tkB"|round(
 hashFiles
-.filter({not($x.matches('3rd_party'))})
+.filter({!($x.matches('3rd_party'))})
 .fileStats
 .agg(+)
 .get([0,2])/1024));
