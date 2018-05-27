@@ -82,7 +82,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="45">
+    <Units Count="47">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -319,6 +319,14 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="plotExport"/>
       </Unit44>
+      <Unit45>
+        <Filename Value="..\core\mnh_tokenArray.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit45>
+      <Unit46>
+        <Filename Value="..\core\mnh_evaluation.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit46>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

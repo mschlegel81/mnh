@@ -77,6 +77,7 @@ TYPE
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
+      {Calling with intrinsicTuleId='' means the original is cloned}
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
@@ -173,6 +174,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
+FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
 IMPLEMENTATION
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
@@ -603,6 +605,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
       r:P_inlineExpression;
       embrace:boolean;
       preparedBodyLength:longint=0;
+      ignoreLHS:boolean=false;
 
   PROCEDURE appendToExpression(VAR T:T_preparedToken);
     begin
@@ -638,9 +641,11 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
 
   begin
     init(et_inline,opLocation);
+    ignoreLHS:=op in [tt_unaryOpMinus,tt_unaryOpPlus,tt_unaryOpNegate];
+
     preparedBodyLength:=1;
     //Pattern (including final parameter names)
-    if LHS^.literalType=lt_expression then begin
+    if not(ignoreLHS) and (LHS^.literalType=lt_expression) then begin
       //Lenght of prepared body of LHS, maybe brackets
       if RHS^.literalType=lt_expression
       then pattern.combineForInline(P_subruleExpression(LHS)^.pattern,
@@ -657,27 +662,32 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
     if RHS^.literalType=lt_expression
     then inc(preparedBodyLength,length(P_inlineExpression(RHS)^.preparedBody)+2)
     else inc(preparedBodyLength);
-    if LHS^.literalType=lt_expression
-    then inc(preparedBodyLength,length(P_inlineExpression(LHS)^.preparedBody)+2)
-    else inc(preparedBodyLength);
+    if not(ignoreLHS) then begin
+      if LHS^.literalType=lt_expression
+      then inc(preparedBodyLength,length(P_inlineExpression(LHS)^.preparedBody)+2)
+      else inc(preparedBodyLength);
+    end;
     setLength(preparedBody,preparedBodyLength);
     preparedBodyLength:=0;
     //construct
-    if LHS^.literalType=lt_expression then begin
-      r:=P_inlineExpression(LHS);
-      if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
-      if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
-      embrace:=r^.needEmbrace(C_opPrecedence[op]);
-      if embrace then appendToExpression(tt_braceOpen);
-      for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
-      if embrace then appendToExpression(tt_braceClose);
-    end else appendToExpression(LHS);
+    if not(ignoreLHS) then begin
+      if LHS^.literalType=lt_expression then begin
+        r:=P_inlineExpression(LHS);
+        if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
+        if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
+        embrace:=r^.needEmbrace(C_opPrecedence[op]);
+        if embrace then appendToExpression(tt_braceOpen);
+        for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
+        if embrace then appendToExpression(tt_braceClose);
+      end else appendToExpression(LHS);
+    end;
     appendToExpression(op);
     if RHS^.literalType=lt_expression then begin
       r:=P_inlineExpression(RHS);
       if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
       if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
-      embrace:=r^.needEmbrace(C_opPrecedence[op]);
+      embrace:=ignoreLHS and (length(r^.preparedBody)>1) or
+          not(ignoreLHS) and r^.needEmbrace(C_opPrecedence[op]-1);
       if embrace then appendToExpression(tt_braceOpen);
       for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
       if embrace then appendToExpression(tt_braceClose);
@@ -697,7 +707,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
       LHSinstead:P_literal=nil;
       RHSinstead:P_literal=nil;
   begin
-    if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iteratableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
+    if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iteratableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
       // generator+3 -> lazyMap(generator,{$x+3})
       LHSinstead:=newIdentityRule(P_threadContext(threadContext)^,tokenLocation);
       new(newRule,createFromOp(LHSinstead,op,RHS,tokenLocation));
@@ -717,19 +727,22 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
       disposeLiteral(LHSinstead);
       exit(result);
     end;
-    if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
-       (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_statefulExpressionTypes) then begin
+    if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
+                      (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_statefulExpressionTypes) then begin
       P_threadContext(threadContext)^.adapters^.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
       exit(newVoidLiteral);
     end;
-    if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_builtinExpressionTypes)
-    then LHSinstead:=P_builtinExpression(LHS)^.getEquivalentInlineExpression(P_threadContext(threadContext)^)
-    else LHSinstead:=LHS^.rereferenced;
+    if LHS<>nil then begin
+      if (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_builtinExpressionTypes)
+      then LHSinstead:=P_builtinExpression(LHS)^.getEquivalentInlineExpression(P_threadContext(threadContext)^)
+      else LHSinstead:=LHS^.rereferenced;
+    end else LHSinstead:=nil;
     if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_builtinExpressionTypes)
     then RHSinstead:=P_builtinExpression(RHS)^.getEquivalentInlineExpression(P_threadContext(threadContext)^)
     else RHSinstead:=RHS^.rereferenced;
     new(newRule,createFromOp(LHSinstead,op,RHSinstead,tokenLocation));
     result:=newRule;
+    if LHSinstead<>nil then
     disposeLiteral(LHSinstead);
     disposeLiteral(RHSinstead);
   end;
@@ -1621,7 +1634,6 @@ INITIALIZATION
   generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
   mnh_funcs_plot.generateRow:=@generateRow;
   {$endif}
-  subruleApplyOpCallback    :=@subruleApplyOpImpl;
   subruleReplacesCallback   :=@subruleReplaces;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
