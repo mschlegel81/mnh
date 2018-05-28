@@ -967,6 +967,20 @@ FUNCTION isPositiveInt(CONST L:P_literal; CONST allowZero:boolean):boolean;
   end;
 
 FUNCTION powMod_impl intFuncSignature;
+  FUNCTION smallPowMod(CONST base:int64; power:int64; CONST modul:int64):int64; inline;
+    VAR f:int64;
+    begin
+      result:=1;
+      f:=base mod modul;
+      while power>0 do begin
+        if odd(power) then begin
+          result:=(result * f) mod modul;
+        end;
+        f:=(f*f) mod modul;
+        power:=power shr 1;
+      end;
+    end;
+
   VAR bx,by,bz:T_bigInt;
       ux:boolean=false;
       uy:boolean=false;
@@ -977,6 +991,12 @@ FUNCTION powMod_impl intFuncSignature;
        isPositiveInt(arg0,true) and
        isPositiveInt(arg1,true) and
        isPositiveInt(arg2,false) then begin
+      if (arg0^.literalType=lt_smallint) and
+         (arg1^.literalType=lt_smallint) and
+         (arg2^.literalType=lt_smallint)
+      then exit(newIntLiteral(smallPowMod(P_smallIntLiteral(arg0)^.value,
+                                          P_smallIntLiteral(arg1)^.value,
+                                          P_smallIntLiteral(arg2)^.value)));
       ensure(arg0,bx,ux);
       ensure(arg1,by,uy);
       ensure(arg2,bz,uz);
