@@ -630,7 +630,7 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
                      else exit(newIntLiteral(bigint.divide(P_bigIntLiteral(LHS)^.value,P_smallIntLiteral(RHS)^.value)));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
                      then exit(newRealLiteral(Nan))
-                     else exit(newIntLiteral(bigint.divide(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
+                     else exit(newIntLiteral(P_bigIntLiteral(LHS)^.value.divide(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_SL);
       end;
