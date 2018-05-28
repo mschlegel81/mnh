@@ -309,7 +309,7 @@ PROCEDURE TMnhForm.onBreakpoint(CONST data: pointer);
 
     jumpToFile;
     clearStackView;
-    updateExpressionMemo;
+    callStackListSelectionChange(nil,false);
 
     outputPageControl.activePage:=debugTabSheet;
   end;
