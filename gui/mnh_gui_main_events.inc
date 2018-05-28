@@ -101,7 +101,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
         exit;
       end;
     end;
-    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
+    runnerModel.haltEvaluation;
     quick.adapters^.haltEvaluation;
     quick.task.ensureStop;
     storeEditorsToSettings;
@@ -177,6 +177,9 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     quick.completion.destroy;
     dispose(quick.adapters,destroy);
     variablesTreeViewModel.destroy;
+    if debuggerData.globalVariableReport<>nil then begin dispose(debuggerData.globalVariableReport,destroy); debuggerData.globalVariableReport:=nil; end;
+    if debuggerData.localVariableReport <>nil then begin dispose(debuggerData.localVariableReport ,destroy); debuggerData.localVariableReport :=nil; end;
+    if debuggerData.inlineVariableReport<>nil then begin dispose(debuggerData.inlineVariableReport,destroy); debuggerData.inlineVariableReport:=nil; end;
     finalizeEditorMeta;
   end;
 
