@@ -741,6 +741,10 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     result:=nil;
     if not(L^.literalType in C_typables) then adapters^.raiseError('Cannot cast primitive scalar',location);
     if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
+    if not(L^.literalType in C_typables) and (adapters<>nil) then adapters^.raiseError('Cannot cast primitive scalar',location);
+    if P_typableLiteral(L)^.customType=@self then begin
+      exit(P_typableLiteral(L^.rereferenced));
+    end;
     if ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
       result:=cloneLiteral(P_typableLiteral(L),location,threadContext,false);
       if result<>nil then result^.customType:=@self;
@@ -2643,6 +2647,11 @@ FUNCTION T_listLiteral.clone: P_compoundLiteral;
     for i:=0 to fill-1 do P_listLiteral(result)^.dat[i]:=dat[i]^.rereferenced;
     P_listLiteral(result)^.fill       :=fill;
     P_listLiteral(result)^.literalType:=literalType;
+    P_listLiteral(result)^.ints       :=ints    ;
+    P_listLiteral(result)^.reals      :=reals   ;
+    P_listLiteral(result)^.strings    :=strings ;
+    P_listLiteral(result)^.booleans   :=booleans;
+    P_listLiteral(result)^.others     :=others  ;
   end;
 
 FUNCTION T_setLiteral.clone: P_compoundLiteral;
