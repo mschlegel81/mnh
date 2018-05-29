@@ -493,7 +493,7 @@ exit}
   end;
 
 FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
-  VAR cast:P_literal;
+  VAR cast:P_typableLiteral;
       raw :P_literal;
       adaptersForCast:P_adapters=nil;
   begin
@@ -523,10 +523,11 @@ FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoca
         exit(false);
       end;
     end else if (param<>nil) and (param^.size=1)
-    then raw:=param^.value[0]
+    then raw:=param^.value[0]^.rereferenced
     else exit(false);
 
     cast:=typedef^.cast(raw,callLocation,threadContextPointer,P_threadContext(threadContextPointer)^.adapters);
+    disposeLiteral(raw);
     if cast=nil then exit(false)
     else begin
       result:=true;
