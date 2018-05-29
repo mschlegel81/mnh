@@ -613,16 +613,14 @@ FUNCTION permutations_impl intFuncSignature;
 FUNCTION factorize_impl intFuncSignature;
   VAR factors:T_factorizationResult;
       i:longint;
-      temp:T_bigInt;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then begin
       if arg0^.literalType=lt_smallint
-      then temp.fromInt(P_smallIntLiteral(arg0)^.value)
-      else temp:=P_bigIntLiteral(arg0)^.value;
-      factors:=bigint.factorize(temp);
-      if arg0^.literalType=lt_smallint
-      then temp.destroy;
+      then begin
+        factors.smallFactors:=factorizeSmall(P_smallIntLiteral(arg0)^.value);
+        setLength(factors.bigFactors,0);
+      end else factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value);
       result:=newListLiteral(length(factors.smallFactors)+length(factors.bigFactors));
       for i:=0 to length(factors.smallFactors)-1 do listResult^.appendInt(factors.smallFactors[i]);
       for i:=0 to length(factors.bigFactors)-1 do listResult^.append(newIntLiteral(factors.bigFactors[i]),false);
