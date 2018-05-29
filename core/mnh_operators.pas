@@ -100,7 +100,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if P_threadContext(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
-        P_threadContext(context)^.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        P_threadContext(context)^.adapters^.raiseError('Stack overflow in overridden operator',tokenLocation);
         exit(newVoidLiteral);
       end;
       parList:=newListLiteral(2);
@@ -338,7 +338,7 @@ FUNCTION outerFunc_id intFuncSignature;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        context.adapters^.raiseError('Stack overflow in overridden operator',tokenLocation);
         exit(nil);
       end;
       inc(context.callDepth);
@@ -385,7 +385,7 @@ boolIntOperator;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.adapters^.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        context.adapters^.raiseError('Stack overflow in overridden operator',tokenLocation);
         exit(nil);
       end;
       inc(context.callDepth);
