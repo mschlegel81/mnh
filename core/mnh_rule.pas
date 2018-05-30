@@ -495,21 +495,7 @@ exit}
 FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean;
   VAR cast:P_typableLiteral;
       raw :P_literal;
-      adaptersForCast:P_adapters=nil;
   begin
-    if (param<>nil) and (param^.size=1)
-    then raw:=param^.value[0]
-    else exit(false);
-
-    if length(subrules)=0 then adaptersForCast:=P_threadContext(threadContextPointer)^.adapters;
-    cast:=typedef^.cast(raw,callLocation,threadContextPointer,adaptersForCast);
-    if cast<>nil then begin
-      firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,cast);
-      lastRep:=firstRep;
-      exit(true);
-    end;
-    if length(subrules)=0 then exit(false);
-
     if inherited replaces(ruleTokenType,callLocation,param,firstRep,lastRep,threadContextPointer) then begin
       if P_threadContext(threadContextPointer)^.callDepth>STACK_DEPTH_LIMIT then begin
         P_threadContext(threadContextPointer)^.adapters^.raiseSystemError('Stack overflow in typecast rule',callLocation);
