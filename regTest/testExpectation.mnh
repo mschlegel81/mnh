@@ -22,6 +22,7 @@ private flavourDependentScripts:=
    'shannonEntropy',
    'thieleInterpolation',
    'travellingSalesmanProblem',
+   'test_rationals',
    EXAMPLES_LOG_NAME].union(plotters.map(::extractFileNameOnly));
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
 
