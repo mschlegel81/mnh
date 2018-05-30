@@ -739,7 +739,6 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_token
 FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
   begin
     result:=nil;
-    if not(L^.literalType in C_typables) then adapters^.raiseError('Cannot cast primitive scalar',location);
     if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
     if not(L^.literalType in C_typables) and (adapters<>nil) then adapters^.raiseError('Cannot cast primitive scalar',location);
     if P_typableLiteral(L)^.customType=@self then begin
