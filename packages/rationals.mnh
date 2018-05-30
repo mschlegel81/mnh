@@ -1,6 +1,5 @@
-@SuppressUnusedParameterWarning
-type Rational(x:IntList(2))->true;
 type RegularContinuedFraction(x:IntList)->x.size>=1;
+type Rational(x:IntList(2))->!x.isRegularContinuedFraction;
 
 //*Returns rational number r in canonical form
 private shortenRational(r:IntList)->begin
@@ -23,17 +22,17 @@ end;
 @Override
 nocurry toRational(i:Int)->[i,1];
 @Override
-nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
-//*Converts continued fraction f to a rational number (represented as IntList(2))
-@Override
 nocurry toRational(f:RegularContinuedFraction)->begin
   local r:=void;
   f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
-  r.shortenRational;
 end;
 
 @Override
-toString(r:Rational)->r.join("/");
+nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
+//*Converts continued fraction f to a rational number (represented as IntList(2))
+
+@Override
+toString(r:Rational)->r[1]=1 ? r[0].toString : r.join("/");
 
 @Override
 //*The result always is a rational number
@@ -51,7 +50,7 @@ OPERATOR_MINUS(a:Int     ,b:Rational)->[a*b[1]-b[0],b[1]].toRational;
 OPERATOR_MINUS(a:Real    ,b:Rational)->a-b.toReal;
 
 @Override
-OPERATOR_MULT(a:Rational,b:Rational)->shortenRational(a*b);
+OPERATOR_MULT(a:Rational,b:Rational)->shortenRational(a.toBuiltin*b);
 OPERATOR_MULT(a:Rational,b:Int     )->shortenRational(a*[b,1]);
 OPERATOR_MULT(a:Rational,b:Real    )->a.toReal*b;
 OPERATOR_MULT(a:Int     ,b:Rational)->shortenRational([a,1]*b);
@@ -146,7 +145,7 @@ decimalForm(cf:RegularContinuedFraction)->cf.toRational.decimalForm;
 @SuppressUnusedWarning
 listApprox(cf:RegularContinuedFraction)->begin
   local r:=cf.toReal;
-  [2..min(30,cf.size)].each(k,cf.head(k).toRegularContinuedFraction)
+  [1..min(30,cf.size)].each(k,cf.head(k).toRegularContinuedFraction)
   .pMap({begin
       local rat:=$cf.toRational;
       "["&abs(rat[1]*r-rat[0])& "]\t"&rat.toString&"\t=\t"&$cf.toString;
@@ -161,3 +160,7 @@ memoized private cfFormat(count>1)->'%s+1/('+cfFormat(count-1)+')';
 
 //*Returns a continued fraction in the form cf[0]+1/(cf[0]+1/(...))
 toString(cf:RegularContinuedFraction)->cfFormat(cf.size).format@cf;
+
+@SuppressUnusedWarning
+convergents(cf:RegularContinuedFraction)->
+  [1..cf.size].pEach(k,cf.head(k).toRegularContinuedFraction.toRational);

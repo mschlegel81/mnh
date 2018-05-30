@@ -1,0 +1,15 @@
+plain script;
+USE '..\packages\rationals.mnh';
+
+values:=[2/3,-1/4,2,-5,-0.7,pi];
+
+values.cross(values).each(x,
+  format("%s + %s = %s",x[0],x[1],x[0]+x[1]),
+  format("%s - %s = %s",x[0],x[1],x[0]-x[1]),
+  format("%s * %s = %s",x[0],x[1],x[0]*x[1]),
+  format("%s / %s = %s",x[0],x[1],x[0]/x[1])).join("\n").print;
+
+print('1/7: ',(1/7).decimalForm);
+print('1/7: ',(1/7).toReal);
+print('pi : ',pi.toRational);
+print('1/6: ',(1.0/6.0).toRational);

@@ -1125,13 +1125,14 @@ The following restrictions apply:<ul>
 </ul>
 For each type <code><b>T</b></code>, two additional rules are crated:<ul>
 <li>A typecheck rule <code>is<b>T</b></code> and</li>
-<li>A typecast rule <code>to<b>T></b></code></li></ul><br>
+<li>A typecast rule <code>to<b>T</b></code></li></ul><br>
 It is recommended that type rules begin with an uppercase letter.<br>
 Types declared with <code><span class="modifier">ducktype</span></code> always match when the typecheck returns true while 
 types declared with <code><span class="modifier">type</span></code> only match after explicit casting. <br>However you may use explicit 
 casting with ducktypes as well. After explicit casting, <code><span class="builtin">typeOf</span></code> will return the name of the custom type.
-<br>
-Note that casting returns a literal that is not "equal" to the input literal. This has effects on the behavior of various builtin types and functions as Sets and Maps, <code><span class="builtin">unique</span></code> or the operator <code><span class="operator">==</span></code>.
+<br> If you overload the the typecast rule, the overriding subrules are applied before the implicitly defined cast.
+<br> Type check rules cannot be overloaded.
+<br> Note that casting returns a literal that is not "equal" to the input literal. This has effects on the behavior of various builtin types and functions as Sets and Maps, <code><span class="builtin">unique</span></code> or the operator <code><span class="operator">==</span></code>.
 <code>
 <!--mnh-->
    in> ducktype SquareMatrix(M:List)->M.size>=1 AND M.each(row,row.isNumList(M.size),AND);
@@ -1153,7 +1154,19 @@ Note that casting returns a literal that is not "equal" to the input literal. Th
   out> 'Matrix'
 <!--end-->
 </code>
-
+Finally you may also define a type hierarchy. 
+<code>
+<!--mnh-->
+​   in> type Complex(x:NumericList(2))->true;
+​   in> type Imaginary(y:Complex)->y[0]=0;
+​   in> y :=[0,1].toImaginary;
+​   in> y.isComplex;
+​  out> true
+​   in> y.isImaginary;
+​  out> true
+<!--end-->
+</code>
+The previous example would also work if any (or both) types were defines as <code><span class="modifier">ducktype</span></code>.
 <h4><br><a name="nocurryMod">nocurry</a></h4>
 The <i>nocurry</i> modifier can be used to suppress currying on rule level.
 </div>

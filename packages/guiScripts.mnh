@@ -132,13 +132,14 @@ editDiff2(editorFile:String)->
 @SuppressUnusedParameterWarning
 checkForUpdates(editorFile:String)->begin
   local availableDownloads:=
-  httpGet(local downloadPage:='http://schlegel.bplaced.de/mnh/downloads.html')
+  httpGet(local downloadPage:='http://schlegel.bplaced.net/mnh/downloads.html')
   .split("\n")
   .matchComposite('a href="mnh5_.*\.zip"')
   .flatten
   .filter(::isString)
   .replace(['a href="','"'],'');
-  local downloadableBuild:=availableDownloads.split("_").flatten.softCast.filter(::isNumeric).max;
+  local downloadableBuild:=try({availableDownloads.split("_").flatten.softCast.filter(::isNumeric).max},{print('No builds found')});
+  downloadableBuild.isVoid ? return void : void;
   downloadableBuild==mnhInfo['build']
   ? print('Your version of MNH5 is up to date')
   : begin
