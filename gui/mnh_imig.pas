@@ -413,6 +413,15 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
     end;
   end;
 
+FUNCTION randomIfs_impl intFuncSignature;
+  VAR ifs:T_ifs;
+  begin
+    ifs.create;
+    ifs.resetParameters(1);
+    result:=newStringLiteral(ifs.getAlgorithmName+ifs.toString());
+    ifs.destroy;
+  end;
+
 INITIALIZATION
   initialize(imigCS);
   initCriticalSection(imigCS);
@@ -432,6 +441,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
   registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
   registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
+  registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary,'randomIfs;//returns a random IFS to be fed to executeWorkflow');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.
