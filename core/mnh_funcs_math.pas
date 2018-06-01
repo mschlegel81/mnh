@@ -911,8 +911,8 @@ FUNCTION gcd_impl intFuncSignature;
           if bigTemp.canBeRepresentedAsInt64 then begin
             r:=bigTemp.toInt;
             workingSmall:=true;
+            bigTemp.destroy;
           end else bigR:=bigTemp;
-          bigTemp.destroy;
         end;
         lt_smallint: if workingSmall
         then r:=smallGcd(r,P_smallIntLiteral(params^.value[k])^.value)

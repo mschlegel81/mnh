@@ -1,13 +1,18 @@
 type RegularContinuedFraction(x:IntList)->x.size>=1;
 type Rational(x:IntList(2))->!x.isRegularContinuedFraction;
 
-//*Returns rational number r in canonical form
-private shortenRational(r:IntList)->begin
+//*Returns rational number r in canonical form or as integer
+@SuppressUnusedWarning
+shortenRational(r:IntList)->begin
   local x:=abs(r);
   x:=x div gcd@x;
-  (r[0]<0 xor r[1]<0
-   ? [-x[0],x[1]]
-   : x).toRational;
+  x[1]=1
+  ? (r[0]<0 xor r[1]<0)
+    ? -x[0]
+    :  x[0]
+  : (r[0]<0 xor r[1]<0
+     ? [-x[0],x[1]]
+     : x).toRational;
 end;
 
 @Override
@@ -25,11 +30,12 @@ nocurry toRational(i:Int)->[i,1];
 nocurry toRational(f:RegularContinuedFraction)->begin
   local r:=void;
   f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
+  r;
 end;
 
 @Override
+//*Converts continued fraction f to a rational number
 nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
-//*Converts continued fraction f to a rational number (represented as IntList(2))
 
 @Override
 toString(r:Rational)->r[1]=1 ? r[0].toString : r.join("/");
@@ -101,7 +107,7 @@ toRegularContinuedFraction(r:Real)->
 //*Converts rational number r to a continued fraction
 @Override
 toRegularContinuedFraction(r:Rational)->begin
-  local x:=r;
+  local x:=r.toBuiltin;
   local cf:=[];
   while(x[1]!=0,begin
     local integerPart:=x[0] div x[1];
@@ -137,7 +143,7 @@ decimalForm(rat:Rational)->begin
        : '('&periodicPart.join&')');
     end;
 end;
-
+decimalForm(i:Int)->i.toString;
 decimalForm(r:Real                     )->r.toRational.decimalForm;
 decimalForm(cf:RegularContinuedFraction)->cf.toRational.decimalForm;
 
@@ -164,3 +170,21 @@ toString(cf:RegularContinuedFraction)->cfFormat(cf.size).format@cf;
 @SuppressUnusedWarning
 convergents(cf:RegularContinuedFraction)->
   [1..cf.size].pEach(k,cf.head(k).toRegularContinuedFraction.toRational);
+
+@SuppressUnusedWarning
+parseRational(s:String)->
+  s.matches('^ *-?\d+ */ *-?\d+ *$')
+  ? begin
+      s.split('/').trim.map(::toInt);
+    end
+  : s.matches('^-?\d+(.\d*(\(\d+\))?)?$')
+    ? begin
+        local p:=s.split('.');
+        local sig:=s.matches('^-') ? -1 : 1;
+        local intPart:=p.head.toInt;
+        local fracPart:=p.tail.head.split(['(',')']).head(2);
+        local periodicPart   :=fracPart[1] orElse '0';
+        local nonperiodicPart:=fracPart[0] orElse '0';
+        sig*intPart.abs+(nonperiodicPart.toInt+periodicPart.toInt/(10^periodicPart.length-1))/10^nonperiodicPart.length;
+      end
+    : fail('cannot parse ',s);
