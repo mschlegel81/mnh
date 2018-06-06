@@ -70,6 +70,9 @@ OPERATOR_DIVREAL(a:Rational,b:Real    )->a.toReal/b;
 OPERATOR_DIVREAL(a:Int     ,b:Rational)->shortenRational([a,1]*b.reverseList);
 OPERATOR_DIVREAL(a:Real    ,b:Rational)->a/b.toReal;
 
+@Override
+OPERATOR_POT(a:Rational,p>=0)->(a.toBuiltin^p).toRational;
+
 //*Helper function returning adjacent values representable as a double
 private nextReal(x:Real,sig in [-1,1])->begin
   local increment:=sig*2^(floor(ln(abs(x))/ln(2.0))-53);

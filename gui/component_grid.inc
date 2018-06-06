@@ -8,7 +8,9 @@ TYPE
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     PROCEDURE doneAdding;
     PROCEDURE update; virtual;
+    PROCEDURE OnResize(Sender:TObject);
     PROCEDURE alignContents; virtual;
+    FUNCTION preferClientAlignment:boolean; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION getName:string; virtual;
   end;
@@ -22,6 +24,7 @@ CONSTRUCTOR T_gridMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral
     tmp:=mapGet(def,key[dmk_colCount]);
     if (tmp<>nil) and (tmp^.literalType in [lt_smallint,lt_bigint]) and (P_abstractIntLiteral(tmp)^.isBetween(1,100)) then colCount:=P_abstractIntLiteral(tmp)^.intValue;
     if colCount<0 then context.adapters^.raiseError('grids must have a specified colCount in [1..100]',location);
+    winControl.OnResize:=@OnResize;
   end;
 
 PROCEDURE T_gridMeta.add(CONST meta: P_guiElementMeta);
@@ -38,12 +41,14 @@ PROCEDURE T_gridMeta.add(CONST meta: P_guiElementMeta);
       control.AnchorParallel   (akBottom,0,leftNeighbor^.getControl);
     end else begin
       control.AnchorToNeighbour(akLeft,10,nil);
+      control.AnchorToNeighbour(akBottom,0,nil);
     end;
     if topNeighbor<>nil then begin
       control.AnchorToNeighbour(akTop  ,10,topNeighbor^.getControl);
       control.AnchorParallel   (akRight,0 ,topNeighbor^.getControl);
     end else begin
       control.AnchorToNeighbour(akTop,10,nil);
+      control.AnchorToNeighbour(akRight,10,nil);
     end;
     setLength(elements,length(elements)+1);
     elements[length(elements)-1]:=meta;
@@ -95,6 +100,11 @@ PROCEDURE T_gridMeta.update;
         widths[colIdx]:=pw;
       end else if pw>widths[colIdx] then widths[colIdx]:=pw;
     end;
+    pw:=0; for k in widths do pw+=k;
+    for k:=0 to length(widths)-1 do widths[k]:=round(widths[k]/pw*winControl.ClientWidth);
+    ph:=0; for k in heights do ph+=k;
+    for k:=0 to length(heights)-1 do heights[k]:=round(heights[k]/ph*winControl.ClientHeight);
+
     for k:=0 to length(elements)-1 do with elements[k]^.getControl do begin
       AutoSize:=false;
       height:=heights[k div colCount];
@@ -104,9 +114,19 @@ PROCEDURE T_gridMeta.update;
     leaveCriticalSection(elementCs);
   end;
 
+PROCEDURE T_gridMeta.OnResize(Sender:TObject);
+  begin
+    update;
+  end;
+
 PROCEDURE T_gridMeta.alignContents;
   begin
     update;
+  end;
+
+FUNCTION T_gridMeta.preferClientAlignment:boolean;
+  begin
+    result:=true;
   end;
 
 DESTRUCTOR T_gridMeta.destroy;
