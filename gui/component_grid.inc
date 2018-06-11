@@ -68,7 +68,8 @@ PROCEDURE T_gridMeta.update;
       l:TLabel;
       pw:longint=0;
       ph:longint=0;
-      widths,heights:array of longint;
+      freeSpace,requiredSpace:longint;
+      widths,heights:array of record size:longint; stretch:boolean; end;
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     for colIdx:=0 to colCount-1 do begin
@@ -93,22 +94,35 @@ PROCEDURE T_gridMeta.update;
       elements[k]^.getControl.GetPreferredSize(pw,ph);
       if rowIdx>=length(heights) then begin
         setLength(heights,rowIdx+1);
-        heights[rowIdx]:=ph;
-      end else if ph>heights[rowIdx] then heights[rowIdx]:=ph;
+        heights[rowIdx].size   :=ph;
+        heights[rowIdx].stretch:=elements[k]^.preferClientAlignment;
+      end else begin
+        if ph>heights[rowIdx].size then heights[rowIdx].size:=ph;
+        heights[rowIdx].stretch:=heights[rowIdx].stretch or elements[k]^.preferClientAlignment;
+      end;
       if colIdx>=length(widths) then begin
         setLength(widths,colIdx+1);
-        widths[colIdx]:=pw;
-      end else if pw>widths[colIdx] then widths[colIdx]:=pw;
+        widths[colIdx].size:=pw;
+        widths[colIdx].stretch:=elements[k]^.preferClientAlignment;
+      end else begin
+        if pw>widths[colIdx].size then widths[colIdx].size:=pw;
+        widths[colIdx].stretch:=widths[colIdx].stretch or elements[k]^.preferClientAlignment;
+      end;
     end;
-    pw:=0; for k in widths do pw+=k;
-    for k:=0 to length(widths)-1 do widths[k]:=round(widths[k]/pw*winControl.ClientWidth);
-    ph:=0; for k in heights do ph+=k;
-    for k:=0 to length(heights)-1 do heights[k]:=round(heights[k]/ph*winControl.ClientHeight);
+    freeSpace    :=winControl.ClientWidth;
+    requiredSpace:=0;
+    for k:=0 to length(widths)-1 do with widths[k] do if stretch then inc(requiredSpace,size) else dec(freeSpace,size);
+    for k:=0 to length(widths)-1 do with widths[k] do if stretch then size:=round(size/requiredSpace*freeSpace);
+
+    freeSpace    :=winControl.ClientHeight;
+    requiredSpace:=0;
+    for k:=0 to length(heights)-1 do with heights[k] do if stretch then inc(requiredSpace,size) else dec(freeSpace,size);
+    for k:=0 to length(heights)-1 do with heights[k] do if stretch then size:=round(size/requiredSpace*freeSpace);
 
     for k:=0 to length(elements)-1 do with elements[k]^.getControl do begin
       AutoSize:=false;
-      height:=heights[k div colCount];
-      width :=widths [k mod colCount];
+      height:=heights[k div colCount].size;
+      width :=widths [k mod colCount].size;
     end;
     TPanel(winControl).AutoSize    :=true;
     leaveCriticalSection(elementCs);
