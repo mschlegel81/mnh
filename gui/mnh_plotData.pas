@@ -720,8 +720,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
             average.destroy;
           end;
       end;
-      drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
       drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
+      drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
     finally
       system.leaveCriticalSection(cs);
     end;
