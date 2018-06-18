@@ -310,7 +310,7 @@ FUNCTION startIpcServer_impl intFuncSignature;
       if isServerRunning(str0^.value) then begin
         context.adapters^.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
       end else begin
-        childContext:=context.getNewAsyncContext;
+        childContext:=context.getNewAsyncContext(false);
         if childContext<>nil then begin
           new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.adapters^));
           beginThread(@ipcServerThread,ipcServer);

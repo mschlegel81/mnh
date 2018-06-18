@@ -1320,7 +1320,7 @@ FUNCTION doAsync(p:pointer):ptrint;
   end;
 
 {$i mnh_func_defines.inc}
-FUNCTION async_imp intFuncSignature;
+FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_literal;
   VAR payload:P_futureLiteral;
       task:P_asyncTask;
       childContext:P_threadContext;
@@ -1331,7 +1331,7 @@ FUNCTION async_imp intFuncSignature;
        ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) and
        context.checkSideEffects('async',tokenLocation,[se_detaching]) then begin
       try
-        childContext:=context.getNewAsyncContext;
+        childContext:=context.getNewAsyncContext(local);
         if childContext<>nil then begin
           if params^.size=2 then parameters:=list1;
           new(payload,create(P_expressionLiteral(arg0),parameters,tokenLocation,{blocking=}false));
@@ -1348,6 +1348,9 @@ FUNCTION async_imp intFuncSignature;
       end;
     end;
   end;
+
+FUNCTION async_imp      intFuncSignature; begin result:=localOrGlobalAsync(false,params,tokenLocation,context); end;
+FUNCTION localAsync_imp intFuncSignature; begin result:=localOrGlobalAsync(true,params,tokenLocation,context); end;
 
 FUNCTION future_imp intFuncSignature;
   VAR future:P_futureLiteral;
@@ -1370,7 +1373,10 @@ INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1,
                'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.');
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want to access local variables, use localAsync instead');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1,
+               'localAsync(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
+               'localAsync(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want a task that runs until the end of the script, use async instead');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1,
                'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
                'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.');
