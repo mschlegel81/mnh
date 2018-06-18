@@ -693,8 +693,7 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadCon
   end;
 
 FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
-  VAR sub:P_subruleExpression;
-      tempToken:P_token=nil;
+  VAR tempToken:P_token=nil;
   begin
     tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(1,false,location,context);
