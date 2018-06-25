@@ -120,7 +120,7 @@ TYPE
       someEchoDeclaration  :boolean;
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
-      hasMessageOfType:array[T_messageType] of boolean;
+      containedMessageTypes:T_messageTypeSet;
       {$ifdef fullVersion}
       privatePlot:P_plot;
       isTryingInstance:boolean;
@@ -352,7 +352,7 @@ FUNCTION T_errorInterceptor.hasError: boolean;
 CONSTRUCTOR T_connectorAdapter.create(CONST connected: P_adapters; CONST includePrint,includeWarnings,includeErrors: boolean);
   VAR toInclude:T_messageTypeSet=[];
   begin
-    if includePrint then include(toInclude,mt_printline);
+    if includePrint    then include(toInclude,mt_printline);
     if includeWarnings then toInclude:=toInclude+[mt_el1_note..mt_el2_userWarning];
     if includeErrors   then toInclude:=toInclude+[mt_el3_evalError..mt_el4_systemError];
     inherited create(at_unknown,toInclude);
@@ -618,8 +618,8 @@ DESTRUCTOR T_adapters.destroy;
 PROCEDURE T_adapters.clearErrors;
   VAR mt:T_messageType;
   begin
+    containedMessageTypes:=[];
     for mt:=low(T_messageType) to high(T_messageType) do begin
-      hasMessageOfType[mt]:=false;
       if   maxErrorLevel>=C_messageTypeMeta[mt].level
       then maxErrorLevel:=C_messageTypeMeta[mt].level-1;
     end;
@@ -645,7 +645,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
       leaveCriticalSection(globalLockCs);
     end;
     if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_displayTable]+C_guiOnlyMessages{$else}]{$endif}) then exit;
-    hasMessageOfType[message.messageType]:=true;
+    include(containedMessageTypes,message.messageType);
     if (message.messageType=mt_el3_stackTrace) then begin
       inc(stackTraceCount);
       if stackTraceCount>30 then exit;
@@ -675,7 +675,7 @@ PROCEDURE T_adapters.echoOutput     (CONST m:T_arrayOfString);                  
 
 PROCEDURE T_adapters.logMissingMain;
   begin
-    hasMessageOfType[mt_el3_noMatchingMain]:=true;
+    include(containedMessageTypes,mt_el3_noMatchingMain);
   end;
 
 PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
@@ -684,10 +684,9 @@ PROCEDURE T_adapters.raiseStoredMessages(VAR stored:T_storedMessages);
 
 {$ifdef fullVersion}
 PROCEDURE T_adapters.logGuiNeeded;                begin hasNeedGUIerror:=true; end;
-FUNCTION T_adapters.isDeferredPlotLogged:boolean; begin result:=hasMessageOfType[mt_plotCreatedWithDeferredDisplay]; end;
-PROCEDURE T_adapters.resetFlagsAfterPlotDone;     begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-                                                                hasMessageOfType[mt_plotCreatedWithInstantDisplay ]:=false; end;
-PROCEDURE T_adapters.logInstantPlot;              begin         hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+FUNCTION T_adapters.isDeferredPlotLogged:boolean; begin result:=mt_plotCreatedWithDeferredDisplay in containedMessageTypes; end;
+PROCEDURE T_adapters.resetFlagsAfterPlotDone;     begin containedMessageTypes:=containedMessageTypes-[mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay ]; end;
+PROCEDURE T_adapters.logInstantPlot;              begin containedMessageTypes:=containedMessageTypes-[mt_plotCreatedWithDeferredDisplay];
                                                                                                             raiseCustomMessage(message(mt_plotCreatedWithInstantDisplay ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));
                                                   end;
 PROCEDURE T_adapters.logDeferredPlot;                                                                 begin raiseCustomMessage(message(mt_plotCreatedWithDeferredDisplay,C_EMPTY_STRING_ARRAY,C_nilTokenLocation));  end;
@@ -739,7 +738,7 @@ PROCEDURE T_adapters.clearAll({$ifdef fullVersion}CONST includePlot:boolean=fals
 
 PROCEDURE T_adapters.stopEvaluation;
   begin
-    hasMessageOfType[mt_el4_haltMessageQuiet]:=true;
+    include(containedMessageTypes,mt_el4_haltMessageQuiet);
     maxErrorLevel:=5;
   end;
 
@@ -752,53 +751,46 @@ FUNCTION T_adapters.noErrors: boolean;
   end;
 
 FUNCTION T_adapters.hasNonSilentError:boolean;
-  VAR m:T_messageType;
   begin
-    for m in [mt_el3_evalError,
-              mt_el3_noMatchingMain,
-              mt_el3_userDefined,
-              mt_el4_systemError] do if hasMessageOfType[m] then exit(true);
-    result:=false;
+    result:=containedMessageTypes*[mt_el3_evalError,
+                                   mt_el3_noMatchingMain,
+                                   mt_el3_userDefined,
+                                   mt_el4_systemError]<>[];
   end;
 
 FUNCTION T_adapters.hasHaltMessage(CONST includeQuiet:boolean=true):boolean;
   begin
-    result:=hasMessageOfType[mt_el4_haltMessageReceived] or
-            hasMessageOfType[mt_el4_haltMessageQuiet] and includeQuiet;
+    result:=(mt_el4_haltMessageReceived in containedMessageTypes) or
+            (mt_el4_haltMessageQuiet in containedMessageTypes) and includeQuiet;
   end;
 
 FUNCTION T_adapters.hasFatalError: boolean;
   begin
-    result:=hasMessageOfType[mt_el4_haltMessageQuiet] or
-            hasMessageOfType[mt_el4_haltMessageReceived] or
-            hasMessageOfType[mt_el4_systemError];
+    result:=containedMessageTypes*[mt_el4_haltMessageQuiet,mt_el4_haltMessageReceived,mt_el4_systemError]<>[];
   end;
 
 FUNCTION T_adapters.hasStackTrace:boolean;
   begin
-    result:=hasMessageOfType[mt_el3_stackTrace];
+    result:=mt_el3_stackTrace in containedMessageTypes;
   end;
 
 FUNCTION T_adapters.hasPrintOut:boolean;
   begin
-    result:=hasMessageOfType[mt_printline] or
-            hasMessageOfType[mt_printdirect];
+    result:=containedMessageTypes*[mt_printline,mt_printdirect]<>[];
   end;
 
 PROCEDURE T_adapters.resetErrorFlags;
-  VAR mt:T_messageType;
   begin
     maxErrorLevel:=0;
-    for mt:=low(T_messageType) to high(T_messageType) do hasMessageOfType[mt]:=false;
+    containedMessageTypes:=[];
   end;
 
 PROCEDURE T_adapters.updateErrorlevel;
   VAR mt:T_messageType;
   begin
     maxErrorLevel:=0;
-    for mt:=low(T_messageType) to high(T_messageType) do
+    for mt in containedMessageTypes do
     if (mt<>mt_el4_haltMessageQuiet) and
-       (hasMessageOfType[mt]) and
        (C_messageTypeMeta[mt].level>maxErrorLevel) then maxErrorLevel:=C_messageTypeMeta[mt].level;
   end;
 
@@ -899,14 +891,14 @@ PROCEDURE T_adapters.setExitCode;
       code:longint=0;
   begin
     code:=userDefinedExitCode;
-    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
+    for mt in containedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
     ExitCode:=code;
   end;
 
 FUNCTION T_adapters.triggersBeep:boolean;
   VAR mt:T_messageType;
   begin
-    for mt:=low(T_messageType) to high(T_messageType) do if hasMessageOfType[mt] and (C_messageTypeMeta[mt].systemErrorLevel>0) then begin
+    for mt in containedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>0) then begin
       {$ifdef debugMode}
       writeln(stdErr,'        DEBUG: Beep triggered by message type ',mt);
       {$endif}

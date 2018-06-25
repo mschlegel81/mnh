@@ -79,7 +79,7 @@ TYPE
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
 
       PROCEDURE doneEvaluating;
-      FUNCTION getNewAsyncContext:P_threadContext;
+      FUNCTION getNewAsyncContext(CONST local:boolean):P_threadContext;
 
       PROCEDURE attachWorkerContext(CONST environment:T_queueTaskEnvironment);
       PROCEDURE detachWorkerContext;
@@ -481,12 +481,14 @@ PROCEDURE T_threadContext.doneEvaluating;
     valueStore^.clear;
   end;
 
-FUNCTION T_threadContext.getNewAsyncContext:P_threadContext;
+FUNCTION T_threadContext.getNewAsyncContext(CONST local:boolean):P_threadContext;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
-    new(result,createThreadContext(nil,adapters));
+    if local then new(result,createThreadContext(nil   ,adapters))
+             else new(result,createThreadContext(parent,adapters));
     parent^.setupThreadContext(result);
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
+    if local then result^.valueStore^.parentStore:=valueStore;
     interLockedIncrement(parent^.detachedAsyncChildCount);
   end;
 

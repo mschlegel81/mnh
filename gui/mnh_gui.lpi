@@ -14,12 +14,18 @@
       <UseXPManifest Value="True"/>
       <XPManifest>
         <DpiAware Value="True"/>
+        <TextName Value="schlegel.mnh5.gui"/>
+        <TextDesc Value="mnh5 IDE + interpreter"/>
       </XPManifest>
       <Icon Value="0"/>
     </General>
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
+    <VersionInfo>
+      <UseVersionInfo Value="True"/>
+      <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE + interpreter" InternalName="mnh5" LegalCopyright="LGPL" OriginalFilename="mnh5" ProductName="MNH5"/>
+    </VersionInfo>
     <BuildModes Count="4">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="deployment">
@@ -165,7 +171,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="47">
+    <Units Count="48">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -410,6 +416,10 @@
         <Filename Value="..\core\mnh_evaluation.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit46>
+      <Unit47>
+        <Filename Value="component_grid.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit47>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
