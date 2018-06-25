@@ -4,6 +4,7 @@ USES sysutils,Classes,
      myGenerics,
      RegExpr,
      mnh_constants,mnh_basicTypes,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
@@ -107,7 +108,7 @@ FUNCTION regexMatch_imp intFuncSignature;
         result:=regex.Exec(trip.y);
       except
         on e:Exception do begin
-           context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -147,7 +148,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
         until not(regex.ExecNext);
       except
         on e:Exception do begin
-          context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -180,7 +181,7 @@ FUNCTION regexSplit_imp intFuncSignature;
         regex.split(trip.y,pieces);
       except
         on e:Exception do begin
-          context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
       result:=newListLiteral;
@@ -213,7 +214,7 @@ FUNCTION regexReplace_imp intFuncSignature;
         result:=regex.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
-          context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;

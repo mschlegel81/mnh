@@ -4,6 +4,7 @@ USES sysutils, Classes, simpleipc, //RTL
      myGenerics,serializationUtil,
      {$ifdef UNIX}myStringUtil,{$endif}  //my tools
      mnh_basicTypes,mnh_constants,
+     mnh_messages,
      mnh_out_adapters,
      mnh_contexts,mnh_litVar,
      mnh_tokenArray,

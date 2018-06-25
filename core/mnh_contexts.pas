@@ -67,11 +67,15 @@ TYPE
       connector:P_messageConnector;
       recycler:T_tokenRecycler;
       valueStore:P_valueStore;
+      regexCache:P_regexMap;
       FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
 
       FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
 
       DESTRUCTOR destroy;
+
+
+
 
       //private
 
@@ -87,7 +91,7 @@ TYPE
     //  {$ifdef fullVersion}
     //  parentCustomForm:pointer;
     //  {$endif}
-    //  regexCache:P_regexMap;
+
     //  recycler  :T_tokenRecycler;
 
     //  adapters  :T_threadLocalMessages;
@@ -117,7 +121,7 @@ TYPE
       PROPERTY threadOptions:T_threadContextOptions read options;
       FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
       FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
-    //  PROPERTY getParent:P_evaluationContext read parent;
+      PROPERTY getParent:P_evaluationContext read parent;
       FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
@@ -200,8 +204,8 @@ TYPE
     //  taskQueue:P_taskQueue;
     //  allowedSideEffects:T_sideEffects;
     //  PROCEDURE setupThreadContext(CONST context:P_threadContext);
-    //public
-    //  prng:T_xosPrng;
+    public
+      prng:T_xosPrng;
     //  CONSTRUCTOR create(CONST outAdapters:P_messageConnector);
     //  CONSTRUCTOR createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath;{$endif} CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
     //  DESTRUCTOR destroy;
@@ -244,7 +248,7 @@ FUNCTION workerThreadCount:longint;
 //    parent        :=parent_;
 //    adapters.create(@callStack.ensureTraceInError,outAdapters);
 //    callingContext:=nil;
-//    regexCache    :=nil;
+//    Cache    :=nil;
 //    allowedSideEffects:=C_allSideEffects;
 //    callDepth:=0;
 //    dequeueContext_:=nil;
