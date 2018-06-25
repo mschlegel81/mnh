@@ -3,8 +3,8 @@ INTERFACE
 USES sysutils,
      myGenerics,mySys,
      myStringUtil,
-     mnh_constants, mnh_basicTypes
-     {$ifdef fullVersion},mnh_plotData{$endif};
+     mnh_messages,
+     mnh_constants, mnh_basicTypes;
 TYPE
   T_storedMessage = record
     messageType: T_messageType;
@@ -34,7 +34,6 @@ TYPE
     protected
       cs:TRTLCriticalSection;
     private
-      autodestruct:boolean;
       messageTypesToInclude:T_messageTypeSet;
       PROCEDURE setOutputBehavior(CONST messageTypesToInclude_:T_messageTypeSet);
     public
@@ -88,127 +87,148 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  P_adapters=^T_adapters;
-  P_errorInterceptor = ^T_errorInterceptor;
-
-  T_errorInterceptor = object(T_collectingOutAdapter)
-    parentAdapters:P_adapters;
-    CONSTRUCTOR create(CONST parent:P_adapters);
-    FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
-    FUNCTION hasError:boolean;
-  end;
-
+  P_messageConnector=^T_messageConnector;
   P_connectorAdapter=^T_connectorAdapter;
   T_connectorAdapter = object(T_abstractOutAdapter)
     private
-      connectedAdapters:P_adapters;
+      connectedAdapters:P_messageConnector;
     public
-      CONSTRUCTOR create(CONST connected:P_adapters; CONST includePrint,includeWarnings,includeErrors:boolean);
+      CONSTRUCTOR create(CONST connected:P_messageConnector; CONST includePrint,includeWarnings,includeErrors:boolean);
       DESTRUCTOR destroy; virtual;
       FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
   end;
 
-  T_adapters=object
+  T_messageConnector=object
     private
-      stackTraceCount:longint;
-      errorCount:longint;
-      maxErrorLevel: shortint;
-      adapter:array of P_abstractOutAdapter;
+      parent  :P_messageConnector;
+      children:array of P_messageConnector;
 
-      someEchoInput        :boolean;
-      someEchoDeclaration  :boolean;
-      someShowExpressionOut:boolean;
-      someShowTimingInfo   :boolean;
-      containedMessageTypes:T_messageTypeSet;
-      {$ifdef fullVersion}
-      privatePlot:P_plot;
-      isTryingInstance:boolean;
-      {$endif}
-      subAdapters:array of P_adapters;
-      userDefinedExitCode:longint;
-      PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
+      flags:T_stateFlags;
+      localErrors:T_collectingOutAdapter;
+      adapters:array of record
+        adapter:P_abstractOutAdapter;
+        doDispose:boolean;
+      end;
     public
-      {$ifdef fullVersion}
-      preferredEchoLineLength:longint;
-      hasNeedGUIerror:boolean;
-      {$endif}
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST parent_:P_messageConnector);
       DESTRUCTOR destroy;
-      PROCEDURE clearErrors;
-      PROCEDURE raiseError      (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseWarning    (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseNote       (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
-      PROCEDURE raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
 
-      PROCEDURE echoDeclaration(CONST m:string);
-      PROCEDURE echoInput      (CONST m:string);
-      PROCEDURE echoOutput     (CONST m:T_arrayOfString);
+      PROCEDURE setFlag  (CONSt flaG:T_stateFlag);
+      PROCEDURE unsetFlag(CONSt flaG:T_stateFlag);
+      PROCEDURE raiseError(CONST message:P_errorMessage);
+      PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
+      PROCEDURE postCustomMessage(CONST message:P_storedMessage);
 
-      PROCEDURE raiseStoredMessages(VAR stored:T_storedMessages);
-      {$ifdef fullVersion}
-      PROCEDURE logGuiNeeded;
-      PROCEDURE logDeferredPlot;
-      FUNCTION isDeferredPlotLogged:boolean;
-      PROCEDURE logInstantPlot;
-      PROCEDURE resetFlagsAfterPlotDone;
-      PROCEDURE logPlotSettingsChanged;
-      PROCEDURE logBreakpointEncountered(CONST data:pointer);
-      PROCEDURE logEndOfEditScript(CONST data:pointer; CONST success:boolean);
-      PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
-      PROCEDURE logDisplayTable;
-      PROCEDURE logDisplayTreeView;
-      PROCEDURE logDisplayCustomForm;
-      {$endif}
-      PROCEDURE logTimingInfo(CONST infoText:T_arrayOfString);
-      PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
-      PROCEDURE logMissingMain;
-      PROCEDURE printOut(CONST s:T_arrayOfString);
-      PROCEDURE printDirect(CONST s:T_arrayOfString);
-      PROCEDURE clearPrint;
-      PROCEDURE clearAll({$ifdef fullVersion}CONST includePlot:boolean=false{$endif});
-      PROCEDURE stopEvaluation;
-      FUNCTION noErrors: boolean; inline;
-      FUNCTION hasNonSilentError:boolean;
-      FUNCTION hasHaltMessage(CONST includeQuiet:boolean=true): boolean;
-      FUNCTION hasFatalError: boolean;
-      FUNCTION hasStackTrace:boolean;
-      FUNCTION hasPrintOut:boolean;
-      PROCEDURE resetErrorFlags;
-      PROCEDURE updateErrorlevel;
-      PROCEDURE haltEvaluation;
-      PROCEDURE logEndOfEvaluation;
-      PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
+      PROCEDURE clear(CONST clearFlags:boolean=true; CONST clearErrors:boolean=true; CONST clearAdapters:boolean=true);
 
-      FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
-      PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
-      FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
-      PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
-      PROCEDURE removeOutAdapter(CONST index:longint);
-      PROCEDURE setPrintTextFileAdapter(CONST filenameOrBlank:string);
+      PROCEDURE escalateErrors;
+      PROCEDURE attachToParent   (CONST p       :P_messageConnector);
+      PROCEDURE attachOneWayChild(CONST newChild:P_messageConnector);
+      PROCEDURE detachFromParent;
 
-      FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
-      FUNCTION getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
-
-      PROCEDURE setUserDefinedExitCode(CONST code:longint);
-      PROCEDURE setExitCode;
-      FUNCTION triggersBeep:boolean;
-
-      PROPERTY doEchoInput:         boolean read someEchoInput        ;
-      PROPERTY doEchoDeclaration:   boolean read someEchoDeclaration  ;
-      PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
-      PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
-
-      {$ifdef fullVersion}
-      FUNCTION plot:P_plot;
-      {$endif}
-      PROCEDURE addSubAdapters(CONST sub:P_adapters);
-      PROCEDURE remSubAdapters(CONST sub:P_adapters);
-      FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
-      FUNCTION getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
   end;
+
+  //T_adapters=object
+  //  private
+  //    stackTraceCount:longint;
+  //    errorCount:longint;
+  //    maxErrorLevel: shortint;
+  //    adapter:array of P_abstractOutAdapter;
+  //
+  //    someEchoInput        :boolean;
+  //    someEchoDeclaration  :boolean;
+  //    someShowExpressionOut:boolean;
+  //    someShowTimingInfo   :boolean;
+  //    containedMessageTypes:T_messageTypeSet;
+  //    {$ifdef fullVersion}
+  //    privatePlot:P_plot;
+  //    isTryingInstance:boolean;
+  //    {$endif}
+  //    subAdapters:array of P_adapters;
+  //    userDefinedExitCode:longint;
+  //    PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
+  //  public
+  //    {$ifdef fullVersion}
+  //    preferredEchoLineLength:longint;
+  //    hasNeedGUIerror:boolean;
+  //    {$endif}
+  //    CONSTRUCTOR create;
+  //    DESTRUCTOR destroy;
+  //    PROCEDURE clearErrors;
+  //    PROCEDURE raiseError      (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //    PROCEDURE raiseWarning    (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //    PROCEDURE raiseNote       (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //    PROCEDURE raiseUserError  (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //    PROCEDURE raiseUserWarning(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //    PROCEDURE raiseUserNote   (CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //    PROCEDURE raiseSystemError(CONST errorMessage: T_arrayOfString; CONST errorLocation: T_searchTokenLocation);
+  //
+  //    PROCEDURE echoDeclaration(CONST m:string);
+  //    PROCEDURE echoInput      (CONST m:string);
+  //    PROCEDURE echoOutput     (CONST m:T_arrayOfString);
+  //
+  //    PROCEDURE raiseStoredMessages(VAR stored:T_storedMessages);
+  //    {$ifdef fullVersion}
+  //    PROCEDURE logGuiNeeded;
+  //    PROCEDURE logDeferredPlot;
+  //    FUNCTION isDeferredPlotLogged:boolean;
+  //    PROCEDURE logInstantPlot;
+  //    PROCEDURE resetFlagsAfterPlotDone;
+  //    PROCEDURE logPlotSettingsChanged;
+  //    PROCEDURE logBreakpointEncountered(CONST data:pointer);
+  //    PROCEDURE logEndOfEditScript(CONST data:pointer; CONST success:boolean);
+  //    PROCEDURE logPlotFileCreated(CONST fileName:string; CONST location:T_searchTokenLocation);
+  //    PROCEDURE logDisplayTable;
+  //    PROCEDURE logDisplayTreeView;
+  //    PROCEDURE logDisplayCustomForm;
+  //    {$endif}
+  //    PROCEDURE logTimingInfo(CONST infoText:T_arrayOfString);
+  //    PROCEDURE logCallStackInfo(CONST infoText:ansistring; CONST location:T_searchTokenLocation);
+  //    PROCEDURE logMissingMain;
+  //    PROCEDURE printOut(CONST s:T_arrayOfString);
+  //    PROCEDURE printDirect(CONST s:T_arrayOfString);
+  //    PROCEDURE clearPrint;
+  //    PROCEDURE clearAll({$ifdef fullVersion}CONST includePlot:boolean=false{$endif});
+  //    PROCEDURE stopEvaluation;
+  //    FUNCTION noErrors: boolean; inline;
+  //    FUNCTION hasNonSilentError:boolean;
+  //    FUNCTION hasHaltMessage(CONST includeQuiet:boolean=true): boolean;
+  //    FUNCTION hasFatalError: boolean;
+  //    FUNCTION hasStackTrace:boolean;
+  //    FUNCTION hasPrintOut:boolean;
+  //    PROCEDURE resetErrorFlags;
+  //    PROCEDURE updateErrorlevel;
+  //    PROCEDURE haltEvaluation;
+  //    PROCEDURE logEndOfEvaluation;
+  //    PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
+  //
+  //    FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
+  //    PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
+  //    FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
+  //    PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
+  //    PROCEDURE removeOutAdapter(CONST index:longint);
+  //    PROCEDURE setPrintTextFileAdapter(CONST filenameOrBlank:string);
+  //
+  //    FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
+  //    FUNCTION getAdapter(CONST adapterType:T_adapterType):P_abstractOutAdapter;
+  //
+  //    PROCEDURE setUserDefinedExitCode(CONST code:longint);
+  //    PROCEDURE setExitCode;
+  //    FUNCTION triggersBeep:boolean;
+  //
+  //    PROPERTY doEchoInput:         boolean read someEchoInput        ;
+  //    PROPERTY doEchoDeclaration:   boolean read someEchoDeclaration  ;
+  //    PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
+  //    PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
+  //
+  //    {$ifdef fullVersion}
+  //    FUNCTION plot:P_plot;
+  //    {$endif}
+  //    PROCEDURE addSubAdapters(CONST sub:P_adapters);
+  //    PROCEDURE remSubAdapters(CONST sub:P_adapters);
+  //    FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+  //    FUNCTION getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
+  //end;
 
 CONST
   C_defaultOutputBehavior_interactive:T_messageTypeSet=[mt_clearConsole,
