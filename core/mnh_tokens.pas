@@ -40,7 +40,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE setIdResolved;
       PROPERTY isIdResolved:boolean read idResolved;
-      FUNCTION complainAboutUnused(VAR adapters:T_messageConnector):boolean;
+      FUNCTION complainAboutUnused(VAR adapters:T_threadLocalMessages):boolean;
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
@@ -68,7 +68,7 @@ TYPE
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
     FUNCTION singleTokenToString:ansistring;
-    FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_messageConnector):boolean;
+    FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_threadLocalMessages):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
@@ -101,7 +101,7 @@ TYPE
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_messageConnector; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
 IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
@@ -127,7 +127,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_messageConnector; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -193,7 +193,7 @@ PROCEDURE T_abstractRule.setIdResolved;
     idResolved:=true;
   end;
 
-FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_messageConnector): boolean;
+FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages): boolean;
   begin
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
     if result then adapters.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
@@ -376,7 +376,7 @@ FUNCTION T_token.singleTokenToString: ansistring;
     then result:=trim(result);
   end;
 
-FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_messageConnector): boolean;
+FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMessages): boolean;
   VAR bracketStack:array of P_token;
   PROCEDURE push(CONST token:P_token);
     begin

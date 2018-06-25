@@ -6,6 +6,7 @@ USES sysutils,
      mnh_basicTypes,mnh_constants,
      mnh_litVar,
      mnh_tokens,
+     mnh_messages,
      mnh_contexts;
 TYPE
   T_patternElement=object
@@ -218,7 +219,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
       if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
         restrictionId:='';
         restrictionValue:=P_literal(tok^.data)^.rereferenced;
-      end else context.adapters^.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
+      end else context.threadLocalMessages.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
       context.recycler.cascadeDisposeToken(tok);
     end;
   end;
@@ -561,8 +562,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
   PROCEDURE fail(VAR firstOfPart:P_token);
     begin
       if firstOfPart=nil
-      then context.adapters^.raiseError('Invalid declaration pattern element.',partLocation)
-      else context.adapters^.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
+      then context.threadLocalMessages.raiseError('Invalid declaration pattern element.',partLocation)
+      else context.threadLocalMessages.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
       context.recycler.cascadeDisposeToken(firstOfPart);
     end;
 
@@ -576,20 +577,20 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       setLength(parts,0);
       closingBracket:=first^.next;
     end else begin
-      parts:=getBodyParts(first,0,context.recycler,context.adapters,closingBracket);
+      parts:=getBodyParts(first,0,context.recycler,context.threadLocalMessages,closingBracket);
       if closingBracket=nil then begin
         context.recycler.cascadeDisposeToken(first);
         exit;
       end;
       if (closingBracket^.next<>nil) and not(closingBracket^.next^.tokType in [tt_assign,tt_declare]) then begin
-        context.adapters^.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
+        context.threadLocalMessages.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
         context.recycler.cascadeDisposeToken(closingBracket^.next);
       end;
 
       for i:=0 to length(parts)-1 do begin
         partLocation:=parts[i].first^.location;
         if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
-          if i<>length(parts)-1 then context.adapters^.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
+          if i<>length(parts)-1 then context.threadLocalMessages.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
           //Optionals: f(...)->
           appendOptional;
           parts[i].first:=context.recycler.disposeToken(parts[i].first);
@@ -618,7 +619,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                       context.recycler.cascadeDisposeToken(parts[i].first);
                   end else begin
                     context.reduceExpression(parts[i].first);
-                    if (context.adapters^.noErrors) and
+                    if (context.threadLocalMessages.continueEvaluation) and
                        (parts[i].first<>nil) and
                        (parts[i].first^.tokType=tt_literal) and
                        (P_literal   (parts[i].first^.data)^.literalType in [lt_smallint,lt_bigint]) and
@@ -712,8 +713,8 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
 
     if allUsed then exit;
     for i in unusedIds do if sig[i].restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal] then
-      context.adapters^.raiseWarning(warnText('Parameter '+sig[i].toString+' not used'),sig[i].elementLocation);
-    if hasOptionals and not(optUsed) then context.adapters^.raiseNote(warnText('Optional ... not used'),subruleLocation);
+      context.threadLocalMessages.postTextMessage(mt_el2_warning,sig[i].elementLocation,warnText('Parameter '+sig[i].toString+' not used'));
+    if hasOptionals and not(optUsed) then context.threadLocalMessages.postTextMessage(mt_el1_note,subruleLocation,warnText('Optional ... not used'));
   end;
 {$endif}
 

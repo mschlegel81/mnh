@@ -57,6 +57,34 @@ TYPE
     PROCEDURE clear; virtual;
   end;
 
+  P_messageConnector=^T_messageConnector;
+  F_traceCallback=PROCEDURE(VAR error:T_errorMessage) of object;
+
+  P_threadLocalMessages=^T_threadLocalMessages;
+  T_threadLocalMessages=object(T_collectingOutAdapter)
+    private
+      flags:T_stateFlags;
+      traceCallback:F_traceCallback;
+      globalMessages:P_messageConnector;
+
+      parentMessages:P_threadLocalMessages;
+      childMessages:array of P_threadLocalMessages;
+      PROCEDURE propagateFlags;
+    public
+    CONSTRUCTOR create(CONST callback:F_traceCallback; CONST Global:P_messageConnector);
+    PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
+
+    PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
+    PROPERTY getFags:T_stateFlags read flags;
+    PROCEDURE clear; virtual;
+    PROCEDURE escalateErrors;
+    FUNCTION continueEvaluation:boolean;
+    DESTRUCTOR destroy; virtual;
+    PROCEDURE setParent(CONST parent:P_threadLocalMessages);
+    PROCEDURE dropChild(CONST child:P_threadLocalMessages);
+    PROCEDURE AddChild (CONST child:P_threadLocalMessages);
+  end;
+
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
     protected
       outputFileName:ansistring;
@@ -80,7 +108,6 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
-  P_messageConnector=^T_messageConnector;
   P_connectorAdapter=^T_connectorAdapter;
   T_connectorAdapter = object(T_abstractOutAdapter)
     private
@@ -99,32 +126,20 @@ TYPE
   T_messageConnector=object
     private
       connectorCS:TRTLCriticalSection;
-
-      parent  :P_messageConnector;
-      children:array of P_messageConnector;
-
-      flags:T_stateFlags;
-      localErrors:T_collectingOutAdapter;
       adapters:array of T_flaggedAdapter;
+      collecting:T_messageTypeSet;
     public
-      CONSTRUCTOR create(CONST parent_:P_messageConnector);
+      CONSTRUCTOR create;
       DESTRUCTOR destroy;
 
-      PROCEDURE setFlag  (CONST flag:T_stateFlag);
-      PROCEDURE unsetFlag(CONST flag:T_stateFlag);
-      PROCEDURE raiseError(CONST message:P_errorMessage);
-      PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
+      PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
       PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
       PROCEDURE postCustomMessage(CONST message:P_storedMessage);
 
-      PROCEDURE clear(CONST clearFlags:boolean=true; CONST clearErrors:boolean=true; CONST clearAdapters:boolean=true);
+      PROCEDURE clear;
 
-      PROCEDURE escalateErrors;
-      PROCEDURE attachToParent   (CONST p       :P_messageConnector);
-      PROCEDURE attachOneWayChild(CONST newChild:P_messageConnector);
-      PROCEDURE dropChild(CONST child:P_messageConnector);
-
-      FUNCTION continueEvaluation:boolean; inline;
+      PROCEDURE updateCollecting;
+      FUNCTION isCollecting(CONST messageType:T_messageType):boolean;
   end;
 
   //T_adapters=object
@@ -287,163 +302,164 @@ OPERATOR :=(s:string):T_messageTypeSet;
     end;
   end;
 
-constructor T_messageConnector.create(const parent_: P_messageConnector);
+CONSTRUCTOR T_messageConnector.create;
   begin
-    InitCriticalSection(connectorCS);
-    parent:=parent_;
-    setLength(children,0);
-    flags:=[];
-    localErrors.create(at_unknown,[mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+    initCriticalSection(connectorCS);
     setLength(adapters,0);
-
-    if parent<>nil then parent^.attachOneWayChild(@self);
   end;
 
-destructor T_messageConnector.destroy;
+DESTRUCTOR T_messageConnector.destroy;
   VAR a:T_flaggedAdapter;
-      k:longint;
   begin
-    EnterCriticalsection(connectorCS);
-    for k:=0 to length(children)-1 do dispose(children[k],destroy);
-    setLength(children,0);
-
-    escalateErrors;
+    enterCriticalSection(connectorCS);
     for a in adapters do if a.doDispose then dispose(a.adapter,destroy);
     setLength(adapters,0);
-
-    if parent<>nil then parent^.dropChild(@self);
-    parent:=nil;
-    LeaveCriticalsection(connectorCS);
-    DoneCriticalsection(connectorCS);
+    leaveCriticalSection(connectorCS);
+    doneCriticalSection(connectorCS);
   end;
 
-procedure T_messageConnector.setFlag(const flag: T_stateFlag);
-  VAR c:P_messageConnector;
+CONSTRUCTOR T_threadLocalMessages.create(CONST callback: F_traceCallback;
+  CONST Global: P_messageConnector);
   begin
-    EnterCriticalsection(connectorCS);
-    with C_flagMeta[flag] do begin
-      if keep or
-         toParent and (parent=nil) or
-         toChild and (length(children)=0) then include(flags,flag);
-      if toParent and (parent<>nil) then parent^.setFlag(flag);
-      if toChild then for c in children do c^.setFlag(flag);
+    inherited create(at_unknown,[mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
+    if callback=nil then raise Exception.create('callback must not be nil');
+    globalMessages       :=Global;
+    parentMessages       :=nil;
+    setLength(childMessages,0);
+    traceCallback        :=callback;
+  end;
+
+PROCEDURE T_threadLocalMessages.propagateFlags;
+  VAR child:P_threadLocalMessages;
+  begin
+    for child in childMessages do begin
+      child^.flags:=child^.flags+flags;
+      child^.propagateFlags;
     end;
-    LeaveCriticalsection(connectorCS);
   end;
 
-procedure T_messageConnector.unsetFlag(const flag: T_stateFlag);
-  VAR c:P_messageConnector;
-  begin
-    EnterCriticalsection(connectorCS);
-    with C_flagMeta[flag] do begin
-      if keep or
-         toChild  and (parent=nil) or
-         toParent and (length(children)=0) then exclude(flags,flag);
-      if toChild  and (parent<>nil) then parent^.unsetFlag(flag);
-      if toParent then for c in children do c^.unsetFlag(flag);
-    end;
-    LeaveCriticalsection(connectorCS);
-  end;
-
-procedure T_messageConnector.raiseError(const message: P_errorMessage);
-  VAR flag:T_stateFlag;
-  begin
-    if (message^.messageClass=mc_error) or (parent=nil)
-    then begin
-      localErrors.append(message);
-      for flag in C_messageClassMeta[message^.messageClass].triggeredFlags do setFlag(flag);
-    end else parent^.raiseError(message);
-  end;
-
-procedure T_messageConnector.raiseError(const text: string;
-  const location: T_searchTokenLocation; const kind: T_messageType);
+PROCEDURE T_threadLocalMessages.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
   VAR message:P_errorMessage;
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
-    raiseError(message);
-    disposeMessage(message);
+    traceCallback(message^);
+    flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
+    propagateFlags;
+    if kind=mt_el4_systemError then escalateErrors;
+    append(message);
   end;
 
-procedure T_messageConnector.postTextMessage(const kind: T_messageType; const location: T_searchTokenLocation; const txt: T_arrayOfString);
+PROCEDURE T_threadLocalMessages.postTextMessage(CONST kind: T_messageType;
+  CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
+  begin
+    if globalMessages<>nil then globalMessages^.postTextMessage(kind,location,txt);
+  end;
+
+PROCEDURE T_threadLocalMessages.clear;
+  begin
+    inherited clear;
+    flags:=[];
+  end;
+
+PROCEDURE T_threadLocalMessages.escalateErrors;
+  VAR m:P_storedMessage;
+  begin
+    if parentMessages<>nil then begin
+      for m in storedMessages do parentMessages^.append(m^.rereferenced);
+      parentMessages^.flags:=parentMessages^.flags+flags;
+      exit;
+    end;
+    if globalMessages<>nil then for m in storedMessages do globalMessages^.postCustomMessage(m^.rereferenced);
+  end;
+
+FUNCTION T_threadLocalMessages.continueEvaluation: boolean;
+  begin
+    result:=flags=[];
+  end;
+
+DESTRUCTOR T_threadLocalMessages.destroy;
+  begin
+    escalateErrors;
+    if parentMessages<>nil then parentMessages^.dropChild(@self);
+  end;
+
+PROCEDURE T_threadLocalMessages.setParent(CONST parent:P_threadLocalMessages);
+  begin
+    enterCriticalSection(cs);
+    if parentMessages<>nil then parentMessages^.dropChild(@self);
+    parentMessages:=parent;
+    if parent<>nil then parent^.AddChild(@self);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_threadLocalMessages.dropChild(CONST child: P_threadLocalMessages);
+  VAR i:longint=0;
+  begin
+    enterCriticalSection(cs);
+    while i<length(childMessages) do
+    if childMessages[i]=child then begin
+      childMessages[i]:=childMessages[length(childMessages)-1];
+      setLength(childMessages,length(childMessages)-1);
+    end else inc(i);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_threadLocalMessages.AddChild(CONST child: P_threadLocalMessages);
+  VAR i:longint=0;
+  begin
+    enterCriticalSection(cs);
+    while (i<length(childMessages)) and (childMessages[i]<>child) do inc(i);
+    if i=length(childMessages) then begin
+      setLength(childMessages,i+1);
+      childMessages[i]:=child;
+    end;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_messageConnector.postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
+  VAR message:P_storedMessage;
+  begin
+    new(message,create(kind,location));
+    postCustomMessage(message);
+  end;
+
+PROCEDURE T_messageConnector.postTextMessage(CONST kind: T_messageType; CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
   VAR message:P_storedMessageWithText;
   begin
     new(message,create(kind,location,txt));
     postCustomMessage(message);
   end;
 
-procedure T_messageConnector.postCustomMessage(const message: P_storedMessage);
+PROCEDURE T_messageConnector.postCustomMessage(CONST message: P_storedMessage);
+  VAR a:T_flaggedAdapter;
+      flag:T_stateFlag;
+  begin
+    enterCriticalSection(connectorCS);
+    for a in adapters do a.adapter^.append(message);
+    leaveCriticalSection(connectorCS);
+  end;
+
+PROCEDURE T_messageConnector.clear;
   VAR a:T_flaggedAdapter;
   begin
-    EnterCriticalsection(connectorCS);
-    for a in adapters do a.adapter^.append(message);
-    if parent<>nil then parent^.postCustomMessage(message)
-                   else disposeMessage(message);
-    LeaveCriticalsection(connectorCS);
+    enterCriticalSection(connectorCS);
+    for a in adapters do a.adapter^.clear;
+    leaveCriticalSection(connectorCS);
   end;
 
-procedure T_messageConnector.clear(const clearFlags: boolean; const clearErrors: boolean; const clearAdapters: boolean);
-  VAR c:P_messageConnector;
-      a:T_flaggedAdapter;
+PROCEDURE T_messageConnector.updateCollecting;
+  VAR a:T_flaggedAdapter;
   begin
-    EnterCriticalsection(connectorCS);
-    if clearFlags    then flags:=[];
-    if clearErrors   then localErrors.clear;
-    if clearAdapters then for a in adapters do a.adapter^.clear;
-    LeaveCriticalsection(connectorCS);
-    if clearFlags or clearErrors then for c in children do c^.clear(clearFlags,clearErrors,false);
-    if clearAdapters and (parent<>nil) then parent^.clear(false,false,clearAdapters);
+    enterCriticalSection(connectorCS);
+    collecting:=[];
+    for a in adapters do collecting:=collecting + a.adapter^.messageTypesToInclude;
+    leaveCriticalSection(connectorCS);
   end;
 
-procedure T_messageConnector.escalateErrors;
-  VAR m:P_storedMessage;
-      a:T_flaggedAdapter;
+FUNCTION T_messageConnector.isCollecting(CONST messageType: T_messageType): boolean;
   begin
-    if parent<>nil
-    then for m in localErrors.storedMessages do parent^.raiseError(P_errorMessage(m^.rereferenced))
-    else for m in localErrors.storedMessages do postCustomMessage(m^.rereferenced);
-    localErrors.clear;
+    result:=messageType in collecting;
   end;
-
-procedure T_messageConnector.attachToParent(const p: P_messageConnector);
-  begin
-    if p=nil then raise exception.Create('p must not be nil');
-    EnterCriticalsection(connectorCS);
-    if parent<>nil then parent^.dropChild(@self);
-    parent:=p;
-    parent^.attachOneWayChild(@self);
-    LeaveCriticalsection(connectorCS);
-  end;
-
-procedure T_messageConnector.attachOneWayChild(const newChild: P_messageConnector);
-  VAR i:longint;
-  begin
-    EnterCriticalsection(connectorCS);
-    for i:=0 to length(children)-1 do if children[i]=newChild then begin
-      LeaveCriticalsection(connectorCS);
-      exit;
-    end;
-    setLength(children,length(children)+1);
-    children[length(children)-1]:=newChild;
-    LeaveCriticalsection(connectorCS);
-  end;
-
-procedure T_messageConnector.dropChild(const child: P_messageConnector);
-  VAR i:longint;
-  begin
-    EnterCriticalsection(connectorCS);
-    i:=0;
-    while i<length(children)-1 do
-    if children[i]=child then begin
-      children[i]:=children[length(children)-1];
-      setLength(children,length(children)-1);
-    end else inc(i);
-    LeaveCriticalsection(connectorCS);
-  end;
-
-function T_messageConnector.continueEvaluation: boolean;
-begin
-  result:=[FlagError,FlagFatalError,FlagQuietHalt]*flags=[];
-end;
 
 //CONSTRUCTOR T_errorInterceptor.create(CONST parent: P_adapters);
 //  begin
@@ -484,9 +500,7 @@ DESTRUCTOR T_connectorAdapter.destroy;
 FUNCTION T_connectorAdapter.append(CONST message: P_storedMessage): boolean;
   begin
     if not(message^.messageType in messageTypesToInclude) then exit(false);
-    if message^.messageClass in [mc_error,mc_fatal]
-    then connectedAdapters^.raiseError(P_errorMessage(message^.rereferenced))
-    else connectedAdapters^.postCustomMessage(message^.rereferenced);
+    connectedAdapters^.postCustomMessage(message^.rereferenced);
     result:=true;
   end;
 

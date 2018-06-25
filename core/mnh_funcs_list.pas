@@ -3,7 +3,9 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
      myGenerics,
+     myStringUtil,
      mnh_constants, mnh_basicTypes,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_contexts,
@@ -89,7 +91,7 @@ FUNCTION sort_imp intFuncSignature;
       {$ifdef fullVersion}
       context.callStackPush(tokenLocation,@builtinLocation_sort,nil);
       {$endif}
-      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.adapters^);
+      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.threadLocalMessages);
       {$ifdef fullVersion}
       context.callStackPop(nil);
       {$endif}
@@ -99,7 +101,7 @@ FUNCTION sort_imp intFuncSignature;
       if arg0^.literalType in C_listTypes
       then cloneOrCopyList0
       else result:=compound0^.toList;
-      P_listLiteral(result)^.sortBySubIndex(int1^.intValue,tokenLocation,context.adapters^);
+      P_listLiteral(result)^.sortBySubIndex(int1^.intValue,tokenLocation,context.threadLocalMessages);
     end
   end;
 
@@ -129,7 +131,7 @@ FUNCTION transpose_imp intFuncSignature;
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_listTypes)
     then begin
       result:=list0^.transpose(nil);
-      if result=nil then context.adapters^.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
+      if result=nil then context.threadLocalMessages.raiseError('The given list cannot be transposed without a filler.',tokenLocation);
     end;
   end;
 
@@ -160,7 +162,7 @@ FUNCTION getElementFreqency intFuncSignature;
       then freqMap.put(list^.value[i],1)
       else inc(freqEntry^.value);
     end;
-    if not(context.adapters^.noErrors) then begin
+    if not(context.threadLocalMessages.continueEvaluation) then begin
       freqMap.destroy;
       exit(nil);
     end;
@@ -402,7 +404,7 @@ FUNCTION group_imp intFuncSignature;
         else begin
           keyList[i]:=dummy^.rereferenced;
           if not(hasError) then
-          context.adapters^.raiseError('Grouping by sublist-index is not possible for this list. Problematic entry: '+
+          context.threadLocalMessages.raiseError('Grouping by sublist-index is not possible for this list. Problematic entry: '+
                                        listToGroup^.value[i]^.toString(50)+' at index '+intToStr(i),tokenLocation);
           hasError:=true;
         end;
@@ -431,7 +433,7 @@ FUNCTION group_imp intFuncSignature;
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
           end else begin
-            context.adapters^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+            context.threadLocalMessages.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
             exit;
           end;
         end;
@@ -461,7 +463,7 @@ FUNCTION group_imp intFuncSignature;
       if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,nil);
       {$endif}
       groupMap.create();
-      for inputIndex:=0 to length(keyList)-1 do if context.adapters^.noErrors then
+      for inputIndex:=0 to length(keyList)-1 do if context.threadLocalMessages.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
       disposeLiteral(keyList);
 

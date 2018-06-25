@@ -5,7 +5,7 @@ USES //FPC/LCL libraries
      //3rd party libraries
      EpikTimer, RegExpr,
      //my libraries
-     myGenerics,mySys,
+     myGenerics,mySys,myStringUtil,
      //MNH:
      mnh_constants, mnh_basicTypes,
      {$ifdef fullVersion}mnh_settings,{$endif}
@@ -51,19 +51,22 @@ TYPE
     initialAllow  :T_sideEffects;
   end;
 
-  { T_threadContext }
-
   T_threadContext=object
     private
+      options:T_threadContextOptions;
       parent:P_evaluationContext;
-      callDepth:longint;
       callStack :T_callStack;
       allowedSideEffects:T_sideEffects;
+      dequeueContext_:P_threadContext;
+      callingContext :P_threadContext;
       CONSTRUCTOR create(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
       PROCEDURE workerThreadDone;
     public
+      callDepth:longint;
       threadLocalMessages:T_threadLocalMessages;
       connector:P_messageConnector;
+      recycler:T_tokenRecycler;
+      valueStore:P_valueStore;
       FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
 
       FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
@@ -71,11 +74,10 @@ TYPE
       DESTRUCTOR destroy;
 
       //private
-    //  options:T_threadContextOptions;
+
     //  parent         :P_evaluationContext;
-    //  callingContext :P_threadContext;
+
     //  children       :array of P_threadContext;
-    //  dequeueContext_:P_threadContext;
     //
     //  {$ifdef fullVersion}
     //  callStack :T_callStack;
@@ -87,7 +89,7 @@ TYPE
     //  {$endif}
     //  regexCache:P_regexMap;
     //  recycler  :T_tokenRecycler;
-    //  valueStore:P_valueStore;
+
     //  adapters  :T_threadLocalMessages;
     //  callDepth:longint;
     //  CONSTRUCTOR createWorkerContext(CONST adapters_:P_messageConnector);
@@ -98,31 +100,31 @@ TYPE
     //  PROCEDURE doneEvaluating;
     //  FUNCTION getNewAsyncContext(CONST local:boolean):P_threadContext;
     //
-    //  PROCEDURE attachWorkerContext(CONST environment:T_queueTaskEnvironment);
-    //  PROCEDURE detachWorkerContext;
+      PROCEDURE attachWorkerContext(CONST environment:T_queueTaskEnvironment);
+      PROCEDURE detachWorkerContext;
     //
-    //  PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
     //  FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
     //  {$ifdef fullVersion}
-    //  PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
     //  PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
-    //  PROCEDURE callStackPop(CONST first:P_token);
+      PROCEDURE callStackPop(CONST first:P_token);
     //  PROCEDURE callStackClear();
     //  FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
     //  PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
     //  {$endif}
     //
-    //  PROPERTY threadOptions:T_threadContextOptions read options;
-    //  FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
-    //  FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
+      PROPERTY threadOptions:T_threadContextOptions read options;
+      FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
+      FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
     //  PROPERTY getParent:P_evaluationContext read parent;
-    //  PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
-    //  FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
-    //  FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-    //  PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef debugMode} inline; {$endif}
-    //  FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
+      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
+      PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
+      FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
+      //PROCEDURE setSideEffectsByEndToken(CONST token:P_token); {$ifndef debugMode} inline; {$endif}
+      FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
     //  PROCEDURE resolveMainParameter(VAR first:P_token);
-    //  FUNCTION dequeueContext:P_threadContext;
+      FUNCTION dequeueContext:P_threadContext;
   end;
 
   T_queueTaskState=(fts_pending, //set on construction
@@ -181,7 +183,7 @@ TYPE
     //
 
     //  {$ifdef fullVersion}
-    //  profiler:P_profiler;
+      profiler:P_profiler;
     //  debuggingStepper:P_debuggingStepper;
     //  {$endif}
     //  timingInfo:record
@@ -516,42 +518,44 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
 //    interLockedIncrement(parent^.detachedAsyncChildCount);
 //  end;
 //
-//PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_queueTaskEnvironment);
-//  begin
-//    callingContext:=environment.callingContext;
-//    parent        :=callingContext^.parent;
-//    adapters      :=callingContext^.adapters;
-//    options       :=callingContext^.options;//-[tco_spawnWorker];
-//    allowedSideEffects:=environment.initialAllow;
-//    valueStore^.clear;
-//    valueStore^.parentStore:=environment.values;
-//    {$ifdef fullVersion}
-//    callStack.clear;
-//    {$endif}
-//    callDepth:=environment.initialDepth;
-//  end;
-//
-//PROCEDURE T_threadContext.detachWorkerContext;
-//  begin
-//    {$ifdef debugMode}
-//    if not(valueStore^.isEmpty) and (adapters^.noErrors) then raise Exception.create('valueStore must be empty on detach');
-//    {$endif}
-//    parent:=nil;
-//    callingContext:=nil;
-//    valueStore^.clear;
-//    valueStore^.parentStore:=nil;
-//    {$ifdef fullVersion}
-//    callStack.clear;
-//    {$endif}
-//  end;
+PROCEDURE T_threadContext.attachWorkerContext(CONST environment:T_queueTaskEnvironment);
+  begin
+    callingContext:=environment.callingContext;
+    parent        :=callingContext^.parent;
+    options       :=callingContext^.options;
+    threadLocalMessages.setParent(@callingContext^.threadLocalMessages);
+    threadLocalMessages.clear;
+    allowedSideEffects:=environment.initialAllow;
+    valueStore^.clear;
+    valueStore^.parentStore:=environment.values;
+    {$ifdef fullVersion}
+    callStack.clear;
+    {$endif}
+    callDepth:=environment.initialDepth;
+  end;
+
+PROCEDURE T_threadContext.detachWorkerContext;
+  begin
+    {$ifdef debugMode}
+    if not(valueStore^.isEmpty) and (threadLocalMessages.continueEvaluation) then raise Exception.create('valueStore must be empty on detach');
+    {$endif}
+    parent:=nil;
+    callingContext:=nil;
+    threadLocalMessages.clear;
+    valueStore^.clear;
+    valueStore^.parentStore:=nil;
+    {$ifdef fullVersion}
+    callStack.clear;
+    {$endif}
+  end;
 //
 //{$ifdef fullVersion}
-//PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
-//  begin
-//    if not(tco_stackTrace in options) then exit;
-//    callStack.push(wallclockTime,callParameters,callerLocation,callee);
-//  end;
-//
+PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
+  begin
+    if not(tco_stackTrace in options) then exit;
+    callStack.push(wallclockTime,callParameters,callerLocation,callee);
+  end;
+
 //PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
 //  begin
 //    if not(tco_stackTrace in options) then exit;
@@ -559,14 +563,14 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
 //    callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
 //  end;
 //
-//PROCEDURE T_threadContext.callStackPop(CONST first:P_token);
-//  VAR loc:T_tokenLocation;
-//  begin
-//    if not(tco_stackTrace in options) then exit;
-//    loc:=callStack.pop(wallclockTime,parent^.profiler);
-//    if (loc.package<>nil) and (first<>nil) then first^.location:=loc;
-//  end;
-//
+PROCEDURE T_threadContext.callStackPop(CONST first:P_token);
+  VAR loc:T_tokenLocation;
+  begin
+    if not(tco_stackTrace in options) then exit;
+    loc:=callStack.pop(wallclockTime,parent^.profiler);
+    if (loc.package<>nil) and (first<>nil) then first^.location:=loc;
+  end;
+
 //PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
 //  begin
 //    if callingContext<>nil then callingContext^.reportVariables(variableReport);
@@ -574,27 +578,27 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
 //  end;
 //{$endif}
 //
-//FUNCTION T_threadContext.reduceExpression(VAR first:P_token):T_reduceResult;
-//  begin result:=reduceExpressionCallback(first,self); end;
-//
-//FUNCTION T_threadContext.reduceToLiteral(VAR first:P_token):T_evaluationResult;
-//  begin
-//    result.triggeredByReturn:=reduceExpressionCallback(first,self)=rr_okWithReturn;
-//    if adapters^.noErrors and (first<>nil) and (first^.tokType=tt_literal) and (first^.next=nil) then begin
-//      result.literal:=P_literal(first^.data)^.rereferenced;
-//      recycler.disposeToken(first);
-//    end else begin
-//      result.literal:=nil;
-//      recycler.cascadeDisposeToken(first);
-//    end;
-//  end;
-//
-//FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-//  begin
-//    result:=allowedSideEffects;
-//    allowedSideEffects:=se;
-//  end;
-//
+FUNCTION T_threadContext.reduceExpression(VAR first:P_token):T_reduceResult;
+  begin result:=reduceExpressionCallback(first,self); end;
+
+FUNCTION T_threadContext.reduceToLiteral(VAR first:P_token):T_evaluationResult;
+  begin
+    result.triggeredByReturn:=reduceExpressionCallback(first,self)=rr_okWithReturn;
+    if threadLocalMessages.continueEvaluation and (first<>nil) and (first^.tokType=tt_literal) and (first^.next=nil) then begin
+      result.literal:=P_literal(first^.data)^.rereferenced;
+      recycler.disposeToken(first);
+    end else begin
+      result.literal:=nil;
+      recycler.cascadeDisposeToken(first);
+    end;
+  end;
+
+FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
+  begin
+    result:=allowedSideEffects;
+    allowedSideEffects:=se;
+  end;
+
 //PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token:P_token);
 //  begin
 //    {$ifdef debugMode}
@@ -603,23 +607,23 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
 //    move(token^.data,allowedSideEffects,sizeOf(pointer));
 //  end;
 //
-//FUNCTION T_threadContext.getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token;
-//  VAR data:pointer=nil;
-//  begin
-//    move(allowedSideEffects,data,sizeOf(data));
-//    if blocking then result:=recycler.newToken(location,'',tt_endRule,data)
-//                else result:=recycler.newToken(location,'',tt_endExpression,data);
-//  end;
-//
-//FUNCTION T_threadContext.getFutureEnvironment:T_queueTaskEnvironment;
-//  begin
-//    result.callingContext:=@self;
-//    result.values:=valueStore^.readOnlyClone;
-//    result.taskQueue:=parent^.getTaskQueue;
-//    result.initialDepth:=callDepth;
-//    result.initialAllow:=sideEffectWhitelist;
-//  end;
-//
+FUNCTION T_threadContext.getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token;
+  VAR data:pointer=nil;
+  begin
+    move(allowedSideEffects,data,sizeOf(data));
+    if blocking then result:=recycler.newToken(location,'',tt_endRule,data)
+                else result:=recycler.newToken(location,'',tt_endExpression,data);
+  end;
+
+FUNCTION T_threadContext.getFutureEnvironment:T_queueTaskEnvironment;
+  begin
+    result.callingContext:=@self;
+    result.values:=valueStore^.readOnlyClone;
+    result.taskQueue:=@parent^.taskQueue;
+    result.initialDepth:=callDepth;
+    result.initialAllow:=sideEffectWhitelist;
+  end;
+
 //PROCEDURE T_threadContext.resolveMainParameter(VAR first:P_token);
 //  VAR parameterIndex:longint;
 //      s:string;
@@ -649,12 +653,12 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
 //    end;
 //  end;
 //
-//FUNCTION T_threadContext.dequeueContext:P_threadContext;
-//  begin
-//    if dequeueContext_=nil then new(dequeueContext_,createWorkerContext(adapters));
-//    result:=dequeueContext_;
-//  end;
-//
+FUNCTION T_threadContext.dequeueContext:P_threadContext;
+  begin
+    if dequeueContext_=nil then new(dequeueContext_,create(parent,@self));
+    result:=dequeueContext_;
+  end;
+
 //{$ifdef fullVersion}
 //PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
 //  VAR p:P_threadContext;
@@ -675,15 +679,16 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit:boolean=false):double;
 //  end;
 //{$endif}
 //
-//PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:T_arrayOfString; CONST missingMain:boolean=false);
-//  VAR totalMessage:T_arrayOfString;
-//  begin
-//    totalMessage:='Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100);
-//    if length(suffix)>0 then append(totalMessage,suffix);
-//    adapters^.raiseError(totalMessage,location);
-//    if missingMain then adapters^.logMissingMain;
-//  end;
-//
+PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string; CONST missingMain:boolean=false);
+  VAR message:string;
+  begin
+    message:='Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100);
+    if length(suffix)>0 then message+=C_lineBreakChar+suffix;
+    if missingMain
+    then threadLocalMessages.raiseError(message,location,mt_el3_noMatchingMain)
+    else threadLocalMessages.raiseError(message,location);
+  end;
+
 FUNCTION T_threadContext.checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
   VAR messageText:string='';
       eff:T_sideEffect;

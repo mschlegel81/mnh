@@ -6,6 +6,7 @@ USES sysutils,
      bigint,
      mnh_constants,
      mnh_basicTypes,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_patterns,
@@ -48,7 +49,7 @@ FUNCTION toBuiltin_imp intFuncSignature;
     else if (params^.size=1) then begin
       if not(arg0^.literalType in C_typables) or (P_typableLiteral(arg0)^.customType=nil)
       then exit(arg0^.rereferenced)
-      else exit(P_typableLiteral(arg0)^.customType^.uncast(arg0,tokenLocation,@context,context.adapters));
+      else exit(P_typableLiteral(arg0)^.customType^.uncast(arg0,tokenLocation,@context,@context.threadLocalMessages));
     end else result:=nil;
   end;
 
@@ -78,7 +79,7 @@ FUNCTION toBoolean_imp intFuncSignature;
         lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
             else if real0^.value=1 then exit(newBoolLiteral(true));
       end;
-      context.adapters^.raiseError(arg0^.toString+' cannot be cast to boolean',tokenLocation);
+      context.threadLocalMessages.raiseError(arg0^.toString+' cannot be cast to boolean',tokenLocation);
     end;
   end;
 
@@ -107,7 +108,7 @@ FUNCTION toInt_imp intFuncSignature;
           end;
         end;
       end;
-      context.adapters^.raiseError(arg0^.toString+' cannot be cast to int',tokenLocation);
+      context.threadLocalMessages.raiseError(arg0^.toString+' cannot be cast to int',tokenLocation);
     end;
   end;
 
@@ -130,7 +131,7 @@ FUNCTION toReal_imp intFuncSignature;
           exit(newRealLiteral(x));
         end;
       end;
-      context.adapters^.raiseError(arg0^.toString+' cannot be cast to real',tokenLocation);
+      context.threadLocalMessages.raiseError(arg0^.toString+' cannot be cast to real',tokenLocation);
     end;
   end;
 
@@ -168,7 +169,7 @@ FUNCTION toMap_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_compoundTypes) then begin
-      result:=compound0^.toMap(tokenLocation,context.adapters^);
+      result:=compound0^.toMap(tokenLocation,context.threadLocalMessages);
     end;
   end;
 
@@ -177,7 +178,7 @@ FUNCTION toGenerator_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_expression) then begin
       result:=arg0^.rereferenced;
-      P_expressionLiteral(result)^.makeIteratable(context.adapters,tokenLocation);
+      P_expressionLiteral(result)^.makeIteratable(@context.threadLocalMessages,tokenLocation);
     end;
   end;
 

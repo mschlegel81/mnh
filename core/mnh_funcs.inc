@@ -18,33 +18,26 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
 
 FUNCTION try_imp intFuncSignature;
   FUNCTION performTry(CONST toTry:P_expressionLiteral; CONST inCaseOfFailure:P_literal):P_literal;
-    VAR prevAdapters,
-        tryAdapters:P_adapters;
-        interceptor:P_errorInterceptor;
-        messagesLiteral:P_literal;
+    VAR messagesLiteral:P_literal;
     begin
-      prevAdapters:=context.adapters;
-      tryAdapters:=prevAdapters^.getAdaptersForTry(interceptor);
-      context.adapters:=tryAdapters;
       result:=toTry^.evaluateToLiteral(tokenLocation,@context).literal;
-      context.adapters:=prevAdapters;
-      if (result=nil) or (interceptor^.hasError) then begin
+      if (result=nil) or (context.adapters.hasError) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then result:=newVoidLiteral
         else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(interceptor^.storedMessages);
+            messagesLiteral:=messagesToLiteralForSandbox(context.adapters.localErrors.storedMessages);
+            context.adapters.localErrors.clear;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral).literal;
-            if result=nil then context.adapters^.raiseError('Error in catch block of try-statement.',tokenLocation);
+            if result=nil then context.adapters.raiseError(ErrorInCatchBlock,tokenLocation);
             disposeLiteral(messagesLiteral);
           end else begin
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context).literal;
-            if result=nil then context.adapters^.raiseError('Error in catch block of try-statement.',tokenLocation);
+            if result=nil then context.adapters.raiseError(ErrorInCatchBlock,tokenLocation);
           end;
         end else result:=inCaseOfFailure^.rereferenced;
       end;
-      dispose(tryAdapters,destroy);
     end;
 
   begin
@@ -100,7 +93,7 @@ FUNCTION inspect_imp intFuncSignature;
       else id      :=filenameOrId;
       if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
       if (fileName='') or not(fileExists(fileName)) then begin
-        context.adapters^.raiseWarning('Cannot locate package with id or path "'+id+'"',locationForWarning);
+        context.adapters.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
         tempPackage:=nil;
         exit;
       end;
@@ -140,7 +133,7 @@ FUNCTION inspect_imp intFuncSignature;
 FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.writeDataStores(context.adapters^,true);
+      P_package(tokenLocation.package)^.writeDataStores(context.adapters,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;

@@ -6,6 +6,7 @@ USES sysutils, math, typinfo,
      myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_constants,
      mnh_basicTypes,
+     mnh_messages,
      mnh_out_adapters;
 
 CONST HASH_GROWTH_THRESHOLD_FACTOR=2;
@@ -226,11 +227,11 @@ TYPE
       FUNCTION arity:longint; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
 
-      PROCEDURE makeStateful  (CONST adapters:P_adapters; CONST location:T_tokenLocation);
-      PROCEDURE makeIteratable(CONST adapters:P_adapters; CONST location:T_tokenLocation);
+      PROCEDURE makeStateful  (CONST adapters:P_threadLocalMessages; CONST location:T_tokenLocation);
+      PROCEDURE makeIteratable(CONST adapters:P_threadLocalMessages; CONST location:T_tokenLocation);
 
       FUNCTION getParentId:T_idString; virtual; abstract;
-      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual; abstract;
+      PROCEDURE validateSerializability(CONST adapters:P_threadLocalMessages); virtual; abstract;
       FUNCTION typeString:string; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
@@ -246,13 +247,13 @@ TYPE
       builtinsuper:T_literalTypeSet;
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
-      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_typableLiteral;
+      FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer):P_typableLiteral;
     public
       CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
-      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
-      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+      FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_typableLiteral;
+      FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
       PROPERTY getWhitelist:T_literalTypeSet read builtinsuper;
@@ -308,7 +309,7 @@ TYPE
     containsError:boolean;
     FUNCTION toSet :P_setLiteral;
     FUNCTION toList:P_listLiteral;
-    FUNCTION toMap(CONST location:T_tokenLocation; VAR adapters:T_adapters):P_mapLiteral;
+    FUNCTION toMap(CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages):P_mapLiteral;
     FUNCTION get     (CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual; abstract;
     FUNCTION typeString:string; virtual;
@@ -355,14 +356,14 @@ TYPE
       FUNCTION listConstructorToString(CONST lengthLimit:longint=maxLongint):string;
       FUNCTION get     (CONST accessor:P_literal):P_literal; virtual;
       FUNCTION getInner(CONST accessor:P_literal):P_literal; virtual;
-      FUNCTION appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST doRangeAppend:boolean):P_compoundLiteral;
+      FUNCTION appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; CONST doRangeAppend:boolean):P_compoundLiteral;
       FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION clone:P_compoundLiteral; virtual;
       FUNCTION iteratableList:T_arrayOfLiteral; virtual;
 
       PROCEDURE sort;
-      PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_adapters);
-      PROCEDURE customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:pointer; VAR adapters: T_adapters);
+      PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_threadLocalMessages);
+      PROCEDURE customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:pointer; VAR adapters: T_threadLocalMessages);
       FUNCTION  sortPerm: P_listLiteral;
       PROCEDURE unique;
 
@@ -455,12 +456,12 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
-FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
-PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128):T_arrayOfString;
+FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; VAR typeMap:T_typeMap):P_literal;
+PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages);
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; CONST maxLineLength:longint=128):T_arrayOfString;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
-FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages):ansistring;
+FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; VAR typeMap:T_typeMap):P_literal;
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
 
@@ -468,7 +469,7 @@ FUNCTION setUnion    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
-FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
+FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
 
 VAR emptyStringSingleton: T_stringLiteral;
 VAR boolLit       : array[false..true] of T_boolLiteral;
@@ -480,21 +481,22 @@ VAR
   voidLit: T_voidLiteral;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
-  FUNCTION headByMessageType(CONST messageType:T_messageType):P_collectionLiteral;
+  FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
     begin
-      if C_messageTypeMeta[messageType].prefix=''
-      then result:=newListLiteral(3)^.appendString(copy(getEnumName(TypeInfo(messageType),ord(messageType)),4,1000))
-      else result:=newListLiteral(3)^.appendString(trim(C_messageTypeMeta[messageType].prefix));
+      result:=newListLiteral(3);
+      if message^.prefix<>''
+      then result^.appendString(trim(message^.prefix))
+      else result^.appendString(copy(getEnumName(TypeInfo(message^.messageType),ord(message^.messageType)),4,1000));
     end;
 
-  VAR i:longint;
+  VAR m:P_storedMessage;
   begin
     result:=newListLiteral();
-    for i:=0 to length(messages)-1 do with messages[i] do if not(C_messageTypeMeta[messageType].ignoredBySandbox) then
+    for m in messages do if not(C_messageTypeMeta[m^.messageType].ignoredBySandbox) then
       result^.append(
-         headByMessageType(messageType)^
-        .appendString(ansistring(location))^
-        .appendString(join(messageText,C_lineBreakChar)),false);
+         headByMessageType(m)^
+        .appendString(ansistring(m^.getLocation))^
+        .appendString(join(m^.messageText,C_lineBreakChar)),false);
   end;
 
 FUNCTION exp(CONST x:double):double; inline;
@@ -719,7 +721,7 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
     if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,false,L);
   end;
 
-FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST forUncasting:boolean):P_typableLiteral;
+FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer):P_typableLiteral;
   begin
     result:=nil;
     case L^.literalType of
@@ -736,7 +738,7 @@ FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_token
     end;
   end;
 
-FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_typableLiteral;
+FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_typableLiteral;
   begin
     result:=nil;
     if P_typableLiteral(L)^.customType=@self then exit(P_typableLiteral(L^.rereferenced));
@@ -745,7 +747,7 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
       exit(P_typableLiteral(L^.rereferenced));
     end;
     if ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
-      result:=cloneLiteral(P_typableLiteral(L),location,threadContext,false);
+      result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
       result:=super^.cast(L,location,threadContext,adapters);
@@ -758,10 +760,10 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if (result=nil) and (adapters<>nil) then adapters^.raiseError('Cannot cast literal to custom type '+name,location);
   end;
 
-FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_adapters):P_literal;
+FUNCTION T_typedef.uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_literal;
   begin
     if not(L^.literalType in C_typables) or (P_typableLiteral(L)^.customType=nil) then exit(L^.rereferenced);
-    result:=cloneLiteral(P_typableLiteral(L),location,threadContext,true);
+    result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
     if result<>nil then P_typableLiteral(result)^.customType:=nil;
   end;
 //=====================================================================================================================
@@ -1679,7 +1681,7 @@ FUNCTION T_mapLiteral.hash: T_hashInt;
   end;
 
 //=======================================================================:?.hash
-PROCEDURE T_expressionLiteral.makeStateful  (CONST adapters:P_adapters; CONST location:T_tokenLocation);
+PROCEDURE T_expressionLiteral.makeStateful  (CONST adapters:P_threadLocalMessages; CONST location:T_tokenLocation);
   begin
     if expressionType in C_statefulExpressionTypes then exit;
     case expressionType of
@@ -1689,7 +1691,7 @@ PROCEDURE T_expressionLiteral.makeStateful  (CONST adapters:P_adapters; CONST lo
     end;
   end;
 
-PROCEDURE T_expressionLiteral.makeIteratable(CONST adapters:P_adapters; CONST location:T_tokenLocation);
+PROCEDURE T_expressionLiteral.makeIteratable(CONST adapters:P_threadLocalMessages;  CONST location:T_tokenLocation);
   begin
     if expressionType in C_iteratableExpressionTypes then exit;
     if not(canApplyToNumberOfParameters(0)) or not(expressionType in C_statefulExpressionTypes) then begin
@@ -2237,7 +2239,7 @@ FUNCTION T_compoundLiteral.toList: P_listLiteral;
     result:=P_listLiteral(newListLiteral^.appendAll(@self));
   end;
 
-FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; VAR adapters:T_adapters): P_mapLiteral;
+FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages): P_mapLiteral;
   VAR iter:T_arrayOfLiteral;
       pair:P_literal;
   begin
@@ -2254,7 +2256,7 @@ FUNCTION T_compoundLiteral.toMap(CONST location:T_tokenLocation; VAR adapters:T_
     disposeLiteral(iter);
   end;
 
-FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST doRangeAppend:boolean):P_compoundLiteral;
+FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; CONST doRangeAppend:boolean):P_compoundLiteral;
   VAR last: P_literal;
       i0, i1: int64;
       c0, c1: char;
@@ -2279,11 +2281,11 @@ FUNCTION T_listLiteral.appendConstructing(CONST L: P_literal; CONST location:T_t
         ReAllocMem(dat,sizeOf(P_literal)*newLen);
         alloc:=newLen;
       end;
-      while (i0<i1) and adapters^.noErrors do begin
+      while (i0<i1) and adapters^.continueEvaluation do begin
         inc(i0);
         appendInt(i0);
       end;
-      while (i0>i1) and adapters^.noErrors do begin
+      while (i0>i1) and adapters^.continueEvaluation do begin
         dec(i0);
         appendInt(i0);
       end;
@@ -2467,7 +2469,7 @@ PROCEDURE T_listLiteral.sort;
   end;
 
 PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint;
-  CONST location: T_tokenLocation; VAR adapters: T_adapters);
+  CONST location: T_tokenLocation; VAR adapters: T_threadLocalMessages);
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
@@ -2487,10 +2489,10 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint;
     myHash:=0;
     scale:=1;
     setLength(temp, fill);
-    while (scale<fill) and adapters.noErrors do begin
+    while (scale<fill) and adapters.continueEvaluation do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i:=0;
-      while (i<fill) and adapters.noErrors do begin
+      while (i<fill) and adapters.continueEvaluation do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<fill) do
           if isLeq(dat[j0],dat[j1])          then begin temp[k]:=dat[j0]; inc(k); inc(j0); end
@@ -2499,15 +2501,15 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint;
         while (j1<i+scale+scale) and (j1<fill) do begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
         inc(i, scale+scale);
       end;
-      if not(adapters.noErrors) then exit;
+      if not(adapters.continueEvaluation) then exit;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
-      if (scale<fill) and adapters.noErrors then begin
+      if (scale<fill) and adapters.continueEvaluation then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i:=0;
-        while (i<fill) and adapters.noErrors do begin
+        while (i<fill) and adapters.continueEvaluation do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<fill) do
             if isLeq(temp[j0],temp[j1])        then begin dat[k]:=temp[j0]; inc(k); inc(j0); end
@@ -2523,7 +2525,7 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint;
     setLength(temp, 0);
   end;
 
-PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:pointer; VAR adapters: T_adapters);
+PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:pointer; VAR adapters: T_threadLocalMessages);
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
@@ -2534,10 +2536,10 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
     myHash:=0;
     scale:=1;
     setLength(temp, fill);
-    while (scale<fill) and adapters.noErrors do begin
+    while (scale<fill) and adapters.continueEvaluation do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i:=0;
-      while (i<fill) and adapters.noErrors do begin
+      while (i<fill) and adapters.continueEvaluation do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<fill) do
           if isLeq(dat[j0],dat[j1])          then begin temp[k]:=dat[j0]; inc(k); inc(j0); end
@@ -2546,15 +2548,15 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
         while (j1<i+scale+scale) and (j1<fill) do begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
         inc(i, scale+scale);
       end;
-      if not(adapters.noErrors) then exit;
+      if not(adapters.continueEvaluation) then exit;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
-      if (scale<fill) and adapters.noErrors then begin
+      if (scale<fill) and adapters.continueEvaluation then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i:=0;
-        while (i<fill) and adapters.noErrors do begin
+        while (i<fill) and adapters.continueEvaluation do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<fill) do
             if isLeq(temp [j0],temp [j1])      then begin dat[k]:=temp[j0]; inc(k); inc(j0); end
@@ -2817,7 +2819,7 @@ FUNCTION mapMerge(CONST params:P_listLiteral; CONST location:T_tokenLocation; CO
                           else result^.literalType:=lt_emptyMap;
   end;
 
-FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
+FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
   VAR returnValue:P_literal=nil;
   PROCEDURE return(CONST L:P_literal); inline;
     begin
@@ -2875,7 +2877,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         toMutate^.myHash:=0;
         exit;
       end;
-      if toMutate^.customType<>nil then adapters.raiseNote('Mutating resets type of variable from '+toMutate^.customType^.name+' to '+C_typeInfo[toMutate^.literalType].name,location);
+      if toMutate^.customType<>nil then adapters.postTextMessage(mt_el1_note,location, 'Mutating resets type of variable from '+toMutate^.customType^.name+' to '+C_typeInfo[toMutate^.literalType].name);
       old:=toMutate;
       toMutate:=old^.clone;
       old^.unreference;
@@ -3031,7 +3033,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
     result:=returnValue;
   end;
 
-FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
+FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; VAR typeMap:T_typeMap):P_literal;
   VAR reusableLiterals:PP_literal;
       reusableFill:longint=0;
       encodingMethod:byte=0;
@@ -3420,7 +3422,7 @@ FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:
     freeMem(reusableLiterals,sizeOf(P_literal)*2097151);
   end;
 
-PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages);
   VAR reusableMap:specialize G_literalKeyMap<longint>;
       previousMapValueDummy:longint;
       mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
@@ -3452,25 +3454,25 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_booleanList,lt_booleanSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then stream^.writeBoolean(P_boolLiteral(x)^.val);
+          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then stream^.writeBoolean(P_boolLiteral(x)^.val);
           disposeLiteral(iter);
         end;
         lt_intList,lt_intSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then P_abstractIntLiteral(x)^.writeToStream(stream);
+          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then P_abstractIntLiteral(x)^.writeToStream(stream);
           disposeLiteral(iter);
         end;
         lt_realList,lt_realSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then stream^.writeDouble(P_realLiteral(x)^.val);
+          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then stream^.writeDouble(P_realLiteral(x)^.val);
           disposeLiteral(iter);
         end;
         lt_stringList,lt_stringSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then stream^.writeAnsiString(P_stringLiteral(x)^.val);
+          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then stream^.writeAnsiString(P_stringLiteral(x)^.val);
           disposeLiteral(iter);
         end;
         lt_void, lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
@@ -3478,7 +3480,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
         lt_numList,lt_numSet:begin
           stream^.writeNaturalNumber(P_compoundLiteral(L)^.size);
           iter:=P_compoundLiteral(L)^.iteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(x);
+          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then writeLiteral(x);
           disposeLiteral(iter);
         end;
         lt_map: begin
@@ -3504,7 +3506,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWra
     reusableMap.destroy;
   end;
 
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST maxLineLength:longint=128):T_arrayOfString;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; CONST maxLineLength:longint=128):T_arrayOfString;
   VAR indent:longint=0;
       prevLines:T_arrayOfString;
       nextLine:ansistring;
@@ -3532,7 +3534,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
         lt_boolean,lt_smallint,lt_bigint,lt_string,lt_real,lt_void: appendPart(L^.toString);
         lt_expression: begin
           P_expressionLiteral(L)^.validateSerializability(adapters);
-          if (adapters=nil) or (adapters^.noErrors) then appendPart(L^.toString);
+          if (adapters=nil) or (adapters^.continueEvaluation) then appendPart(L^.toString);
         end;
         lt_list..lt_emptyList,
         lt_set ..lt_emptySet,
@@ -3550,7 +3552,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
             iter:=sortedTemp^.iteratableList;
             disposeLiteral(sortedTemp);
           end else iter:=P_compoundLiteral(L)^.iteratableList;
-          for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.noErrors) then begin
+          for k:=0 to length(iter)-1 do if (adapters=nil) or (adapters^.continueEvaluation) then begin
             ser(iter[k],k);
             if k<length(iter)-1 then appendSeparator;
           end;
@@ -3575,7 +3577,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_tokenLocation
     result:=prevLines;
   end;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages):ansistring;
   VAR wrapper:T_outputStreamWrapper;
       stream:TStringStream;
   begin
@@ -3587,7 +3589,7 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
     wrapper.destroy; //implicitly destroys stream
   end;
 
-FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; VAR typeMap:T_typeMap):P_literal;
+FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; VAR typeMap:T_typeMap):P_literal;
   VAR wrapper:T_inputStreamWrapper;
       stream:TStringStream;
   begin

@@ -108,7 +108,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral;
           true,
           eachLocation,
           @context);
-        proceed:=context.adapters^.noErrors and not(aggregator^.earlyAbort);
+        proceed:=context.threadLocalMessages.continueEvaluation and not(aggregator^.earlyAbort);
       end;
       context.valueStore^.scopePop;
       inc(eachIndex);
@@ -188,7 +188,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
           //if there is not enough pending after dequeuing, increase aimEnqueueCount
           if environment.taskQueue^.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
         end;
-        proceed:=context.adapters^.noErrors and not(aggregator^.earlyAbort);
+        proceed:=context.threadLocalMessages.continueEvaluation and not(aggregator^.earlyAbort);
       end;
 
       inc(eachIndex);
@@ -218,7 +218,7 @@ FUNCTION processMapSerial(CONST inputIterator,expr:P_expressionLiteral;
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     result:=newListLiteral();
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.threadLocalMessages.continueEvaluation) do begin
       if isExpressionNullary
       then result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context  ).literal,false)
       else result^.append(expr^.evaluateToLiteral(expr^.getLocation,@context,x).literal,false);
@@ -290,7 +290,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.threadLocalMessages.continueEvaluation) do begin
       if isExpressionNullary
       then enqueueForAggregation(createTask(nil))
       else enqueueForAggregation(createTask(x  ));
@@ -379,7 +379,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
-    while (x<>nil) and (x^.literalType<>lt_void) and (context.adapters^.noErrors) do begin
+    while (x<>nil) and (x^.literalType<>lt_void) and (context.threadLocalMessages.continueEvaluation) do begin
       enqueueForAggregation(createTask(x  ));
       if environment.taskQueue^.getQueuedCount>aimEnqueueCount then begin
         if not(canAggregate) then environment.taskQueue^.activeDeqeue(dequeueContext^);
@@ -403,7 +403,7 @@ PROCEDURE aggregate(CONST inputIterator: P_expressionLiteral; CONST aggregator: 
   VAR x:T_evaluationResult;
   begin
     x:=inputIterator^.evaluateToLiteral(location,@context);
-    while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.adapters^.noErrors and not(aggregator^.earlyAbort) do begin
+    while (x.literal<>nil) and (x.literal^.literalType<>lt_void) and context.threadLocalMessages.continueEvaluation and not(aggregator^.earlyAbort) do begin
       aggregator^.addToAggregation(
         x,
         false,
@@ -466,7 +466,7 @@ PROCEDURE T_filterTask.evaluate(VAR context: T_threadContext);
     state:=fts_evaluating;
     leaveCriticalSection(taskCs);
     try
-      if context.adapters^.noErrors then with mapPayload do begin
+      if context.threadLocalMessages.continueEvaluation then with mapPayload do begin
         context.attachWorkerContext(env);
         evaluationResult.triggeredByReturn:=false;
         if mapRule^.evaluateToBoolean(mapRule^.getLocation,@context,true,mapParameter)
@@ -504,7 +504,7 @@ PROCEDURE T_mapTask.evaluate(VAR context: T_threadContext);
     state:=fts_evaluating;
     leaveCriticalSection(taskCs);
     try
-      if context.adapters^.noErrors then with mapPayload do begin
+      if context.threadLocalMessages.continueEvaluation then with mapPayload do begin
         context.attachWorkerContext(env);
         evaluationResult:=mapRule^.evaluateToLiteral(mapRule^.getLocation,@context,mapParameter);
         context.detachWorkerContext;
@@ -560,7 +560,7 @@ PROCEDURE T_eachTask.evaluate(VAR context: T_threadContext);
     state:=fts_evaluating;
     leaveCriticalSection(taskCs);
     try
-      if context.adapters^.noErrors then with eachPayload do begin
+      if context.threadLocalMessages.continueEvaluation then with eachPayload do begin
         context.attachWorkerContext(env);
         context.valueStore^.scopePush(false);
         idxLit:=newIntLiteral(eachIndex);
@@ -651,8 +651,8 @@ PROCEDURE T_futureLiteral.executeInContext(CONST context:P_threadContext);
     end;
 
     resultValue:=func^.evaluate(getLocation,context,param).literal;
-    if (resultValue=nil) and (context^.adapters^.noErrors)
-    then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation,C_EMPTY_STRING_ARRAY);
+    if (resultValue=nil) and (context^.threadLocalMessages.continueEvaluation)
+    then context^.raiseCannotApplyError('future/async payload '+func^.toString(20),param,getLocation);
 
     enterCriticalSection(criticalSection);
     state:=fls_done;
