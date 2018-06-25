@@ -3,6 +3,7 @@ INTERFACE
 USES sysutils,
      myGenerics,
      mnh_basicTypes,mnh_constants,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar
      {$ifdef fullVersion},
@@ -19,7 +20,7 @@ TYPE
       CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
-      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
+      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
       FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
@@ -52,8 +53,8 @@ TYPE
       PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean);
       PROCEDURE createVariable(CONST id:T_idString; CONST value:int64;     CONST readonly:boolean);
       FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
-      PROCEDURE setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters);
-      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST threadContext:pointer):P_literal;
+      PROCEDURE setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages);
+      FUNCTION  mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
       PROCEDURE scopePush(CONST blocking:boolean);
       PROCEDURE scopePop;
       {$ifdef fullVersion}
@@ -85,7 +86,7 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
     value^.rereference;
   end;
 
-FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters; CONST threadContext:pointer):P_literal;
+FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
   begin
     if readonly then begin
       adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
@@ -269,26 +270,26 @@ FUNCTION T_valueStore.getVariableValue(CONST id: T_idString): P_literal;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_valueStore.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+PROCEDURE T_valueStore.setVariableValue(CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages);
   VAR named:P_namedVariable;
       blocked:boolean;
   begin
     system.enterCriticalSection(cs);
     named:=getVariable(id,false,blocked);
     if named<>nil then named^.setValue(value)
-    else adapters^.raiseError('Cannot assign value to unknown local variable '+id,location);
+    else adapters.raiseError('Cannot assign value to unknown local variable '+id,location);
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST threadContext:pointer):P_literal;
+FUNCTION T_valueStore.mutateVariableValue(CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
   VAR named:P_namedVariable;
       blocked:boolean;
   begin
     system.enterCriticalSection(cs);
     named:=getVariable(id,false,blocked);
-    if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters^,threadContext)
+    if named<>nil then result:=named^.mutate(mutation,RHS,location,adapters,threadContext)
     else begin
-      adapters^.raiseError('Cannot mutate unknown local variable '+id,location);
+      adapters.raiseError('Cannot mutate unknown local variable '+id,location);
       result:=nil;
     end;
     system.leaveCriticalSection(cs);

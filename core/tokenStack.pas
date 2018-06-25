@@ -10,6 +10,7 @@ USES sysutils,
      mnh_tokens
      {$ifdef fullVersion},
      mnh_profiling,
+     mnh_messages,
      mnh_debuggingVar
      {$endif};
 TYPE
@@ -60,7 +61,7 @@ TYPE
                      CONST callerLocation: T_tokenLocation;
                      CONST callee: P_objectWithIdAndLocation);
       FUNCTION pop(CONST wallclockTime:double;CONST profiler:P_profiler):T_tokenLocation;
-      PROCEDURE print(VAR adapters:T_adapters);
+      PROCEDURE ensureTraceInError(VAR error:T_errorMessage);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
   end;
 
@@ -100,7 +101,7 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE clear;
     PROCEDURE scopePush;
-    PROCEDURE scopePop(VAR adapters:T_adapters; CONST location:T_tokenLocation);
+    PROCEDURE scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation);
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
     FUNCTION addId(CONST id:T_idString; CONST location:T_tokenLocation):boolean;
@@ -230,11 +231,18 @@ FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):
     dec(fill);
   end;
 
-PROCEDURE T_callStack.print(VAR adapters:T_adapters);
-  VAR i:longint;
+PROCEDURE T_callStack.ensureTraceInError(VAR error:T_errorMessage);
+  VAR i,k:longint;
   begin
-    for i:=fill-1 downto 0 do with dat[i] do
-    adapters.logCallStackInfo(calleeId,callLocation);
+    if length(error.stacktrace)=0 then begin
+      setLength(error.stacktrace,fill);
+      k:=0;
+      for i:=fill-1 downto 0 do begin
+        error.stacktrace[k].callee  :=dat[i].calleeId;
+        error.stacktrace[k].location:=dat[i].callLocation;
+        inc(k);
+      end;
+    end;
   end;
 
 FUNCTION T_callStack.getEntry(CONST index:longint):T_callStackEntry;
@@ -410,13 +418,13 @@ PROCEDURE T_idStack.scopePush;
     setLength(ids,length(ids)+1);
   end;
 
-PROCEDURE T_idStack.scopePop(VAR adapters:T_adapters; CONST location:T_tokenLocation);
+PROCEDURE T_idStack.scopePop(VAR adapters:T_threadLocalMessages; CONST location:T_tokenLocation);
   VAR topIdx:longint;
       i:longint;
   begin
     topIdx:=length(ids)-1;
     for i:=0 to length(ids[topIdx])-1 do begin
-      if not(ids[topIdx,i].used) then adapters.raiseWarning('Unused local variable '+ids[topIdx,i].name,ids[topIdx,i].location);
+      if not(ids[topIdx,i].used) then adapters.postTextMessage(mt_el2_warning,ids[topIdx,i].location,'Unused local variable '+ids[topIdx,i].name);
       {$ifdef fullVersion}
       if localIdInfos<>nil then localIdInfos^.add(ids[topIdx,i].name,ids[topIdx,i].location,location,tt_blockLocalVariable);
       {$endif}

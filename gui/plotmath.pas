@@ -76,6 +76,7 @@ TYPE
     axisTrafo:array['x'..'y'] of T_axisTrafo;
     axisStyle:array['x'..'y'] of T_gridStyle;
 
+    PROCEDURE setDefaults;
     PROCEDURE updateForPlot(CONST Canvas:TCanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
     FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
@@ -255,6 +256,18 @@ PROCEDURE T_customText.setBackground(CONST r, g, b: double);
     background[cc_red  ]:=round(255*max(0,min(1,r)));
     background[cc_green]:=round(255*max(0,min(1,g)));
     background[cc_blue ]:=round(255*max(0,min(1,b)));
+  end;
+
+PROCEDURE T_scalingOptions.setDefaults;
+  VAR axis:char;
+  begin
+    for axis:='x' to 'y' do begin
+      axisTrafo[axis].reset;
+      axisStyle[axis]:=[gse_tics,gse_coarseGrid,gse_fineGrid];
+    end;
+    preserveAspect:=true;
+    relativeFontSize:=10;
+    autoscaleFactor:=1;
   end;
 
 PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);

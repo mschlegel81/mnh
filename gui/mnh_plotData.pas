@@ -3,6 +3,8 @@ INTERFACE
 USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
      mnh_basicTypes, mnh_constants,
+     mnh_messages,
+     mnh_out_adapters,
      plotstyles,plotMath,plotMaps;
 TYPE
   T_plotQuality=0..3;
@@ -15,6 +17,70 @@ TYPE
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
   T_boundingBox = array['x'..'y', 0..1] of double;
+
+  P_addRowMessage=^T_addRowMessage;
+  T_addRowMessage=object(T_payloadMessage)
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      styleOptions: string;
+      rowData:T_dataRow;
+      CONSTRUCTOR create(CONST styleOptions_: string; CONST rowData_:T_dataRow);
+  end;
+
+  P_addTextMessage=^T_addTextMessage;
+  T_addTextMessage=object(T_payloadMessage)
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      customText:T_customText;
+      CONSTRUCTOR create(CONST cText:T_customText);
+  end;
+
+  P_plotOptionsMessage=^T_plotOptionsMessage;
+  T_plotOptionsMessage=object(T_payloadMessage)
+    private
+      options:T_scalingOptions;
+      retrieved:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR createRetrieveRequest;
+      CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions);
+      PROCEDURE setOptions(CONST o:T_scalingOptions);
+      FUNCTION getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+  end;
+
+  P_plotRenderRequest=^T_plotRenderRequest;
+  T_plotRenderRequest=object(T_payloadMessage)
+    private
+      targetIsString:boolean;
+      fileName:string;
+      width,height,quality:longint;
+
+      retrieved:boolean;
+      outputString:string;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_,quality_:longint);
+      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_,quality_:longint);
+      PROCEDURE SetString(CONST s:string);
+      FUNCTION getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages):string;
+  end;
+
+  P_plotDropRowRequest=^T_plotDropRowRequest;
+
+  { T_plotDropRowRequest }
+
+  T_plotDropRowRequest=object(T_payloadMessage)
+    private
+      count:longint;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST numberOfRowsToDrop:longint);
+  end;
 
   P_plot =^T_plot;
   T_plot = object
@@ -73,8 +139,139 @@ TYPE
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
+FUNCTION getOptionsViaAdapters(VAr threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
+FUNCTION getOptionsViaAdapters(VAr threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
+  VAR request:P_plotOptionsMessage;
+  begin
+    new(request,createRetrieveRequest);
+    threadLocalMessages.append(request^.rereferenced);
+    result:=request^.getOptionsWaiting(threadLocalMessages);
+    disposeMessage(request);
+  end;
+
+{ T_addTextMessage }
+
+FUNCTION T_addTextMessage.internalType: shortstring;
+  begin
+    result:='T_addTextMessage';
+  end;
+
+CONSTRUCTOR T_addTextMessage.create(CONST cText: T_customText);
+  begin
+    inherited create(mt_plot_addText);
+    customText:=cText;
+  end;
+
+FUNCTION T_plotDropRowRequest.internalType: shortstring;
+  begin
+    result:='T_plotDropRowRequest';
+  end;
+
+CONSTRUCTOR T_plotDropRowRequest.create(CONST numberOfRowsToDrop: longint);
+  begin
+    inherited create(mt_plot_dropRow);
+    count:=numberOfRowsToDrop;
+  end;
+
+FUNCTION T_plotRenderRequest.internalType: shortstring;
+  begin
+    result:='T_plotRenderRequest';
+  end;
+
+CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_, quality_: longint);
+  begin
+    inherited create(mt_plot_renderRequest);
+    targetIsString:=false;
+    fileName:=filename_;
+    width:=width_;
+    height:=height_;
+    quality:=quality_;
+    retrieved:=false;
+    outputString:='';
+  end;
+
+CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_, quality_: longint);
+  begin
+    inherited create(mt_plot_renderRequest);
+    targetIsString:=true;
+    fileName:='';
+    width:=width_;
+    height:=height_;
+    quality:=quality_;
+    retrieved:=false;
+    outputString:='';
+  end;
+
+PROCEDURE T_plotRenderRequest.SetString(CONST s: string);
+  begin
+    enterCriticalSection(messageCs);
+    outputString:=s;
+    retrieved:=true;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_plotRenderRequest.getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages): string;
+  begin
+    enterCriticalSection(messageCs);
+    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=outputString;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_plotOptionsMessage.internalType: shortstring;
+  begin
+    result:='T_plotOptionsMessage';
+  end;
+
+CONSTRUCTOR T_plotOptionsMessage.createRetrieveRequest;
+  begin
+    inherited create(mt_plot_retrieveOptions);
+    retrieved:=false;
+  end;
+
+CONSTRUCTOR T_plotOptionsMessage.createPostRequest(CONST o: T_scalingOptions);
+  begin
+    inherited create(mt_plot_setOptions);
+    retrieved:=true;
+    options:=o;
+  end;
+
+PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
+  begin
+    enterCriticalSection(messageCs);
+    options:=o;
+    retrieved:=true;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_plotOptionsMessage.getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+  begin
+    enterCriticalSection(messageCs);
+    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=options;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_addRowMessage.internalType: shortstring;
+  begin
+    result:='T_addRowMessage';
+  end;
+
+CONSTRUCTOR T_addRowMessage.create(CONST styleOptions_: string; CONST rowData_: T_dataRow);
+  begin
+    styleOptions:=styleOptions_;
+    rowData     :=rowData_;
+  end;
 
 FUNCTION T_plotSeries.getOptions(CONST index: longint): T_scalingOptions;
   begin
@@ -197,15 +394,7 @@ PROCEDURE T_plot.setDefaults;
   VAR axis: char;
   begin
     system.enterCriticalSection(cs);
-    with scalingOptions do begin
-      for axis:='x' to 'y' do begin
-        axisTrafo[axis].reset;
-        axisStyle[axis]:=[gse_tics,gse_coarseGrid,gse_fineGrid];
-      end;
-      preserveAspect:=true;
-      relativeFontSize:=10;
-      autoscaleFactor:=1;
-    end;
+    scalingOptions.setDefaults;
     clear;
     system.leaveCriticalSection(cs);
   end;

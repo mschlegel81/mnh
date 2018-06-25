@@ -4,15 +4,16 @@ USES sysutils,
      //MNH:
      mnh_basicTypes,
      mnh_tokens,
+     mnh_messages,
      mnh_out_adapters,
      tokenStack;
 TYPE
   P_debuggingSnapshot=^T_debuggingSnapshot;
-  T_debuggingSnapshot=record
-    location:T_tokenLocation;
+  T_debuggingSnapshot=object(T_payloadMessage)
     tokenStack:P_tokenStack;
-    first:pointer;
+    first:P_token;
     callStack:P_callStack;
+    CONSTRUCTOR create(CONST tokens_:P_tokenStack; CONST first_:P_token; CONST stack_:P_callStack);
   end;
 
   T_debuggerState=(breakSoonest,
@@ -30,11 +31,10 @@ TYPE
       state:T_debuggerState;
       lastBreakLine:T_tokenLocation;
       lastBreakLevel:longint;
-      snapshot:T_debuggingSnapshot;
-      adapters:P_adapters;
+      adapters:P_messageConnector;
       cs:TRTLCriticalSection;
     public
-      CONSTRUCTOR create(CONST parentAdapters:P_adapters);
+      CONSTRUCTOR create(CONST parentAdapters:P_messageConnector);
       DESTRUCTOR destroy;
       PROCEDURE resetForDebugging(CONST inPackage:P_objectWithPath);
       PROCEDURE stepping(CONST first:P_token; CONST stack:P_tokenStack; CONST callStack:P_callStack);
@@ -48,7 +48,18 @@ TYPE
   end;
 
 IMPLEMENTATION
-CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_adapters);
+
+{ T_debuggingSnapshot }
+
+CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack; CONST first_: P_token; CONST stack_: P_callStack);
+  begin
+    inherited create(mt_debugger_breakpoint);
+    first:=first_;
+    tokenStack:=tokens_;
+    callStack:=stack_;
+  end;
+
+CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messageConnector);
   begin
     initCriticalSection(cs);
     adapters:=parentAdapters;
@@ -94,14 +105,7 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
       for i:=0 to length(breakpoints)-1 do if isEqualLine(first^.location,breakpoints[i]) then exit(true);
     end;
 
-  PROCEDURE prepareSnapshot;
-    begin
-      snapshot.location:=first^.location;
-      snapshot.tokenStack:=stack;
-      snapshot.first:=first;
-      snapshot.callStack:=callStack;
-    end;
-
+  VAR snapshot:P_debuggingSnapshot;
   begin
     if (state=dontBreakAtAll) then exit;
     system.enterCriticalSection(cs);
@@ -131,8 +135,8 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
 
       lastBreakLine:=first^.location;
       lastBreakLevel:=callStack^.size;
-      prepareSnapshot;
-      adapters^.logBreakpointEncountered(@snapshot);
+      new(snapshot,create(stack,first,callStack));
+      adapters^.postCustomMessage(snapshot);
       while state=waitingForGUI do begin
         system.leaveCriticalSection(cs);
         ThreadSwitch;
