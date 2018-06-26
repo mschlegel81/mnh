@@ -385,6 +385,7 @@ DESTRUCTOR T_threadLocalMessages.destroy;
 
 PROCEDURE T_threadLocalMessages.setParent(CONST parent:P_threadLocalMessages);
   begin
+    if parent=parentMessages then exit;
     enterCriticalSection(cs);
     if parentMessages<>nil then parentMessages^.dropChild(@self);
     parentMessages:=parent;

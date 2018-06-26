@@ -139,10 +139,10 @@ TYPE
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
-FUNCTION getOptionsViaAdapters(VAr threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
+FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
-FUNCTION getOptionsViaAdapters(VAr threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
+FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
   VAR request:P_plotOptionsMessage;
   begin
     new(request,createRetrieveRequest);

@@ -95,9 +95,6 @@ CONST
 {mt_plot_setOptions}     (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_clear}          (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0));
 
-
-
-
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],
     [mt_el2_warning,mt_el2_userWarning],
@@ -245,7 +242,7 @@ CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType; CONST loc:
 CONSTRUCTOR T_payloadMessage.create(CONST messageType_: T_messageType);
   begin
     inherited create(messageType_,C_nilTokenLocation);
-    InitCriticalSection(messageCs);
+    initCriticalSection(messageCs);
   end;
 
 FUNCTION T_storedMessage.toString(CONST forGui: boolean): T_arrayOfString;
@@ -285,13 +282,13 @@ FUNCTION T_errorMessage.toString(CONST forGui: boolean): T_arrayOfString;
 
 DESTRUCTOR T_storedMessage.destroy;
   begin
-    if refCount<>0 then raise exception.create('Disposing message with refCount='+inttostr(refCount));
+    if refCount<>0 then raise Exception.create('Disposing message with refCount='+intToStr(refCount));
   end;
 
 DESTRUCTOR T_payloadMessage.destroy;
   begin
     inherited destroy;
-    DoneCriticalsection(messageCs);
+    doneCriticalSection(messageCs);
   end;
 
 FUNCTION T_storedMessage.equals(CONST other: P_storedMessage): boolean;

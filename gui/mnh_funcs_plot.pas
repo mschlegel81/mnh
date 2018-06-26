@@ -80,14 +80,14 @@ FUNCTION addPlot intFuncSignature;
         sizeWithoutOptions:=params^.size;
       end;
       if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
-        context.connector^.postCustomMessage(addRowMessage(newDataRow(list0)));
+        context.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list0)));
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 2) and
          (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (list0^.size=list1^.size) then begin
-        context.connector^.postCustomMessage(addRowMessage(newDataRow(list1,list0)));
+        context.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list1,list0)));
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
@@ -95,7 +95,7 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
          (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
          (arg3^.literalType in [lt_smallint,lt_bigint]) and (int3^.isBetween(2,maxLongint)) then begin
-        context.connector^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
+        context.globalMessages^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
                                                                 fReal(arg1),
                                                                 fReal(arg2),
                                                                 int3^.intValue,
@@ -109,7 +109,7 @@ FUNCTION addPlot intFuncSignature;
 FUNCTION plot intFuncSignature;
   begin
     if not(context.checkSideEffects('plot',tokenLocation,[se_alterPlotState])) then exit(nil);
-    context.connector^.postSingal(mt_plot_clear,C_nilTokenLocation);
+    context.globalMessages^.postSingal(mt_plot_clear,C_nilTokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,context);
@@ -144,7 +144,7 @@ FUNCTION setOptions intFuncSignature;
   PROCEDURE matchKey(CONST key:string; CONST value:P_literal);
     PROCEDURE fail;
       begin
-        context.connector^.postTextMessage(mt_el2_warning,tokenLocation,
+        context.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,
           'invalid plot option ; key="'+key+'" is not known or not compatible with value '+value^.toString);
         allOkay:=false;
       end;
@@ -215,7 +215,7 @@ FUNCTION setOptions intFuncSignature;
     end else allOkay:=false;
     if allOkay then begin
       new(postOptionsMessage,createPostRequest(opt));
-      context.connector^.postCustomMessage(postOptionsMessage);
+      context.globalMessages^.postCustomMessage(postOptionsMessage);
     end;
   end;
 
@@ -227,7 +227,7 @@ FUNCTION resetOptions_impl intFuncSignature;
     if (params=nil) or (params^.size=0) then begin
       opt.setDefaults;
       new(postOptionsMessage,createPostRequest(opt));
-      context.connector^.postCustomMessage(postOptionsMessage);
+      context.globalMessages^.postCustomMessage(postOptionsMessage);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -254,7 +254,7 @@ FUNCTION renderToFile_impl intFuncSignature;
       try
         fileName:=ChangeFileExt(fileName,'.png');
         new(renderRequest,createRenderToFileRequest(fileName,width,height,quality));
-        context.connector^.postCustomMessage(renderRequest);
+        context.globalMessages^.postCustomMessage(renderRequest);
       except
         on e:Exception do begin
           context.threadLocalMessages.raiseError('Error on renderToFile: '+e.message,tokenLocation);
@@ -281,7 +281,7 @@ FUNCTION renderToString_impl intFuncSignature;
                         else quality:=0;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       new(renderRequest,createRenderToStringRequest(width,height,quality));
-      context.connector^.postCustomMessage(renderRequest^.rereferenced);
+      context.globalMessages^.postCustomMessage(renderRequest^.rereferenced);
       result:=newStringLiteral(renderRequest^.getStringWaiting(context.threadLocalMessages));
       disposeMessage(renderRequest);
     end;
@@ -296,7 +296,7 @@ FUNCTION removePlot_imp intFuncSignature;
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
       new(dropPlotMessage,create(toDrop));
-      context.connector^.postCustomMessage(dropPlotMessage);
+      context.globalMessages^.postCustomMessage(dropPlotMessage);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -350,7 +350,7 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
         end;
       end;
       new(postRequest,create(txt));
-      context.connector^.postCustomMessage(postRequest);
+      context.globalMessages^.postCustomMessage(postRequest);
       result:=newVoidLiteral;
     end;
   end;
