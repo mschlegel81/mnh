@@ -44,7 +44,7 @@ TYPE
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
-      PROCEDURE resolveIds(CONST adapters:P_messageConnector); virtual;
+      PROCEDURE resolveIds(CONST adapters:P_threadLocalMessages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
@@ -204,7 +204,7 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages)
 {$endif}
 
 PROCEDURE T_abstractRule.clearCache; begin end;
-PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_messageConnector); begin end;
+PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_threadLocalMessages); begin end;
 FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;

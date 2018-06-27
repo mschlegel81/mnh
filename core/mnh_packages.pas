@@ -6,7 +6,9 @@ USES //basic classes
      myGenerics, myStringUtil,
      //MNH:
      mnh_constants, mnh_basicTypes,
-     mnh_litVar, mnh_fileWrappers, mnh_out_adapters,
+     mnh_litVar, mnh_fileWrappers,
+     mnh_messages,
+     mnh_out_adapters,
      mnh_caches,
      mnh_tokens, mnh_contexts,
      mnh_profiling,
@@ -43,9 +45,9 @@ TYPE
     pack:P_package;
     locationOfDeclaration:T_tokenLocation;
     {Creates a package reference with a given packId (or fails reporting via adapters if no package with the given ID can be found)}
-    CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_threadLocalMessages);
     {Creates a package reference with a specific path (or fails reporting via adapters if the file does not exist)}
-    CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_threadLocalMessages);
     {$ifdef fullVersion}
     {Returns true, if the package has <idOrPath> either as ID or as path; Used for code assistance only}
     FUNCTION hasIdOrPath(CONST idOrPath:string; CONST importingPackage:P_objectWithPath):boolean;
@@ -76,10 +78,10 @@ TYPE
       anyCalled:boolean;
       {$endif}
 
-      PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
+      PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
       PROCEDURE clear(CONST includeSecondaries:boolean);
-      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_adapters; VAR metaData:T_ruleMetaData):P_rule;
-      PROCEDURE writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_threadLocalMessages; VAR metaData:T_ruleMetaData):P_rule;
+      PROCEDURE writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_threadContext{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
@@ -89,7 +91,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
-      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+      PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
@@ -99,7 +101,7 @@ TYPE
       FUNCTION usedPackages:T_packageList;
       FUNCTION declaredRules:T_ruleList;
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
-      PROCEDURE complainAboutUnused(VAR adapters:T_adapters);
+      PROCEDURE complainAboutUnused(VAR adapters:T_threadLocalMessages);
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_threadContext);
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -157,11 +159,11 @@ TYPE
     private
       editor:P_codeProvider;
       packageForPostEval:P_package;
-      adapters:P_adapters;
+      adapters:P_threadLocalMessages;
       checkPending,currentlyProcessing:boolean;
       cs:TRTLCriticalSection;
     public
-      CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters:P_adapters);
+      CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters:P_threadLocalMessages);
       DESTRUCTOR destroy;
       PROCEDURE triggerUpdate(CONST package:P_package);
       PROCEDURE ensureStop;
@@ -173,7 +175,7 @@ TYPE
   T_sandbox=object
     private
       evaluationContext:T_evaluationContext;
-      adapters:T_adapters;
+      adapters:T_threadLocalMessages;
       collector:T_collectingOutAdapter;
       busy:boolean;
       package:T_package;
@@ -186,7 +188,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
-      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_threadLocalMessages; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       FUNCTION runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
@@ -266,7 +268,7 @@ FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:stri
   end;
 
 {$ifdef fullVersion}
-CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST quickAdapters: P_adapters);
+CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST quickAdapters: P_threadLocalMessages);
   begin
     editor:=quickEdit;
     adapters:=quickAdapters;
@@ -686,7 +688,7 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_adapters; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_threadLocalMessages; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
   begin
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
@@ -824,7 +826,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
     end;
   end;
 
-CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_threadLocalMessages);
   begin
     locationOfDeclaration:=tokenLocation;
     id:=packId;
@@ -836,7 +838,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
     pack:=nil;
   end;
 
-CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_threadLocalMessages);
   begin
     locationOfDeclaration:=tokenLocation;
     path:=expandFileName(extractFilePath(tokenLocation.package^.getPath)+path_);
@@ -1510,7 +1512,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
     readyForUsecase:=lu_NONE;
   end;
 
-PROCEDURE T_package.writeDataStores(VAR adapters:T_adapters; CONST recurse:boolean);
+PROCEDURE T_package.writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
   VAR rule:P_rule;
       i:longint;
   begin
@@ -1569,7 +1571,7 @@ DESTRUCTOR T_package.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_adapters; VAR metaData:T_ruleMetaData): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_modifierSet; CONST ruleDeclarationStart: T_tokenLocation; VAR adapters: T_threadLocalMessages; VAR metaData:T_ruleMetaData): P_rule;
   PROCEDURE raiseModifierComplaint;
     VAR m:T_modifier;
         s:string='';
@@ -1661,7 +1663,7 @@ FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
     result:='';
   end;
 
-PROCEDURE T_package.resolveRuleIds(CONST adapters: P_adapters);
+PROCEDURE T_package.resolveRuleIds(CONST adapters: P_threadLocalMessages);
   VAR rule:P_rule;
   begin
     for rule in packageRules.valueSet do rule^.resolveIds(adapters);
@@ -1689,7 +1691,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
     end;
   end;
 
-PROCEDURE T_package.complainAboutUnused(VAR adapters: T_adapters);
+PROCEDURE T_package.complainAboutUnused(VAR adapters: T_threadLocalMessages);
   VAR rule:P_rule;
       import:T_packageReference;
   begin
@@ -1801,7 +1803,7 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   end;
 
 PROCEDURE T_package.resolveId(VAR token: T_token;
-  CONST adaptersOrNil: P_adapters{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
+  CONST adaptersOrNil: P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif});
   VAR userRule:P_rule;
       intrinsicFuncPtr:P_intFuncCallback;
       ruleId:T_idString;

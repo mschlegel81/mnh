@@ -214,42 +214,42 @@ VAR globalLock:TRTLCriticalSection;
 
 { T_contextRecycler }
 
-constructor T_contextRecycler.create;
+CONSTRUCTOR T_contextRecycler.create;
   begin
-    InitCriticalSection(recyclerCS);
+    initCriticalSection(recyclerCS);
     fill:=0;
-    Initialize(contexts);
+    initialize(contexts);
   end;
 
-destructor T_contextRecycler.destroy;
+DESTRUCTOR T_contextRecycler.destroy;
   VAR k:longint;
   begin
-    EnterCriticalsection(recyclerCS);
+    enterCriticalSection(recyclerCS);
     for k:=0 to fill-1 do dispose(contexts[k],destroy);
     fill:=0;
-    LeaveCriticalsection(recyclerCS);
-    DoneCriticalsection(recyclerCS);
+    leaveCriticalSection(recyclerCS);
+    doneCriticalSection(recyclerCS);
   end;
 
-procedure T_contextRecycler.disposeContext(var context: P_threadContext);
+PROCEDURE T_contextRecycler.disposeContext(VAR context: P_threadContext);
   begin
-    EnterCriticalsection(recyclerCS);
+    enterCriticalSection(recyclerCS);
     if fill<length(contexts) then begin
       contexts[fill]:=context;
       inc(fill);
     end else dispose(context,destroy);
-    LeaveCriticalsection(recyclerCS);
+    leaveCriticalSection(recyclerCS);
   end;
 
-function T_contextRecycler.newContext(CONST parentThread:P_threadContext):P_threadContext;
+FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext):P_threadContext;
   begin
-    EnterCriticalsection(recyclerCS);
+    enterCriticalSection(recyclerCS);
     if fill>0 then begin
       dec(fill);
       result:=contexts[fill];
       result^.initFor(parentThread^.related.evaluation,parentThread);
     end else new(result,create(parentThread^.related.evaluation,parentThread));
-    LeaveCriticalsection(recyclerCS);
+    leaveCriticalSection(recyclerCS);
   end;
 
 {$ifndef fullVersion}
@@ -500,7 +500,7 @@ FUNCTION workerThreadCount:longint;
 //    result:=taskQueue;
 //  end;
 //
-function T_threadContext.wallclockTime(const forceInit: boolean): double;
+FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
   begin
     if related.evaluation^.wallClock=nil then begin
       if forceInit then begin
@@ -532,9 +532,9 @@ FUNCTION T_threadContext.getNewAsyncContext(CONST local:boolean):P_threadContext
 //
 //
 //{$ifdef fullVersion}
-procedure T_threadContext.callStackPush(const callerLocation: T_tokenLocation;
-  const callee: P_objectWithIdAndLocation;
-  const callParameters: P_variableTreeEntryCategoryNode);
+PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation;
+  CONST callee: P_objectWithIdAndLocation;
+  CONST callParameters: P_variableTreeEntryCategoryNode);
   begin
     if not(tco_stackTrace in options) then exit;
     callStack.push(wallclockTime,callParameters,callerLocation,callee);
@@ -547,7 +547,7 @@ procedure T_threadContext.callStackPush(const callerLocation: T_tokenLocation;
 //    callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
 //  end;
 //
-procedure T_threadContext.callStackPop(const first: P_token);
+PROCEDURE T_threadContext.callStackPop(CONST first: P_token);
   VAR loc:T_tokenLocation;
   begin
     if not(tco_stackTrace in options) then exit;
@@ -562,10 +562,10 @@ procedure T_threadContext.callStackPop(const first: P_token);
 //  end;
 //{$endif}
 //
-function T_threadContext.reduceExpression(var first: P_token): T_reduceResult;
+FUNCTION T_threadContext.reduceExpression(VAR first: P_token): T_reduceResult;
   begin result:=reduceExpressionCallback(first,self); end;
 
-function T_threadContext.reduceToLiteral(var first: P_token
+FUNCTION T_threadContext.reduceToLiteral(VAR first: P_token
   ): T_evaluationResult;
   begin
     result.triggeredByReturn:=reduceExpressionCallback(first,self)=rr_okWithReturn;
@@ -578,8 +578,8 @@ function T_threadContext.reduceToLiteral(var first: P_token
     end;
   end;
 
-function T_threadContext.setAllowedSideEffectsReturningPrevious(
-  const se: T_sideEffects): T_sideEffects;
+FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(
+  CONST se: T_sideEffects): T_sideEffects;
   begin
     result:=allowedSideEffects;
     allowedSideEffects:=se;
@@ -593,8 +593,8 @@ function T_threadContext.setAllowedSideEffectsReturningPrevious(
 //    move(token^.data,allowedSideEffects,sizeOf(pointer));
 //  end;
 //
-function T_threadContext.getNewEndToken(const blocking: boolean;
-  const location: T_tokenLocation): P_token;
+FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
+  CONST location: T_tokenLocation): P_token;
   VAR data:pointer=nil;
   begin
     move(allowedSideEffects,data,sizeOf(data));
@@ -602,7 +602,7 @@ function T_threadContext.getNewEndToken(const blocking: boolean;
                 else result:=recycler.newToken(location,'',tt_endExpression,data);
   end;
 
-function T_threadContext.getFutureEnvironment: T_queueTaskEnvironment;
+FUNCTION T_threadContext.getFutureEnvironment: T_queueTaskEnvironment;
   begin
     result.callingContext:=@self;
     result.values:=valueStore^.readOnlyClone;
@@ -611,7 +611,7 @@ function T_threadContext.getFutureEnvironment: T_queueTaskEnvironment;
     result.initialAllow:=sideEffectWhitelist;
   end;
 
-procedure T_threadContext.workerContextInit(const environment: T_queueTaskEnvironment);
+PROCEDURE T_threadContext.workerContextInit(CONST environment: T_queueTaskEnvironment);
   begin
     with related do begin
       parent:=environment.callingContext;
@@ -645,7 +645,7 @@ procedure T_threadContext.workerContextInit(const environment: T_queueTaskEnviro
     {$endif}
   end;}
 
-procedure T_threadContext.workerContextDone;
+PROCEDURE T_threadContext.workerContextDone;
   begin
     threadLocalMessages.escalateErrors;
     {$ifdef fullVersion}
@@ -709,9 +709,9 @@ procedure T_threadContext.workerContextDone;
 //  end;
 //{$endif}
 //
-procedure T_threadContext.raiseCannotApplyError(const ruleWithType: string;
-  const parameters: P_listLiteral; const location: T_tokenLocation;
-  const suffix: string; const missingMain: boolean);
+PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType: string;
+  CONST parameters: P_listLiteral; CONST location: T_tokenLocation;
+  CONST suffix: string; CONST missingMain: boolean);
   VAR message:string;
   begin
     message:='Cannot apply '+ruleWithType+' to parameter list '+parameterListTypeString(parameters)+':  '+toParameterListString(parameters,true,100);
@@ -721,8 +721,8 @@ procedure T_threadContext.raiseCannotApplyError(const ruleWithType: string;
     else threadLocalMessages.raiseError(message,location);
   end;
 
-function T_threadContext.checkSideEffects(const id: string;
-  const location: T_tokenLocation; const functionSideEffects: T_sideEffects
+FUNCTION T_threadContext.checkSideEffects(CONST id: string;
+  CONST location: T_tokenLocation; CONST functionSideEffects: T_sideEffects
   ): boolean;
   VAR messageText:string='';
       eff:T_sideEffect;
@@ -778,10 +778,10 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     end;
   end;
 
-constructor T_threadContext.create(const evaluation: P_evaluationContext; const parentThread: P_threadContext);
+CONSTRUCTOR T_threadContext.create(CONST evaluation: P_evaluationContext; CONST parentThread: P_threadContext);
   begin
-    InitCriticalSection(contextCS);
-    EnterCriticalsection(contextCS);
+    initCriticalSection(contextCS);
+    enterCriticalSection(contextCS);
     callStack.create;
     new(valueStore,create);
     recycler.create;
@@ -789,13 +789,13 @@ constructor T_threadContext.create(const evaluation: P_evaluationContext; const 
     related.parent:=nil;
     related.evaluation:=nil;
     initFor(evaluation,parentThread);
-    LeaveCriticalsection(contextCS);
+    leaveCriticalSection(contextCS);
   end;
 
-procedure T_threadContext.initFor(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
+PROCEDURE T_threadContext.initFor(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
   VAR threadOption :T_threadContextOption;
   begin
-    EnterCriticalsection(contextCS);
+    enterCriticalSection(contextCS);
     if parentThread=nil then begin
       for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in evaluation^.options then include(options,threadOption);
       related.parent:=nil;
@@ -814,30 +814,30 @@ procedure T_threadContext.initFor(CONST evaluation:P_evaluationContext; CONST pa
     callStack.clear;
     valueStore^.clear;
     parentCustomForm:=nil;
-    LeaveCriticalsection(contextCS);
+    leaveCriticalSection(contextCS);
   end;
 
-procedure T_threadContext.dropChildContext(const context: P_threadContext);
+PROCEDURE T_threadContext.dropChildContext(CONST context: P_threadContext);
   VAR k:longint=0;
   begin
-    EnterCriticalsection(contextCS);
+    enterCriticalSection(contextCS);
     with related do
     while k<length(children) do
     if children[k]=context then begin
       children[k]:=children[length(children)-1];
-      SetLength(children,length(children)-1);
+      setLength(children,length(children)-1);
       context^.threadLocalMessages.setParent(nil);
     end else inc(k);
-    LeaveCriticalsection(contextCS);
+    leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_threadContext.addChildContext(CONST context:P_threadContext);
   VAR k:longint=0;
   begin
-    EnterCriticalsection(contextCS);
+    enterCriticalSection(contextCS);
     with related do begin
       for k:=0 to length(children)-1 do if children[k]=context then begin
-        LeaveCriticalsection(contextCS);
+        leaveCriticalSection(contextCS);
         exit;
       end;
       k:=length(children);
@@ -845,12 +845,12 @@ PROCEDURE T_threadContext.addChildContext(CONST context:P_threadContext);
       children[k]:=context;
       context^.threadLocalMessages.setParent(@threadLocalMessages);
     end;
-    LeaveCriticalsection(contextCS);
+    leaveCriticalSection(contextCS);
   end;
 
-destructor T_threadContext.destroy;
+DESTRUCTOR T_threadContext.destroy;
   begin
-    DoneCriticalsection(contextCS);
+    doneCriticalSection(contextCS);
   end;
 
 CONSTRUCTOR T_queueTask.create(CONST environment:T_queueTaskEnvironment; CONST volatile:boolean);
