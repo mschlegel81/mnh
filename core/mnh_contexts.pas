@@ -77,6 +77,7 @@ TYPE
       PROCEDURE initFor(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
       DESTRUCTOR destroy;
       PROCEDURE dropChildContext(CONST context:P_threadContext);
+      PROCEDURE addChildContext(CONST context:P_threadContext);
     public
       callDepth:longint;
       threadLocalMessages:T_threadLocalMessages;
@@ -86,24 +87,28 @@ TYPE
       {$ifdef fullVersion}
       parentCustomForm:pointer;
       {$endif}
-      FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
-      FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
-
-      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
-      PROCEDURE callStackPop(CONST first:P_token);
-      PROPERTY threadOptions:T_threadContextOptions read options;
+      //Globals
       PROPERTY getGlobals:P_evaluationContext read related.evaluation;
-      FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
-      FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
-      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
+      FUNCTION wallclockTime(CONST forceInit:boolean=false):double;
+      //Side effects
+      FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
-
+      FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
+      //Messaging
+      PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
+      //Evaluation:
+      FUNCTION reduceExpression(VAR first:P_token):T_reduceResult; inline;
+      FUNCTION reduceToLiteral(VAR first:P_token):T_evaluationResult; inline;
+      //Multithreading:
       FUNCTION getFutureEnvironment:T_queueTaskEnvironment;
-
+      FUNCTION getNewAsyncContext(CONST local:boolean):P_threadContext;
       PROCEDURE workerContextInit(CONST environment:T_queueTaskEnvironment);
       PROCEDURE workerContextDone;
+      //Misc.:
+      PROPERTY threadOptions:T_threadContextOptions read options;
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
+      PROCEDURE callStackPop(CONST first:P_token);
   end;
 
   T_queueTaskState=(fts_pending, //set on construction
@@ -517,16 +522,13 @@ function T_threadContext.wallclockTime(const forceInit: boolean): double;
 //  end;
 //
 //
-//FUNCTION T_threadContext.getNewAsyncContext(CONST local:boolean):P_threadContext;
-//  begin
-//    if not(tco_createDetachedTask in options) then exit(nil);
-//    if local then new(result,createThreadContext(nil   ,adapters))
-//             else new(result,createThreadContext(parent,adapters));
-//    parent^.setupThreadContext(result);
-//    result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
-//    if local then result^.valueStore^.parentStore:=valueStore;
-//    interLockedIncrement(parent^.detachedAsyncChildCount);
-//  end;
+FUNCTION T_threadContext.getNewAsyncContext(CONST local:boolean):P_threadContext;
+  begin
+    if not(tco_createDetachedTask in options) then exit(nil);
+    result:=contextPool.newContext(@self);
+    result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
+    if local then result^.valueStore^.parentStore:=valueStore;
+  end;
 //
 //
 //{$ifdef fullVersion}
@@ -614,9 +616,9 @@ procedure T_threadContext.workerContextInit(const environment: T_queueTaskEnviro
     with related do begin
       parent:=environment.callingContext;
       evaluation:=parent^.related.evaluation;
+      parent^.addChildContext(@self);
     end;
     options:=related.parent^.options;
-    threadLocalMessages.setParent(@related.parent^.threadLocalMessages);
     threadLocalMessages.clear;
     allowedSideEffects:=environment.initialAllow;
     valueStore^.clear;
@@ -646,8 +648,6 @@ procedure T_threadContext.workerContextInit(const environment: T_queueTaskEnviro
 procedure T_threadContext.workerContextDone;
   begin
     threadLocalMessages.escalateErrors;
-    threadLocalMessages.clear;
-    threadLocalMessages.setParent(nil);
     {$ifdef fullVersion}
     {$ifdef debugMode}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
@@ -655,7 +655,7 @@ procedure T_threadContext.workerContextDone;
     callStack.clear;
     {$endif}
     valueStore^.clear;
-    related.parent^.dropChildContext(@self);
+    if related.parent<>nil then related.parent^.dropChildContext(@self);
     related.parent:=nil;
     related.evaluation:=nil;
   end;
@@ -807,7 +807,7 @@ procedure T_threadContext.initFor(CONST evaluation:P_evaluationContext; CONST pa
       options:=parentThread^.options;
       related.parent:=parentThread;
       related.evaluation:=parentThread^.related.evaluation;
-      threadLocalMessages.setParent(@parentThread^.threadLocalMessages);
+      parentThread^.addChildContext(@self);
       callDepth:=0;
       globalMessages:=parentThread^.globalMessages;
     end;
@@ -826,7 +826,25 @@ procedure T_threadContext.dropChildContext(const context: P_threadContext);
     if children[k]=context then begin
       children[k]:=children[length(children)-1];
       SetLength(children,length(children)-1);
+      context^.threadLocalMessages.setParent(nil);
     end else inc(k);
+    LeaveCriticalsection(contextCS);
+  end;
+
+PROCEDURE T_threadContext.addChildContext(CONST context:P_threadContext);
+  VAR k:longint=0;
+  begin
+    EnterCriticalsection(contextCS);
+    with related do begin
+      for k:=0 to length(children)-1 do if children[k]=context then begin
+        LeaveCriticalsection(contextCS);
+        exit;
+      end;
+      k:=length(children);
+      setLength(children,k+1);
+      children[k]:=context;
+      context^.threadLocalMessages.setParent(@threadLocalMessages);
+    end;
     LeaveCriticalsection(contextCS);
   end;
 
