@@ -62,8 +62,6 @@ TYPE
       FUNCTION newContext(CONST parentThread:P_threadContext):P_threadContext;
   end;
 
-  { T_threadContext }
-
   T_threadContext=object
     private
       contextCS:TRTLCriticalSection;

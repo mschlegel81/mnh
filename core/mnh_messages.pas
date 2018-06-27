@@ -8,7 +8,8 @@ USES sysutils,
 TYPE
   T_stateFlag=(FlagQuietHalt,
                FlagError,
-               FlagFatalError);
+               FlagFatalError,
+               FlagGUINeeded);
   T_stateFlags=set of T_stateFlag;
 
   T_messageClass=(mc_echo   ,

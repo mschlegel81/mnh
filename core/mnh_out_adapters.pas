@@ -84,6 +84,7 @@ TYPE
     PROCEDURE dropChild(CONST child:P_threadLocalMessages);
     PROCEDURE addChild (CONST child:P_threadLocalMessages);
     PROCEDURE setStopFlag;
+    PROCEDURE logGuiNeeded;
   end;
 
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
@@ -130,6 +131,7 @@ TYPE
       adapters:array of T_flaggedAdapter;
       collecting:T_messageTypeSet;
     public
+      preferredEchoLineLength:longint;
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
 
@@ -337,6 +339,10 @@ CONSTRUCTOR T_threadLocalMessages.create(CONST callback: F_traceCallback;
 PROCEDURE T_threadLocalMessages.propagateFlags;
   VAR child:P_threadLocalMessages;
   begin
+    if ((FlagFatalError in flags) or (FlagGUINeeded in flags)) and (parentMessages<>nil) then begin
+      parentMessages^.flags:=parentMessages^.flags+(flags*[FlagFatalError,FlagGUINeeded]);
+      parentMessages^.propagateFlags;
+    end;
     for child in childMessages do begin
       child^.flags:=child^.flags+flags;
       child^.propagateFlags;
@@ -429,6 +435,15 @@ PROCEDURE T_threadLocalMessages.setStopFlag;
   begin
     enterCriticalSection(cs);
     include(flags,FlagQuietHalt);
+    leaveCriticalSection(cs);
+    propagateFlags;
+  end;
+
+PROCEDURE T_threadLocalMessages.logGuiNeeded;
+  begin
+    enterCriticalSection(cs);
+    include(flags,FlagQuietHalt);
+    include(flags,FlagGUINeeded);
     leaveCriticalSection(cs);
     propagateFlags;
   end;
