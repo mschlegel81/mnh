@@ -82,7 +82,8 @@ TYPE
     DESTRUCTOR destroy; virtual;
     PROCEDURE setParent(CONST parent:P_threadLocalMessages);
     PROCEDURE dropChild(CONST child:P_threadLocalMessages);
-    PROCEDURE AddChild (CONST child:P_threadLocalMessages);
+    PROCEDURE addChild (CONST child:P_threadLocalMessages);
+    PROCEDURE setStopFlag;
   end;
 
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
@@ -140,6 +141,10 @@ TYPE
 
       PROCEDURE updateCollecting;
       FUNCTION isCollecting(CONST messageType:T_messageType):boolean;
+
+      PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
+
+      FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
   end;
 
   //T_adapters=object
@@ -240,7 +245,7 @@ TYPE
   //    {$endif}
   //    PROCEDURE addSubAdapters(CONST sub:P_adapters);
   //    PROCEDURE remSubAdapters(CONST sub:P_adapters);
-  //    FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+  //
   //    FUNCTION getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
   //end;
 
@@ -389,7 +394,10 @@ PROCEDURE T_threadLocalMessages.setParent(CONST parent:P_threadLocalMessages);
     enterCriticalSection(cs);
     if parentMessages<>nil then parentMessages^.dropChild(@self);
     parentMessages:=parent;
-    if parent<>nil then parent^.AddChild(@self);
+    if parent<>nil then begin
+      parent^.addChild(@self);
+      globalMessages:=parent^.globalMessages;
+    end;
     leaveCriticalSection(cs);
   end;
 
@@ -405,7 +413,7 @@ PROCEDURE T_threadLocalMessages.dropChild(CONST child: P_threadLocalMessages);
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_threadLocalMessages.AddChild(CONST child: P_threadLocalMessages);
+PROCEDURE T_threadLocalMessages.addChild(CONST child: P_threadLocalMessages);
   VAR i:longint=0;
   begin
     enterCriticalSection(cs);
@@ -415,6 +423,14 @@ PROCEDURE T_threadLocalMessages.AddChild(CONST child: P_threadLocalMessages);
       childMessages[i]:=child;
     end;
     leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_threadLocalMessages.setStopFlag;
+  begin
+    enterCriticalSection(cs);
+    include(flags,FlagQuietHalt);
+    leaveCriticalSection(cs);
+    propagateFlags;
   end;
 
 PROCEDURE T_messageConnector.postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
@@ -433,7 +449,6 @@ PROCEDURE T_messageConnector.postTextMessage(CONST kind: T_messageType; CONST lo
 
 PROCEDURE T_messageConnector.postCustomMessage(CONST message: P_storedMessage);
   VAR a:T_flaggedAdapter;
-      flag:T_stateFlag;
   begin
     enterCriticalSection(connectorCS);
     for a in adapters do a.adapter^.append(message);
@@ -916,17 +931,19 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 //    addOutAdapter(result,true);
 //  end;
 //
-//PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
-//  begin
-//    setLength(adapter,length(adapter)+1);
-//    adapter[length(adapter)-1]:=p;
-//    p^.autodestruct:=destroyIt;
-//    someEchoInput        :=someEchoInput         or (mt_echo_input       in p^.messageTypesToInclude);
-//    someEchoDeclaration  :=someEchoDeclaration   or (mt_echo_declaration in p^.messageTypesToInclude);
-//    someShowExpressionOut:=someShowExpressionOut or (mt_echo_output      in p^.messageTypesToInclude);
-//    someShowTimingInfo   :=someShowTimingInfo    or (mt_timing_info      in p^.messageTypesToInclude);
-//  end;
-//
+PROCEDURE T_messageConnector.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
+  begin
+    enterCriticalSection(connectorCS);
+    setLength(adapters,length(adapters)+1);
+    adapters[length(adapters)-1].adapter:=p;
+    adapters[length(adapters)-1].doDispose:=destroyIt;
+    collecting:=collecting+p^.messageTypesToInclude;
+    leaveCriticalSection(connectorCS);
+  end;
+
+FUNCTION T_messageConnector.getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+  begin new(result,create(@self,includePrint,includeWarnings,includeErrors)); end;
+
 //FUNCTION T_adapters.addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
 //  VAR consoleOutAdapter:P_consoleOutAdapter;
 //  begin
@@ -1049,9 +1066,6 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 //    end;
 //    leaveCriticalSection(globalLockCs);
 //  end;
-//
-//FUNCTION T_adapters.getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
-//  begin new(result,create(@self,includePrint,includeWarnings,includeErrors)); end;
 //
 //FUNCTION T_adapters.getAdaptersForTry(OUT errorInterceptor:P_errorInterceptor):P_adapters;
 //  begin

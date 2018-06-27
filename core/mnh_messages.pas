@@ -162,6 +162,7 @@ TYPE
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
 OPERATOR :=(x:qword):T_messageTypeSet;
 PROCEDURE disposeMessage(message:P_storedMessage);
+FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
 IMPLEMENTATION
 OPERATOR :=(CONST x:T_messageTypeSet):qword;
   VAR mt:T_messageType;
@@ -203,9 +204,9 @@ FUNCTION T_storedMessageWithText.internalType: shortstring; begin result:='T_sto
 FUNCTION T_payloadMessage.internalType: shortstring; begin result:='T_payloadMessage'; end;
 FUNCTION T_errorMessage.internalType: shortstring; begin result:='T_errorMessage'; end;
 
-FUNCTION T_storedMessage.prefix: shortstring;
+FUNCTION getPrefix(CONST messageType:T_messageType):shortstring;
   begin
-    case kind of
+    case messageType of
       mt_echo_input,
       mt_echo_declaration:result:=' in>';
       mt_echo_output     :result:='out>';
@@ -220,6 +221,9 @@ FUNCTION T_storedMessage.prefix: shortstring;
       else result:='';
     end;
   end;
+
+FUNCTION T_storedMessage.prefix: shortstring;
+  begin result:=getPrefix(kind); end;
 
 CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation; CONST message: T_arrayOfString);
   begin

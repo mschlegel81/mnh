@@ -93,7 +93,7 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
       end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
         if childIdx>=length(children) then begin
           setLength(children,childIdx+1);
-          new(children[childIdx],createBlank(containingModel,containingModel^.view.items.AddChild(associatedNode,'')));
+          new(children[childIdx],createBlank(containingModel,containingModel^.view.items.addChild(associatedNode,'')));
         end;
         children[childIdx]^.updateWithSubrule(subRule,idAndModifiers,inMainPackage);
         inc(childIdx);
@@ -119,7 +119,7 @@ PROCEDURE T_outlineNode.updateWithPackage(CONST package: P_package; CONST mainPa
     for rule in package^.declaredRules do if rule^.hasPublicSubrule or mainPackage then begin
       if childIdx>=length(children) then begin
         setLength(children,childIdx+1);
-        new(children[childIdx],createBlank(containingModel,containingModel^.view.items.AddChild(associatedNode,'')));
+        new(children[childIdx],createBlank(containingModel,containingModel^.view.items.addChild(associatedNode,'')));
       end;
       children[childIdx]^.updateWithRule(rule,mainPackage);
       inc(childIdx);

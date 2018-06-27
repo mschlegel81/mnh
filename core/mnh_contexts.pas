@@ -62,6 +62,8 @@ TYPE
       FUNCTION newContext(CONST parentThread:P_threadContext):P_threadContext;
   end;
 
+  { T_threadContext }
+
   T_threadContext=object
     private
       contextCS:TRTLCriticalSection;
@@ -73,11 +75,12 @@ TYPE
         children       :array of P_threadContext;
       end;
       callStack :T_callStack;
-      CONSTRUCTOR create(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
+      CONSTRUCTOR create();
       PROCEDURE initFor(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
       DESTRUCTOR destroy;
       PROCEDURE dropChildContext(CONST context:P_threadContext);
       PROCEDURE addChildContext(CONST context:P_threadContext);
+      PROCEDURE setThreadOptions(CONST globalOptions:T_evaluationContextOptions);
     public
       callDepth:longint;
       threadLocalMessages:T_threadLocalMessages;
@@ -108,6 +111,7 @@ TYPE
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
+      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop(CONST first:P_token);
   end;
 
@@ -155,43 +159,32 @@ TYPE
     PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   end;
 
-  T_evaluationContext=object
+  T_evaluationContext=object(T_threadContext)
     private
       taskQueue:T_taskQueue;
-      connector:P_messageConnector;
       wallClock:TEpikTimer;
-
-      //private
-      options :T_evaluationContextOptions;
-    //  mainParameters:T_arrayOfString;
-    //
-
-    //  {$ifdef fullVersion}
+      globalOptions :T_evaluationContextOptions;
+      mainParameters:T_arrayOfString;
+      {$ifdef fullVersion}
       profiler:P_profiler;
-    //  debuggingStepper:P_debuggingStepper;
-    //  {$endif}
-    //  timingInfo:record
-    //    startOfProfiling:double;
-    //    timeSpent:array[pc_importing..pc_interpretation] of double;
-    //  end;
-    //
-    //  children:array of P_threadContext;
-    //  primaryThreadContext:P_threadContext;
-    //
-    //  disposeAdaptersOnDestruction:boolean;
-    //  contextAdapters:P_messageConnector;
-    //
-    //  taskQueue:P_taskQueue;
-    //  allowedSideEffects:T_sideEffects;
-    //  PROCEDURE setupThreadContext(CONST context:P_threadContext);
+      debuggingStepper:P_debuggingStepper;
+      {$endif}
+      timingInfo:record
+        startOfProfiling:double;
+        timeSpent:array[pc_importing..pc_interpretation] of double;
+      end;
+      disposeAdaptersOnDestruction:boolean;
     public
       prng:T_xosPrng;
-    //  CONSTRUCTOR create(CONST outAdapters:P_messageConnector);
+      CONSTRUCTOR create(CONST outAdapters:P_messageConnector);
     //  CONSTRUCTOR createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath;{$endif} CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
-    //  DESTRUCTOR destroy;
-    //  PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
-    //  PROCEDURE stopWorkers;
-    //  PROCEDURE afterEvaluation;
+      DESTRUCTOR destroy;
+      PROCEDURE resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif} CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+      PROCEDURE stopWorkers;
+      PROCEDURE afterEvaluation;
+
+      PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
+
     //  PROPERTY evaluationOptions:T_evaluationContextOptions read options;
     //  PROPERTY threadContext:P_threadContext read primaryThreadContext;
     //  PROPERTY adapters:P_messageConnector read contextAdapters;
@@ -247,8 +240,8 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext):P_thre
     if fill>0 then begin
       dec(fill);
       result:=contexts[fill];
-      result^.initFor(parentThread^.related.evaluation,parentThread);
-    end else new(result,create(parentThread^.related.evaluation,parentThread));
+    end else new(result,create());
+    result^.initFor(parentThread^.related.evaluation,parentThread);
     leaveCriticalSection(recyclerCS);
   end;
 
@@ -304,23 +297,26 @@ FUNCTION workerThreadCount:longint;
 //    if dequeueContext_<>nil then dispose(dequeueContext_,destroy);
 //  end;
 
-//CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_messageConnector);
-//  begin
-//    prng.create;
-//    prng.randomize;
-//    wallClock:=nil;
-//    {$ifdef fullVersion}
-//    profiler:=nil;
-//    debuggingStepper:=nil;
-//    {$endif}
-//    taskQueue:=nil;
-//    contextAdapters:=outAdapters;
-//    disposeAdaptersOnDestruction:=false;
-//    setLength(children,0);
-//    allowedSideEffects:=C_allSideEffects;
-//    mainParameters:=C_EMPTY_STRING_ARRAY;
-//    new(primaryThreadContext,createThreadContext(@self,adapters));
-//  end;
+CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_messageConnector);
+  begin
+    inherited create();
+    prng.create;
+    prng.randomize;
+    wallClock:=nil;
+    {$ifdef fullVersion}
+    profiler:=nil;
+    debuggingStepper:=nil;
+    {$endif}
+    taskQueue.create;
+
+    related.evaluation:=@self;
+    related.parent:=nil;
+    setLength(related.children,0);
+    globalMessages:=outAdapters;
+    disposeAdaptersOnDestruction:=false;
+    allowedSideEffects:=C_allSideEffects;
+    mainParameters:=C_EMPTY_STRING_ARRAY;
+  end;
 //
 //CONSTRUCTOR T_evaluationContext.createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
 //  VAR tempAdapters:P_messageConnector;
@@ -334,131 +330,132 @@ FUNCTION workerThreadCount:longint;
 //    resetForEvaluation({$ifdef fullVersion}package,{$endif}ect_silent,mainParams);
 //  end;
 //
-//DESTRUCTOR T_evaluationContext.destroy;
-//  begin
-//    prng.destroy;
-//    if wallClock<>nil then FreeAndNil(wallClock);
-//    {$ifdef fullVersion}
-//    if profiler<>nil then dispose(profiler,destroy);
-//    if debuggingStepper<>nil then dispose(debuggingStepper,destroy);
-//    {$endif}
-//    dispose(primaryThreadContext,destroy);
-//    if taskQueue<>nil then dispose(taskQueue,destroy);
-//    if disposeAdaptersOnDestruction then dispose(contextAdapters,destroy);
-//  end;
+DESTRUCTOR T_evaluationContext.destroy;
+  begin
+    prng.destroy;
+    if wallClock<>nil then FreeAndNil(wallClock);
+    {$ifdef fullVersion}
+    if profiler<>nil then dispose(profiler,destroy);
+    if debuggingStepper<>nil then dispose(debuggingStepper,destroy);
+    {$endif}
+    taskQueue.destroy;
+    if disposeAdaptersOnDestruction then dispose(globalMessages,destroy);
+    inherited destroy;
+  end;
 //
-//PROCEDURE T_evaluationContext.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
-//  VAR pc:T_profileCategory;
-//      i:longint;
-//  begin
-//    setLength(mainParameters,length(mainParams));
-//    for i:=0 to length(mainParams)-1 do mainParameters[i]:=mainParams[i];
-//    //set options
-//    options:=C_evaluationContextOptions[evaluationContextType];
-//    if adapters^.isCollecting(mt_timing_info) then options:=options+[eco_timing];
-//    if evaluationContextType=ect_silent then allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
-//                                        else allowedSideEffects:=C_allSideEffects;
-//    {$ifdef fullVersion}
-//    //prepare or dispose profiler:
-//    if eco_profiling in options then begin
-//      if profiler=nil then new(profiler,create)
-//                      else profiler^.clear;
-//    end else if profiler<>nil then begin
-//      dispose(profiler,destroy);
-//      profiler:=nil;
-//    end;
-//    //prepare or dispose stepper:
-//    if eco_debugging in options then begin
-//      if debuggingStepper=nil then new(debuggingStepper,create(adapters));
-//      debuggingStepper^.resetForDebugging(package);
-//    end else if debuggingStepper<>nil then begin
-//      dispose(debuggingStepper,destroy);
-//      debuggingStepper:=nil;
-//    end;
+PROCEDURE T_evaluationContext.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
+  VAR pc:T_profileCategory;
+      i:longint;
+  begin
+    setLength(mainParameters,length(mainParams));
+    for i:=0 to length(mainParams)-1 do mainParameters[i]:=mainParams[i];
+    //set options
+    globalOptions:=C_evaluationContextOptions[evaluationContextType];
+    if globalMessages^.isCollecting(mt_timing_info) then globalOptions:=globalOptions+[eco_timing];
+    if evaluationContextType=ect_silent then allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
+                                        else allowedSideEffects:=C_allSideEffects;
+    {$ifdef fullVersion}
+    //prepare or dispose profiler:
+    if eco_profiling in globalOptions then begin
+      if profiler=nil then new(profiler,create)
+                      else profiler^.clear;
+    end else if profiler<>nil then begin
+      dispose(profiler,destroy);
+      profiler:=nil;
+    end;
+    //prepare or dispose stepper:
+    if eco_debugging in globalOptions then begin
+      if debuggingStepper=nil then new(debuggingStepper,create(globalMessages));
+      debuggingStepper^.resetForDebugging(package);
+    end else if debuggingStepper<>nil then begin
+      dispose(debuggingStepper,destroy);
+      debuggingStepper:=nil;
+    end;
+
+    {$endif}
+    setThreadOptions(globalOptions);
+    setLength(related.children,0);
+    //timing:
+    if (eco_timing in globalOptions) or (eco_profiling in globalOptions) or enforceWallClock then begin
+      if wallClock=nil then wallClock:=TEpikTimer.create(nil);
+      with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
+      wallClock.clear;
+      wallClock.start;
+      timingInfo.startOfProfiling:=wallClock.elapsed;
+    end;
+  end;
 //
-//    {$endif}
-//    //prepare primary context
-//    setupThreadContext(primaryThreadContext);
+PROCEDURE T_evaluationContext.stopWorkers;
+  CONST TIME_OUT_AFTER=10/(24*60*60); //=10 seconds
+  VAR timeout:double;
+      dequeueContext:P_threadContext;
+  begin
+    timeout:=now+TIME_OUT_AFTER;
+    threadLocalMessages.setStopFlag;
+    while (now<timeout) and ((length(related.children)>0) or (taskQueue.queuedCount>0)) do begin
+      dequeueContext:=contextPool.newContext(@self);
+      taskQueue.activeDeqeue(dequeueContext^);
+      contextPool.disposeContext(dequeueContext);
+      ThreadSwitch;
+      sleep(1);
+    end;
+  end;
 //
-//    detachedAsyncChildCount:=0;
-//    //timing:
-//    if (eco_timing in options) or (eco_profiling in options) or enforceWallClock then begin
-//      if wallClock=nil then wallClock:=TEpikTimer.create(nil);
-//      with timingInfo do for pc:=low(timeSpent) to high(timeSpent) do timeSpent[pc]:=0;
-//      wallClock.clear;
-//      wallClock.start;
-//      timingInfo.startOfProfiling:=wallClock.elapsed;
-//    end;
-//  end;
-//
-//PROCEDURE T_evaluationContext.stopWorkers;
-//  CONST TIME_OUT_AFTER=10/(24*60*60); //=10 seconds
-//  VAR timeout:double;
-//  begin
-//    timeout:=now+TIME_OUT_AFTER;
-//    adapters^.stopEvaluation;
-//    while (now<timeout) and ((detachedAsyncChildCount>0) or (taskQueue<>nil) and (taskQueue^.queuedCount>0)) do begin
-//      if taskQueue<>nil then taskQueue^.activeDeqeue(primaryThreadContext^.dequeueContext^);
-//      ThreadSwitch;
-//      sleep(1);
-//    end;
-//  end;
-//
-//PROCEDURE T_evaluationContext.afterEvaluation;
-//  PROCEDURE logTimingInfo;
-//    CONST CATEGORY_DESCRIPTION:array[T_profileCategory] of string=(
-//      'Importing time      ',
-//      'Tokenizing time     ',
-//      'Declaration time    ',
-//      'Interpretation time ',
-//      'Unaccounted for     ',
-//      'Total               ');
-//
-//    VAR timeValue :array[T_profileCategory] of double;
-//        timeString:array[T_profileCategory] of string;
-//        cat:T_profileCategory;
-//
-//        timeUnit:string;
-//        longest:longint=0;
-//        formatString:ansistring;
-//        timingMessage:T_arrayOfString;
-//
-//    FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
-//    FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
-//    begin
-//      timeValue[pc_total]:=wallClock.elapsed-timingInfo.startOfProfiling;
-//      timeValue[pc_unknown]:=timeValue[pc_total];
-//      for cat:=low(timingInfo.timeSpent) to high(timingInfo.timeSpent) do begin
-//        timeValue[cat]:=timingInfo.timeSpent[cat];
-//        timeValue[pc_unknown]:=timeValue[pc_unknown]-timeValue[cat];
-//      end;
-//      if timeValue[pc_total]<1 then begin
-//        for cat:=low(timeValue) to high(timeValue) do timeValue[cat]:=timeValue[cat]*1000;
-//        timeUnit:='ms';
-//        formatString:='0.000';
-//      end else begin
-//        timeUnit:='s';
-//        formatString:='0.000000';
-//      end;
-//      for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=fmt(timeValue[cat]);
-//      for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=CATEGORY_DESCRIPTION[cat]+fmt(timeString[cat]);
-//      timingMessage:=C_EMPTY_STRING_ARRAY;
-//      for cat:=low(T_profileCategory) to high(T_profileCategory) do begin
-//        if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
-//        append(timingMessage,timeString[cat]);
-//      end;
-//      adapters^.logTimingInfo(timingMessage);
-//    end;
-//
-//  begin
-//    stopWorkers;
-//    adapters^.logEndOfEvaluation;
-//    if (adapters^.doShowTimingInfo) and (wallClock<>nil) then logTimingInfo;
-//    {$ifdef fullVersion}
-//    if (eco_profiling in options) and (profiler<>nil) then profiler^.logInfo(adapters);
-//    {$endif}
-//    if not(suppressBeep) and (eco_beepOnError in options) and adapters^.triggersBeep then beep;
-//  end;
+PROCEDURE T_evaluationContext.afterEvaluation;
+  PROCEDURE logTimingInfo;
+    CONST CATEGORY_DESCRIPTION:array[T_profileCategory] of string=(
+      'Importing time      ',
+      'Tokenizing time     ',
+      'Declaration time    ',
+      'Interpretation time ',
+      'Unaccounted for     ',
+      'Total               ');
+
+    VAR timeValue :array[T_profileCategory] of double;
+        timeString:array[T_profileCategory] of string;
+        cat:T_profileCategory;
+
+        timeUnit:string;
+        longest:longint=0;
+        formatString:ansistring;
+        timingMessage:T_arrayOfString;
+
+    FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
+    FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
+    begin
+      timeValue[pc_total]:=wallClock.elapsed-timingInfo.startOfProfiling;
+      timeValue[pc_unknown]:=timeValue[pc_total];
+      for cat:=low(timingInfo.timeSpent) to high(timingInfo.timeSpent) do begin
+        timeValue[cat]:=timingInfo.timeSpent[cat];
+        timeValue[pc_unknown]:=timeValue[pc_unknown]-timeValue[cat];
+      end;
+      if timeValue[pc_total]<1 then begin
+        for cat:=low(timeValue) to high(timeValue) do timeValue[cat]:=timeValue[cat]*1000;
+        timeUnit:='ms';
+        formatString:='0.000';
+      end else begin
+        timeUnit:='s';
+        formatString:='0.000000';
+      end;
+      for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=fmt(timeValue[cat]);
+      for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=CATEGORY_DESCRIPTION[cat]+fmt(timeString[cat]);
+      timingMessage:=C_EMPTY_STRING_ARRAY;
+      for cat:=low(T_profileCategory) to high(T_profileCategory) do begin
+        if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
+        append(timingMessage,timeString[cat]);
+      end;
+      globalMessages^.postTextMessage(mt_timing_info,C_nilTokenLocation,timingMessage);
+    end;
+
+  begin
+    stopWorkers;
+    globalMessages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+    if (globalMessages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
+    {$ifdef fullVersion}
+    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(globalMessages);
+    {$endif}
+    //if not(suppressBeep) and (eco_beepOnError in globalMessages) and adapters^.triggersBeep then beep;
+  end;
 //
 //PROCEDURE T_evaluationContext.setupThreadContext(CONST context:P_threadContext);
 //  VAR threadOptions:T_threadContextOptions=[];
@@ -516,13 +513,14 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
     result:=related.evaluation^.wallClock.elapsed;
   end;
 //
-//PROCEDURE T_threadContext.timeBaseComponent(CONST component: T_profileCategory);
-//  begin
-//    with parent^.timingInfo do timeSpent[component]:=wallclockTime-timeSpent[component];
-//  end;
+PROCEDURE T_evaluationContext.timeBaseComponent(CONST component: T_profileCategory);
+  begin
+    with timingInfo do timeSpent[component]:=wallclockTime-timeSpent[component];
+  end;
 //
 //
-FUNCTION T_threadContext.getNewAsyncContext(CONST local:boolean):P_threadContext;
+FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean
+  ): P_threadContext;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
     result:=contextPool.newContext(@self);
@@ -540,13 +538,13 @@ PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation;
     callStack.push(wallclockTime,callParameters,callerLocation,callee);
   end;
 
-//PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
-//  begin
-//    if not(tco_stackTrace in options) then exit;
-//    if calls[category]=nil then new(calls[category],create(package,category));
-//    callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
-//  end;
-//
+PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
+  begin
+    if not(tco_stackTrace in options) then exit;
+    if calls[category]=nil then new(calls[category],create(package,category));
+    callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
+  end;
+
 PROCEDURE T_threadContext.callStackPop(CONST first: P_token);
   VAR loc:T_tokenLocation;
   begin
@@ -611,7 +609,8 @@ FUNCTION T_threadContext.getFutureEnvironment: T_queueTaskEnvironment;
     result.initialAllow:=sideEffectWhitelist;
   end;
 
-PROCEDURE T_threadContext.workerContextInit(CONST environment: T_queueTaskEnvironment);
+PROCEDURE T_threadContext.workerContextInit(
+  CONST environment: T_queueTaskEnvironment);
   begin
     with related do begin
       parent:=environment.callingContext;
@@ -753,10 +752,10 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
   CONST SLEEP_TIME_TO_QUIT=73;
   VAR sleepTime:longint;
       currentTask:P_queueTask;
-      tempcontext:T_threadContext;
+      tempcontext:P_threadContext;
   begin
     sleepTime:=0;
-    tempcontext.create(P_evaluationContext(p),nil);
+    tempcontext:=contextPool.newContext(nil);
     with P_evaluationContext(p)^ do begin
       repeat
         currentTask:=taskQueue.dequeue;
@@ -766,19 +765,19 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           sleep(sleepTime div 5);
         end else begin
           if currentTask^.isVolatile then begin
-            currentTask^.evaluate(tempcontext);
+            currentTask^.evaluate(tempcontext^);
             dispose(currentTask,destroy);
-          end else currentTask^.evaluate(tempcontext);
+          end else currentTask^.evaluate(tempcontext^);
           sleepTime:=0;
         end;
-      until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue.destructionPending) or not(tempcontext.threadLocalMessages.continueEvaluation);
-      tempcontext.destroy;
+      until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue.destructionPending) or not(tempcontext^.threadLocalMessages.continueEvaluation);
+      contextPool.disposeContext(tempcontext);
       result:=0;
       interlockedDecrement(taskQueue.poolThreadsRunning);
     end;
   end;
 
-CONSTRUCTOR T_threadContext.create(CONST evaluation: P_evaluationContext; CONST parentThread: P_threadContext);
+CONSTRUCTOR T_threadContext.create();
   begin
     initCriticalSection(contextCS);
     enterCriticalSection(contextCS);
@@ -788,21 +787,20 @@ CONSTRUCTOR T_threadContext.create(CONST evaluation: P_evaluationContext; CONST 
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
-    initFor(evaluation,parentThread);
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.initFor(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
-  VAR threadOption :T_threadContextOption;
+PROCEDURE T_threadContext.initFor(CONST evaluation: P_evaluationContext;
+  CONST parentThread: P_threadContext);
   begin
     enterCriticalSection(contextCS);
     if parentThread=nil then begin
-      for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in evaluation^.options then include(options,threadOption);
+      setThreadOptions(evaluation^.globalOptions);
       related.parent:=nil;
       related.evaluation:=evaluation;
       threadLocalMessages.setParent(nil);
       callDepth:=parentThread^.callDepth+1;
-      globalMessages:=evaluation^.connector;
+      globalMessages:=evaluation^.globalMessages;
     end else begin
       options:=parentThread^.options;
       related.parent:=parentThread;
@@ -831,7 +829,7 @@ PROCEDURE T_threadContext.dropChildContext(CONST context: P_threadContext);
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.addChildContext(CONST context:P_threadContext);
+PROCEDURE T_threadContext.addChildContext(CONST context: P_threadContext);
   VAR k:longint=0;
   begin
     enterCriticalSection(contextCS);
@@ -846,6 +844,12 @@ PROCEDURE T_threadContext.addChildContext(CONST context:P_threadContext);
       context^.threadLocalMessages.setParent(@threadLocalMessages);
     end;
     leaveCriticalSection(contextCS);
+  end;
+
+PROCEDURE T_threadContext.setThreadOptions( CONST globalOptions: T_evaluationContextOptions);
+  VAR threadOption :T_threadContextOption;
+  begin
+    for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in globalOptions then include(options,threadOption);
   end;
 
 DESTRUCTOR T_threadContext.destroy;

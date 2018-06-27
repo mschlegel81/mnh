@@ -12,7 +12,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getParent^.prng.dwordRandom));
+      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getGlobals^.prng.dwordRandom));
     end;
   end;
 
@@ -21,20 +21,20 @@ FUNCTION try_imp intFuncSignature;
     VAR messagesLiteral:P_literal;
     begin
       result:=toTry^.evaluateToLiteral(tokenLocation,@context).literal;
-      if (result=nil) or (context.adapters.hasError) then begin
+      if (result=nil) or (context.threadLocalMessages.getFags<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then result:=newVoidLiteral
         else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(context.adapters.localErrors.storedMessages);
-            context.adapters.localErrors.clear;
+            messagesLiteral:=messagesToLiteralForSandbox(context.threadLocalMessages.storedMessages);
+            context.threadLocalMessages.clear;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral).literal;
-            if result=nil then context.adapters.raiseError(ErrorInCatchBlock,tokenLocation);
+            if result=nil then context.threadLocalMessages.raiseError('Error in catch block',tokenLocation);
             disposeLiteral(messagesLiteral);
           end else begin
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context).literal;
-            if result=nil then context.adapters.raiseError(ErrorInCatchBlock,tokenLocation);
+            if result=nil then context.threadLocalMessages.raiseError('Error in catch block',tokenLocation);
           end;
         end else result:=inCaseOfFailure^.rereferenced;
       end;
@@ -72,7 +72,7 @@ FUNCTION runScript_imp intFuncSignature;
       end;
       setLength(scriptParams,list1^.size);
       for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
-      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,context.adapters,byte(connect),enforceDeterminism);
+      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,context.globalMessages,byte(connect),enforceDeterminism);
     end;
   end;
 
@@ -93,7 +93,7 @@ FUNCTION inspect_imp intFuncSignature;
       else id      :=filenameOrId;
       if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
       if (fileName='') or not(fileExists(fileName)) then begin
-        context.adapters.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
+        context.globalMessages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
         tempPackage:=nil;
         exit;
       end;
@@ -133,7 +133,7 @@ FUNCTION inspect_imp intFuncSignature;
 FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.writeDataStores(context.adapters,true);
+      P_package(tokenLocation.package)^.writeDataStores(context.threadLocalMessages,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -141,7 +141,7 @@ FUNCTION writeAllDataStores_imp intFuncSignature;
 FUNCTION writeDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
-      P_package(tokenLocation.package)^.writeDataStores(context.adapters^,false);
+      P_package(tokenLocation.package)^.writeDataStores(context.threadLocalMessages,false);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
