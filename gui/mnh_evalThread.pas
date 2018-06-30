@@ -3,6 +3,7 @@ INTERFACE
 USES sysutils,Classes,
      myGenerics,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_fileWrappers,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,mnh_contexts,
@@ -38,7 +39,7 @@ TYPE
       outputLanguage:string;
       createNewEditor:boolean;
       scriptType:T_scriptType;
-      CONSTRUCTOR create(CONST rule:P_subruleExpression; OUT isValid:boolean; VAR adapters:T_adapters);
+      CONSTRUCTOR create(CONST rule:P_subruleExpression; OUT isValid:boolean; VAR adapters:T_threadLocalMessages);
       DESTRUCTOR destroy;
     public
       PROPERTY getName:string read name;
@@ -71,7 +72,7 @@ TYPE
       //"final" properties
       cs:TRTLCriticalSection;
       thread:TThreadFunc;
-      adapter:P_adapters;
+      adapter:P_messageConnector;
       //request variables
       request:T_evalRequest;
 
@@ -86,7 +87,7 @@ TYPE
       FUNCTION pendingRequest:T_evalRequest;
     public
       context:T_evaluationContext;
-      CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
+      CONSTRUCTOR create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE haltEvaluation; virtual;
 
@@ -108,13 +109,13 @@ TYPE
       utilityScriptPackage:P_package;
       utilityScriptList:T_scriptMetaArray;
       currentEdit:P_editScriptTask;
-      editAdapters:P_adapters;
+      editAdapters:P_messageConnector;
 
       FUNCTION parametersForMainCall:T_arrayOfString;
       PROCEDURE preEval; virtual;
       PROCEDURE postEval; virtual;
     public
-      CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
+      CONSTRUCTOR create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE reEvaluateWithGUI;
       PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
@@ -132,7 +133,7 @@ TYPE
 
 VAR runEvaluator:T_runEvaluator;
 
-PROCEDURE initUnit(CONST guiAdapters:P_adapters);
+PROCEDURE initUnit(CONST guiAdapters:P_messageConnector);
 OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
 
@@ -158,7 +159,7 @@ FUNCTION main(p:pointer):ptrint;
 
   PROCEDURE setupEdit(OUT context:T_evaluationContext);
     begin
-      P_runEvaluator(p)^.editAdapters^.clearAll;
+      P_runEvaluator(p)^.editAdapters^.clear;
       context.create(P_runEvaluator(p)^.editAdapters);
       context.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY);
     end;
@@ -168,17 +169,18 @@ FUNCTION main(p:pointer):ptrint;
         successful:boolean=true;
     begin
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
-      P_runEvaluator(p)^.utilityScriptPackage^.finalize(context.threadContext^);
+      P_runEvaluator(p)^.utilityScriptPackage^.finalize(context);
       context.afterEvaluation;
-      if (context.adapters^.hasPrintOut) or
-         (context.adapters^.hasNonSilentError) then begin
-        collector:=P_collectingOutAdapter(context.adapters^.getAdapter(0));
-        P_runEvaluator(p)^.adapter^.clearPrint;
-        P_runEvaluator(p)^.adapter^.raiseStoredMessages(collector^.storedMessages);
+      if context.globalMessages^.hasCollected(mt_printline) or
+         context.globalMessages^.hasCollected(mt_printdirect) or
+         (([FlagError,FlagFatalError]*context.threadLocalMessages.getFlags)<>[]) then begin
+        collector:=P_collectingOutAdapter(context.globalMessages^.getAdapter(0));
+        P_runEvaluator(p)^.adapter^.postSingal(mt_clearConsole,C_nilTokenLocation);
+        P_runEvaluator(p)^.adapter^.postCustomMessages(collector^.storedMessages);
         successful:=false;
       end;
       if P_runEvaluator(p)^.currentEdit<>nil then P_runEvaluator(p)^.adapter^.logEndOfEditScript(P_runEvaluator(p)^.currentEdit,successful)
-                                             else P_runEvaluator(p)^.adapter^.logEndOfEvaluation;
+                                             else P_runEvaluator(p)^.adapter^.postSingal(mt_endOfEvaluation);
       context.destroy;
       P_runEvaluator(p)^.currentEdit:=nil;
     end;
@@ -198,7 +200,7 @@ FUNCTION main(p:pointer):ptrint;
       for script in utilityScriptList do dispose(script,destroy);
       setLength(utilityScriptList,0);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
-      utilityScriptPackage^.load(lu_forImport,editContext.threadContext^,C_EMPTY_STRING_ARRAY);
+      utilityScriptPackage^.load(lu_forImport,editContext,C_EMPTY_STRING_ARRAY);
       if editContext.adapters^.noErrors then begin
         for scriptType in T_scriptType do
         for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
@@ -337,7 +339,7 @@ PROCEDURE T_evaluator.ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
+CONSTRUCTOR T_evaluator.create(CONST adapters: P_messageConnector; threadFunc: TThreadFunc);
   begin
     system.initCriticalSection(cs);
     request:=er_none;
@@ -348,7 +350,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     context.create(adapter);
   end;
 
-CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
+CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
   VAR collector:P_collectingOutAdapter;
   begin
     inherited create(adapters,threadFunc);
@@ -636,7 +638,7 @@ FUNCTION T_runEvaluator.parametersForMainCall: T_arrayOfString;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE initUnit(CONST guiAdapters:P_adapters);
+PROCEDURE initUnit(CONST guiAdapters:P_messageConnector);
   begin
     runEvaluator.create(guiAdapters,@main);
     unitIsInitialized:=true;

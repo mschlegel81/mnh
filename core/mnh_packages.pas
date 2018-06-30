@@ -1375,7 +1375,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationC
 
         {$ifdef fullVersion}
         //error handling if main returns more than one token:------------------
-        if not(displayedHelp) and ((t=nil) or (t^.next<>nil)) and (FlagGUINeeded in context.threadLocalMessages.getFags)
+        if not(displayedHelp) and ((t=nil) or (t^.next<>nil)) and (FlagGUINeeded in context.threadLocalMessages.getFlags)
           then context.globalMessages^.postTextMessage(mt_el1_note,packageTokenLocation(@self),'Evaluation requires GUI-startup. Re-evaluating.');
         //------------------:error handling if main returns more than one token
         {$endif}

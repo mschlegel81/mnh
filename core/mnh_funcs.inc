@@ -21,7 +21,7 @@ FUNCTION try_imp intFuncSignature;
     VAR messagesLiteral:P_literal;
     begin
       result:=toTry^.evaluateToLiteral(tokenLocation,@context).literal;
-      if (result=nil) or (context.threadLocalMessages.getFags<>[]) then begin
+      if (result=nil) or (context.threadLocalMessages.getFlags<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then result:=newVoidLiteral

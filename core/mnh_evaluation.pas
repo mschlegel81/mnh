@@ -7,6 +7,7 @@ USES sysutils,
      mnh_tokens,
      mnh_tokenArray,
      tokenStack,
+     mnh_messages,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
      mnh_funcs,
@@ -128,7 +129,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     begin
       returnToken:=first; //result is first (tt_literal);
       first:=context.recycler.disposeToken(first^.next); //drop semicolon
-      while not(level=0) and (context.threadLocalMessages.noErrors) do begin
+      while not(level=0) and (context.threadLocalMessages.continueEvaluation) do begin
         while not(stack.topType  in [tt_beginRule,tt_beginExpression,tt_beginBlock,
                                      tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do stack.popDestroy(context.recycler);
         while (first<>nil) and
@@ -194,8 +195,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           exit(false);
         end;
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(eachToken,0,context.recycler,context.adapters,bracketClosingEach);
-        if (bracketClosingEach=nil) or not(context.threadLocalMessages.noErrors) then exit(false);
+        bodyParts:=getBodyParts(eachToken,0,context.recycler,context.threadLocalMessages,bracketClosingEach);
+        if (bracketClosingEach=nil) or not(context.threadLocalMessages.continueEvaluation) then exit(false);
         if (length(bodyParts)>1) and isPureAggregator then begin
           context.threadLocalMessages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
           exit(false);
@@ -231,7 +232,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
-            if context.threadLocalMessages.noErrors
+            if context.threadLocalMessages.continueEvaluation
             then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
           end else context.threadLocalMessages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
@@ -299,7 +300,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         then processListParallel(iterator,bodyRule,aggregator,eachLocation,context)
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context);
       end else begin
-        if eachType = tt_parallelEach then context.threadLocalMessages.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
+        if eachType = tt_parallelEach then context.threadLocalMessages.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
         aggregate(iterator,aggregator,eachLocation,context);
       end;
       //----------------------------------------------------------iterate over itList
@@ -323,7 +324,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         result:=false;
         //first token is <while>-Token
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,context.recycler,context.adapters,bracketClosingWhile);
+        bodyParts:=getBodyParts(first,1,context.recycler,context.threadLocalMessages,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if (length(bodyParts)>2) or (length(bodyParts)<1) then begin
           context.threadLocalMessages.raiseError('Invalid while-construct; Exactly one or two arguments (head, body) are expected.',errorLocation);
@@ -360,13 +361,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       returnValue:=NIL_EVAL_RESULT;
       whileLocation:=first^.location;
       if context.callDepth>STACK_DEPTH_LIMIT then begin
-        context.threadLocalMessages.raiseSystemError('Stack overflow in while construct.',whileLocation);
+        context.threadLocalMessages.raiseError('Stack overflow in while construct.',whileLocation,mt_el4_systemError);
         exit;
       end;
       if not(parseBodyOk) then exit;
       while not(returnValue.triggeredByReturn)
             and headRule^.evaluateToBoolean(whileLocation,@context,true)
-            and (context.threadLocalMessages.noErrors) do evaluateBody;
+            and (context.threadLocalMessages.continueEvaluation) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
@@ -400,7 +401,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(first^.tokType,first^.location,parameterListLiteral,firstReplace,lastReplace,@context)) then begin
-            context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+            context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
             exit;
           end;
         {$ifndef debugMode}
@@ -441,8 +442,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         if newLiteral<>nil then begin
           firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
-        end else if not(context.threadLocalMessages.noErrors) then exit else begin
-          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+        end else if not(context.threadLocalMessages.continueEvaluation) then exit else begin
+          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
           exit;
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
@@ -451,8 +452,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           if newLiteral<>nil then begin
             firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
             lastReplace:=firstReplace;
-          end else if not(context.threadLocalMessages.noErrors) then exit else begin
-            context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+          end else if not(context.threadLocalMessages.continueEvaluation) then exit else begin
+            context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
             exit;
           end;
         end else begin
@@ -549,19 +550,19 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           first:=context.recycler.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
+          context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.threadLocalMessages);
           first:=context.recycler.disposeToken(first);
         end;
         tt_mut_nested_assign..tt_mut_nestedDrop: if first^.data=nil then begin
-          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters,@context);
-          if context.threadLocalMessages.noErrors then begin
+          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.threadLocalMessages,@context);
+          if context.threadLocalMessages.continueEvaluation then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end else begin
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
-          if context.threadLocalMessages.noErrors then begin
+          if context.threadLocalMessages.continueEvaluation then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
@@ -967,7 +968,7 @@ end}
           tt_list_constructor,tt_list_constructor_ranging: case cTokType[1] of
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
-                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
+                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context.threadLocalMessages,
                               stack.topType=tt_list_constructor_ranging);
                 if first^.next^.tokType=tt_separatorCnt
                 then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
@@ -979,7 +980,7 @@ end}
               didSubstitution:=true;
             end;
             tt_listBraceClose: begin // [ | <Lit> ] ...
-              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
+              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context.threadLocalMessages,
                             stack.topType=tt_list_constructor_ranging);
               first:=context.recycler.disposeToken(first);
               first:=context.recycler.disposeToken(first);
@@ -1184,11 +1185,11 @@ end}
         end;
 {cT[0]=}tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_identifier: begin
-          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
+          P_abstractPackage(first^.location.package)^.resolveId(first^,@context.threadLocalMessages);
           didSubstitution:=true;
         end;
         tt_parameterIdentifier: begin
-          context.resolveMainParameter(first);
+          context.getGlobals^.resolveMainParameter(first);
           didSubstitution:=true;
         end;
 {cT[0]=}tt_mutate: begin stack.push(first); didSubstitution:=true; end;
@@ -1260,7 +1261,7 @@ end}
           didSubstitution:=true;
         end;
       end;
-    until not(didSubstitution) or not(context.threadLocalMessages.noErrors);
+    until not(didSubstitution) or not(context.threadLocalMessages.continueEvaluation);
     {$ifndef debugMode}
     except
       on e:Exception do begin
@@ -1271,28 +1272,17 @@ end}
     end;
     {$endif}
     dec(context.callDepth);
-    if context.threadLocalMessages.noErrors then begin
+    if context.threadLocalMessages.continueEvaluation then begin
       if (stack.topIndex>=0) or (first<>nil) and (first^.next<>nil) then begin
         context.threadLocalMessages.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
-        {$ifdef fullVersion}
-        if not(context.threadLocalMessages.hasStackTrace) then context.callStackPrint;
-        {$endif}
         cleanupStackAndExpression;
       end;
-    end else if (context.threadLocalMessages.hasFatalError) then begin
+    end else if (FlagFatalError in context.threadLocalMessages.getFlags) then begin
       result:=rr_fail;
-      {$ifdef fullVersion}
-      if not(context.threadLocalMessages.hasHaltMessage) and
-         not(context.threadLocalMessages.hasStackTrace) then context.callStackPrint;
-      context.callStackClear;
-      {$endif}
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
       if (context.callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
       result:=rr_fail;
-      {$ifdef fullVersion}
-      if not(context.threadLocalMessages.hasStackTrace) then context.callStackPrint;
-      {$endif}
       cleanupStackAndExpression;
     end;
     stack.destroy;
@@ -1310,10 +1300,10 @@ FUNCTION doAsync(p:pointer):ptrint;
     result:=0;
     with P_asyncTask(p)^ do begin
       payload^.executeInContext(myContext);
-      myContext^.doneEvaluating;
+      myContext^.workerContextDone;
 
       disposeLiteral(payload);
-      dispose(myContext,destroy);
+      contextPool.disposeContext(myContext);
       myContext:=nil;
     end;
     freeMem(p,sizeOf(T_asyncTask));
@@ -1344,7 +1334,7 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
           context.threadLocalMessages.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
         end;
       except
-        on e:EOutOfMemory do context.threadLocalMessages.raiseSystemError(e.message,tokenLocation);
+        on e:EOutOfMemory do context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
       end;
     end;
   end;

@@ -7,10 +7,10 @@ USES sysutils,
      mnh_basicTypes,
      mnh_out_adapters,
      mnh_litVar,
-     mnh_tokens
+     mnh_tokens,
+     mnh_messages
      {$ifdef fullVersion},
      mnh_profiling,
-     mnh_messages,
      mnh_debuggingVar
      {$endif};
 TYPE

@@ -59,7 +59,8 @@ TYPE
     mt_plot_renderRequest,
     mt_plot_retrieveOptions,
     mt_plot_setOptions,
-    mt_plot_clear);
+    mt_plot_clear,
+    mt_guiEdit_done);
 
   T_messageTypeSet=set of T_messageType;
 
@@ -94,7 +95,8 @@ CONST
 {mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_setOptions}     (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_plot_clear}          (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0));
+{mt_plot_clear}          (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0));
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],

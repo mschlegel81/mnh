@@ -58,24 +58,28 @@ TYPE
   end;
 
   P_messageConnector=^T_messageConnector;
+  {$ifdef fullVersion}
   F_traceCallback=PROCEDURE(VAR error:T_errorMessage) of object;
+  {$endif}
 
   P_threadLocalMessages=^T_threadLocalMessages;
   T_threadLocalMessages=object(T_collectingOutAdapter)
     private
       flags:T_stateFlags;
+      {$ifdef fullVersion}
       traceCallback:F_traceCallback;
+      {$endif}
       globalMessages:P_messageConnector;
 
       parentMessages:P_threadLocalMessages;
       childMessages:array of P_threadLocalMessages;
       PROCEDURE propagateFlags;
     public
-    CONSTRUCTOR create(CONST callback:F_traceCallback; CONST Global:P_messageConnector);
+    CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback; {$endif}CONST Global:P_messageConnector);
     PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
 
     PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
-    PROPERTY getFags:T_stateFlags read flags;
+    PROPERTY getFlags:T_stateFlags read flags;
     PROCEDURE clear; virtual;
     PROCEDURE escalateErrors;
     FUNCTION continueEvaluation:boolean;
@@ -129,7 +133,7 @@ TYPE
     private
       connectorCS:TRTLCriticalSection;
       adapters:array of T_flaggedAdapter;
-      collecting:T_messageTypeSet;
+      collecting,collected:T_messageTypeSet;
     public
       preferredEchoLineLength:longint;
       CONSTRUCTOR create;
@@ -138,13 +142,18 @@ TYPE
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
       PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
       PROCEDURE postCustomMessage(CONST message:P_storedMessage);
+      PROCEDURE postCustomMessages(CONST message:T_storedMessages);
 
       PROCEDURE clear;
 
       PROCEDURE updateCollecting;
       FUNCTION isCollecting(CONST messageType:T_messageType):boolean;
+      FUNCTION hasCollected(CONST messageType:T_messageType):boolean;
+      FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
 
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
+      FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
+      FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
 
       FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
   end;
@@ -223,7 +232,7 @@ TYPE
   //    PROCEDURE logEndOfEvaluation;
   //    PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
   //
-  //    FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
+  //
   //    PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
   //    FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
   //    PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
@@ -325,15 +334,16 @@ DESTRUCTOR T_messageConnector.destroy;
     doneCriticalSection(connectorCS);
   end;
 
-CONSTRUCTOR T_threadLocalMessages.create(CONST callback: F_traceCallback;
+CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_traceCallback;{$endif}
   CONST Global: P_messageConnector);
   begin
     inherited create(at_unknown,[mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
-    if callback=nil then raise Exception.create('callback must not be nil');
     globalMessages       :=Global;
     parentMessages       :=nil;
     setLength(childMessages,0);
-    traceCallback        :=callback;
+    {$ifdef fullVersion}
+    traceCallback:=callback;
+    {$endif}
   end;
 
 PROCEDURE T_threadLocalMessages.propagateFlags;
@@ -353,7 +363,9 @@ PROCEDURE T_threadLocalMessages.raiseError(CONST text: string; CONST location: T
   VAR message:P_errorMessage;
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));
-    traceCallback(message^);
+    {$ifdef fullVersion}
+    if traceCallback<>nil then traceCallback(message^);
+    {$endif}
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
     propagateFlags;
     if kind=mt_el4_systemError then escalateErrors;
@@ -466,7 +478,21 @@ PROCEDURE T_messageConnector.postCustomMessage(CONST message: P_storedMessage);
   VAR a:T_flaggedAdapter;
   begin
     enterCriticalSection(connectorCS);
-    for a in adapters do a.adapter^.append(message);
+    for a in adapters do if a.adapter^.append(message) then include(collected,message^.messageType);
+    leaveCriticalSection(connectorCS);
+  end;
+
+PROCEDURE T_messageConnector.postCustomMessages(CONST message:T_storedMessages);
+  VAR a:T_flaggedAdapter;
+      m:P_storedMessage;
+      anyCollected:boolean;
+  begin
+    enterCriticalSection(connectorCS);
+    for m in message do begin
+      anyCollected:=false;
+      for a in adapters do if a.adapter^.append(m) then anyCollected:=true;
+      if anyCollected then include(collected,m^.messageType);
+    end;
     leaveCriticalSection(connectorCS);
   end;
 
@@ -475,6 +501,7 @@ PROCEDURE T_messageConnector.clear;
   begin
     enterCriticalSection(connectorCS);
     for a in adapters do a.adapter^.clear;
+    collected:=[];
     leaveCriticalSection(connectorCS);
   end;
 
@@ -490,6 +517,16 @@ PROCEDURE T_messageConnector.updateCollecting;
 FUNCTION T_messageConnector.isCollecting(CONST messageType: T_messageType): boolean;
   begin
     result:=messageType in collecting;
+  end;
+
+FUNCTION T_messageConnector.hasCollected(CONST messageType:T_messageType):boolean;
+  begin
+    result:=messageType in collected;
+  end;
+
+FUNCTION T_messageConnector.getAdapter(CONST index:longint):P_abstractOutAdapter;
+  begin
+    result:=adapters[index].adapter;
   end;
 
 //CONSTRUCTOR T_errorInterceptor.create(CONST parent: P_adapters);
@@ -933,19 +970,19 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 //PROCEDURE T_adapters.logEndOfEvaluation;                               begin raiseCustomMessage(message(mt_endOfEvaluation        ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 //PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring); begin raiseCustomMessage(message(mt_el4_systemError        ,errorMessage        ,C_nilTokenLocation)); end;
 //
-//FUNCTION T_adapters.addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
-//  VAR fileName:string;
-//      options:string='';
-//  begin
-//    if pos('(',fileNameAndOptions)>0 then begin
-//      options :=copy(fileNameAndOptions,  pos('(',fileNameAndOptions),length(fileNameAndOptions));
-//      fileName:=copy(fileNameAndOptions,1,pos('(',fileNameAndOptions)-1);
-//    end else fileName:=fileNameAndOptions;
-//
-//    new(result,create(fileName,options,not(appendMode)));
-//    addOutAdapter(result,true);
-//  end;
-//
+FUNCTION T_messageConnector.addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
+  VAR fileName:string;
+      options:string='';
+  begin
+    if pos('(',fileNameAndOptions)>0 then begin
+      options :=copy(fileNameAndOptions,  pos('(',fileNameAndOptions),length(fileNameAndOptions));
+      fileName:=copy(fileNameAndOptions,1,pos('(',fileNameAndOptions)-1);
+    end else fileName:=fileNameAndOptions;
+
+    new(result,create(fileName,options,not(appendMode)));
+    addOutAdapter(result,true);
+  end;
+
 PROCEDURE T_messageConnector.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   begin
     enterCriticalSection(connectorCS);
@@ -959,13 +996,13 @@ PROCEDURE T_messageConnector.addOutAdapter(CONST p: P_abstractOutAdapter; CONST 
 FUNCTION T_messageConnector.getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
   begin new(result,create(@self,includePrint,includeWarnings,includeErrors)); end;
 
-//FUNCTION T_adapters.addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
-//  VAR consoleOutAdapter:P_consoleOutAdapter;
-//  begin
-//    new(consoleOutAdapter,create(verbosity));
-//    addOutAdapter(consoleOutAdapter,true);
-//    result:=consoleOutAdapter;
-//  end;
+FUNCTION T_messageConnector.addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
+  VAR consoleOutAdapter:P_consoleOutAdapter;
+  begin
+    new(consoleOutAdapter,create(verbosity));
+    addOutAdapter(consoleOutAdapter,true);
+    result:=consoleOutAdapter;
+  end;
 //
 //PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
 //  VAR i:longint;

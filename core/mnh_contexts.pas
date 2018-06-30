@@ -72,7 +72,9 @@ TYPE
         parent         :P_threadContext;
         children       :array of P_threadContext;
       end;
+      {$ifdef fullVersion}
       callStack :T_callStack;
+      {$endif}
       CONSTRUCTOR create();
       PROCEDURE initFor(CONST evaluation:P_evaluationContext; CONST parentThread:P_threadContext);
       DESTRUCTOR destroy;
@@ -95,6 +97,7 @@ TYPE
       FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean;
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
+      PROCEDURE setSideEffectsByEndToken(CONST token:P_token);
       FUNCTION getNewEndToken(CONST blocking:boolean; CONST location:T_tokenLocation):P_token; {$ifndef debugMode} inline; {$endif}
       //Messaging
       PROCEDURE raiseCannotApplyError(CONST ruleWithType:string; CONST parameters:P_listLiteral; CONST location:T_tokenLocation; CONST suffix:string=''; CONST missingMain:boolean=false);
@@ -108,9 +111,12 @@ TYPE
       PROCEDURE workerContextDone;
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
+      {$ifdef fullVersion}
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop(CONST first:P_token);
+      FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
+      {$endif}
   end;
 
   T_queueTaskState=(fts_pending, //set on construction
@@ -182,6 +188,8 @@ TYPE
       PROCEDURE afterEvaluation;
 
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
+
+      PROCEDURE resolveMainParameter(VAR first:P_token);
 
     //  PROPERTY evaluationOptions:T_evaluationContextOptions read options;
     //  PROPERTY threadContext:P_threadContext read primaryThreadContext;
@@ -527,7 +535,7 @@ FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean
   end;
 //
 //
-//{$ifdef fullVersion}
+{$ifdef fullVersion}
 PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation;
   CONST callee: P_objectWithIdAndLocation;
   CONST callParameters: P_variableTreeEntryCategoryNode);
@@ -551,6 +559,13 @@ PROCEDURE T_threadContext.callStackPop(CONST first: P_token);
     if (loc.package<>nil) and (first<>nil) then first^.location:=loc;
   end;
 
+FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
+  begin
+    if (related.evaluation=nil) or (related.evaluation^.debuggingStepper=nil) then exit(false);
+    if first<>nil then related.evaluation^.debuggingStepper^.stepping(first,stack,@callStack);
+    result:=true;
+  end;
+{$endif}
 //PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
 //  begin
 //    if callingContext<>nil then callingContext^.reportVariables(variableReport);
@@ -581,14 +596,14 @@ FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(
     allowedSideEffects:=se;
   end;
 
-//PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token:P_token);
-//  begin
-//    {$ifdef debugMode}
-//    if (not(token^.tokType in [tt_endRule,tt_endExpression])) then raise Exception.create('Invalid parameter for setSideEffectsByEndToken; not an end-token but '+safeTokenToString(token));
-//    {$endif}
-//    move(token^.data,allowedSideEffects,sizeOf(pointer));
-//  end;
-//
+PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token:P_token);
+  begin
+    {$ifdef debugMode}
+    if (not(token^.tokType in [tt_endRule,tt_endExpression])) then raise Exception.create('Invalid parameter for setSideEffectsByEndToken; not an end-token but '+safeTokenToString(token));
+    {$endif}
+    move(token^.data,allowedSideEffects,sizeOf(pointer));
+  end;
+
 FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
   CONST location: T_tokenLocation): P_token;
   VAR data:pointer=nil;
@@ -657,34 +672,34 @@ PROCEDURE T_threadContext.workerContextDone;
     related.evaluation:=nil;
   end;
 
-//PROCEDURE T_threadContext.resolveMainParameter(VAR first:P_token);
-//  VAR parameterIndex:longint;
-//      s:string;
-//      newValue:P_literal=nil;
-//  begin
-//    if first^.tokType=tt_parameterIdentifier then begin
-//      if copy(first^.txt,1,1)='$' then begin
-//        parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
-//        if parameterIndex<0 then begin
-//          if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
-//            newValue:=newListLiteral(length(parent^.mainParameters)+1);
-//            P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
-//            for s in parent^.mainParameters do P_listLiteral(newValue)^.appendString(s);
-//          end else begin
-//            adapters^.raiseError('Invalid parameter identifier',first^.location);
-//            exit;
-//          end;
-//        end else if parameterIndex=0 then
-//          newValue:=newStringLiteral(first^.location.package^.getPath)
-//        else if parameterIndex<=length(parent^.mainParameters) then
-//          newValue:=newStringLiteral(parent^.mainParameters[parameterIndex-1])
-//        else
-//          newValue:=newVoidLiteral;
-//        first^.data:=newValue;
-//        first^.tokType:=tt_literal;
-//      end else adapters^.raiseError('Invalid parameter identifier',first^.location);
-//    end;
-//  end;
+PROCEDURE T_evaluationContext.resolveMainParameter(VAR first:P_token);
+  VAR parameterIndex:longint;
+      s:string;
+      newValue:P_literal=nil;
+  begin
+    if first^.tokType=tt_parameterIdentifier then begin
+      if copy(first^.txt,1,1)='$' then begin
+        parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
+        if parameterIndex<0 then begin
+          if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
+            newValue:=newListLiteral(length(mainParameters)+1);
+            P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
+            for s in mainParameters do P_listLiteral(newValue)^.appendString(s);
+          end else begin
+            threadLocalMessages.raiseError('Invalid parameter identifier',first^.location);
+            exit;
+          end;
+        end else if parameterIndex=0 then
+          newValue:=newStringLiteral(first^.location.package^.getPath)
+        else if parameterIndex<=length(mainParameters) then
+          newValue:=newStringLiteral(mainParameters[parameterIndex-1])
+        else
+          newValue:=newVoidLiteral;
+        first^.data:=newValue;
+        first^.tokType:=tt_literal;
+      end else threadLocalMessages.raiseError('Invalid parameter identifier',first^.location);
+    end;
+  end;
 //
 //{$ifdef fullVersion}
 //PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
@@ -737,12 +752,6 @@ FUNCTION T_threadContext.checkSideEffects(CONST id: string;
   end;
 
 //{$ifdef fullVersion}
-//FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
-//  begin
-//    if (parent=nil) or (parent^.debuggingStepper=nil) then exit(false);
-//    if first<>nil then parent^.debuggingStepper^.stepping(first,stack,@callStack);
-//    result:=true;
-//  end;
 //{$endif}
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
@@ -779,12 +788,15 @@ CONSTRUCTOR T_threadContext.create();
   begin
     initCriticalSection(contextCS);
     enterCriticalSection(contextCS);
+    {$ifdef fullVersion}
     callStack.create;
+    {$endif}
     new(valueStore,create);
     recycler.create;
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
+    threadLocalMessages.create({$ifdef fullVersion}@callStack...,{$endif}nil);
     leaveCriticalSection(contextCS);
   end;
 
@@ -807,9 +819,11 @@ PROCEDURE T_threadContext.initFor(CONST evaluation: P_evaluationContext;
       callDepth:=0;
       globalMessages:=parentThread^.globalMessages;
     end;
+    {$ifdef fullVersion}
     callStack.clear;
-    valueStore^.clear;
     parentCustomForm:=nil;
+    {$endif}
+    valueStore^.clear;
     leaveCriticalSection(contextCS);
   end;
 
