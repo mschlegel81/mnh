@@ -2,8 +2,6 @@ UNIT mnh_operators;
 INTERFACE
 USES math,
      sysutils,
-     myGenerics,
-     myStringUtil,
      bigint,
      mnh_constants,
      mnh_basicTypes,

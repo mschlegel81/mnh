@@ -1,7 +1,6 @@
 UNIT valueStore;
 INTERFACE
 USES sysutils,
-     myGenerics,
      mnh_basicTypes,mnh_constants,
      mnh_messages,
      mnh_out_adapters,

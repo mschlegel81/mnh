@@ -1,7 +1,6 @@
 UNIT listProcessing;
 INTERFACE
 USES sysutils,
-     myGenerics,
      mnh_constants, mnh_basicTypes,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_litVar,valueStore,mnh_subrules,

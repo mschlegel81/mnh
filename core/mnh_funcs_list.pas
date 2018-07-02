@@ -2,8 +2,6 @@ UNIT mnh_funcs_list;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
-     myGenerics,
-     myStringUtil,
      mnh_constants, mnh_basicTypes,
      mnh_messages,
      mnh_out_adapters,

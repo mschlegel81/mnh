@@ -2,7 +2,6 @@ UNIT mnh_funcs_types;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,
-     myGenerics,
      bigint,
      mnh_constants,
      mnh_basicTypes,

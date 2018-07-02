@@ -75,7 +75,7 @@ TYPE
       childMessages:array of P_threadLocalMessages;
       PROCEDURE propagateFlags;
     public
-    CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback; {$endif}CONST Global:P_messageConnector);
+    CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback; {$endif});
     PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
 
     PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
@@ -84,6 +84,7 @@ TYPE
     PROCEDURE escalateErrors;
     FUNCTION continueEvaluation:boolean;
     DESTRUCTOR destroy; virtual;
+    PROCEDURE setGlobal(CONST global:P_messageConnector);
     PROCEDURE setParent(CONST parent:P_threadLocalMessages);
     PROCEDURE dropChild(CONST child:P_threadLocalMessages);
     PROCEDURE addChild (CONST child:P_threadLocalMessages);
@@ -334,11 +335,10 @@ DESTRUCTOR T_messageConnector.destroy;
     doneCriticalSection(connectorCS);
   end;
 
-CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_traceCallback;{$endif}
-  CONST Global: P_messageConnector);
+CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_traceCallback;{$endif});
   begin
     inherited create(at_unknown,[mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
-    globalMessages       :=Global;
+    globalMessages       :=nil;
     parentMessages       :=nil;
     setLength(childMessages,0);
     {$ifdef fullVersion}
@@ -370,10 +370,10 @@ PROCEDURE T_threadLocalMessages.raiseError(CONST text: string; CONST location: T
     propagateFlags;
     if kind=mt_el4_systemError then escalateErrors;
     append(message);
+    disposeMessage(message);
   end;
 
-PROCEDURE T_threadLocalMessages.postTextMessage(CONST kind: T_messageType;
-  CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
+PROCEDURE T_threadLocalMessages.postTextMessage(CONST kind: T_messageType; CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
   begin
     if globalMessages<>nil then globalMessages^.postTextMessage(kind,location,txt);
   end;
@@ -388,11 +388,11 @@ PROCEDURE T_threadLocalMessages.escalateErrors;
   VAR m:P_storedMessage;
   begin
     if parentMessages<>nil then begin
-      for m in storedMessages do parentMessages^.append(m^.rereferenced);
+      for m in storedMessages do parentMessages^.append(m);
       parentMessages^.flags:=parentMessages^.flags+flags;
       exit;
     end;
-    if globalMessages<>nil then for m in storedMessages do globalMessages^.postCustomMessage(m^.rereferenced);
+    if globalMessages<>nil then for m in storedMessages do globalMessages^.postCustomMessage(m);
   end;
 
 FUNCTION T_threadLocalMessages.continueEvaluation: boolean;
@@ -404,6 +404,14 @@ DESTRUCTOR T_threadLocalMessages.destroy;
   begin
     escalateErrors;
     if parentMessages<>nil then parentMessages^.dropChild(@self);
+    inherited destroy;
+  end;
+
+PROCEDURE T_threadLocalMessages.setGlobal(CONST global:P_messageConnector);
+  begin
+    enterCriticalSection(cs);
+    globalMessages:=global;
+    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_threadLocalMessages.setParent(CONST parent:P_threadLocalMessages);
@@ -465,6 +473,7 @@ PROCEDURE T_messageConnector.postSingal(CONST kind:T_messageType; CONST location
   begin
     new(message,create(kind,location));
     postCustomMessage(message);
+    disposeMessage(message);
   end;
 
 PROCEDURE T_messageConnector.postTextMessage(CONST kind: T_messageType; CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
@@ -472,6 +481,7 @@ PROCEDURE T_messageConnector.postTextMessage(CONST kind: T_messageType; CONST lo
   begin
     new(message,create(kind,location,txt));
     postCustomMessage(message);
+    disposeMessage(message);
   end;
 
 PROCEDURE T_messageConnector.postCustomMessage(CONST message: P_storedMessage);
@@ -635,7 +645,7 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
           if not(mySys.isConsoleShowing) then mySys.showConsole;
           for i:=0 to length(messageText)-1 do write(messageText[i]);
         end;
-        else for s in message^.toString(false) do writeln(stdErr,s);
+        else for s in message^.toString({$ifdef fullVersion}false{$endif}) do writeln(stdErr,s);
       end;
       leaveCriticalSection(cs);
     end;
@@ -682,9 +692,11 @@ PROCEDURE T_collectingOutAdapter.removeDuplicateStoredMessages;
   end;
 
 PROCEDURE T_collectingOutAdapter.clear;
+  VAR m:P_storedMessage;
   begin
     system.enterCriticalSection(cs);
     inherited clear;
+    for m in storedMessages do disposeMessage(m);
     setLength(storedMessages,0);
     system.leaveCriticalSection(cs);
   end;
@@ -753,7 +765,7 @@ PROCEDURE T_textFileOutAdapter.flush;
           case m^.messageType of
             mt_printline  : for s in m^.messageText do writeln(handle,s);
             mt_printdirect: for s in m^.messageText do write  (handle,s);
-            else for s in m^.toString(false) do writeln(handle,s);
+            else for s in m^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
           end;
           disposeMessage(m);
         end;

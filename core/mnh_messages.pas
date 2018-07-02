@@ -2,7 +2,6 @@ UNIT mnh_messages;
 INTERFACE
 USES sysutils,
      myGenerics,
-     myStringUtil,
      mnh_constants,mnh_basicTypes;
 
 TYPE
@@ -116,7 +115,7 @@ TYPE
     public
       FUNCTION prefix:shortstring;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation);
-      FUNCTION toString(CONST forGui:boolean):T_arrayOfString; virtual;
+      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
 
@@ -135,9 +134,10 @@ TYPE
       FUNCTION internalType:shortstring; virtual;
     public
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
-      FUNCTION toString(CONST forGui:boolean):T_arrayOfString; virtual;
+      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       FUNCTION equals(CONST other:P_storedMessage):boolean; virtual;
       FUNCTION messageText:T_arrayOfString; virtual;
+      DESTRUCTOR destroy; virtual;
   end;
 
   P_errorMessage=^T_errorMessage;
@@ -147,8 +147,9 @@ TYPE
     public
       stacktrace:array of record location:T_searchTokenLocation; callee:T_idString; end;
       CONSTRUCTOR create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
-      FUNCTION toString(CONST forGui:boolean):T_arrayOfString; virtual;
+      FUNCTION toString({$ifdef fullVersion}CONST forGui:boolean{$endif}):T_arrayOfString; virtual;
       FUNCTION messageText:T_arrayOfString; virtual;
+      DESTRUCTOR destroy; virtual;
   end;
 
   P_payloadMessage=^T_payloadMessage;
@@ -237,6 +238,7 @@ CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType; CO
 CONSTRUCTOR T_errorMessage.create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
   begin
     inherited create(messageType_,loc,message);
+    SetLength(stacktrace,0);
   end;
 
 CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation);
@@ -252,18 +254,18 @@ CONSTRUCTOR T_payloadMessage.create(CONST messageType_: T_messageType);
     initCriticalSection(messageCs);
   end;
 
-FUNCTION T_storedMessage.toString(CONST forGui: boolean): T_arrayOfString;
+FUNCTION T_storedMessage.toString({$ifdef fullVersion}CONST forGui:boolean{$endif}): T_arrayOfString;
   begin
     result:=C_EMPTY_STRING_ARRAY;
   end;
 
-FUNCTION T_storedMessageWithText.toString(CONST forGui: boolean): T_arrayOfString;
+FUNCTION T_storedMessageWithText.toString({$ifdef fullVersion}CONST forGui:boolean{$endif}): T_arrayOfString;
   VAR i:longint;
       loc:string='';
       marker:string;
   begin
     if kind in [mt_printline,mt_printdirect] then exit(txt);
-    if forGui then marker:=C_messageClassMeta[C_messageTypeMeta[kind].mClass].guiMarker else marker:='';
+    {$ifdef fullVersion}if forGui then marker:=C_messageClassMeta[C_messageTypeMeta[kind].mClass].guiMarker else {$endif} marker:='';
     setLength(result,length(txt));
     with C_messageTypeMeta[kind] do begin
       if C_messageClassMeta[mClass].includeLocation then loc:=ansistring(location)+' ';
@@ -274,12 +276,12 @@ FUNCTION T_storedMessageWithText.toString(CONST forGui: boolean): T_arrayOfStrin
     end;
   end;
 
-FUNCTION T_errorMessage.toString(CONST forGui: boolean): T_arrayOfString;
+FUNCTION T_errorMessage.toString({$ifdef fullVersion}CONST forGui:boolean{$endif}): T_arrayOfString;
   VAR i,i0:longint;
       marker:string;
   begin
-    result:=inherited toString(forGui);
-    if forGui then marker:=C_messageClassMeta[C_messageTypeMeta[kind].mClass].guiMarker else marker:='';
+    result:=inherited toString({$ifdef fullVersion}forGui{$endif});
+    {$ifdef fullVersion}if forGui then marker:=C_messageClassMeta[C_messageTypeMeta[kind].mClass].guiMarker else {$endif}marker:='';
     i0:=length(result);
     setLength(result,i0+length(stacktrace));
     for i:=0 to length(stacktrace)-1 do begin
@@ -290,6 +292,18 @@ FUNCTION T_errorMessage.toString(CONST forGui: boolean): T_arrayOfString;
 DESTRUCTOR T_storedMessage.destroy;
   begin
     if refCount<>0 then raise Exception.create('Disposing message with refCount='+intToStr(refCount));
+  end;
+
+DESTRUCTOR T_storedMessageWithText.destroy;
+  begin
+    inherited destroy;
+    setLength(txt,0);
+  end;
+
+DESTRUCTOR T_errorMessage.destroy;
+  begin
+    inherited destroy;
+    SetLength(stacktrace,0);
   end;
 
 DESTRUCTOR T_payloadMessage.destroy;

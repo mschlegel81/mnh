@@ -244,11 +244,16 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext):P_thre
   begin
     enterCriticalSection(recyclerCS);
     if fill>0 then begin
+      writeln('T_contextRecycler.newContext reuses context ',ThreadID);
       dec(fill);
       result:=contexts[fill];
-    end else new(result,create());
-    result^.initFor(parentThread^.related.evaluation,parentThread);
+    end else begin
+      writeln('T_contextRecycler.newContext creates new context ',ThreadID);
+      new(result,create());
+    end;
     leaveCriticalSection(recyclerCS);
+    result^.initFor(parentThread^.related.evaluation,parentThread);
+    writeln('T_contextRecycler.newContext done ',ThreadID);
   end;
 
 {$ifndef fullVersion}
@@ -318,7 +323,9 @@ CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_messageConnector);
     related.evaluation:=@self;
     related.parent:=nil;
     setLength(related.children,0);
+
     globalMessages:=outAdapters;
+    threadLocalMessages.setGlobal(globalMessages);
     disposeAdaptersOnDestruction:=false;
     allowedSideEffects:=C_allSideEffects;
     mainParameters:=C_EMPTY_STRING_ARRAY;
@@ -642,24 +649,11 @@ PROCEDURE T_threadContext.workerContextInit(
 
   end;
 
-{PROCEDURE T_threadContext.detachWorkerContext;
-  begin
-    {$ifdef debugMode}
-    if not(valueStore^.isEmpty) and (threadLocalMessages.continueEvaluation) then raise Exception.create('valueStore must be empty on detach');
-    {$endif}
-    parent:=nil;
-    callingContext:=nil;
-    threadLocalMessages.clear;
-    valueStore^.clear;
-    valueStore^.parentStore:=nil;
-    {$ifdef fullVersion}
-    callStack.clear;
-    {$endif}
-  end;}
-
 PROCEDURE T_threadContext.workerContextDone;
   begin
     threadLocalMessages.escalateErrors;
+    threadLocalMessages.setParent(nil);
+    threadLocalMessages.setGlobal(nil);
     {$ifdef fullVersion}
     {$ifdef debugMode}
     if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
@@ -796,12 +790,11 @@ CONSTRUCTOR T_threadContext.create();
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
-    threadLocalMessages.create({$ifdef fullVersion}@callStack...,{$endif}nil);
+    threadLocalMessages.create({$ifdef fullVersion}@callStack...,{$endif});
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.initFor(CONST evaluation: P_evaluationContext;
-  CONST parentThread: P_threadContext);
+PROCEDURE T_threadContext.initFor(CONST evaluation: P_evaluationContext; CONST parentThread: P_threadContext);
   begin
     enterCriticalSection(contextCS);
     if parentThread=nil then begin
@@ -815,6 +808,7 @@ PROCEDURE T_threadContext.initFor(CONST evaluation: P_evaluationContext;
       options:=parentThread^.options;
       related.parent:=parentThread;
       related.evaluation:=parentThread^.related.evaluation;
+      threadLocalMessages.setGlobal(evaluation^.globalMessages);
       parentThread^.addChildContext(@self);
       callDepth:=0;
       globalMessages:=parentThread^.globalMessages;
@@ -866,6 +860,17 @@ PROCEDURE T_threadContext.setThreadOptions( CONST globalOptions: T_evaluationCon
 
 DESTRUCTOR T_threadContext.destroy;
   begin
+    enterCriticalSection(contextCS);
+    {$ifdef fullVersion}
+    callStack.destroy;
+    {$endif}
+    dispose(valueStore,destroy);
+    recycler.destroy;
+    setLength(related.children,0);
+    related.parent:=nil;
+    related.evaluation:=nil;
+    threadLocalMessages.destroy;
+    leaveCriticalSection(contextCS);
     doneCriticalSection(contextCS);
   end;
 

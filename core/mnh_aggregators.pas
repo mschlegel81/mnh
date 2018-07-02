@@ -1,9 +1,6 @@
 UNIT mnh_aggregators;
 INTERFACE
-USES //my libraries
-     myGenerics,
-     //MNH:
-     mnh_funcs,
+USES mnh_funcs,
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
      mnh_contexts,

@@ -2,7 +2,6 @@ UNIT mnh_patterns;
 INTERFACE
 USES sysutils,
      math,
-     myGenerics,
      mnh_basicTypes,mnh_constants,
      mnh_litVar,
      mnh_tokens,

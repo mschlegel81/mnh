@@ -2,7 +2,6 @@ UNIT mnh_builtinGenerators;
 INTERFACE
 USES sysutils,
      mySys,myCrypto,bigint,
-     myGenerics,
      myStringUtil,
      mnh_constants,
      mnh_basicTypes,

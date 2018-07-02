@@ -16,7 +16,6 @@ TYPE T_triplet=record
        x,y,z:ansistring;
      end;
      T_regexMap=specialize G_stringKeyMap<TRegExpr>;
-     P_regexMap=^T_regexMap;
 VAR regexCache:T_regexMap;
 PROCEDURE disposeRegex(VAR r:TRegExpr); begin r.free; end;
 

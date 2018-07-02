@@ -148,7 +148,8 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
       end;
     end;
     if doFormatTabs=ft_never then exit(join(resultParts,''));
-    result:=join(resultParts,'');
+    setLength(result,1);
+    result[0]:=join(resultParts,'');
     tabOrBreak:=(doFormatTabs=ft_always);
     i:=1;
     while (not(tabOrBreak)) and (i<=length(result[0])) do begin

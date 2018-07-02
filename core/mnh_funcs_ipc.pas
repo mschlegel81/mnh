@@ -78,7 +78,7 @@ FUNCTION newServer(CONST serverId:string=''):TSimpleIPCServer;
     try
       if serverId<>'' then result.serverId:=cleanPath(serverId)
                       else result.serverId:=getNewServerId;
-      result.Global:=true;
+      result.global:=true;
       result.StartServer;
     finally
       registry.leaveCs;
