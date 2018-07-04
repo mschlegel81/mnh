@@ -18,8 +18,10 @@ TYPE
                   mc_warning,
                   mc_error  ,
                   mc_fatal  ,
+                  {$ifdef fullVersion}
                   mc_plot   ,
-                  mc_gui);
+                  mc_gui
+                  {$endif});
 CONST
   C_messageClassMeta:array[T_messageClass] of record guiMarker:string; htmlSpan:string; includeLocation:boolean; triggeredFlags:T_stateFlags; end=
     {mc_echo   }((guiMarker: ECHO_MARKER   ; htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
@@ -51,19 +53,35 @@ TYPE
     mt_el4_systemError,
     mt_endOfEvaluation,
     mt_timing_info,
+    {$ifdef fullVersion}
     mt_debugger_breakpoint,
     mt_displayTable,
     mt_plot_addText,
+    mt_plot_addRow,
     mt_plot_dropRow,
     mt_plot_renderRequest,
     mt_plot_retrieveOptions,
     mt_plot_setOptions,
     mt_plot_clear,
-    mt_guiEdit_done);
+    mt_plot_clearAnimation,
+    mt_plot_addAnimationFrame,
+    mt_plot_postDisplay,
+    mt_guiEdit_done,
+    mt_displayVariableTree,
+    mt_displayCustomForm
+    {$endif});
 
   T_messageTypeSet=set of T_messageType;
 
 CONST
+  {$ifdef fullVersion}
+  C_messagesAlwaysProcessedInGuiMode:T_messageTypeSet=[mt_debugger_breakpoint,
+                                                       mt_displayTable,
+                                                       mt_guiEdit_done,
+                                                       mt_displayVariableTree,
+                                                       mt_displayCustomForm];
+  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
+  {$endif}
   C_messageTypeMeta:array[T_messageType] of record
     level:shortint;
     mClass:T_messageClass;
@@ -90,12 +108,18 @@ CONST
 {mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_displayTable}        (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
 {mt_plot_addText}        (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_plot_addRow}         (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_dropRow}        (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_setOptions}     (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
 {mt_plot_clear}          (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0));
+{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
+{mt_displayVariableTree} (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
+{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0));
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],

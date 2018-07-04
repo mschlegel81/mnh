@@ -115,6 +115,7 @@ TYPE
       PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
       PROCEDURE callStackPop(CONST first:P_token);
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
+      PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
   end;
 
@@ -187,10 +188,10 @@ TYPE
 
       FUNCTION queuedFuturesCount:longint;
 
-    //  {$ifdef fullVersion}
-    //  FUNCTION stepper:P_debuggingStepper;
-    //  FUNCTION isPaused:boolean;
-    //  {$endif}
+      {$ifdef fullVersion}
+      FUNCTION stepper:P_debuggingStepper;
+      FUNCTION isPaused:boolean;
+      {$endif}
   end;
 
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
@@ -362,7 +363,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     //prepare or dispose stepper:
     if eco_debugging in globalOptions then begin
-      if debuggingStepper=nil then new(debuggingStepper,create(globalMessages));
+      if debuggingStepper=nil then new(debuggingStepper,create(@messages));
       debuggingStepper^.resetForDebugging(package);
     end else if debuggingStepper<>nil then begin
       dispose(debuggingStepper,destroy);
@@ -462,7 +463,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
     messages.globalMessages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
     if (messages.globalMessages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
     {$ifdef fullVersion}
-    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(globalMessages);
+    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(@messages);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and messages.globalMessages^.triggersBeep then beep;
   end;
@@ -484,18 +485,18 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
 //    context^.allowedSideEffects:=allowedSideEffects;
 //  end;
 //
-//{$ifdef fullVersion}
-//FUNCTION T_evaluationGlobals.stepper:P_debuggingStepper;
-//  begin
-//    if debuggingStepper=nil then new(debuggingStepper,create(adapters));
-//    result:=debuggingStepper;
-//  end;
-//
-//FUNCTION T_evaluationGlobals.isPaused:boolean;
-//  begin
-//    result:=(debuggingStepper<>nil) and debuggingStepper^.paused;
-//  end;
-//{$endif}
+{$ifdef fullVersion}
+FUNCTION T_evaluationGlobals.stepper:P_debuggingStepper;
+  begin
+    if debuggingStepper=nil then new(debuggingStepper,create(messages.globalMessages));
+    result:=debuggingStepper;
+  end;
+
+FUNCTION T_evaluationGlobals.isPaused:boolean;
+  begin
+    result:=(debuggingStepper<>nil) and debuggingStepper^.paused;
+  end;
+{$endif}
 //
 //FUNCTION T_evaluationGlobals.getTaskQueue:P_taskQueue;
 //  begin
@@ -569,12 +570,13 @@ FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack)
     if first<>nil then related.evaluation^.debuggingStepper^.stepping(first,stack,@callStack);
     result:=true;
   end;
+
+PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
+  begin
+    if related.parent<>nil then related.parent^.reportVariables(variableReport);
+    valueStore^.reportVariables(variableReport);
+  end;
 {$endif}
-//PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
-//  begin
-//    if callingContext<>nil then callingContext^.reportVariables(variableReport);
-//    valueStore^.reportVariables(variableReport);
-//  end;
 //{$endif}
 //
 FUNCTION T_threadContext.reduceExpression(VAR first: P_token): T_reduceResult;
@@ -791,7 +793,7 @@ CONSTRUCTOR T_threadContext.create();
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
-    messages.create({$ifdef fullVersion}@callStack...,{$endif});
+    messages.create({$ifdef fullVersion}@callStack.ensureTraceInError{$endif});
     leaveCriticalSection(contextCS);
   end;
 

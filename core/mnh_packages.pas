@@ -161,6 +161,7 @@ TYPE
       packageForPostEval:P_package;
       connector:P_messageConnector;
       checkPending,currentlyProcessing:boolean;
+      currentThreadLocals:P_threadLocalMessages;
       cs:TRTLCriticalSection;
     public
       CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters: P_messageConnector);
@@ -274,6 +275,7 @@ CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST q
     connector:=quickAdapters;
     packageForPostEval:=nil;
     checkPending:=false;
+    currentThreadLocals:=nil;
     currentlyProcessing:=false;
     initCriticalSection(cs);
   end;
@@ -292,8 +294,9 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       enterCriticalSection(cs);
       currentlyProcessing:=true;
       evaluationContext.create(connector);
+      currentThreadLocals:=@evaluationContext.messages;
       while sleepCount<100 do begin
-        while checkPending do begin
+        while checkPending and evaluationContext.messages.continueEvaluation do begin
           sleepCount:=0;
           checkPending:=false;
           leaveCriticalSection(cs);
@@ -308,6 +311,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
         inc(sleepCount);
         enterCriticalSection(cs);
       end;
+      currentThreadLocals:=nil;
       evaluationContext.destroy;
       currentlyProcessing:=false;
       leaveCriticalSection(cs);
@@ -333,6 +337,7 @@ PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
 PROCEDURE T_postEvaluationData.ensureStop;
   begin
     enterCriticalSection(cs);
+    if currentThreadLocals<>nil then currentThreadLocals^.setStopFlag;
     while currentlyProcessing do begin
       leaveCriticalSection(cs);
       ThreadSwitch;

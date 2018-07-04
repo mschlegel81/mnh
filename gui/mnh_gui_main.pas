@@ -31,6 +31,7 @@ USES
   mnhCompletion,
   ipcModel,
   mnh_constants, mnh_basicTypes,mnh_settings,
+  mnh_messages,
   mnh_out_adapters,
   mnh_litVar,
   mnh_funcs,
@@ -156,11 +157,11 @@ TYPE
     tbStop:                    TToolButton;
     variablesTreeView:         TTreeView;
     {$i mnh_gui_main_events.inc}
-    PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
-    PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
-    PROCEDURE onDebuggerEvent;                                              override;
-    PROCEDURE onEndOfEvaluation;                                            override;
-    PROCEDURE triggerFastPolling;                                           override;
+    PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); override;
+    PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); override;
+    PROCEDURE onDebuggerEvent;                                override;
+    PROCEDURE onEndOfEvaluation;                              override;
+    PROCEDURE triggerFastPolling;                             override;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE enableDynamicItems;
     PROCEDURE updateScriptMenus;
@@ -181,7 +182,7 @@ TYPE
     end;
     quick:record
       meta:T_basicEditorMeta;
-      adapters:P_adapters;
+      adapters:P_messageConnector;
       task:T_postEvaluationData;
       completion:T_completionLogic;
       evaluationDeferred:boolean;
@@ -244,37 +245,35 @@ FUNCTION openInEditor_impl intFuncSignature;
     end;
   end;
 
-PROCEDURE TMnhForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
-  VAR task:P_editScriptTask;
-      outIdx:longint;
+PROCEDURE TMnhForm.onEditFinished(CONST data:P_editScriptTask);
+  VAR outIdx:longint;
   begin
-    {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',successful); {$endif}
-    task:=data;
-    if successful then begin
-      if (task^.wantOutput) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_stringList) then begin
-        if task^.wantNewEditor then outIdx:=addEditorMetaForNewFile
-                               else outIdx:=task^.inputIdx;
+    {$ifdef debugMode} writeln('        DEBUG: TMnhForm.onEditFinished; data present: ',data<>nil,'; successful: ',(data<>nil) and (data^.successful)); {$endif}
+    if data^.successful then begin
+      if (data^.wantOutput) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_stringList) then begin
+        if data^.wantNewEditor then outIdx:=addEditorMetaForNewFile
+                               else outIdx:=data^.inputIdx;
         inputPageControl.activePageIndex:=outIdx;
-        getEditor^.setLanguage(task^.getOutputLanguage,LANG_TXT);
-        getEditor^.updateContentAfterEditScript(P_listLiteral(task^.getOutput));
-      end else if (task^.wantInsert) and (task^.getOutput<>nil) and (task^.getOutput^.literalType=lt_string) then begin
-        inputPageControl.activePageIndex:=task^.inputIdx;
-        getEditor^.insertText(P_stringLiteral(task^.getOutput)^.value);
+        getEditor^.setLanguage(data^.getOutputLanguage,LANG_TXT);
+        getEditor^.updateContentAfterEditScript(P_listLiteral(data^.getOutput));
+      end else if (data^.wantInsert) and (data^.getOutput<>nil) and (data^.getOutput^.literalType=lt_string) then begin
+        inputPageControl.activePageIndex:=data^.inputIdx;
+        getEditor^.insertText(P_stringLiteral(data^.getOutput)^.value);
       end;
     end;
-    dispose(task,destroy);
+    disposeMessage(data);
     updateEditorsByGuiStatus;
   end;
 
 VAR currentSnapshot:P_debuggingSnapshot=nil;
 
-PROCEDURE TMnhForm.onBreakpoint(CONST data: pointer);
+PROCEDURE TMnhForm.onBreakpoint(CONST data:P_debuggingSnapshot);
   PROCEDURE jumpToFile;
     begin
       runnerModel.markDebugLine(outputEdit,-1);
-      if currentSnapshot^.location.package=nil then exit;
-      if openLocation(currentSnapshot^.location) then begin
-        runnerModel.markDebugLine(getEditor^.editor,currentSnapshot^.location.line);
+      if currentSnapshot^.getLocation.fileName='?' then exit;
+      if openLocation(currentSnapshot^.getLocation) then begin
+        runnerModel.markDebugLine(getEditor^.editor,currentSnapshot^.getLocation.line);
         getEditor^.editor.Repaint;
       end;
     end;
@@ -302,7 +301,7 @@ PROCEDURE TMnhForm.onBreakpoint(CONST data: pointer);
 
     if debuggerData.localVariableReport<>nil then debuggerData.localVariableReport^.clear
                                              else new(debuggerData.localVariableReport,create(dvc_local));
-    runEvaluator.context.threadContext^.reportVariables(debuggerData.localVariableReport^);
+    runEvaluator.context.reportVariables(debuggerData.localVariableReport^);
 
     if debuggerData.inlineVariableReport<>nil then debuggerData.inlineVariableReport^.clear
                                               else new(debuggerData.inlineVariableReport,create(dvc_inline));

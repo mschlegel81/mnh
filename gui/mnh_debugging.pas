@@ -49,14 +49,17 @@ TYPE
 
 IMPLEMENTATION
 
-{ T_debuggingSnapshot }
-
 CONSTRUCTOR T_debuggingSnapshot.create(CONST tokens_: P_tokenStack; CONST first_: P_token; CONST stack_: P_callStack);
   begin
     inherited create(mt_debugger_breakpoint);
     first:=first_;
     tokenStack:=tokens_;
     callStack:=stack_;
+    if first=nil then with location do begin
+      fileName:='?';
+      line:=1;
+      column:=1;
+    end else location:=first^.location;
   end;
 
 CONSTRUCTOR T_debuggingStepper.create(CONST parentAdapters:P_messageConnector);

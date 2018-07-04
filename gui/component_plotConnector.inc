@@ -40,14 +40,14 @@ CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then plotConfig.mouseMoved:=P_expressionLiteral(tmp)
-      else context.adapters^.raiseError('mouseMoved is: '+tmp^.typeString+'; must be nullary or binary expression',location);
+      else context.messages.raiseError('mouseMoved is: '+tmp^.typeString+'; must be nullary or binary expression',location);
     end;
 
     tmp:=mapGet(def,key[dmk_mouseClicked]);
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then plotConfig.mouseClicked:=P_expressionLiteral(tmp)
-      else context.adapters^.raiseError('mouseClicked is: '+tmp^.typeString+'; must be nullary or binary expression',location);
+      else context.messages.raiseError('mouseClicked is: '+tmp^.typeString+'; must be nullary or binary expression',location);
     end;
 
     connect;

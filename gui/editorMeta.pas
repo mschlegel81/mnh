@@ -980,10 +980,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
     if not(canRun) then exit;
     guiOutAdapter.flushClear;
     resetPlot(mainCall);
-    if settings.value^.doResetPlotOnEvaluation then begin
-      guiAdapters.plot^.setDefaults;
-      if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
-    end;
+    if settings.value^.doResetPlotOnEvaluation then plotSystem.resetOnEvaluationStart;
     resetTableForms;
     resetTreeForms;
     getEditor^.setWorkingDir;

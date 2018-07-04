@@ -11,7 +11,9 @@ USES
   Classes, SynEdit, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   //MNH
   mnh_constants,
-  mnh_funcs, mnh_cmdLineInterpretation, mnh_contexts, mnh_settings, mnh_out_adapters,
+  mnh_funcs, mnh_cmdLineInterpretation, mnh_contexts, mnh_settings,
+  mnh_messages, mnh_out_adapters,
+  mnh_debugging,
   mnh_evalThread, mnhFormHandler, mnh_plotForm, mnh_tables, askDialog, guiOutAdapters, SynHighlighterMnh, editorMetaBase;
 
 TYPE
@@ -25,11 +27,11 @@ TYPE
     PROCEDURE OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE Timer1Timer(Sender: TObject);
 
-    PROCEDURE onEditFinished(CONST data:pointer; CONST successful:boolean); override;
-    PROCEDURE onBreakpoint  (CONST data:pointer);                           override;
-    PROCEDURE onDebuggerEvent;                                              override;
-    PROCEDURE onEndOfEvaluation; override;
-    PROCEDURE triggerFastPolling; override;
+    PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); override;
+    PROCEDURE onBreakpoint  (CONST data:P_debuggingSnapshot); override;
+    PROCEDURE onDebuggerEvent;                                override;
+    PROCEDURE onEndOfEvaluation;                              override;
+    PROCEDURE triggerFastPolling;                             override;
   private
     outputHighlighter:TSynMnhSyn;
   end;
@@ -45,7 +47,6 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
     guiOutAdapter.flushToGui;
-    if guiAdapters.isDeferredPlotLogged and not(currentRunnerInfo.state in C_runningStates) then plotForm.doPlot();
     if askForm.displayPending then askForm.Show;
     if Timer1.interval<MAX_INTERVAL then Timer1.interval:=Timer1.interval+1;
     if plotFormIsInitialized and plotForm.timerTick then Timer1.interval:=plotForm.wantTimerInterval
@@ -53,17 +54,9 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
   end;
 
-PROCEDURE ToutputOnlyForm.onEditFinished(CONST data: pointer; CONST successful: boolean);
-begin
-end;
-
-PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data: pointer);
-begin
-end;
-
-PROCEDURE ToutputOnlyForm.onDebuggerEvent;
-begin
-end;
+PROCEDURE ToutputOnlyForm.onEditFinished(CONST data:P_editScriptTask);  begin end;
+PROCEDURE ToutputOnlyForm.onBreakpoint(CONST data:P_debuggingSnapshot); begin end;
+PROCEDURE ToutputOnlyForm.onDebuggerEvent;                              begin end;
 
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin

@@ -140,11 +140,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       end;
       if headless then context.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package.load(lu_forCallingMain,context,mainParameters);
-      {$ifdef fullVersion} if not(FlagGUINeeded in context.threadLocalMessages.getFlags) then {$endif}
+      {$ifdef fullVersion} if not(FlagGUINeeded in context.messages.getFlags) then {$endif}
       context.afterEvaluation;
       package.destroy;
       {$ifdef fullVersion}
-      if (FlagGUINeeded in context.threadLocalMessages.getFlags) then begin
+      if (FlagGUINeeded in context.messages.getFlags) then begin
         reEvaluationWithGUIrequired:=true;
         context.destroy;
         exit;

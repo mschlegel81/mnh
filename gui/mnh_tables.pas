@@ -116,7 +116,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       end;
       enterCriticalSection(tableFormCs);
       newTableForm.initWithLiteral(P_listLiteral(params^.value[0]),caption,header);
-      context.globalMessages^.postSingal(mt_displayTable,C_nilTokenLocation);
+      context.messages.globalMessages^.postSingal(mt_displayTable,C_nilTokenLocation);
       leaveCriticalSection(tableFormCs);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
@@ -241,7 +241,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
       byColumn:=index;
       ascending:=true;
 
-      tempAdapters.create(nil,nil);
+      tempAdapters.create(nil);
       literal^.sortBySubIndex(index,dummyLocation,tempAdapters);
       tempAdapters.destroy;
     end;

@@ -2,6 +2,9 @@ UNIT mnh_patterns;
 INTERFACE
 USES sysutils,
      math,
+     {$ifdef fullVersion}
+     myGenerics,
+     {$endif}
      mnh_basicTypes,mnh_constants,
      mnh_litVar,
      mnh_tokens,

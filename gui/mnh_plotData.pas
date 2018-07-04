@@ -67,12 +67,10 @@ TYPE
       CONSTRUCTOR createRenderToStringRequest(CONST width_,height_,quality_:longint);
       PROCEDURE SetString(CONST s:string);
       FUNCTION getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages):string;
+      PROPERTY isRenderToStringRequest:boolean read targetIsString;
   end;
 
   P_plotDropRowRequest=^T_plotDropRowRequest;
-
-  { T_plotDropRowRequest }
-
   T_plotDropRowRequest=object(T_payloadMessage)
     private
       count:longint;
@@ -82,7 +80,24 @@ TYPE
       CONSTRUCTOR create(CONST numberOfRowsToDrop:longint);
   end;
 
+  P_plotDisplayRequest=^T_plotDisplayRequest;
+  T_plotDisplayRequest=object(T_payloadMessage)
+    private
+      displayExecuted:boolean;
+      wantImmediateDisplay:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST displayImmediate:boolean);
+      PROCEDURE waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
+      PROCEDURE markExecuted;
+      PROPERTY immediate:boolean read wantImmediateDisplay;
+  end;
+
   P_plot =^T_plot;
+
+  { T_plot }
+
   T_plot = object
     private
       cs: TRTLCriticalSection;
@@ -96,6 +111,10 @@ TYPE
       PROCEDURE drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
       PROCEDURE drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
       FUNCTION  obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
+
+      PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
+      PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
+      PROCEDURE addCustomText(CONST text:T_customText);
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -103,9 +122,6 @@ TYPE
       PROCEDURE setDefaults;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
-      PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
-      PROCEDURE addCustomText(CONST text:T_customText);
 
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
@@ -115,6 +131,12 @@ TYPE
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
+
+      PROCEDURE processMessage(VAR m:T_addRowMessage);
+      PROCEDURE processMessage(VAR m:T_addTextMessage);
+      PROCEDURE processMessage(VAR m:T_plotOptionsMessage);
+      PROCEDURE processMessage(VAR m:T_plotRenderRequest);
+      PROCEDURE processMessage(VAR m:T_plotDropRowRequest);
   end;
 
   T_plotSeries=object
@@ -151,7 +173,34 @@ FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_
     disposeMessage(request);
   end;
 
-{ T_addTextMessage }
+FUNCTION T_plotDisplayRequest.internalType: shortstring;
+  begin
+    result:='P_plotDisplayRequest';
+  end;
+
+CONSTRUCTOR T_plotDisplayRequest.create(CONST displayImmediate: boolean);
+  begin
+    wantImmediateDisplay:=displayImmediate;
+    displayExecuted:=false;
+  end;
+
+PROCEDURE T_plotDisplayRequest.waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
+  begin
+    enterCriticalSection(messageCs);
+    while not(displayExecuted) and (errorFlagProvider.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    leaveCriticalSection(messageCs);
+  end;
+
+PROCEDURE T_plotDisplayRequest.markExecuted;
+  begin
+    enterCriticalSection(messageCs);
+    displayExecuted:=true;
+    leaveCriticalSection(messageCs);
+  end;
 
 FUNCTION T_addTextMessage.internalType: shortstring;
   begin
@@ -269,6 +318,7 @@ FUNCTION T_addRowMessage.internalType: shortstring;
 
 CONSTRUCTOR T_addRowMessage.create(CONST styleOptions_: string; CONST rowData_: T_dataRow);
   begin
+    inherited create(mt_plot_addRow);
     styleOptions:=styleOptions_;
     rowData     :=rowData_;
   end;
@@ -391,7 +441,6 @@ CONSTRUCTOR T_plot.createWithDefaults;
   end;
 
 PROCEDURE T_plot.setDefaults;
-  VAR axis: char;
   begin
     system.enterCriticalSection(cs);
     scalingOptions.setDefaults;
@@ -429,7 +478,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove:longint);
+PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
   VAR i0,i:longint;
   begin
     if numberOfRowsToRemove<=0 then exit;
@@ -440,7 +489,7 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove:longint);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.addCustomText(CONST text:T_customText);
+PROCEDURE T_plot.addCustomText(CONST text: T_customText);
   begin
     system.enterCriticalSection(cs);
     setLength(customText,length(customText)+1);
@@ -462,7 +511,8 @@ FUNCTION T_plot.getScalingOptions: T_scalingOptions;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
+PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint;
+  CONST factor: double; VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
@@ -483,7 +533,8 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     system.leaveCriticalSection(cs);
   end; end;
 
-PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
+PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
+  VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
@@ -503,7 +554,9 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     system.leaveCriticalSection(cs);
   end; end;
 
-PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
+PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
+  intendedHeight, scalingFactor: longint; VAR gridTic: T_ticInfos;
+  CONST sampleIndex: byte);
   CONST darts_delta:array[0..4,0..1] of single=(( 0.12, 0.24),
                                                 (-0.12,-0.24),
                                                 ( 0.24,-0.12),
@@ -806,13 +859,15 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     target.UnlockCanvas;
   end;
 
-PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
+PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,
+  intendedHeight: longint);
   VAR txt:T_customText;
   begin
     for txt in customText do txt.renderText(intendedWidth,intendedHeight,scalingOptions,target);
   end;
 
-PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,
+  intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
@@ -864,7 +919,8 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
     dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality
+  );
   VAR renderImage:TImage;
       gridTics:T_ticInfos;
       average:T_wordColMap;
@@ -916,14 +972,16 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
     end;
   end;
 
-FUNCTION T_plot.obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
+FUNCTION T_plot.obtainPlot(CONST width, height: longint;
+  CONST quality: T_plotQuality): TImage;
   begin
     result:=TImage.create(nil);
     result.SetInitialBounds(0,0,width,height);
     renderPlot(result,quality);
   end;
 
-PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);
+PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height,
+  supersampling: longint);
   VAR storeImage:TImage;
   begin
     storeImage:=obtainPlot(width,height,supersampling);
@@ -931,7 +989,8 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, super
     storeImage.destroy;
   end;
 
-FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
+FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint
+  ): ansistring;
   VAR storeImage: TImage;
       memStream: TStringStream;
   begin
@@ -944,7 +1003,7 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     storeImage.destroy;
   end;
 
-PROCEDURE T_plot.copyFrom(VAR p:T_plot);
+PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
@@ -965,6 +1024,35 @@ PROCEDURE T_plot.copyFrom(VAR p:T_plot);
     //:copy custom text
     system.leaveCriticalSection(p.cs);
     system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_addRowMessage);
+  begin
+    addRow(m.styleOptions,m.rowData);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_addTextMessage);
+  begin
+    addCustomText(m.customText);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_plotOptionsMessage);
+  begin
+    if m.messageType=mt_plot_retrieveOptions
+    then m.setOptions(scalingOptions)
+    else scalingOptions:=m.options;
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_plotRenderRequest);
+  begin
+    if m.isRenderToStringRequest
+    then m.SetString(renderToString(m.width,m.height,m.quality))
+    else renderToFile(m.fileName,   m.width,m.height,m.quality);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_plotDropRowRequest);
+  begin
+    removeRows(m.count);
   end;
 
 INITIALIZATION

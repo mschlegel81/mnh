@@ -6,6 +6,7 @@ object plotForm: TplotForm
   Caption = 'MNH plot'
   ClientHeight = 421
   ClientWidth = 700
+  DesignTimePPI = 144
   Menu = MainMenu
   OnClose = FormClose
   OnCreate = FormCreate

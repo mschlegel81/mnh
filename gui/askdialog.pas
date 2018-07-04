@@ -238,7 +238,7 @@ FUNCTION ask_impl intFuncSignature;
       (arg0^.literalType = lt_string) then begin
       system.enterCriticalSection(cs);
       askForm.initWithQuestion(str0^.value);
-      result := newStringLiteral(askForm.getLastAnswerReleasing(@context.threadLocalMessages));
+      result := newStringLiteral(askForm.getLastAnswerReleasing(@context.messages));
       system.leaveCriticalSection(cs);
     end
     else if (params<>nil) and (params^.size = 2) and
@@ -249,7 +249,7 @@ FUNCTION ask_impl intFuncSignature;
       for i := 0 to length(opt)-1 do
         opt[i] := P_stringLiteral(list1^.value[i])^.value;
       askForm.initWithQuestionAndOptions(str0^.value, opt);
-      result := newStringLiteral(askForm.getLastAnswerReleasing(@context.threadLocalMessages));
+      result := newStringLiteral(askForm.getLastAnswerReleasing(@context.messages));
       system.leaveCriticalSection(cs);
     end;
   end;

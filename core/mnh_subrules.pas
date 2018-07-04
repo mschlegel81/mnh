@@ -1289,14 +1289,14 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       lastRep:=lastRep^.next;
       lastRep^.next:=context.recycler.newToken(location,'',tt_braceClose);
       context.reduceExpression(firstRep);
-      result:=context.threadLocalMessages.continueEvaluation and
+      result:=context.messages.continueEvaluation and
               (firstRep<>nil) and
               (firstRep^.next=nil) and
               (firstRep^.tokType=tt_literal) and
               (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(firstRep^.data)^.size = TList^.size);
-      for m in context.threadLocalMessages.storedMessages do collector.append(m);
-      context.threadLocalMessages.clear;
+      for m in context.messages.storedMessages do collector.append(m);
+      context.messages.clear;
       if result then resultLiteral:=P_listLiteral(P_literal(firstRep^.data)^.rereferenced);
       context.recycler.cascadeDisposeToken(firstRep);
     end;
@@ -1310,14 +1310,14 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       params.append(TList,true);
       temp:=f^.evaluate(location,@context,@params).literal;
       params.destroy;
-      result:=context.threadLocalMessages.continueEvaluation and
+      result:=context.messages.continueEvaluation and
               (temp<>nil) and
               (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
       else if temp<>nil then disposeLiteral(temp);
-      for m in context.threadLocalMessages.storedMessages do collector.append(m);
-      context.threadLocalMessages.clear;
+      for m in context.messages.storedMessages do collector.append(m);
+      context.messages.clear;
     end;
 
   PROCEDURE constructInitialTList;
@@ -1349,7 +1349,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         scalingOptions:T_scalingOptions;
 
     begin
-      scalingOptions:=getOptionsViaAdapters(context.threadLocalMessages);
+      scalingOptions:=getOptionsViaAdapters(context.messages);
       while stillOk and (length(dataRow)<samples) do begin
         //Prepare threshold:----------------------------------------------------
         screenRow:=scalingOptions.transformRow(dataRow,1,0,0);
@@ -1446,8 +1446,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     end else begin
       disposeLiteral(TList);
       collector.removeDuplicateStoredMessages;
-      for m in collector.storedMessages do context.threadLocalMessages.append(m);
-      context.threadLocalMessages.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
+      for m in collector.storedMessages do context.messages.append(m);
+      context.messages.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       setLength(dataRow,0);
     end;
     collector.destroy;

@@ -4,7 +4,8 @@ USES
   sysutils, SynEdit, Forms,
   SynEditKeyCmds,
   myStringUtil,
-  mnh_constants,
+  mnh_constants,mnh_basicTypes,
+  mnh_messages,
   myGenerics,mnh_out_adapters;
 CONST
   C_synOutDefaultMessageTypes:T_messageTypeSet=[mt_clearConsole,
@@ -16,7 +17,6 @@ CONST
                                               mt_el2_userWarning,
                                               mt_el3_evalError,
                                               mt_el3_noMatchingMain,
-                                              mt_el3_stackTrace,
                                               mt_el3_userDefined,
                                               mt_el4_systemError,
                                               mt_timing_info];
@@ -39,7 +39,7 @@ TYPE
       outputLinesLimit:longint;
       PROCEDURE appendInternal(CONST s:string);
       PROCEDURE startOutput;
-      FUNCTION singleMessageOut(CONST m:T_storedMessage):boolean;
+      FUNCTION singleMessageOut(CONST m:P_storedMessage):boolean;
       PROCEDURE doneOutput;
     public
       CONSTRUCTOR create(CONST owner:TForm; CONST outputEdit:TSynEdit;
@@ -122,7 +122,7 @@ PROCEDURE T_synOutAdapter.appendInternal(CONST s:string);
     wroteToSyn:=true;
   end;
 
-FUNCTION T_synOutAdapter.singleMessageOut(CONST m: T_storedMessage):boolean;
+FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
   PROCEDURE clearSynAndBuffer;
     begin
       linesToWrite:=C_EMPTY_STRING_ARRAY;
@@ -151,19 +151,19 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: T_storedMessage):boolean;
       s:string;
   begin
     result:=true;
-    case m.messageType of
+    case m^.messageType of
       mt_clearConsole: clearSynAndBuffer;
       mt_printline:
         begin
-          if (length(m.messageText)>0) and (m.messageText[0]=C_formFeedChar) then begin
+          if (length(m^.messageText)>0) and (m^.messageText[0]=C_formFeedChar) then begin
             clearSynAndBuffer;
-            for j:=1 to length(m.messageText)-1 do appendInternal(m.messageText[j]);
+            for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
           end else if lastWasDirectPrint then begin
-            if length(m.messageText)>0 then begin
-              processDirectPrint(m.messageText[0]);
+            if length(m^.messageText)>0 then begin
+              processDirectPrint(m^.messageText[0]);
             end;
-            for j:=1 to length(m.messageText)-1 do appendInternal(m.messageText[j]);
-          end else for j:=0 to length(m.messageText)-1 do appendInternal(m.messageText[j]);
+            for j:=1 to length(m^.messageText)-1 do appendInternal(m^.messageText[j]);
+          end else for s in m^.messageText do appendInternal(s);
         end;
       mt_printdirect:
         begin
@@ -178,7 +178,7 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: T_storedMessage):boolean;
             syn.ExecuteCommand(ecEditorBottom,' ',nil);
             syn.ExecuteCommand(ecLineStart,' ',nil);
           end;
-          for j:=0 to length(m.messageText)-1 do processDirectPrint(m.messageText[j]);
+          for s in m^.messageText do processDirectPrint(s);
         end;
       mt_el1_note,
       mt_el1_userNote,
@@ -186,13 +186,12 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: T_storedMessage):boolean;
       mt_el2_userWarning,
       mt_el3_evalError,
       mt_el3_noMatchingMain,
-      mt_el3_stackTrace,
       mt_el3_userDefined,
       mt_el4_systemError,
-      mt_timing_info: for s in defaultFormatting(m,true) do appendInternal(s);
+      mt_timing_info: for s in m^.toString(true) do appendInternal(s);
       else result:=false;
     end;
-    if result then lastWasDirectPrint:=m.messageType=mt_printdirect;
+    if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;
   end;
 
 PROCEDURE T_synOutAdapter.doneOutput;
@@ -228,14 +227,14 @@ CONSTRUCTOR T_synOutAdapter.create(CONST owner: TForm; CONST outputEdit: TSynEdi
   end;
 
 FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
-  VAR m:T_storedMessage;
+  VAR m:P_storedMessage;
   begin
     system.enterCriticalSection(cs);
     result:=[];
     startOutput;
     try
       for m in storedMessages do begin
-        include(result,m.messageType);
+        include(result,m^.messageType);
         singleMessageOut(m);
       end;
       clear;
@@ -246,11 +245,13 @@ FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
   end;
 
 PROCEDURE T_synOutAdapter.flushClear;
+  VAR clearMessage:P_storedMessage;
   begin
     system.enterCriticalSection(cs);
     lastWasDirectPrint:=false;
     clear;
-    append(clearConsoleMessage);
+    new(clearMessage,create(mt_clearConsole,C_nilTokenLocation));
+    append(clearMessage);
     system.leaveCriticalSection(cs);
   end;
 

@@ -881,13 +881,13 @@ FUNCTION T_lexer.getEnhancedTokens(CONST localIdInfos:P_localIdInfos):T_enhanced
   begin
     blob.closer:=localIdInfos^.getBlobCloserOrZero(inputLocation.line);
 
-    recycler.create;
-    adapters.create(nil,nil);
+    recycler.init;
+    adapters.create(nil);
     while fetchNext(recycler,adapters,nil,false) do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(input[length(input)-1]);
 
-    recycler.destroy;
+    recycler.cleanupInstance;
     adapters.destroy;
 
     result.create;
@@ -1016,8 +1016,8 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     location.line:=0;
     location.column:=1;
     lexer.create(inputString,location,@BLANK_ABSTRACT_PACKAGE);
-    adapters.create(nil,nil);
-    recycler.create;
+    adapters.create(nil);
+    recycler.init;
     repeat until not(lexer.fetchNext(recycler,adapters{$ifdef fullVersion},nil{$endif},true));
     adapters.destroy;
     t:=lexer.nextStatement.firstToken;
@@ -1030,7 +1030,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
       result[length(result)-1]:=t^.getRawToken;
       t:=recycler.disposeToken(t);
     end;
-    recycler.destroy;
+    recycler.cleanupInstance;
   end;
 {$endif}
 

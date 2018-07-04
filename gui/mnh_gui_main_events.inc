@@ -31,7 +31,7 @@ PROCEDURE miShowAssistanceClick(Sender: TObject);
 PROCEDURE miShowOutputClick(Sender: TObject);
 PROCEDURE miShowQuickEvalClick(Sender: TObject);
 PROCEDURE miStackTracingClick(Sender: TObject);
-PROCEDURE miHaltEvalutaionClick(Sender: TObject);
+PROCEDURE miHaltEvaluationClick(Sender: TObject);
 PROCEDURE tbMicroStepClick(Sender: TObject);
 PROCEDURE tbRunClick(Sender: TObject);
 PROCEDURE tbStepClick(Sender: TObject);
@@ -102,7 +102,6 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
       end;
     end;
     runnerModel.haltEvaluation;
-    quick.adapters^.haltEvaluation;
     quick.task.ensureStop;
     storeEditorsToSettings;
   end;
@@ -401,10 +400,10 @@ PROCEDURE TMnhForm.miStackTracingClick(Sender: TObject);
     runnerModel.stackTracing:=miStackTracing.checked;
   end;
 
-PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+PROCEDURE TMnhForm.miHaltEvaluationClick(Sender: TObject);
   begin
     runnerModel.haltEvaluation;
-    quick.adapters^.haltEvaluation;
+    quick.task.ensureStop;
     currentSnapshot:=nil;
   end;
 
@@ -489,7 +488,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     flushedMessages:=guiOutAdapter.flushToGui;
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
-    if (mt_gui_breakpointEncountered in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
+    if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then exit;
 

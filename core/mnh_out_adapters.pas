@@ -10,6 +10,7 @@ TYPE
                  at_console,
                  at_textFile,
                  at_gui,
+                 at_plot,
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
 CONST
@@ -18,6 +19,7 @@ CONST
     {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info],
     {at_textFile} [mt_printline..mt_el4_systemError,mt_timing_info],
     {at_gui}      [low(T_messageType)..high(T_messageType)],
+    {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
 
@@ -74,7 +76,7 @@ TYPE
       PROCEDURE propagateFlags;
     public
       globalMessages:P_messageConnector;
-      CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback; {$endif});
+      CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback{$endif});
       PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
 
       PROCEDURE setParent(CONST parent:P_threadLocalMessages);
@@ -84,7 +86,7 @@ TYPE
       PROPERTY getFlags:T_stateFlags read flags;
       PROCEDURE clear; virtual;
       PROCEDURE escalateErrors;
-      FUNCTION continueEvaluation:boolean;
+      FUNCTION continueEvaluation:boolean; {$ifndef debugMode} inline; {$endif}
       DESTRUCTOR destroy; virtual;
       FUNCTION childCount:longint;
       PROCEDURE setStopFlag;
@@ -135,6 +137,9 @@ TYPE
       adapters:array of T_flaggedAdapter;
       collecting,collected:T_messageTypeSet;
       userDefinedExitCode:longint;
+      {$ifdef fullVersion}
+      flags:T_stateFlags;
+      {$endif}
     public
       preferredEchoLineLength:longint;
       CONSTRUCTOR create;
@@ -162,6 +167,9 @@ TYPE
       PROCEDURE setUserDefinedExitCode(CONST code:longint);
       PROCEDURE setExitCode;
       FUNCTION triggersBeep:boolean;
+      {$ifdef fullVersion}
+      FUNCTION continueEvaluation:boolean; {$ifndef debugMode} inline; {$endif}
+      {$endif}
   end;
 
   //T_adapters=object
@@ -340,7 +348,7 @@ DESTRUCTOR T_messageConnector.destroy;
     doneCriticalSection(connectorCS);
   end;
 
-CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_traceCallback;{$endif});
+CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_traceCallback{$endif});
   begin
     inherited create(at_unknown,[mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]);
     globalMessages       :=nil;
@@ -358,6 +366,9 @@ PROCEDURE T_threadLocalMessages.propagateFlags;
       parentMessages^.flags:=parentMessages^.flags+(flags*[FlagFatalError,FlagGUINeeded]);
       parentMessages^.propagateFlags;
     end;
+    {$ifdef fullVersion}
+    if (parentMessages=nil) and (globalMessages<>nil) then globalMessages^.flags:=globalMessages^.flags+flags;
+    {$endif}
     for child in childMessages do begin
       child^.flags:=child^.flags+flags;
       child^.propagateFlags;
@@ -404,6 +415,13 @@ FUNCTION T_threadLocalMessages.continueEvaluation: boolean;
   begin
     result:=flags=[];
   end;
+
+{$ifdef fullVersion}
+FUNCTION T_messageConnector.continueEvaluation:boolean;
+  begin
+    result:=flags=[];
+  end;
+{$endif}
 
 DESTRUCTOR T_threadLocalMessages.destroy;
   begin
@@ -517,6 +535,9 @@ PROCEDURE T_messageConnector.clear;
     enterCriticalSection(connectorCS);
     for a in adapters do a.adapter^.clear;
     collected:=[];
+    {$ifdef fullVersion}
+    flags:=[];
+    {$endif}
     userDefinedExitCode:=0;
     leaveCriticalSection(connectorCS);
   end;

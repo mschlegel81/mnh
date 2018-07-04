@@ -1,7 +1,7 @@
 TYPE
   P_secondaryOutputMemoMeta=^T_secondaryOutputMemoMeta;
   T_secondaryOutputMemoMeta=object(T_outputMemoMeta)
-    adaptersHoldingCollector:P_adapters;
+    adaptersHoldingCollector:P_messageConnector;
     collector:P_synOutAdapter;
     CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_threadContext);
     FUNCTION evaluate(CONST location:T_tokenLocation; VAR context:T_threadContext):boolean; virtual;
@@ -18,7 +18,7 @@ CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST de
     inherited create(parent,def,location,context,[dmk_type]);
     state_hlLang:=fileTypeMeta[LANG_OUTPUT].extensions[0];
     synMeta.setLanguage(state_hlLang,synMeta.language);
-    adaptersHoldingCollector:=context.adapters;
+    adaptersHoldingCollector:=context.messages.globalMessages;
     new(collector,create(parent^.containedInForm,synMeta.editor));
     connect;
   end;

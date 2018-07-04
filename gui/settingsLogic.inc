@@ -17,7 +17,7 @@ PROCEDURE initializeOutputSettings;
                             and (mt_el2_userWarning in settings.value^.outputBehaviour)
                             and (mt_el3_userDefined in settings.value^.outputBehaviour);
     end;
-    guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour+C_guiOnlyMessages;
+    guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour+C_messagesAlwaysProcessedInGuiMode;
     MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
   end;
