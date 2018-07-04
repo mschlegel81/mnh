@@ -202,9 +202,6 @@ FUNCTION workerThreadCount:longint;
 {$endif}
 IMPLEMENTATION
 VAR globalLock:TRTLCriticalSection;
-
-{ T_contextRecycler }
-
 CONSTRUCTOR T_contextRecycler.create;
   begin
     initCriticalSection(recyclerCS);
@@ -461,6 +458,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
 
   begin
     stopWorkers;
+    messages.escalateErrors;
     messages.globalMessages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
     if (messages.globalMessages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
     {$ifdef fullVersion}
@@ -621,7 +619,9 @@ FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
 
 FUNCTION T_threadContext.getFutureEnvironment: P_threadContext;
   begin
+    enterCriticalSection(contextCS);
     result:=contextPool.newContext(@self);
+    leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_threadContext.beginEvaluation;
@@ -655,7 +655,7 @@ PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
     messages.setParent(nil);
 
     related.evaluation:=nil;
-    related.parent^.dropChildContext(@self);
+    if related.parent<>nil then related.parent^.dropChildContext(@self);
     {$ifdef fullVersion}
     callStack.clear;
     parentCustomForm:=nil;
@@ -756,7 +756,6 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
   CONST SLEEP_TIME_TO_QUIT=73;
   VAR sleepTime:longint;
       currentTask:P_queueTask;
-      tempcontext:P_threadContext;
   begin
     sleepTime:=0;
     with P_evaluationGlobals(p)^ do begin
@@ -882,6 +881,7 @@ CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
   begin;
     initCriticalSection(taskCs);
     isVolatile:=volatile;
+    env:=nil;
   end;
 
 PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
@@ -891,6 +891,7 @@ PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
     {$endif}
     evaluationResult:=NIL_EVAL_RESULT;
     nextToEvaluate  :=nil;
+    if env<>nil then contextPool.disposeContext(env);
     env:=newEnvironment;
     env^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
   end;
@@ -920,7 +921,7 @@ FUNCTION T_queueTask.getResult:T_evaluationResult;
 DESTRUCTOR T_queueTask.destroy;
   begin
     enterCriticalSection(taskCs);
-    contextPool.disposeContext(env);
+    if env<>nil then contextPool.disposeContext(env);
     leaveCriticalSection(taskCs);
     doneCriticalSection(taskCs);
   end;

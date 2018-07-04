@@ -86,7 +86,6 @@ TYPE
     payload:P_futureLiteral;
     CONSTRUCTOR create(CONST future:P_futureLiteral);
     PROCEDURE   evaluate; virtual;
-    DESTRUCTOR  destroy; virtual;
   end;
 
 PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral;
@@ -124,7 +123,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
   VAR firstToAggregate:P_eachTask=nil;
       lastToAggregate:P_eachTask=nil;
 
-  PROCEDURE enqueueForAggregation(CONST task:P_eachTask); inline;
+  PROCEDURE enqueueForAggregation(CONST task:P_eachTask); {$ifndef debugMode} inline; {$endif}
     begin
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
@@ -139,7 +138,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         fill:longint;
       end;
 
-  FUNCTION canAggregate:boolean; inline;
+  FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_eachTask;
     begin
       result:=false;
@@ -155,7 +154,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       end;
     end;
 
-  FUNCTION createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal):P_eachTask; inline;
+  FUNCTION createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal):P_eachTask; {$ifndef debugMode} inline; {$endif}
     begin
       with recycling do if fill>0 then begin
         dec(fill);
@@ -227,7 +226,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       lastToAggregate:P_mapTask=nil;
       resultLiteral:P_listLiteral;
 
-  PROCEDURE enqueueForAggregation(CONST task:P_mapTask); inline;
+  PROCEDURE enqueueForAggregation(CONST task:P_mapTask); {$ifndef debugMode} inline; {$endif}
     begin
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
@@ -242,7 +241,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
         fill:longint;
       end;
 
-  FUNCTION canAggregate:boolean; inline;
+  FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_mapTask;
     begin
       result:=false;
@@ -258,7 +257,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       end;
     end;
 
-  FUNCTION createTask(CONST x:P_literal):P_mapTask; inline;
+  FUNCTION createTask(CONST x:P_literal):P_mapTask; {$ifndef debugMode} inline; {$endif}
     begin
       with recycling do if fill>0 then begin
         dec(fill);
@@ -305,7 +304,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
   VAR firstToAggregate:P_filterTask=nil;
       lastToAggregate:P_filterTask=nil;
 
-  PROCEDURE enqueueForAggregation(CONST task:P_filterTask); inline;
+  PROCEDURE enqueueForAggregation(CONST task:P_filterTask); {$ifndef debugMode} inline; {$endif}
     begin
       if firstToAggregate=nil then begin
         firstToAggregate:=task;
@@ -320,7 +319,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
         fill:longint;
       end;
 
-  FUNCTION canAggregate:boolean; inline;
+  FUNCTION canAggregate:boolean; {$ifndef debugMode} inline; {$endif}
     VAR toAggregate:P_filterTask;
         value:P_literal;
     begin
@@ -344,7 +343,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       end;
     end;
 
-  FUNCTION createTask(CONST x:P_literal):P_filterTask; inline;
+  FUNCTION createTask(CONST x:P_literal):P_filterTask; {$ifndef debugMode} inline; {$endif}
     begin
       with recycling do if fill>0 then begin
         dec(fill);
@@ -360,7 +359,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
     aimEnqueueCount:=workerThreadCount*2+1;
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
-      enqueueForAggregation(createTask(x  ));
+      enqueueForAggregation(createTask(x));
       if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
         if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
         //if there is not enough pending after dequeuing, increase aimEnqueueCount
@@ -416,14 +415,6 @@ PROCEDURE T_futureTask.evaluate;
     finally
       env^.finalizeTaskAndDetachFromParent;
     end;
-  end;
-
-DESTRUCTOR T_futureTask.destroy;
-  begin
-    enterCriticalSection(taskCs);
-    contextPool.disposeContext(env);
-    leaveCriticalSection(taskCs);
-    inherited destroy;
   end;
 
 CONSTRUCTOR T_filterTask.createFilterTask(CONST expr: P_expressionLiteral);

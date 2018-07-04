@@ -676,6 +676,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
     package.load(lu_forDirectExecution,evaluationContext,C_EMPTY_STRING_ARRAY);
+    evaluationContext.afterEvaluation;
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;

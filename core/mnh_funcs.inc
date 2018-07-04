@@ -24,8 +24,10 @@ FUNCTION try_imp intFuncSignature;
       if (result=nil) or (context.messages.getFlags<>[]) then begin
         if (result<>nil) then disposeLiteral(result);
         //Error handling
-        if inCaseOfFailure=nil then result:=newVoidLiteral
-        else if inCaseOfFailure^.literalType=lt_expression then begin
+        if inCaseOfFailure=nil then begin
+          context.messages.clear;
+          result:=newVoidLiteral
+        end else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
             messagesLiteral:=messagesToLiteralForSandbox(context.messages.storedMessages);
             context.messages.clear;
@@ -33,10 +35,14 @@ FUNCTION try_imp intFuncSignature;
             if result=nil then context.messages.raiseError('Error in catch block',tokenLocation);
             disposeLiteral(messagesLiteral);
           end else begin
+            context.messages.clear;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context).literal;
             if result=nil then context.messages.raiseError('Error in catch block',tokenLocation);
           end;
-        end else result:=inCaseOfFailure^.rereferenced;
+        end else begin
+          context.messages.clear;
+          result:=inCaseOfFailure^.rereferenced;
+        end;
       end;
     end;
 

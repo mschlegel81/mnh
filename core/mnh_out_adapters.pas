@@ -773,7 +773,6 @@ PROCEDURE T_textFileOutAdapter.flush;
             mt_printdirect: for s in m^.messageText do write  (handle,s);
             else for s in m^.toString({$ifdef fullVersion}false{$endif}) do writeln(handle,s);
           end;
-          disposeMessage(m);
         end;
         clear;
         close(handle);
