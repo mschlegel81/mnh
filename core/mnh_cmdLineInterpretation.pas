@@ -109,7 +109,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
   PROCEDURE doDirect;
-    VAR context:T_evaluationContext;
+    VAR context:T_evaluationGlobals;
         package:P_package;
     begin
       context.create(@consoleAdapters);
@@ -124,7 +124,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
 
   PROCEDURE fileMode;
-    VAR context:T_evaluationContext;
+    VAR context:T_evaluationGlobals;
         package:T_package;
     begin
       package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);

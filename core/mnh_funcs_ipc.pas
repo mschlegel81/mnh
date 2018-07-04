@@ -201,16 +201,16 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
     begin with P_myIpcServer(p)^ do begin
       //Even unique-instance-marker-servers should fetch messages from time to time
       if (servingContextOrNil<>nil) and
-         readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.threadLocalMessages) and
+         readMessage(server,request.senderId,request.messageHash,request.statusOk,request.payload,feedbackLocation,@servingContextOrNil^.messages) and
          processThisRequest(request.messageHash) and
          (servingExpressionOrNil<>nil) then begin
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
           response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,request.payload).literal;
-          response.statusOk:=servingContextOrNil^.threadLocalMessages.continueEvaluation;
+          response.statusOk:=servingContextOrNil^.messages.continueEvaluation;
         end else begin
-          servingContextOrNil^.threadLocalMessages.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
+          servingContextOrNil^.messages.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
           response.payload :=nil;
           response.statusOk:=false;
         end;
@@ -232,7 +232,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       recentRequestOffset:=0;
       try
         server:=newServer(serverId);
-        if servingContextOrNil<>nil then servingContextOrNil^.threadLocalMessages.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId)
+        if servingContextOrNil<>nil then servingContextOrNil^.messages.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId)
       except on e:Exception do ipcMessageConnector^.raiseError(e.message,feedbackLocation,mt_el4_systemError); end;
 
       while not(hasKillRequest) and (ipcMessageConnector^.continueEvaluation) do begin
@@ -247,7 +247,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       except on e:Exception do
         ipcMessageConnector^.raiseError(e.message,feedbackLocation,mt_el4_systemError);
       end;
-      if servingContextOrNil<>nil then servingContextOrNil^.threadLocalMessages.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
+      if servingContextOrNil<>nil then servingContextOrNil^.messages.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
     end;
     dispose(P_myIpcServer(p),destroy);
     result:=0;
@@ -267,7 +267,7 @@ CONSTRUCTOR T_myIpcServer.create(CONST serverId_:string; CONST location: T_token
 DESTRUCTOR T_myIpcServer.destroy;
   begin
     if servingContextOrNil<>nil then begin
-      servingContextOrNil^.workerContextDone;
+      servingContextOrNil^.finalizeTaskAndDetachFromParent;
       contextPool.disposeContext(servingContextOrNil);
     end;
     if servingExpressionOrNil<>nil then disposeLiteral(servingExpressionOrNil);
@@ -286,14 +286,14 @@ FUNCTION assertUniqueInstance_impl intFuncSignature;
       try
         normalizedPath:=cleanPath(expandFileName(tokenLocation.package^.getPath));
         if isServerRunning(normalizedPath)
-        then context.threadLocalMessages.raiseError('There already is an instance of this script running',tokenLocation)
+        then context.messages.raiseError('There already is an instance of this script running',tokenLocation)
         else begin
-          new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.threadLocalMessages));
+          new(markerServer,create(normalizedPath,tokenLocation,nil,nil,context.messages));
           beginThread(@ipcServerThread,markerServer);
           result:=newVoidLiteral;
         end;
       except on e:Exception do
-        context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
+        context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
       end;
       registry.leaveCs;
     end;
@@ -309,14 +309,14 @@ FUNCTION startIpcServer_impl intFuncSignature;
        (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
       registry.enterCs;
       if isServerRunning(str0^.value) then begin
-        context.threadLocalMessages.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
+        context.messages.raiseError('There already is an IPC server with ID "'+str0^.value+'" running',tokenLocation);
       end else begin
         childContext:=context.getNewAsyncContext(false);
         if childContext<>nil then begin
-          new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.threadLocalMessages));
+          new(ipcServer,create(str0^.value,tokenLocation,P_expressionLiteral(arg1^.rereferenced),childContext,childContext^.messages));
           beginThread(@ipcServerThread,ipcServer);
           result:=newVoidLiteral;
-        end else context.threadLocalMessages.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
+        end else context.messages.raiseError('startIpcServer is not allowed in this context because delegation is disabled.',tokenLocation);
       end;
       registry.leaveCs;
     end;
@@ -339,20 +339,20 @@ FUNCTION sendIpcRequest_impl intFuncSignature;
     if (params<>nil) and (params^.size=2) and context.checkSideEffects('sendIpcRequest',tokenLocation,[se_accessIpc]) and
        (arg0^.literalType=lt_string) then begin
       temporaryReceiver:=newServer();
-      sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,@context.threadLocalMessages,messageHash);
+      sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,@context.messages,messageHash);
       repeat
-        fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,@context.threadLocalMessages);
+        fetchedResult:=readMessage(temporaryReceiver,response.senderId,responseHash,response.statusOk,response.payload,tokenLocation,@context.messages);
         if not(fetchedResult) then begin
           inc(aliveCheckCounter);
           if (aliveCheckCounter>100) then begin
             if not(isServerRunning(str0^.value))
-            then context.threadLocalMessages.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
-            else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,@context.threadLocalMessages,messageHash);
+            then context.messages.raiseError('IPC server "'+str0^.value+'" died before answering.',tokenLocation)
+            else sendMessage(temporaryReceiver.serverId,str0^.value,true,arg1,tokenLocation,@context.messages,messageHash);
             aliveCheckCounter:=0;
           end else sleep(1);
         end;
-      until fetchedResult or not(context.threadLocalMessages.continueEvaluation);
-      if fetchedResult and context.threadLocalMessages.continueEvaluation then begin
+      until fetchedResult or not(context.messages.continueEvaluation);
+      if fetchedResult and context.messages.continueEvaluation then begin
         if response.payload<>nil then result:=response.payload
                                  else result:=newVoidLiteral;
       end;

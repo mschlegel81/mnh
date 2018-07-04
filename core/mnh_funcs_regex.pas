@@ -101,7 +101,7 @@ FUNCTION regexMatch_imp intFuncSignature;
         result:=regex.Exec(trip.y);
       except
         on e:Exception do begin
-          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -139,7 +139,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
         until not(regex.ExecNext);
       except
         on e:Exception do begin
-          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -170,7 +170,7 @@ FUNCTION regexSplit_imp intFuncSignature;
         regex.split(trip.y,pieces);
       except
         on e:Exception do begin
-          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
       result:=newListLiteral;
@@ -201,7 +201,7 @@ FUNCTION regexReplace_imp intFuncSignature;
         result:=regex.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
-          context.threadLocalMessages.raiseError(e.message,tokenLocation,mt_el4_systemError);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;

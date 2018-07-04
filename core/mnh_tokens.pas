@@ -492,7 +492,7 @@ PROCEDURE T_token.setModifier(CONST modifier:T_modifier);
     tokType:=tt_modifier;
   end;
 
-PROCEDURE T_TokenRecycler.init;
+PROCEDURE T_tokenRecycler.init;
   VAR i:longint;
   begin
     for i:=0 to length(dat)-1 do dat[i]:=nil;

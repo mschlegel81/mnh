@@ -37,7 +37,6 @@ CONST
   C_equivalentOption:array[tco_spawnWorker..tco_stackTrace] of T_evaluationContextOption=(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace);
 
 TYPE
-
   P_evaluationGlobals=^T_evaluationGlobals;
   P_threadContext=^T_threadContext;
   P_taskQueue=^T_taskQueue;
@@ -130,8 +129,8 @@ TYPE
       isVolatile    :boolean;
     public
       PROCEDURE   evaluate; virtual; abstract;
-      CONSTRUCTOR create(CONST environment:P_threadContext; CONST volatile:boolean);
-      PROCEDURE   reset;
+      CONSTRUCTOR create(CONST volatile:boolean);
+      PROCEDURE   defineAndEnqueue(CONST newEnvironment:P_threadContext);
       FUNCTION    canGetResult:boolean;
       FUNCTION    getResult:T_evaluationResult;
       DESTRUCTOR  destroy; virtual;
@@ -188,14 +187,10 @@ TYPE
 
       FUNCTION queuedFuturesCount:longint;
 
-    //  PROPERTY evaluationOptions:T_evaluationContextOptions read options;
-    //  PROPERTY threadContext:P_threadContext read primaryThreadContext;
-    //  PROPERTY adapters:P_messageConnector read contextAdapters;
     //  {$ifdef fullVersion}
     //  FUNCTION stepper:P_debuggingStepper;
     //  FUNCTION isPaused:boolean;
     //  {$endif}
-    //  FUNCTION getTaskQueue:P_taskQueue;
   end;
 
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_threadContext):T_reduceResult;
@@ -348,18 +343,17 @@ DESTRUCTOR T_evaluationGlobals.destroy;
     if disposeAdaptersOnDestruction then dispose(messages.globalMessages,destroy);
     inherited destroy;
   end;
-//
+
 PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
   VAR pc:T_profileCategory;
       i:longint;
   begin
     setLength(mainParameters,length(mainParams));
     for i:=0 to length(mainParams)-1 do mainParameters[i]:=mainParams[i];
-    //set options
+    //global options
     globalOptions:=C_evaluationContextOptions[evaluationContextType];
-    if messages.globalMessages^.isCollecting(mt_timing_info) then globalOptions:=globalOptions+[eco_timing];
-    if evaluationContextType=ect_silent then allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
-                                        else allowedSideEffects:=C_allSideEffects;
+    if messages.globalMessages^.isCollecting(mt_timing_info)
+    then globalOptions:=globalOptions+[eco_timing];
     {$ifdef fullVersion}
     //prepare or dispose profiler:
     if eco_profiling in globalOptions then begin
@@ -377,10 +371,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
       dispose(debuggingStepper,destroy);
       debuggingStepper:=nil;
     end;
-
     {$endif}
-    setThreadOptions(globalOptions);
-    setLength(related.children,0);
     //timing:
     if (eco_timing in globalOptions) or (eco_profiling in globalOptions) or enforceWallClock then begin
       if wallClock=nil then wallClock:=TEpikTimer.create(nil);
@@ -389,8 +380,26 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
       wallClock.start;
       timingInfo.startOfProfiling:=wallClock.elapsed;
     end;
+    //evaluation state
+    if evaluationContextType=ect_silent
+    then allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
+    else allowedSideEffects:=C_allSideEffects;
+
+    setThreadOptions(globalOptions);
+    valueStore^.clear;
+    messages.clear;
+    with related do begin
+      evaluation:=@self;
+      parent:=nil;
+      setLength(children,0);
+    end;
+    {$ifdef fullVersion}
+    callStack.clear;
+    parentCustomForm:=nil;
+    {$endif}
+    state:=fts_evaluating;
   end;
-//
+
 PROCEDURE T_evaluationGlobals.stopWorkers;
   CONST TIME_OUT_AFTER=10/(24*60*60); //=10 seconds
   VAR timeout:double;
@@ -403,7 +412,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers;
       sleep(1);
     end;
   end;
-//
+
 PROCEDURE T_evaluationGlobals.afterEvaluation;
   PROCEDURE logTimingInfo;
     CONST CATEGORY_DESCRIPTION:array[T_profileCategory] of string=(
@@ -457,7 +466,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
     {$ifdef fullVersion}
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(globalMessages);
     {$endif}
-    //if not(suppressBeep) and (eco_beepOnError in globalMessages) and adapters^.triggersBeep then beep;
+    if not(suppressBeep) and (eco_beepOnError in globalOptions) and messages.globalMessages^.triggersBeep then beep;
   end;
 //
 //PROCEDURE T_evaluationGlobals.setupThreadContext(CONST context:P_threadContext);
@@ -522,13 +531,13 @@ PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCatego
   end;
 //
 //
-FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean
-  ): P_threadContext;
+FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean): P_threadContext;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
     result:=contextPool.newContext(@self);
     result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
-    if local then result^.valueStore^.parentStore:=valueStore;
+    if local then result^.valueStore^.parentStore:=valueStore
+             else result^.valueStore^.parentStore:=nil;
   end;
 //
 //
@@ -617,28 +626,28 @@ FUNCTION T_threadContext.getFutureEnvironment: P_threadContext;
 
 PROCEDURE T_threadContext.beginEvaluation;
   begin
-    {$ifdef DEBUGMODE}
-    if state<>fts_pending then raise exception.create('Wrong state before calling T_threadContext.beginEvaluation');
+    {$ifdef debugMode}
+    if state<>fts_pending then raise Exception.create('Wrong state before calling T_threadContext.beginEvaluation');
     {$endif}
-    EnterCriticalsection(contextCS);
+    enterCriticalSection(contextCS);
     state:=fts_evaluating;
-    LeaveCriticalsection(contextCS);
+    leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
   VAR child:P_threadContext;
   begin
-    EnterCriticalsection(contextCS);
+    enterCriticalSection(contextCS);
     with related do if length(children)>0 then begin
       for child in children do if child^.state=fts_pending
       then begin
-        LeaveCriticalsection(contextCS);
-        raise exception.Create('T_threadContext has pending children on finalizeTaskAndDetachFromParent');
+        leaveCriticalSection(contextCS);
+        raise Exception.create('T_threadContext has pending children on finalizeTaskAndDetachFromParent');
       end;
       while length(children)>0 do begin
-        LeaveCriticalsection(contextCS);
+        leaveCriticalSection(contextCS);
         ThreadSwitch; sleep(1);
-        EnterCriticalsection(contextCS);
+        enterCriticalSection(contextCS);
       end;
     end;
     state:=fts_finished;
@@ -652,8 +661,8 @@ PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
     parentCustomForm:=nil;
     {$endif}
     { recycler  : nothing to do}
-    valuestore^.clear;
-    LeaveCriticalsection(contextCS);
+    valueStore^.clear;
+    leaveCriticalSection(contextCS);
   end;
 
 PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
@@ -806,7 +815,7 @@ PROCEDURE T_threadContext.initAsChildOf(CONST parentThread: P_threadContext);
     messages.setParent(@parentThread^.messages);
 
     { recycler  : nothing to do}
-    valuestore^.clear;
+    valueStore^.clear;
     valueStore^.parentStore:=parentThread^.valueStore;
 
     {$ifdef fullVersion}
@@ -869,17 +878,21 @@ DESTRUCTOR T_threadContext.destroy;
     doneCriticalSection(contextCS);
   end;
 
-CONSTRUCTOR T_queueTask.create(CONST environment:P_threadContext; CONST volatile:boolean);
+CONSTRUCTOR T_queueTask.create(CONST volatile:boolean);
   begin;
     initCriticalSection(taskCs);
-    env       :=environment;
     isVolatile:=volatile;
   end;
 
-PROCEDURE T_queueTask.reset;
+PROCEDURE T_queueTask.defineAndEnqueue(CONST newEnvironment:P_threadContext);
   begin
+    {$ifdef debugMode}
+    if newEnvironment=nil then raise Exception.create('T_queueTask.defineAndEnqueue - newEnvironemnt must not be nil');
+    {$endif}
     evaluationResult:=NIL_EVAL_RESULT;
     nextToEvaluate  :=nil;
+    env:=newEnvironment;
+    env^.getGlobals^.taskQueue.enqueue(@self,newEnvironment);
   end;
 
 FUNCTION T_queueTask.canGetResult:boolean;
@@ -906,9 +919,9 @@ FUNCTION T_queueTask.getResult:T_evaluationResult;
 
 DESTRUCTOR T_queueTask.destroy;
   begin
-    EnterCriticalsection(taskCs);
+    enterCriticalSection(taskCs);
     contextPool.disposeContext(env);
-    LeaveCriticalsection(taskCs);
+    leaveCriticalSection(taskCs);
     doneCriticalSection(taskCs);
   end;
 

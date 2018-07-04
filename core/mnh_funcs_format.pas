@@ -163,14 +163,14 @@ DESTRUCTOR T_format.destroy;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
   begin;
-    if not(context.threadLocalMessages.continueEvaluation) then exit(nil);
+    if not(context.messages.continueEvaluation) then exit(nil);
     system.enterCriticalSection(cachedFormatCS);
     if cachedFormats.containsKey(formatString,result) then begin
       system.leaveCriticalSection(cachedFormatCS);
       exit(result);
     end;
     new(result,create(formatString,tokenLocation,context));
-    if context.threadLocalMessages.continueEvaluation then cachedFormats.put(formatString,result)
+    if context.messages.continueEvaluation then cachedFormats.put(formatString,result)
     else begin
       dispose(result,destroy);
       result:=nil;
@@ -202,7 +202,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           '%': if fmtPart then begin
                  if bracketLevel>0
                  then part:=part+formatString[i]
-                 else context.threadLocalMessages.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
+                 else context.messages.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
                end else begin
                  if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
                    part:=part+'%';
@@ -221,7 +221,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                  part:=part+formatString[i];
                  if bracketLevel<=0 then begin
                    if not(formatString[i] in FORMAT_CHARS) then
-                     context.threadLocalMessages.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
+                     context.messages.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
                    setLength(result,length(result)+1);
                    result[length(result)-1]:=part;
                    part:='';
@@ -251,12 +251,12 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       begin
         part:=trim(part);
         if pos('{',part)<=0 then begin
-          if pos('}',part)>0 then context.threadLocalMessages.raiseError('Invalid format specification: '+escapeString(part,es_dontCare),tokenLocation);
+          if pos('}',part)>0 then context.messages.raiseError('Invalid format specification: '+escapeString(part,es_dontCare),tokenLocation);
           expPart:='$'+intToStr(index);
         end else begin
           expPart:=copy(part,3,pos('}',part)-3);
           part:='%'+copy(part,pos('}',part)+1,length(part));
-          if (pos('{',part)>0) or (pos('}',part)>0) then context.threadLocalMessages.raiseError('Invalid format specification: '+escapeString(part,es_dontCare),tokenLocation);
+          if (pos('{',part)>0) or (pos('}',part)>0) then context.messages.raiseError('Invalid format specification: '+escapeString(part,es_dontCare),tokenLocation);
         end;
         if expressionString=''
         then expressionString:=                 '['+expPart
@@ -279,7 +279,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           end;
         end;
       end;
-      if context.threadLocalMessages.continueEvaluation
+      if context.messages.continueEvaluation
       then begin
         tempStringLiteral:=newStringLiteral('{'+expressionString+']}');
         result:=stringOrListToExpression(tempStringLiteral,
@@ -330,7 +330,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
-        except on E:Exception do context.threadLocalMessages.raiseError('Error during formatting: '+e.message,tokenLocation);
+        except on E:Exception do context.messages.raiseError('Error during formatting: '+e.message,tokenLocation);
         end;
       end;
 
@@ -374,7 +374,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_compoundTypes) and (P_compoundLiteral(params^.value[i])^.customType=nil) then begin
       if listSize=-1 then listSize:=P_compoundLiteral(params^.value[i])^.size
                   else if listSize<>P_compoundLiteral(params^.value[i])^.size then begin
-        context.threadLocalMessages.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^.value[i])^.size)+' for formatting.',tokenLocation);
+        context.messages.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_compoundLiteral(params^.value[i])^.size)+' for formatting.',tokenLocation);
         exit(C_EMPTY_STRING_ARRAY);
       end;
     end;
@@ -388,9 +388,9 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     then i:=length(parts) shr 1
     else i:=P_expression(formatSubrule)^.arity;
     if i<>(params^.size-1) then begin
-      context.threadLocalMessages.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
+      context.messages.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin
-        context.threadLocalMessages.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
+        context.messages.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
         disposeLiteral(formatSubrule);
         formatSubrule:=nil;
       end;
@@ -398,8 +398,8 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       exit(C_EMPTY_STRING_ARRAY);
     end;
     setLength(result,listSize);
-    for i:=0 to listSize-1 do if (context.threadLocalMessages.continueEvaluation) then result[i]:=getFormattedString(i);
-    if not(context.threadLocalMessages.continueEvaluation) then setLength(result,0);
+    for i:=0 to listSize-1 do if (context.messages.continueEvaluation) then result[i]:=getFormattedString(i);
+    if not(context.messages.continueEvaluation) then setLength(result,0);
     for i:=1 to length(iter)-1 do disposeLiteral(iter[i]);
   end;
 
@@ -417,7 +417,7 @@ FUNCTION format_imp intFuncSignature;
       {$ifdef fullVersion}
       context.callStackPop(nil);
       {$endif}
-      if not(context.threadLocalMessages.continueEvaluation) then exit(nil);
+      if not(context.messages.continueEvaluation) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
       else begin
@@ -437,12 +437,12 @@ FUNCTION printf_imp intFuncSignature;
       context.callStackPush(tokenLocation,@builtinLocation_printf,nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
-      if not(context.threadLocalMessages.continueEvaluation) then begin
+      if not(context.messages.continueEvaluation) then begin
         {$ifdef fullVersion}context.callStackPop(nil);{$endif}
         exit(nil);
       end;
       system.enterCriticalSection(print_cs);
-      context.threadLocalMessages.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
+      context.messages.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context.callStackPop(nil);{$endif}
@@ -498,7 +498,7 @@ FUNCTION parseTime_imp intFuncSignature;
         zNum:word=0;
     begin
       if length(format)<>length(input) then begin
-        context.threadLocalMessages.raiseError('parseTime expects two strings of equal length as parameters',tokenLocation);
+        context.messages.raiseError('parseTime expects two strings of equal length as parameters',tokenLocation);
         exit;
       end;
       input:=cleanString(input,digits,'0');
@@ -522,7 +522,7 @@ FUNCTION parseTime_imp intFuncSignature;
       try
         result:=EncodeDate(yNum,mNum,dNum)+EncodeTime(hNum,nNum,sNum,zNum);
       except
-        on E:Exception do context.threadLocalMessages.raiseError('parseTime failed:'+E.message,tokenLocation);
+        on E:Exception do context.messages.raiseError('parseTime failed:'+E.message,tokenLocation);
       end;
     end;
 
