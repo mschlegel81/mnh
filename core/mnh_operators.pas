@@ -100,7 +100,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if P_threadContext(context)^.callDepth>=STACK_DEPTH_LIMIT then begin
-        P_threadContext(context)^.threadLocalMessages.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
+        P_threadContext(context)^.messages.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
         exit(newVoidLiteral);
       end;
       parList:=newListLiteral(2);
@@ -119,10 +119,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     end;
     result:=OP_IMPL[op](LHS,RHS,tokenLocation,P_threadContext(context)^);
     if result=nil then begin
-      P_threadContext(context)^.threadLocalMessages.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_threadContext(context)^.messages.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       result:=newVoidLiteral;
     end else if (result^.literalType in C_compoundTypes) and (P_compoundLiteral(result)^.containsError) then begin
-      P_threadContext(context)^.threadLocalMessages.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      P_threadContext(context)^.messages.raiseError('Incompatible operators '+LHS^.typeString+' and '+RHS^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
       disposeLiteral(result);
       result:=newVoidLiteral;
     end;
@@ -242,7 +242,7 @@ FUNCTION outerFunc_id intFuncSignature;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.threadLocalMessages.raiseError('Stack overflow in overridden comparator',tokenLocation);
+        context.messages.raiseError('Stack overflow in overridden comparator',tokenLocation,mt_el4_systemError);
         exit(nil);
       end;
       inc(context.callDepth);
@@ -255,7 +255,7 @@ FUNCTION outerFunc_id intFuncSignature;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.threadLocalMessages.raiseError('Incompatible comparands '+arg0^.typeString+' and '+arg1^.typeString,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible comparands '+arg0^.typeString+' and '+arg1^.typeString,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -338,7 +338,7 @@ FUNCTION outerFunc_id intFuncSignature;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.threadLocalMessages.raiseError('Stack overflow in overridden operator',tokenLocation);
+        context.messages.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
         exit(nil);
       end;
       inc(context.callDepth);
@@ -351,7 +351,7 @@ FUNCTION outerFunc_id intFuncSignature;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.threadLocalMessages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -385,7 +385,7 @@ boolIntOperator;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
-        context.threadLocalMessages.raiseError('Stack overflow in overridden operator',tokenLocation);
+        context.messages.raiseError('Stack overflow in overridden operator',tokenLocation,mt_el4_systemError);
         exit(nil);
       end;
       inc(context.callDepth);
@@ -397,7 +397,7 @@ boolIntOperator;
     end;
     if (params<>nil) and (params^.size=2) then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.threadLocalMessages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);
@@ -770,7 +770,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         lt_bigint: if P_bigIntLiteral(RHS)^.value.canBeRepresentedAsInt32
                    then exit(pot_int_int(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value.toInt))
                    else begin
-                     context.threadLocalMessages.raiseError('Huge exponents are unimplemented',tokenLocation);
+                     context.messages.raiseError('Huge exponents are unimplemented',tokenLocation);
                      exit(newVoidLiteral);
                    end;
         lt_real:   exit(newRealLiteral(exp(ln(P_smallIntLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
@@ -783,7 +783,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         lt_bigint: if P_bigIntLiteral(RHS)^.value.canBeRepresentedAsInt32
                    then exit(pot_int_int(P_bigIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value.toInt))
                    else begin
-                     context.threadLocalMessages.raiseError('Huge exponents are unimplemented',tokenLocation);
+                     context.messages.raiseError('Huge exponents are unimplemented',tokenLocation);
                      exit(newVoidLiteral);
                    end;
         lt_real:   exit(newRealLiteral(exp(ln(P_bigIntLiteral(LHS)^.floatValue)*P_realLiteral(RHS)^.value)));
@@ -796,7 +796,7 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
         lt_bigint: if P_bigIntLiteral(RHS)^.value.canBeRepresentedAsInt32
                    then exit(pot_real_int(P_realLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value.toInt))
                    else begin
-                     context.threadLocalMessages.raiseError('Huge exponents are unimplemented',tokenLocation);
+                     context.messages.raiseError('Huge exponents are unimplemented',tokenLocation);
                      exit(newVoidLiteral);
                    end;
         lt_real:   exit(newRealLiteral(exp(ln(P_realLiteral(LHS)^.value)*P_realLiteral(RHS)^.value)));
@@ -856,7 +856,7 @@ genericOuter;
     if (params<>nil) and (params^.size=2)
     then begin
       result:=function_id(arg0,arg1,tokenLocation,context);
-      if result=nil then context.threadLocalMessages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
+      if result=nil then context.messages.raiseError('Incompatible operators '+arg0^.typeString+' and '+arg1^.typeString+' for operator '+C_tokenInfo[op].defaultId,tokenLocation);
     end else if (params<>nil) and (params^.size=1)
     then exit(arg0^.rereferenced)
     else if (params=nil) or (params^.size=0) then exit(newVoidLiteral);

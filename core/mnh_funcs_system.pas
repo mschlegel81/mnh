@@ -172,14 +172,14 @@ FUNCTION getEnv_impl intFuncSignature;
 //    end;
 //  end;
 //
-//FUNCTION setExitCode_impl intFuncSignature;
-//  begin
-//    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
-//      ExitCode:=int0^.intValue;
-//      context.adapters^.setUserDefinedExitCode(ExitCode);
-//      result:=newVoidLiteral;
-//    end else result:=nil;
-//  end;
+FUNCTION setExitCode_impl intFuncSignature;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
+      ExitCode:=int0^.intValue;
+      context.globalMessages^.setUserDefinedExitCode(ExitCode);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
 
 FUNCTION time_imp intFuncSignature;
   VAR res:P_literal;
@@ -236,7 +236,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
   //registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
   //registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
-  //registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
   builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+

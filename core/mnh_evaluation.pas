@@ -2,6 +2,9 @@ UNIT mnh_evaluation;
 INTERFACE
 USES sysutils,
      myGenerics,
+     {$ifndef debugMode}
+     myStringUtil,
+     {$endif}
      mnh_constants,mnh_basicTypes,
      mnh_litVar,
      mnh_tokens,
@@ -286,7 +289,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         {$ifdef debugMode}
         raise Exception.create('Stack overflow in (p)each construct.');
         {$else}
-        context.threadLocalMessages.raiseSystemError('Stack overflow in (p)each construct.',eachLocation);
+        context.threadLocalMessages.raiseError('Stack overflow in (p)each construct.',eachLocation,mt_el4_systemError);
         {$endif}
         exit;
       end;
@@ -407,8 +410,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         {$ifndef debugMode}
         except
           on e:Exception do begin
-            context.threadLocalMessages.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId,first^.location);
-            context.threadLocalMessages.raiseSystemError(e.message,first^.location);
+            context.threadLocalMessages.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
             exit;
           end;
         end;
@@ -433,8 +435,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         {$ifndef debugMode}
         except
           on e:Exception do begin
-            context.threadLocalMessages.raiseSystemError('Severe error trying to apply builtin rule '+first^.txt,first^.location);
-            context.threadLocalMessages.raiseSystemError(e.message,first^.location);
+            context.threadLocalMessages.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
             exit;
           end;
         end;
@@ -1265,9 +1266,7 @@ end}
     {$ifndef debugMode}
     except
       on e:Exception do begin
-        context.threadLocalMessages.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth));
-        if first<>nil then context.threadLocalMessages.raiseSystemError(e.message,errorLocation)
-                      else context.threadLocalMessages.raiseSystemError(e.message);
+        context.threadLocalMessages.raiseError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth)+C_lineBreakChar+e.message,errorLocation(first),mt_el4_systemError);
       end;
     end;
     {$endif}

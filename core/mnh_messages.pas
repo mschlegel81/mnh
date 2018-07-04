@@ -238,7 +238,7 @@ CONSTRUCTOR T_storedMessageWithText.create(CONST messageType_: T_messageType; CO
 CONSTRUCTOR T_errorMessage.create(CONST messageType_:T_messageType; CONST loc:T_searchTokenLocation;  CONST message:T_arrayOfString);
   begin
     inherited create(messageType_,loc,message);
-    SetLength(stacktrace,0);
+    setLength(stacktrace,0);
   end;
 
 CONSTRUCTOR T_storedMessage.create(CONST messageType_: T_messageType; CONST loc: T_searchTokenLocation);
@@ -303,7 +303,7 @@ DESTRUCTOR T_storedMessageWithText.destroy;
 DESTRUCTOR T_errorMessage.destroy;
   begin
     inherited destroy;
-    SetLength(stacktrace,0);
+    setLength(stacktrace,0);
   end;
 
 DESTRUCTOR T_payloadMessage.destroy;

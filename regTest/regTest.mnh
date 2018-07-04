@@ -27,7 +27,7 @@ testFile(scriptFileName:String,doLog:Boolean)->
           .getInner(2)
           .split("\n")
           .flatten|checkAfterTest(scriptFileName);
-
+    note("Collected the following output: \n",output.join("\n"));
     scriptFileName.isSmokeTest
     ? logSmokeTestRunTime(logName,
                           time-startTime,

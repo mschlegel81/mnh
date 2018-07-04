@@ -183,9 +183,9 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
   begin
-    predigest(rep,nil,context.recycler,context.threadLocalMessages);
+    predigest(rep,nil,context.recycler,context.messages);
     if (rep^.tokType<>tt_expBraceOpen) then begin
-      context.threadLocalMessages.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
+      context.messages.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
     end;
     t:=rep^.next; prev:=rep;
@@ -201,16 +201,16 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
       t:=t^.next;
     end;
     if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-      context.threadLocalMessages.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
+      context.messages.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
       exit;
     end;
 
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
     context.recycler.disposeToken(t); //dispose closing curly bracket
-    if context.threadLocalMessages.continueEvaluation then begin
+    if context.messages.continueEvaluation then begin
       new(inlineSubRule,createFromInline(inlineRuleTokens,context));
-      if context.threadLocalMessages.continueEvaluation then begin
+      if context.messages.continueEvaluation then begin
         rep^.tokType:=tt_literal;
         rep^.data:=inlineSubRule;
       end else dispose(inlineSubRule,destroy);
@@ -241,17 +241,17 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
           tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
           tt_save: begin
             if subExpressionLevel=0 then begin
-              if indexOfSave>=0     then context.threadLocalMessages.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
-              else if scopeLevel<>1 then context.threadLocalMessages.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
+              if indexOfSave>=0     then context.messages.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
+              else if scopeLevel<>1 then context.messages.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
               else begin
                 indexOfSave:=i;
-                makeStateful(@context.threadLocalMessages,token.location);
+                makeStateful(@context.messages,token.location);
               end;
             end;
             parIdx:=-1;
           end;
           tt_return: begin
-            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.threadLocalMessages.raiseError('return statements are currently only allowed in subrules',token.location);
+            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.messages.raiseError('return statements are currently only allowed in subrules',token.location);
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
@@ -367,9 +367,9 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
           tt_expBraceOpen : inc(subExpressionLevel);
           tt_expBraceClose: dec(subExpressionLevel);
           tt_save: if subExpressionLevel=0 then begin
-            if indexOfSave>=0 then context.threadLocalMessages.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-            if scopeLevel<>1 then context.threadLocalMessages.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-            makeStateful(@context.threadLocalMessages,token.location);
+            if indexOfSave>=0 then context.messages.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+            if scopeLevel<>1 then context.messages.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+            makeStateful(@context.messages,token.location);
             indexOfSave:=i;
           end;
         end;
@@ -475,12 +475,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         firstRep:=nil;
         lastRep:=nil;
         leaveCriticalSection(subruleCallCs);
-        context.threadLocalMessages.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
+        context.messages.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
         exit;
       end;
       currentlyEvaluating:=true;
 
-      if not(functionIdsReady) then resolveIds(@context.threadLocalMessages);
+      if not(functionIdsReady) then resolveIds(@context.messages);
       blocking:=typ in C_subruleExpressionTypes;
       firstRep:=context.recycler.newToken(getLocation,'',beginToken[blocking]);
       lastRep:=firstRep;
@@ -557,7 +557,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         else lastRep:=firstRep^.last;
         context.valueStore:=previousValueStore;
         if firstCallOfResumable then begin
-          if context.threadLocalMessages.continueEvaluation then begin
+          if context.messages.continueEvaluation then begin
             updateBody;
           end else begin
             dispose(saveValueStore,destroy);
@@ -585,12 +585,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       result:=false;
       case typ of
         et_eachBody: begin
-          if param=nil then context.threadLocalMessages.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
-                       else context.threadLocalMessages.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
+          if param=nil then context.messages.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
+                       else context.messages.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
         end;
         et_inline,et_inlineIteratable,et_inlineStateful: begin
-          if param=nil then context.threadLocalMessages.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
-                       else context.threadLocalMessages.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
+          if param=nil then context.messages.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
+                       else context.messages.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
         end;
       end;
     end;
@@ -730,7 +730,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     end;
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
                       (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_statefulExpressionTypes) then begin
-      P_threadContext(threadContext)^.threadLocalMessages.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
+      P_threadContext(threadContext)^.messages.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
       exit(newVoidLiteral);
     end;
     if LHS<>nil then begin
@@ -936,7 +936,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
       result:=false;
-      if allowRaiseError then P_threadContext(context)^.threadLocalMessages.raiseError('Expression does not return a boolean.',location);
+      if allowRaiseError then P_threadContext(context)^.messages.raiseError('Expression does not return a boolean.',location);
     end;
   end;
 
@@ -1514,12 +1514,12 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.recycler,context.threadLocalMessages{$ifdef fullVersion},nil{$endif});
+    statement:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
     lexer.destroy;
     if statement.firstToken=nil then begin
-      context.threadLocalMessages.raiseError('The parsed expression appears to be empty',location);
+      context.messages.raiseError('The parsed expression appears to be empty',location);
       exit(nil);
-    end else if not(context.threadLocalMessages.continueEvaluation) then begin
+    end else if not(context.messages.continueEvaluation) then begin
       exit(nil); //Parsing error ocurred
     end;
     result:=statement.firstToken;
@@ -1546,7 +1546,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
                     else last^.next:=subTokens;
       last:=subTokens^.last;
     end;
-    preprocessStatement(result,context.threadLocalMessages{$ifdef fullVersion},nil{$endif});
+    preprocessStatement(result,context.messages{$ifdef fullVersion},nil{$endif});
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
@@ -1560,7 +1560,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
     if first=nil then exit(nil);
 
-    if not(first^.areBracketsPlausible(context.threadLocalMessages)) then begin
+    if not(first^.areBracketsPlausible(context.messages)) then begin
       context.recycler.cascadeDisposeToken(first);
       exit(nil);
     end;
@@ -1572,14 +1572,14 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     end;
 
     digestInlineExpression(first,context);
-    if (context.threadLocalMessages.continueEvaluation) and (first^.next<>nil) then context.threadLocalMessages.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-    if not(context.threadLocalMessages.continueEvaluation) then begin
+    if (context.messages.continueEvaluation) and (first^.next<>nil) then context.messages.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if not(context.messages.continueEvaluation) then begin
       context.recycler.cascadeDisposeToken(first);
       exit(nil);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
       context.recycler.disposeToken(first);
-      context.threadLocalMessages.raiseError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location,mt_el4_systemError);
+      context.messages.raiseError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location,mt_el4_systemError);
       exit(nil);
     end;
     result:=P_expressionLiteral(first^.data);

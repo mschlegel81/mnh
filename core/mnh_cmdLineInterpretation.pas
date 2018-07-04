@@ -120,7 +120,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       context.afterEvaluation;
       dispose(package,destroy);
       context.destroy;
-//      consoleAdapters.setExitCode;
+      consoleAdapters.setExitCode;
     end;
 
   PROCEDURE fileMode;
@@ -151,7 +151,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       end;
       {$endif}
       context.destroy;
-//      consoleAdapters.setExitCode;
+      consoleAdapters.setExitCode;
     end;
 
   PROCEDURE addParameter(VAR list:T_arrayOfString; CONST index:longint);

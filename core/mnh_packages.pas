@@ -188,7 +188,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
-      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_messageConnector; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+      FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       FUNCTION runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
@@ -689,18 +689,20 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerAdapters:P_messageConnector; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
+FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
   VAR fileName:string='';
+      c:P_connectorAdapter=nil;
   begin
     if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
     then fileName:=expandFileName(filenameOrId)
     else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
     if (fileName='') or not(fileExists(fileName)) then begin
-      callerAdapters^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
+      callerContext^.globalMessages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
       exit(nil);
     end;
     adapters.clear;
-    if connectLevel>0 then adapters.addOutAdapter(callerAdapters^.getConnector(connectLevel>=1,connectLevel>=2,connectLevel>=3),true);
+    callerContext^.threadLocalMessages.addChild(@evaluationContext.threadLocalMessages);
+    if connectLevel>0 then c:=adapters.connectToOther(callerContext^.globalMessages,connectLevel>=1,connectLevel>=2,connectLevel>=3);
     if enforceDeterminism then evaluationContext.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
@@ -709,6 +711,8 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       evaluationContext.afterEvaluation;
     finally
       result:=messagesToLiteralForSandbox(collector.storedMessages);
+      if c<>nil then callerContext^.globalMessages^.removeOutAdapter(c);
+      evaluationContext.workerContextDone();
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
   end;
@@ -1364,10 +1368,13 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationC
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           writeln(getHelpOnMain);
           {$ifdef fullVersion}displayedHelp:=true;{$endif}
-        end else context.raiseCannotApplyError('user defined rule '+mainRule^.getId,
-                                               parametersForMain,
-                                               mainRule^.getLocation,
-                                               C_lineBreakChar+join(mainRule^.getCmdLineHelpText,C_lineBreakChar),true);
+        end else begin
+          context.raiseCannotApplyError('user defined rule '+mainRule^.getId,
+                                        parametersForMain,
+                                        mainRule^.getLocation,
+                                        C_lineBreakChar+join(mainRule^.getCmdLineHelpText,C_lineBreakChar),true);
+          if (length(mainParameters)=1) and (mainParameters[0]='-h') then writeln(getHelpOnMain);
+        end;
         if profile then context.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
         context.callStackPop(nil);
@@ -1516,7 +1523,7 @@ PROCEDURE T_package.writeDataStores(VAR adapters:T_threadLocalMessages; CONST re
   end;
 
 PROCEDURE T_package.finalize(VAR context:T_threadContext);
-  VAR ruleList:array of P_rule;
+  VAR rule:P_rule;
       i:longint;
   begin
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context);
@@ -1527,11 +1534,7 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     if isMain then begin
       context.getGlobals^.stopWorkers;
     end;
-    //context.globalMessages^.updateErrorlevel;
-    ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do
-      if ruleList[i]^.getRuleType=rt_datastore then P_datastoreRule(ruleList[i])^.writeBack(context.threadLocalMessages);
-    setLength(ruleList,0);
+    for rule in packageRules.valueSet do if rule^.getRuleType=rt_datastore then P_datastoreRule(rule)^.writeBack(context.threadLocalMessages);
   end;
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;

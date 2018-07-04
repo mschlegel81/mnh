@@ -124,7 +124,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_lit
 FUNCTION clearPrint_imp intFuncSignature;
   begin
     system.enterCriticalSection(print_cs);
-    context.globalMessages^.postSingal(mt_clearConsole,C_nilTokenLocation);
+    context.messages.globalMessages^.postSingal(mt_clearConsole,C_nilTokenLocation);
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -163,7 +163,7 @@ FUNCTION print_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('print',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.globalMessages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
+    context.messages.globalMessages^.postTextMessage(mt_printline,C_nilTokenLocation,getStringToPrint(params,ft_onlyIfTabsAndLinebreaks));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -172,7 +172,7 @@ FUNCTION printDirect_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('printDirect',tokenLocation,[se_output])) then exit(nil);
     system.enterCriticalSection(print_cs);
-    context.globalMessages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
+    context.messages.globalMessages^.postTextMessage(mt_printdirect,C_nilTokenLocation,getStringToPrint(params,ft_never));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -180,22 +180,22 @@ FUNCTION printDirect_imp intFuncSignature;
 FUNCTION note_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('note',tokenLocation,[se_output])) then exit(nil);
-    context.globalMessages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
+    context.messages.globalMessages^.postTextMessage(mt_el1_userNote,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
 FUNCTION warn_imp intFuncSignature;
   begin
     if not(context.checkSideEffects('warn',tokenLocation,[se_output])) then exit(nil);
-    context.globalMessages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
+    context.messages.globalMessages^.postTextMessage(mt_el2_userWarning,tokenLocation,getStringToPrint(params,ft_always));
     result:=newVoidLiteral;
   end;
 
 FUNCTION fail_impl intFuncSignature;
   begin
-    if (params=nil) or (params^.size=0) then context.threadLocalMessages.raiseError('Fail',tokenLocation,mt_el3_userDefined)
+    if (params=nil) or (params^.size=0) then context.messages.raiseError('Fail',tokenLocation,mt_el3_userDefined)
     else begin
-      context.threadLocalMessages.raiseError(join(getStringToPrint(params,ft_always),C_lineBreakChar),tokenLocation,mt_el3_userDefined);
+      context.messages.raiseError(join(getStringToPrint(params,ft_always),C_lineBreakChar),tokenLocation,mt_el3_userDefined);
       result:=newVoidLiteral;
     end;
     result:=nil;

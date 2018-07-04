@@ -87,8 +87,8 @@ TYPE
       dat:array[0..2047] of P_token;
       fill:longint;
     public
-      CONSTRUCTOR create;
-      DESTRUCTOR destroy;
+      PROCEDURE init;
+      PROCEDURE cleanupInstance;
 
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -492,14 +492,14 @@ PROCEDURE T_token.setModifier(CONST modifier:T_modifier);
     tokType:=tt_modifier;
   end;
 
-CONSTRUCTOR T_tokenRecycler.create;
+PROCEDURE T_TokenRecycler.init;
   VAR i:longint;
   begin
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
   end;
 
-DESTRUCTOR T_tokenRecycler.destroy;
+PROCEDURE T_tokenRecycler.cleanupInstance;
   begin
     while fill>0 do begin
       dec(fill);

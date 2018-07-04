@@ -173,7 +173,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       proceed:boolean=true;
       dequeueContext:P_threadContext;
   begin
-    dequeueContext:=contextPool.newContext(@context);
+    dequeueContext:=contextPool.newContext();
     recycling.fill:=0;
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
@@ -282,7 +282,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       isExpressionNullary:boolean;
       dequeueContext:P_threadContext;
   begin
-    dequeueContext:=contextPool.newContext(@context);
+    dequeueContext:=contextPool.newContext();
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
@@ -374,7 +374,7 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       aimEnqueueCount:longint;
       dequeueContext:P_threadContext;
   begin
-    dequeueContext:=contextPool.newContext(@context);
+    dequeueContext:=contextPool.newContext();
     recycling.fill:=0;
     environment:=context.getFutureEnvironment;
     aimEnqueueCount:=workerThreadCount*2+1;
@@ -440,7 +440,7 @@ PROCEDURE T_futureTask.evaluate(VAR context: T_threadContext);
       context.workerContextInit(env);
       payload^.executeInContext(@context);
       disposeLiteral(payload);
-      context.workerContextDone;
+      context.workerContextDone();
     finally
       enterCriticalSection(taskCs);
       state:=fts_ready;
@@ -473,7 +473,7 @@ PROCEDURE T_filterTask.evaluate(VAR context: T_threadContext);
         if mapRule^.evaluateToBoolean(mapRule^.getLocation,@context,true,mapParameter)
         then evaluationResult.literal:=mapParameter
         else evaluationResult.literal:=nil;
-        context.workerContextDone;
+        context.workerContextDone();
       end;
     finally
       enterCriticalSection(taskCs);
@@ -561,7 +561,8 @@ PROCEDURE T_eachTask.evaluate(VAR context: T_threadContext);
     state:=fts_evaluating;
     leaveCriticalSection(taskCs);
     try
-      if context.threadLocalMessages.continueEvaluation then with eachPayload do begin
+      if context            .threadLocalMessages.continueEvaluation and
+         env.callingContext^.threadLocalMessages.continueEvaluation then with eachPayload do begin
         context.workerContextInit(env);
         context.valueStore^.scopePush(false);
         idxLit:=newIntLiteral(eachIndex);

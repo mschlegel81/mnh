@@ -72,7 +72,7 @@ FUNCTION runScript_imp intFuncSignature;
       end;
       setLength(scriptParams,list1^.size);
       for i:=0 to list1^.size-1 do scriptParams[i]:=P_stringLiteral(list1^.value[i])^.value;
-      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,context.globalMessages,byte(connect),enforceDeterminism);
+      result:=sandbox^.runScript(str0^.value,scriptParams,tokenLocation,@context,byte(connect),enforceDeterminism);
     end;
   end;
 

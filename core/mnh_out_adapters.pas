@@ -69,27 +69,26 @@ TYPE
       {$ifdef fullVersion}
       traceCallback:F_traceCallback;
       {$endif}
-      globalMessages:P_messageConnector;
-
       parentMessages:P_threadLocalMessages;
       childMessages:array of P_threadLocalMessages;
       PROCEDURE propagateFlags;
     public
-    CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback; {$endif});
-    PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
+      globalMessages:P_messageConnector;
+      CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback; {$endif});
+      PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
 
-    PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
-    PROPERTY getFlags:T_stateFlags read flags;
-    PROCEDURE clear; virtual;
-    PROCEDURE escalateErrors;
-    FUNCTION continueEvaluation:boolean;
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE setGlobal(CONST global:P_messageConnector);
-    PROCEDURE setParent(CONST parent:P_threadLocalMessages);
-    PROCEDURE dropChild(CONST child:P_threadLocalMessages);
-    PROCEDURE addChild (CONST child:P_threadLocalMessages);
-    PROCEDURE setStopFlag;
-    PROCEDURE logGuiNeeded;
+      PROCEDURE setParent(CONST parent:P_threadLocalMessages);
+      PROCEDURE dropChild(CONST child:P_threadLocalMessages);
+      PROCEDURE addChild (CONST child:P_threadLocalMessages);
+      PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
+      PROPERTY getFlags:T_stateFlags read flags;
+      PROCEDURE clear; virtual;
+      PROCEDURE escalateErrors;
+      FUNCTION continueEvaluation:boolean;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION childCount:longint;
+      PROCEDURE setStopFlag;
+      PROCEDURE logGuiNeeded;
   end;
 
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
@@ -135,6 +134,7 @@ TYPE
       connectorCS:TRTLCriticalSection;
       adapters:array of T_flaggedAdapter;
       collecting,collected:T_messageTypeSet;
+      userDefinedExitCode:longint;
     public
       preferredEchoLineLength:longint;
       CONSTRUCTOR create;
@@ -155,8 +155,13 @@ TYPE
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       FUNCTION addOutfile(CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_textFileOutAdapter;
       FUNCTION addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
+      PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
 
-      FUNCTION getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+      FUNCTION connectToOther(CONST other:P_messageConnector; CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+
+      PROCEDURE setUserDefinedExitCode(CONST code:longint);
+      PROCEDURE setExitCode;
+      FUNCTION triggersBeep:boolean;
   end;
 
   //T_adapters=object
@@ -402,16 +407,9 @@ FUNCTION T_threadLocalMessages.continueEvaluation: boolean;
 
 DESTRUCTOR T_threadLocalMessages.destroy;
   begin
-    escalateErrors;
+    clear;
     if parentMessages<>nil then parentMessages^.dropChild(@self);
     inherited destroy;
-  end;
-
-PROCEDURE T_threadLocalMessages.setGlobal(CONST global:P_messageConnector);
-  begin
-    enterCriticalSection(cs);
-    globalMessages:=global;
-    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_threadLocalMessages.setParent(CONST parent:P_threadLocalMessages);
@@ -448,6 +446,13 @@ PROCEDURE T_threadLocalMessages.addChild(CONST child: P_threadLocalMessages);
       setLength(childMessages,i+1);
       childMessages[i]:=child;
     end;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_threadLocalMessages.childCount:longint;
+  begin
+    enterCriticalSection(cs);
+    result:=length(childMessages);
     leaveCriticalSection(cs);
   end;
 
@@ -512,6 +517,7 @@ PROCEDURE T_messageConnector.clear;
     enterCriticalSection(connectorCS);
     for a in adapters do a.adapter^.clear;
     collected:=[];
+    userDefinedExitCode:=0;
     leaveCriticalSection(connectorCS);
   end;
 
@@ -969,14 +975,6 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 //    containedMessageTypes:=[];
 //  end;
 //
-//PROCEDURE T_adapters.updateErrorlevel;
-//  VAR mt:T_messageType;
-//  begin
-//    maxErrorLevel:=0;
-//    for mt in containedMessageTypes do
-//    if (mt<>mt_el4_haltMessageQuiet) and
-//       (C_messageTypeMeta[mt].level>maxErrorLevel) then maxErrorLevel:=C_messageTypeMeta[mt].level;
-//  end;
 //
 //PROCEDURE T_adapters.haltEvaluation;                                   begin raiseCustomMessage(message(mt_el4_haltMessageReceived,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
 //PROCEDURE T_adapters.logEndOfEvaluation;                               begin raiseCustomMessage(message(mt_endOfEvaluation        ,C_EMPTY_STRING_ARRAY,C_nilTokenLocation)); end;
@@ -1005,8 +1003,11 @@ PROCEDURE T_messageConnector.addOutAdapter(CONST p: P_abstractOutAdapter; CONST 
     leaveCriticalSection(connectorCS);
   end;
 
-FUNCTION T_messageConnector.getConnector(CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
-  begin new(result,create(@self,includePrint,includeWarnings,includeErrors)); end;
+FUNCTION T_messageConnector.connectToOther(CONST other:P_messageConnector; CONST includePrint,includeWarnings,includeErrors:boolean):P_connectorAdapter;
+  begin
+    new(result,create(@self,includePrint,includeWarnings,includeErrors));
+    other^.addOutAdapter(result,true);
+  end;
 
 FUNCTION T_messageConnector.addConsoleOutAdapter(CONST verbosity:string=''):P_consoleOutAdapter;
   VAR consoleOutAdapter:P_consoleOutAdapter;
@@ -1015,6 +1016,19 @@ FUNCTION T_messageConnector.addConsoleOutAdapter(CONST verbosity:string=''):P_co
     addOutAdapter(consoleOutAdapter,true);
     result:=consoleOutAdapter;
   end;
+
+PROCEDURE T_messageConnector.removeOutAdapter(CONST p:P_abstractOutAdapter);
+  VAR i:longint=0;
+  begin
+    enterCriticalSection(connectorCS);
+    while i<length(adapters) do if adapters[i].adapter=p then begin
+      if adapters[i].doDispose then dispose(adapters[i].adapter,destroy);
+      adapters[i]:=adapters[length(adapters)-1];
+      setLength(   adapters,length(adapters)-1);
+    end else inc(i);
+    leaveCriticalSection(connectorCS);
+  end;
+
 //
 //PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
 //  VAR i:longint;
@@ -1067,31 +1081,31 @@ FUNCTION T_messageConnector.addConsoleOutAdapter(CONST verbosity:string=''):P_co
 //    result:=nil;
 //  end;
 //
-//PROCEDURE T_adapters.setUserDefinedExitCode(CONST code:longint);
-//  begin
-//    userDefinedExitCode:=code;
-//  end;
-//
-//PROCEDURE T_adapters.setExitCode;
-//  VAR mt:T_messageType;
-//      code:longint=0;
-//  begin
-//    code:=userDefinedExitCode;
-//    for mt in containedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
-//    ExitCode:=code;
-//  end;
-//
-//FUNCTION T_adapters.triggersBeep:boolean;
-//  VAR mt:T_messageType;
-//  begin
-//    for mt in containedMessageTypes do if (C_messageTypeMeta[mt].systemErrorLevel>0) then begin
-//      {$ifdef debugMode}
-//      writeln(stdErr,'        DEBUG: Beep triggered by message type ',mt);
-//      {$endif}
-//      exit(true);
-//    end;
-//    result:=false;
-//  end;
+PROCEDURE T_messageConnector.setUserDefinedExitCode(CONST code:longint);
+  begin
+    userDefinedExitCode:=code;
+  end;
+
+PROCEDURE T_messageConnector.setExitCode;
+  VAR mt:T_messageType;
+      code:longint=0;
+  begin
+    code:=userDefinedExitCode;
+    for mt in collected do if (C_messageTypeMeta[mt].systemErrorLevel>code) then code:=C_messageTypeMeta[mt].systemErrorLevel;
+    ExitCode:=code;
+  end;
+
+FUNCTION T_messageConnector.triggersBeep:boolean;
+  VAR mt:T_messageType;
+  begin
+    for mt in collected do if (C_messageTypeMeta[mt].systemErrorLevel>0) then begin
+      {$ifdef debugMode}
+      writeln(stdErr,'        DEBUG: Beep triggered by message type ',mt);
+      {$endif}
+      exit(true);
+    end;
+    result:=false;
+  end;
 //
 //{$ifdef fullVersion}
 //FUNCTION T_adapters.plot:P_plot;
