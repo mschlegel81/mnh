@@ -65,7 +65,7 @@ TYPE
     public
       CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_,quality_:longint);
       CONSTRUCTOR createRenderToStringRequest(CONST width_,height_,quality_:longint);
-      PROCEDURE SetString(CONST s:string);
+      PROCEDURE setString(CONST s:string);
       FUNCTION getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages):string;
       PROPERTY isRenderToStringRequest:boolean read targetIsString;
   end;
@@ -166,6 +166,7 @@ TYPE
       displayImmediate           :boolean;
       doPlot:F_execPlotCallback;
       pullSettingsToGui:F_pullSettingsToGuiCallback;
+      isProcessingMessage:boolean;
       PROCEDURE processMessage(CONST message:P_storedMessage);
     public
       currentPlot:T_plot;
@@ -276,7 +277,7 @@ CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_
     outputString:='';
   end;
 
-PROCEDURE T_plotRenderRequest.SetString(CONST s: string);
+PROCEDURE T_plotRenderRequest.setString(CONST s: string);
   begin
     enterCriticalSection(messageCs);
     outputString:=s;
@@ -1016,8 +1017,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height,
     storeImage.destroy;
   end;
 
-FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint
-  ): ansistring;
+FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
   VAR storeImage: TImage;
       memStream: TStringStream;
   begin
@@ -1073,7 +1073,7 @@ PROCEDURE T_plot.processMessage(VAR m: T_plotOptionsMessage);
 PROCEDURE T_plot.processMessage(VAR m: T_plotRenderRequest);
   begin
     if m.isRenderToStringRequest
-    then m.SetString(renderToString(m.width,m.height,m.quality))
+    then m.setString(renderToString(m.width,m.height,m.quality))
     else renderToFile(m.fileName,   m.width,m.height,m.quality);
   end;
 
@@ -1084,6 +1084,7 @@ PROCEDURE T_plot.processMessage(VAR m: T_plotDropRowRequest);
 
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   begin
+    isProcessingMessage:=true;
     case message^.messageType of
       mt_plot_addText:           currentPlot.processMessage(P_addTextMessage    (message)^);
       mt_plot_addRow :           currentPlot.processMessage(P_addRowMessage     (message)^);
@@ -1106,14 +1107,17 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
     end;
     plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or
       (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
+    isProcessingMessage:=false;
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;
   VAR m:P_storedMessage;
   begin
     enterCriticalSection(cs);
-    for m in storedMessages do processMessage(m);
-    clear;
+    if not(isProcessingMessage) then begin
+      for m in storedMessages do processMessage(m);
+      clear;
+    end;
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
@@ -1124,6 +1128,7 @@ PROCEDURE T_plotSystem.doneGuiInteraction;
 CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback);
   begin
     inherited create(at_plot,C_includableMessages[at_plot]);
+    isProcessingMessage:=false;
     plotChangedSinceLastDisplay:=false;
     currentPlot.createWithDefaults;
     doPlot:=executePlotCallback;

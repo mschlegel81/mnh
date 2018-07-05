@@ -538,7 +538,6 @@ FUNCTION uninitialized_fallback intFuncSignature;
 
 PROCEDURE initializePlotForm;
   begin
-    writeln('initializePlotForm');
     reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );

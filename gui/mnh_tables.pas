@@ -104,6 +104,10 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       i:longint;
   begin
     if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
+    if not(gui_started) then begin
+      context.messages.logGuiNeeded;
+      exit(nil);
+    end;
     if (params<>nil) and
        (params^.size>0) and
        (params^.value[0]^.literalType in C_listTypes) then begin

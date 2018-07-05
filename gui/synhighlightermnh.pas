@@ -411,7 +411,7 @@ FUNCTION TSynMnhSyn.getToken: ansistring;
   begin
     len := run-fTokenPos;
     result := '';
-    SetString(result, (fLine+fTokenPos), len);
+    setString(result, (fLine+fTokenPos), len);
   end;
 
 PROCEDURE TSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer);

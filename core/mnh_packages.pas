@@ -417,8 +417,7 @@ FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean;
     end;
 
   PROCEDURE addErrors(CONST list:T_storedMessages);
-    VAR i:longint;
-        s,head,rest:string;
+    VAR s,head,rest:string;
         m:P_storedMessage;
     begin
       for m in list do begin
@@ -795,9 +794,6 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       tok:T_rawToken;
       m:P_storedMessage;
   begin
-    writeln('Sandbox executes:');
-    for tmp in input do writeln(tmp);
-    writeln(':Sandbox executes');
     messages:=sandbox^.execute(input);
     setLength(textOut,0);
     setLength(htmlOut,0);

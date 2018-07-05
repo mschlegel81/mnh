@@ -250,51 +250,6 @@ FUNCTION workerThreadCount:longint;
   end;
 {$endif}
 
-//CONSTRUCTOR T_threadContext.createThreadContext(CONST parent_:P_evaluationContext; CONST outAdapters:P_messageConnector=nil);
-//  begin
-//    recycler  .create;
-//    new(valueStore,create);
-//    {$ifdef fullVersion}
-//    callStack .create;
-//    parentCustomForm:=nil;
-//    {$endif}
-//    parent        :=parent_;
-//    adapters.create(@callStack.ensureTraceInError,outAdapters);
-//    callingContext:=nil;
-//    Cache    :=nil;
-//    allowedSideEffects:=C_allSideEffects;
-//    callDepth:=0;
-//    dequeueContext_:=nil;
-//  end;
-//
-//CONSTRUCTOR T_threadContext.createWorkerContext(CONST adapters_:P_messageConnector);
-//  begin
-//    recycler  .create;
-//    new(valueStore,create);
-//    {$ifdef fullVersion}
-//    callStack .create;
-//    parentCustomForm:=nil;
-//    {$endif}
-//    allowedSideEffects:=C_allSideEffects;
-//    regexCache    :=nil;
-//    parent        :=nil;
-//    adapters.create(@callStack.ensureTraceInError,adapters_);
-//    callingContext:=nil;
-//    dequeueContext_:=nil;
-//  end;
-//
-//DESTRUCTOR T_threadContext.destroy;
-//  begin
-//    {$ifdef debugMode}{$ifdef fullVersion}
-//    if callStack.size>0 then raise Exception.create('Non-empty callstack on T_threadContext.doneEvaluating');
-//    parentCustomForm:=nil;
-//    {$endif}{$endif}
-//    if valueStore<>nil then dispose(valueStore,destroy);
-//    recycler  .destroy;
-//    if regexCache<>nil then dispose(regexCache,destroy);
-//    if dequeueContext_<>nil then dispose(dequeueContext_,destroy);
-//  end;
-
 CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
   begin
     inherited create();
@@ -316,19 +271,7 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
     allowedSideEffects:=C_allSideEffects;
     mainParameters:=C_EMPTY_STRING_ARRAY;
   end;
-//
-//CONSTRUCTOR T_evaluationGlobals.createAndResetSilentContext({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST mainParams:T_arrayOfString; CONST customSideEffecWhitelist:T_sideEffects);
-//  VAR tempAdapters:P_messageConnector;
-//  begin
-//    new(tempAdapters,create);
-//    create(tempAdapters);
-//    taskQueue:=nil;
-//    disposeAdaptersOnDestruction:=true;
-//    allowedSideEffects:=customSideEffecWhitelist;
-//    mainParameters:=C_EMPTY_STRING_ARRAY;
-//    resetForEvaluation({$ifdef fullVersion}package,{$endif}ect_silent,mainParams);
-//  end;
-//
+
 DESTRUCTOR T_evaluationGlobals.destroy;
   begin
     prng.destroy;
@@ -467,24 +410,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and messages.globalMessages^.triggersBeep then beep;
   end;
-//
-//PROCEDURE T_evaluationGlobals.setupThreadContext(CONST context:P_threadContext);
-//  VAR threadOptions:T_threadContextOptions=[];
-//      threadOption :T_threadContextOption;
-//  begin
-//    for threadOption:=low(C_equivalentOption) to high(C_equivalentOption) do if C_equivalentOption[threadOption] in options then include(threadOptions,threadOption);
-//    context^.options:=threadOptions;
-//    context^.parent:=@self;
-//    {$ifdef fullVersion}
-//    context^.callStack.clear;
-//    context^.parentCustomForm:=nil;
-//    {$endif}
-//    context^.valueStore^.clear;
-//    context^.adapters:=adapters;
-//    context^.callDepth:=0;
-//    context^.allowedSideEffects:=allowedSideEffects;
-//  end;
-//
+
 {$ifdef fullVersion}
 FUNCTION T_evaluationGlobals.stepper:P_debuggingStepper;
   begin
@@ -497,17 +423,7 @@ FUNCTION T_evaluationGlobals.isPaused:boolean;
     result:=(debuggingStepper<>nil) and debuggingStepper^.paused;
   end;
 {$endif}
-//
-//FUNCTION T_evaluationGlobals.getTaskQueue:P_taskQueue;
-//  begin
-//    if taskQueue=nil then begin
-//      enterCriticalSection(globalLock);
-//      if taskQueue=nil then new(taskQueue,create);
-//      leaveCriticalSection(globalLock);
-//    end;
-//    result:=taskQueue;
-//  end;
-//
+
 FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
   begin
     if related.evaluation^.wallClock=nil then begin
@@ -523,13 +439,12 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
     end;
     result:=related.evaluation^.wallClock.elapsed;
   end;
-//
+
 PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCategory);
   begin
     with timingInfo do timeSpent[component]:=wallclockTime-timeSpent[component];
   end;
-//
-//
+
 FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean): P_threadContext;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
@@ -538,8 +453,7 @@ FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean): P_threadConte
     if local then result^.valueStore^.parentStore:=valueStore
              else result^.valueStore^.parentStore:=nil;
   end;
-//
-//
+
 {$ifdef fullVersion}
 PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation;
   CONST callee: P_objectWithIdAndLocation;
@@ -577,8 +491,7 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntr
     valueStore^.reportVariables(variableReport);
   end;
 {$endif}
-//{$endif}
-//
+
 FUNCTION T_threadContext.reduceExpression(VAR first: P_token): T_reduceResult;
   begin result:=reduceExpressionCallback(first,self); end;
 
@@ -699,27 +612,6 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
 FUNCTION T_evaluationGlobals.queuedFuturesCount:longint;
   begin result:=taskQueue.queuedCount; end;
 
-//
-//{$ifdef fullVersion}
-//PROCEDURE T_threadContext.callStackPrint(CONST targetAdapters:P_adapters=nil);
-//  VAR p:P_threadContext;
-//      a:P_adapters;
-//  begin
-//    if not(tco_stackTrace in options) then exit;
-//    a:=targetAdapters;
-//    if a=nil then a:=adapters;
-//    if a=nil then exit;
-//    p:=callingContext;
-//    callStack.print(a^);
-//    if p<>nil then p^.callStackPrint(a);
-//  end;
-//
-//PROCEDURE T_threadContext.callStackClear;
-//  begin
-//    callStack.clear;
-//  end;
-//{$endif}
-//
 PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType: string;
   CONST parameters: P_listLiteral; CONST location: T_tokenLocation;
   CONST suffix: string; CONST missingMain: boolean);
@@ -749,9 +641,6 @@ FUNCTION T_threadContext.checkSideEffects(CONST id: string;
     messages.raiseError(messageText,location);
     result:=false;
   end;
-
-//{$ifdef fullVersion}
-//{$endif}
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
   //means that 0.511 seconds have passed since the last activity

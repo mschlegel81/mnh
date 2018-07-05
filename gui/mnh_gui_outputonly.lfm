@@ -6,6 +6,7 @@ object outputOnlyForm: ToutputOnlyForm
   Caption = 'outputOnlyForm'
   ClientHeight = 320
   ClientWidth = 646
+  DesignTimePPI = 144
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy

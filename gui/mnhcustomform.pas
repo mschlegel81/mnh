@@ -639,7 +639,7 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
   begin
     result:=nil;
     if not(gui_started) then begin
-      context.messages.globalMessages^.postSingal(mt_displayCustomForm,C_nilTokenLocation);;
+      context.messages.logGuiNeeded;
       exit(nil);
     end;
     if (params<>nil) and (params^.size=2) and (params^.value[0]^.literalType=lt_string) and (params^.value[1]^.literalType in C_mapTypes+C_listTypes) then begin

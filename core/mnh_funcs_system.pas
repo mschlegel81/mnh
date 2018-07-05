@@ -108,7 +108,7 @@ FUNCTION driveInfo_imp intFuncSignature;
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
-      SetString(DriveLetter, Buf, StrLen(Buf));
+      setString(DriveLetter, Buf, StrLen(Buf));
       infoMap^.put('serial',VolumeSerialNumber);
       infoMap^.put('label' ,DriveLetter);
       result:=infoMap;

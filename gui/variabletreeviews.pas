@@ -66,6 +66,10 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
   VAR caption:string='MNH variable';
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
+    if not(gui_started) then begin
+      context.messages.logGuiNeeded;
+      exit(nil);
+    end;
     if (params<>nil) and
        (params^.size>0) and (params^.size<=2) then begin
       if (params^.size=2) then begin

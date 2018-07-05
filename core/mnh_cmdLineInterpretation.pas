@@ -52,7 +52,7 @@ PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConne
   VAR i:longint;
   begin
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters.addOutfile(nameAndOption,appending);
-    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
+    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior{$ifdef fullVersion}+C_messagesAlwaysProcessedInGuiMode{$endif};
   end;
 
 PROCEDURE displayHelp;
