@@ -19,6 +19,7 @@ PROCEDURE displayHelp;
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     {$ifdef fullVersion}
+    plotAdapters:P_abstractOutAdapter=nil;
     profilingRun:boolean=false;
     reEvaluationWithGUIrequired:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
@@ -129,6 +130,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     begin
       package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
       context.create(@consoleAdapters);
+      {$ifdef fullVersion}
+      consoleAdapters.addOutAdapter(plotAdapters,false);
+      {$endif}
       context.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
         package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);

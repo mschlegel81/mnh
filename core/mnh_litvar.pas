@@ -2877,7 +2877,7 @@ FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONS
         toMutate^.myHash:=0;
         exit;
       end;
-      if toMutate^.customType<>nil then adapters.postTextMessage(mt_el1_note,location, 'Mutating resets type of variable from '+toMutate^.customType^.name+' to '+C_typeInfo[toMutate^.literalType].name);
+      if toMutate^.customType<>nil then adapters.globalMessages^.postTextMessage(mt_el1_note,location, 'Mutating resets type of variable from '+toMutate^.customType^.name+' to '+C_typeInfo[toMutate^.literalType].name);
       old:=toMutate;
       toMutate:=old^.clone;
       old^.unreference;

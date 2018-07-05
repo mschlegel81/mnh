@@ -424,7 +424,7 @@ PROCEDURE T_idStack.scopePop(VAR adapters:T_threadLocalMessages; CONST location:
   begin
     topIdx:=length(ids)-1;
     for i:=0 to length(ids[topIdx])-1 do begin
-      if not(ids[topIdx,i].used) then adapters.postTextMessage(mt_el2_warning,ids[topIdx,i].location,'Unused local variable '+ids[topIdx,i].name);
+      if not(ids[topIdx,i].used) then adapters.globalMessages^.postTextMessage(mt_el2_warning,ids[topIdx,i].location,'Unused local variable '+ids[topIdx,i].name);
       {$ifdef fullVersion}
       if localIdInfos<>nil then localIdInfos^.add(ids[topIdx,i].name,ids[topIdx,i].location,location,tt_blockLocalVariable);
       {$endif}

@@ -62,8 +62,7 @@ FUNCTION createSecondaryAdapters(CONST outputEdit:TSynEdit):P_messageConnector;
   end;
 
 CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST outputEdit:TSynEdit; CONST displayLogo:boolean);
-  VAR i:longint;
-      m:P_storedMessageWithText;
+  VAR m:P_storedMessageWithText;
   FUNCTION allTypesApartFromPlotting:T_messageTypeSet;
     VAR typ:T_messageType;
     begin

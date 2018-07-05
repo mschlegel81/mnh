@@ -101,25 +101,6 @@ TYPE
     FUNCTION wantTimerInterval:longint;
   end;
 
-  T_plotSystem=object(T_collectingOutAdapter)
-    private
-      plotChangedSinceLastDisplay:boolean;
-      displayImmediate           :boolean;
-      PROCEDURE processMessage(CONST message:P_storedMessage);
-      PROCEDURE startGuiInteraction;
-      PROCEDURE doneGuiInteraction;
-    public
-      currentPlot:T_plot;
-      animation:T_plotSeries;
-
-      CONSTRUCTOR create();
-      DESTRUCTOR destroy; virtual;
-      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
-      FUNCTION requiresFastPolling:boolean;
-      FUNCTION processPendingMessages:boolean;
-      PROCEDURE resetOnEvaluationStart;
-  end;
-
 FUNCTION plotForm: TplotForm;
 FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot(CONST hideWindow:boolean);
@@ -157,117 +138,6 @@ PROCEDURE resetPlot(CONST hideWindow:boolean);
   end;
 
 {$R *.lfm}
-
-//procedure T_plotSystem.markAsInitialized;
-//  begin
-//    EnterCriticalsection(cs);
-//    guiStarted:=true;
-//    LeaveCriticalsection(cs);
-//  end;
-
-PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
-  begin
-    case message^.messageType of
-      mt_plot_addText:           currentPlot.processMessage(P_addTextMessage    (message)^);
-      mt_plot_addRow :           currentPlot.processMessage(P_addRowMessage     (message)^);
-      mt_plot_dropRow:           currentPlot.processMessage(P_plotDropRowRequest(message)^);
-      mt_plot_renderRequest:     currentPlot.processMessage(P_plotRenderRequest (message)^);
-      mt_plot_retrieveOptions,
-      mt_plot_setOptions:        currentPlot.processMessage(P_plotOptionsMessage(message)^);
-      mt_plot_clear:             currentPlot.clear;
-      mt_plot_clearAnimation:    animation.clear;
-      mt_plot_addAnimationFrame: animation.addFrame(currentPlot);
-      mt_plot_postDisplay:       begin
-        plotForm.doPlot;
-        displayImmediate:=true;
-        P_plotDisplayRequest(message)^.markExecuted;
-      end;
-      mt_endOfEvaluation: begin
-        if plotChangedSinceLastDisplay then plotForm.doPlot;
-        displayImmediate:=false;
-      end;
-    end;
-    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or
-      (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
-  end;
-
-PROCEDURE T_plotSystem.startGuiInteraction;
-  VAR m:P_storedMessage;
-  begin
-    enterCriticalSection(cs);
-    for m in storedMessages do processMessage(m);
-    clear;
-  end;
-
-PROCEDURE T_plotSystem.doneGuiInteraction;
-  begin
-    leaveCriticalSection(cs);
-  end;
-
-CONSTRUCTOR T_plotSystem.create();
-  begin
-    inherited create(at_plot,C_includableMessages[at_plot]);
-    plotChangedSinceLastDisplay:=false;
-    currentPlot.createWithDefaults;
-    animation.create;
-  end;
-
-DESTRUCTOR T_plotSystem.destroy;
-  begin
-    inherited destroy;
-    currentPlot.destroy;
-    animation.destroy;
-  end;
-
-FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
-  begin
-    enterCriticalSection(cs);
-    case message^.messageType of
-      mt_plot_addText,
-      mt_plot_addRow,
-      mt_plot_dropRow,
-      mt_plot_setOptions,
-      mt_plot_clear,
-      mt_plot_clearAnimation,
-      mt_plot_retrieveOptions,
-      mt_plot_renderRequest,
-      mt_plot_addAnimationFrame: begin
-        result:=true;
-        //if there are pending tasks then store else process
-        if (length(storedMessages)>0)
-        then inherited append(message)
-        else processMessage(message);
-      end;
-      mt_endOfEvaluation,
-      mt_plot_postDisplay: result:=inherited append(message);
-      else result:=false;
-    end;
-    leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_plotSystem.requiresFastPolling:boolean;
-  begin
-    enterCriticalSection(cs);
-    result:=displayImmediate or (animation.frameCount<>0);
-    leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_plotSystem.processPendingMessages:boolean;
-  VAR m:P_storedMessage;
-  begin
-    enterCriticalSection(cs);
-    result:=length(storedMessages)>0;
-    for m in storedMessages do processMessage(m);
-    clear;
-    leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_plotSystem.resetOnEvaluationStart;
-  begin
-    currentPlot.setDefaults;
-    if plotFormIsInitialized then plotForm.pullPlotSettingsToGui();
-  end;
-
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['+','-']) then begin
@@ -290,6 +160,7 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
+    plotSystem.registerPlotForm(@pullPlotSettingsToGui);
     if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
@@ -596,7 +467,7 @@ PROCEDURE TplotForm.doPlot;
       exit;
     end;
     plotSystem.currentPlot.renderPlot(plotImage,getPlotQuality);
-    plotSystem.plotChangedSinceLastDisplay:=false;
+    plotSystem.logPlotDone;
     plotSystem.doneGuiInteraction;
   end;
 
@@ -667,10 +538,16 @@ FUNCTION uninitialized_fallback intFuncSignature;
 
 PROCEDURE initializePlotForm;
   begin
+    writeln('initializePlotForm');
     reregisterRule(PLOT_NAMESPACE,'plotClosed'       ,@plotClosedByUser_impl);
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
+  end;
+
+PROCEDURE executePlot;
+  begin
+    plotForm.doPlot;
   end;
 
 INITIALIZATION
@@ -678,7 +555,7 @@ INITIALIZATION
   registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@uninitialized_fallback,ak_nullary,'clearAnimation;//Clears the animated plot');
   registerRule(PLOT_NAMESPACE,'addAnimationFrame',@uninitialized_fallback,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
   registerRule(PLOT_NAMESPACE,'display'          ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
-  plotSystem.create()
+  plotSystem.create(@executePlot)
 FINALIZATION
   if myPlotForm<>nil then FreeAndNil(myPlotForm);
   plotSystem.destroy;

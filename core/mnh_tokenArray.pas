@@ -449,7 +449,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR recycler: T_tokenRecycler;
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
         end else if commentOpener='#' then blob.closer:='#' else blob.closer:='''';
-      end else if pos('TODO',commentText)>0 then threadLocalMessages.postTextMessage(mt_el1_note,inputLocation,commentText);
+      end else if pos('TODO',commentText)>0 then threadLocalMessages.globalMessages^.postTextMessage(mt_el1_note,inputLocation,commentText);
     end;
 
   VAR id:ansistring='';

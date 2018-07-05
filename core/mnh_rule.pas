@@ -308,17 +308,17 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.messages.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
     if (getRuleType=rt_customOperator) then begin
       if not(rule^.canApplyToNumberOfParameters(2)) then context.messages.raiseError('Overloaded operators must accept two parameters',rule^.getLocation);
-      if rule^.getPattern.usesDucktyping then context.messages.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
+      if rule^.getPattern.usesDucktyping then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
     end;
     i:=0;
     while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);
     if i>=length(subrules) then begin
       setLength(subrules,i+1);
-      for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.messages.postTextMessage(mt_el2_warning,rule^.getLocation,'Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation));
+      for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation));
     end else begin
       disposeLiteral(subrules[i]);
       if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE))
-      then context.messages.postTextMessage(mt_el2_warning,rule^.getLocation,'Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
+      then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
     end;
     subrules[i]:=rule;
     if (length(subrules)>1) and (getRuleType in C_ruleTypesWithOnlyOneSubrule) then context.messages.raiseError('Cannot add a subrule to a '+C_ruleTypeText[getRuleType]+'rule!',rule^.getLocation);
@@ -332,7 +332,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
 PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
   begin
     inherited addOrReplaceSubRule(rule,context);
-    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.messages.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
+    if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
   end;
 
 PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
@@ -784,7 +784,7 @@ FUNCTION T_datastoreRule.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_
 PROCEDURE T_datastoreRule.writeBack(VAR adapters: T_threadLocalMessages);
   VAR L:P_literal;
   begin
-    if (adapters.continueEvaluation) and valueChangedAfterDeclaration then begin
+    if adapters.continueEvaluation and valueChangedAfterDeclaration then begin
       L:=namedValue.getValue;
       dataStoreMeta.writeValue(L,getLocation,@adapters,encodeAsText);
       disposeLiteral(L);

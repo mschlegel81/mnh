@@ -63,12 +63,12 @@ FUNCTION readXmlFile_impl intFuncSignature;
           context.messages.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
         end;
       end else begin
-        context.messages.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
         exit(newVoidLiteral);
       end;
       result:=obtainXmlData(FDoc);
       if result=nil then begin
-        context.messages.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
         result:=newVoidLiteral;
       end;
     end;

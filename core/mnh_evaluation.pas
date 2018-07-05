@@ -303,7 +303,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         then processListParallel(iterator,bodyRule,aggregator,eachLocation,context)
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context);
       end else begin
-        if eachType = tt_parallelEach then context.messages.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
+        if eachType = tt_parallelEach then context.messages.globalMessages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
         aggregate(iterator,aggregator,eachLocation,context);
       end;
       //----------------------------------------------------------iterate over itList

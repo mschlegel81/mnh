@@ -95,9 +95,6 @@ TYPE
   end;
 
   P_plot =^T_plot;
-
-  { T_plot }
-
   T_plot = object
     private
       cs: TRTLCriticalSection;
@@ -161,6 +158,31 @@ TYPE
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
+  F_execPlotCallback=PROCEDURE;
+  F_pullSettingsToGuiCallback=PROCEDURE of object;
+  T_plotSystem=object(T_collectingOutAdapter)
+    private
+      plotChangedSinceLastDisplay:boolean;
+      displayImmediate           :boolean;
+      doPlot:F_execPlotCallback;
+      pullSettingsToGui:F_pullSettingsToGuiCallback;
+      PROCEDURE processMessage(CONST message:P_storedMessage);
+    public
+      currentPlot:T_plot;
+      animation:T_plotSeries;
+
+      CONSTRUCTOR create(CONST executePlotCallback:F_execPlotCallback);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+      FUNCTION requiresFastPolling:boolean;
+      FUNCTION processPendingMessages:boolean;
+      PROCEDURE resetOnEvaluationStart;
+      PROCEDURE logPlotDone;
+      PROCEDURE registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
+      PROCEDURE startGuiInteraction;
+      PROCEDURE doneGuiInteraction;
+  end;
+
 FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
@@ -168,7 +190,7 @@ FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_
   VAR request:P_plotOptionsMessage;
   begin
     new(request,createRetrieveRequest);
-    threadLocalMessages.append(request^.rereferenced);
+    threadLocalMessages.globalMessages^.postCustomMessage(request^.rereferenced);
     result:=request^.getOptionsWaiting(threadLocalMessages);
     disposeMessage(request);
   end;
@@ -180,6 +202,7 @@ FUNCTION T_plotDisplayRequest.internalType: shortstring;
 
 CONSTRUCTOR T_plotDisplayRequest.create(CONST displayImmediate: boolean);
   begin
+    inherited create(mt_plot_postDisplay);
     wantImmediateDisplay:=displayImmediate;
     displayExecuted:=false;
   end;
@@ -281,6 +304,7 @@ FUNCTION T_plotOptionsMessage.internalType: shortstring;
 CONSTRUCTOR T_plotOptionsMessage.createRetrieveRequest;
   begin
     inherited create(mt_plot_retrieveOptions);
+    options.setDefaults;
     retrieved:=false;
   end;
 
@@ -300,15 +324,18 @@ PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
   end;
 
 FUNCTION T_plotOptionsMessage.getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+  VAR timeout:double;
   begin
+    timeout:=now+5/(24*60*60);
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+    while not(retrieved) and (errorFlagProvider.continueEvaluation) and (now<timeout) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
     end;
     result:=options;
     leaveCriticalSection(messageCs);
+    if now>=timeout then raise Exception.create('T_plotOptionsMessage.getOptionsWaiting timed out');
   end;
 
 FUNCTION T_addRowMessage.internalType: shortstring;
@@ -1053,6 +1080,125 @@ PROCEDURE T_plot.processMessage(VAR m: T_plotRenderRequest);
 PROCEDURE T_plot.processMessage(VAR m: T_plotDropRowRequest);
   begin
     removeRows(m.count);
+  end;
+
+PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
+  begin
+    case message^.messageType of
+      mt_plot_addText:           currentPlot.processMessage(P_addTextMessage    (message)^);
+      mt_plot_addRow :           currentPlot.processMessage(P_addRowMessage     (message)^);
+      mt_plot_dropRow:           currentPlot.processMessage(P_plotDropRowRequest(message)^);
+      mt_plot_renderRequest:     currentPlot.processMessage(P_plotRenderRequest (message)^);
+      mt_plot_retrieveOptions,
+      mt_plot_setOptions:        currentPlot.processMessage(P_plotOptionsMessage(message)^);
+      mt_plot_clear:             currentPlot.clear;
+      mt_plot_clearAnimation:    animation.clear;
+      mt_plot_addAnimationFrame: animation.addFrame(currentPlot);
+      mt_plot_postDisplay:       begin
+        if doPlot<>nil then doPlot();
+        displayImmediate:=true;
+        P_plotDisplayRequest(message)^.markExecuted;
+      end;
+      mt_endOfEvaluation: begin
+        if plotChangedSinceLastDisplay and (doPlot<>nil) then doPlot();
+        displayImmediate:=false;
+      end;
+    end;
+    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or
+      (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
+  end;
+
+PROCEDURE T_plotSystem.startGuiInteraction;
+  VAR m:P_storedMessage;
+  begin
+    enterCriticalSection(cs);
+    for m in storedMessages do processMessage(m);
+    clear;
+  end;
+
+PROCEDURE T_plotSystem.doneGuiInteraction;
+  begin
+    leaveCriticalSection(cs);
+  end;
+
+CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback);
+  begin
+    inherited create(at_plot,C_includableMessages[at_plot]);
+    plotChangedSinceLastDisplay:=false;
+    currentPlot.createWithDefaults;
+    doPlot:=executePlotCallback;
+    pullSettingsToGui:=nil;
+    animation.create;
+  end;
+
+DESTRUCTOR T_plotSystem.destroy;
+  begin
+    inherited destroy;
+    currentPlot.destroy;
+    animation.destroy;
+  end;
+
+FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
+  begin
+    enterCriticalSection(cs);
+    case message^.messageType of
+      mt_plot_addText,
+      mt_plot_addRow,
+      mt_plot_dropRow,
+      mt_plot_setOptions,
+      mt_plot_clear,
+      mt_plot_clearAnimation,
+      mt_plot_retrieveOptions,
+      mt_plot_renderRequest,
+      mt_plot_addAnimationFrame: begin
+        result:=true;
+        //if there are pending tasks then store else process
+        if (length(storedMessages)>0)
+        then inherited append(message)
+        else processMessage(message);
+      end;
+      mt_endOfEvaluation,
+      mt_plot_postDisplay: result:=inherited append(message);
+      else result:=false;
+    end;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_plotSystem.requiresFastPolling:boolean;
+  begin
+    enterCriticalSection(cs);
+    result:=displayImmediate or (animation.frameCount<>0);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_plotSystem.processPendingMessages:boolean;
+  VAR m:P_storedMessage;
+  begin
+    enterCriticalSection(cs);
+    result:=length(storedMessages)>0;
+    for m in storedMessages do processMessage(m);
+    clear;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plotSystem.resetOnEvaluationStart;
+  begin
+    currentPlot.setDefaults;
+    if pullSettingsToGui<>nil then pullSettingsToGui();
+  end;
+
+PROCEDURE T_plotSystem.logPlotDone;
+  begin
+    enterCriticalSection(cs);
+    plotChangedSinceLastDisplay:=false;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plotSystem.registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
+  begin
+    enterCriticalSection(cs);
+    pullSettingsToGui:=pullSetingsToGuiCB;
+    leaveCriticalSection(cs);
   end;
 
 INITIALIZATION

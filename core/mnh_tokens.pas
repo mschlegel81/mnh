@@ -196,7 +196,7 @@ PROCEDURE T_abstractRule.setIdResolved;
 FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages): boolean;
   begin
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
-    if result then adapters.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
+    if result then adapters.globalMessages^.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
     'Unused rule '+id+
     '; you can suppress this warning with '+
     ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);

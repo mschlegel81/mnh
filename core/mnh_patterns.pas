@@ -715,8 +715,8 @@ PROCEDURE T_pattern.complainAboutUnusedParameters(CONST usedIds:T_arrayOfLongint
 
     if allUsed then exit;
     for i in unusedIds do if sig[i].restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal] then
-      context.messages.postTextMessage(mt_el2_warning,sig[i].elementLocation,warnText('Parameter '+sig[i].toString+' not used'));
-    if hasOptionals and not(optUsed) then context.messages.postTextMessage(mt_el1_note,subruleLocation,warnText('Optional ... not used'));
+      context.messages.globalMessages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,warnText('Parameter '+sig[i].toString+' not used'));
+    if hasOptionals and not(optUsed) then context.messages.globalMessages^.postTextMessage(mt_el1_note,subruleLocation,warnText('Optional ... not used'));
   end;
 {$endif}
 

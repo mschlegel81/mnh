@@ -210,7 +210,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
           response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,request.payload).literal;
           response.statusOk:=servingContextOrNil^.messages.continueEvaluation;
         end else begin
-          servingContextOrNil^.messages.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
+          servingContextOrNil^.messages.globalMessages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');
           response.payload :=nil;
           response.statusOk:=false;
         end;
@@ -232,7 +232,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       recentRequestOffset:=0;
       try
         server:=newServer(serverId);
-        if servingContextOrNil<>nil then servingContextOrNil^.messages.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId)
+        if servingContextOrNil<>nil then servingContextOrNil^.messages.globalMessages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server started. '+serverId)
       except on e:Exception do ipcMessageConnector^.raiseError(e.message,feedbackLocation,mt_el4_systemError); end;
 
       while not(hasKillRequest) and (ipcMessageConnector^.continueEvaluation) do begin
@@ -247,7 +247,7 @@ FUNCTION ipcServerThread(p:pointer):ptrint;
       except on e:Exception do
         ipcMessageConnector^.raiseError(e.message,feedbackLocation,mt_el4_systemError);
       end;
-      if servingContextOrNil<>nil then servingContextOrNil^.messages.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
+      if servingContextOrNil<>nil then servingContextOrNil^.messages.globalMessages^.postTextMessage(mt_el1_note,feedbackLocation,'IPC server stopped. '+serverId);
     end;
     dispose(P_myIpcServer(p),destroy);
     result:=0;

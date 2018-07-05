@@ -1099,7 +1099,7 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
     VAR i:longint;
     begin
       for i:=0 to length(attributes)-1 do if attributes[i].key=key then begin
-        threadLocalMessages.postTextMessage(mt_el2_warning,location,'Duplicate attribute key "'+key+'"');
+        threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,location,'Duplicate attribute key "'+key+'"');
         exit(i);
       end;
       result:=length(attributes);
@@ -1122,7 +1122,7 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
           if isSideEffectName(trim(sideEffectName),sideEffect)
           then include(sideEffectWhitelist,sideEffect)
           else begin
-            threadLocalMessages.postTextMessage(mt_el2_warning,location,'Unknown side effect: '+trim(sideEffectName));
+            threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,location,'Unknown side effect: '+trim(sideEffectName));
             hasUnknownSideEffects:=true;
           end;
         end;
@@ -1131,7 +1131,7 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
       if hasUnknownSideEffects then begin
         compoundMessage:='The following side effects are defined:';
         for sideEffect in C_allSideEffects do append(compoundMessage,C_sideEffectName[sideEffect]);
-        threadLocalMessages.postTextMessage(mt_el2_warning,location, compoundMessage);
+        threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,location, compoundMessage);
       end;
     end;
 

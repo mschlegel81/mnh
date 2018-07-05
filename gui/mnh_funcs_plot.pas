@@ -34,36 +34,41 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
   VAR i,imax:longint;
       xy:P_listLiteral;
-  PROCEDURE addSample(CONST px,py:double);
-    VAR k:longint;
-    begin
-      k:=length(result);
-      setLength(result,k+1);
-      result[k,0]:=px;
-      result[k,1]:=py;
-    end;
-
   begin
     setLength(result,0);
     if x=nil then case y^.literalType of
-      lt_list:
+      lt_list: begin
+        setLength(result,y^.size);
         with y^ do for i:=0 to size-1 do if value[i]^.literalType in [lt_intList,lt_realList,lt_numList] then begin
           xy:=P_listLiteral(value[i]);
-          if xy^.size=2 then addSample(fReal(xy^.value[0]), fReal(xy^.value[1]))
-                        else addSample(Nan,Nan);
-        end else addSample(Nan,Nan);
-      lt_intList, lt_realList, lt_numList:
-        with y^ do for i:=0 to size-1 do addSample(i,fReal(value[i]));
+          if xy^.size=2 then begin result[i,0]:=fReal(xy^.value[0]); result[i,1]:=fReal(xy^.value[1]); end
+                        else begin result[i,0]:=Nan;                 result[i,1]:=Nan;                 end;
+        end else begin
+          result[i,0]:=Nan;
+          result[i,1]:=Nan;
+        end;
+      end;
+      lt_intList, lt_realList, lt_numList: begin
+        setLength(result,y^.size);
+        with y^ do for i:=0 to size-1 do begin
+          result[i,0]:=i;
+          result[i,1]:=fReal(value[i]);
+        end;
+      end;
     end else begin
       imax:=min(X^.size, Y^.size);
-      for i:=0 to imax-1 do addSample(fReal(X^.value[i]), fReal(Y^.value[i]));
+      setLength(result,imax);
+      for i:=0 to imax-1 do begin
+        result[i,0]:=fReal(X^.value[i]);
+        result[i,1]:=fReal(Y^.value[i]);
+      end;
     end;
   end;
 
 FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
-  FUNCTION addRowMessage(dataRow:T_dataRow):P_addRowMessage;
+  FUNCTION addRowMessage(CONST dataRow:T_dataRow):P_addRowMessage;
     begin
       new(result,create(options,dataRow));
     end;

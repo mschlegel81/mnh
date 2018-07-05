@@ -9,14 +9,16 @@ USES {$ifdef UNIX} cthreads,{$else}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mySys,
-  mnh_cmdLineInterpretation,
+  mnh_cmdLineInterpretation, mnh_funcs_ipc,
   ipcModel,
   mnh_gui_main,
-  mnh_gui_outputOnly;
+  mnh_gui_outputOnly,
+  mnh_plotForm;
 
 {$R *.res}
 
 begin
+  mnh_cmdLineInterpretation.plotAdapters:=@mnh_plotForm.plotSystem;
   if wantMainLoopAfterParseCmdLine then begin
     hideConsole;
     Application.title:='MNH5 - GUI';

@@ -442,7 +442,7 @@ FUNCTION printf_imp intFuncSignature;
         exit(nil);
       end;
       system.enterCriticalSection(print_cs);
-      context.messages.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
+      context.messages.globalMessages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context.callStackPop(nil);{$endif}

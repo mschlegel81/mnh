@@ -15,6 +15,7 @@ USES //basic classes
      {$ifdef fullVersion}
        mnh_doc,
        mnh_funcs_plot,
+       mnh_plotData,
        mnh_settings,
        mnh_html,
        tokenStack,
@@ -182,6 +183,7 @@ TYPE
       package:T_package;
       cs:TRTLCriticalSection;
       {$ifdef fullVersion}
+      plotSystem:T_plotSystem;
       PROCEDURE updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
       {$endif}
     public
@@ -658,6 +660,10 @@ CONSTRUCTOR T_sandbox.create;
     collector.create(at_unknown,C_collectAllOutputBehavior);
     adapters.create;
     adapters.addOutAdapter(@collector,false);
+    {$ifdef fullVersion}
+    plotSystem.create(nil);
+    adapters.addOutAdapter(@plotSystem,false);
+    {$endif}
     evaluationContext.create(@adapters);
     package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
     busy:=false;
@@ -670,6 +676,9 @@ DESTRUCTOR T_sandbox.destroy;
     evaluationContext.destroy;
     adapters.destroy;
     collector.destroy;
+    {$ifdef fullVersion}
+    plotSystem.destroy;
+    {$endif}
     leaveCriticalSection(cs);
     doneCriticalSection(cs);
   end;
@@ -677,6 +686,9 @@ DESTRUCTOR T_sandbox.destroy;
 FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword): T_storedMessages;
   begin
     adapters.clear;
+    {$ifdef fullVersion}
+    plotSystem.resetOnEvaluationStart;
+    {$endif}
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
@@ -689,6 +701,9 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
 FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
   begin
     adapters.clear;
+    {$ifdef fullVersion}
+    plotSystem.resetOnEvaluationStart;
+    {$endif}
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext,C_EMPTY_STRING_ARRAY);
     result:=collector.storedMessages;
@@ -703,10 +718,13 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     then fileName:=expandFileName(filenameOrId)
     else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
     if (fileName='') or not(fileExists(fileName)) then begin
-      callerContext^.messages.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
+      callerContext^.messages.globalMessages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
       exit(nil);
     end;
     adapters.clear;
+    {$ifdef fullVersion}
+    plotSystem.resetOnEvaluationStart;
+    {$endif}
     //one-way-link to propagate stop-signal:
     callerContext^.messages.addChild(@evaluationContext.messages);
     //filtered link for messages
@@ -736,6 +754,9 @@ FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST 
     or inPack^.importedRules.containsKey('toString',toStringRule)
     then begin
       adapters.clear;
+      {$ifdef fullVersion}
+      plotSystem.resetOnEvaluationStart;
+      {$endif}
       evaluationContext.resetForEvaluation({$ifdef fullVersion}inPack,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
       evaluationContext.setAllowedSideEffectsReturningPrevious([]);
       parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
@@ -774,6 +795,9 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
       tok:T_rawToken;
       m:P_storedMessage;
   begin
+    writeln('Sandbox executes:');
+    for tmp in input do writeln(tmp);
+    writeln(':Sandbox executes');
     messages:=sandbox^.execute(input);
     setLength(textOut,0);
     setLength(htmlOut,0);
@@ -1535,15 +1559,16 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
   VAR rule:P_rule;
       i:longint;
   begin
+    for i:=0 to length(runAfter)-1 do begin
+      runAfter[i]^.evaluate(packageTokenLocation(@self),@context,nil);
+      context.messages.escalateErrors;
+    end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context);
-    for i:=0 to length(runAfter)-1 do runAfter[i]^.evaluate(packageTokenLocation(@self),@context,nil);
     mnh_funcs_server.onPackageFinalization(@self);
     mnh_funcs_ipc   .onPackageFinalization(@self);
     mnh_funcs_format.onPackageFinalization(@self);
-    if isMain then begin
-      context.getGlobals^.stopWorkers;
-    end;
     for rule in packageRules.valueSet do if rule^.getRuleType=rt_datastore then P_datastoreRule(rule)^.writeBack(context.messages);
+    if isMain then context.getGlobals^.stopWorkers;
   end;
 
 FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
@@ -1614,16 +1639,16 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
                   modifier_synchronized,
                   modifier_customType,
                   modifier_customDuckType] do if m in modifiers then adapters.raiseError('modifier '+C_modifierInfo[m].name+' is not allowed when overriding operators',ruleDeclarationStart);
-        if modifier_noCurry  in modifiers then adapters.postTextMessage(mt_el1_note   ,ruleDeclarationStart,'nocurry modifier is implicit when overloading operators');
-        if modifier_private  in modifiers then adapters.postTextMessage(mt_el2_warning,ruleDeclarationStart,'private modifier is ignored when overloading operators' );
-        if modifier_memoized in modifiers then adapters.postTextMessage(mt_el2_warning,ruleDeclarationStart,'memoized modifier is ignored when overloading operators');
+        if modifier_noCurry  in modifiers then adapters.globalMessages^.postTextMessage(mt_el1_note   ,ruleDeclarationStart,'nocurry modifier is implicit when overloading operators');
+        if modifier_private  in modifiers then adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'private modifier is ignored when overloading operators' );
+        if modifier_memoized in modifiers then adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'memoized modifier is ignored when overloading operators');
       end;
 
       if (ruleType=rt_customTypeCheck) and not(ruleId[1] in ['A'..'Z']) then
-        adapters.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Type rules should begin with an uppercase letter');
+        adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Type rules should begin with an uppercase letter');
       end;
       if startsWith(ruleId,'is') and packageRules.containsKey(isTypeToType(ruleId)) then
-        adapters.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Rule '+ruleId+' hides implicit typecheck rule');
+        adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Rule '+ruleId+' hides implicit typecheck rule');
 
       case ruleType of
         rt_memoized       : new(P_memoizedRule             (result),create(ruleId,ruleDeclarationStart));
@@ -1642,7 +1667,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         then begin
           if op in overridableOperators then begin
             customOperatorRules[op]:=result;
-            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading operator '+C_tokenInfo[op].defaultId);
+            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.globalMessages^.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading operator '+C_tokenInfo[op].defaultId);
             result^.allowCurrying:=false;
             {$ifdef fullVersion}
             result^.setIdResolved;
@@ -1651,7 +1676,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
           exit(result);
         end;
         result^.hiddenRule:=hidden;
-        if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading builtin rule "'+ruleId+'"');
+        if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.globalMessages^.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading builtin rule "'+ruleId+'"');
       end else result^.hiddenRule:=nil;
     end else begin
       if (result^.getRuleType<>ruleType) and (ruleType<>rt_normal)
@@ -1702,7 +1727,7 @@ PROCEDURE T_package.complainAboutUnused(VAR adapters: T_threadLocalMessages);
   begin
     for rule in packageRules.valueSet do rule^.complainAboutUnused(adapters);
     for import in packageUses do if not(import.pack^.anyCalled) then
-      adapters.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
+      adapters.globalMessages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
   end;
 {$endif}
 

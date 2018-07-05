@@ -9,8 +9,10 @@ TYPE
   T_adapterType=(at_unknown,
                  at_console,
                  at_textFile,
+                 {$ifdef fullVersion}
                  at_gui,
                  at_plot,
+                 {$endif}
                  at_sandboxAdapter,
                  at_printTextFileAtRuntime);
 CONST
@@ -18,8 +20,10 @@ CONST
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
     {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info],
     {at_textFile} [mt_printline..mt_el4_systemError,mt_timing_info],
+    {$ifdef fullVersion}
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
+    {$endif}
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
 
@@ -78,11 +82,12 @@ TYPE
       globalMessages:P_messageConnector;
       CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback{$endif});
       PROCEDURE raiseError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
-
+      {$ifdef debugMode}
+      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+      {$endif}
       PROCEDURE setParent(CONST parent:P_threadLocalMessages);
       PROCEDURE dropChild(CONST child:P_threadLocalMessages);
       PROCEDURE addChild (CONST child:P_threadLocalMessages);
-      PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
       PROPERTY getFlags:T_stateFlags read flags;
       PROCEDURE clear; virtual;
       PROCEDURE escalateErrors;
@@ -90,7 +95,9 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION childCount:longint;
       PROCEDURE setStopFlag;
+      {$ifdef fullVersion}
       PROCEDURE logGuiNeeded;
+      {$endif}
   end;
 
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
@@ -362,8 +369,8 @@ CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_
 PROCEDURE T_threadLocalMessages.propagateFlags;
   VAR child:P_threadLocalMessages;
   begin
-    if ((FlagFatalError in flags) or (FlagGUINeeded in flags)) and (parentMessages<>nil) then begin
-      parentMessages^.flags:=parentMessages^.flags+(flags*[FlagFatalError,FlagGUINeeded]);
+    if ((FlagFatalError in flags) {$ifdef fullVersion} or (FlagGUINeeded in flags) {$endif}) and (parentMessages<>nil) then begin
+      parentMessages^.flags:=parentMessages^.flags+(flags*[FlagFatalError{$ifdef fullVersion} ,FlagGUINeeded{$endif}]);
       parentMessages^.propagateFlags;
     end;
     {$ifdef fullVersion}
@@ -389,10 +396,16 @@ PROCEDURE T_threadLocalMessages.raiseError(CONST text: string; CONST location: T
     disposeMessage(message);
   end;
 
-PROCEDURE T_threadLocalMessages.postTextMessage(CONST kind: T_messageType; CONST location: T_searchTokenLocation; CONST txt: T_arrayOfString);
+{$ifdef debugMode}
+FUNCTION T_threadLocalMessages.append(CONST message:P_storedMessage):boolean;
   begin
-    if globalMessages<>nil then globalMessages^.postTextMessage(kind,location,txt);
+    if message^.messageType in [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError]
+    then begin
+      result:=true;
+      inherited append(message);
+    end else raise Exception.create('Invalid call to T_threadLocalMessages.append');
   end;
+{$endif}
 
 PROCEDURE T_threadLocalMessages.clear;
   begin
@@ -482,14 +495,18 @@ PROCEDURE T_threadLocalMessages.setStopFlag;
     propagateFlags;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_threadLocalMessages.logGuiNeeded;
   begin
     enterCriticalSection(cs);
-    include(flags,FlagQuietHalt);
-    include(flags,FlagGUINeeded);
+    if not(gui_started) then begin
+      include(flags,FlagGUINeeded);
+      include(flags,FlagQuietHalt);
+      propagateFlags;
+    end;
     leaveCriticalSection(cs);
-    propagateFlags;
   end;
+{$endif}
 
 PROCEDURE T_messageConnector.postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
   VAR message:P_storedMessage;
