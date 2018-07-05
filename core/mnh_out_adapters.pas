@@ -98,6 +98,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE logGuiNeeded;
       {$endif}
+      PROCEDURE clearFlagsForCodeAssistance;
   end;
 
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
@@ -333,6 +334,10 @@ FUNCTION T_messageConnector.continueEvaluation:boolean;
     result:=flags=[];
   end;
 {$endif}
+PROCEDURE T_threadLocalMessages.clearFlagsForCodeAssistance;
+  begin
+    flags:=[];
+  end;
 
 DESTRUCTOR T_threadLocalMessages.destroy;
   begin

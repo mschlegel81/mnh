@@ -605,12 +605,12 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
   VAR newPackage:P_package;
   PROCEDURE updateErrors;
     VAR m:P_storedMessage;
+        level:longint;
     begin
       setLength(caData.localErrors,0);
       setLength(caData.externalErrors,0);
-      with collector do
-      for m in storedMessages do
-      if C_messageTypeMeta[m^.messageType].level>=1 then begin
+      with collector do for level:=4 downto 2 do for m in storedMessages do
+      if C_messageTypeMeta[m^.messageType].level=level then begin
         if m^.getLocation.fileName=newPackage^.getPath
         then begin
           setLength(caData.localErrors,length(caData.localErrors)+1);
@@ -640,7 +640,8 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     {$endif}
     if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
     if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
-    caData.packageIsValid:=evaluationContext.messages.continueEvaluation;
+    evaluationContext.messages.escalateErrors;
+    caData.packageIsValid:=not(evaluationContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
     caData.currentlyProcessing:=false;
     caData.package^.updateLists(caData.userRules);
     updateErrors;
@@ -1271,7 +1272,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
   begin
     profile:=context.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.firstToken=nil then exit;
-    if usecase=lu_forCodeAssistance then context.messages.clear;
+    if usecase=lu_forCodeAssistance then context.messages.clearFlagsForCodeAssistance;
 
     if (usecase<>lu_forCodeAssistance) and not(context.messages.continueEvaluation) then begin
       context.recycler.cascadeDisposeToken(statement.firstToken);
@@ -1368,6 +1369,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     end;
     if statement.firstToken<>nil then context.recycler.cascadeDisposeToken(statement.firstToken);
     statement.firstToken:=nil;
+    if usecase=lu_forCodeAssistance then context.messages.clearFlagsForCodeAssistance;
   end;
 
 PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
