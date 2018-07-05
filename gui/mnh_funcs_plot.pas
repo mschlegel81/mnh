@@ -35,33 +35,23 @@ FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
   VAR i,imax:longint;
       xy:P_listLiteral;
   begin
-    setLength(result,0);
     if x=nil then case y^.literalType of
       lt_list: begin
-        setLength(result,y^.size);
+        result.init(y^.size);
         with y^ do for i:=0 to size-1 do if value[i]^.literalType in [lt_intList,lt_realList,lt_numList] then begin
           xy:=P_listLiteral(value[i]);
-          if xy^.size=2 then begin result[i,0]:=fReal(xy^.value[0]); result[i,1]:=fReal(xy^.value[1]); end
-                        else begin result[i,0]:=Nan;                 result[i,1]:=Nan;                 end;
-        end else begin
-          result[i,0]:=Nan;
-          result[i,1]:=Nan;
-        end;
+          if xy^.size=2 then result[i]:=pointOf(fReal(xy^.value[0]),fReal(xy^.value[1]))
+                        else result[i]:=pointOf(Nan,Nan);
+        end else result[i]:=pointOf(Nan,Nan);
       end;
       lt_intList, lt_realList, lt_numList: begin
-        setLength(result,y^.size);
-        with y^ do for i:=0 to size-1 do begin
-          result[i,0]:=i;
-          result[i,1]:=fReal(value[i]);
-        end;
+        result.init(y^.size);
+        with y^ do for i:=0 to size-1 do result[i]:=pointOf(i,fReal(value[i]));
       end;
     end else begin
       imax:=min(X^.size, Y^.size);
-      setLength(result,imax);
-      for i:=0 to imax-1 do begin
-        result[i,0]:=fReal(X^.value[i]);
-        result[i,1]:=fReal(Y^.value[i]);
-      end;
+      result.init(imax);
+      for i:=0 to imax-1 do result[i]:=pointOf(fReal(X^.value[i]),fReal(Y^.value[i]));
     end;
   end;
 
@@ -85,14 +75,14 @@ FUNCTION addPlot intFuncSignature;
         sizeWithoutOptions:=params^.size;
       end;
       if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
-        context.messages.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list0)));
+        context.messages.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list0)),true);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 2) and
          (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (list0^.size=list1^.size) then begin
-        context.messages.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list1,list0)));
+        context.messages.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list1,list0)),true);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
@@ -105,7 +95,7 @@ FUNCTION addPlot intFuncSignature;
                                                                 fReal(arg2),
                                                                 int3^.intValue,
                                                                 tokenLocation,
-                                                                context)));
+                                                                context)),true);
         exit(newVoidLiteral);
       end;
     end;
@@ -355,7 +345,7 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
         end;
       end;
       new(postRequest,create(txt));
-      context.messages.globalMessages^.postCustomMessage(postRequest);
+      context.messages.globalMessages^.postCustomMessage(postRequest,true);
       result:=newVoidLiteral;
     end;
   end;

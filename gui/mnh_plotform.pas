@@ -524,7 +524,7 @@ FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
     new(displayRequest,create(true));
-    context.messages.globalMessages^.postCustomMessage(displayRequest^.rereferenced);
+    context.messages.globalMessages^.postCustomMessage(displayRequest);
     displayRequest^.waitForExecution(context.messages);
     disposeMessage(displayRequest);
     result:=newVoidLiteral;

@@ -154,7 +154,7 @@ TYPE
 
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
       PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
-      PROCEDURE postCustomMessage(CONST message:P_storedMessage);
+      PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);
       PROCEDURE postCustomMessages(CONST message:T_storedMessages);
 
       PROCEDURE clear;
@@ -422,11 +422,12 @@ PROCEDURE T_messageConnector.postTextMessage(CONST kind: T_messageType; CONST lo
     disposeMessage(message);
   end;
 
-PROCEDURE T_messageConnector.postCustomMessage(CONST message: P_storedMessage);
+PROCEDURE T_messageConnector.postCustomMessage(CONST message: P_storedMessage; CONST disposeAfterPosting:boolean);
   VAR a:T_flaggedAdapter;
   begin
     enterCriticalSection(connectorCS);
     for a in adapters do if a.adapter^.append(message) then include(collected,message^.messageType);
+    if disposeAfterPosting then disposeMessage(message);
     leaveCriticalSection(connectorCS);
   end;
 

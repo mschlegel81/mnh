@@ -1350,10 +1350,10 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
     begin
       scalingOptions:=getOptionsViaAdapters(context.messages);
-      while stillOk and (length(dataRow)<samples) do begin
+      while stillOk and (dataRow.size<samples) do begin
         //Prepare threshold:----------------------------------------------------
         screenRow:=scalingOptions.transformRow(dataRow,1,0,0);
-        for i:=1 to length(dataRow)-1 do
+        for i:=1 to dataRow.size-1 do
         if screenRow[i-1].valid and screenRow[i].valid then begin
           distThreshold:=distThreshold+sqr(screenRow[i].x-screenRow[i-1].x)
                                       +sqr(screenRow[i].y-screenRow[i-1].y);
@@ -1364,7 +1364,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
         TList:=newListLiteral;
-        for i:=1 to length(dataRow)-1 do
+        for i:=1 to dataRow.size-1 do
         if not(screenRow[i  ].valid) or
            not(screenRow[i-1].valid) or
           (sqr(screenRow[i].x-screenRow[i-1].x)
@@ -1391,12 +1391,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           then newRow:=newDataRow(resultLiteral,TList)
           else newRow:=newDataRow(resultLiteral);
           //Merge samples:------------------------------------------------------
-          setLength(oldRow,length(dataRow));
-          for i:=0 to length(oldRow)-1 do oldRow[i]:=dataRow[i];
+          dataRow.cloneTo(oldRow);
           setLength(oldTimes,length(tRow));
           for i:=0 to length(oldTimes)-1 do oldTimes[i]:=tRow[i];
-          setLength(dataRow,length(oldRow  )+length(newRow  ));
-          setLength(tRow   ,length(oldTimes)+length(newTimes));
+          dataRow.size  :=oldRow.size+newRow.size;
+          setLength(tRow,length(oldTimes)+length(newTimes));
           i:=0;
           j:=0;
           k:=0;
@@ -1421,6 +1420,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
             dataRow[k]:=newRow[j];
             inc(j); inc(k);
           end;
+          newRow.free;
+          oldRow.free;
           //------------------------------------------------------:Merge samples
           disposeLiteral(resultLiteral);
         end;
@@ -1431,6 +1432,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   VAR m:P_storedMessage;
   begin
+    dataRow.init();
     collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
     constructInitialTList;
 
@@ -1448,7 +1450,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       collector.removeDuplicateStoredMessages;
       for m in collector.storedMessages do context.messages.append(m);
       context.messages.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
-      setLength(dataRow,0);
+      dataRow.free;
     end;
     collector.destroy;
     result:=dataRow;

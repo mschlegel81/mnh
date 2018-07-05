@@ -14,8 +14,6 @@ CONST
   PLOT_QUALITY_MEDIUM_2=2;
   PLOT_QUALITY_HIGH    =3;
 TYPE
-  T_point = array[0..1] of double;
-  T_dataRow = array of T_point;
   T_boundingBox = array['x'..'y', 0..1] of double;
 
   P_addRowMessage=^T_addRowMessage;
@@ -1032,6 +1030,7 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
 
 PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   VAR i:longint;
+      clonedSample:T_dataRow;
   begin
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
@@ -1041,7 +1040,8 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row,length(p.row));
     for i:=0 to length(row)-1 do begin
-      row[i].create(i,p.row[i].sample);
+      p.row[i].sample.cloneTo(clonedSample);
+      row[i].create(i,clonedSample);
       row[i].style:=p.row[i].style;
     end;
     //:copy rows | copy custom text:
