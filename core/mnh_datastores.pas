@@ -20,7 +20,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION fileChangedSinceRead:boolean;
       FUNCTION readValue(CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
-      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST adapters: P_adapters; CONST writePlainText:boolean);
+      PROCEDURE writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_threadLocalMessages; CONST writePlainText:boolean);
   end;
 
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
@@ -136,7 +136,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context.adapters,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,@context.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
         if result<>nil then disposeLiteral(result);
@@ -149,7 +149,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       if not(accessed) then exit(newVoidLiteral);
       dropFirst(fileLines,1);
       lexer.create(fileLines,location,P_abstractPackage(location.package));
-      stmt:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
+      stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
       stmt.firstToken^.setSingleLocationForExpression(location);
       lexer.destroy;
       result:=context.reduceToLiteral(stmt.firstToken).literal;
@@ -157,19 +157,19 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
     fileAge(fileName,fileReadAt);
   end;
 
-PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST writePlainText:boolean);
+PROCEDURE T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_threadLocalMessages; CONST writePlainText:boolean);
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
   begin
     tryObtainName(true);
     if writePlainText then begin
       plainText:=ruleId+':=';
-      append(plainText,serializeToStringList(L,location,adapters));
+      append(plainText,serializeToStringList(L,location,threadLocalMessages));
       writeFileLines(fileName,plainText,C_lineBreakChar,false);
     end else begin
       wrapper.createToWriteToFile(fileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(L,@wrapper,location,adapters);
+      writeLiteralToStream(L,@wrapper,location,threadLocalMessages);
       wrapper.destroy;
     end;
   end;

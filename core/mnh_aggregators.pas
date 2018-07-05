@@ -1,9 +1,6 @@
 UNIT mnh_aggregators;
 INTERFACE
-USES //my libraries
-     myGenerics,
-     //MNH:
-     mnh_funcs,
+USES mnh_funcs,
      mnh_constants, mnh_basicTypes,
      mnh_out_adapters,
      mnh_contexts,
@@ -295,7 +292,7 @@ PROCEDURE T_andAggregator.addToAggregation(er:T_evaluationResult; CONST doDispos
     if er.literal^.literalType=lt_boolean then begin
       boolResult:=boolResult and P_boolLiteral(er.literal)^.value;
     end else if er.literal^.literalType<>lt_void then begin
-      context^.adapters^.raiseError('Cannot apply AND-aggregator to element of type '+er.literal^.typeString,location);
+      context^.messages.raiseError('Cannot apply AND-aggregator to element of type '+er.literal^.typeString,location);
     end;
     if doDispose then disposeLiteral(er.literal);
   end;
@@ -306,7 +303,7 @@ PROCEDURE T_orAggregator.addToAggregation(er:T_evaluationResult; CONST doDispose
     if er.literal^.literalType=lt_boolean then begin
       boolResult:=boolResult or P_boolLiteral(er.literal)^.value;
     end else if er.literal^.literalType<>lt_void then begin
-      context^.adapters^.raiseError('Cannot apply OR-aggregator to element of type '+er.literal^.typeString,location);
+      context^.messages.raiseError('Cannot apply OR-aggregator to element of type '+er.literal^.typeString,location);
     end;
     if doDispose then disposeLiteral(er.literal);
   end;
@@ -339,7 +336,7 @@ PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST d
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
       if resultLiteral=nil then begin
-        context^.adapters^.raiseError('Aggregation failed for element '+er.literal^.toString(50),location);
+        context^.messages.raiseError('Aggregation failed for element '+er.literal^.toString(50),location);
         resultLiteral:=newVoidLiteral;
       end;
     end;

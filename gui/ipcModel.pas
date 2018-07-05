@@ -12,7 +12,7 @@ PROCEDURE initIpcServer(CONST mainForm:TForm);
   begin
     uniqueEditorInstanceIpcServer:=TSimpleIPCServer.create(mainForm);
     uniqueEditorInstanceIpcServer.serverId:=UNIQUE_EDITOR_IPC_ID;
-    uniqueEditorInstanceIpcServer.Global:=true;
+    uniqueEditorInstanceIpcServer.global:=true;
     uniqueEditorInstanceIpcServer.StartServer;
   end;
 

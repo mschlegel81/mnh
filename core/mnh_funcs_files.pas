@@ -4,6 +4,7 @@ INTERFACE
 USES sysutils,Classes,Process,UTF8Process,FileUtil,{$ifdef Windows}windows,{$endif}lclintf,LazFileUtils,LazUTF8,
      myGenerics,mySys,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_litVar,
+     mnh_messages,
      mnh_funcs,mnh_out_adapters,mnh_fileWrappers,mnh_tokenArray,
      mnh_contexts,mnh_datastores;
 IMPLEMENTATION
@@ -119,7 +120,7 @@ FUNCTION fileContents_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) and context.checkSideEffects('fileContents',tokenLocation,[se_readFile]) then begin
       result:=newStringLiteral(fileContent(str0^.value,accessed));
       if not(accessed) then begin
-        context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
         disposeLiteral(result);
         result:=newStringLiteral('');
       end;
@@ -134,9 +135,9 @@ FUNCTION readDatastore_impl intFuncSignature;
       meta.create(str0^.value,str1^.value);
       result:=meta.readValue(tokenLocation,context);
       meta.destroy;
-      if (result=nil) and (context.adapters^.noErrors) then begin
+      if (result=nil) and (context.messages.continueEvaluation) then begin
         result:=newVoidLiteral;
-        context.adapters^.raiseWarning('Datastore for script '+str0^.toString()+' and rule '+str1^.toString()+' does not exist',tokenLocation);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'Datastore for script '+str0^.toString()+' and rule '+str1^.toString()+' does not exist');
       end;
     end;
   end;
@@ -144,7 +145,7 @@ FUNCTION readDatastore_impl intFuncSignature;
 FUNCTION serialize_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=newStringLiteral(serialize(arg0,tokenLocation,context.adapters))
+    then result:=newStringLiteral(serialize(arg0,tokenLocation,@context.messages))
     else result:=nil;
   end;
 
@@ -154,7 +155,7 @@ FUNCTION deserialize_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
       typeMap:=P_abstractPackage(tokenLocation.package)^.getTypeMap;
-      result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context.adapters,typeMap);
+      result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,@context.messages,typeMap);
       typeMap.destroy;
     end else result:=nil;
   end;
@@ -170,7 +171,7 @@ FUNCTION fileLines_impl intFuncSignature;
       result:=newListLiteral;
       for i:=0 to length(L)-1 do listResult^.appendString(L[i]);
       if not(accessed) then begin
-        context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
         disposeLiteral(result);
         result:=newListLiteral;
       end;
@@ -187,7 +188,7 @@ FUNCTION writeFile_impl intFuncSignature;
       ok:=mnh_fileWrappers.writeFile(str0^.value,
                                      str1^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
     end;
   end;
 
@@ -208,7 +209,7 @@ FUNCTION writeOrAppendFileLines(CONST params:P_listLiteral; CONST tokenLocation:
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value[i])^.value;
       ok:=writeFileLines(str0^.value,L,sep,doAppend);
       result:=newBoolLiteral(ok);
-      if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'File "'+str0^.value+'" cannot be accessed');
     end;
   end;
 
@@ -239,7 +240,7 @@ FUNCTION execSync_impl intFuncSignature;
       try
         tempProcess.execute;
         tempProcess.CloseInput;
-        while tempProcess.running and context.adapters^.noErrors do begin
+        while tempProcess.running and context.messages.continueEvaluation do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           if not(includeStdErr) then begin
             while tempProcess.stdErr.NumBytesAvailable>0 do

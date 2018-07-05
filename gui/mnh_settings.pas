@@ -1,6 +1,9 @@
 UNIT mnh_settings;
 INTERFACE
-USES myGenerics,dateutils,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants,serializationUtil,typinfo;
+USES Classes,sysutils,dateutils,typinfo,
+     myGenerics,serializationUtil,mySys,
+     mnh_constants,mnh_messages,
+     mnh_fileWrappers,mnh_out_adapters;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -293,7 +296,7 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     antialiasedFonts:=stream.readBoolean;
     mainForm.loadFromStream(stream);
     outputBehaviour:=stream.readNaturalNumber;
-    outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline,mt_displayTable,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged];
+    outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
     doResetPlotOnEvaluation := stream.readBoolean;
     saveIntervalIdx:=stream.readByte;
     wordWrapEcho:=stream.readBoolean;

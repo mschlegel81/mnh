@@ -18,6 +18,7 @@ USES //basic classes
      mnh_debuggingVar,
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
+     mnh_messages,
      mnh_patterns;
 TYPE
   T_subruleAttribute=record
@@ -36,7 +37,7 @@ TYPE
     public
       FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:pointer; CONST allowRaiseError:boolean; CONST a:P_literal=nil; CONST b:P_literal=nil):boolean; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
-      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
+      PROCEDURE validateSerializability(CONST threadLocalMessages:P_threadLocalMessages); virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:pointer):P_expressionLiteral; virtual;
@@ -52,7 +53,7 @@ TYPE
       DESTRUCTOR destroy;
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
-      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
+      PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR threadLocalMessages:T_threadLocalMessages);
       FUNCTION getAttributesLiteral:P_mapLiteral;
       FUNCTION getDocTxt:ansistring;
       PROCEDURE setComment(CONST commentText:ansistring);
@@ -81,14 +82,14 @@ TYPE
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       FUNCTION getParameterNames:P_listLiteral; virtual;
     public
-      PROCEDURE resolveIds(CONST adapters:P_adapters);
+      PROCEDURE resolveIds(CONST threadLocalMessages:P_threadLocalMessages);
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; VAR context:T_threadContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_threadContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_threadContext; CONST customId_:T_idString='');
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
-      PROCEDURE validateSerializability(CONST adapters:P_adapters); virtual;
+      PROCEDURE validateSerializability(CONST threadLocalMessages:P_threadLocalMessages); virtual;
       //Pattern related:
       FUNCTION arity:longint; virtual;
       FUNCTION isVariadic:boolean;
@@ -168,7 +169,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
   end;
 
-PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
+PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST threadLocalMessages:P_threadLocalMessages);
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
@@ -182,9 +183,9 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
   begin
-    predigest(rep,nil,context.recycler,context.adapters);
+    predigest(rep,nil,context.recycler,context.messages);
     if (rep^.tokType<>tt_expBraceOpen) then begin
-      context.adapters^.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
+      context.messages.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
     end;
     t:=rep^.next; prev:=rep;
@@ -200,16 +201,16 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
       t:=t^.next;
     end;
     if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-      context.adapters^.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
+      context.messages.raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
       exit;
     end;
 
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
     context.recycler.disposeToken(t); //dispose closing curly bracket
-    if context.adapters^.noErrors then begin
+    if context.messages.continueEvaluation then begin
       new(inlineSubRule,createFromInline(inlineRuleTokens,context));
-      if context.adapters^.noErrors then begin
+      if context.messages.continueEvaluation then begin
         rep^.tokType:=tt_literal;
         rep^.data:=inlineSubRule;
       end else dispose(inlineSubRule,destroy);
@@ -240,17 +241,17 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
           tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
           tt_save: begin
             if subExpressionLevel=0 then begin
-              if indexOfSave>=0     then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
-              else if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
+              if indexOfSave>=0     then context.messages.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
+              else if scopeLevel<>1 then context.messages.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
               else begin
                 indexOfSave:=i;
-                makeStateful(context.adapters,token.location);
+                makeStateful(@context.messages,token.location);
               end;
             end;
             parIdx:=-1;
           end;
           tt_return: begin
-            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.adapters^.raiseError('return statements are currently only allowed in subrules',token.location);
+            if not(typ in [et_subrule,et_subruleIteratable,et_subruleStateful,et_eachBody,et_whileBody]) then context.messages.raiseError('return statements are currently only allowed in subrules',token.location);
             parIdx:=-1;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
@@ -366,9 +367,9 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
           tt_expBraceOpen : inc(subExpressionLevel);
           tt_expBraceClose: dec(subExpressionLevel);
           tt_save: if subExpressionLevel=0 then begin
-            if indexOfSave>=0 then context.adapters^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-            if scopeLevel<>1 then context.adapters^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-            makeStateful(context.adapters,token.location);
+            if indexOfSave>=0 then context.messages.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+            if scopeLevel<>1 then context.messages.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+            makeStateful(@context.messages,token.location);
             indexOfSave:=i;
           end;
         end;
@@ -474,12 +475,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         firstRep:=nil;
         lastRep:=nil;
         leaveCriticalSection(subruleCallCs);
-        context.adapters^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
+        context.messages.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
         exit;
       end;
       currentlyEvaluating:=true;
 
-      if not(functionIdsReady) then resolveIds(context.adapters);
+      if not(functionIdsReady) then resolveIds(@context.messages);
       blocking:=typ in C_subruleExpressionTypes;
       firstRep:=context.recycler.newToken(getLocation,'',beginToken[blocking]);
       lastRep:=firstRep;
@@ -556,7 +557,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         else lastRep:=firstRep^.last;
         context.valueStore:=previousValueStore;
         if firstCallOfResumable then begin
-          if context.adapters^.noErrors then begin
+          if context.messages.continueEvaluation then begin
             updateBody;
           end else begin
             dispose(saveValueStore,destroy);
@@ -584,12 +585,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       result:=false;
       case typ of
         et_eachBody: begin
-          if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
-                       else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
+          if param=nil then context.messages.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
+                       else context.messages.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
         end;
         et_inline,et_inlineIteratable,et_inlineStateful: begin
-          if param=nil then context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
-                       else context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
+          if param=nil then context.messages.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(pattern.arity),getLocation)
+                       else context.messages.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(pattern.arity),getLocation);
         end;
       end;
     end;
@@ -729,7 +730,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     end;
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
                       (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_statefulExpressionTypes) then begin
-      P_threadContext(threadContext)^.adapters^.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
+      P_threadContext(threadContext)^.messages.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
       exit(newVoidLiteral);
     end;
     if LHS<>nil then begin
@@ -772,15 +773,15 @@ FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId
     disposeLiteral(mapper);
   end;
 
-PROCEDURE T_inlineExpression.validateSerializability(CONST adapters: P_adapters);
+PROCEDURE T_inlineExpression.validateSerializability(CONST threadLocalMessages:P_threadLocalMessages);
   begin
-    if adapters=nil then exit;
-    if (typ<>et_inline) then adapters^.raiseError('Expression literal '+toString(20)+' is not serializable',getLocation);
+    if threadLocalMessages=nil then exit;
+    if (typ<>et_inline) then threadLocalMessages^.raiseError('Expression literal '+toString(20)+' is not serializable',getLocation);
   end;
 
-PROCEDURE T_expression.validateSerializability(CONST adapters: P_adapters);
+PROCEDURE T_expression.validateSerializability(CONST threadLocalMessages:P_threadLocalMessages);
   begin
-    if adapters<>nil then adapters^.raiseError('Expression '+toString()+' cannot be serialized',getLocation);
+    if threadLocalMessages<>nil then threadLocalMessages^.raiseError('Expression '+toString()+' cannot be serialized',getLocation);
   end;
 
 CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
@@ -935,7 +936,7 @@ FUNCTION T_expression.evaluateToBoolean(CONST location: T_tokenLocation; CONST c
       result:=P_boolLiteral(resultLiteral)^.value;
     end else begin
       result:=false;
-      if allowRaiseError then P_threadContext(context)^.adapters^.raiseError('Expression does not return a boolean.',location);
+      if allowRaiseError then P_threadContext(context)^.messages.raiseError('Expression does not return a boolean.',location);
     end;
   end;
 
@@ -1090,7 +1091,7 @@ FUNCTION T_ruleMetaData.getAttribute(CONST attributeKey:string; CONST caseSensit
     result:=blankAttribute;
   end;
 
-PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR adapters:T_adapters);
+PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR threadLocalMessages:T_threadLocalMessages);
   VAR line:string;
       parts:T_arrayOfString;
       newAttriuteIndex:longint=0;
@@ -1098,7 +1099,7 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
     VAR i:longint;
     begin
       for i:=0 to length(attributes)-1 do if attributes[i].key=key then begin
-        adapters.raiseWarning('Duplicate attribute key "'+key+'"',location);
+        threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,location,'Duplicate attribute key "'+key+'"');
         exit(i);
       end;
       result:=length(attributes);
@@ -1121,16 +1122,16 @@ PROCEDURE T_ruleMetaData.setAttributes(CONST attributeLines:T_arrayOfString; CON
           if isSideEffectName(trim(sideEffectName),sideEffect)
           then include(sideEffectWhitelist,sideEffect)
           else begin
-            adapters.raiseWarning('Unknown side effect: '+trim(sideEffectName),location);
+            threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,location,'Unknown side effect: '+trim(sideEffectName));
             hasUnknownSideEffects:=true;
           end;
         end;
       end;
-      if requirePure and (sideEffectWhitelist<>[]) then adapters.raiseError('Conflicting side effect restrictions: pure cannot be combined',location);
+      if requirePure and (sideEffectWhitelist<>[]) then threadLocalMessages.raiseError('Conflicting side effect restrictions: pure cannot be combined',location);
       if hasUnknownSideEffects then begin
         compoundMessage:='The following side effects are defined:';
         for sideEffect in C_allSideEffects do append(compoundMessage,C_sideEffectName[sideEffect]);
-        adapters.raiseWarning(compoundMessage,location);
+        threadLocalMessages.globalMessages^.postTextMessage(mt_el2_warning,location, compoundMessage);
       end;
     end;
 
@@ -1190,7 +1191,7 @@ FUNCTION T_ruleMetaData.getDocTxt:ansistring;
     if result<>'' then result:=result+C_lineBreakChar;
   end;
 
-PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
+PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST threadLocalMessages:P_threadLocalMessages);
   VAR bracketStack:T_TokenStack;
   FUNCTION isEachIdentifier(CONST id:string):boolean;
     VAR k:longint;
@@ -1212,7 +1213,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
           tt_braceClose:bracketStack.quietPop;
         end;
         if (tokType=tt_identifier) and not(isEachIdentifier(txt)) then
-          BLANK_ABSTRACT_PACKAGE.resolveId(t^,adapters);
+          BLANK_ABSTRACT_PACKAGE.resolveId(t^,threadLocalMessages);
       end;
       t:=t^.next;
     end;
@@ -1220,7 +1221,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST adapters:P_adapters);
 
   end;
 
-PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
+PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalMessages);
   VAR i:longint;
       bracketStack:T_TokenStack;
   FUNCTION isEachIdentifier(CONST id:string):boolean;
@@ -1242,7 +1243,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST adapters: P_adapters);
           tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(@token);
           tt_braceClose: bracketStack.quietPop;
           tt_identifier: if (parIdx<0) and not(isEachIdentifier(token.txt)) then begin
-            P_abstractPackage(token.location.package)^.resolveId(token,adapters);
+            P_abstractPackage(token.location.package)^.resolveId(token,threadLocalMessages);
             functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
           end;
           {$ifdef fullVersion}
@@ -1267,7 +1268,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
       resultLiteral:P_listLiteral=nil;
 
-      tempcontext:T_evaluationContext;
       collector  :T_collectingOutAdapter;
 
       dataReadyVectorized:boolean=false;
@@ -1276,6 +1276,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
   FUNCTION evaluatePEachExpressionOk:boolean;
     VAR firstRep:P_token=nil;
         lastRep:P_token=nil;
+        m:P_storedMessage;
     begin
       firstRep:=context.recycler.newToken(location,'',tt_literal,TList); TList^.rereference;
       firstRep^.next:=context.recycler.newToken(location,'t',tt_parallelEach);
@@ -1287,14 +1288,15 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       lastRep^.next:=context.recycler.newToken(location,'',tt_literal,f); f^.rereference;
       lastRep:=lastRep^.next;
       lastRep^.next:=context.recycler.newToken(location,'',tt_braceClose);
-      tempcontext.threadContext^.reduceExpression(firstRep);
-      result:=tempcontext.adapters^.noErrors and
+      context.reduceExpression(firstRep);
+      result:=context.messages.continueEvaluation and
               (firstRep<>nil) and
               (firstRep^.next=nil) and
               (firstRep^.tokType=tt_literal) and
               (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(firstRep^.data)^.size = TList^.size);
-      tempcontext.adapters^.clearErrors;
+      for m in context.messages.storedMessages do collector.append(m);
+      context.messages.clear;
       if result then resultLiteral:=P_listLiteral(P_literal(firstRep^.data)^.rereferenced);
       context.recycler.cascadeDisposeToken(firstRep);
     end;
@@ -1302,18 +1304,20 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
   FUNCTION evaluateVectorExpressionOk:boolean;
     VAR params:T_listLiteral;
         temp:P_literal;
+        m:P_storedMessage;
     begin
       params.create(1);
       params.append(TList,true);
-      temp:=f^.evaluate(location,tempcontext.threadContext,@params).literal;
+      temp:=f^.evaluate(location,@context,@params).literal;
       params.destroy;
-      result:=tempcontext.adapters^.noErrors and
+      result:=context.messages.continueEvaluation and
               (temp<>nil) and
               (temp^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
               (P_listLiteral(temp)^.size = TList^.size);
       if result then resultLiteral:=P_listLiteral(temp)
       else if temp<>nil then disposeLiteral(temp);
-      tempcontext.adapters^.clearErrors;
+      for m in context.messages.storedMessages do collector.append(m);
+      context.messages.clear;
     end;
 
   PROCEDURE constructInitialTList;
@@ -1342,12 +1346,14 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         screenRow:T_rowToPaint;
         t:double;
         stillOk:boolean=true;
+        scalingOptions:T_scalingOptions;
 
     begin
-      while stillOk and (length(dataRow)<samples) do begin
+      scalingOptions:=getOptionsViaAdapters(context.messages);
+      while stillOk and (dataRow.size<samples) do begin
         //Prepare threshold:----------------------------------------------------
-        screenRow:=context.adapters^.plot^.options.transformRow(dataRow,1,0,0);
-        for i:=1 to length(dataRow)-1 do
+        screenRow:=scalingOptions.transformRow(dataRow,1,0,0);
+        for i:=1 to dataRow.size-1 do
         if screenRow[i-1].valid and screenRow[i].valid then begin
           distThreshold:=distThreshold+sqr(screenRow[i].x-screenRow[i-1].x)
                                       +sqr(screenRow[i].y-screenRow[i-1].y);
@@ -1358,7 +1364,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
         TList:=newListLiteral;
-        for i:=1 to length(dataRow)-1 do
+        for i:=1 to dataRow.size-1 do
         if not(screenRow[i  ].valid) or
            not(screenRow[i-1].valid) or
           (sqr(screenRow[i].x-screenRow[i-1].x)
@@ -1385,12 +1391,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           then newRow:=newDataRow(resultLiteral,TList)
           else newRow:=newDataRow(resultLiteral);
           //Merge samples:------------------------------------------------------
-          setLength(oldRow,length(dataRow));
-          for i:=0 to length(oldRow)-1 do oldRow[i]:=dataRow[i];
+          dataRow.cloneTo(oldRow);
           setLength(oldTimes,length(tRow));
           for i:=0 to length(oldTimes)-1 do oldTimes[i]:=tRow[i];
-          setLength(dataRow,length(oldRow  )+length(newRow  ));
-          setLength(tRow   ,length(oldTimes)+length(newTimes));
+          dataRow.size  :=oldRow.size+newRow.size;
+          setLength(tRow,length(oldTimes)+length(newTimes));
           i:=0;
           j:=0;
           k:=0;
@@ -1415,6 +1420,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
             dataRow[k]:=newRow[j];
             inc(j); inc(k);
           end;
+          newRow.free;
+          oldRow.free;
           //------------------------------------------------------:Merge samples
           disposeLiteral(resultLiteral);
         end;
@@ -1423,10 +1430,10 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       end;
     end;
 
+  VAR m:P_storedMessage;
   begin
-    tempcontext.createAndResetSilentContext(nil,C_EMPTY_STRING_ARRAY,[]);
+    dataRow.init();
     collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
-    tempcontext.adapters^.addOutAdapter(@collector,false);
     constructInitialTList;
 
     dataReadyVectorized:=evaluateVectorExpressionOk;
@@ -1440,12 +1447,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       refineDataRow;
     end else begin
       disposeLiteral(TList);
-      context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       collector.removeDuplicateStoredMessages;
-      context.adapters^.raiseStoredMessages(collector.storedMessages);
-      setLength(dataRow,0);
+      for m in collector.storedMessages do context.messages.append(m);
+      context.messages.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
+      dataRow.free;
     end;
-    tempcontext.destroy;
     collector.destroy;
     result:=dataRow;
   end;
@@ -1510,12 +1516,12 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.recycler,context.adapters^{$ifdef fullVersion},nil{$endif});
+    statement:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
     lexer.destroy;
     if statement.firstToken=nil then begin
-      context.adapters^.raiseError('The parsed expression appears to be empty',location);
+      context.messages.raiseError('The parsed expression appears to be empty',location);
       exit(nil);
-    end else if not(context.adapters^.noErrors) then begin
+    end else if not(context.messages.continueEvaluation) then begin
       exit(nil); //Parsing error ocurred
     end;
     result:=statement.firstToken;
@@ -1542,7 +1548,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
                     else last^.next:=subTokens;
       last:=subTokens^.last;
     end;
-    preprocessStatement(result,context.adapters^{$ifdef fullVersion},nil{$endif});
+    preprocessStatement(result,context.messages{$ifdef fullVersion},nil{$endif});
   end;
 
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
@@ -1556,7 +1562,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context);
     if first=nil then exit(nil);
 
-    if not(first^.areBracketsPlausible(context.adapters^)) then begin
+    if not(first^.areBracketsPlausible(context.messages)) then begin
       context.recycler.cascadeDisposeToken(first);
       exit(nil);
     end;
@@ -1568,14 +1574,14 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     end;
 
     digestInlineExpression(first,context);
-    if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-    if not(context.adapters^.noErrors) then begin
+    if (context.messages.continueEvaluation) and (first^.next<>nil) then context.messages.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if not(context.messages.continueEvaluation) then begin
       context.recycler.cascadeDisposeToken(first);
       exit(nil);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
       context.recycler.disposeToken(first);
-      context.adapters^.raiseSystemError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+      context.messages.raiseError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location,mt_el4_systemError);
       exit(nil);
     end;
     result:=P_expressionLiteral(first^.data);

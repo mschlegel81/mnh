@@ -6,6 +6,7 @@ USES //basic classes
      myGenerics, myStringUtil,
      //MNH:
      mnh_basicTypes,mnh_constants,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar;
 TYPE
@@ -39,11 +40,11 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE setIdResolved;
       PROPERTY isIdResolved:boolean read idResolved;
-      FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
+      FUNCTION complainAboutUnused(VAR adapters:T_threadLocalMessages):boolean;
       FUNCTION getDocTxt:string; virtual; abstract;
       {$endif}
       PROCEDURE clearCache; virtual;
-      PROCEDURE resolveIds(CONST adapters:P_adapters); virtual;
+      PROCEDURE resolveIds(CONST adapters:P_threadLocalMessages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
       FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
@@ -67,7 +68,7 @@ TYPE
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
     FUNCTION singleTokenToString:ansistring;
-    FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_adapters):boolean;
+    FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_threadLocalMessages):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
@@ -86,8 +87,8 @@ TYPE
       dat:array[0..2047] of P_token;
       fill:longint;
     public
-      CONSTRUCTOR create;
-      DESTRUCTOR destroy;
+      PROCEDURE init;
+      PROCEDURE cleanupInstance;
 
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
@@ -100,7 +101,7 @@ TYPE
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
 IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
@@ -126,7 +127,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; CONST adapters:P_adapters; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -138,7 +139,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
       setLength(result,1);
       result[0].first:=first^.next;
     end else begin
-      adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      adapters.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
       setLength(result,0);
       exit;
     end;
@@ -146,7 +147,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
       if t^.tokType in C_openingBrackets then inc(bracketLevel)
       else if t^.tokType in C_closingBrackets then dec(bracketLevel)
       else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-        if partLength=0 then adapters^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        if partLength=0 then adapters.raiseError('Empty body part.',result[length(result)-1].first^.location);
         result[length(result)-1].last:=p; //end of body part is token before comma
         setLength(result,length(result)+1);
         result[length(result)-1].first:=t^.next; //start of next body part is token after comma
@@ -156,7 +157,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
     result[length(result)-1].last:=p; //end of body part is token before comma
     if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-      adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      adapters.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
       setLength(result,0);
       exit;
     end;
@@ -192,18 +193,18 @@ PROCEDURE T_abstractRule.setIdResolved;
     idResolved:=true;
   end;
 
-FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_adapters): boolean;
+FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages): boolean;
   begin
     result:=(id<>MAIN_RULE_ID) and not(idResolved);
-    if result then adapters.raiseWarning('Unused rule '+id+
+    if result then adapters.globalMessages^.postTextMessage(mt_el2_warning,lineLocation(declarationStart),
+    'Unused rule '+id+
     '; you can suppress this warning with '+
-    ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE,
-    lineLocation(declarationStart));
+    ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_WARNING_ATTRIBUTE);
   end;
 {$endif}
 
 PROCEDURE T_abstractRule.clearCache; begin end;
-PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_adapters); begin end;
+PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_threadLocalMessages); begin end;
 FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;
@@ -375,7 +376,7 @@ FUNCTION T_token.singleTokenToString: ansistring;
     then result:=trim(result);
   end;
 
-FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): boolean;
+FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMessages): boolean;
   VAR bracketStack:array of P_token;
   PROCEDURE push(CONST token:P_token);
     begin
@@ -491,14 +492,14 @@ PROCEDURE T_token.setModifier(CONST modifier:T_modifier);
     tokType:=tt_modifier;
   end;
 
-CONSTRUCTOR T_tokenRecycler.create;
+PROCEDURE T_tokenRecycler.init;
   VAR i:longint;
   begin
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
   end;
 
-DESTRUCTOR T_tokenRecycler.destroy;
+PROCEDURE T_tokenRecycler.cleanupInstance;
   begin
     while fill>0 do begin
       dec(fill);

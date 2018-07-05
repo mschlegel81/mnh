@@ -564,113 +564,6 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
            (modifiers:[modifier_customDuckType,modifier_private];           ruleType:rt_duckTypeCheck));
 
 TYPE
-  T_messageClass=(mc_echo   ,
-                  mc_print  ,
-                  mc_timing ,
-                  mc_note   ,
-                  mc_warning,
-                  mc_error  );
-CONST
-  C_messageClassMeta:array[T_messageClass] of record guiMarker:string; htmlSpan:string; end=
-    {mc_echo   }((guiMarker: ECHO_MARKER   ; htmlSpan:''),
-    {mc_print  } (guiMarker: ''            ; htmlSpan:''),
-    {mc_timing } (guiMarker: TIMING_MARKER ; htmlSpan:''),
-    {mc_note   } (guiMarker: NOTE_MARKER   ; htmlSpan:''),
-    {mc_warning} (guiMarker: WARNING_MARKER; htmlSpan:''),
-    {mc_error  } (guiMarker: ERROR_MARKER  ; htmlSpan:'error'));
-
-TYPE
-  T_messageType = (
-    mt_clearConsole,
-    mt_printline,
-    mt_printdirect,
-    mt_echo_input,
-    mt_echo_declaration,
-    mt_echo_output,
-    mt_echo_continued,
-    mt_el1_note,
-    mt_el1_userNote,
-    mt_el2_warning,
-    mt_el2_userWarning,
-    mt_el3_evalError,
-    mt_el3_noMatchingMain,
-    mt_el3_stackTrace,
-    mt_el3_userDefined,
-    mt_el4_systemError,
-    mt_el4_haltMessageReceived,
-    mt_el4_haltMessageQuiet,
-    mt_endOfEvaluation,
-    mt_timing_info
-    {$ifdef fullVersion},
-    mt_plotFileCreated,
-    mt_plotCreatedWithDeferredDisplay,
-    mt_plotCreatedWithInstantDisplay,
-    mt_plotSettingsChanged,
-    mt_displayTable,
-    mt_displayTreeView,
-    mt_displayCustomDialog,
-    mt_displayImage,
-    mt_gui_editScriptSucceeded,
-    mt_gui_editScriptFailed,
-    mt_gui_breakpointEncountered,
-    mt_guiPseudoPackageFound
-    {$endif});
-
-  T_messageTypeSet=set of T_messageType;
-
-CONST
-  {$ifdef fullVersion}
-  C_plotMessages:T_messageTypeSet=[mt_plotFileCreated..mt_plotSettingsChanged];
-  C_guiOnlyMessages:T_messageTypeSet=[mt_plotFileCreated..mt_gui_breakpointEncountered];
-  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
-  {$endif}
-  C_messageTypeMeta:array[T_messageType] of record
-    level:shortint;
-    mClass:T_messageClass;
-    prefix:string;
-    includeLocation,ignoredBySandbox,triggersGuiStartup:boolean;
-    systemErrorLevel:byte;
-  end = (
-{mt_clearConsole           }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_printline              }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_print                  }             (level:-2; mClass:mc_print;   prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_input             }             (level:-1; mClass:mc_echo;    prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_declaration       }             (level:-1; mClass:mc_echo;    prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_output            }             (level:-1; mClass:mc_echo;    prefix: 'out>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_echo_continued         }             (level:-1; mClass:mc_echo;    prefix: '...>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el1_note               }             (level: 1; mClass:mc_note;    prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el1_userNote           }             (level: 1; mClass:mc_note;    prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el2_warning            }             (level: 2; mClass:mc_warning; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el2_userWarning        }             (level: 2; mClass:mc_warning; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el3_evalError          }             (level: 3; mClass:mc_error;   prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:3),
-{mt_el3_noMatchingMain     }             (level: 3; mClass:mc_error;   prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:1),
-{mt_el3_stackTrace         }             (level: 3; mClass:mc_error;   prefix: 'Stack trace '         ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el3_userDefined        }             (level: 3; mClass:mc_error;   prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:2),
-{mt_el4_systemError        }             (level: 4; mClass:mc_error;   prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:5),
-{mt_el4_haltMessageReceived}             (level: 4; mClass:mc_error;   prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_el4_haltMessageQuiet   }             (level: 4; mClass:mc_error;   prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_endOfEvaluation        }             (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_timing_info            }             (level:-1; mClass:mc_timing;  prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0)
-{$ifdef fullVersion},
-{mt_plotFileCreated                    } (level:-1; mClass:mc_note;    prefix: 'Image:'               ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_plotCreatedWithDeferredDisplay     } (level:-1; mClass:mc_note;    prefix: 'Deferred plot request'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_plotCreatedWithInstantDisplay      } (level:-1; mClass:mc_note;    prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_plotSettingsChanged                } (level:-1; mClass:mc_note;    prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_displayTable                       } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_displayTreeView                    } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_displayCustomDialog                } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_displayImage}                        (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; systemErrorLevel:0),
-{mt_gui_editScriptSucceeded            } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_gui_editScriptFailed               } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_gui_breakpointEncountered          } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; systemErrorLevel:0),
-{mt_guiPseudoPackageFound              } (level:-1; mClass:mc_note;    prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; systemErrorLevel:0)
-{$endif});
-  C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
-    [mt_el1_note,mt_el1_userNote],
-    [mt_el2_warning,mt_el2_userWarning],
-    [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_stackTrace,mt_el3_userDefined],
-    [mt_el4_systemError,mt_el4_haltMessageReceived,mt_el4_haltMessageQuiet]);
-TYPE
   T_sideEffect=(se_inputViaAsk,
                 se_output,
                 se_sound,
@@ -711,8 +604,6 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
 FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
-OPERATOR :=(CONST x:T_messageTypeSet):qword;
-OPERATOR :=(x:qword):T_messageTypeSet;
 IMPLEMENTATION
 FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
   VAR se:T_sideEffect;
@@ -760,36 +651,6 @@ FUNCTION configDir:string;
     {$else}
     result:=GetAppConfigDir(false);
     {$endif}
-  end;
-
-OPERATOR :=(CONST x:T_messageTypeSet):qword;
-  VAR mt:T_messageType;
-      mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
-      i:longint;
-  begin
-    for i:=0 to length(mask)-1 do mask[i]:=false;
-    i:=length(mask)-1;
-    for mt:=low(T_messageType) to high(T_messageType) do if i>0 then begin
-      mask[i]:=mt in x;
-      dec(i);
-    end;
-    result:=0;
-    move(mask,result,sizeOf(qword));
-  end;
-
-OPERATOR :=(x:qword):T_messageTypeSet;
-  VAR mt:T_messageType;
-      mask:bitpacked array [0..sizeOf(qword)*8-1] of boolean;
-      i:longint;
-  begin
-    initialize(mask);
-    move(x,mask,sizeOf(qword));
-    i:=length(mask)-1;
-    result:=[];
-    for mt:=low(T_messageType) to high(T_messageType) do begin
-      if (i>0) and mask[i] then include(result,mt);
-      dec(i);
-    end;
   end;
 
 INITIALIZATION

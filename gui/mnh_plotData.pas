@@ -3,6 +3,8 @@ INTERFACE
 USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
      mnh_basicTypes, mnh_constants,
+     mnh_messages,
+     mnh_out_adapters,
      plotstyles,plotMath,plotMaps;
 TYPE
   T_plotQuality=0..3;
@@ -12,9 +14,83 @@ CONST
   PLOT_QUALITY_MEDIUM_2=2;
   PLOT_QUALITY_HIGH    =3;
 TYPE
-  T_point = array[0..1] of double;
-  T_dataRow = array of T_point;
   T_boundingBox = array['x'..'y', 0..1] of double;
+
+  P_addRowMessage=^T_addRowMessage;
+  T_addRowMessage=object(T_payloadMessage)
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      styleOptions: string;
+      rowData:T_dataRow;
+      CONSTRUCTOR create(CONST styleOptions_: string; CONST rowData_:T_dataRow);
+  end;
+
+  P_addTextMessage=^T_addTextMessage;
+  T_addTextMessage=object(T_payloadMessage)
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      customText:T_customText;
+      CONSTRUCTOR create(CONST cText:T_customText);
+  end;
+
+  P_plotOptionsMessage=^T_plotOptionsMessage;
+  T_plotOptionsMessage=object(T_payloadMessage)
+    private
+      options:T_scalingOptions;
+      retrieved:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR createRetrieveRequest;
+      CONSTRUCTOR createPostRequest(CONST o:T_scalingOptions);
+      PROCEDURE setOptions(CONST o:T_scalingOptions);
+      FUNCTION getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+  end;
+
+  P_plotRenderRequest=^T_plotRenderRequest;
+  T_plotRenderRequest=object(T_payloadMessage)
+    private
+      targetIsString:boolean;
+      fileName:string;
+      width,height,quality:longint;
+
+      retrieved:boolean;
+      outputString:string;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_,quality_:longint);
+      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_,quality_:longint);
+      PROCEDURE setString(CONST s:string);
+      FUNCTION getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages):string;
+      PROPERTY isRenderToStringRequest:boolean read targetIsString;
+  end;
+
+  P_plotDropRowRequest=^T_plotDropRowRequest;
+  T_plotDropRowRequest=object(T_payloadMessage)
+    private
+      count:longint;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST numberOfRowsToDrop:longint);
+  end;
+
+  P_plotDisplayRequest=^T_plotDisplayRequest;
+  T_plotDisplayRequest=object(T_payloadMessage)
+    private
+      displayExecuted:boolean;
+      wantImmediateDisplay:boolean;
+    protected
+      FUNCTION internalType:shortstring; virtual;
+    public
+      CONSTRUCTOR create(CONST displayImmediate:boolean);
+      PROCEDURE waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
+      PROCEDURE markExecuted;
+      PROPERTY immediate:boolean read wantImmediateDisplay;
+  end;
 
   P_plot =^T_plot;
   T_plot = object
@@ -29,17 +105,18 @@ TYPE
       PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
       PROCEDURE drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
       PROCEDURE drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
-    public
       FUNCTION  obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
+
+      PROCEDURE addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
+      PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
+      PROCEDURE addCustomText(CONST text:T_customText);
+    public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
       CONSTRUCTOR createWithDefaults;
       PROCEDURE setDefaults;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
-      PROCEDURE removeRows(CONST numberOfRowsToRemove:longint);
-      PROCEDURE addCustomText(CONST text:T_customText);
 
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
@@ -49,6 +126,12 @@ TYPE
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
+
+      PROCEDURE processMessage(VAR m:T_addRowMessage);
+      PROCEDURE processMessage(VAR m:T_addTextMessage);
+      PROCEDURE processMessage(VAR m:T_plotOptionsMessage);
+      PROCEDURE processMessage(VAR m:T_plotRenderRequest);
+      PROCEDURE processMessage(VAR m:T_plotDropRowRequest);
   end;
 
   T_plotSeries=object
@@ -73,8 +156,196 @@ TYPE
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
+  F_execPlotCallback=PROCEDURE;
+  F_pullSettingsToGuiCallback=PROCEDURE of object;
+  P_plotSystem=^T_plotSystem;
+  T_plotSystem=object(T_collectingOutAdapter)
+    private
+      plotChangedSinceLastDisplay:boolean;
+      displayImmediate           :boolean;
+      doPlot:F_execPlotCallback;
+      pullSettingsToGui:F_pullSettingsToGuiCallback;
+      isProcessingMessage:boolean;
+      PROCEDURE processMessage(CONST message:P_storedMessage);
+    public
+      currentPlot:T_plot;
+      animation:T_plotSeries;
+
+      CONSTRUCTOR create(CONST executePlotCallback:F_execPlotCallback);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
+      FUNCTION requiresFastPolling:boolean;
+      FUNCTION processPendingMessages:boolean;
+      PROCEDURE resetOnEvaluationStart;
+      PROCEDURE logPlotDone;
+      PROCEDURE registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
+      PROCEDURE startGuiInteraction;
+      PROCEDURE doneGuiInteraction;
+  end;
+
+FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
+FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_scalingOptions;
+  VAR request:P_plotOptionsMessage;
+  begin
+    new(request,createRetrieveRequest);
+    threadLocalMessages.globalMessages^.postCustomMessage(request^.rereferenced);
+    result:=request^.getOptionsWaiting(threadLocalMessages);
+    disposeMessage(request);
+  end;
+
+FUNCTION T_plotDisplayRequest.internalType: shortstring;
+  begin
+    result:='P_plotDisplayRequest';
+  end;
+
+CONSTRUCTOR T_plotDisplayRequest.create(CONST displayImmediate: boolean);
+  begin
+    inherited create(mt_plot_postDisplay);
+    wantImmediateDisplay:=displayImmediate;
+    displayExecuted:=false;
+  end;
+
+PROCEDURE T_plotDisplayRequest.waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
+  begin
+    enterCriticalSection(messageCs);
+    while not(displayExecuted) and (errorFlagProvider.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    leaveCriticalSection(messageCs);
+  end;
+
+PROCEDURE T_plotDisplayRequest.markExecuted;
+  begin
+    enterCriticalSection(messageCs);
+    displayExecuted:=true;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_addTextMessage.internalType: shortstring;
+  begin
+    result:='T_addTextMessage';
+  end;
+
+CONSTRUCTOR T_addTextMessage.create(CONST cText: T_customText);
+  begin
+    inherited create(mt_plot_addText);
+    customText:=cText;
+  end;
+
+FUNCTION T_plotDropRowRequest.internalType: shortstring;
+  begin
+    result:='T_plotDropRowRequest';
+  end;
+
+CONSTRUCTOR T_plotDropRowRequest.create(CONST numberOfRowsToDrop: longint);
+  begin
+    inherited create(mt_plot_dropRow);
+    count:=numberOfRowsToDrop;
+  end;
+
+FUNCTION T_plotRenderRequest.internalType: shortstring;
+  begin
+    result:='T_plotRenderRequest';
+  end;
+
+CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: string; CONST width_, height_, quality_: longint);
+  begin
+    inherited create(mt_plot_renderRequest);
+    targetIsString:=false;
+    fileName:=filename_;
+    width:=width_;
+    height:=height_;
+    quality:=quality_;
+    retrieved:=false;
+    outputString:='';
+  end;
+
+CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_, quality_: longint);
+  begin
+    inherited create(mt_plot_renderRequest);
+    targetIsString:=true;
+    fileName:='';
+    width:=width_;
+    height:=height_;
+    quality:=quality_;
+    retrieved:=false;
+    outputString:='';
+  end;
+
+PROCEDURE T_plotRenderRequest.setString(CONST s: string);
+  begin
+    enterCriticalSection(messageCs);
+    outputString:=s;
+    retrieved:=true;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_plotRenderRequest.getStringWaiting(VAR errorFlagProvider:T_threadLocalMessages): string;
+  begin
+    enterCriticalSection(messageCs);
+    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=outputString;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_plotOptionsMessage.internalType: shortstring;
+  begin
+    result:='T_plotOptionsMessage';
+  end;
+
+CONSTRUCTOR T_plotOptionsMessage.createRetrieveRequest;
+  begin
+    inherited create(mt_plot_retrieveOptions);
+    options.setDefaults;
+    retrieved:=false;
+  end;
+
+CONSTRUCTOR T_plotOptionsMessage.createPostRequest(CONST o: T_scalingOptions);
+  begin
+    inherited create(mt_plot_setOptions);
+    retrieved:=true;
+    options:=o;
+  end;
+
+PROCEDURE T_plotOptionsMessage.setOptions(CONST o: T_scalingOptions);
+  begin
+    enterCriticalSection(messageCs);
+    options:=o;
+    retrieved:=true;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_plotOptionsMessage.getOptionsWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_scalingOptions;
+  begin
+    enterCriticalSection(messageCs);
+    while not(retrieved) and (errorFlagProvider.continueEvaluation) do begin
+      leaveCriticalSection(messageCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(messageCs);
+    end;
+    result:=options;
+    leaveCriticalSection(messageCs);
+  end;
+
+FUNCTION T_addRowMessage.internalType: shortstring;
+  begin
+    result:='T_addRowMessage';
+  end;
+
+CONSTRUCTOR T_addRowMessage.create(CONST styleOptions_: string; CONST rowData_: T_dataRow);
+  begin
+    inherited create(mt_plot_addRow);
+    styleOptions:=styleOptions_;
+    rowData     :=rowData_;
+  end;
 
 FUNCTION T_plotSeries.getOptions(CONST index: longint): T_scalingOptions;
   begin
@@ -194,18 +465,9 @@ CONSTRUCTOR T_plot.createWithDefaults;
   end;
 
 PROCEDURE T_plot.setDefaults;
-  VAR axis: char;
   begin
     system.enterCriticalSection(cs);
-    with scalingOptions do begin
-      for axis:='x' to 'y' do begin
-        axisTrafo[axis].reset;
-        axisStyle[axis]:=[gse_tics,gse_coarseGrid,gse_fineGrid];
-      end;
-      preserveAspect:=true;
-      relativeFontSize:=10;
-      autoscaleFactor:=1;
-    end;
+    scalingOptions.setDefaults;
     clear;
     system.leaveCriticalSection(cs);
   end;
@@ -240,7 +502,7 @@ PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove:longint);
+PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove: longint);
   VAR i0,i:longint;
   begin
     if numberOfRowsToRemove<=0 then exit;
@@ -251,7 +513,7 @@ PROCEDURE T_plot.removeRows(CONST numberOfRowsToRemove:longint);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.addCustomText(CONST text:T_customText);
+PROCEDURE T_plot.addCustomText(CONST text: T_customText);
   begin
     system.enterCriticalSection(cs);
     setLength(customText,length(customText)+1);
@@ -273,7 +535,8 @@ FUNCTION T_plot.getScalingOptions: T_scalingOptions;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
+PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint;
+  CONST factor: double; VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
@@ -294,7 +557,8 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     system.leaveCriticalSection(cs);
   end; end;
 
-PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
+PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
+  VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(cs);
@@ -314,7 +578,9 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     system.leaveCriticalSection(cs);
   end; end;
 
-PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,intendedHeight,scalingFactor:longint; VAR gridTic: T_ticInfos; CONST sampleIndex:byte);
+PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
+  intendedHeight, scalingFactor: longint; VAR gridTic: T_ticInfos;
+  CONST sampleIndex: byte);
   CONST darts_delta:array[0..4,0..1] of single=(( 0.12, 0.24),
                                                 (-0.12,-0.24),
                                                 ( 0.24,-0.12),
@@ -617,13 +883,15 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,inte
     target.UnlockCanvas;
   end;
 
-PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint);
+PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,
+  intendedHeight: longint);
   VAR txt:T_customText;
   begin
     for txt in customText do txt.renderText(intendedWidth,intendedHeight,scalingOptions,target);
   end;
 
-PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight:longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,
+  intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
@@ -675,7 +943,8 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
     dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality
+  );
   VAR renderImage:TImage;
       gridTics:T_ticInfos;
       average:T_wordColMap;
@@ -727,14 +996,16 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality:T_plotQuality);
     end;
   end;
 
-FUNCTION T_plot.obtainPlot(CONST width,height:longint; CONST quality:T_plotQuality):TImage;
+FUNCTION T_plot.obtainPlot(CONST width, height: longint;
+  CONST quality: T_plotQuality): TImage;
   begin
     result:=TImage.create(nil);
     result.SetInitialBounds(0,0,width,height);
     renderPlot(result,quality);
   end;
 
-PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);
+PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height,
+  supersampling: longint);
   VAR storeImage:TImage;
   begin
     storeImage:=obtainPlot(width,height,supersampling);
@@ -755,8 +1026,9 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     storeImage.destroy;
   end;
 
-PROCEDURE T_plot.copyFrom(VAR p:T_plot);
+PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   VAR i:longint;
+      clonedSample:T_dataRow;
   begin
     system.enterCriticalSection(cs);
     system.enterCriticalSection(p.cs);
@@ -766,7 +1038,8 @@ PROCEDURE T_plot.copyFrom(VAR p:T_plot);
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row,length(p.row));
     for i:=0 to length(row)-1 do begin
-      row[i].create(i,p.row[i].sample);
+      p.row[i].sample.cloneTo(clonedSample);
+      row[i].create(i,clonedSample);
       row[i].style:=p.row[i].style;
     end;
     //:copy rows | copy custom text:
@@ -776,6 +1049,159 @@ PROCEDURE T_plot.copyFrom(VAR p:T_plot);
     //:copy custom text
     system.leaveCriticalSection(p.cs);
     system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_addRowMessage);
+  begin
+    addRow(m.styleOptions,m.rowData);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_addTextMessage);
+  begin
+    addCustomText(m.customText);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_plotOptionsMessage);
+  begin
+    if m.messageType=mt_plot_retrieveOptions
+    then m.setOptions(scalingOptions)
+    else scalingOptions:=m.options;
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_plotRenderRequest);
+  begin
+    if m.isRenderToStringRequest
+    then m.setString(renderToString(m.width,m.height,m.quality))
+    else renderToFile(m.fileName,   m.width,m.height,m.quality);
+  end;
+
+PROCEDURE T_plot.processMessage(VAR m: T_plotDropRowRequest);
+  begin
+    removeRows(m.count);
+  end;
+
+PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
+  begin
+    isProcessingMessage:=true;
+    case message^.messageType of
+      mt_plot_addText:           currentPlot.processMessage(P_addTextMessage    (message)^);
+      mt_plot_addRow :           currentPlot.processMessage(P_addRowMessage     (message)^);
+      mt_plot_dropRow:           currentPlot.processMessage(P_plotDropRowRequest(message)^);
+      mt_plot_renderRequest:     currentPlot.processMessage(P_plotRenderRequest (message)^);
+      mt_plot_retrieveOptions,
+      mt_plot_setOptions:        currentPlot.processMessage(P_plotOptionsMessage(message)^);
+      mt_plot_clear:             currentPlot.clear;
+      mt_plot_clearAnimation:    animation.clear;
+      mt_plot_addAnimationFrame: animation.addFrame(currentPlot);
+      mt_plot_postDisplay:       begin
+        if doPlot<>nil then doPlot();
+        displayImmediate:=true;
+        P_plotDisplayRequest(message)^.markExecuted;
+      end;
+      mt_endOfEvaluation: begin
+        if plotChangedSinceLastDisplay and (doPlot<>nil) then doPlot();
+        displayImmediate:=false;
+      end;
+    end;
+    plotChangedSinceLastDisplay:=plotChangedSinceLastDisplay or
+      (message^.messageType in [mt_plot_addText,mt_plot_addRow,mt_plot_dropRow,mt_plot_setOptions,mt_plot_clear,mt_plot_addAnimationFrame]);
+    isProcessingMessage:=false;
+  end;
+
+PROCEDURE T_plotSystem.startGuiInteraction;
+  VAR m:P_storedMessage;
+  begin
+    enterCriticalSection(cs);
+    if not(isProcessingMessage) then begin
+      for m in storedMessages do processMessage(m);
+      clear;
+    end;
+  end;
+
+PROCEDURE T_plotSystem.doneGuiInteraction;
+  begin
+    leaveCriticalSection(cs);
+  end;
+
+CONSTRUCTOR T_plotSystem.create(CONST executePlotCallback:F_execPlotCallback);
+  begin
+    inherited create(at_plot,C_includableMessages[at_plot]);
+    isProcessingMessage:=false;
+    plotChangedSinceLastDisplay:=false;
+    currentPlot.createWithDefaults;
+    doPlot:=executePlotCallback;
+    pullSettingsToGui:=nil;
+    animation.create;
+  end;
+
+DESTRUCTOR T_plotSystem.destroy;
+  begin
+    inherited destroy;
+    currentPlot.destroy;
+    animation.destroy;
+  end;
+
+FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
+  begin
+    enterCriticalSection(cs);
+    case message^.messageType of
+      mt_plot_addText,
+      mt_plot_addRow,
+      mt_plot_dropRow,
+      mt_plot_setOptions,
+      mt_plot_clear,
+      mt_plot_clearAnimation,
+      mt_plot_retrieveOptions,
+      mt_plot_renderRequest,
+      mt_plot_addAnimationFrame: begin
+        result:=true;
+        //if there are pending tasks then store else process
+        if (length(storedMessages)>0)
+        then inherited append(message)
+        else processMessage(message);
+      end;
+      mt_endOfEvaluation,
+      mt_plot_postDisplay: result:=inherited append(message);
+      else result:=false;
+    end;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_plotSystem.requiresFastPolling:boolean;
+  begin
+    enterCriticalSection(cs);
+    result:=displayImmediate or (animation.frameCount<>0);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_plotSystem.processPendingMessages:boolean;
+  VAR m:P_storedMessage;
+  begin
+    enterCriticalSection(cs);
+    result:=length(storedMessages)>0;
+    for m in storedMessages do processMessage(m);
+    clear;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plotSystem.resetOnEvaluationStart;
+  begin
+    currentPlot.setDefaults;
+    if pullSettingsToGui<>nil then pullSettingsToGui();
+  end;
+
+PROCEDURE T_plotSystem.logPlotDone;
+  begin
+    enterCriticalSection(cs);
+    plotChangedSinceLastDisplay:=false;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plotSystem.registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
+  begin
+    enterCriticalSection(cs);
+    pullSettingsToGui:=pullSetingsToGuiCB;
+    leaveCriticalSection(cs);
   end;
 
 INITIALIZATION

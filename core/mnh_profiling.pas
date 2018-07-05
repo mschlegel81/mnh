@@ -5,6 +5,7 @@ USES sysutils,
      myGenerics,myStringUtil,
      //MNH:
      mnh_basicTypes,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar;
 
@@ -42,7 +43,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE add(CONST id: T_idString; CONST location: ansistring; CONST dt_inclusive,dt_exclusive:double);
-      PROCEDURE logInfo(CONST adapters:P_adapters);
+      PROCEDURE logInfo(CONST adapters:P_messageConnector);
   end;
 
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
@@ -95,7 +96,7 @@ PROCEDURE T_profiler.add(CONST id: T_idString; CONST location: ansistring; CONST
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_profiler.logInfo(CONST adapters:P_adapters);
+PROCEDURE T_profiler.logInfo(CONST adapters:P_messageConnector);
   FUNCTION nicestTime(CONST seconds:double):string;
     begin
        result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms';
@@ -147,11 +148,11 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_adapters);
                     .appendReal(timeSpent_exclusive*1E3),false);
       showProfilingTableCallback(data);
       disposeLiteral(data);
-      adapters^.logDisplayTable;
+      adapters^.postSingal(mt_displayTable,C_nilTokenLocation);
     end;
     {$endif}
 
-    for i:=0 to length(lines)-1 do adapters^.logTimingInfo(lines[i]);
+    adapters^.postTextMessage(mt_timing_info,C_nilTokenLocation,lines);
     leaveCriticalSection(cs);
   end;
 

@@ -1,6 +1,12 @@
 UNIT mnh_funcs_xml;
 INTERFACE
-USES sysutils, mnh_basicTypes,mnh_litVar,mnh_constants,mnh_funcs,mnh_contexts,XMLRead,dom,Classes,LazUTF8,myGenerics;
+USES sysutils,XMLRead,dom,Classes,LazUTF8,
+     myGenerics,
+     mnh_basicTypes,mnh_constants,
+     mnh_litVar,
+     mnh_funcs,
+     mnh_messages,
+     mnh_contexts;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
@@ -54,15 +60,15 @@ FUNCTION readXmlFile_impl intFuncSignature;
         ReadXMLFile(FDoc, str0^.value)
       except
         on e:Exception do begin
-          context.adapters^.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
+          context.messages.raiseError('Error parsing XML file '+str0^.value+': '+e.message,tokenLocation);
         end;
       end else begin
-        context.adapters^.raiseWarning('XML File '+str0^.value+' does not exist',tokenLocation);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'XML File '+str0^.value+' does not exist');
         exit(newVoidLiteral);
       end;
       result:=obtainXmlData(FDoc);
       if result=nil then begin
-        context.adapters^.raiseWarning('Error parsing XML file '+str0^.value,tokenLocation);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'Error parsing XML file '+str0^.value);
         result:=newVoidLiteral;
       end;
     end;
@@ -80,13 +86,13 @@ FUNCTION readXml_impl intFuncSignature;
         ReadXMLFile(FDoc,input);
       except
         on e:Exception do begin
-          context.adapters^.raiseError('Error parsing XML input: '+e.message,tokenLocation);
+          context.messages.raiseError('Error parsing XML input: '+e.message,tokenLocation);
         end;
       end;
       FreeAndNil(input);
       result:=obtainXmlData(FDoc);
       if result=nil then begin
-        context.adapters^.raiseError('Error parsing XML input.',tokenLocation);
+        context.messages.raiseError('Error parsing XML input.',tokenLocation);
         result:=newVoidLiteral;
       end;
     end;

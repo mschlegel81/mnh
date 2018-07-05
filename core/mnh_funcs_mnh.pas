@@ -26,7 +26,7 @@ FUNCTION sleep_imp intFuncSignature;
         lt_bigint  : sleepUntil:=sleepUntil+P_bigIntLiteral  (arg0)^.value.toFloat;
         lt_real    : sleepUntil:=sleepUntil+P_realLiteral    (arg0)^.value;
       end;
-      while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
+      while (context.wallclockTime(true)<sleepUntil) and (context.messages.continueEvaluation) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
         if sleepInt>1000 then sleepInt:=1000;
         if (sleepInt>0) then sleep(sleepInt);
@@ -46,7 +46,7 @@ FUNCTION sleepUntil_imp intFuncSignature;
         lt_bigint  : sleepUntil:=P_bigIntLiteral  (arg0)^.value.toFloat;
         lt_real    : sleepUntil:=P_realLiteral    (arg0)^.value;
       end;
-      while (context.wallclockTime(true)<sleepUntil) and (context.adapters^.noErrors) do begin
+      while (context.wallclockTime(true)<sleepUntil) and (context.messages.continueEvaluation) do begin
         sleepInt:=round(900*(sleepUntil-context.wallclockTime(true)));
         if sleepInt>1000 then sleepInt:=1000;
         if (sleepInt>0) then sleep(sleepInt);
@@ -139,14 +139,14 @@ FUNCTION ord_imp intFuncSignature;
                     else exit(newIntLiteral(-1));
         lt_expression: result:=P_expressionLiteral(x)^.applyBuiltinFunction('ord',tokenLocation,@context);
         lt_error,lt_void, lt_real: begin
-          context.adapters^.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
+          context.messages.raiseError('ord can only be applied to booleans, ints and strings',tokenLocation);
           exit(newVoidLiteral);
         end else begin
           if x^.literalType in C_listTypes
           then result:=newListLiteral(P_compoundLiteral(x)^.size)
           else result:=newSetLiteral;
           iter:=P_compoundLiteral(x)^.iteratableList;
-          for sub in iter do if context.adapters^.noErrors then
+          for sub in iter do if context.messages.continueEvaluation then
             collResult^.append(recurse(sub),false);
           disposeLiteral(iter);
         end;

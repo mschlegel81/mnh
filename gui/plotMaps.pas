@@ -46,7 +46,10 @@ PROCEDURE T_wordColMap.addSample(CONST Bitmap:TBitmap);
   begin
     try
       if tempIntfImage=nil then tempIntfImage:=Bitmap.CreateIntfImage
-                           else tempIntfImage.LoadFromBitmap(Bitmap.handle,Bitmap.MaskHandle);
+                           else begin
+                             tempIntfImage.cleanupInstance;
+                             tempIntfImage.LoadFromBitmap(Bitmap.handle,Bitmap.MaskHandle);
+                           end;
       for y:=0 to min(yRes,Bitmap.height)-1 do begin
         p:=data+y*xRes;
         b:=tempIntfImage.GetDataLineStart(y);

@@ -52,7 +52,7 @@ TYPE
     PROCEDURE initWithQuestion(CONST question: ansistring);
     PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
     PROCEDURE lock;
-    FUNCTION getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
+    FUNCTION getLastAnswerReleasing(CONST adapters:P_threadLocalMessages): ansistring;
     PROCEDURE setButtons(CONST enable:boolean; CONST options: T_arrayOfString);
   end;
 
@@ -163,12 +163,12 @@ PROCEDURE TaskForm.lock;
     ownerThread := ThreadID;
   end;
 
-FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
+FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_threadLocalMessages): ansistring;
   VAR i:longint;
   begin
     while displayPending or showing do begin
       sleep(10);
-      if (adapters<>nil) and not(adapters)^.noErrors then begin
+      if (adapters<>nil) and not(adapters^.continueEvaluation) then begin
         displayPending:=false;
         ModalResult:=0;
         Hide;
@@ -238,7 +238,7 @@ FUNCTION ask_impl intFuncSignature;
       (arg0^.literalType = lt_string) then begin
       system.enterCriticalSection(cs);
       askForm.initWithQuestion(str0^.value);
-      result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
+      result := newStringLiteral(askForm.getLastAnswerReleasing(@context.messages));
       system.leaveCriticalSection(cs);
     end
     else if (params<>nil) and (params^.size = 2) and
@@ -249,7 +249,7 @@ FUNCTION ask_impl intFuncSignature;
       for i := 0 to length(opt)-1 do
         opt[i] := P_stringLiteral(list1^.value[i])^.value;
       askForm.initWithQuestionAndOptions(str0^.value, opt);
-      result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
+      result := newStringLiteral(askForm.getLastAnswerReleasing(@context.messages));
       system.leaveCriticalSection(cs);
     end;
   end;

@@ -4,6 +4,7 @@ USES sysutils,Classes,
      myGenerics,
      RegExpr,
      mnh_constants,mnh_basicTypes,
+     mnh_messages,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
@@ -14,19 +15,15 @@ IMPLEMENTATION
 TYPE T_triplet=record
        x,y,z:ansistring;
      end;
-
+     T_regexMap=specialize G_stringKeyMap<TRegExpr>;
+VAR regexCache:T_regexMap;
 PROCEDURE disposeRegex(VAR r:TRegExpr); begin r.free; end;
-FUNCTION assertRegexCache(VAR context:T_threadContext):P_regexMap;
-  begin
-    if context.regexCache=nil then new(context.regexCache,create(@disposeRegex));
-    result:=context.regexCache;
-  end;
 
-FUNCTION regexForExpression(CONST cache:P_regexMap; CONST expression:ansistring):TRegExpr;
+FUNCTION regexForExpression(CONST expression:ansistring):TRegExpr;
   begin
-    if not(cache^.containsKey(expression,result)) then begin
+    if not(regexCache.containsKey(expression,result)) then begin
       result:=TRegExpr.create(expression);
-      cache^.put(expression,result);
+      regexCache.put(expression,result);
       result.expression:=expression;
     end;
   end;
@@ -69,8 +66,7 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   end;
 
 FUNCTION regexValidate_imp intFuncSignature;
-  VAR regexCache:P_regexMap;
-      regex:TRegExpr;
+  VAR regex:TRegExpr;
       message:string='';
       feedbackMethod:P_expressionLiteral=nil;
       feedbackInput :P_stringLiteral;
@@ -79,8 +75,7 @@ FUNCTION regexValidate_imp intFuncSignature;
       feedbackMethod:=P_expressionLiteral(arg1);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
     end else exit(nil);
-    regexCache:=assertRegexCache(context);
-    regex:=regexForExpression(regexCache,str0^.value);
+    regex:=regexForExpression(str0^.value);
     try
       regex.Exec(str0^.value+str0^.value);
     except
@@ -97,17 +92,16 @@ FUNCTION regexValidate_imp intFuncSignature;
   end;
 
 FUNCTION regexMatch_imp intFuncSignature;
-  VAR regexCache:P_regexMap;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
     VAR regex:TRegExpr;
     begin
-      regex:=regexForExpression(regexCache,trip.x);
+      regex:=regexForExpression(trip.x);
       regex.inputString:=trip.y;
       try
         result:=regex.Exec(trip.y);
       except
         on e:Exception do begin
-           context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -115,7 +109,6 @@ FUNCTION regexMatch_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
@@ -127,12 +120,11 @@ FUNCTION regexMatch_imp intFuncSignature;
   end;
 
 FUNCTION regexMatchComposite_imp intFuncSignature;
-  VAR regexCache:P_regexMap;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
         regex:TRegExpr;
     begin
-      regex:=regexForExpression(regexCache,trip.x);
+      regex:=regexForExpression(trip.x);
       regex.inputString:=trip.y;
       result:=newListLiteral;
       try
@@ -147,7 +139,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
         until not(regex.ExecNext);
       except
         on e:Exception do begin
-          context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -156,7 +148,6 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
@@ -168,19 +159,18 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
   end;
 
 FUNCTION regexSplit_imp intFuncSignature;
-  VAR regexCache:P_regexMap;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
         pieces : TStrings;
         regex:TRegExpr;
     begin
-      regex:=regexForExpression(regexCache,trip.x);
+      regex:=regexForExpression(trip.x);
       pieces:=TStringList.create;
       try
         regex.split(trip.y,pieces);
       except
         on e:Exception do begin
-          context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
       result:=newListLiteral;
@@ -192,7 +182,6 @@ FUNCTION regexSplit_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,nil);
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=regexSplit(triplet(arg1,arg0,nil,0))
@@ -204,16 +193,15 @@ FUNCTION regexSplit_imp intFuncSignature;
   end;
 
 FUNCTION regexReplace_imp intFuncSignature;
-  VAR regexCache:P_regexMap;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
     VAR regex:TRegExpr;
     begin
-      regex:=regexForExpression(regexCache,trip.x);
+      regex:=regexForExpression(trip.x);
       try
         result:=regex.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
-          context.adapters^.raiseSystemError(e.message,tokenLocation);
+          context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
     end;
@@ -222,7 +210,6 @@ FUNCTION regexReplace_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) then begin
-      regexCache:=assertRegexCache(context);
       i1:=listSize(arg0,arg1,arg2);
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
@@ -240,5 +227,7 @@ INITIALIZATION
   mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,ak_binary ,'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,ak_binary ,'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary,'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
-
+  regexCache.create(@disposeRegex)
+FINALIZATION
+  regexCache.destroy;
 end.

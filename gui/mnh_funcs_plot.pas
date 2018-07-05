@@ -10,6 +10,7 @@ USES sysutils,math,
      mnh_litVar,
      mnh_contexts,
      mnh_funcs,
+     mnh_messages,
      mnh_plotData,plotstyles,plotMath;
 TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
@@ -33,35 +34,35 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
   VAR i,imax:longint;
       xy:P_listLiteral;
-  PROCEDURE addSample(CONST px,py:double);
-    VAR k:longint;
-    begin
-      k:=length(result);
-      setLength(result,k+1);
-      result[k,0]:=px;
-      result[k,1]:=py;
-    end;
-
   begin
-    setLength(result,0);
     if x=nil then case y^.literalType of
-      lt_list:
+      lt_list: begin
+        result.init(y^.size);
         with y^ do for i:=0 to size-1 do if value[i]^.literalType in [lt_intList,lt_realList,lt_numList] then begin
           xy:=P_listLiteral(value[i]);
-          if xy^.size=2 then addSample(fReal(xy^.value[0]), fReal(xy^.value[1]))
-                        else addSample(Nan,Nan);
-        end else addSample(Nan,Nan);
-      lt_intList, lt_realList, lt_numList:
-        with y^ do for i:=0 to size-1 do addSample(i,fReal(value[i]));
+          if xy^.size=2 then result[i]:=pointOf(fReal(xy^.value[0]),fReal(xy^.value[1]))
+                        else result[i]:=pointOf(Nan,Nan);
+        end else result[i]:=pointOf(Nan,Nan);
+      end;
+      lt_intList, lt_realList, lt_numList: begin
+        result.init(y^.size);
+        with y^ do for i:=0 to size-1 do result[i]:=pointOf(i,fReal(value[i]));
+      end;
     end else begin
       imax:=min(X^.size, Y^.size);
-      for i:=0 to imax-1 do addSample(fReal(X^.value[i]), fReal(Y^.value[i]));
+      result.init(imax);
+      for i:=0 to imax-1 do result[i]:=pointOf(fReal(X^.value[i]),fReal(Y^.value[i]));
     end;
   end;
 
 FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
+  FUNCTION addRowMessage(CONST dataRow:T_dataRow):P_addRowMessage;
+    begin
+      new(result,create(options,dataRow));
+    end;
+
   begin
     if not(context.checkSideEffects('addPlot',tokenLocation,[se_alterPlotState])) then exit(nil);
     result:=nil;
@@ -74,16 +75,14 @@ FUNCTION addPlot intFuncSignature;
         sizeWithoutOptions:=params^.size;
       end;
       if (sizeWithoutOptions = 1) and (arg0^.literalType in [lt_list,lt_intList, lt_realList, lt_numList]) then begin
-        context.adapters^.plot^.addRow(options,newDataRow(list0));
-        context.adapters^.logDeferredPlot;
+        context.messages.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list0)),true);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 2) and
          (arg0^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (arg1^.literalType in [lt_intList, lt_realList, lt_numList]) and
          (list0^.size=list1^.size) then begin
-        context.adapters^.plot^.addRow(options,newDataRow(list1,list0));
-        context.adapters^.logDeferredPlot;
+        context.messages.globalMessages^.postCustomMessage(addRowMessage(newDataRow(list1,list0)),true);
         exit(newVoidLiteral);
       end;
       if (sizeWithoutOptions = 4) and
@@ -91,13 +90,12 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
          (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
          (arg3^.literalType in [lt_smallint,lt_bigint]) and (int3^.isBetween(2,maxLongint)) then begin
-        context.adapters^.plot^.addRow(options,generateRow(P_expressionLiteral(arg0),
-                                                          fReal(arg1),
-                                                          fReal(arg2),
-                                                          int3^.intValue,
-                                                          tokenLocation,
-                                                          context));
-        if context.adapters^.noErrors then context.adapters^.logDeferredPlot;
+        context.messages.globalMessages^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
+                                                                fReal(arg1),
+                                                                fReal(arg2),
+                                                                int3^.intValue,
+                                                                tokenLocation,
+                                                                context)),true);
         exit(newVoidLiteral);
       end;
     end;
@@ -106,7 +104,7 @@ FUNCTION addPlot intFuncSignature;
 FUNCTION plot intFuncSignature;
   begin
     if not(context.checkSideEffects('plot',tokenLocation,[se_alterPlotState])) then exit(nil);
-    context.adapters^.plot^.clear;
+    context.messages.globalMessages^.postSingal(mt_plot_clear,C_nilTokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (arg0^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,context);
@@ -117,7 +115,7 @@ FUNCTION getOptions intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      opt:=context.adapters^.plot^.options;
+      opt:=getOptionsViaAdapters(context.messages);
       result:=newMapLiteral^
         .put('x0'             ,opt.axisTrafo['x'].worldMin)^
         .put('x1'             ,opt.axisTrafo['x'].worldMax)^
@@ -141,7 +139,8 @@ FUNCTION setOptions intFuncSignature;
   PROCEDURE matchKey(CONST key:string; CONST value:P_literal);
     PROCEDURE fail;
       begin
-        context.adapters^.raiseWarning('invalid plot option ; key="'+key+'" is not known or not compatible with value '+value^.toString,tokenLocation);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,
+          'invalid plot option ; key="'+key+'" is not known or not compatible with value '+value^.toString);
         allOkay:=false;
       end;
 
@@ -190,10 +189,11 @@ FUNCTION setOptions intFuncSignature;
 
   VAR pair:P_literal;
       iter:T_arrayOfLiteral;
+      postOptionsMessage:P_plotOptionsMessage;
   begin
     if not(context.checkSideEffects('setOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
     result:=nil;
-    opt:=context.adapters^.plot^.options;
+    opt:=getOptionsViaAdapters(context.messages);
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
       iter:=compound0^.iteratableList;
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
@@ -209,16 +209,20 @@ FUNCTION setOptions intFuncSignature;
       result:=newBoolLiteral(allOkay);
     end else allOkay:=false;
     if allOkay then begin
-      context.adapters^.plot^.options:=opt;
-      context.adapters^.logPlotSettingsChanged;
+      new(postOptionsMessage,createPostRequest(opt));
+      context.messages.globalMessages^.postCustomMessage(postOptionsMessage);
     end;
   end;
 
 FUNCTION resetOptions_impl intFuncSignature;
+  VAR opt:T_scalingOptions;
+      postOptionsMessage:P_plotOptionsMessage;
   begin
     if not(context.checkSideEffects('resetOptions',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
-      context.adapters^.plot^.setDefaults;
+      opt.setDefaults;
+      new(postOptionsMessage,createPostRequest(opt));
+      context.messages.globalMessages^.postCustomMessage(postOptionsMessage);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -226,6 +230,7 @@ FUNCTION resetOptions_impl intFuncSignature;
 FUNCTION renderToFile_impl intFuncSignature;
   VAR fileName: ansistring;
       width, height, quality: longint;
+      renderRequest:P_plotRenderRequest;
   begin
     if not(context.checkSideEffects('renderToFile',tokenLocation,[se_writeFile])) then exit(nil);
     result:=nil;
@@ -243,11 +248,11 @@ FUNCTION renderToFile_impl intFuncSignature;
       if (fileName = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       try
         fileName:=ChangeFileExt(fileName,'.png');
-        context.adapters^.plot^.renderToFile(fileName,width,height,quality);
-        context.adapters^.logPlotFileCreated(expandFileName(ChangeFileExt(fileName,'.png')),tokenLocation);
+        new(renderRequest,createRenderToFileRequest(fileName,width,height,quality));
+        context.messages.globalMessages^.postCustomMessage(renderRequest);
       except
         on e:Exception do begin
-          context.adapters^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
+          context.messages.raiseError('Error on renderToFile: '+e.message,tokenLocation);
           exit(nil);
         end;
       end;
@@ -257,6 +262,7 @@ FUNCTION renderToFile_impl intFuncSignature;
 
 FUNCTION renderToString_impl intFuncSignature;
   VAR width, height, quality: longint;
+      renderRequest:P_plotRenderRequest;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and
@@ -269,19 +275,23 @@ FUNCTION renderToString_impl intFuncSignature;
       if params^.size>2 then quality:=int2^.intValue
                         else quality:=0;
       if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
-      result:=newStringLiteral(context.adapters^.plot^.renderToString(width,height,quality));
+      new(renderRequest,createRenderToStringRequest(width,height,quality));
+      context.messages.globalMessages^.postCustomMessage(renderRequest^.rereferenced);
+      result:=newStringLiteral(renderRequest^.getStringWaiting(context.messages));
+      disposeMessage(renderRequest);
     end;
   end;
 
 FUNCTION removePlot_imp intFuncSignature;
   VAR toDrop:longint=1;
+      dropPlotMessage:P_plotDropRowRequest;
   begin
     if not(context.checkSideEffects('removePlot',tokenLocation,[se_alterPlotState])) then exit(nil);
     if (params=nil) or (params^.size=0) or
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
-      context.adapters^.plot^.removeRows(toDrop);
-      context.adapters^.logDeferredPlot;
+      new(dropPlotMessage,create(toDrop));
+      context.messages.globalMessages^.postCustomMessage(dropPlotMessage);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -293,6 +303,7 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
 
       hasCol   :boolean=false;
       hasAnchor:boolean=false;
+      postRequest:P_addTextMessage;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=3) and
@@ -333,7 +344,8 @@ FUNCTION drawTextRelativeOrAbsolute(CONST params:P_listLiteral; CONST tokenLocat
           end else exit(nil);
         end;
       end;
-      context.adapters^.plot^.addCustomText(txt);
+      new(postRequest,create(txt));
+      context.messages.globalMessages^.postCustomMessage(postRequest,true);
       result:=newVoidLiteral;
     end;
   end;

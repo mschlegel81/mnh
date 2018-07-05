@@ -5,10 +5,13 @@ UNIT mnh_tables;
 INTERFACE
 
 USES
-  mnhFormHandler,
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
-  mnh_litVar, mnh_funcs,mnh_constants,mnh_contexts,mnh_out_adapters,mnh_basicTypes,
-  myGenerics,myStringUtil,mnh_fileWrappers,mnh_profiling;
+  mnhFormHandler,
+  myGenerics,myStringUtil,
+  mnh_constants,mnh_basicTypes,
+  mnh_messages,
+  mnh_litVar, mnh_funcs,mnh_contexts,mnh_out_adapters,
+  mnh_fileWrappers,mnh_profiling;
 
 TYPE
   TtableForm = class(TForm)
@@ -101,6 +104,10 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       i:longint;
   begin
     if not(context.checkSideEffects('showTable',tokenLocation,[se_output])) then exit(nil);
+    if not(gui_started) then begin
+      context.messages.logGuiNeeded;
+      exit(nil);
+    end;
     if (params<>nil) and
        (params^.size>0) and
        (params^.value[0]^.literalType in C_listTypes) then begin
@@ -113,7 +120,7 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
       end;
       enterCriticalSection(tableFormCs);
       newTableForm.initWithLiteral(P_listLiteral(params^.value[0]),caption,header);
-      context.adapters^.logDisplayTable;
+      context.messages.globalMessages^.postSingal(mt_displayTable,C_nilTokenLocation);
       leaveCriticalSection(tableFormCs);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;
@@ -217,7 +224,7 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
 
 PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
   VAR dummyLocation:T_tokenLocation;
-      tempAdapters:T_adapters;
+      tempAdapters:T_threadLocalMessages;
       newLiteral:P_listLiteral;
       i:longint;
   begin
@@ -238,7 +245,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
       byColumn:=index;
       ascending:=true;
 
-      tempAdapters.create;
+      tempAdapters.create(nil);
       literal^.sortBySubIndex(index,dummyLocation,tempAdapters);
       tempAdapters.destroy;
     end;

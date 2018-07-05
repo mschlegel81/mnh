@@ -27,7 +27,7 @@ testFile(scriptFileName:String,doLog:Boolean)->
           .getInner(2)
           .split("\n")
           .flatten|checkAfterTest(scriptFileName);
-
+    note("Collected the following output: \n",output.join("\n"));
     scriptFileName.isSmokeTest
     ? logSmokeTestRunTime(logName,
                           time-startTime,
@@ -107,3 +107,26 @@ main('noLog')->testAll(false,true);
 
 //*Display info on test cases
 main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKIP' : '',$0.testParameters.join(" ")].join("\t")}).join("\n").print;
+
+//*Run only the tests matching case, without logging and even if the test has been passed
+main('only',case)->begin
+  assertUniqueInstance;
+  local includeTest:={$x.matches(case)};
+
+  sandBoxExecute('1');
+  local toRun:=allDemos
+           .filter({!skipFile($f)})
+           .filter({includeTest($script)});
+  local allPassed:=
+  (toRun.map({testFile($script,false)})|((local runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
+  printCase("");
+  printDirect("\r");
+  printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
+    allDemos.size+1,
+    allDemos.size+1-toRun.size-ord(runExamples),
+                    toRun.size+ord(runExamples),
+    getFailedTests.size);
+  allPassed ? print("All tests ok     ",repeat(' ',50))
+            : print("Some tests failed:",repeat(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse setExitCode(99);
+  showTestTimeInfo;
+end;

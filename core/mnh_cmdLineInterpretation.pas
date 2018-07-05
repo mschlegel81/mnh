@@ -4,6 +4,7 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      myStringUtil,myGenerics,{$ifdef fullVersion}mySys,{$endif}
      mnh_constants,
      mnh_fileWrappers,
+     mnh_messages,
      mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,mnh_settings,{$endif}
      mnh_funcs_mnh,
      mnh_contexts,
@@ -12,12 +13,13 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
-PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
+PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
 PROCEDURE displayHelp;
 
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     {$ifdef fullVersion}
+    plotAdapters:P_abstractOutAdapter=nil;
     profilingRun:boolean=false;
     reEvaluationWithGUIrequired:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
@@ -46,11 +48,11 @@ FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
     result:=fileOrCommandToInterpret;
   end;
 
-PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
+PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
   VAR i:longint;
   begin
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do adapters.addOutfile(nameAndOption,appending);
-    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior;
+    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehavior:=defaultOutputBehavior{$ifdef fullVersion}+C_messagesAlwaysProcessedInGuiMode{$endif};
   end;
 
 PROCEDURE displayHelp;
@@ -100,7 +102,7 @@ PROCEDURE displayHelp;
   end;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
-  VAR consoleAdapters:T_adapters;
+  VAR consoleAdapters:T_messageConnector;
       mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
       directExecutionMode:boolean=false;
@@ -108,14 +110,14 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
   PROCEDURE doDirect;
-    VAR context:T_evaluationContext;
+    VAR context:T_evaluationGlobals;
         package:P_package;
     begin
       context.create(@consoleAdapters);
-      if headless then context.threadContext^.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+      if headless then context.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
       context.resetForEvaluation({$ifdef fullVersion}package,contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
-      package^.load(lu_forDirectExecution,context.threadContext^,C_EMPTY_STRING_ARRAY);
+      package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
       dispose(package,destroy);
       context.destroy;
@@ -123,27 +125,30 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
 
   PROCEDURE fileMode;
-    VAR context:T_evaluationContext;
+    VAR context:T_evaluationGlobals;
         package:T_package;
     begin
       package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
       context.create(@consoleAdapters);
+      {$ifdef fullVersion}
+      consoleAdapters.addOutAdapter(plotAdapters,false);
+      {$endif}
       context.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
-        package.load(lu_forCodeAssistance,context.threadContext^,C_EMPTY_STRING_ARRAY);
+        package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
         writeln(package.getHelpOnMain);
         package.destroy;
         wantHelpDisplay:=false;
         context.destroy;
         exit;
       end;
-      if headless then context.threadContext^.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package.load(lu_forCallingMain,context.threadContext^,mainParameters);
-      {$ifdef fullVersion} if not(context.adapters^.hasNeedGUIerror) then {$endif}
+      if headless then context.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+      package.load(lu_forCallingMain,context,mainParameters);
+      {$ifdef fullVersion} if not(FlagGUINeeded in context.messages.getFlags) then {$endif}
       context.afterEvaluation;
       package.destroy;
       {$ifdef fullVersion}
-      if context.adapters^.hasNeedGUIerror then begin
+      if (FlagGUINeeded in context.messages.getFlags) then begin
         reEvaluationWithGUIrequired:=true;
         context.destroy;
         exit;

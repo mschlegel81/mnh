@@ -9,6 +9,7 @@ USES
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, StdCtrls,
   mnh_constants, mnh_basicTypes,
   mnhFormHandler,
+  mnh_messages,
   mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
   mnh_contexts, mnh_evalThread, plotstyles, plotMath,
   plotExport;
@@ -81,37 +82,32 @@ TYPE
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   private
     animationFrameIndex:longint;
-    tempPlot:T_plot;
-    tempPlotShown:boolean;
-    animation:T_plotSeries;
     fpsSamplingStart:double;
     framesSampled:longint;
     closedByUser:boolean;
+
+    mouseUpTriggersPlot:boolean;
+    lastMouseX,lastMouseY:longint;
     FUNCTION getPlotQuality:byte;
   public
     onPlotRescale:TNotifyEvent;
     onPlotMouseMove,
     onPlotMouseClick:PMouseEvent;
+
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer();
-    PROCEDURE doPlot(CONST useTemporary:boolean=false);
-    PROCEDURE doOrPostPlot();
+    PROCEDURE doPlot;
     FUNCTION timerTick:boolean;
     FUNCTION wantTimerInterval:longint;
   end;
-
-VAR guiAdapters:P_adapters;
 
 FUNCTION plotForm: TplotForm;
 FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot(CONST hideWindow:boolean);
 PROCEDURE initializePlotForm;
+VAR plotSystem:T_plotSystem;
 IMPLEMENTATION
-VAR plotSubsystem:record
-      mouseUpTriggersPlot:boolean;
-      lastMouseX,lastMouseY:longint;
-    end;
-    myPlotForm:TplotForm=nil;
+VAR myPlotForm:TplotForm=nil;
 
 FUNCTION plotForm: TplotForm;
   begin
@@ -131,8 +127,6 @@ FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot(CONST hideWindow:boolean);
   begin
     if myPlotForm=nil then exit;
-    myPlotForm.animation.clear;
-    myPlotForm.tempPlot.clear;
     myPlotForm.closedByUser:=false;
     myPlotForm.onPlotRescale   :=nil;
     myPlotForm.onPlotMouseClick:=nil;
@@ -147,10 +141,12 @@ PROCEDURE resetPlot(CONST hideWindow:boolean);
 PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
   begin
     if (key in ['+','-']) then begin
-      if key='+' then guiAdapters^.plot^.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
-                 else guiAdapters^.plot^.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
+      plotSystem.startGuiInteraction;
+      if key='+' then plotSystem.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,  0.9,plotImage)
+                 else plotSystem.currentPlot.zoomOnPoint(lastMouseX,lastMouseY,1/0.9,plotImage);
       pullPlotSettingsToGui();
-      doOrPostPlot();
+      doPlot();
+      plotSystem.doneGuiInteraction;
       if Assigned(onPlotRescale) then onPlotRescale(Sender);
     end;
   end;
@@ -158,22 +154,18 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     miAutoReset.checked:=settings.value^.doResetPlotOnEvaluation;
-    tempPlot.createWithDefaults;
-    tempPlotShown:=false;
-    animation.create;
     fpsSamplingStart:=now;
     framesSampled:=0;
     closedByUser:=false;
     onPlotRescale:=nil;
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
+    plotSystem.registerPlotForm(@pullPlotSettingsToGui);
     if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
 PROCEDURE TplotForm.FormDestroy(Sender: TObject);
   begin
-    tempPlot.destroy;
-    animation.destroy;
   end;
 
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -203,12 +195,14 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
   begin
     if animationFrameIndex=frameTrackBar.position then exit;
     animationFrameIndex:=frameTrackBar.position;
-    animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+    plotSystem.startGuiInteraction;
+    plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+    plotSystem.doneGuiInteraction;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
-    doOrPostPlot();
+    doPlot;
   end;
 
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
@@ -232,19 +226,23 @@ PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
 PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
   VAR o:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot^.options;
+    plotSystem.startGuiInteraction;
+    o:=plotSystem.currentPlot.options;
     o.relativeFontSize:=o.relativeFontSize/1.1;
-    guiAdapters^.plot^.options:=o;
-    doOrPostPlot();
+    plotSystem.currentPlot.options:=o;
+    doPlot;
+    plotSystem.doneGuiInteraction;
   end;
 
 PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
   VAR o:T_scalingOptions;
   begin
-    o:=guiAdapters^.plot^.options;
+    plotSystem.startGuiInteraction;
+    o:=plotSystem.currentPlot.options;
     o.relativeFontSize:=o.relativeFontSize*1.1;
-    guiAdapters^.plot^.options:=o;
-    doOrPostPlot();
+    plotSystem.currentPlot.options:=o;
+    doPlot;
+    plotSystem.doneGuiInteraction;
   end;
 
 PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
@@ -268,30 +266,34 @@ PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
 PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
   VAR frameIndex:longint;
   begin
-    if exportPlotForm.showModalFor(animation.frameCount>0)=mrOk then begin
-      if (exportPlotForm.rbExportAll.checked) and (animation.frameCount>0) then begin
-        for frameIndex:=0 to animation.frameCount-1 do begin
-          animation.renderFrame(frameIndex,
+    plotSystem.startGuiInteraction;
+    if exportPlotForm.showModalFor(plotSystem.animation.frameCount>0)=mrOk then begin
+      if (exportPlotForm.rbExportAll.checked) and (plotSystem.animation.frameCount>0) then begin
+        for frameIndex:=0 to plotSystem.animation.frameCount-1 do begin
+          plotSystem.animation.renderFrame(frameIndex,
                                 exportPlotForm.animationFileName(
                                      frameIndex,
-                                     animation.frameCount),
+                                     plotSystem.animation.frameCount),
                                 exportPlotForm.renderWidth,
                                 exportPlotForm.renderHeight,
                                 exportPlotForm.QualityTrackbar.position);
         end;
       end else begin
-        if (animation.frameCount>0)
-        then animation.renderFrame          (animationFrameIndex,
-                                             exportPlotForm.OutputFileNameEdit.caption,
-                                             exportPlotForm.renderWidth,
-                                             exportPlotForm.renderHeight,
-                                             exportPlotForm.QualityTrackbar.position)
-        else guiAdapters^.plot^.renderToFile(exportPlotForm.OutputFileNameEdit.caption,
-                                             exportPlotForm.renderWidth,
-                                             exportPlotForm.renderHeight,
-                                             exportPlotForm.QualityTrackbar.position);
+        if (plotSystem.animation.frameCount>0)
+        then plotSystem.animation.renderFrame(
+               animationFrameIndex,
+               exportPlotForm.OutputFileNameEdit.caption,
+               exportPlotForm.renderWidth,
+               exportPlotForm.renderHeight,
+               exportPlotForm.QualityTrackbar.position)
+        else plotSystem.currentPlot.renderToFile(
+               exportPlotForm.OutputFileNameEdit.caption,
+               exportPlotForm.renderWidth,
+               exportPlotForm.renderHeight,
+               exportPlotForm.QualityTrackbar.position);
       end;
     end;
+    plotSystem.doneGuiInteraction;
   end;
 
 PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
@@ -337,41 +339,39 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
 PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     if ssLeft in Shift then begin
-      plotSubsystem.lastMouseX:=x;
-      plotSubsystem.lastMouseY:=y;
-      if Assigned(onPlotMouseClick) then onPlotMouseClick(guiAdapters^.plot^.options.screenToReal(x,y));
+      lastMouseX:=x;
+      lastMouseY:=y;
+      if Assigned(onPlotMouseClick) then onPlotMouseClick(plotSystem.currentPlot.options.screenToReal(x,y));
     end;
   end;
 
 PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
   VAR p:T_point;
   begin
-    if (animationFrameIndex>=0) and (animationFrameIndex<animation.frameCount)
-    then p:=animation.options[animationFrameIndex].screenToReal(x,y)
-    else if tempPlotShown then p:=tempPlot.options.screenToReal(x,y)
-                else p:=guiAdapters^.plot^.options.screenToReal(x,y);
+    if (animationFrameIndex>=0) and (animationFrameIndex<plotSystem.animation.frameCount)
+    then p:=plotSystem.animation  .options[animationFrameIndex].screenToReal(x,y)
+    else p:=plotSystem.currentPlot.options                     .screenToReal(x,y);
     StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
-    if ssLeft in Shift then with plotSubsystem do begin
+    if (ssLeft in Shift) and (plotSystem.animation.frameCount=0) then begin
       if (x<>lastMouseX) or (y<>lastMouseY) then begin
-        guiAdapters^.plot^.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
-        guiAdapters^.plot^.options:=guiAdapters^.plot^.options;
+        plotSystem.startGuiInteraction;
+        plotSystem.currentPlot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
+        plotSystem.doneGuiInteraction;
         mouseUpTriggersPlot:=true;
       end;
     end else if Assigned(onPlotMouseMove) then onPlotMouseMove(p);
-    with plotSubsystem do begin
-      lastMouseX:=x;
-      lastMouseY:=y;
-    end;
+    lastMouseX:=x;
+    lastMouseY:=y;
   end;
 
 PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
-    with plotSubsystem do if mouseUpTriggersPlot then begin
+    if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
       if Assigned(onPlotRescale) then onPlotRescale(Sender);
       lastMouseX:=x;
       lastMouseY:=y;
-      doOrPostPlot();
+      doPlot;
     end;
   end;
 
@@ -392,7 +392,9 @@ FUNCTION TplotForm.getPlotQuality: byte;
 PROCEDURE TplotForm.pullPlotSettingsToGui;
   VAR currentScalingOptions:T_scalingOptions;
   begin
-    currentScalingOptions:=guiAdapters^.plot^.options;
+    plotSystem.startGuiInteraction;
+    currentScalingOptions:=plotSystem.currentPlot.options;
+    plotSystem.doneGuiInteraction;
     miXTics.checked         :=gse_tics       in currentScalingOptions.axisStyle['x'];
     miXGrid.checked         :=gse_coarseGrid in currentScalingOptions.axisStyle['x'];
     miXFinerGrid.checked    :=gse_fineGrid   in currentScalingOptions.axisStyle['x'];
@@ -427,31 +429,28 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     end;
 
   begin
-    currentScalingOptions:=guiAdapters^.plot^.options;
+    plotSystem.startGuiInteraction;
+    currentScalingOptions:=plotSystem.currentPlot.options;
     updateCurrent;
-    guiAdapters^.plot^.options:=currentScalingOptions;
-    if tempPlotShown then begin
-      currentScalingOptions:=tempPlot.options;
-      updateCurrent;
-      tempPlot.options:=currentScalingOptions;
-    end;
+    plotSystem.currentPlot.options:=currentScalingOptions;
     pullPlotSettingsToGui();
-    if animation.frameCount<=0 then doOrPostPlot();
+    if plotSystem.animation.frameCount<=0 then doPlot;
     i:=0;
-    while i<animation.frameCount do begin
-      currentScalingOptions:=animation.options[i];
+    while i<plotSystem.animation.frameCount do begin
+      currentScalingOptions:=plotSystem.animation.options[i];
       updateCurrent;
-      animation.options[i]:=currentScalingOptions;
+      plotSystem.animation.options[i]:=currentScalingOptions;
       inc(i);
     end;
+    plotSystem.doneGuiInteraction;
   end;
 
-PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
+PROCEDURE TplotForm.doPlot;
   PROCEDURE updateInteractiveSection;
     begin
-      AnimationGroupBox.visible:=(animation.frameCount>0);
-      AnimationGroupBox.enabled:=(animation.frameCount>0);
-      if animation.frameCount>0 then begin
+      AnimationGroupBox.visible:=(plotSystem.animation.frameCount>0);
+      AnimationGroupBox.enabled:=(plotSystem.animation.frameCount>0);
+      if plotSystem.animation.frameCount>0 then begin
         AnimationGroupBox.AutoSize:=true;
       end else begin
         AnimationGroupBox.AutoSize:=false;
@@ -461,38 +460,24 @@ PROCEDURE TplotForm.doPlot(CONST useTemporary: boolean);
 
   begin
     if not(showing) then Show;
+    plotSystem.startGuiInteraction;
     updateInteractiveSection;
-    if animation.frameCount<>0 then begin
-      animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
-      guiAdapters^.resetFlagsAfterPlotDone;
+    if plotSystem.animation.frameCount<>0 then begin
+      plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
       exit;
     end;
-    if useTemporary then begin
-      tempPlot.renderPlot(plotImage,getPlotQuality);
-      tempPlotShown:=true;
-      guiAdapters^.resetFlagsAfterPlotDone;
-    end else begin
-      guiAdapters^.plot^.renderPlot(plotImage,getPlotQuality);
-      tempPlotShown:=false;
-      guiAdapters^.resetFlagsAfterPlotDone;
-    end;
-  end;
-
-PROCEDURE TplotForm.doOrPostPlot;
-  begin
-    if runEvaluator.evaluationRunning
-    then begin
-      if tempPlotShown then doPlot(true);
-      guiAdapters^.logDeferredPlot;
-    end else doPlot();
+    plotSystem.currentPlot.renderPlot(plotImage,getPlotQuality);
+    plotSystem.logPlotDone;
+    plotSystem.doneGuiInteraction;
   end;
 
 FUNCTION TplotForm.timerTick:boolean;
   begin
     result:=false;
-    if gui_started and (showing) and (animation.frameCount>0) then begin
-      if animateCheckBox.checked and animation.nextFrame(animationFrameIndex,cycleCheckbox.checked) then begin
-        animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+    plotSystem.startGuiInteraction;
+    if gui_started and (showing) and (plotSystem.animation.frameCount>0) then begin
+      if animateCheckBox.checked and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked) then begin
+        plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
         inc(framesSampled);
         if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
           animationFPSLabel.caption:=intToStr(round(framesSampled/((now-fpsSamplingStart)*24*60*60)))+'fps';
@@ -501,12 +486,13 @@ FUNCTION TplotForm.timerTick:boolean;
         end;
         result:=true;
       end;
-      frameTrackBar.max:=animation.frameCount-1;
+      frameTrackBar.max:=plotSystem.animation.frameCount-1;
       frameTrackBar.position:=animationFrameIndex;
       frameIndexLabel.caption:=intToStr(animationFrameIndex);
       if frameTrackBar.max>20 then frameTrackBar.frequency:=5
                               else frameTrackBar.frequency:=1;
     end else result:=false;
+    plotSystem.doneGuiInteraction;
   end;
 
 FUNCTION TplotForm.wantTimerInterval: longint;
@@ -525,25 +511,28 @@ FUNCTION plotClosedByUser_impl intFuncSignature;
 FUNCTION clearPlotAnim_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
     result:=newVoidLiteral;
-    plotForm.animation.clear;
+    context.messages.globalMessages^.postSingal(mt_plot_clearAnimation,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION addAnimFrame_impl intFuncSignature;
   begin if (params=nil) or (params^.size=0) then begin
     result:=newVoidLiteral;
-    plotForm.animation.addFrame(context.adapters^.plot^);
+    context.messages.globalMessages^.postSingal(mt_plot_addAnimationFrame,C_nilTokenLocation);
   end else result:=nil; end;
 
 FUNCTION display_imp intFuncSignature;
+  VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
-    context.adapters^.logInstantPlot;
-    plotForm.tempPlot.copyFrom(context.adapters^.plot^);
+    new(displayRequest,create(true));
+    context.messages.globalMessages^.postCustomMessage(displayRequest);
+    displayRequest^.waitForExecution(context.messages);
+    disposeMessage(displayRequest);
     result:=newVoidLiteral;
   end else result:=nil; end;
 
 FUNCTION uninitialized_fallback intFuncSignature;
   begin
-    context.adapters^.hasNeedGUIerror:=true;
+    context.messages.logGuiNeeded;
     result:=nil;
   end;
 
@@ -555,14 +544,20 @@ PROCEDURE initializePlotForm;
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
   end;
 
+PROCEDURE executePlot;
+  begin
+    plotForm.doPlot;
+  end;
+
 INITIALIZATION
   registerRule(PLOT_NAMESPACE,'plotClosed'       ,@uninitialized_fallback,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
   registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@uninitialized_fallback,ak_nullary,'clearAnimation;//Clears the animated plot');
   registerRule(PLOT_NAMESPACE,'addAnimationFrame',@uninitialized_fallback,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
   registerRule(PLOT_NAMESPACE,'display'          ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
-
+  plotSystem.create(@executePlot)
 FINALIZATION
   if myPlotForm<>nil then FreeAndNil(myPlotForm);
+  plotSystem.destroy;
 
 end.
 

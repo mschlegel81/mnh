@@ -6,10 +6,12 @@ USE GUI;
 private rollAt(t:Numeric,doPlot:Boolean)->begin
   local center:=[t,1];
   local line:=[center,center+[-sin(t),-cos(t)]];
+  local otherLines:=(t+pi/6*[1..11]).each(phi,center+0.95*[-sin(phi),-cos(phi)],center+[-sin(phi),-cos(phi)],[Nan,Nan]);
   local circle:=center+{[sin($x),cos($x)]};
   doPlot
   ? begin
       plot(line,'. l');
+      addPlot(otherLines,'black');
       addPlot(circle,0,2*pi,100,'black');
     end
   : void;

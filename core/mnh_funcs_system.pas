@@ -17,21 +17,21 @@ FUNCTION resetRandom_impl intFuncSignature;
   begin
     if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
     result:=nil;
-    if (params= nil) or  (params^.size=0) then begin context.getParent^.prng.resetSeed(0); result:=newVoidLiteral; end else
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_bigint)   then begin context.getParent^.prng.resetSeed(P_bigIntLiteral(arg0)^.value.getRawBytes); result:=newVoidLiteral; end;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin context.getParent^.prng.resetSeed(P_smallIntLiteral(arg0)^.value          ); result:=newVoidLiteral; end;
+    if (params= nil) or  (params^.size=0) then begin context.getGlobals^.prng.resetSeed(0); result:=newVoidLiteral; end else
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_bigint)   then begin context.getGlobals^.prng.resetSeed(P_bigIntLiteral(arg0)^.value.getRawBytes); result:=newVoidLiteral; end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin context.getGlobals^.prng.resetSeed(P_smallIntLiteral(arg0)^.value          ); result:=newVoidLiteral; end;
   end;
 
 FUNCTION random_imp intFuncSignature;
   VAR i,count:longint;
   begin
     if not(context.checkSideEffects('random',tokenLocation,[se_alterContextState])) then exit(nil);
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getParent^.prng.realRandom))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(context.getGlobals^.prng.realRandom))
     else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint) then begin
       count:=int0^.intValue;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do listResult^.appendReal(context.getParent^.prng.realRandom);
+        for i:=1 to count do listResult^.appendReal(context.getGlobals^.prng.realRandom);
         exit(result);
       end;
     end;
@@ -43,8 +43,8 @@ FUNCTION intRandom_imp intFuncSignature;
   FUNCTION singleIntRandom:P_abstractIntLiteral;
     begin
       if arg0^.literalType=lt_bigint
-      then result:=newIntLiteral(randomInt(@(context.getParent^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
-      else result:=newIntLiteral(context.getParent^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
+      then result:=newIntLiteral(randomInt(@(context.getGlobals^.prng.dwordRandom),P_bigIntLiteral(arg0)^.value))
+      else result:=newIntLiteral(context.getGlobals^.prng.intRandom(P_smallIntLiteral(arg0)^.value));
     end;
 
   begin
@@ -108,7 +108,7 @@ FUNCTION driveInfo_imp intFuncSignature;
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
-      SetString(DriveLetter, Buf, StrLen(Buf));
+      setString(DriveLetter, Buf, StrLen(Buf));
       infoMap^.put('serial',VolumeSerialNumber);
       infoMap^.put('label' ,DriveLetter);
       result:=infoMap;
@@ -154,29 +154,29 @@ FUNCTION getEnv_impl intFuncSignature;
     end;
   end;
 
-FUNCTION logTo_impl intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_boolean)  then begin
-      context.adapters^.addOutfile(str0^.value,bool1^.value);
-      result:=newVoidLiteral;
-    end;
-  end;
-
-FUNCTION printTo_impl intFuncSignature;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)  then begin
-      context.adapters^.setPrintTextFileAdapter(str0^.value);
-      result:=newVoidLiteral;
-    end;
-  end;
-
+//FUNCTION logTo_impl intFuncSignature;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_boolean)  then begin
+//      context.adapters^.addOutfile(str0^.value,bool1^.value);
+//      result:=newVoidLiteral;
+//    end;
+//  end;
+//
+//FUNCTION printTo_impl intFuncSignature;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)  then begin
+//      context.adapters^.setPrintTextFileAdapter(str0^.value);
+//      result:=newVoidLiteral;
+//    end;
+//  end;
+//
 FUNCTION setExitCode_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and context.checkSideEffects('setExitCode',tokenLocation,[se_alterContextState]) then begin
       ExitCode:=int0^.intValue;
-      context.adapters^.setUserDefinedExitCode(ExitCode);
+      context.messages.globalMessages^.setUserDefinedExitCode(ExitCode);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -234,8 +234,8 @@ INITIALIZATION
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   ,'getEnv;//Returns the current environment variables as a nested list.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     ,'changeDirectory(folder:string);//Sets the working directory');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
+  //registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
+  //registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
   builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+

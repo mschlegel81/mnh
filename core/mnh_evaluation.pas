@@ -2,11 +2,15 @@ UNIT mnh_evaluation;
 INTERFACE
 USES sysutils,
      myGenerics,
+     {$ifndef debugMode}
+     myStringUtil,
+     {$endif}
      mnh_constants,mnh_basicTypes,
      mnh_litVar,
      mnh_tokens,
      mnh_tokenArray,
      tokenStack,
+     mnh_messages,
      {$ifdef fullVersion}mnh_settings,{$endif}
      mnh_contexts,
      mnh_funcs,
@@ -41,11 +45,11 @@ FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; 
         end;
         disposeLiteral(iter);
         if P_collectionLiteral(result)^.containsError then begin
-          raiseNotApplicableError('! (logical negation)',x,opLocation,context.adapters^);
+          raiseNotApplicableError('! (logical negation)',x,opLocation,context.messages);
           disposeLiteral(result);
         end;
       end;
-      else raiseNotApplicableError('! (logical negation)',x,opLocation,context.adapters^);
+      else raiseNotApplicableError('! (logical negation)',x,opLocation,context.messages);
     end;
     if result=nil then result:=newVoidLiteral;
   end;
@@ -72,11 +76,11 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
         end;
         disposeLiteral(iter);
         if P_collectionLiteral(result)^.containsError then begin
-          raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.adapters^);
+          raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.messages);
           disposeLiteral(result);
         end;
       end;
-      else raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.adapters^);
+      else raiseNotApplicableError('- (arithmetic negation)',x,opLocation,context.messages);
     end;
     if result=nil then result:=newVoidLiteral;
   end;
@@ -119,7 +123,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
   PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation; CONST LHS:P_literal);
     begin
       result:=rr_fail;
-      context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans. Got '+LHS^.typeString,location);
+      context.messages.raiseError('Lazy boolean operators can only be applied to scalar booleans. Got '+LHS^.typeString,location);
     end;
 
   PROCEDURE processReturnStatement;
@@ -128,7 +132,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     begin
       returnToken:=first; //result is first (tt_literal);
       first:=context.recycler.disposeToken(first^.next); //drop semicolon
-      while not(level=0) and (context.adapters^.noErrors) do begin
+      while not(level=0) and (context.messages.continueEvaluation) do begin
         while not(stack.topType  in [tt_beginRule,tt_beginExpression,tt_beginBlock,
                                      tt_endRule  ,tt_endExpression  ,tt_endBlock,tt_EOL]) do stack.popDestroy(context.recycler);
         while (first<>nil) and
@@ -137,7 +141,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         if first=nil then begin
           if level=1
           then level:=0
-          else context.adapters^.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
+          else context.messages.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
         end else case first^.tokType of
           tt_beginBlock:            begin stack.push(first); context.valueStore^.scopePush(false); end;
           tt_beginExpression,
@@ -148,7 +152,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
               context.valueStore^.scopePop;
               stack.popDestroy(context.recycler);
               first:=context.recycler.disposeToken(first);
-            end else context.adapters^.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endBlock)',errorLocation);
+            end else context.messages.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endBlock)',errorLocation);
           tt_endExpression,tt_endRule:
             if stack.topType=C_compatibleBegin[first^.     tokType]
             then begin
@@ -158,8 +162,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
               stack.popDestroy(context.recycler);
               first:=context.recycler.disposeToken(first);
               dec(level);
-            end else context.adapters^.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endRule)',first^.location);
-          else context.adapters^.raiseError('Invalid stack state (processing return statement) - WTF?',first^.location);
+            end else context.messages.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endRule)',first^.location);
+          else context.messages.raiseError('Invalid stack state (processing return statement) - WTF?',first^.location);
         end;
       end;
       if first=nil then result:=rr_okWithReturn;
@@ -190,14 +194,14 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         eachToken:=first^.next;
         if (eachToken^.next=nil) or (eachToken^.next^.tokType=tt_braceClose) then begin
           //This can only happen with the agg-construct!
-          context.adapters^.raiseError('Invalid agg-construct: aggregator is missing',eachToken^.location);
+          context.messages.raiseError('Invalid agg-construct: aggregator is missing',eachToken^.location);
           exit(false);
         end;
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(eachToken,0,context.recycler,context.adapters,bracketClosingEach);
-        if (bracketClosingEach=nil) or not(context.adapters^.noErrors) then exit(false);
+        bodyParts:=getBodyParts(eachToken,0,context.recycler,context.messages,bracketClosingEach);
+        if (bracketClosingEach=nil) or not(context.messages.continueEvaluation) then exit(false);
         if (length(bodyParts)>1) and isPureAggregator then begin
-          context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
+          context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
           exit(false);
         end;
 
@@ -219,7 +223,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
             tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
               then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
-              else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
+              else if isPureAggregator then context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN)      then aggregator:=newMinAggregator      else
               if (P_intFuncCallback(t^.data)=BUILTIN_MAX)      then aggregator:=newMaxAggregator      else
@@ -231,9 +235,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         end else if isPureAggregator then begin
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
-            if context.adapters^.noErrors
+            if context.messages.continueEvaluation
             then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
-          end else context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
+          end else context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
         aggregatorPresent:=(aggregator<>nil);
@@ -244,7 +248,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           aggregator:=newListAggregator;
           if isPureAggregator then begin
             result:=false;
-            context.adapters^.raiseError('Invalid agg-construct: aggregator is missing.',eachToken^.location);
+            context.messages.raiseError('Invalid agg-construct: aggregator is missing.',eachToken^.location);
           end;
         end;
         //----------------------------------------------process aggregator part (if any)
@@ -278,14 +282,14 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       initialize(bodyRule);
 
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_void]) then begin
-        context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
+        context.messages.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
       if context.callDepth>STACK_DEPTH_LIMIT then begin
         {$ifdef debugMode}
         raise Exception.create('Stack overflow in (p)each construct.');
         {$else}
-        context.adapters^.raiseSystemError('Stack overflow in (p)each construct.',eachLocation);
+        context.messages.raiseError('Stack overflow in (p)each construct.',eachLocation,mt_el4_systemError);
         {$endif}
         exit;
       end;
@@ -299,7 +303,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         then processListParallel(iterator,bodyRule,aggregator,eachLocation,context)
         else processListSerial  (iterator,bodyRule,aggregator,eachLocation,context);
       end else begin
-        if eachType = tt_parallelEach then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
+        if eachType = tt_parallelEach then context.messages.globalMessages^.postTextMessage(mt_el1_note,eachLocation,'There is no paralellization for pEach statements without body (i.e. pure aggregators)');
         aggregate(iterator,aggregator,eachLocation,context);
       end;
       //----------------------------------------------------------iterate over itList
@@ -323,10 +327,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         result:=false;
         //first token is <while>-Token
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,context.recycler,context.adapters,bracketClosingWhile);
+        bodyParts:=getBodyParts(first,1,context.recycler,context.messages,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if (length(bodyParts)>2) or (length(bodyParts)<1) then begin
-          context.adapters^.raiseError('Invalid while-construct; Exactly one or two arguments (head, body) are expected.',errorLocation);
+          context.messages.raiseError('Invalid while-construct; Exactly one or two arguments (head, body) are expected.',errorLocation);
           exit(false);
         end;
 
@@ -360,13 +364,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       returnValue:=NIL_EVAL_RESULT;
       whileLocation:=first^.location;
       if context.callDepth>STACK_DEPTH_LIMIT then begin
-        context.adapters^.raiseSystemError('Stack overflow in while construct.',whileLocation);
+        context.messages.raiseError('Stack overflow in while construct.',whileLocation,mt_el4_systemError);
         exit;
       end;
       if not(parseBodyOk) then exit;
       while not(returnValue.triggeredByReturn)
             and headRule^.evaluateToBoolean(whileLocation,@context,true)
-            and (context.adapters^.noErrors) do evaluateBody;
+            and (context.messages.continueEvaluation) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
@@ -400,14 +404,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(first^.tokType,first^.location,parameterListLiteral,firstReplace,lastReplace,@context)) then begin
-            context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+            context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
             exit;
           end;
         {$ifndef debugMode}
         except
           on e:Exception do begin
-            context.adapters^.raiseSystemError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId,first^.location);
-            context.adapters^.raiseSystemError(e.message,first^.location);
+            context.messages.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
             exit;
           end;
         end;
@@ -423,7 +426,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           newLiteral:=parameterListLiteral^.value[0]^.rereferenced;
           firstReplace:=context.recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
           lastReplace:=firstReplace;
-        end else context.adapters^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
+        end else context.messages.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifndef debugMode}
         try
@@ -432,8 +435,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         {$ifndef debugMode}
         except
           on e:Exception do begin
-            context.adapters^.raiseSystemError('Severe error trying to apply builtin rule '+first^.txt,first^.location);
-            context.adapters^.raiseSystemError(e.message,first^.location);
+            context.messages.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
             exit;
           end;
         end;
@@ -441,8 +443,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         if newLiteral<>nil then begin
           firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
-        end else if not(context.adapters^.noErrors) then exit else begin
-          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+        end else if not(context.messages.continueEvaluation) then exit else begin
+          context.raiseCannotApplyError('intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
           exit;
         end;
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
@@ -451,8 +453,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           if newLiteral<>nil then begin
             firstReplace:=context.recycler.newToken(first^.location,'',tt_literal,newLiteral);
             lastReplace:=firstReplace;
-          end else if not(context.adapters^.noErrors) then exit else begin
-            context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location,C_EMPTY_STRING_ARRAY);
+          end else if not(context.messages.continueEvaluation) then exit else begin
+            context.raiseCannotApplyError('wrapped intrinsic rule '+first^.txt,parameterListLiteral,first^.location);
             exit;
           end;
         end else begin
@@ -461,7 +463,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context)) then exit;
         end;
       end else begin
-        context.adapters^.raiseError('Trying to apply a rule which is no rule!',errorLocation);
+        context.messages.raiseError('Trying to apply a rule which is no rule!',errorLocation);
         exit;
       end;
       context.recycler.disposeToken(first);
@@ -485,7 +487,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       end;
       if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
         stack.popLink(first);
-        context.adapters^.raiseError('Cannot evaluate inline-if; cannot locate then-marker',errorLocation);
+        context.messages.raiseError('Cannot evaluate inline-if; cannot locate then-marker',errorLocation);
         exit;
       end;
       tokenBeforeElse:=prev;
@@ -496,7 +498,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       end;
       if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
         stack.popLink(first);
-        context.adapters^.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',errorLocation);
+        context.messages.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',errorLocation);
         exit;
       end;
       lastThen:=prev;
@@ -549,19 +551,19 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           first:=context.recycler.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.adapters);
+          context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.messages);
           first:=context.recycler.disposeToken(first);
         end;
         tt_mut_nested_assign..tt_mut_nestedDrop: if first^.data=nil then begin
-          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.adapters,@context);
-          if context.adapters^.noErrors then begin
+          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.messages,@context);
+          if context.messages.continueEvaluation then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end else begin
           newValue:=P_mutableRule(first^.data)^.mutateInline(kind,newValue,first^.location,context);
-          if context.adapters^.noErrors then begin
+          if context.messages.continueEvaluation then begin
             first:=context.recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
@@ -633,7 +635,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         didSubstitution:=true;
         exit;
       end else begin
-        context.adapters^.raiseError('Unresolved identifier: '+newFunctionToken^.txt,newFunctionToken^.location);
+        context.messages.raiseError('Unresolved identifier: '+newFunctionToken^.txt,newFunctionToken^.location);
         context.recycler.disposeToken(newFunctionToken);
         exit;
       end;
@@ -704,7 +706,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
             stack.push(first);
             didSubstitution:=true;
           end;
-        else context.adapters^.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',errorLocation);
+        else context.messages.raiseError('Unexpected token after literal: '+safeTokenToString(first^.next)+' ('+C_tokenInfo[cTokType[1]].helpText+')',errorLocation);
       end;
     end;
 
@@ -864,8 +866,8 @@ tt_iifCheck: begin stack.push(first); didSubstitution:=true; end;
 tt_each,tt_parallelEach: resolveEach(cTokType[1])}
 
 {$define FORBIDDEN_SEPARATORS:=
-tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
-tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
+tt_separatorCnt:   context.messages.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
+tt_separatorComma: context.messages.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$WARN 2005 OFF}
 //COMMON_SEMICOLON_HANDLING is defined for cTokType[0]=tt_literal; case C_tokType[1] of ...
@@ -962,12 +964,12 @@ end}
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
             FORBIDDEN_SEPARATORS;
-            else context.adapters^.raiseError('Unable to resolve paranthesis!',stack.dat[stack.topIndex]^.location);
+            else context.messages.raiseError('Unable to resolve paranthesis!',stack.dat[stack.topIndex]^.location);
           end;
           tt_list_constructor,tt_list_constructor_ranging: case cTokType[1] of
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
-                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
+                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context.messages,
                               stack.topType=tt_list_constructor_ranging);
                 if first^.next^.tokType=tt_separatorCnt
                 then stack.dat[stack.topIndex]^.tokType:=tt_list_constructor_ranging
@@ -979,7 +981,7 @@ end}
               didSubstitution:=true;
             end;
             tt_listBraceClose: begin // [ | <Lit> ] ...
-              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters,
+              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,@context.messages,
                             stack.topType=tt_list_constructor_ranging);
               first:=context.recycler.disposeToken(first);
               first:=context.recycler.disposeToken(first);
@@ -1029,7 +1031,7 @@ end}
                     first^.tokType:=tt_literal;
                     resolveElementAccess;
                   end else begin
-                    context.adapters^.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
+                    context.messages.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
                     {$ifdef fullVersion}{$ifdef debugMode}
                     context.valueStore^.writeScopeList;
                     {$endif}{$endif}
@@ -1061,7 +1063,7 @@ end}
               first:=context.recycler.disposeToken(first);
               didSubstitution:=true;
             end;
-            tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
+            tt_separatorCnt:   context.messages.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
           end;
@@ -1144,7 +1146,7 @@ end}
             first^.tokType:=tt_literal;
             didSubstitution:=true;
           end else begin
-            context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
+            context.messages.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
             {$ifdef fullVersion}{$ifdef debugMode}
             context.valueStore^.writeScopeList;
             {$endif}{$endif}
@@ -1157,7 +1159,7 @@ end}
         tt_unaryOpNegate:    begin                                  stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_comparatorEq..tt_operatorLazyOr,
         tt_operatorMult..tt_operatorConcatAlt:
-          context.adapters^.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
+          context.messages.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
 {cT[0]=}tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_expBraceOpen: begin
           digestInlineExpression(first,context);
@@ -1184,11 +1186,11 @@ end}
         end;
 {cT[0]=}tt_list_constructor, tt_list_constructor_ranging: begin stack.push(first); didSubstitution:=true; end;
 {cT[0]=}tt_identifier: begin
-          P_abstractPackage(first^.location.package)^.resolveId(first^,context.adapters);
+          P_abstractPackage(first^.location.package)^.resolveId(first^,@context.messages);
           didSubstitution:=true;
         end;
         tt_parameterIdentifier: begin
-          context.resolveMainParameter(first);
+          context.getGlobals^.resolveMainParameter(first);
           didSubstitution:=true;
         end;
 {cT[0]=}tt_mutate: begin stack.push(first); didSubstitution:=true; end;
@@ -1239,8 +1241,8 @@ end}
 {cT[0]=}tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
-          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
-        end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
+          else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
+        end else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
         tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
@@ -1260,39 +1262,26 @@ end}
           didSubstitution:=true;
         end;
       end;
-    until not(didSubstitution) or not(context.adapters^.noErrors);
+    until not(didSubstitution) or not(context.messages.continueEvaluation);
     {$ifndef debugMode}
     except
       on e:Exception do begin
-        context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth));
-        if first<>nil then context.adapters^.raiseSystemError(e.message,errorLocation)
-                      else context.adapters^.raiseSystemError(e.message);
+        context.messages.raiseError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth)+C_lineBreakChar+e.message,errorLocation(first),mt_el4_systemError);
       end;
     end;
     {$endif}
     dec(context.callDepth);
-    if context.adapters^.noErrors then begin
+    if context.messages.continueEvaluation then begin
       if (stack.topIndex>=0) or (first<>nil) and (first^.next<>nil) then begin
-        context.adapters^.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
-        {$ifdef fullVersion}
-        if not(context.adapters^.hasStackTrace) then context.callStackPrint;
-        {$endif}
+        context.messages.raiseError('Irreducible expression: '+stack.toString(first,100),errorLocation);
         cleanupStackAndExpression;
       end;
-    end else if (context.adapters^.hasFatalError) then begin
+    end else if (FlagFatalError in context.messages.getFlags) then begin
       result:=rr_fail;
-      {$ifdef fullVersion}
-      if not(context.adapters^.hasHaltMessage) and
-         not(context.adapters^.hasStackTrace) then context.callStackPrint;
-      context.callStackClear;
-      {$endif}
       while (stack.topIndex>=0) do stack.popDestroy(context.recycler);
       if (context.callDepth=0) then context.recycler.cascadeDisposeToken(first);
     end else begin
       result:=rr_fail;
-      {$ifdef fullVersion}
-      if not(context.adapters^.hasStackTrace) then context.callStackPrint;
-      {$endif}
       cleanupStackAndExpression;
     end;
     stack.destroy;
@@ -1310,10 +1299,10 @@ FUNCTION doAsync(p:pointer):ptrint;
     result:=0;
     with P_asyncTask(p)^ do begin
       payload^.executeInContext(myContext);
-      myContext^.doneEvaluating;
+      myContext^.finalizeTaskAndDetachFromParent;
 
       disposeLiteral(payload);
-      dispose(myContext,destroy);
+      contextPool.disposeContext(myContext);
       myContext:=nil;
     end;
     freeMem(p,sizeOf(T_asyncTask));
@@ -1341,10 +1330,10 @@ FUNCTION localOrGlobalAsync(CONST local:boolean; CONST params:P_listLiteral; CON
           beginThread(@doAsync,task);
           result:=payload^.rereferenced;
         end else begin
-          context.adapters^.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
+          context.messages.raiseError('Creation of asynchronous/future tasks is forbidden for the current context',tokenLocation);
         end;
       except
-        on e:EOutOfMemory do context.adapters^.raiseSystemError(e.message,tokenLocation);
+        on e:EOutOfMemory do context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
       end;
     end;
   end;

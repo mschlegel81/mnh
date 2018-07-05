@@ -11,7 +11,23 @@ CONST
 
 TYPE
   T_point = array[0..1] of double;
-  T_dataRow = array of T_point;
+  P_point = ^T_point;
+  FUNCTION pointOf(CONST x,y:double):T_point; inline;
+TYPE
+  T_dataRow = object
+    private
+      dat:P_point;
+      alloc:longint;
+      FUNCTION getPoint(CONST index:longint):T_point;               inline;
+      PROCEDURE setPoint(CONST index:longint; CONST value:T_point); inline;
+      PROCEDURE SetSize(CONST newSize:longint);
+    public
+      PROCEDURE init(CONST initialSize:longint=0);
+      PROCEDURE free;
+      PROPERTY point[index:longint]:T_point read getPoint write setPoint; default;
+      PROPERTY size:longint read alloc write SetSize;
+      PROCEDURE cloneTo(OUT other:T_dataRow);
+  end;
 
   T_rowToPaint = array of record
     x,y:longint;
@@ -76,6 +92,7 @@ TYPE
     axisTrafo:array['x'..'y'] of T_axisTrafo;
     axisStyle:array['x'..'y'] of T_gridStyle;
 
+    PROCEDURE setDefaults;
     PROCEDURE updateForPlot(CONST Canvas:TCanvas; CONST aimWidth,aimHeight:longint; CONST samples:T_allSamples; VAR grid:T_ticInfos);
     FUNCTION transformRow(CONST row:T_dataRow; CONST scalingFactor:byte; CONST subPixelDx,subPixelDy:double):T_rowToPaint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
@@ -107,6 +124,47 @@ TYPE
   end;
 
 IMPLEMENTATION
+FUNCTION pointOf(CONST x,y:double):T_point;
+  begin
+    result[0]:=x;
+    result[1]:=y;
+  end;
+
+FUNCTION T_dataRow.getPoint(CONST index: longint): T_point;
+  begin
+    result:=dat[index];
+  end;
+
+PROCEDURE T_dataRow.setPoint(CONST index: longint; CONST value: T_point);
+  begin
+    if index>=alloc then SetSize(index+1);
+    dat[index]:=value;
+  end;
+
+PROCEDURE T_dataRow.SetSize(CONST newSize: longint);
+  begin
+    alloc:=newSize;
+    ReAllocMem(dat,sizeOf(T_point)*alloc);
+  end;
+
+PROCEDURE T_dataRow.init(CONST initialSize: longint);
+  begin
+    alloc:=initialSize;
+    getMem(dat,sizeOf(T_point)*alloc);
+  end;
+
+PROCEDURE T_dataRow.free;
+  begin
+    freeMem(dat);
+    alloc:=0;
+  end;
+
+PROCEDURE T_dataRow.cloneTo(OUT other: T_dataRow);
+  begin
+    other.init(alloc);
+    move(dat^,other.dat^,sizeOf(T_point)*alloc);
+  end;
+
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
   CONST BLACK:T_color=(0,0,0);
         WHITE:T_color=(255,255,255);
@@ -162,7 +220,7 @@ PROCEDURE T_customText.renderText(CONST xRes, yRes: longint; CONST opt: T_scalin
         exit;
       end;
     end else begin
-      setLength(tempRow,1);
+      tempRow.init(1);
       tempRow[0]:=p;
       toPaint:=opt.transformRow(tempRow,1,0,0);
       x:=toPaint[0].x;
@@ -257,6 +315,18 @@ PROCEDURE T_customText.setBackground(CONST r, g, b: double);
     background[cc_blue ]:=round(255*max(0,min(1,b)));
   end;
 
+PROCEDURE T_scalingOptions.setDefaults;
+  VAR axis:char;
+  begin
+    for axis:='x' to 'y' do begin
+      axisTrafo[axis].reset;
+      axisStyle[axis]:=[gse_tics,gse_coarseGrid,gse_fineGrid];
+    end;
+    preserveAspect:=true;
+    relativeFontSize:=10;
+    autoscaleFactor:=1;
+  end;
+
 PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,aimHeight: longint; CONST samples: T_allSamples; VAR grid: T_ticInfos);
 
   VAR validSampleCount:longint=0;
@@ -265,6 +335,7 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         row:T_sampleRow;
         point:T_point;
         x,y:double;
+        i:longint;
     begin
       for axis:='x' to 'y' do
       if axisTrafo[axis].autoscale then begin
@@ -274,7 +345,8 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
         result[axis,0]:=axisTrafo[axis].rangeByUser[0];
         result[axis,1]:=axisTrafo[axis].rangeByUser[1];
       end;
-      for row in samples do for point in row.sample do begin
+      for row in samples do for i:=0 to row.sample.size-1 do begin
+        point:=row.sample[i];
         x:=point[0]; if (x<MIN_VALUE_FOR[axisTrafo['x'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['x'].logs]) then continue;
         y:=point[1]; if (y<MIN_VALUE_FOR[axisTrafo['y'].logs]) or (x>MAX_VALUE_FOR[axisTrafo['y'].logs]) then continue;
         if not(axisTrafo['x'].autoscale) and not(axisTrafo['x'].sampleIsInRange(x)) or
@@ -542,12 +614,12 @@ FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST scalingFactor
   VAR i:longint;
       tx,ty:double;
   begin
-    setLength(result,length(row));
-    for i:=0 to length(row)-1 do begin
-      tx:=axisTrafo['x'].apply(row[i,0])*scalingFactor+subPixelDx;
+    setLength(result,row.size);
+    for i:=0 to row.size-1 do begin
+      tx:=axisTrafo['x'].apply(row[i][0])*scalingFactor+subPixelDx;
       result[i].valid:=not(isNan(tx)) and (tx>=-2147483648) and (tx<=2147483647);
       if not(result[i].valid) then continue;
-      ty:=axisTrafo['y'].apply(row[i,1])*scalingFactor+subPixelDy;
+      ty:=axisTrafo['y'].apply(row[i][1])*scalingFactor+subPixelDy;
       result[i].valid:=not(isNan(ty)) and (ty>=-2147483648) and (ty<=2147483647);
       if not(result[i].valid) then continue;
       result[i].x:=round(tx);
@@ -567,16 +639,15 @@ FUNCTION T_scalingOptions.absoluteFontSize(CONST xRes, yRes: longint): longint;
   end;
 
 CONSTRUCTOR T_sampleRow.create(CONST index: longint; CONST row: T_dataRow);
-  VAR i:longint;
   begin
     style.create(index);
-    setLength(sample, length(row));
-    for i:=0 to length(row)-1 do sample[i]:=row[i];
+    sample:=row;
   end;
 
 DESTRUCTOR T_sampleRow.destroy;
   begin
-    setLength(sample, 0);
+    style.destroy;
+    sample.free;
   end;
 
 PROCEDURE T_axisTrafo.prepare;

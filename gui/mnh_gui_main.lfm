@@ -8,6 +8,7 @@ object MnhForm: TMnhForm
   ClientHeight = 591
   ClientWidth = 717
   Color = clWhite
+  DesignTimePPI = 144
   KeyPreview = True
   Menu = MainMenu1
   OnChangeBounds = FormResize
@@ -2885,7 +2886,7 @@ object MnhForm: TMnhForm
         Caption = 'HALT EVALUATION!'
         Enabled = False
         ShortCut = 123
-        OnClick = miHaltEvalutaionClick
+        OnClick = miHaltEvaluationClick
       end
       object miEvaluateNow: TMenuItem
         Caption = 'Evaluate'

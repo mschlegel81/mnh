@@ -25,7 +25,7 @@ TYPE
   end;
 
 VAR
-  guiAdapters:P_adapters;
+  imigSystem:T_imageSystem;
 
 FUNCTION DisplayImageForm: TDisplayImageForm;
 IMPLEMENTATION
@@ -69,26 +69,18 @@ PROCEDURE TDisplayImageForm.FormShow(Sender: TObject);
 PROCEDURE TDisplayImageForm.displayCurrentImage;
   VAR resizedPic:T_rawImage;
   begin
-    with guiAdapters^.picture do begin
-      if tryingToDisplayImage then exit;
+    with imigSystem do begin
+      if tryingToDisplayImage or (currentImage=nil) then exit;
       tryingToDisplayImage:=true;
-      lock;
-      if value=nil then begin
-        unlock;
-        tryingToDisplayImage:=false;
-        guiAdapters^.raiseSystemError('There is no image loaded to display');
-        exit;
-      end;
       if not(showing) then Show;
-      if (value^.dimensions.width<displayImage.width) and (value^.dimensions.height<displayImage.height)
-      then value^.copyToImage(displayImage)
+      if (currentImage^.dimensions.width<displayImage.width) and (currentImage^.dimensions.height<displayImage.height)
+      then currentImage^.copyToImage(displayImage)
       else begin
-        resizedPic.create(value^);
+        resizedPic.create(currentImage^);
         resizedPic.resize(displayImage.width,displayImage.height,res_fit);
         resizedPic.copyToImage(displayImage);
         resizedPic.destroy;
       end;
-      unlock;
       tryingToDisplayImage:=false;
     end;
   end;
@@ -100,7 +92,13 @@ FUNCTION getScreenSize_imp intFuncSignature;
     if (params=nil) or (params^.size=0) then result:=newListLiteral(2)^.appendInt(screen.width)^.appendInt(screen.height);
   end;
 
+PROCEDURE renderImage;
+  begin
+    DisplayImageForm.displayCurrentImage;
+  end;
+
 INITIALIZATION
+  imigSystem.create(@renderImage);
   registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,ak_nullary,'Returns the current screen size');
 
 FINALIZATION

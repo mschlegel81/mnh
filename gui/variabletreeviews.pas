@@ -6,7 +6,9 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  mnh_debuggingVar,treeUtil, mnh_litVar,mnh_constants,mnh_basicTypes,mnh_contexts,mnh_funcs,mnh_out_adapters,mnhFormHandler;
+  mnh_constants,mnh_basicTypes,
+  mnh_messages,
+  mnh_debuggingVar,treeUtil, mnh_litVar,mnh_contexts,mnh_funcs,mnh_out_adapters,mnhFormHandler;
 
 TYPE
   TVarTreeViewForm = class(TForm)
@@ -64,6 +66,10 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
   VAR caption:string='MNH variable';
   begin
     if not(context.checkSideEffects('showVariable',tokenLocation,[se_output])) then exit(nil);
+    if not(gui_started) then begin
+      context.messages.logGuiNeeded;
+      exit(nil);
+    end;
     if (params<>nil) and
        (params^.size>0) and (params^.size<=2) then begin
       if (params^.size=2) then begin
@@ -73,7 +79,7 @@ FUNCTION showVariable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       end;
       enterCriticalSection(treeFormCs);
       newTreeForm.initWithLiteral(P_listLiteral(params^.value[0]),caption);
-      context.adapters^.logDisplayTreeView;
+      context.messages.globalMessages^.postSingal(mt_displayVariableTree,C_nilTokenLocation);
       leaveCriticalSection(treeFormCs);
       if gui_started then result:=newVoidLiteral else result:=nil;
     end else result:=nil;

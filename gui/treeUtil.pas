@@ -39,7 +39,7 @@ PROCEDURE T_treeModel.addChildren(CONST node: TTreeNode);
   begin
     rootValue:=P_treeEntry(node.data);
     children:=rootValue^.getChildren;
-    for child in children do view.items.AddChild(node,child^.toString).data:=child;
+    for child in children do view.items.addChild(node,child^.toString).data:=child;
   end;
 
 PROCEDURE T_treeModel.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);

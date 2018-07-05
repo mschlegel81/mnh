@@ -2,8 +2,13 @@ UNIT SynHighlighterMnh;
 INTERFACE
 
 USES
-  sysutils, Classes, FileUtil, Controls, Graphics,mnh_funcs,
-  SynEditTypes, SynEditHighlighter, mnh_packages,mnh_constants,myGenerics,myStringUtil;
+  sysutils, Classes, FileUtil, Controls, Graphics,
+  SynEditTypes, SynEditHighlighter,
+  myGenerics,myStringUtil,
+  mnh_constants,
+  mnh_messages,
+  mnh_funcs,
+  mnh_packages;
 
 TYPE
   T_tokenKind = (
@@ -35,7 +40,11 @@ CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
 {mc_timing }tkTimingNote,
 {mc_note   }tkNote,
 {mc_warning}tkWarning,
-{mc_error  }tkError);
+{mc_error  }tkError,
+{mc_fatal  }tkError,
+{mc_plot   }tkNote,
+{$ifdef imig}tkNote,{$endif}
+{mc_gui    }tkNote);
 
 TYPE
   TSynMnhSyn = class(TSynCustomHighlighter)
@@ -403,7 +412,7 @@ FUNCTION TSynMnhSyn.getToken: ansistring;
   begin
     len := run-fTokenPos;
     result := '';
-    SetString(result, (fLine+fTokenPos), len);
+    setString(result, (fLine+fTokenPos), len);
   end;
 
 PROCEDURE TSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer);
