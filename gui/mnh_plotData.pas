@@ -1193,9 +1193,9 @@ FUNCTION T_plotSystem.processPendingMessages:boolean;
 
 PROCEDURE T_plotSystem.resetOnEvaluationStart(CONST startedFromSandbox:boolean);
   begin
-    if settings.value^.doResetPlotOnEvaluation
-    then currentPlot.clear
-    else currentPlot.setDefaults;
+    if settings.value^.doResetPlotOnEvaluation or startedFromSandbox
+    then currentPlot.setDefaults
+    else currentPlot.clear;
     if pullSettingsToGui<>nil then pullSettingsToGui();
   end;
 
