@@ -171,7 +171,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="60">
+    <Units Count="63">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -468,6 +468,18 @@
         <Filename Value="..\core\mnh_funcs_ipc.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit59>
+      <Unit60>
+        <Filename Value="..\core\listProcessing.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit60>
+      <Unit61>
+        <Filename Value="..\core\valueStore.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit61>
+      <Unit62>
+        <Filename Value="mnh_plotData.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit62>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

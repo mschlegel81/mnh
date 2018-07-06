@@ -12,7 +12,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
         setLength(src,0);
         for i:=0 to P_listLiteral(arg0)^.size-1 do append(src,P_stringLiteral(P_listLiteral(arg0)^.value[i])^.value);
       end;
-      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getGlobals^.prng.dwordRandom));
+      result:=messagesToLiteralForSandbox(sandbox^.execute(src,context.getGlobals^.prng.dwordRandom),C_textMessages-[mt_timing_info]);
     end;
   end;
 
@@ -29,7 +29,7 @@ FUNCTION try_imp intFuncSignature;
           result:=newVoidLiteral
         end else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(context.messages.storedMessages);
+            messagesLiteral:=messagesToLiteralForSandbox(context.messages.storedMessages,C_errorMessageTypes[4]+C_errorMessageTypes[3]);
             context.messages.clear;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,@context,messagesLiteral).literal;
             if result=nil then context.messages.raiseError('Error in catch block',tokenLocation);
@@ -108,7 +108,7 @@ FUNCTION inspect_imp intFuncSignature;
 
   PROCEDURE loadTemporaryPackage;
     begin
-      loadMessages:=messagesToLiteralForSandbox( sandbox^.loadForCodeAssistance(tempPackage^));
+      loadMessages:=messagesToLiteralForSandbox( sandbox^.loadForCodeAssistance(tempPackage^),C_errorsAndWarnings);
     end;
 
   begin

@@ -379,6 +379,7 @@ INITIALIZATION
   initialize(tableFormCs);
   initCriticalSection(tableFormCs);
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tables');{$endif}
   resetTableForms;
   doneCriticalSection(tableFormCs);
 

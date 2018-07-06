@@ -83,7 +83,7 @@ TYPE
       {$endif}
       parentMessages:P_threadLocalMessages;
       childMessages:array of P_threadLocalMessages;
-      PROCEDURE propagateFlags;
+      PROCEDURE propagateFlags(CONST up:boolean=true; CONST down:boolean=true);
     public
       globalMessages:P_messageConnector;
       CONSTRUCTOR create({$ifdef fullVersion}CONST callback:F_traceCallback{$endif});
@@ -164,7 +164,7 @@ TYPE
       PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);
       PROCEDURE postCustomMessages(CONST message:T_storedMessages);
 
-      PROCEDURE clear;
+      PROCEDURE clear(CONST clearAllAdapters:boolean=true);
 
       PROCEDURE updateCollecting;
       FUNCTION isCollecting(CONST messageType:T_messageType):boolean;
@@ -206,7 +206,6 @@ VAR
 {$endif}
 OPERATOR :=(s:string):T_messageTypeSet;
 IMPLEMENTATION
-VAR globalLockCs:TRTLCriticalSection;
 
 OPERATOR :=(s:string):T_messageTypeSet;
   VAR i,level:longint;
@@ -271,19 +270,19 @@ CONSTRUCTOR T_threadLocalMessages.create({$ifdef fullVersion} CONST callback: F_
     {$endif}
   end;
 
-PROCEDURE T_threadLocalMessages.propagateFlags;
+PROCEDURE T_threadLocalMessages.propagateFlags(CONST up:boolean=true; CONST down:boolean=true);
   VAR child:P_threadLocalMessages;
   begin
-    if ((FlagFatalError in flags) {$ifdef fullVersion} or (FlagGUINeeded in flags) {$endif}) and (parentMessages<>nil) then begin
+    if up and ((FlagFatalError in flags) {$ifdef fullVersion} or (FlagGUINeeded in flags) {$endif}) and (parentMessages<>nil) then begin
       parentMessages^.flags:=parentMessages^.flags+(flags*[FlagFatalError{$ifdef fullVersion} ,FlagGUINeeded{$endif}]);
-      parentMessages^.propagateFlags;
+      parentMessages^.propagateFlags(true,false);
     end;
     {$ifdef fullVersion}
     if (parentMessages=nil) and (globalMessages<>nil) then globalMessages^.flags:=globalMessages^.flags+flags;
     {$endif}
-    for child in childMessages do begin
+    if down then for child in childMessages do begin
       child^.flags:=child^.flags+flags;
-      child^.propagateFlags;
+      child^.propagateFlags(false,true);
     end;
   end;
 
@@ -456,11 +455,11 @@ PROCEDURE T_messageConnector.postCustomMessages(CONST message:T_storedMessages);
     leaveCriticalSection(connectorCS);
   end;
 
-PROCEDURE T_messageConnector.clear;
+PROCEDURE T_messageConnector.clear(CONST clearAllAdapters:boolean=true);
   VAR a:T_flaggedAdapter;
   begin
     enterCriticalSection(connectorCS);
-    for a in adapters do a.adapter^.clear;
+    if clearAllAdapters then for a in adapters do a.adapter^.clear;
     collected:=[];
     {$ifdef fullVersion}
     flags:=[];
@@ -516,8 +515,7 @@ FUNCTION T_connectorAdapter.append(CONST message: P_storedMessage): boolean;
   end;
 
 //T_abstractOutAdapter:=========================================================
-PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean;
-  CONST mt: T_messageTypeSet);
+PROCEDURE T_abstractOutAdapter.enableMessageType(CONST enabled: boolean; CONST mt: T_messageTypeSet);
   begin
     if enabled
     then messageTypesToInclude:=(messageTypesToInclude+mt) * C_includableMessages[adapterType]
@@ -797,9 +795,4 @@ FUNCTION T_messageConnector.triggersBeep:boolean;
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
-  initialize(globalLockCs);
-  initCriticalSection(globalLockCs);
-
-FINALIZATION
-  doneCriticalSection(globalLockCs);
 end.

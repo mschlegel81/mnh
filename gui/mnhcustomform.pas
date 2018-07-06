@@ -4,7 +4,7 @@ UNIT mnhCustomForm;
 
 INTERFACE
 {$ifdef debugMode}
-  {$define debug_mnhCustomForm}
+  {define debug_mnhCustomForm}
 {$endif}
 
 USES
@@ -265,7 +265,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
     if tmp<>nil then begin
       if tmp^.literalType=lt_string then begin
         config.bindingTo:=P_stringLiteral(tmp)^.value;
-        state.bindingValue:=context.valueStore^.getVariableValue(config.bindingTo);
+        state.bindingValue:=context.valueScope^.getVariableValue(config.bindingTo);
       end else context.messages.raiseError('bind is: '+tmp^.typeString+'; must the identifier of a local variable as string',location);
       disposeLiteral(tmp);
     end;
@@ -293,13 +293,13 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
     result:=false;
     if (config.bindingTo<>'') then begin
       if (state.bindingValue<>nil) and (state.isFocused) then begin
-        tmp:=context.valueStore^.getVariableValue(config.bindingTo);
+        tmp:=context.valueScope^.getVariableValue(config.bindingTo);
         if tmp=nil then begin
           {$ifdef debug_mnhCustomForm}
           writeln(stdErr,'        DEBUG: evaluating binding (gui initializing) for ',getName);
           {$endif}
           result:=true;
-          context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.messages);
+          context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,context.messages);
         end else begin
           if tmp^.equals(state.bindingValue) then begin
             disposeLiteral(tmp);
@@ -309,11 +309,11 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; VAR context:
             {$endif}
             result:=true;
             disposeLiteral(tmp);
-            context.valueStore^.setVariableValue(config.bindingTo,state.bindingValue,location,context.messages);
+            context.valueScope^.setVariableValue(config.bindingTo,state.bindingValue,location,context.messages);
           end;
         end;
       end else if not(state.isFocused) then begin
-        tmp:=context.valueStore^.getVariableValue(config.bindingTo);
+        tmp:=context.valueScope^.getVariableValue(config.bindingTo);
         if tmp<>nil then begin
           if tmp^.equals(state.bindingValue)
           then  disposeLiteral(tmp)
@@ -673,6 +673,7 @@ INITIALIZATION
   registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnhCustomForm');{$endif}
   freeScriptedForms;
   doneCriticalSection(scriptedFormCs);
 end.

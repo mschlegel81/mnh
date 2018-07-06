@@ -149,7 +149,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; VAR context:T
       if not(accessed) then exit(newVoidLiteral);
       dropFirst(fileLines,1);
       lexer.create(fileLines,location,P_abstractPackage(location.package));
-      stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
+      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
       stmt.firstToken^.setSingleLocationForExpression(location);
       lexer.destroy;
       result:=context.reduceToLiteral(stmt.firstToken).literal;

@@ -1,11 +1,11 @@
 object MnhForm: TMnhForm
   Left = 985
-  Height = 621
+  Height = 659
   Top = 222
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
-  ClientHeight = 591
+  ClientHeight = 629
   ClientWidth = 717
   Color = clWhite
   DesignTimePPI = 144
@@ -22,7 +22,7 @@ object MnhForm: TMnhForm
   LCLVersion = '1.8.2.0'
   object inputPageControl: TPageControl
     Left = 175
-    Height = 353
+    Height = 226
     Top = 30
     Width = 542
     TabStop = False
@@ -35,7 +35,7 @@ object MnhForm: TMnhForm
     Cursor = crVSplit
     Left = 0
     Height = 8
-    Top = 383
+    Top = 256
     Width = 717
     Align = alBottom
     OnMoved = Splitter1Moved
@@ -107,31 +107,31 @@ object MnhForm: TMnhForm
   end
   object Splitter4: TSplitter
     Left = 170
-    Height = 353
+    Height = 226
     Top = 30
     Width = 5
   end
   object BottomPanel: TPanel
     Left = 0
-    Height = 200
-    Top = 391
+    Height = 365
+    Top = 264
     Width = 717
     Align = alBottom
     BevelOuter = bvNone
-    ClientHeight = 200
+    ClientHeight = 365
     ClientWidth = 717
     TabOrder = 4
     object outputPageControl: TPageControl
       Left = 0
-      Height = 164
+      Height = 329
       Top = 0
       Width = 717
       TabStop = False
-      ActivePage = HelpSheet
+      ActivePage = QuickTabSheet
       Align = alClient
       Font.Color = clBlack
       ParentFont = False
-      TabIndex = 0
+      TabIndex = 4
       TabOrder = 0
       Options = [nboKeyboardTabSwitch]
       object HelpSheet: TTabSheet
@@ -158,7 +158,7 @@ object MnhForm: TMnhForm
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
           Gutter.Visible = False
-          Gutter.Width = 65
+          Gutter.Width = 57
           Gutter.MouseActions = <>
           HideSelection = True
           InsertMode = False
@@ -607,7 +607,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -660,7 +660,7 @@ object MnhForm: TMnhForm
           OnMouseUp = assistanceSynEditMouseUp
           BorderStyle = bsNone
           Gutter.Visible = False
-          Gutter.Width = 65
+          Gutter.Width = 57
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1120,7 +1120,7 @@ object MnhForm: TMnhForm
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1171,7 +1171,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 27
+          Gutter.Width = 19
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -1619,7 +1619,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -1639,7 +1639,7 @@ object MnhForm: TMnhForm
       end
       object debugTabSheet: TTabSheet
         Caption = 'Debug'
-        ClientHeight = 309
+        ClientHeight = 291
         ClientWidth = 709
         Enabled = False
         TabVisible = False
@@ -1655,27 +1655,27 @@ object MnhForm: TMnhForm
         end
         object Panel2: TPanel
           Left = 0
-          Height = 234
+          Height = 216
           Top = 75
           Width = 709
           Align = alClient
           BevelOuter = bvNone
-          ClientHeight = 234
+          ClientHeight = 216
           ClientWidth = 709
           TabOrder = 1
           object callStackGroupBox: TGroupBox
             Left = 0
-            Height = 234
+            Height = 216
             Top = 0
             Width = 115
             Align = alLeft
             Caption = 'Call stack'
-            ClientHeight = 204
+            ClientHeight = 186
             ClientWidth = 111
             TabOrder = 0
             object callStackList: TListBox
               Left = 0
-              Height = 214
+              Height = 186
               Top = 0
               Width = 111
               Align = alClient
@@ -1686,12 +1686,12 @@ object MnhForm: TMnhForm
           end
           object Panel1: TPanel
             Left = 120
-            Height = 234
+            Height = 216
             Top = 0
             Width = 589
             Align = alClient
             BevelOuter = bvNone
-            ClientHeight = 234
+            ClientHeight = 216
             ClientWidth = 589
             TabOrder = 1
             object callStackInfoStringGrid: TStringGrid
@@ -1727,7 +1727,7 @@ object MnhForm: TMnhForm
             end
             object variablesTreeView: TTreeView
               Left = 0
-              Height = 158
+              Height = 140
               Top = 76
               Width = 589
               Align = alClient
@@ -1739,7 +1739,7 @@ object MnhForm: TMnhForm
           end
           object Splitter2: TSplitter
             Left = 115
-            Height = 234
+            Height = 216
             Top = 0
             Width = 5
           end
@@ -1757,7 +1757,7 @@ object MnhForm: TMnhForm
           inline currentExpressionMemo: TSynMemo
             Cursor = crIBeam
             Left = 0
-            Height = 50
+            Height = 40
             Top = 0
             Width = 705
             Align = alClient
@@ -1771,7 +1771,7 @@ object MnhForm: TMnhForm
             TabStop = False
             BorderStyle = bsNone
             Gutter.Visible = False
-            Gutter.Width = 65
+            Gutter.Width = 57
             Gutter.MouseActions = <>
             Keystrokes = <            
               item
@@ -2215,7 +2215,7 @@ object MnhForm: TMnhForm
                 MouseActions = <>
               end
               object SynGutterLineNumber1: TSynGutterLineNumber
-                Width = 25
+                Width = 17
                 MouseActions = <>
                 MarkupInfo.Background = clBtnFace
                 MarkupInfo.Foreground = clNone
@@ -2249,12 +2249,12 @@ object MnhForm: TMnhForm
       end
       object QuickTabSheet: TTabSheet
         Caption = 'Quick evaluation (F4)'
-        ClientHeight = 149
+        ClientHeight = 291
         ClientWidth = 709
         inline QuickOutputEdit: TSynEdit
           Left = 0
           Height = 253
-          Top = -104
+          Top = 38
           Width = 709
           Align = alBottom
           Font.Height = -13
@@ -2267,7 +2267,7 @@ object MnhForm: TMnhForm
           OnKeyUp = assistanceSynEditKeyUp
           OnMouseDown = assistanceSynEditMouseDown
           OnMouseUp = assistanceSynEditMouseUp
-          Gutter.Width = 27
+          Gutter.Width = 19
           Gutter.MouseActions = <>
           RightGutter.Width = 0
           RightGutter.MouseActions = <>
@@ -2715,7 +2715,7 @@ object MnhForm: TMnhForm
           WantTabs = False
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 17
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -2732,24 +2732,33 @@ object MnhForm: TMnhForm
             end
           end
         end
+        object Splitter5: TSplitter
+          Cursor = crVSplit
+          Left = 0
+          Height = 10
+          Top = 0
+          Width = 709
+          Align = alTop
+          ResizeAnchor = akTop
+        end
       end
     end
     object StatusBar: TStatusBar
       Left = 0
       Height = 36
-      Top = 164
+      Top = 329
       Width = 717
       Panels = <>
     end
   end
   object OutlineGroupBox: TGroupBox
     Left = 0
-    Height = 353
+    Height = 226
     Top = 30
     Width = 170
     Align = alLeft
     Caption = 'Outline'
-    ClientHeight = 323
+    ClientHeight = 196
     ClientWidth = 166
     TabOrder = 5
     object cbOutlineShowPrivate: TCheckBox
@@ -2774,7 +2783,7 @@ object MnhForm: TMnhForm
     end
     object outlineTreeView: TTreeView
       Left = 0
-      Height = 265
+      Height = 138
       Top = 58
       Width = 166
       Align = alClient

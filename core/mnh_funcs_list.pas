@@ -543,6 +543,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'pMap',   @pMap_imp  ,ak_binary,'pMap(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_list');{$endif}
   builtinLocation_sort.destroy;
   builtinLocation_group .destroy;
 

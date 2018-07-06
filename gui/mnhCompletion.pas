@@ -205,6 +205,7 @@ PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnhCompletion');{$endif}
   if intrinsicRulesForCompletion_ready then intrinsicRulesForCompletion.destroy;
 
 end.

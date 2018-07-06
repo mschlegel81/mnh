@@ -396,6 +396,7 @@ INITIALIZATION
   registerRule(HTTP_NAMESPACE,'stopAllHttpServers'  ,@stopAllHttpServers_impl  ,ak_nullary   ,'stopAllHttpServers;//Stops all currently running httpServers and waits for shutdown');
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_server');{$endif}
   registry.destroy;
 
 end.

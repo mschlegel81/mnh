@@ -92,54 +92,54 @@ CONST
                                                        mt_guiEdit_done,
                                                        mt_displayVariableTree,
                                                        mt_displayCustomForm];
-  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
   {$endif}
+  C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
+  C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messageTypeMeta:array[T_messageType] of record
     level:shortint;
     mClass:T_messageClass;
-    ignoredBySandbox:boolean;
     systemErrorLevel:byte;
   end = (
-{mt_clearConsole      }  (level:-2; mClass:mc_print;   ignoredBySandbox: false; systemErrorLevel:0),
-{mt_printline         }  (level:-2; mClass:mc_print;   ignoredBySandbox: false; systemErrorLevel:0),
-{mt_print             }  (level:-2; mClass:mc_print;   ignoredBySandbox: false; systemErrorLevel:0),
-{mt_echo_input        }  (level:-1; mClass:mc_echo;    ignoredBySandbox: false; systemErrorLevel:0),
-{mt_echo_declaration  }  (level:-1; mClass:mc_echo;    ignoredBySandbox: false; systemErrorLevel:0),
-{mt_echo_output       }  (level:-1; mClass:mc_echo;    ignoredBySandbox: false; systemErrorLevel:0),
-{mt_echo_continued    }  (level:-1; mClass:mc_echo;    ignoredBySandbox: false; systemErrorLevel:0),
-{mt_el1_note          }  (level: 1; mClass:mc_note;    ignoredBySandbox: false; systemErrorLevel:0),
-{mt_el1_userNote      }  (level: 1; mClass:mc_note;    ignoredBySandbox: false; systemErrorLevel:0),
-{mt_el2_warning       }  (level: 2; mClass:mc_warning; ignoredBySandbox: false; systemErrorLevel:0),
-{mt_el2_userWarning   }  (level: 2; mClass:mc_warning; ignoredBySandbox: false; systemErrorLevel:0),
-{mt_el3_evalError     }  (level: 3; mClass:mc_error;   ignoredBySandbox: false; systemErrorLevel:3),
-{mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   ignoredBySandbox: false; systemErrorLevel:1),
-{mt_el3_userDefined   }  (level: 3; mClass:mc_error;   ignoredBySandbox: false; systemErrorLevel:2),
-{mt_el4_systemError   }  (level: 4; mClass:mc_error;   ignoredBySandbox: false; systemErrorLevel:5),
-{mt_endOfEvaluation   }  (level:-1; mClass:mc_note;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_timing_info       }  (level:-1; mClass:mc_timing;  ignoredBySandbox:  true; systemErrorLevel:0)
+{mt_clearConsole      }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_printline         }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_print             }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_echo_input        }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_declaration  }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_output       }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_continued    }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_el1_note          }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el1_userNote      }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el2_warning       }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el2_userWarning   }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el3_evalError     }  (level: 3; mClass:mc_error;   systemErrorLevel:3),
+{mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   systemErrorLevel:1),
+{mt_el3_userDefined   }  (level: 3; mClass:mc_error;   systemErrorLevel:2),
+{mt_el4_systemError   }  (level: 4; mClass:mc_error;   systemErrorLevel:5),
+{mt_endOfEvaluation   }  (level:-1; mClass:mc_note;    systemErrorLevel:0),
+{mt_timing_info       }  (level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
-{mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_displayTable}        (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_addText}        (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_addRow}         (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_dropRow}        (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_setOptions}     (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_clear}          (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; systemErrorLevel:0),
+{mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayTable}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_plot_addText}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addRow}         (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_dropRow}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_setOptions}     (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clear}          (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {$ifdef imig}
-{mt_image_postDisplay}   (level:-1; mClass:mc_image;   ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_image_load}          (level:-1; mClass:mc_image;   ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_image_close}         (level:-1; mClass:mc_image;   ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_image_obtainImage...}(level:-1; mClass:mc_image;   ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_image_obtainDim...}  (level:-1; mClass:mc_image;   ignoredBySandbox:  true; systemErrorLevel:0),
+{mt_image_postDisplay}   (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_load}          (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_close}         (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_obtainImage...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_obtainDim...}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
 {$endif}
-{mt_displayVariableTree} (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; systemErrorLevel:0),
-{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     ignoredBySandbox:  true; systemErrorLevel:0)
+{mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(

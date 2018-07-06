@@ -71,7 +71,7 @@ TYPE
 
       //save related:
       indexOfSave:longint;
-      saveValueStore:P_valueStore;
+      saveValueStore:P_valueScope;
       currentlyEvaluating:boolean;
 
       PROCEDURE updatePatternForInline;
@@ -183,7 +183,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
       bracketLevel:longint=0;
       inlineSubRule:P_inlineExpression;
   begin
-    predigest(rep,nil,context.recycler,context.messages);
+    predigest(rep,nil,context.messages);
     if (rep^.tokType<>tt_expBraceOpen) then begin
       context.messages.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
@@ -207,7 +207,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
-    context.recycler.disposeToken(t); //dispose closing curly bracket
+    disposeToken(t); //dispose closing curly bracket
     if context.messages.continueEvaluation then begin
       new(inlineSubRule,createFromInline(inlineRuleTokens,context));
       if context.messages.continueEvaluation then begin
@@ -224,15 +224,15 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
       subExpressionLevel:longint=0;
 
   begin
-    setLength(preparedBody,0);
+    setLength(preparedBody,rep^.getCount);
     t:=rep;
     i:=0;
     indexOfSave:=-1;
     while t<>nil do begin
-      if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
+      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[i] do begin
         token:=t^;
-        t^.tokType:=tt_EOL; t:=context.recycler.disposeToken(t);
+        t^.tokType:=tt_EOL; t:=disposeToken(t);
         token.next:=nil;
         case token.tokType of
           tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=-1; end;
@@ -354,12 +354,13 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
     pattern.create;
     t:=rep;
     i:=0;
+    setLength(preparedBody,rep^.getCount);
     while (t<>nil) do begin
-      if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
+      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL;
-        t:=context.recycler.disposeToken(t);
+        t:=disposeToken(t);
         token.next:=nil;
         case token.tokType of
           tt_beginBlock   : inc(scopeLevel        );
@@ -384,10 +385,11 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
 DESTRUCTOR T_inlineExpression.destroy;
   VAR i:longint;
   begin
+    inherited destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
-    if (saveValueStore<>nil) then dispose(saveValueStore,destroy);
+    disposeScope(saveValueStore);
     meta.destroy;
     doneCriticalSection(subruleCallCs);
   end;
@@ -460,7 +462,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         L:P_literal;
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
-        previousValueStore:P_valueStore;
+        previousValueScope:P_valueScope;
         previousSideEffectWhitelist:T_sideEffects;
         firstCallOfResumable:boolean=false;
         {$ifdef fullVersion}
@@ -482,7 +484,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
 
       if not(functionIdsReady) then resolveIds(@context.messages);
       blocking:=typ in C_subruleExpressionTypes;
-      firstRep:=context.recycler.newToken(getLocation,'',beginToken[blocking]);
+      firstRep:=newToken(getLocation,'',beginToken[blocking]);
       lastRep:=firstRep;
 
       if (preparedBody[                     0].token.tokType=tt_beginBlock) and
@@ -529,8 +531,8 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
           end else begin
             L:=param^.value[parIdx];
           end;
-          lastRep^.next:=context.recycler.newToken(token.location,'',tt_literal,L^.rereferenced);
-        end else lastRep^.next:=context.recycler.newToken(token);
+          lastRep^.next:=newToken(token.location,'',tt_literal,L^.rereferenced);
+        end else lastRep^.next:=newToken(token);
         lastRep:=lastRep^.next;
       end;
 
@@ -539,33 +541,30 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       {$endif}
       if indexOfSave>=0 then begin
         if saveValueStore=nil then begin
-          new(saveValueStore,create);
-          saveValueStore^.scopePush(blocking);
+          saveValueStore:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
           firstCallOfResumable:=true;
         end;
-        previousValueStore:=context.valueStore;
-        context.valueStore:=saveValueStore;
-        context.valueStore^.parentStore:=previousValueStore;
+        previousValueScope:=context.valueScope;
+        context.valueScope:=saveValueStore;
 
         previousSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
-        firstRep:=context.recycler.disposeToken(firstRep);
+        firstRep:=disposeToken(firstRep);
         context.setAllowedSideEffectsReturningPrevious(previousSideEffectWhitelist);
 
         context.reduceExpression(firstRep);
         if firstRep=nil
         then lastRep:=nil
         else lastRep:=firstRep^.last;
-        context.valueStore:=previousValueStore;
+        context.valueScope:=previousValueScope;
         if firstCallOfResumable then begin
           if context.messages.continueEvaluation then begin
             updateBody;
           end else begin
-            dispose(saveValueStore,destroy);
-            saveValueStore:=nil;
+            disposeScope(saveValueStore);
           end;
         end;
       end else begin
-        lastRep^.next:=context.recycler.newToken(getLocation,'',tt_semicolon);
+        lastRep^.next:=newToken(getLocation,'',tt_semicolon);
         lastRep:=lastRep^.next;
         lastRep^.next:=context.getNewEndToken(blocking,getLocation);
         context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
@@ -699,7 +698,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
 FUNCTION newIdentityRule(VAR context:T_threadContext; CONST location:T_tokenLocation):P_subruleExpression;
   begin
     new(result,
-        createFromInline(context.recycler.newToken(location,'$x',tt_parameterIdentifier,nil),
+        createFromInline(newToken(location,'$x',tt_parameterIdentifier,nil),
                          context)); //={$x}
   end;
 
@@ -818,7 +817,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
     indexOfSave:=original^.indexOfSave;
-    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.clone;
+    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.cloneSaveValueStore;
     if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
     meta:=original^.meta;
     updatePatternForInline;
@@ -830,47 +829,43 @@ FUNCTION T_inlineExpression.getParameterNames: P_listLiteral;
   end;
 
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
-  FUNCTION newToken(CONST tokenText:T_idString; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
-    begin result:=context.recycler.newToken(location,tokenText,tokenType,ptr); end;
   VAR last:P_token;
       i:longint;
   begin
-    result:=newToken('',tt_braceOpen);
+    result:=newToken(location,'',tt_braceOpen);
     last:=result;
     for i:=0 to minPatternLength-1 do begin
       if i>0 then begin
-        last^.next:=newToken('',tt_separatorComma);
+        last^.next:=newToken(location,'',tt_separatorComma);
         last:=last^.next;
       end;
-      last^.next:=newToken('$'+intToStr(i),tt_parameterIdentifier);
+      last^.next:=newToken(location,'$'+intToStr(i),tt_parameterIdentifier);
       last:=last^.next;
     end;
-    last^.next:=newToken('',tt_braceClose);
+    last^.next:=newToken(location,'',tt_braceClose);
     last:=last^.next;
     if variadic then begin
-      last^.next:=newToken('',tt_listToParameterList);
+      last^.next:=newToken(location,'',tt_listToParameterList);
       last:=last^.next;
       if minPatternLength>0 then begin
-        last^.next:=newToken('',tt_optionalParameters);
+        last^.next:=newToken(location,'',tt_optionalParameters);
       end else begin
-        last^.next:=newToken(ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
+        last^.next:=newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier);
       end;
     end;
   end;
 
 FUNCTION getParametersForUncurrying(CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
-  FUNCTION newToken(CONST tokenText:T_idString; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
-    begin result:=context.recycler.newToken(location,tokenText,tokenType,ptr); end;
   VAR last:P_token;
       i:longint;
   begin
-    result:=newToken('',tt_parList_constructor,givenParameters^.rereferenced);
+    result:=newToken(location,'',tt_parList_constructor,givenParameters^.rereferenced);
     last:=result;
     for i:=givenParameters^.size to expectedArity-1 do begin
-      last^.next:=newToken('$'+intToStr(i-givenParameters^.size),tt_parameterIdentifier);
+      last^.next:=newToken(location,'$'+intToStr(i-givenParameters^.size),tt_parameterIdentifier);
       last:=last^.next;
     end;
-    last^.next:=newToken('',tt_braceClose);
+    last^.next:=newToken(location,'',tt_braceClose);
     last:=last^.next;
   end;
 
@@ -879,7 +874,7 @@ FUNCTION T_builtinExpression.getEquivalentInlineExpression(VAR context:T_threadC
       first:P_token;
   begin
     meta:=getMeta(func);
-    first:=context.recycler.newToken(getLocation,meta.qualifiedId,tt_intrinsicRule,func);
+    first:=newToken(getLocation,meta.qualifiedId,tt_intrinsicRule,func);
     first^.next:=getParametersForPseudoFuncPtr(C_arityKind[meta.arityKind].fixedParameters,C_arityKind[meta.arityKind].variadic,getLocation,context);
     new(result,createFromInline(first,context));
   end;
@@ -1278,16 +1273,16 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         lastRep:P_token=nil;
         m:P_storedMessage;
     begin
-      firstRep:=context.recycler.newToken(location,'',tt_literal,TList); TList^.rereference;
-      firstRep^.next:=context.recycler.newToken(location,'t',tt_parallelEach);
+      firstRep:=newToken(location,'',tt_literal,TList); TList^.rereference;
+      firstRep^.next:=newToken(location,'t',tt_parallelEach);
       lastRep:=firstRep^.next;
-      lastRep^.next:=context.recycler.newToken(location,'t',tt_identifier);
+      lastRep^.next:=newToken(location,'t',tt_identifier);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.recycler.newToken(location,'',tt_ponFlipper);
+      lastRep^.next:=newToken(location,'',tt_ponFlipper);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.recycler.newToken(location,'',tt_literal,f); f^.rereference;
+      lastRep^.next:=newToken(location,'',tt_literal,f); f^.rereference;
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.recycler.newToken(location,'',tt_braceClose);
+      lastRep^.next:=newToken(location,'',tt_braceClose);
       context.reduceExpression(firstRep);
       result:=context.messages.continueEvaluation and
               (firstRep<>nil) and
@@ -1298,7 +1293,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       for m in context.messages.storedMessages do collector.append(m);
       context.messages.clear;
       if result then resultLiteral:=P_listLiteral(P_literal(firstRep^.data)^.rereferenced);
-      context.recycler.cascadeDisposeToken(firstRep);
+      cascadeDisposeToken(firstRep);
     end;
 
   FUNCTION evaluateVectorExpressionOk:boolean;
@@ -1516,7 +1511,7 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
+    statement:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
     lexer.destroy;
     if statement.firstToken=nil then begin
       context.messages.raiseError('The parsed expression appears to be empty',location);
@@ -1537,11 +1532,11 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
       if L^.value[i]^.literalType=lt_string
       then subTokens:=stringToTokens(P_stringLiteral(L^.value[i])^.value,location,package,context)
       else begin
-        subTokens:=context.recycler.newToken(location,'',tt_literal,L^.value[i]);
+        subTokens:=newToken(location,'',tt_literal,L^.value[i]);
         L^.value[i]^.rereference;
       end;
       if subTokens=nil then begin
-        if result<>nil then context.recycler.cascadeDisposeToken(result);
+        if result<>nil then cascadeDisposeToken(result);
         exit(nil);
       end;
       if result=nil then result:=subTokens
@@ -1563,31 +1558,31 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     if first=nil then exit(nil);
 
     if not(first^.areBracketsPlausible(context.messages)) then begin
-      context.recycler.cascadeDisposeToken(first);
+      cascadeDisposeToken(first);
       exit(nil);
     end;
     if first^.tokType<>tt_expBraceOpen then begin
-      temp:=context.recycler.newToken(location,'',tt_expBraceOpen);
+      temp:=newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
       temp:=first^.last;
-      temp^.next:=context.recycler.newToken(location,'',tt_expBraceClose);
+      temp^.next:=newToken(location,'',tt_expBraceClose);
     end;
 
     digestInlineExpression(first,context);
     if (context.messages.continueEvaluation) and (first^.next<>nil) then context.messages.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.messages.continueEvaluation) then begin
-      context.recycler.cascadeDisposeToken(first);
+      cascadeDisposeToken(first);
       exit(nil);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-      context.recycler.disposeToken(first);
+      disposeToken(first);
       context.messages.raiseError('This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location,mt_el4_systemError);
       exit(nil);
     end;
     result:=P_expressionLiteral(first^.data);
     first^.tokType:=tt_EOL;
     first^.data:=nil;
-    context.recycler.disposeToken(first);
+    disposeToken(first);
   end;
 
 FUNCTION toExpression_imp intFuncSignature;
@@ -1595,15 +1590,15 @@ FUNCTION toExpression_imp intFuncSignature;
     VAR first:P_token;
     begin
       //Create token-series { <Literal> }
-      first            :=context.recycler.newToken(tokenLocation,'',tt_expBraceOpen);
-      first^.next      :=context.recycler.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
-      first^.next^.next:=context.recycler.newToken(tokenLocation,'',tt_expBraceClose);
+      first            :=newToken(tokenLocation,'',tt_expBraceOpen);
+      first^.next      :=newToken(tokenLocation,'',tt_literal,l); L^.rereference;
+      first^.next^.next:=newToken(tokenLocation,'',tt_expBraceClose);
       //Reduce to inline expression
       digestInlineExpression(first,context);
       result:=P_expressionLiteral(first^.data);
       first^.tokType:=tt_EOL;
       first^.data:=nil;
-      context.recycler.disposeToken(first);
+      disposeToken(first);
     end;
 
   begin
@@ -1648,6 +1643,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(S);//Interprets a string or list S');
 FINALIZATION
   {$ifdef fullVersion}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_subrules');{$endif}
   generateRowIdentification.destroy;
   {$endif}
 end.

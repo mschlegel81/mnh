@@ -21,7 +21,7 @@ TYPE
     dat:PP_token;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE popDestroy(VAR recycler:T_tokenRecycler);
+    PROCEDURE popDestroy();
     PROCEDURE popLink(VAR first:P_token);
     PROCEDURE push(VAR first:P_token);
     PROCEDURE quietPush(CONST first:P_token);
@@ -263,9 +263,9 @@ DESTRUCTOR T_TokenStack.destroy;
     freeMem(dat,alloc*sizeOf(P_token));
   end;
 
-PROCEDURE T_TokenStack.popDestroy(VAR recycler:T_tokenRecycler);
+PROCEDURE T_TokenStack.popDestroy();
   begin
-    recycler.disposeToken(dat[topIndex]);
+    disposeToken(dat[topIndex]);
     dec(topIndex);
   end;
 

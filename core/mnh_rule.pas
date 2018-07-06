@@ -20,7 +20,7 @@ TYPE
     hiddenRule:P_intFuncCallback;
     allowCurrying:boolean;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
-    FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
+    FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
     {$ifdef fullVersion}
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
     {$endif}
@@ -84,7 +84,6 @@ TYPE
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
-      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
   end;
 
   P_typecheckRule=^T_typecheckRule;
@@ -155,7 +154,7 @@ FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST common
       tempLiteral:=hiddenRule(givenParameters,callLocation,context);
       dec(context.callDepth);
       if tempLiteral<>nil then begin
-        firstRep:=context.recycler.newToken(callLocation,'',tt_literal,tempLiteral);
+        firstRep:=newToken(callLocation,'',tt_literal,tempLiteral);
         lastRep:=firstRep;
         exit(true);
       end;
@@ -167,10 +166,10 @@ FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST common
       //  rule : f(x,y)->...
       //  input: f(x)
       //  out  : {f(x,$y)}
-      tempToken      :=context.recycler.newToken(callLocation,getId,ruleTokenType,@self);
+      tempToken      :=newToken(callLocation,getId,ruleTokenType,@self);
       tempToken^.next:=getParametersForUncurrying(givenParameters,commonArity,callLocation,context);
       new(tempInline,createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
-      firstRep:=context.recycler.newToken(callLocation,'',tt_literal,tempInline);
+      firstRep:=newToken(callLocation,'',tt_literal,tempInline);
       lastRep:=firstRep;
       result:=true;
     end else if (givenParameters^.size>commonArity) then begin
@@ -181,13 +180,13 @@ FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST common
       parHead:=givenParameters^.head(commonArity);
       if replaces(ruleTokenType,callLocation,parHead,firstRep,lastRep,@context) then begin
         parTail:=givenParameters^.tail(commonArity);
-        tempToken:=context.recycler.newToken(firstRep^.location,'',tt_braceOpen);
+        tempToken:=newToken(firstRep^.location,'',tt_braceOpen);
         tempToken^.next:=firstRep;
         firstRep:=tempToken;
 
-        lastRep^.next:=context.recycler.newToken(firstRep^.location,'',tt_braceClose);
+        lastRep^.next:=newToken(firstRep^.location,'',tt_braceClose);
         lastRep:=lastRep^.next;
-        lastRep^.next:=context.recycler.newToken(firstRep^.location,'',tt_parList,parTail);
+        lastRep^.next:=newToken(firstRep^.location,'',tt_parList,parTail);
         lastRep:=lastRep^.next;
         result:=true;
       end;
@@ -440,11 +439,11 @@ exit}
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
-      newFirst      :=P_threadContext(threadContextPointer)^.recycler.newToken(firstRep^.location, getId+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=P_threadContext(threadContextPointer)^.recycler.newToken(firstRep^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
+      newFirst      :=newToken(firstRep^.location, getId+'.put.cache',tt_rulePutCacheValue,@self);
+      newFirst^.next:=newToken(firstRep^.location, '', tt_parList_constructor,newListLiteral(1)^.append(useParam,true)); t:=newFirst^.next;
       t       ^.next:=firstRep;
       firstRep:=newFirst;
-      lastRep^.next:=P_threadContext(threadContextPointer)^.recycler.newToken(firstRep^.location, '', tt_braceClose);
+      lastRep^.next:=newToken(firstRep^.location, '', tt_braceClose);
       lastRep:=lastRep^.next;
     end;
 
@@ -471,7 +470,7 @@ exit}
     lit:=cache.get(useParam);
     if lit<>nil then begin
       lit^.rereference;
-      firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(getLocation,'',tt_literal,lit);
+      firstRep:=newToken(getLocation,'',tt_literal,lit);
       lastRep:=firstRep;
       CLEAN_EXIT(true);
     end else for sub in subrules do if ((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or (sub^.isPublic)) and sub^.replaces(useParam,callLocation,firstRep,lastRep,P_threadContext(threadContextPointer)^) then begin
@@ -482,8 +481,8 @@ exit}
         cache.put(useParam,lit);
         lastRep:=firstRep;
       end else begin
-        P_threadContext(threadContextPointer)^.recycler.cascadeDisposeToken(firstRep);
-        firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(getLocation,'',tt_literal,newVoidLiteral);
+        cascadeDisposeToken(firstRep);
+        firstRep:=newToken(getLocation,'',tt_literal,newVoidLiteral);
         lastRep:=firstRep;
       end;
       CLEAN_EXIT(true);
@@ -518,7 +517,7 @@ FUNCTION T_typeCastRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoca
     if cast=nil then exit(false)
     else begin
       result:=true;
-      firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,cast);
+      firstRep:=newToken(callLocation,'',tt_literal,cast);
       lastRep:=firstRep;
     end;
   end;
@@ -530,7 +529,7 @@ FUNCTION T_typecheckRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
             and (param^.size=1)
             and (typedef<>nil)
             and (typedef^.matchesLiteral(param^.value[0],callLocation,threadContextPointer));
-    firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(callLocation,'',tt_literal,newBoolLiteral(boolResult));
+    firstRep:=newToken(callLocation,'',tt_literal,newBoolLiteral(boolResult));
     lastRep:=firstRep;
     result:=true;
   end;
@@ -540,7 +539,7 @@ FUNCTION T_mutableRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLocat
     result:=((ruleTokenType in [tt_localUserRule,tt_customTypeRule]) or not(privateRule)) and ((param=nil) or (param^.size=0));
     if result then begin
       system.enterCriticalSection(rule_cs);
-      firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
+      firstRep:=newToken(getLocation,'',tt_literal,namedValue.getValue);
       system.leaveCriticalSection(rule_cs);
       lastRep:=firstRep;
       called:=true;
@@ -553,7 +552,7 @@ FUNCTION T_datastoreRule.replaces(CONST ruleTokenType:T_tokenType; CONST callLoc
     if result then begin
       system.enterCriticalSection(rule_cs);
       readDataStore(P_threadContext(threadContextPointer)^);
-      firstRep:=P_threadContext(threadContextPointer)^.recycler.newToken(getLocation,'',tt_literal,namedValue.getValue);
+      firstRep:=newToken(getLocation,'',tt_literal,namedValue.getValue);
       lastRep:=firstRep;
       system.leaveCriticalSection(rule_cs);
     end else result:=isFallbackPossible(ruleTokenType,0,callLocation,param,firstRep,lastRep,P_threadContext(threadContextPointer)^);
@@ -590,6 +589,11 @@ FUNCTION T_datastoreRule.getValue(VAR context:T_threadContext):P_literal;
     system.leaveCriticalSection(rule_cs);
   end;
 
+FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
+  begin
+
+  end;
+
 FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext): P_mapLiteral;
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
@@ -603,18 +607,6 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
       .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
       .put(newStringLiteral('location'),newStringLiteral(getLocation                  ),false)^
       .put(newStringLiteral('subrules'),subrulesList               ,false)
-      {$ifdef fullVersion}
-      ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
-      {$endif};
-    if includeFunctionPointer then
-    result^.put(newStringLiteral('function'),getFunctionPointer(context,tt_localUserRule,getLocation),false);
-  end;
-
-FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
-  begin
-    result:=newMapLiteral^
-      .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
-      .put(newStringLiteral('location'),newStringLiteral(getLocation                  ),false)
       {$ifdef fullVersion}
       ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
       {$endif};
@@ -672,7 +664,7 @@ FUNCTION T_ruleWithSubrules.getFunctionPointer(VAR context: T_threadContext; CON
       maxPatternLength:=max(maxPatternLength,sub^.arity);
       if sub^.isVariadic then maxPatternLength:=maxLongint;
     end;
-    tempToken      :=context.recycler.newToken(location,getId,ruleTokenType,@self);
+    tempToken      :=newToken(location,getId,ruleTokenType,@self);
     tempToken^.next:=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
     new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
@@ -688,7 +680,7 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadCon
       maxPatternLength:=max(maxPatternLength,sub^.arity);
       if sub^.isVariadic then maxPatternLength:=maxLongint;
     end;
-    tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
+    tempToken            :=newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(minPatternLength,maxPatternLength>minPatternLength,location,context);
     new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
@@ -696,7 +688,7 @@ FUNCTION T_protectedRuleWithSubrules.getFunctionPointer(VAR context: T_threadCon
 FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral;
   VAR tempToken:P_token=nil;
   begin
-    tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
+    tempToken            :=newToken(location,getId,ruleTokenType,@self);
     tempToken^.next      :=getParametersForPseudoFuncPtr(1,false,location,context);
     new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
@@ -704,9 +696,9 @@ FUNCTION T_typeCastRule.getFunctionPointer(VAR context:T_threadContext; CONST ru
 FUNCTION T_mutableRule.getFunctionPointer(VAR context: T_threadContext; CONST ruleTokenType: T_tokenType; CONST location: T_tokenLocation): P_expressionLiteral;
   VAR tempToken:P_token=nil;
   begin
-    tempToken            :=context.recycler.newToken(location,getId,ruleTokenType,@self);
-    tempToken^.next      :=context.recycler.newToken(location,'',tt_braceOpen );
-    tempToken^.next^.next:=context.recycler.newToken(location,'',tt_braceClose);
+    tempToken            :=newToken(location,getId,ruleTokenType,@self);
+    tempToken^.next      :=newToken(location,'',tt_braceOpen );
+    tempToken^.next^.next:=newToken(location,'',tt_braceClose);
     new(P_inlineExpression(result),createFromInline(tempToken,context,C_tokenInfo[tt_pseudoFuncPointer].defaultId+getId));
   end;
 

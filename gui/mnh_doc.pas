@@ -481,6 +481,7 @@ INITIALIZATION
   if not(DirectoryExists(htmlRoot)) then CreateDir(htmlRoot);
   functionDocMap.create();
 FINALIZATION
-  finalizeFunctionDocMap;
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_doc');{$endif}
+   finalizeFunctionDocMap;
 
 end.

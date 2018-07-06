@@ -12,7 +12,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
      variableTreeViews,mnhCustomForm;
 
 {$ifdef debugMode}
-  {$define debug_guiOutAdapters}
+  {define debug_guiOutAdapters}
 {$endif}
 
 TYPE
@@ -201,6 +201,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing guiOutAdapters');{$endif}
   if unitIsInitialized then begin
     guiAdapters.destroy;
     guiOutAdapter.destroy;

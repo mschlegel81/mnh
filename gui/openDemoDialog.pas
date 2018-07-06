@@ -60,6 +60,7 @@ PROCEDURE TopenDemoDialogForm.FormShow(Sender: TObject);
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing openDemoDialog');{$endif}
   if myOpenDemoDialogForm<>nil then FreeAndNil(myOpenDemoDialogForm);
 
 end.

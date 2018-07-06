@@ -18,7 +18,6 @@ TYPE
   P_token=^T_token;
   PP_token=^P_token;
   P_abstractRule=^T_abstractRule;
-  P_tokenRecycler=^T_tokenRecycler;
   T_abstractRule=object(T_objectWithIdAndLocation)
     private
       {$ifdef fullVersion}
@@ -47,7 +46,7 @@ TYPE
       PROCEDURE resolveIds(CONST adapters:P_threadLocalMessages); virtual;
       FUNCTION isReportable(OUT value:P_literal):boolean; virtual; abstract;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual; abstract;
-      FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
+      FUNCTION evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer):boolean;
       FUNCTION getTypedef:P_typedef; virtual;
   end;
 
@@ -64,6 +63,7 @@ TYPE
     PROCEDURE define(CONST original:T_token); inline;
     PROCEDURE undefine; inline;
     FUNCTION last:P_token;
+    FUNCTION getCount:longint;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; CONST limit:longint=maxLongint):ansistring;
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
@@ -82,27 +82,24 @@ TYPE
     PROCEDURE setModifier(CONST modifier:T_modifier);
   end;
 
-  T_tokenRecycler=object
-    private
-      dat:array[0..2047] of P_token;
-      fill:longint;
-    public
-      PROCEDURE init;
-      PROCEDURE cleanupInstance;
-
-      FUNCTION disposeToken(p:P_token):P_token; inline;
-      PROCEDURE cascadeDisposeToken(VAR p:P_token);
-      FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
-      FUNCTION newToken(CONST original:T_token):P_token; inline;
-      FUNCTION newToken(CONST original:P_token):P_token; inline;
-  end;
-
   T_bodyParts=array of record first,last:P_token; end;
 
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
+
+FUNCTION disposeToken(p:P_token):P_token; inline;
+PROCEDURE cascadeDisposeToken(VAR p:P_token);
+FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
+FUNCTION newToken(CONST original:T_token):P_token; inline;
+FUNCTION newToken(CONST original:P_token):P_token; inline;
 IMPLEMENTATION
+VAR tokenRecycler:record
+      dat:array[0..2047] of P_token;
+      fill:longint;
+      recyclerCS:TRTLCriticalSection;
+    end;
+
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
       idLike,prevIdLike:boolean;
@@ -127,7 +124,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR recycler:T_tokenRecycler; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR adapters:T_threadLocalMessages; OUT closingBracket:P_token):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -163,7 +160,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
     end;
     closingBracket:=t;
     for i:=0 to length(result)-1 do begin
-      if result[i].last^.next<>closingBracket then recycler.disposeToken(result[i].last^.next);
+      if result[i].last^.next<>closingBracket then disposeToken(result[i].last^.next);
       result[i].last^.next:=nil;
     end;
   end;
@@ -205,7 +202,7 @@ FUNCTION T_abstractRule.complainAboutUnused(VAR adapters: T_threadLocalMessages)
 
 PROCEDURE T_abstractRule.clearCache; begin end;
 PROCEDURE T_abstractRule.resolveIds(CONST adapters: P_threadLocalMessages); begin end;
-FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer; CONST recycler:P_tokenRecycler):boolean;
+FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST singleParameter:P_literal; CONST threadContextPointer:pointer):boolean;
   VAR parList:P_listLiteral;
       firstRep,lastRep:P_token;
   begin
@@ -217,7 +214,7 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST ruleTokenType:T_tokenType; CONST
               (firstRep^.next=nil          ) and
               (firstRep^.tokType=tt_literal) and
               (firstRep^.data=@boolLit[true]);
-      recycler^.cascadeDisposeToken(firstRep);
+      cascadeDisposeToken(firstRep);
     end else result:=false;
     disposeLiteral(parList);
   end;
@@ -287,6 +284,17 @@ FUNCTION T_token.last: P_token;
   begin
     result:=@self;
     while result^.next<>nil do result:=result^.next;
+  end;
+
+FUNCTION T_token.getCount:longint;
+  VAR p:P_token;
+  begin
+    p:=@self;
+    result:=0;
+    while p<>nil do begin
+      p:=p^.next;
+      inc(result);
+    end;
   end;
 
 FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CONST limit:longint=maxLongint): ansistring;
@@ -492,15 +500,9 @@ PROCEDURE T_token.setModifier(CONST modifier:T_modifier);
     tokType:=tt_modifier;
   end;
 
-PROCEDURE T_tokenRecycler.init;
-  VAR i:longint;
+PROCEDURE cleanupTokenRecyclerInstance;
   begin
-    for i:=0 to length(dat)-1 do dat[i]:=nil;
-    fill:=0;
-  end;
-
-PROCEDURE T_tokenRecycler.cleanupInstance;
-  begin
+    with tokenRecycler do
     while fill>0 do begin
       dec(fill);
       try
@@ -511,54 +513,70 @@ PROCEDURE T_tokenRecycler.cleanupInstance;
     end;
   end;
 
-FUNCTION T_tokenRecycler.disposeToken(p: P_token): P_token;
+FUNCTION disposeToken(p: P_token): P_token;
   begin
     if p=nil then result:=nil
     else begin
       result:=p^.next;
-      if (fill>=length(dat))
+      with tokenRecycler do if (tryEnterCriticalsection(recyclerCS)=0) or (fill>=length(dat))
       then dispose(p,destroy)
       else begin
         p^.undefine;
         dat[fill]:=p;
         inc(fill);
+        leaveCriticalSection(recyclerCS);
       end;
     end;
   end;
 
-PROCEDURE T_tokenRecycler.cascadeDisposeToken(VAR p: P_token);
+PROCEDURE cascadeDisposeToken(VAR p: P_token);
   begin
     while p<>nil do p:=disposeToken(p);
   end;
 
-FUNCTION T_tokenRecycler.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
+FUNCTION newToken(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer): P_token;
   begin
-    if (fill>0) then begin
+    with tokenRecycler do
+    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
       dec(fill);
       result:=dat[fill];
+      leaveCriticalSection(recyclerCS);
     end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
     result^.next:=nil;
   end;
 
-FUNCTION T_tokenRecycler.newToken(CONST original: T_token): P_token;
+FUNCTION newToken(CONST original: T_token): P_token;
   begin
-    if (fill>0) then begin
+    with tokenRecycler do
+    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
       dec(fill);
       result:=dat[fill];
+      leaveCriticalSection(recyclerCS);
     end else new(result,create);
     result^.define(original);
     result^.next:=nil;
   end;
 
-FUNCTION T_tokenRecycler.newToken(CONST original: P_token): P_token;
+FUNCTION newToken(CONST original: P_token): P_token;
   begin
-    if (fill>0) then begin
+    with tokenRecycler do
+    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
       dec(fill);
       result:=dat[fill];
+      leaveCriticalSection(recyclerCS);
     end else new(result,create);
     result^.define(original^);
     result^.next:=nil;
   end;
+
+INITIALIZATION
+  tokenRecycler.fill:=0;
+  initCriticalSection(tokenRecycler.recyclerCS);
+
+FINALIZATION
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tokens');{$endif}
+  cleanupTokenRecyclerInstance;
+  doneCriticalSection(tokenRecycler.recyclerCS);
 
 end.

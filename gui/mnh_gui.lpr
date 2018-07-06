@@ -9,7 +9,7 @@ USES {$ifdef UNIX} cthreads,{$else}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mySys,
-  mnh_cmdLineInterpretation, mnh_funcs_ipc,
+  mnh_cmdLineInterpretation,
   ipcModel,
   mnh_gui_main,
   mnh_gui_outputOnly,
