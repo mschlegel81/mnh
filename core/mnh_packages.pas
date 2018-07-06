@@ -77,6 +77,8 @@ TYPE
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
+
+      PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_evaluationGlobals);
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
@@ -104,7 +106,6 @@ TYPE
       PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
       PROCEDURE complainAboutUnused(VAR adapters:T_threadLocalMessages);
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
-      PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_evaluationGlobals);
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
@@ -158,12 +159,12 @@ TYPE
   P_postEvaluationData=^T_postEvaluationData;
   T_postEvaluationData=object
     private
-      editor:P_codeProvider;
-      packageForPostEval:P_package;
-      connector:P_messageConnector;
-      checkPending,currentlyProcessing:boolean;
-      currentThreadLocals:P_threadLocalMessages;
-      cs:TRTLCriticalSection;
+      editor              :P_codeProvider;
+      packageForPostEval  :P_package;
+      connector           :P_messageConnector;
+      currentlyProcessing :boolean;
+      currentThreadLocals :P_threadLocalMessages;
+      cs                  :TRTLCriticalSection;
     public
       CONSTRUCTOR create(CONST quickEdit:P_codeProvider; CONST quickAdapters: P_messageConnector);
       DESTRUCTOR destroy;
@@ -276,7 +277,6 @@ CONSTRUCTOR T_postEvaluationData.create(CONST quickEdit: P_codeProvider; CONST q
     editor:=quickEdit;
     connector:=quickAdapters;
     packageForPostEval:=nil;
-    checkPending:=false;
     currentThreadLocals:=nil;
     currentlyProcessing:=false;
     initCriticalSection(cs);
@@ -291,21 +291,46 @@ DESTRUCTOR T_postEvaluationData.destroy;
 FUNCTION postEvalThread(p:pointer):ptrint;
   VAR evaluationContext:T_evaluationGlobals;
       sleepCount:longint=0;
+      lastEvaluatedPackage:string='';
+      lastInput:T_arrayOfString;
+
+  FUNCTION inputChanged:boolean;
+    VAR currPackage:string;
+        currInput  :T_arrayOfString;
+    begin
+      currInput  :=P_postEvaluationData(p)^.editor^.getLines;
+      currPackage:=P_postEvaluationData(p)^.packageForPostEval^.getPath+'#'+
+          IntToHex(P_postEvaluationData(p)^.packageForPostEval^.getCodeState,8);
+      if arrEquals(currInput,lastInput) and (currPackage=lastEvaluatedPackage)
+      then result:=false
+      else begin
+        result:=true;
+        lastInput:=currInput;
+        lastEvaluatedPackage:=currPackage;
+      end;
+    end;
+
   begin
     with P_postEvaluationData(p)^ do begin
       enterCriticalSection(cs);
       currentlyProcessing:=true;
       evaluationContext.create(connector);
+      evaluationContext.setAllowedSideEffectsReturningPrevious([
+                se_output,
+                se_sleep,
+                se_detaching,
+                se_readPackageState,
+                se_readFile]);
       currentThreadLocals:=@evaluationContext.messages;
-      while sleepCount<100 do begin
-        while checkPending and evaluationContext.messages.continueEvaluation do begin
+      while (sleepCount<100) and evaluationContext.messages.continueEvaluation do begin
+        while inputChanged do begin
           sleepCount:=0;
-          checkPending:=false;
           leaveCriticalSection(cs);
-          connector^.clear;
-          evaluationContext.resetForEvaluation(packageForPostEval,ect_normal,C_EMPTY_STRING_ARRAY);
+          evaluationContext.resetForEvaluation(packageForPostEval,ect_silent,C_EMPTY_STRING_ARRAY);
+          connector^.clear(false);
           connector^.postSingal(mt_clearConsole,C_nilTokenLocation);
-          packageForPostEval^.interpretInPackage(editor^.getLines,evaluationContext);
+          packageForPostEval^.interpretInPackage(lastInput,evaluationContext);
+          evaluationContext.afterEvaluation;
           enterCriticalSection(cs);
         end;
         leaveCriticalSection(cs);
@@ -326,11 +351,9 @@ PROCEDURE T_postEvaluationData.triggerUpdate(CONST package: P_package);
     enterCriticalSection(cs);
     packageForPostEval:=package;
     if currentlyProcessing then begin
-      checkPending:=true;
       leaveCriticalSection(cs);
       exit;
     end;
-    checkPending:=true;
     currentlyProcessing:=true;
     beginThread(@postEvalThread,@self);
     leaveCriticalSection(cs);
@@ -687,7 +710,7 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
   begin
     adapters.clear;
     {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart;
+    plotSystem.resetOnEvaluationStart(true);
     {$endif}
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
@@ -702,10 +725,11 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
   begin
     adapters.clear;
     {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart;
+    plotSystem.resetOnEvaluationStart(true);
     {$endif}
     evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
     packageToInspect.load(lu_forCodeAssistance,evaluationContext,C_EMPTY_STRING_ARRAY);
+    evaluationContext.afterEvaluation;
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
@@ -723,7 +747,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     end;
     adapters.clear;
     {$ifdef fullVersion}
-    plotSystem.resetOnEvaluationStart;
+    plotSystem.resetOnEvaluationStart(true);
     {$endif}
     //one-way-link to propagate stop-signal:
     callerContext^.messages.addChild(@evaluationContext.messages);
@@ -736,7 +760,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
       package.load(lu_forCallingMain,evaluationContext,mainParameters);
       evaluationContext.afterEvaluation;
     finally
-      result:=messagesToLiteralForSandbox(collector.storedMessages);
+      result:=messagesToLiteralForSandbox(collector.storedMessages,C_textMessages);
       if c<>nil then callerContext^.messages.globalMessages^.removeOutAdapter(c);
       evaluationContext.afterEvaluation;
       evaluationContext.finalizeTaskAndDetachFromParent;
@@ -755,7 +779,7 @@ FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST 
     then begin
       adapters.clear;
       {$ifdef fullVersion}
-      plotSystem.resetOnEvaluationStart;
+      plotSystem.resetOnEvaluationStart(true);
       {$endif}
       evaluationContext.resetForEvaluation({$ifdef fullVersion}inPack,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
       evaluationContext.setAllowedSideEffectsReturningPrevious([]);
@@ -814,11 +838,11 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
     for m in messages do begin
       case m^.messageType of
         mt_printline:  for tmp in m^.messageText do append(htmlOut,escapeHtml(tmp));
-        mt_echo_input, mt_echo_declaration, mt_el1_note: begin end;
+        mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
         mt_echo_output: for tmp in m^.messageText do append(htmlOut,m^.prefix+' '+toHtmlCode(escapeHtml(tmp)));
         else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
       end;
-      if m^.messageType<>mt_echo_input then
+      if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
         for tmp in m^.messageText do append(textOut,C_messageClassMeta[m^.messageClass].guiMarker+m^.prefix+' '+tmp);
     end;
   end;
@@ -1910,25 +1934,10 @@ FUNCTION T_package.declaredRules: T_ruleList;
 PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:T_evaluationGlobals);
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
-      oldSideEffects:T_sideEffects;
-      needAfterEval:boolean=false;
   begin
-    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then begin
+    if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then
       load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
-      needAfterEval:=true;
-    end;
 
-    oldSideEffects:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*
-    [se_output,
-     se_inputViaAsk,
-     se_sound,
-     se_sleep,
-     se_readPackageState,
-     se_alterContextState,
-     se_alterPlotState,
-     se_readFile,
-     se_accessHttp,
-     se_accessIpc]);
     lexer.create(input,packageTokenLocation(@self),@self);
     stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
     while (context.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
@@ -1936,8 +1945,6 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
       stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
     end;
     lexer.destroy;
-    context.setAllowedSideEffectsReturningPrevious(oldSideEffects);
-    if needAfterEval then context.afterEvaluation;
   end;
 
 FUNCTION T_package.getImport(CONST idOrPath:string):P_abstractPackage;

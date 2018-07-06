@@ -490,18 +490,18 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
     if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
-    if flushedMessages<>[] then exit;
+    if flushedMessages<>[] then begin UpdateTimeTimer.interval:=1; exit; end;
 
     flushedMessages:=P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui;
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=QuickTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
-    if flushedMessages<>[] then exit;
+    if flushedMessages<>[] then begin UpdateTimeTimer.interval:=1; exit; end;
 
     while guiTaskQueue.executeTask do;
     autosaveSettings;
     checkForFileChanges;
     pollAssistant;
-    if (quick.evaluationDeferred and not(quick.task.processing) and runnerModel.canRun) then QuickEditChange(Sender);
+    if (quick.evaluationDeferred and runnerModel.canRun) then QuickEditChange(Sender);
   end;
 
 PROCEDURE TMnhForm.inputPageControlChange(Sender: TObject);

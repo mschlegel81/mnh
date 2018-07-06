@@ -3,6 +3,7 @@ INTERFACE
 USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
      mnh_basicTypes, mnh_constants,
+     mnh_settings,
      mnh_messages,
      mnh_out_adapters,
      plotstyles,plotMath,plotMaps;
@@ -82,14 +83,12 @@ TYPE
   T_plotDisplayRequest=object(T_payloadMessage)
     private
       displayExecuted:boolean;
-      wantImmediateDisplay:boolean;
     protected
       FUNCTION internalType:shortstring; virtual;
     public
-      CONSTRUCTOR create(CONST displayImmediate:boolean);
+      CONSTRUCTOR create();
       PROCEDURE waitForExecution(VAR errorFlagProvider:T_threadLocalMessages);
       PROCEDURE markExecuted;
-      PROPERTY immediate:boolean read wantImmediateDisplay;
   end;
 
   P_plot =^T_plot;
@@ -175,7 +174,7 @@ TYPE
       FUNCTION append(CONST message:P_storedMessage):boolean; virtual;
       FUNCTION requiresFastPolling:boolean;
       FUNCTION processPendingMessages:boolean;
-      PROCEDURE resetOnEvaluationStart;
+      PROCEDURE resetOnEvaluationStart(CONST startedFromSandbox:boolean);
       PROCEDURE logPlotDone;
       PROCEDURE registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsToGuiCallback);
       PROCEDURE startGuiInteraction;
@@ -199,10 +198,9 @@ FUNCTION T_plotDisplayRequest.internalType: shortstring;
     result:='P_plotDisplayRequest';
   end;
 
-CONSTRUCTOR T_plotDisplayRequest.create(CONST displayImmediate: boolean);
+CONSTRUCTOR T_plotDisplayRequest.create();
   begin
     inherited create(mt_plot_postDisplay);
-    wantImmediateDisplay:=displayImmediate;
     displayExecuted:=false;
   end;
 
@@ -1111,13 +1109,8 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   end;
 
 PROCEDURE T_plotSystem.startGuiInteraction;
-  VAR m:P_storedMessage;
   begin
     enterCriticalSection(cs);
-    if not(isProcessingMessage) then begin
-      for m in storedMessages do processMessage(m);
-      clear;
-    end;
   end;
 
 PROCEDURE T_plotSystem.doneGuiInteraction;
@@ -1177,18 +1170,32 @@ FUNCTION T_plotSystem.requiresFastPolling:boolean;
   end;
 
 FUNCTION T_plotSystem.processPendingMessages:boolean;
-  VAR m:P_storedMessage;
+  VAR lastDisplayIndex:longint;
+      i:longint;
   begin
     enterCriticalSection(cs);
     result:=length(storedMessages)>0;
-    for m in storedMessages do processMessage(m);
+    //it does not make sense to render multiple plots in one run
+    //Lookup the last display request;
+    lastDisplayIndex:=-1;
+    for i:=0 to length(storedMessages)-1 do if storedMessages[i]^.messageType=mt_plot_postDisplay then lastDisplayIndex:=i;
+    //process messages
+    for i:=0 to length(storedMessages)-1 do
+    if storedMessages[i]^.messageType=mt_plot_postDisplay
+    then begin
+      if i=lastDisplayIndex
+      then processMessage(storedMessages[i])
+      else P_plotDisplayRequest(storedMessages[i])^.markExecuted;
+    end else processMessage(storedMessages[i]);
     clear;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plotSystem.resetOnEvaluationStart;
+PROCEDURE T_plotSystem.resetOnEvaluationStart(CONST startedFromSandbox:boolean);
   begin
-    currentPlot.setDefaults;
+    if settings.value^.doResetPlotOnEvaluation
+    then currentPlot.clear
+    else currentPlot.setDefaults;
     if pullSettingsToGui<>nil then pullSettingsToGui();
   end;
 

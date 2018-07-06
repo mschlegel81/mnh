@@ -168,8 +168,13 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_comparatorLss,
       tt_comparatorGrt: if restrictionId='' then result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionValue^.toString)
                                             else result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
-      tt_comparatorListEq: if restrictionId='' then result:=restrictionValue^.toString
-                                               else result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
+      tt_comparatorEq,
+      tt_comparatorListEq: begin
+        if restrictionId=''
+        then result:=restrictionValue^.toString
+        else result:=restrictionId;
+        if id<>'' then result:=id+C_tokenInfo[restrictionType].defaultId+result;
+      end;
       tt_operatorIn: if restrictionId='' then result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionValue^.toString)
                                          else result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionId);
       else result:=result+id;

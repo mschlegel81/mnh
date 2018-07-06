@@ -978,11 +978,15 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
       contextType:T_evaluationContextType;
   begin
     if not(canRun) then exit;
+    //adapter reset
+    guiAdapters.clear;
     guiOutAdapter.flushClear;
+    plotSystem.resetOnEvaluationStart(false);
+    //dynamic forms reset
     resetPlot(mainCall);
-    if settings.value^.doResetPlotOnEvaluation then plotSystem.resetOnEvaluationStart;
     resetTableForms;
     resetTreeForms;
+    //environment and options
     getEditor^.setWorkingDir;
     if debugMode then begin
       updateEditorsByGuiStatus;

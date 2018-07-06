@@ -454,7 +454,7 @@ FUNCTION newVoidLiteral                               : P_voidLiteral; inline;
 
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_literal; inline;
 
-FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
+FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet):P_listLiteral;
 
 FUNCTION newLiteralFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages; VAR typeMap:T_typeMap):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_threadLocalMessages);
@@ -480,7 +480,7 @@ VAR
   intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
   voidLit: T_voidLiteral;
 
-FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
+FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet):P_listLiteral;
   FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
     begin
       result:=newListLiteral(3);
@@ -492,7 +492,7 @@ FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLite
   VAR m:P_storedMessage;
   begin
     result:=newListLiteral();
-    for m in messages do if not(C_messageTypeMeta[m^.messageType].ignoredBySandbox) then
+    for m in messages do if m^.messageType in toInclude then
       result^.append(
          headByMessageType(m)^
         .appendString(ansistring(m^.getLocation))^

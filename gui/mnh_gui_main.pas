@@ -131,7 +131,8 @@ TYPE
     Splitter1,
     Splitter2,
     Splitter3,
-    Splitter4:                 TSplitter;
+    Splitter4,
+    Splitter5:                 TSplitter;
     StatusBar:                 TStatusBar;
     callStackInfoStringGrid:   TStringGrid;
     outputEdit,

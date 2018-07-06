@@ -464,6 +464,7 @@ PROCEDURE TplotForm.doPlot;
     updateInteractiveSection;
     if plotSystem.animation.frameCount<>0 then begin
       plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
+      plotSystem.doneGuiInteraction;
       exit;
     end;
     plotSystem.currentPlot.renderPlot(plotImage,getPlotQuality);
@@ -523,10 +524,18 @@ FUNCTION addAnimFrame_impl intFuncSignature;
 FUNCTION display_imp intFuncSignature;
   VAR displayRequest:P_plotDisplayRequest;
   begin if (params=nil) or (params^.size=0) then begin
-    new(displayRequest,create(true));
+    new(displayRequest,create());
     context.messages.globalMessages^.postCustomMessage(displayRequest);
     displayRequest^.waitForExecution(context.messages);
     disposeMessage(displayRequest);
+    result:=newVoidLiteral;
+  end else result:=nil; end;
+
+FUNCTION postdisplay_imp intFuncSignature;
+  VAR displayRequest:P_plotDisplayRequest;
+  begin if (params=nil) or (params^.size=0) then begin
+    new(displayRequest,create());
+    context.messages.globalMessages^.postCustomMessage(displayRequest,true);
     result:=newVoidLiteral;
   end else result:=nil; end;
 
@@ -542,6 +551,7 @@ PROCEDURE initializePlotForm;
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
+    reregisterRule(PLOT_NAMESPACE,'postDisplay'      ,@postDisplay_imp      );
   end;
 
 PROCEDURE executePlot;
@@ -553,7 +563,8 @@ INITIALIZATION
   registerRule(PLOT_NAMESPACE,'plotClosed'       ,@uninitialized_fallback,ak_nullary,'plotClosed;//Returns true if the plot has been closed by user interaction');
   registerRule(PLOT_NAMESPACE,'clearAnimation'   ,@uninitialized_fallback,ak_nullary,'clearAnimation;//Clears the animated plot');
   registerRule(PLOT_NAMESPACE,'addAnimationFrame',@uninitialized_fallback,ak_nullary,'addAnimationFrame;//Adds the current plot to the animation');
-  registerRule(PLOT_NAMESPACE,'display'          ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible, even during evaluation.');
+  registerRule(PLOT_NAMESPACE,'display'          ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible and waits for execution');
+  registerRule(PLOT_NAMESPACE,'postDisplay'      ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
   plotSystem.create(@executePlot)
 FINALIZATION
   if myPlotForm<>nil then FreeAndNil(myPlotForm);

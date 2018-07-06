@@ -10,7 +10,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
      synOutAdapter,
      variableTreeViews,mnhCustomForm;
 {$ifdef debugMode}
-  {$define debug_guiOutAdapters}
+  {define debug_guiOutAdapters}
 {$endif}
 
 TYPE

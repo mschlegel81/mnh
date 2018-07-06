@@ -4,7 +4,7 @@ UNIT mnhCustomForm;
 
 INTERFACE
 {$ifdef debugMode}
-  {$define debug_mnhCustomForm}
+  {define debug_mnhCustomForm}
 {$endif}
 
 USES

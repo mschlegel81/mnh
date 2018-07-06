@@ -28,7 +28,7 @@ save;
 end};
 
 private timeStepSize:=2E-2;
-private aimFPS:=30;
+private aimFPS:=50;
 
 @demo_for=plotting, animation
 main->begin
@@ -42,12 +42,11 @@ main->begin
   local nextFrameAt:=time;
   local stepCounter:=-1;
   while(!plotClosed,begin
-    local stateFuture:=future(stepForward,[state]);
     plot();
     state[[0,2,4]].each(position,plotter[index](position));
     plot.drawTextAbsolute(0.05,1,format('t=%6.2f',(stepCounter+=1)*timeStepSize),'TL');
-    display;
-    state:=stateFuture();
     sleepUntil(nextFrameAt+=1/aimFPS);
+    postDisplay;
+    state:=state.stepForward;
   end);
 end;

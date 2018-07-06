@@ -20,7 +20,7 @@ TYPE
     hiddenRule:P_intFuncCallback;
     allowCurrying:boolean;
     FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual; abstract;
-    FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual; abstract;
+    FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
     {$ifdef fullVersion}
     PROCEDURE checkParameters(VAR context:T_threadContext); virtual;
     {$endif}
@@ -84,7 +84,6 @@ TYPE
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
-      FUNCTION inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral; virtual;
   end;
 
   P_typecheckRule=^T_typecheckRule;
@@ -590,6 +589,11 @@ FUNCTION T_datastoreRule.getValue(VAR context:T_threadContext):P_literal;
     system.leaveCriticalSection(rule_cs);
   end;
 
+FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
+  begin
+
+  end;
+
 FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext): P_mapLiteral;
   FUNCTION subrulesList:P_listLiteral;
     VAR sub:P_subruleExpression;
@@ -603,18 +607,6 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
       .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
       .put(newStringLiteral('location'),newStringLiteral(getLocation                  ),false)^
       .put(newStringLiteral('subrules'),subrulesList               ,false)
-      {$ifdef fullVersion}
-      ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
-      {$endif};
-    if includeFunctionPointer then
-    result^.put(newStringLiteral('function'),getFunctionPointer(context,tt_localUserRule,getLocation),false);
-  end;
-
-FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
-  begin
-    result:=newMapLiteral^
-      .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
-      .put(newStringLiteral('location'),newStringLiteral(getLocation                  ),false)
       {$ifdef fullVersion}
       ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
       {$endif};
