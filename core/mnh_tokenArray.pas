@@ -1035,7 +1035,7 @@ INITIALIZATION
   {$endif}
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_tokenArray');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tokenArray');{$endif}
   BLANK_ABSTRACT_PACKAGE.destroy;
 
 end.

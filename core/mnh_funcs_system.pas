@@ -242,7 +242,7 @@ INITIALIZATION
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_funcs_system');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_system');{$endif}
   builtinLocation_time.destroy;
 
 end.

@@ -673,7 +673,7 @@ INITIALIZATION
   registerRule(GUI_NAMESPACE,'showDialog',@showDialog_impl,ak_binary,'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed');
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnhCustomForm');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnhCustomForm');{$endif}
   freeScriptedForms;
   doneCriticalSection(scriptedFormCs);
 end.

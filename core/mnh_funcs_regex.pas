@@ -229,6 +229,6 @@ INITIALIZATION
   mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary,'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
   regexCache.create(@disposeRegex)
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_funcs_regex');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_regex');{$endif}
   regexCache.destroy;
 end.

@@ -377,7 +377,7 @@ INITIALIZATION
   registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary ,'sendIpcRequest(serverId:string,request);//Delegates a given request to an IPC server');
   registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1,'isIpcServerRunning(serverId:string);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance');
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_funcs_ipc');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_ipc');{$endif}
   registry.destroy;
   if Assigned(checkingClient) then checkingClient.free;
 end.

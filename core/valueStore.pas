@@ -330,7 +330,7 @@ INITIALIZATION
     fill:=0;
   end;
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing valueStore');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing valueStore');{$endif}
   with scopeRecycler do begin
     enterCriticalSection(recyclerCS);
     while fill>0 do begin
@@ -341,7 +341,7 @@ FINALIZATION
         dat[fill]:=nil;
       end;
     end;
-    LeaveCriticalsection(recyclerCS);
+    leaveCriticalSection(recyclerCS);
   end;
   doneCriticalSection(scopeRecycler.recyclerCS);
 

@@ -553,7 +553,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_funcs_format');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_format');{$endif}
   clearCachedFormats;
   cachedFormats.destroy;
   system.doneCriticalSection(cachedFormatCS);

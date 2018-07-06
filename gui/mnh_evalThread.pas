@@ -650,6 +650,6 @@ PROCEDURE earlyFinalization;
   end;
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_evalThread');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_evalThread');{$endif}
   earlyFinalization;
 end.

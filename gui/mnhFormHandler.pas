@@ -129,7 +129,7 @@ INITIALIZATION
   registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing');
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnhFormHandler');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnhFormHandler');{$endif}
   finalizeUnit;
 end.
 

@@ -3613,7 +3613,7 @@ INITIALIZATION
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_litVar');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_litVar');{$endif}
   boolLit[false].destroy;
   boolLit[true ].destroy;
   voidLit.destroy;

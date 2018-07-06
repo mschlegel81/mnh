@@ -118,7 +118,7 @@ PROCEDURE TnewCentralPackageForm.updatePackageList;
   end;
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing newCentralPackageDialog');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing newCentralPackageDialog');{$endif}
   if myNewCentralPackageForm<>nil then FreeAndNil(myNewCentralPackageForm);
 
 end.

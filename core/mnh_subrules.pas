@@ -1643,7 +1643,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(S);//Interprets a string or list S');
 FINALIZATION
   {$ifdef fullVersion}
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_subrules');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_subrules');{$endif}
   generateRowIdentification.destroy;
   {$endif}
 end.

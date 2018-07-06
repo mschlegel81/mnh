@@ -1077,7 +1077,7 @@ INITIALIZATION
   doNotCheckFileBefore:=now;
   recentlyActivated.create;
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing editorMeta');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing editorMeta');{$endif}
   recentlyActivated.destroy;
   if fallbackCodeAssistant<>nil then dispose(fallbackCodeAssistant,destroy);
 end.

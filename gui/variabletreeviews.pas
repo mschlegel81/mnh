@@ -129,7 +129,7 @@ INITIALIZATION
   initialize(treeFormCs);
   initCriticalSection(treeFormCs);
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'variableTreeViews');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'variableTreeViews');{$endif}
   resetTreeForms;
   doneCriticalSection(treeFormCs);
 end.

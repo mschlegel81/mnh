@@ -930,7 +930,7 @@ PROCEDURE T_taskQueue.activeDeqeue;
 INITIALIZATION
   contextPool.create;
 FINALIZATION
-  {$ifdef debugMode}writeln(stderr,'finalizing mnh_contexts');{$endif}
+  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_contexts');{$endif}
   contextPool.destroy;
 
 end.
