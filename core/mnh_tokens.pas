@@ -63,6 +63,7 @@ TYPE
     PROCEDURE define(CONST original:T_token); inline;
     PROCEDURE undefine; inline;
     FUNCTION last:P_token;
+    FUNCTION getCount:longint;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; CONST limit:longint=maxLongint):ansistring;
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
@@ -283,6 +284,17 @@ FUNCTION T_token.last: P_token;
   begin
     result:=@self;
     while result^.next<>nil do result:=result^.next;
+  end;
+
+FUNCTION T_token.getCount:longint;
+  VAR p:P_token;
+  begin
+    p:=@self;
+    result:=0;
+    while p<>nil do begin
+      p:=p^.next;
+      inc(result);
+    end;
   end;
 
 FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CONST limit:longint=maxLongint): ansistring;

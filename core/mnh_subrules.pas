@@ -224,12 +224,12 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; VAR context:
       subExpressionLevel:longint=0;
 
   begin
-    setLength(preparedBody,0);
+    setLength(preparedBody,rep^.getCount);
     t:=rep;
     i:=0;
     indexOfSave:=-1;
     while t<>nil do begin
-      if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
+      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL; t:=disposeToken(t);
@@ -354,8 +354,9 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
     pattern.create;
     t:=rep;
     i:=0;
+    setLength(preparedBody,rep^.getCount);
     while (t<>nil) do begin
-      if (i>=length(preparedBody)) then setLength(preparedBody,round(length(preparedBody)*1.1)+1);
+      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[i] do begin
         token:=t^;
         t^.tokType:=tt_EOL;
