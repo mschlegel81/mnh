@@ -942,7 +942,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     begin
       if statement.firstToken^.next=nil then begin
         context.messages.raiseError('Empty include clause',statement.firstToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       first:=statement.firstToken;
@@ -958,7 +958,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         context.messages.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
       end;
-      first:=context.recycler.disposeToken(first);
+      first:=disposeToken(first);
       if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
         helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,@context.messages);
@@ -969,18 +969,18 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         context.messages.raiseError('Invalid include clause ',locationForErrorFeedback);
         exit;
       end;
-      context.recycler.cascadeDisposeToken(first);
+      cascadeDisposeToken(first);
       new(importWrapper,create(newFileCodeProvider(helperUse.path),@self));
       setLength(extendedPackages,length(extendedPackages)+1);
       extendedPackages[length(extendedPackages)-1]:=importWrapper;
 
       helperUse.destroy;
       lexer.create(importWrapper,@self);
-      stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},localIdInfos{$endif});
+      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
       inc(extendsLevel);
       while (context.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
         interpret(stmt,usecase,context);
-        stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},localIdInfos{$endif});
+        stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
       end;
       dec(extendsLevel);
       lexer.destroy;
@@ -1031,7 +1031,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     begin
       if statement.firstToken^.next=nil then begin
         context.messages.raiseError('Empty use clause',statement.firstToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       initialize(newId);
@@ -1043,7 +1043,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       {$endif}
       locationForErrorFeedback:=first^.location;
-      first:=context.recycler.disposeToken(first);
+      first:=disposeToken(first);
       while first<>nil do begin
         j:=-1;
         if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
@@ -1073,7 +1073,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
                          or (packageUses[i].id   =               packageUses[j].id)
           then context.messages.globalMessages^.postTextMessage(mt_el2_warning,first^.location,'Duplicate import: '+newId);
-        first:=context.recycler.disposeToken(first);
+        first:=disposeToken(first);
       end;
       if not(context.messages.continueEvaluation) then begin
         for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
@@ -1135,38 +1135,38 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       //plausis:
       if (ruleBody=nil) then begin
         context.messages.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       while (statement.firstToken<>nil) and (statement.firstToken^.tokType=tt_modifier) and (C_modifierInfo[statement.firstToken^.getModifier].isRuleModifier) do begin
         include(ruleModifiers,statement.firstToken^.getModifier);
-        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+        statement.firstToken:=disposeToken(statement.firstToken);
       end;
       evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
 
       if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
         context.messages.raiseError('Declaration does not start with an identifier.',statement.firstToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
-        context.recycler.cascadeDisposeToken(ruleBody);
+        cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(ruleBody);
         exit;
       end;
       p:=statement.firstToken;
       while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
         if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
           context.messages.raiseError('Declaration head contains qualified ID.',p^.location);
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          context.recycler.cascadeDisposeToken(ruleBody);
+          cascadeDisposeToken(statement.firstToken);
+          cascadeDisposeToken(ruleBody);
           exit;
         end;
         p:=p^.next;
       end;
       //:plausis
       ruleId:=trim(statement.firstToken^.txt);
-      statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+      statement.firstToken:=disposeToken(statement.firstToken);
       if not(statement.firstToken^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
         context.messages.raiseError('Invalid declaration head.',statement.firstToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
-        context.recycler.cascadeDisposeToken(ruleBody);
+        cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(ruleBody);
         exit;
       end;
       rulePattern.create;
@@ -1180,10 +1180,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       {$endif}
 
       if statement.firstToken<>nil then begin
-        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+        statement.firstToken:=disposeToken(statement.firstToken);
       end else begin
         context.messages.raiseError('Invalid declaration.',ruleDeclarationStart);
-        context.recycler.cascadeDisposeToken(ruleBody);
+        cascadeDisposeToken(ruleBody);
         exit;
       end;
       rulePattern.toParameterIds(ruleBody);
@@ -1226,12 +1226,12 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           end;
           statement.firstToken:=nil;
         end else begin
-          context.recycler.cascadeDisposeToken(statement.firstToken);
-          context.recycler.cascadeDisposeToken(ruleBody);
+          cascadeDisposeToken(statement.firstToken);
+          cascadeDisposeToken(ruleBody);
         end;
       end else begin
-        context.recycler.cascadeDisposeToken(statement.firstToken);
-        context.recycler.cascadeDisposeToken(ruleBody);
+        cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(ruleBody);
       end;
     end;
 
@@ -1242,19 +1242,19 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     begin
       if (getCodeProvider^.isPseudoFile) then begin
         context.messages.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       while (statement.firstToken<>nil) and (statement.firstToken^.tokType=tt_modifier) and (C_modifierInfo[statement.firstToken^.getModifier].isRuleModifier) do begin
         include(ruleModifiers,statement.firstToken^.getModifier);
         loc:=statement.firstToken^.location;
-        statement.firstToken:=context.recycler.disposeToken(statement.firstToken);
+        statement.firstToken:=disposeToken(statement.firstToken);
       end;
       if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
          (statement.firstToken^.next<>nil) then begin
         if statement.firstToken<>nil then loc:=statement.firstToken^.location;
         context.messages.raiseError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       metaData.create;
@@ -1282,7 +1282,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           else t^.tokType:=tt_typeCheck;
           t^.txt    :=t^.next^.txt;
           t^.data   :=t^.next^.data;
-          context.recycler.disposeToken(t^.next);
+          disposeToken(t^.next);
           t^.next:=newNext;
         end;
         if t^.tokType      in C_openingBrackets then inc(level)
@@ -1299,7 +1299,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     if usecase=lu_forCodeAssistance then context.messages.clearFlagsForCodeAssistance;
 
     if (usecase<>lu_forCodeAssistance) and not(context.messages.continueEvaluation) then begin
-      context.recycler.cascadeDisposeToken(statement.firstToken);
+      cascadeDisposeToken(statement.firstToken);
       exit;
     end;
 
@@ -1317,7 +1317,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     if (assignmentToken<>nil) then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.messages.raiseError('Rule declaration is not allowed here',assignmentToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       {$ifdef fullVersion}
@@ -1325,10 +1325,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       {$endif}
       if profile then context.timeBaseComponent(pc_declaration);
       if not ((assignmentToken^.next<>nil) and (usecase=lu_forCodeAssistance) or (assignmentToken^.next^.areBracketsPlausible(context.messages))) then begin
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
-      predigest(assignmentToken,@self,context.recycler,context.messages);
+      predigest(assignmentToken,@self,context.messages);
       if context.messages.globalMessages^.isCollecting(mt_echo_declaration) then context.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
       parseRule;
       if profile then context.timeBaseComponent(pc_declaration);
@@ -1338,7 +1338,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     end else if statement.firstToken^.tokType=tt_modifier then begin
       if not(se_alterPackageState in context.sideEffectWhitelist) then begin
         context.messages.raiseError('Datastore declaration is not allowed here',statement.firstToken^.location);
-        context.recycler.cascadeDisposeToken(statement.firstToken);
+        cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       {$ifdef fullVersion}
@@ -1359,10 +1359,10 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           {$endif}
           if profile then context.timeBaseComponent(pc_interpretation);
           if not ((statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.messages)) then begin
-            context.recycler.cascadeDisposeToken(statement.firstToken);
+            cascadeDisposeToken(statement.firstToken);
             exit;
           end;
-          predigest(statement.firstToken,@self,context.recycler,context.messages);
+          predigest(statement.firstToken,@self,context.messages);
           if context.messages.globalMessages^.isCollecting(mt_echo_input) then context.messages.globalMessages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
           context.reduceExpression(statement.firstToken);
           if profile then context.timeBaseComponent(pc_interpretation);
@@ -1385,13 +1385,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           end;
         end;
         lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.messages) then begin
-          predigest(statement.firstToken,@self,context.recycler,context.messages);
+          predigest(statement.firstToken,@self,context.messages);
           resolveBuiltinIDs(statement.firstToken,@context.messages);
         end
         else context.messages.globalMessages^.postTextMessage(mt_el1_note,statement.firstToken^.location,'Skipping expression '+tokensToString(statement.firstToken,50));
       end;
     end;
-    if statement.firstToken<>nil then context.recycler.cascadeDisposeToken(statement.firstToken);
+    if statement.firstToken<>nil then cascadeDisposeToken(statement.firstToken);
     statement.firstToken:=nil;
     if usecase=lu_forCodeAssistance then context.messages.clearFlagsForCodeAssistance;
   end;
@@ -1441,7 +1441,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
           then context.messages.globalMessages^.postTextMessage(mt_el1_note,packageTokenLocation(@self),'Evaluation requires GUI-startup. Re-evaluating.');
         //------------------:error handling if main returns more than one token
         {$endif}
-        context.recycler.cascadeDisposeToken(t);
+        cascadeDisposeToken(t);
         disposeLiteral(parametersForMain);
         parametersForMain:=nil;
       end;
@@ -1483,7 +1483,7 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
     lexer.create(@self);
     newCodeHash:=getCodeProvider^.stateHash;
     if profile then context.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},localIdInfos{$endif});
+    stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
     isPlainScript:=isPlainScriptStatement;
     if isPlainScript then begin
       case usecase of
@@ -1491,15 +1491,15 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
         lu_forCallingMain    : usecase:=lu_forDirectExecution;
       end;
       commentOnPlainMain:=join(stmt.comments,C_lineBreakChar);
-      context.recycler.cascadeDisposeToken(stmt.firstToken);
-      stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},localIdInfos{$endif});
+      cascadeDisposeToken(stmt.firstToken);
+      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
     end;
     if profile then context.timeBaseComponent(pc_tokenizing);
 
     while ((usecase=lu_forCodeAssistance) or (context.messages.continueEvaluation)) and (stmt.firstToken<>nil) do begin
       interpret(stmt,usecase,context{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},localIdInfos{$endif});
+      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
       if profile then context.timeBaseComponent(pc_tokenizing);
     end;
     lexer.destroy;
@@ -1939,10 +1939,10 @@ PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:
       load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
 
     lexer.create(input,packageTokenLocation(@self),@self);
-    stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
+    stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
     while (context.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
       interpret(stmt,lu_forDirectExecution,context);
-      stmt:=lexer.getNextStatement(context.recycler,context.messages{$ifdef fullVersion},nil{$endif});
+      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
     end;
     lexer.destroy;
   end;

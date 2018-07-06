@@ -83,7 +83,6 @@ TYPE
     public
       callDepth:longint;
       messages:T_threadLocalMessages;
-      recycler  :T_tokenRecycler;
       valueStore:P_valueStore;
       {$ifdef fullVersion}
       parentCustomForm:pointer;
@@ -495,16 +494,15 @@ PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntr
 FUNCTION T_threadContext.reduceExpression(VAR first: P_token): T_reduceResult;
   begin result:=reduceExpressionCallback(first,self); end;
 
-FUNCTION T_threadContext.reduceToLiteral(VAR first: P_token
-  ): T_evaluationResult;
+FUNCTION T_threadContext.reduceToLiteral(VAR first: P_token): T_evaluationResult;
   begin
     result.triggeredByReturn:=reduceExpressionCallback(first,self)=rr_okWithReturn;
     if messages.continueEvaluation and (first<>nil) and (first^.tokType=tt_literal) and (first^.next=nil) then begin
       result.literal:=P_literal(first^.data)^.rereferenced;
-      recycler.disposeToken(first);
+      disposeToken(first);
     end else begin
       result.literal:=nil;
-      recycler.cascadeDisposeToken(first);
+      cascadeDisposeToken(first);
     end;
   end;
 
@@ -528,8 +526,8 @@ FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
   VAR data:pointer=nil;
   begin
     move(allowedSideEffects,data,sizeOf(data));
-    if blocking then result:=recycler.newToken(location,'',tt_endRule,data)
-                else result:=recycler.newToken(location,'',tt_endExpression,data);
+    if blocking then result:=newToken(location,'',tt_endRule,data)
+                else result:=newToken(location,'',tt_endExpression,data);
   end;
 
 FUNCTION T_threadContext.getFutureEnvironment: P_threadContext;
@@ -678,7 +676,6 @@ CONSTRUCTOR T_threadContext.create();
     callStack.create;
     {$endif}
     new(valueStore,create);
-    recycler.init;
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
@@ -759,7 +756,6 @@ DESTRUCTOR T_threadContext.destroy;
     callStack.destroy;
     {$endif}
     dispose(valueStore,destroy);
-    recycler.cleanupInstance;
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;

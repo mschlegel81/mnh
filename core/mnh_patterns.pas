@@ -221,13 +221,13 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
   VAR tok:P_token;
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
-      tok:=context.recycler.newToken(location,restrictionId,tt_identifier,nil);
+      tok:=newToken(location,restrictionId,tt_identifier,nil);
       context.reduceExpression(tok);
       if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
         restrictionId:='';
         restrictionValue:=P_literal(tok^.data)^.rereferenced;
       end else context.messages.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
-      context.recycler.cascadeDisposeToken(tok);
+      cascadeDisposeToken(tok);
     end;
   end;
 
@@ -571,7 +571,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       if firstOfPart=nil
       then context.messages.raiseError('Invalid declaration pattern element.',partLocation)
       else context.messages.raiseError('Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
-      context.recycler.cascadeDisposeToken(firstOfPart);
+      cascadeDisposeToken(firstOfPart);
     end;
 
   PROCEDURE assertNil(VAR firstOfPart:P_token);
@@ -584,14 +584,14 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       setLength(parts,0);
       closingBracket:=first^.next;
     end else begin
-      parts:=getBodyParts(first,0,context.recycler,context.messages,closingBracket);
+      parts:=getBodyParts(first,0,context.messages,closingBracket);
       if closingBracket=nil then begin
-        context.recycler.cascadeDisposeToken(first);
+        cascadeDisposeToken(first);
         exit;
       end;
       if (closingBracket^.next<>nil) and not(closingBracket^.next^.tokType in [tt_assign,tt_declare]) then begin
         context.messages.raiseError('Invalid pattern suffix '+tokensToString(closingBracket^.next),closingBracket^.next^.location);
-        context.recycler.cascadeDisposeToken(closingBracket^.next);
+        cascadeDisposeToken(closingBracket^.next);
       end;
 
       for i:=0 to length(parts)-1 do begin
@@ -600,17 +600,17 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           if i<>length(parts)-1 then context.messages.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
           //Optionals: f(...)->
           appendOptional;
-          parts[i].first:=context.recycler.disposeToken(parts[i].first);
+          parts[i].first:=disposeToken(parts[i].first);
           assertNil(parts[i].first);
         end else if (parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
           //Identified parameter: f(x)->
           rulePatternElement.create(parts[i].first^.txt,parts[i].first^.location);
-          parts[i].first:=context.recycler.disposeToken(parts[i].first);
+          parts[i].first:=disposeToken(parts[i].first);
           if (parts[i].first<>nil) then begin
             if (parts[i].first^.tokType=tt_typeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.builtinTypeCheck:=parts[i].first^.getTypeCheck;
-              parts[i].first:=context.recycler.disposeToken(parts[i].first);
+              parts[i].first:=disposeToken(parts[i].first);
 
               if C_typeCheckInfo[rulePatternElement.builtinTypeCheck].modifiable then begin
                 if (parts[i].first=nil) then begin end else
@@ -623,7 +623,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                      (parts[i].first^.next^.next^.tokType=tt_braceClose) and
                      (parts[i].first^.next^.next^.next=nil) then begin
                       rulePatternElement.restrictionIdx:=P_abstractIntLiteral(parts[i].first^.next^.data)^.intValue;
-                      context.recycler.cascadeDisposeToken(parts[i].first);
+                      cascadeDisposeToken(parts[i].first);
                   end else begin
                     context.reduceExpression(parts[i].first);
                     if (context.messages.continueEvaluation) and
@@ -633,7 +633,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
                        (P_abstractIntLiteral(parts[i].first^.data)^.intValue>=0)
                     then begin
                       rulePatternElement.restrictionIdx:=P_abstractIntLiteral(parts[i].first^.data)^.intValue;
-                      context.recycler.cascadeDisposeToken(parts[i].first);
+                      cascadeDisposeToken(parts[i].first);
                     end else fail(parts[i].first);
                   end;
                 end else fail(parts[i].first);
@@ -641,19 +641,19 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
 
             end else if (parts[i].first^.tokType in C_comparators) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
-              parts[i].first:=context.recycler.disposeToken(parts[i].first);
+              parts[i].first:=disposeToken(parts[i].first);
 
               if (parts[i].first=nil) then fail(parts[i].first) else
               if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
                 rulePatternElement.restrictionId:=parts[i].first^.txt;
-                parts[i].first:=context.recycler.disposeToken(parts[i].first);
+                parts[i].first:=disposeToken(parts[i].first);
                 assertNil(parts[i].first);
               end else begin
                 context.reduceExpression(parts[i].first);
                 if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
                   rulePatternElement.restrictionValue:=parts[i].first^.data;
                   rulePatternElement.restrictionValue^.rereference;
-                  parts[i].first:=context.recycler.disposeToken(parts[i].first);
+                  parts[i].first:=disposeToken(parts[i].first);
                   assertNil(parts[i].first);
                 end else fail(parts[i].first);
               end;
@@ -667,7 +667,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               {$ifdef fullVersion}
               P_abstractRule(parts[i].first^.data)^.setIdResolved;
               {$endif}
-              parts[i].first:=context.recycler.disposeToken(parts[i].first);
+              parts[i].first:=disposeToken(parts[i].first);
 
               assertNil(parts[i].first);
             end else fail(parts[i].first);
@@ -681,7 +681,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             rulePatternElement.restrictionType:=tt_comparatorListEq;
             rulePatternElement.restrictionValue:=parts[i].first^.data;
             rulePatternElement.restrictionValue^.rereference;
-            parts[i].first:=context.recycler.disposeToken(parts[i].first);
+            parts[i].first:=disposeToken(parts[i].first);
             assertNil(parts[i].first);
             append(rulePatternElement);
           end else fail(parts[i].first);
@@ -690,8 +690,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       parts:=nil;
     end;
     finalizeRefs(ruleDeclarationStart,context);
-    context.recycler.disposeToken(first);
-    first:=context.recycler.disposeToken(closingBracket);
+    disposeToken(first);
+    first:=disposeToken(closingBracket);
   end;
 
 {$ifdef fullVersion}
