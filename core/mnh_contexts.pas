@@ -16,7 +16,7 @@ USES //FPC/LCL libraries
      mnh_profiling{$ifdef fullVersion},tokenStack,mnh_debugging,mnh_debuggingVar{$endif};
 TYPE
   T_evaluationContextOption =(eco_spawnWorker,eco_profiling,eco_createDetachedTask,eco_timing,eco_debugging,eco_stackTrace,eco_beepOnError);
-  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_stackTrace,tco_notifyParentOfAsyncTaskEnd);
+  T_threadContextOption     =(tco_spawnWorker,tco_profiling,tco_createDetachedTask,tco_timing,tco_debugging,tco_stackTrace);
   T_evaluationContextOptions=set of T_evaluationContextOption;
   T_threadContextOptions    =set of T_threadContextOption;
   T_evaluationContextType   =(ect_normal{$ifdef fullVersion},ect_profiling,ect_debugging,ect_debuggingAndProfiling,ect_stackTracing{$endif},ect_silent);
@@ -50,7 +50,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE disposeContext(VAR context:P_threadContext);
-      FUNCTION newContext(CONST parentThread:P_threadContext):P_threadContext;
+      FUNCTION newContext(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel):P_threadContext;
   end;
 
   T_taskState=(fts_pending, //set on construction
@@ -75,7 +75,7 @@ TYPE
       end;
       state:T_taskState;
       CONSTRUCTOR create();
-      PROCEDURE initAsChildOf(CONST parentThread:P_threadContext);
+      PROCEDURE initAsChildOf(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel);
       DESTRUCTOR destroy;
       PROCEDURE dropChildContext(CONST context:P_threadContext);
       PROCEDURE addChildContext(CONST context:P_threadContext);
@@ -83,7 +83,7 @@ TYPE
     public
       callDepth:longint;
       messages:T_threadLocalMessages;
-      valueStore:P_valueStore;
+      valueScope:P_valueScope;
       {$ifdef fullVersion}
       parentCustomForm:pointer;
       {$endif}
@@ -201,7 +201,7 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_threadCon
 FUNCTION workerThreadCount:longint;
 {$endif}
 IMPLEMENTATION
-VAR globalLock:TRTLCriticalSection;
+
 CONSTRUCTOR T_contextRecycler.create;
   begin
     initCriticalSection(recyclerCS);
@@ -229,7 +229,7 @@ PROCEDURE T_contextRecycler.disposeContext(VAR context: P_threadContext);
     leaveCriticalSection(recyclerCS);
   end;
 
-FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext):P_threadContext;
+FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST parentScopeAccess:AccessLevel):P_threadContext;
   begin
     enterCriticalSection(recyclerCS);
     if fill>0 then begin
@@ -239,7 +239,7 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext):P_thre
       new(result,create());
     end;
     leaveCriticalSection(recyclerCS);
-    result^.initAsChildOf(parentThread);
+    result^.initAsChildOf(parentThread,parentScopeAccess);
   end;
 
 {$ifndef fullVersion}
@@ -326,7 +326,8 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     else allowedSideEffects:=C_allSideEffects;
 
     setThreadOptions(globalOptions);
-    valueStore^.clear;
+    disposeScope(valueScope);
+    valueScope:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
     messages.clear;
     with related do begin
       evaluation:=@self;
@@ -408,6 +409,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
     if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(@messages);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and messages.globalMessages^.triggersBeep then beep;
+    while valueScope<>nil do scopePop(valueScope);
   end;
 
 {$ifdef fullVersion}
@@ -427,13 +429,13 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
   begin
     if related.evaluation^.wallClock=nil then begin
       if forceInit then begin
-        enterCriticalSection(globalLock);
+        enterCriticalSection(related.evaluation^.contextCS);
         if related.evaluation^.wallClock=nil then begin
           related.evaluation^.wallClock:=TEpikTimer.create(nil);
           related.evaluation^.wallClock.clear;
           related.evaluation^.wallClock.start;
         end;
-        leaveCriticalSection(globalLock);
+        leaveCriticalSection(related.evaluation^.contextCS);
       end else exit(0);
     end;
     result:=related.evaluation^.wallClock.elapsed;
@@ -445,12 +447,12 @@ PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCatego
   end;
 
 FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean): P_threadContext;
+  VAR parentAccess:AccessLevel;
   begin
     if not(tco_createDetachedTask in options) then exit(nil);
-    result:=contextPool.newContext(@self);
-    result^.options:=options+[tco_notifyParentOfAsyncTaskEnd];
-    if local then result^.valueStore^.parentStore:=valueStore
-             else result^.valueStore^.parentStore:=nil;
+    if local then parentAccess:=ACCESS_READONLY
+             else parentAccess:=ACCESS_BLOCKED;
+    result:=contextPool.newContext(@self,parentAccess);
   end;
 
 {$ifdef fullVersion}
@@ -487,7 +489,7 @@ FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack)
 PROCEDURE T_threadContext.reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
   begin
     if related.parent<>nil then related.parent^.reportVariables(variableReport);
-    valueStore^.reportVariables(variableReport);
+    if valueScope<>nil then valueScope^.reportVariables(variableReport);
   end;
 {$endif}
 
@@ -533,7 +535,7 @@ FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
 FUNCTION T_threadContext.getFutureEnvironment: P_threadContext;
   begin
     enterCriticalSection(contextCS);
-    result:=contextPool.newContext(@self);
+    result:=contextPool.newContext(@self,ACCESS_READONLY);
     leaveCriticalSection(contextCS);
   end;
 
@@ -574,7 +576,7 @@ PROCEDURE T_threadContext.finalizeTaskAndDetachFromParent;
     parentCustomForm:=nil;
     {$endif}
     { recycler  : nothing to do}
-    valueStore^.clear;
+    disposeScope(valueScope);
     leaveCriticalSection(contextCS);
   end;
 
@@ -675,7 +677,7 @@ CONSTRUCTOR T_threadContext.create();
     {$ifdef fullVersion}
     callStack.create;
     {$endif}
-    new(valueStore,create);
+    valueScope:=nil;
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
@@ -683,7 +685,7 @@ CONSTRUCTOR T_threadContext.create();
     leaveCriticalSection(contextCS);
   end;
 
-PROCEDURE T_threadContext.initAsChildOf(CONST parentThread: P_threadContext);
+PROCEDURE T_threadContext.initAsChildOf(CONST parentThread: P_threadContext; CONST parentScopeAccess:AccessLevel);
   begin
     enterCriticalSection(contextCS);
     options           :=parentThread^.options;
@@ -702,8 +704,9 @@ PROCEDURE T_threadContext.initAsChildOf(CONST parentThread: P_threadContext);
     messages.setParent(@parentThread^.messages);
 
     { recycler  : nothing to do}
-    valueStore^.clear;
-    valueStore^.parentStore:=parentThread^.valueStore;
+    if parentScopeAccess=ACCESS_BLOCKED
+    then valueScope:=nil
+    else valueScope:=newValueScopeAsChildOf(parentThread^.valueScope,parentScopeAccess);
 
     {$ifdef fullVersion}
     parentCustomForm:=nil;
@@ -755,7 +758,7 @@ DESTRUCTOR T_threadContext.destroy;
     {$ifdef fullVersion}
     callStack.destroy;
     {$endif}
-    dispose(valueStore,destroy);
+    disposeScope(valueScope);
     setLength(related.children,0);
     related.parent:=nil;
     related.evaluation:=nil;
@@ -925,11 +928,8 @@ PROCEDURE T_taskQueue.activeDeqeue;
   end;
 
 INITIALIZATION
-  initialize(globalLock);
-  initCriticalSection(globalLock);
   contextPool.create;
 FINALIZATION
-  doneCriticalSection(globalLock);
   contextPool.destroy;
 
 end.

@@ -98,8 +98,8 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral;
   begin
     x:=inputIterator^.evaluateToLiteral(eachLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
-      context.valueStore^.scopePush(false);
-      context.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
+      scopePush(context.valueScope,ACCESS_READWRITE);
+      context.valueScope^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
       for rule in rulesList do if proceed then begin
         aggregator^.addToAggregation(
           rule^.evaluateToLiteral(eachLocation,@context,x),
@@ -108,7 +108,7 @@ PROCEDURE processListSerial(CONST inputIterator:P_expressionLiteral;
           @context);
         proceed:=context.messages.continueEvaluation and not(aggregator^.earlyAbort);
       end;
-      context.valueStore^.scopePop;
+      scopePop(context.valueScope);
       inc(eachIndex);
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(eachLocation,@context).literal;
@@ -507,17 +507,14 @@ PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_threadContext; CONST expr:
   end;
 
 PROCEDURE T_eachTask.evaluate;
-  VAR idxLit:P_abstractIntLiteral;
   begin
     env^.beginEvaluation;
     try
       if env^.messages.continueEvaluation then with eachPayload do begin
-        env^.valueStore^.scopePush(false);
-        idxLit:=newIntLiteral(eachIndex);
-        env^.valueStore^.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
-        idxLit^.unreference;
+        scopePush(env^.valueScope,ACCESS_READWRITE);
+        env^.valueScope^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
         evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,env,eachParameter);
-        env^.valueStore^.scopePop;
+        scopePop(env^.valueScope);
       end;
     finally
       enterCriticalSection(taskCs);

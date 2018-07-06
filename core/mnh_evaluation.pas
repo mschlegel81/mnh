@@ -12,6 +12,7 @@ USES sysutils,
      tokenStack,
      mnh_messages,
      {$ifdef fullVersion}mnh_settings,{$endif}
+     valueStore,
      mnh_contexts,
      mnh_funcs,
      mnh_operators,
@@ -143,13 +144,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           then level:=0
           else context.messages.raiseError('Invalid stack state (processing return statement) - empty stack',errorLocation);
         end else case first^.tokType of
-          tt_beginBlock:            begin stack.push(first); context.valueStore^.scopePush(false); end;
+          tt_beginBlock:            begin stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_beginExpression,
-          tt_beginRule: begin inc(level); stack.push(first); context.valueStore^.scopePush(true);  end;
+          tt_beginRule: begin inc(level); stack.push(first); scopePush(context.valueScope,ACCESS_BLOCKED); end;
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
-              context.valueStore^.scopePop;
+              scopePop(context.valueScope);
               stack.popDestroy;
               first:=disposeToken(first);
             end else context.messages.raiseError('Invalid stack state (processing return statement) - begin/end mismatch (endBlock)',errorLocation);
@@ -158,7 +159,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
             then begin
               {$ifdef fullVersion} context.callStackPop(returnToken); {$endif}
               context.setSideEffectsByEndToken(first);
-              context.valueStore^.scopePop;
+              scopePop(context.valueScope);
               stack.popDestroy;
               first:=disposeToken(first);
               dec(level);
@@ -547,15 +548,15 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.valueStore^.createVariable(first^.txt,newValue,false);
+          context.valueScope^.createVariable(first^.txt,newValue,false);
           first:=disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.valueStore^.setVariableValue(first^.txt,newValue,first^.location,context.messages);
+          context.valueScope^.setVariableValue(first^.txt,newValue,first^.location,context.messages);
           first:=disposeToken(first);
         end;
         tt_mut_nested_assign..tt_mut_nestedDrop: if first^.data=nil then begin
-          newValue:=context.valueStore^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.messages,@context);
+          newValue:=context.valueScope^.mutateVariableValue(first^.txt,kind,newValue,first^.location,context.messages,@context);
           if context.messages.continueEvaluation then begin
             first:=disposeToken(first);
             disposeLiteral(first^.data);
@@ -600,7 +601,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
         if tokType=tt_blockLocalVariable then begin
-          expression:=context.valueStore^.getVariableValue(newFunctionToken^.txt);
+          expression:=context.valueScope^.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
             if expression^.literalType<>lt_expression then expression^.unreference
             else begin
@@ -806,7 +807,8 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     begin
       while (first<>nil) and clean do begin
         case first^.tokType of
-          tt_beginBlock,tt_beginExpression,tt_beginRule: context.valueStore^.scopePush( first^.tokType=tt_beginRule);
+          tt_beginBlock,tt_beginExpression:  scopePush(context.valueScope,ACCESS_READWRITE);
+          tt_beginRule:                      scopePush(context.valueScope,ACCESS_BLOCKED);
           tt_endBlock,tt_endExpression,tt_endRule: begin
             while (stack.topIndex>=0) and not(stack.topType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
             stack.popDestroy;
@@ -815,7 +817,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
               if (stack.topType in [tt_beginRule,tt_beginExpression]) then context.callStackPop(nil);
               {$endif}
               stack.popDestroy;
-              context.valueStore^.scopePop;
+              scopePop(context.valueScope);
             end else clean:=false;
             if first^.tokType=tt_endRule then context.setSideEffectsByEndToken(first);
           end;
@@ -883,7 +885,7 @@ tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression
     stack.popDestroy;
     first^.next:=disposeToken(first^.next);
     first^.next:=disposeToken(first^.next);
-    context.valueStore^.scopePop;
+    scopePop(context.valueScope);
     didSubstitution:=true;
   end else begin
     first:=disposeToken(first);
@@ -1024,7 +1026,7 @@ end}
                   stack.push(first);
                 end else begin
                   if first^.tokType=tt_blockLocalVariable
-                  then newLit:=context.valueStore^.getVariableValue(first^.txt)
+                  then newLit:=context.valueScope^.getVariableValue(first^.txt)
                   else newLit:=P_mutableRule(first^.data)^.getValue(context);
                   if newLit<>nil then begin
                     first^.data:=newLit;
@@ -1032,9 +1034,6 @@ end}
                     resolveElementAccess;
                   end else begin
                     context.messages.raiseError('Cannot resolve variable '+first^.txt+' ('+C_tokenInfo[first^.tokType].helpText+')',first^.location);
-                    {$ifdef fullVersion}{$ifdef debugMode}
-                    context.valueStore^.writeScopeList;
-                    {$endif}{$endif}
                     didSubstitution:=false;
                   end;
                 end;
@@ -1078,7 +1077,7 @@ end}
               stack.popDestroy;
               first^.next:=disposeToken(first^.next);
               first^.next:=disposeToken(first^.next);
-              context.valueStore^.scopePop;
+              scopePop(context.valueScope);
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1101,7 +1100,7 @@ end}
               end;
               first^.next:=disposeToken(first^.next);
               first^.next:=disposeToken(first^.next);
-              context.valueStore^.scopePop;
+              scopePop(context.valueScope);
               didSubstitution:=true;
             end else begin
               stack.popLink(first);
@@ -1128,8 +1127,13 @@ end}
             end;
           end;
         end;
-{cT[0]=}tt_beginBlock,tt_beginRule,tt_beginExpression: begin
-          context.valueStore^.scopePush(cTokType[0]=tt_beginRule);
+{cT[0]=}tt_beginRule: begin
+          scopePush(context.valueScope,ACCESS_BLOCKED);
+          stack.push(first);
+          didSubstitution:=true;
+        end;
+{cT[0]=}tt_beginBlock,tt_beginExpression: begin
+          scopePush(context.valueScope,ACCESS_READWRITE);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1141,15 +1145,12 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end else begin
-          first^.data:=context.valueStore^.getVariableValue(first^.txt);
+          first^.data:=context.valueScope^.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
           end else begin
             context.messages.raiseError('Cannot find value for local id "'+first^.txt+'"',errorLocation);
-            {$ifdef fullVersion}{$ifdef debugMode}
-            context.valueStore^.writeScopeList;
-            {$endif}{$endif}
           end;
         end;
 {cT[0]=}tt_operatorPlus:     begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;

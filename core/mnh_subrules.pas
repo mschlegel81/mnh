@@ -71,7 +71,7 @@ TYPE
 
       //save related:
       indexOfSave:longint;
-      saveValueStore:P_valueStore;
+      saveValueStore:P_valueScope;
       currentlyEvaluating:boolean;
 
       PROCEDURE updatePatternForInline;
@@ -385,10 +385,11 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; VAR context:
 DESTRUCTOR T_inlineExpression.destroy;
   VAR i:longint;
   begin
+    inherited destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
-    if (saveValueStore<>nil) then dispose(saveValueStore,destroy);
+    disposeScope(saveValueStore);
     meta.destroy;
     doneCriticalSection(subruleCallCs);
   end;
@@ -461,7 +462,7 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         L:P_literal;
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
-        previousValueStore:P_valueStore;
+        previousValueScope:P_valueScope;
         previousSideEffectWhitelist:T_sideEffects;
         firstCallOfResumable:boolean=false;
         {$ifdef fullVersion}
@@ -540,13 +541,11 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
       {$endif}
       if indexOfSave>=0 then begin
         if saveValueStore=nil then begin
-          new(saveValueStore,create);
-          saveValueStore^.scopePush(blocking);
+          saveValueStore:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
           firstCallOfResumable:=true;
         end;
-        previousValueStore:=context.valueStore;
-        context.valueStore:=saveValueStore;
-        context.valueStore^.parentStore:=previousValueStore;
+        previousValueScope:=context.valueScope;
+        context.valueScope:=saveValueStore;
 
         previousSideEffectWhitelist:=context.setAllowedSideEffectsReturningPrevious(context.sideEffectWhitelist*meta.sideEffectWhitelist);
         firstRep:=disposeToken(firstRep);
@@ -556,13 +555,12 @@ FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocat
         if firstRep=nil
         then lastRep:=nil
         else lastRep:=firstRep^.last;
-        context.valueStore:=previousValueStore;
+        context.valueScope:=previousValueScope;
         if firstCallOfResumable then begin
           if context.messages.continueEvaluation then begin
             updateBody;
           end else begin
-            dispose(saveValueStore,destroy);
-            saveValueStore:=nil;
+            disposeScope(saveValueStore);
           end;
         end;
       end else begin
@@ -819,7 +817,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token);
     indexOfSave:=original^.indexOfSave;
-    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.clone;
+    if original^.saveValueStore<>nil then saveValueStore:=original^.saveValueStore^.cloneSaveValueStore;
     if intrinsicRuleId<>'' then appendToExpression(tt_braceClose);
     meta:=original^.meta;
     updatePatternForInline;
