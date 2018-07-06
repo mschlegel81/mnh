@@ -70,6 +70,7 @@ FUNCTION TrenameForm.newId: string;
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing renameDialog');{$endif}
   if myRenameForm<>nil then FreeAndNil(myRenameForm);
 end.
 

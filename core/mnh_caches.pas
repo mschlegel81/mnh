@@ -204,6 +204,7 @@ INITIALIZATION
   initialize(allCacheCs);
   initCriticalSection(allCacheCs);
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_caches');{$endif}
   doneCriticalSection(allCacheCs);
 
 end.

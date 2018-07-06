@@ -189,6 +189,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing guiOutAdapters');{$endif}
   if unitIsInitialized then begin
     guiAdapters.destroy;
     guiOutAdapter.destroy;

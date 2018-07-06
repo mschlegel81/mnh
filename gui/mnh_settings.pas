@@ -608,6 +608,7 @@ INITIALIZATION
   settings.create(@obtainSettings,@disposeSettings);
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_settings');{$endif}
   settings.destroy;
 
 end.

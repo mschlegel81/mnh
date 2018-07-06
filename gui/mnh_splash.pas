@@ -80,6 +80,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_splash');{$endif}
   if Assigned(mySplashForm) then FreeAndNil(mySplashForm);
   while (docThreadsRunning>0) do sleep(1);
 

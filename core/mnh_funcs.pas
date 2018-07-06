@@ -251,6 +251,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
   system.initCriticalSection(print_cs);
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_funcs');{$endif}
   builtinMetaMap.destroy;
   intrinsicRuleMap.destroy;
   dispose(mnhSystemPseudoPackage,destroy);

@@ -200,7 +200,6 @@ VAR
 {$endif}
 OPERATOR :=(s:string):T_messageTypeSet;
 IMPLEMENTATION
-VAR globalLockCs:TRTLCriticalSection;
 
 OPERATOR :=(s:string):T_messageTypeSet;
   VAR i,level:longint;
@@ -790,9 +789,4 @@ FUNCTION T_messageConnector.triggersBeep:boolean;
 
 INITIALIZATION
   defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
-  initialize(globalLockCs);
-  initCriticalSection(globalLockCs);
-
-FINALIZATION
-  doneCriticalSection(globalLockCs);
 end.

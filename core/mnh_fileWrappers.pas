@@ -465,6 +465,7 @@ INITIALIZATION
   initCriticalSection(fileByIdCs);
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_fileWrappers');{$endif}
   fileByIDCache.destroy;
   doneCriticalSection(fileByIdCs);
 

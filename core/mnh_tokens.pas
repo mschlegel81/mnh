@@ -575,6 +575,7 @@ INITIALIZATION
   initCriticalSection(tokenRecycler.recyclerCS);
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_tokens');{$endif}
   cleanupTokenRecyclerInstance;
   doneCriticalSection(tokenRecycler.recyclerCS);
 

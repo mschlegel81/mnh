@@ -75,5 +75,6 @@ INITIALIZATION
                'ask(q:string);//Asks the user question q and returns the user input#'+
                'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option');
 FINALIZATION;
+  {$ifdef debugMode}writeln(stderr,'finalizing consoleAsk');{$endif}
   system.doneCriticalSection(cs);
 end.

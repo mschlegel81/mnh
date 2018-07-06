@@ -106,6 +106,7 @@ FUNCTION TExportPlotForm.animationFileName(CONST frameIndex, framesTotal: longin
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing plotExport');{$endif}
   if myExportPlotForm<>nil then FreeAndNil(myExportPlotForm);
 
 end.

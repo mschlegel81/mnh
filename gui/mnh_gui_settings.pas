@@ -222,6 +222,7 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_gui_settings');{$endif}
   if mySettingsForm<>nil then FreeAndNil(mySettingsForm);
 
 end.

@@ -567,6 +567,7 @@ INITIALIZATION
   registerRule(PLOT_NAMESPACE,'postDisplay'      ,@uninitialized_fallback,ak_nullary,'display;//Displays the plot as soon as possible and returns immediately');
   plotSystem.create(@executePlot)
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing mnh_plotForm');{$endif}
   if myPlotForm<>nil then FreeAndNil(myPlotForm);
   plotSystem.destroy;
 

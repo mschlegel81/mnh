@@ -81,6 +81,7 @@ FUNCTION TcloseDialogForm.showOnQuitWhileEvaluating:integer;
   end;
 
 FINALIZATION
+  {$ifdef debugMode}writeln(stderr,'finalizing closeDialog');{$endif}
   if myCloseDialogForm<>nil then FreeAndNil(myCloseDialogForm);
 
 end.
