@@ -189,7 +189,7 @@ FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_
   VAR request:P_plotOptionsMessage;
   begin
     new(request,createRetrieveRequest);
-    threadLocalMessages.globalMessages^.postCustomMessage(request^.rereferenced);
+    threadLocalMessages.globalMessages^.postCustomMessage(request);
     result:=request^.getOptionsWaiting(threadLocalMessages);
     disposeMessage(request);
   end;
@@ -1154,7 +1154,13 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         else processMessage(message);
       end;
       mt_endOfEvaluation,
-      mt_plot_postDisplay: result:=inherited append(message);
+      mt_plot_postDisplay: begin
+        //if we can't plot anyway, we can process the message right away
+        result:=true;
+        if doPlot=nil
+        then processMessage(message)
+        else inherited append(message);
+      end;
       else result:=false;
     end;
     leaveCriticalSection(cs);

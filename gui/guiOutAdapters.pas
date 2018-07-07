@@ -87,6 +87,7 @@ CONSTRUCTOR T_guiOutAdapter.create(CONST owner:T_abstractMnhForm; CONST outputEd
     if not(displayLogo) then exit;
     new(m,create(mt_printline,C_nilTokenLocation,LOGO));
     append(m);
+    disposeMessage(m);
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;

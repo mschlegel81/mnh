@@ -1978,6 +1978,4 @@ INITIALIZATION
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_packages');{$endif}
   doneSandboxes;
-{$define include_finalization}
-{$include mnh_funcs.inc}
 end.
