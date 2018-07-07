@@ -61,7 +61,6 @@ TYPE
 
 PROCEDURE resetTableForms;
 PROCEDURE conditionalShowTables;
-PROCEDURE setupCallbacks;
 IMPLEMENTATION
 VAR tableForms: array of TtableForm;
     tableFormCs:TRTLCriticalSection;
@@ -131,11 +130,6 @@ PROCEDURE showProfilingTable(CONST data: P_listLiteral);
     enterCriticalSection(tableFormCs);
     newTableForm.initWithLiteral(data,'Profiling info',true);
     leaveCriticalSection(tableFormCs);
-  end;
-
-PROCEDURE setupCallbacks;
-  begin
-    showProfilingTableCallback:=@showProfilingTable;
   end;
 
 PROCEDURE TtableForm.FormCreate(Sender: TObject);

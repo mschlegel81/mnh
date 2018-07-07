@@ -8,7 +8,9 @@ USES sysutils,Classes,
      mnh_out_adapters,
      mnh_litVar,
      mnh_contexts
-     {$ifdef fullVersion},mnh_doc{$endif};
+     {$ifdef fullVersion},
+     mnh_profiling,
+     mnh_doc{$endif};
 TYPE
   T_arityKind=(ak_nullary,
                ak_unary,
@@ -243,12 +245,14 @@ FUNCTION T_mnhSystemPseudoPackage.getId:T_idString;
     result:=getPath;
   end;
 
+VAR identifiedInternalFunctionTally:longint=0;
 CONSTRUCTOR T_identifiedInternalFunction.create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
   begin
     id:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
     location.package:=mnhSystemPseudoPackage;
     location.column:=1;
-    location.line:=hash(unqualifiedId);
+    location.line:=identifiedInternalFunctionTally;
+    InterLockedIncrement(identifiedInternalFunctionTally);
   end;
 
 DESTRUCTOR T_identifiedInternalFunction.destroy;
@@ -283,10 +287,12 @@ PROCEDURE disposeIdentifiedInternalFunction(VAR p:P_identifiedInternalFunction);
 INITIALIZATION
   intrinsicRuleMap.create;
   builtinMetaMap.create;
+  new(mnhSystemPseudoPackage,create);
   {$ifdef fullVersion}
+  mnh_profiling.mnhSysPseudopackagePrefix:='@'+mnhSystemPseudoPackage^.getPath;
+
   builtinProfileLocationMap.create(@disposeIdentifiedInternalFunction);
   {$endif}
-  new(mnhSystemPseudoPackage,create);
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary ,'clearPrint;//Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic,'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used');

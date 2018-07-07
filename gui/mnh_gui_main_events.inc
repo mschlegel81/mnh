@@ -145,8 +145,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     initIpcServer(self);
     //Initialize other units
-    setupCallbacks;
-
     initGuiOutAdapters(MnhForm,outputEdit,true);
     quick.adapters:=createSecondaryAdapters(QuickOutputEdit);
     {$ifdef debugMode}
