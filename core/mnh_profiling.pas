@@ -33,7 +33,7 @@ TYPE
 
   P_calleeEntry=^T_calleeEntry;
   T_calleeEntry=object
-    id:T_idstring;
+    id:T_idString;
     calleeLocation:string;
     callerMap:T_callerMap;
 
@@ -78,19 +78,19 @@ PROCEDURE disposeEntry(VAR entry:P_calleeEntry);
     dispose(entry,destroy);
   end;
 
-constructor T_calleeEntry.create(const id_: T_idString; const loc: string);
+CONSTRUCTOR T_calleeEntry.create(CONST id_: T_idString; CONST loc: string);
   begin
     id:=id_;
     calleeLocation:=loc;
     callerMap.create();
   end;
 
-destructor T_calleeEntry.destroy;
+DESTRUCTOR T_calleeEntry.destroy;
   begin
     callerMap.destroy;
   end;
 
-procedure T_calleeEntry.aggregateValues;
+PROCEDURE T_calleeEntry.aggregateValues;
   VAR callerEntry:T_callerEntry;
   begin
     timeSpent_inclusive:=0;
@@ -103,7 +103,7 @@ procedure T_calleeEntry.aggregateValues;
     end;
   end;
 
-function T_calleeEntry.toString(const withHeader: boolean): T_arrayOfString;
+FUNCTION T_calleeEntry.toString(CONST withHeader: boolean): T_arrayOfString;
   FUNCTION nicestTime(CONST seconds:double):string;
     begin
        result:=formatFloat('0.000',seconds*1E3);
@@ -155,7 +155,7 @@ function T_calleeEntry.toString(const withHeader: boolean): T_arrayOfString;
     end;
   end;
 
-procedure T_calleeEntry.add(const callerLocation: ansistring; const dt_inclusive, dt_exclusive: double);
+PROCEDURE T_calleeEntry.add(CONST callerLocation: ansistring; CONST dt_inclusive, dt_exclusive: double);
   VAR callerEntry:T_callerEntry;
   begin
     if callerMap.containsKey(callerLocation,callerEntry) then begin

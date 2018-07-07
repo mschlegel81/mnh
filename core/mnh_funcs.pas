@@ -252,7 +252,7 @@ CONSTRUCTOR T_identifiedInternalFunction.create(CONST namespace:T_namespace; CON
     location.package:=mnhSystemPseudoPackage;
     location.column:=1;
     location.line:=identifiedInternalFunctionTally;
-    InterLockedIncrement(identifiedInternalFunctionTally);
+    interLockedIncrement(identifiedInternalFunctionTally);
   end;
 
 DESTRUCTOR T_identifiedInternalFunction.destroy;
