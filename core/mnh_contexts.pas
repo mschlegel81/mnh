@@ -110,9 +110,9 @@ TYPE
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
       {$ifdef fullVersion}
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
-      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
-      PROCEDURE callStackPop(CONST first:P_token);
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode); inline;
+      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls); inline;
+      PROCEDURE callStackPop(CONST first:P_token); inline;
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
@@ -406,7 +406,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
     messages.globalMessages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
     if (messages.globalMessages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
     {$ifdef fullVersion}
-    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(@messages);
+    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(messages.globalMessages);
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and messages.globalMessages^.triggersBeep then beep;
     while valueScope<>nil do scopePop(valueScope);

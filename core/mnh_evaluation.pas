@@ -432,6 +432,13 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         {$ifndef debugMode}
         try
         {$endif}
+        {$ifdef fullVersion}
+        if tco_profiling in context.threadOptions then begin
+          context.callStackPush(first^.location,getIntrinsicRuleIdAndLocation(first^.data),nil);
+          newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+          context.callStackPop(nil);
+        end else
+        {$endif}
         newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
         {$ifndef debugMode}
         except

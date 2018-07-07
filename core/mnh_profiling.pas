@@ -110,6 +110,7 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messageConnector);
 
   begin
     enterCriticalSection(cs);
+    try
     profilingData:=map.valueSet;
     for j:=0 to length(profilingData)-1 do for i:=0 to j-1 do if profilingData[i].timeSpent_inclusive<profilingData[j].timeSpent_inclusive then begin
       swapTemp:=profilingData[i];
@@ -153,7 +154,10 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messageConnector);
     {$endif}
 
     adapters^.postTextMessage(mt_timing_info,C_nilTokenLocation,lines);
-    leaveCriticalSection(cs);
+
+    finally
+      leaveCriticalSection(cs);
+    end;
   end;
 
 CONSTRUCTOR T_packageProfilingCall.create(CONST package_: P_objectWithPath; CONST category_: T_profileCategory);

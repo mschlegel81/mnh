@@ -42,8 +42,6 @@ IMPLEMENTATION
 {$i mnh_func_defines.inc}
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
-    builtinLocation_printf,
-    builtinLocation_format:T_identifiedInternalFunction;
 
 PROCEDURE onPackageFinalization(CONST package:P_objectWithPath);
   VAR formats:cachedFormats.KEY_VALUE_LIST;
@@ -403,6 +401,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     for i:=1 to length(iter)-1 do disposeLiteral(iter[i]);
   end;
 
+{$ifdef fullVersion}VAR formatLoc:P_intFuncCallback; {$endif}
 FUNCTION format_imp intFuncSignature;
   VAR txt:T_arrayOfString;
       i:longint;
@@ -411,7 +410,7 @@ FUNCTION format_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_format,nil);
+      if tco_profiling in context.threadOptions then context.callStackPush(tokenLocation,getIntrinsicRuleIdAndLocation(formatLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       {$ifdef fullVersion}
@@ -427,6 +426,7 @@ FUNCTION format_imp intFuncSignature;
     end;
   end;
 
+{$ifdef fullVersion}VAR printfLoc:P_intFuncCallback;{$endif}
 FUNCTION printf_imp intFuncSignature;
   VAR preparedStatement:P_preparedFormatStatement;
   begin
@@ -434,7 +434,7 @@ FUNCTION printf_imp intFuncSignature;
     if not(context.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_printf,nil);
+      if tco_profiling in context.threadOptions then context.callStackPush(tokenLocation,getIntrinsicRuleIdAndLocation(printfLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.messages.continueEvaluation) then begin
@@ -545,19 +545,17 @@ INITIALIZATION
   cachedFormats.create;
   initialize(cachedFormatCS);
   system.initCriticalSection(cachedFormatCS);
-  builtinLocation_printf.create(SYSTEM_BUILTIN_NAMESPACE,'printf');
+  {$ifdef fullVersion}printfLoc:={$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'         ,@printf_imp,ak_variadic_1,'printf(formatString:string,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
-  builtinLocation_format.create(STRINGS_NAMESPACE,'format');
-  registerRule(STRINGS_NAMESPACE        ,'format'           ,@format_imp           ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'formatTime'       ,@formatTime_imp       ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE        ,'parseTime'        ,@parseTime_imp        ,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  {$ifdef fullVersion}formatLoc:={$endif}
+  registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
 
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_format');{$endif}
   clearCachedFormats;
   cachedFormats.destroy;
   system.doneCriticalSection(cachedFormatCS);
-  builtinLocation_printf.destroy;
-  builtinLocation_format.destroy;
 
 end.

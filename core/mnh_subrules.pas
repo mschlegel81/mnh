@@ -1255,7 +1255,6 @@ PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalM
   end;
 
 {$ifdef fullVersion}
-VAR generateRowIdentification:T_identifiedInternalFunction;
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
   VAR tRow :T_arrayOfDouble;
       TList:P_listLiteral=nil;
@@ -1632,7 +1631,6 @@ FUNCTION interpret_imp intFuncSignature;
 
 INITIALIZATION
   {$ifdef fullVersion}
-  generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
   mnh_funcs_plot.generateRow:=@generateRow;
   {$endif}
   subruleReplacesCallback   :=@subruleReplaces;
@@ -1641,9 +1639,4 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
   registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(S);//Interprets a string or list S');
-FINALIZATION
-  {$ifdef fullVersion}
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_subrules');{$endif}
-  generateRowIdentification.destroy;
-  {$endif}
 end.

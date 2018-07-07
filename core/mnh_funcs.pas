@@ -34,10 +34,12 @@ TYPE
 
   P_identifiedInternalFunction=^T_identifiedInternalFunction;
   T_identifiedInternalFunction=object(T_objectWithIdAndLocation)
-    location:T_tokenLocation;
-    id:T_idString;
-    CONSTRUCTOR create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
-    DESTRUCTOR destroy;
+    private
+      location:T_tokenLocation;
+      id:T_idString;
+      CONSTRUCTOR create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
+      DESTRUCTOR destroy;
+    public
     FUNCTION getId:T_idString; virtual;
     FUNCTION getLocation:T_tokenLocation; virtual;
   end;
@@ -51,14 +53,17 @@ TYPE
   end;
 
   P_builtinFunctionMetaData=^T_builtinFunctionMetaData;
-  T_builtinFunctionMetaData=record
-    arityKind  :T_arityKind;
-    qualifiedId:T_idString;
+  T_builtinFunctionMetaData=object
+    arityKind    :T_arityKind;
+    namespace    :T_namespace;
+    unqualifiedId:T_idString;
+    FUNCTION qualifiedId:string;
   end;
+  T_intrinsicRuleMap=specialize G_stringKeyMap<P_intFuncCallback>;
 
 VAR
   intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
-  intrinsicRuleMap:specialize G_stringKeyMap<P_intFuncCallback>;
+  intrinsicRuleMap:T_intrinsicRuleMap;
   builtinMetaMap  :specialize G_pointerKeyMap<T_builtinFunctionMetaData>;
   print_cs        :system.TRTLCriticalSection;
 
@@ -67,8 +72,14 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST messageTail:ansistring='');
+{$ifdef fullVersion}
+FUNCTION getIntrinsicRuleIdAndLocation(CONST p:pointer):P_identifiedInternalFunction;
+{$endif}
 IMPLEMENTATION
 VAR mnhSystemPseudoPackage:P_mnhSystemPseudoPackage;
+    {$ifdef fullVersion}
+    builtinProfileLocationMap:specialize G_pointerKeyMap<P_identifiedInternalFunction>;
+    {$endif}
 TYPE formatTabsOption=(ft_always,ft_never,ft_onlyIfTabsAndLinebreaks);
 
 FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind:T_arityKind; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_intFuncCallback;
@@ -79,7 +90,8 @@ FUNCTION registerRule(CONST namespace: T_namespace; CONST name:T_idString; CONST
     intrinsicRuleMap.put(                                                  name,result);
     intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,result);
     meta.arityKind:=aritiyKind;
-    meta.qualifiedId:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name;
+    meta.namespace:=namespace;
+    meta.unqualifiedId:=name;
     builtinMetaMap.put(ptr,meta);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
@@ -101,8 +113,22 @@ FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONS
   end;
 
 FUNCTION getMeta(CONST p:pointer):T_builtinFunctionMetaData;
+  VAR entry:T_intrinsicRuleMap.KEY_VALUE_PAIR;
   begin
+    {$ifdef debugMode}
+    if not builtinMetaMap.containsKey(p,result) then begin
+      for entry in intrinsicRuleMap.entrySet do if pointer(entry.value)=p
+      then raise Exception.create('No meta for function "'+entry.key+'"');
+      raise Exception.create('No meta for function @'+IntToHex(ptrint(p),16));
+    end;
+    {$else}
     result:=builtinMetaMap.get(p);
+    {$endif}
+  end;
+
+FUNCTION T_builtinFunctionMetaData.qualifiedId:string;
+  begin
+    result:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST L:P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_threadLocalMessages; CONST messageTail: ansistring='');
@@ -238,9 +264,28 @@ FUNCTION T_identifiedInternalFunction.getLocation: T_tokenLocation;
     result:=location;
   end;
 
+{$ifdef fullVersion}
+FUNCTION getIntrinsicRuleIdAndLocation(CONST p:pointer):P_identifiedInternalFunction;
+  VAR meta:T_builtinFunctionMetaData;
+  begin
+    if builtinProfileLocationMap.containsKey(p,result) then exit(result);
+    meta:=getMeta(p);
+    new(result,create(meta.namespace,meta.unqualifiedId));
+    builtinProfileLocationMap.put(p,result);
+  end;
+
+PROCEDURE disposeIdentifiedInternalFunction(VAR p:P_identifiedInternalFunction);
+  begin
+    dispose(p,destroy);
+  end;
+{$endif}
+
 INITIALIZATION
   intrinsicRuleMap.create;
   builtinMetaMap.create;
+  {$ifdef fullVersion}
+  builtinProfileLocationMap.create(@disposeIdentifiedInternalFunction);
+  {$endif}
   new(mnhSystemPseudoPackage,create);
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary ,'clearPrint;//Clears the output and returns void.');
@@ -252,6 +297,9 @@ INITIALIZATION
   system.initCriticalSection(print_cs);
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs');{$endif}
+  {$ifdef fullVersion}
+  builtinProfileLocationMap.destroy;
+  {$endif}
   builtinMetaMap.destroy;
   intrinsicRuleMap.destroy;
   dispose(mnhSystemPseudoPackage,destroy);

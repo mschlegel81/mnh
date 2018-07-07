@@ -12,7 +12,6 @@ USES sysutils,
      mnh_contexts;
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
-VAR builtinLocation_time:T_identifiedInternalFunction;
 FUNCTION resetRandom_impl intFuncSignature;
   begin
     if not(context.checkSideEffects('resetRandom',tokenLocation,[se_alterContextState])) then exit(nil);
@@ -181,6 +180,7 @@ FUNCTION setExitCode_impl intFuncSignature;
     end else result:=nil;
   end;
 
+{$ifdef fullVersion}VAR timeLoc:P_intFuncCallback;{$endif}
 FUNCTION time_imp intFuncSignature;
   VAR res:P_literal;
       t:double=0;
@@ -198,7 +198,8 @@ FUNCTION time_imp intFuncSignature;
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_time,nil);
+      if tco_profiling in context.threadOptions then
+      context.callStackPush(tokenLocation,getIntrinsicRuleIdAndLocation(timeLoc),nil);
       {$endif}
       if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
                         else res:=evaluate(P_expressionLiteral(arg0));
@@ -237,12 +238,9 @@ INITIALIZATION
   //registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo'          ,@logTo_impl          ,ak_binary    ,'logTo(logName:string,appendMode:boolean);//Adds a log with given name and write mode and returns void.');
   //registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo'        ,@printTo_impl        ,ak_unary     ,'printTo(logName:string);//Adds a log receiving only print messages with given name and and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,'setExitCode(code:int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.');
-  builtinLocation_time.create(SYSTEM_BUILTIN_NAMESPACE,'time');
+  {$ifdef fullVersion}timeLoc:={$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic,'time;//Returns an internal time for time difference measurement.#'+
                'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.');
-FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_system');{$endif}
-  builtinLocation_time.destroy;
 
 end.
