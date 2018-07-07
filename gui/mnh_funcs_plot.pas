@@ -249,7 +249,7 @@ FUNCTION renderToFile_impl intFuncSignature;
       try
         fileName:=ChangeFileExt(fileName,'.png');
         new(renderRequest,createRenderToFileRequest(fileName,width,height,quality));
-        context.messages.globalMessages^.postCustomMessage(renderRequest);
+        context.messages.globalMessages^.postCustomMessage(renderRequest,true);
       except
         on e:Exception do begin
           context.messages.raiseError('Error on renderToFile: '+e.message,tokenLocation);
