@@ -89,9 +89,8 @@ TYPE
   T_expressionAggregator=object(T_aggregator)
     private
       aggregator:P_expressionLiteral;
-      aggregationContext:pointer;
     public
-      CONSTRUCTOR create(CONST ex:P_expressionLiteral; CONST contextPointer:pointer);
+      CONSTRUCTOR create(CONST ex:P_expressionLiteral);
       DESTRUCTOR destroy; virtual;
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_threadContext); virtual;
   end;
@@ -128,7 +127,7 @@ FUNCTION newMaxAggregator                   :P_maxAggregator;
 FUNCTION newHeadAggregator                  :P_headAggregator;
 FUNCTION newTrailingAggregator              :P_trailingAggregator;
 FUNCTION newSetAggregator                   :P_setAggregator;
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:pointer):P_expressionAggregator;
+FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_expressionAggregator;
 IMPLEMENTATION
 FUNCTION newAggregator(CONST op:T_tokenType):P_aggregator;
   begin
@@ -150,9 +149,9 @@ FUNCTION newHeadAggregator    :P_headAggregator;     begin new(result,create); e
 FUNCTION newTrailingAggregator:P_trailingAggregator; begin new(result,create); end;
 FUNCTION newSetAggregator     :P_setAggregator;      begin new(result,create); end;
 
-FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST contextPointer:pointer):P_expressionAggregator;
+FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral):P_expressionAggregator;
   begin
-    new(result,create(ex,contextPointer));
+    new(result,create(ex));
   end;
 
 CONSTRUCTOR T_aggregator.create(CONST initialValue:P_literal); begin hasReturnLiteral:=false; resultLiteral:=initialValue; end;
@@ -174,11 +173,10 @@ CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType);
     opPointer:=intFuncForOperator[op];
   end;
 
-CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral; CONST contextPointer: pointer);
+CONSTRUCTOR T_expressionAggregator.create(CONST ex: P_expressionLiteral);
   begin
     inherited create(nil);
     aggregator:=ex; aggregator^.rereference;
-    aggregationContext:=contextPointer;
   end;
 
 DESTRUCTOR T_aggregator          .destroy; begin if resultLiteral<>nil then disposeLiteral(resultLiteral); end;
@@ -332,7 +330,7 @@ PROCEDURE T_expressionAggregator.addToAggregation(er:T_evaluationResult; CONST d
     if resultLiteral=nil
     then resultLiteral:=er.literal^.rereferenced
     else if er.literal^.literalType<>lt_void then begin
-      newValue:=aggregator^.evaluateToLiteral(location,aggregationContext,resultLiteral,er.literal).literal;
+      newValue:=aggregator^.evaluateToLiteral(location,context,resultLiteral,er.literal).literal;
       disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
       if resultLiteral=nil then begin

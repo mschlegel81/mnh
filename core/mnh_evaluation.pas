@@ -221,9 +221,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorConcatAlt: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
+              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data))
               else if isPureAggregator then context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN)      then aggregator:=newMinAggregator      else
@@ -237,7 +237,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
             if context.messages.continueEvaluation
-            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
           end else context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
@@ -1209,7 +1209,7 @@ end}
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
               // || aggregator ( + )
               first^.tokType:=tt_aggregatorExpressionLiteral;
-              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next);
+              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next,context);
               first^.next:=disposeToken(first^.next); //drop (
               first^.next:=disposeToken(first^.next); //drop +
               first^.next:=disposeToken(first^.next); //drop )
@@ -1251,10 +1251,10 @@ end}
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
-        tt_pseudoFuncPointer: case cTokType[1] of
+{cT[0]=}tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
-            first^.data:=createPrimitiveAggregatorLiteral(first^.next);
+            first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
             first^.tokType:=tt_literal;
             first^.next:=disposeToken(first^.next);
             didSubstitution:=true;

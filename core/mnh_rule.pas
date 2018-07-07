@@ -7,6 +7,7 @@ USES sysutils,math,
      mnh_litVar, valueStore,
      mnh_funcs,
      mnh_tokens,
+     mnh_tokenArray,
      mnh_messages,
      mnh_contexts,
      mnh_patterns,
@@ -142,7 +143,21 @@ TYPE
       FUNCTION getValue(VAR context:T_threadContext):P_literal; virtual;
   end;
 
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
 IMPLEMENTATION
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
+  begin
+    if      tok^.tokType in C_operators   then begin
+      if P_abstractPackage(tok^.location.package)^.customOperatorRule[tok^.tokType]=nil
+      then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
+      else result:=P_rule(P_abstractPackage(tok^.location.package)^.customOperatorRule[tok^.tokType])^.getFunctionPointer(context,tt_localUserRule,tok^.location);
+    end else if tok^.tokType=tt_intrinsicRule then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
+    else begin
+      result:=nil;
+      raise Exception.create('Invalid argument for createPrimitiveAggregatorLiteral('+safeTokenToString(tok)+')');
+    end;
+  end;
+
 FUNCTION T_rule.isFallbackPossible(CONST ruleTokenType:T_tokenType; CONST commonArity:longint; CONST callLocation:T_tokenLocation; CONST givenParameters:P_listLiteral; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
   VAR tempToken:P_token;
       tempInline:P_inlineExpression;
