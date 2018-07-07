@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="63">
+    <Units Count="64">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -397,6 +397,10 @@
         <Filename Value="mnh_plotData.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit62>
+      <Unit63>
+        <Filename Value="..\core\mnh_profiling.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit63>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -74,12 +74,16 @@ PROCEDURE disposeScope(VAR scope:P_valueScope);
   begin
     if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)<=0 then begin
-      with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0) or (fill>=length(dat))
+      with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0)
       then dispose(scope,destroy)
       else begin
-        scope^.insteadOfDestroy;
-        dat[fill]:=scope;
-        inc(fill);
+        if (fill>=length(dat))
+        then dispose(scope,destroy)
+        else begin
+          scope^.insteadOfDestroy;
+          dat[fill]:=scope;
+          inc(fill);
+        end;
         leaveCriticalSection(recyclerCS);
       end;
     end;
@@ -88,24 +92,26 @@ PROCEDURE disposeScope(VAR scope:P_valueScope);
 
 FUNCTION newValueScopeAsChildOf(CONST scope:P_valueScope; CONST parentAccess:AccessLevel):P_valueScope;
   begin
-    with scopeRecycler do
-    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
+    with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.insteadOfCreate(scope,parentAccess);
+      end else new(result,create(scope,parentAccess));
       leaveCriticalSection(recyclerCS);
-      result^.insteadOfCreate(scope,parentAccess);
     end else new(result,create(scope,parentAccess));
   end;
 
 PROCEDURE scopePush(VAR scope:P_valueScope; CONST parentAccess:AccessLevel);
   VAR newScope:P_valueScope;
   begin
-    with scopeRecycler do
-    if (tryEnterCriticalsection(recyclerCS)<>0) and (fill>0) then begin
-      dec(fill);
-      newScope:=dat[fill];
+    with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)<>0) then begin
+      if (fill>0) then begin
+        dec(fill);
+        newScope:=dat[fill];
+        newScope^.insteadOfCreate(scope,parentAccess);
+      end else new(newScope,create(scope,parentAccess));
       leaveCriticalSection(recyclerCS);
-      newScope^.insteadOfCreate(scope,parentAccess);
     end else new(newScope,create(scope,parentAccess));
     scope:=newScope;
   end;
@@ -115,13 +121,18 @@ PROCEDURE scopePop(VAR scope:P_valueScope);
   begin
     if scope=nil then exit;
     newScope:=scope^.parentScope;
+    if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)<=0 then begin
-      with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0) or (fill>=length(dat))
+      with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0)
       then dispose(scope,destroy)
       else begin
-        scope^.insteadOfDestroy;
-        dat[fill]:=scope;
-        inc(fill);
+        if (fill>=length(dat))
+        then dispose(scope,destroy)
+        else begin
+          scope^.insteadOfDestroy;
+          dat[fill]:=scope;
+          inc(fill);
+        end;
         leaveCriticalSection(recyclerCS);
       end;
     end;
@@ -344,5 +355,4 @@ FINALIZATION
     leaveCriticalSection(recyclerCS);
   end;
   doneCriticalSection(scopeRecycler.recyclerCS);
-
 end.
