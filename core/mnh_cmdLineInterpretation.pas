@@ -110,51 +110,51 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
   PROCEDURE doDirect;
-    VAR context:T_evaluationGlobals;
+    VAR globals:T_evaluationGlobals;
         package:P_package;
     begin
-      context.create(@consoleAdapters);
-      if headless then context.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+      globals.create(@consoleAdapters);
+      if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
-      context.resetForEvaluation({$ifdef fullVersion}package,contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
-      package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
-      context.afterEvaluation;
+      globals.resetForEvaluation({$ifdef fullVersion}package,contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
+      package^.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
+      globals.afterEvaluation;
       dispose(package,destroy);
-      context.destroy;
+      globals.destroy;
       consoleAdapters.setExitCode;
     end;
 
   PROCEDURE fileMode;
-    VAR context:T_evaluationGlobals;
+    VAR globals:T_evaluationGlobals;
         package:T_package;
     begin
       package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
-      context.create(@consoleAdapters);
+      globals.create(@consoleAdapters);
       {$ifdef fullVersion}
       consoleAdapters.addOutAdapter(plotAdapters,false);
       {$endif}
-      context.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
+      globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
-        package.load(lu_forCodeAssistance,context,C_EMPTY_STRING_ARRAY);
+        package.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY);
         writeln(package.getHelpOnMain);
         package.destroy;
         wantHelpDisplay:=false;
-        context.destroy;
+        globals.destroy;
         exit;
       end;
-      if headless then context.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package.load(lu_forCallingMain,context,mainParameters);
-      {$ifdef fullVersion} if not(FlagGUINeeded in context.messages.getFlags) then {$endif}
-      context.afterEvaluation;
+      if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
+      package.load(lu_forCallingMain,globals,mainParameters);
+      {$ifdef fullVersion} if not(FlagGUINeeded in globals.primaryContext.messages.getFlags) then {$endif}
+      globals.afterEvaluation;
       package.destroy;
       {$ifdef fullVersion}
-      if (FlagGUINeeded in context.messages.getFlags) then begin
+      if (FlagGUINeeded in globals.primaryContext.messages.getFlags) then begin
         reEvaluationWithGUIrequired:=true;
-        context.destroy;
+        globals.destroy;
         exit;
       end;
       {$endif}
-      context.destroy;
+      globals.destroy;
       consoleAdapters.setExitCode;
     end;
 

@@ -147,11 +147,8 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threa
 IMPLEMENTATION
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_threadContext):P_expressionLiteral;
   begin
-    if      tok^.tokType in C_operators   then begin
-      if P_abstractPackage(tok^.location.package)^.customOperatorRule[tok^.tokType]=nil
-      then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
-      else result:=P_rule(P_abstractPackage(tok^.location.package)^.customOperatorRule[tok^.tokType])^.getFunctionPointer(context,tt_localUserRule,tok^.location);
-    end else if tok^.tokType=tt_intrinsicRule then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
+    if      tok^.tokType in C_operators   then result:=getIntrinsicRuleAsExpression(intFuncForOperator[tok^.tokType])
+    else if tok^.tokType=tt_intrinsicRule then result:=getIntrinsicRuleAsExpression(                   tok^.data    )
     else begin
       result:=nil;
       raise Exception.create('Invalid argument for createPrimitiveAggregatorLiteral('+safeTokenToString(tok)+')');

@@ -5,7 +5,8 @@ USES sysutils,math,
      mnh_basicTypes,mnh_constants,
      mnh_fileWrappers,
      mnh_litVar,
-     mnh_funcs,mnh_funcs_mnh,
+     mnh_funcs,
+     mnh_funcs_mnh,
      tokenStack,
      {$ifdef fullVersion}
      mnh_html,
@@ -54,6 +55,13 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+  end;
+
+  P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
+  T_mnhSystemPseudoPackage=object(T_abstractPackage)
+    CONSTRUCTOR create;
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION getPath:ansistring; virtual;
   end;
 
   T_enhancedStatement=record
@@ -132,6 +140,7 @@ TYPE
 PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR threadLocalMessages:T_threadLocalMessages);
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
+    MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR threadLocalMessages:T_threadLocalMessages);
   VAR t:P_token;
@@ -184,6 +193,21 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR th
         end;
       t:=t^.next;
     end;
+  end;
+
+CONSTRUCTOR T_mnhSystemPseudoPackage.create;
+  begin
+    inherited create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
+  end;
+
+FUNCTION T_mnhSystemPseudoPackage.getId: T_idString;
+  begin
+    result:='[MNH]';
+  end;
+
+FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
+  begin
+    result:='[MNH]';
   end;
 
 {$ifdef fullVersion}
@@ -1030,6 +1054,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
 
 INITIALIZATION
   BLANK_ABSTRACT_PACKAGE.create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
+  MNH_PSEUDO_PACKAGE.create();
   {$ifdef fullVersion}
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
@@ -1037,5 +1062,6 @@ INITIALIZATION
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tokenArray');{$endif}
   BLANK_ABSTRACT_PACKAGE.destroy;
+  MNH_PSEUDO_PACKAGE.destroy;
 
 end.

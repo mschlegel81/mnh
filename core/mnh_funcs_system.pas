@@ -198,8 +198,7 @@ FUNCTION time_imp intFuncSignature;
     else if (params^.size>=1) and (arg0^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (arg1^.literalType in C_listTypes)) then begin
       {$ifdef fullVersion}
-      if tco_profiling in context.threadOptions then
-      context.callStackPush(tokenLocation,getIntrinsicRuleIdAndLocation(timeLoc),nil);
+      context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(timeLoc),nil);
       {$endif}
       if params^.size=2 then res:=evaluate(P_expressionLiteral(arg0),list1)
                         else res:=evaluate(P_expressionLiteral(arg0));

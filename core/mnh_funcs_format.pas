@@ -410,7 +410,7 @@ FUNCTION format_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      if tco_profiling in context.threadOptions then context.callStackPush(tokenLocation,getIntrinsicRuleIdAndLocation(formatLoc),nil);
+      context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(formatLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       {$ifdef fullVersion}
@@ -434,7 +434,7 @@ FUNCTION printf_imp intFuncSignature;
     if not(context.checkSideEffects('printf',tokenLocation,[se_output])) then exit(nil);
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       {$ifdef fullVersion}
-      if tco_profiling in context.threadOptions then context.callStackPush(tokenLocation,getIntrinsicRuleIdAndLocation(printfLoc),nil);
+      context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(printfLoc),nil);
       {$endif}
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context);
       if not(context.messages.continueEvaluation) then begin

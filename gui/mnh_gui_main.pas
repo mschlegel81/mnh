@@ -302,7 +302,7 @@ PROCEDURE TMnhForm.onBreakpoint(CONST data:P_debuggingSnapshot);
 
     if debuggerData.localVariableReport<>nil then debuggerData.localVariableReport^.clear
                                              else new(debuggerData.localVariableReport,create(dvc_local));
-    runEvaluator.context.reportVariables(debuggerData.localVariableReport^);
+    runEvaluator.globals.primaryContext.reportVariables(debuggerData.localVariableReport^);
 
     if debuggerData.inlineVariableReport<>nil then debuggerData.inlineVariableReport^.clear
                                               else new(debuggerData.inlineVariableReport,create(dvc_inline));

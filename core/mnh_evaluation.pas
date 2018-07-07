@@ -1,5 +1,9 @@
 UNIT mnh_evaluation;
 INTERFACE
+{$ifndef debugMode}
+  {$define useTryCatchBlocks}
+{$endif}
+
 USES sysutils,
      myGenerics,
      {$ifndef debugMode}
@@ -401,14 +405,14 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(first^.tokType,first^.location,parameterListLiteral,firstReplace,lastReplace,@context)) then begin
             context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
             exit;
           end;
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         except
           on e:Exception do begin
             context.messages.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
@@ -429,18 +433,18 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           lastReplace:=firstReplace;
         end else context.messages.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         try
         {$endif}
         {$ifdef fullVersion}
         if tco_profiling in context.threadOptions then begin
-          context.callStackPush(first^.location,getIntrinsicRuleIdAndLocation(first^.data),nil);
+          context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),nil);
           newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
           context.callStackPop(nil);
         end else
         {$endif}
         newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         except
           on e:Exception do begin
             context.messages.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
@@ -786,7 +790,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     end;
 
   PROCEDURE resolvePseudoFuncPointer;
-    VAR exRule:P_builtinExpression;
+    VAR exRule:P_expressionLiteral;
         ruleToken:P_token;
         temp:P_token;
         location:T_tokenLocation;
@@ -801,7 +805,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         ruleToken^.tokType:=tt_literal;
         first:=ruleToken;
       end else begin
-        new(exRule,create(P_intFuncCallback(ruleToken^.data),ruleToken^.location));
+        exRule:=getIntrinsicRuleAsExpression(ruleToken^.data);
         disposeToken(ruleToken);
         first:=newToken(location,'',tt_literal,exRule); // {f@$params}
       end;
@@ -912,7 +916,7 @@ end}
     result:=rr_ok;
     inc(context.callDepth);
     stack.create;
-    {$ifndef debugMode}try{$endif}
+    {$ifdef useTryCatchBlocks}try{$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
@@ -1251,7 +1255,7 @@ end}
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+P_literal(stack.dat[stack.topIndex]^.data)^.typeString+': '+stack.dat[stack.topIndex]^.singleTokenToString,errorLocation);
         end else context.messages.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',errorLocation);
-{cT[0]=}tt_pseudoFuncPointer: case cTokType[1] of
+        tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
             first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
@@ -1271,7 +1275,7 @@ end}
         end;
       end;
     until not(didSubstitution) or not(context.messages.continueEvaluation);
-    {$ifndef debugMode}
+    {$ifdef useTryCatchBlocks}
     except
       on e:Exception do begin
         context.messages.raiseError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth)+C_lineBreakChar+e.message,errorLocation(first),mt_el4_systemError);
