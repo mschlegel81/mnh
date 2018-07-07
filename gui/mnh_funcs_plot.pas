@@ -210,7 +210,7 @@ FUNCTION setOptions intFuncSignature;
     end else allOkay:=false;
     if allOkay then begin
       new(postOptionsMessage,createPostRequest(opt));
-      context.messages.globalMessages^.postCustomMessage(postOptionsMessage);
+      context.messages.globalMessages^.postCustomMessage(postOptionsMessage,true);
     end;
   end;
 
