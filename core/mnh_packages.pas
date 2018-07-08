@@ -98,7 +98,7 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
-      FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -177,7 +177,7 @@ TYPE
   P_sandbox=^T_sandbox;
   T_sandbox=object
     private
-      evaluationContext:T_evaluationGlobals;
+      globals:T_evaluationGlobals;
       adapters:T_messageConnector;
       collector:T_collectingOutAdapter;
       busy:boolean;
@@ -193,7 +193,6 @@ TYPE
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
-      FUNCTION runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -651,20 +650,20 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     {$endif}
     new(newPackage,create(provider,nil));
     adapters.clear;
-    evaluationContext.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
+    globals.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
     new(newLocalIdInfos,create);
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - load');
     {$endif}
-    newPackage^.load(lu_forCodeAssistance,evaluationContext,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
+    newPackage^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
     enterCriticalSection(caData.cs);
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - copy package');
     {$endif}
     if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
     if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
-    evaluationContext.primaryContext.messages.escalateErrors;
-    caData.packageIsValid:=not(evaluationContext.primaryContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
+    globals.primaryContext.messages.escalateErrors;
+    caData.packageIsValid:=not(globals.primaryContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
     caData.currentlyProcessing:=false;
     caData.package^.updateLists(caData.userRules);
     updateErrors;
@@ -687,7 +686,7 @@ CONSTRUCTOR T_sandbox.create;
     plotSystem.create(nil);
     adapters.addOutAdapter(@plotSystem,false);
     {$endif}
-    evaluationContext.create(@adapters);
+    globals.create(@adapters);
     package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
     busy:=false;
   end;
@@ -696,7 +695,7 @@ DESTRUCTOR T_sandbox.destroy;
   begin
     enterCriticalSection(cs);
     package.destroy;
-    evaluationContext.destroy;
+    globals.destroy;
     adapters.destroy;
     collector.destroy;
     {$ifdef fullVersion}
@@ -713,10 +712,10 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
-    if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
-    package.load(lu_forDirectExecution,evaluationContext,C_EMPTY_STRING_ARRAY);
-    evaluationContext.afterEvaluation;
+    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+    if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
+    package.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
+    globals.afterEvaluation;
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
@@ -727,9 +726,9 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
-    evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
-    packageToInspect.load(lu_forCodeAssistance,evaluationContext,C_EMPTY_STRING_ARRAY);
-    evaluationContext.afterEvaluation;
+    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+    packageToInspect.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY);
+    globals.afterEvaluation;
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
@@ -750,56 +749,22 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
     //one-way-link to propagate stop-signal:
-    callerContext^.messages.addChild(@evaluationContext.primaryContext.messages);
+    callerContext^.messages.addChild(@globals.primaryContext.messages);
     //filtered link for messages
     if connectLevel>0 then c:=adapters.connectToOther(callerContext^.messages.globalMessages,connectLevel>=1,connectLevel>=2,connectLevel>=3);
-    if enforceDeterminism then evaluationContext.prng.resetSeed(0);
+    if enforceDeterminism then globals.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
-      evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
-      package.load(lu_forCallingMain,evaluationContext,mainParameters);
-      evaluationContext.afterEvaluation;
+      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
+      package.load(lu_forCallingMain,globals,mainParameters);
+      globals.afterEvaluation;
     finally
       result:=messagesToLiteralForSandbox(collector.storedMessages,C_textMessages);
       if c<>nil then callerContext^.messages.globalMessages^.removeOutAdapter(c);
-      evaluationContext.afterEvaluation;
-      evaluationContext.primaryContext.finalizeTaskAndDetachFromParent;
+      globals.afterEvaluation;
+      globals.primaryContext.finalizeTaskAndDetachFromParent;
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
-  end;
-
-FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
-  VAR toStringRule:P_rule;
-      toReduce,dummy:P_token;
-      parameters:P_listLiteral;
-      stringOut:P_literal=nil;
-  begin
-    if inPack^.packageRules .containsKey('toString',toStringRule)
-    or inPack^.importedRules.containsKey('toString',toStringRule)
-    then begin
-      adapters.clear;
-      {$ifdef fullVersion}
-      plotSystem.resetOnEvaluationStart(true);
-      {$endif}
-      evaluationContext.resetForEvaluation({$ifdef fullVersion}inPack,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
-      evaluationContext.primaryContext.setAllowedSideEffectsReturningPrevious([]);
-      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
-      if toStringRule^.replaces(tt_localUserRule,packageTokenLocation(inPack),parameters,toReduce,dummy,@evaluationContext)
-      then stringOut:=evaluationContext.primaryContext.reduceToLiteral(toReduce).literal;
-      disposeLiteral(parameters);
-    end;
-
-    if stringOut=nil then begin
-      if (L^.literalType=lt_string) and not(escape)
-      then result:=P_stringLiteral(L)^.value
-      else result:=L^.toString();
-    end else begin
-      if stringOut^.literalType=lt_string
-      then result:=P_stringLiteral(stringOut)^.value
-      else result:=stringOut^.toString();
-      disposeLiteral(stringOut);
-    end;
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
 {$ifdef fullVersion}
@@ -1593,9 +1558,31 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     if isMain then context.getGlobals^.stopWorkers;
   end;
 
-FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
+FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string;
+  VAR toStringRule:P_rule;
+      toReduce,dummy:P_token;
+      parameters:P_listLiteral;
+      stringOut:P_literal=nil;
   begin
-    result:=sandbox^.runToString(L,@self,forOutput);
+    if packageRules .containsKey('toString',toStringRule)
+    or importedRules.containsKey('toString',toStringRule)
+    then begin
+      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
+      if toStringRule^.replaces(tt_localUserRule,location,parameters,toReduce,dummy,context)
+      then stringOut:=P_threadContext(context)^.reduceToLiteral(toReduce).literal;
+      disposeLiteral(parameters);
+    end;
+
+    if stringOut=nil then begin
+      if (L^.literalType=lt_string) and not(forOutput)
+      then result:=P_stringLiteral(L)^.value
+      else result:=L^.toString();
+    end else begin
+      if stringOut^.literalType=lt_string
+      then result:=P_stringLiteral(stringOut)^.value
+      else result:=stringOut^.toString();
+      disposeLiteral(stringOut);
+    end;
   end;
 
 FUNCTION T_package.getTypeMap:T_typeMap;

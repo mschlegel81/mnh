@@ -22,7 +22,7 @@ TYPE
     realFmt,strFmt:string;
     lengthPar1,lengthPar2:longint;
     CONSTRUCTOR create(CONST formatString:ansistring);
-    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST package:P_abstractPackage);
+    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_threadContext);
     DESTRUCTOR destroy;
   end;
 
@@ -126,7 +126,7 @@ CONSTRUCTOR T_format.create(CONST formatString: ansistring);
     end;
   end;
 
-PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST package:P_abstractPackage);
+PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST location:T_tokenLocation; CONST context:P_threadContext);
   FUNCTION pad(CONST s:string; CONST numberFormat:boolean):string;
     VAR leadingMinus:byte=0;
     begin
@@ -150,7 +150,7 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST pac
       fmtCat_decimal: if l^.literalType in [lt_smallint,lt_bigint] then begin txt+=pad(P_abstractIntLiteral(l)^.toString   ,true); exit; end;
       fmtCat_hex    : if l^.literalType in [lt_smallint,lt_bigint] then begin txt+=pad(P_abstractIntLiteral(l)^.toHexString,true); exit; end;
     end;
-    txt+=sysutils.format(strFmt,[package^.literalToString(L)]);
+    txt+=sysutils.format(strFmt,[P_abstractPackage(location.package)^.literalToString(L,location,context)]);
   end;
 
 DESTRUCTOR T_format.destroy;
@@ -324,7 +324,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
-            then formats[i].formatAppend(result,p.value[k],P_abstractPackage(tokenLocation.package))
+            then formats[i].formatAppend(result,p.value[k],tokenLocation,@context)
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];

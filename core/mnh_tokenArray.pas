@@ -39,7 +39,7 @@ TYPE
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
-      FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -1009,7 +1009,7 @@ PROCEDURE T_abstractPackage.logReady(CONST stateHashAtLoad:T_hashInt); begin rea
 FUNCTION T_abstractPackage.getId: T_idString;                          begin result:=codeProvider^.id;                           end;
 FUNCTION T_abstractPackage.getPath: ansistring;                        begin result:=codeProvider^.getPath;                      end;
 
-FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
+FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer;  CONST forOutput:boolean=false):string;
   begin
     if not(forOutput) and (L^.literalType=lt_string)
     then result:=P_stringLiteral(L)^.value
