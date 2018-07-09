@@ -5,7 +5,8 @@ USES sysutils,math,
      mnh_basicTypes,mnh_constants,
      mnh_fileWrappers,
      mnh_litVar,
-     mnh_funcs,mnh_funcs_mnh,
+     mnh_funcs,
+     mnh_funcs_mnh,
      tokenStack,
      {$ifdef fullVersion}
      mnh_html,
@@ -38,7 +39,7 @@ TYPE
       PROPERTY getCodeProvider:P_codeProvider read codeProvider;
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
-      FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -54,6 +55,13 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       PROCEDURE resolveId(VAR token:T_token; CONST adaptersOrNil:P_threadLocalMessages{$ifdef fullVersion};CONST markAsUsed:boolean=true{$endif}); virtual;
+  end;
+
+  P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
+  T_mnhSystemPseudoPackage=object(T_abstractPackage)
+    CONSTRUCTOR create;
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION getPath:ansistring; virtual;
   end;
 
   T_enhancedStatement=record
@@ -132,6 +140,7 @@ TYPE
 PROCEDURE preprocessStatement(CONST token:P_token; VAR threadLocalMessages: T_threadLocalMessages{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR threadLocalMessages:T_threadLocalMessages);
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
+    MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
 IMPLEMENTATION
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR threadLocalMessages:T_threadLocalMessages);
   VAR t:P_token;
@@ -184,6 +193,21 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; VAR th
         end;
       t:=t^.next;
     end;
+  end;
+
+CONSTRUCTOR T_mnhSystemPseudoPackage.create;
+  begin
+    inherited create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
+  end;
+
+FUNCTION T_mnhSystemPseudoPackage.getId: T_idString;
+  begin
+    result:='[MNH]';
+  end;
+
+FUNCTION T_mnhSystemPseudoPackage.getPath: ansistring;
+  begin
+    result:='[MNH]';
   end;
 
 {$ifdef fullVersion}
@@ -985,7 +1009,7 @@ PROCEDURE T_abstractPackage.logReady(CONST stateHashAtLoad:T_hashInt); begin rea
 FUNCTION T_abstractPackage.getId: T_idString;                          begin result:=codeProvider^.id;                           end;
 FUNCTION T_abstractPackage.getPath: ansistring;                        begin result:=codeProvider^.getPath;                      end;
 
-FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
+FUNCTION T_abstractPackage.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer;  CONST forOutput:boolean=false):string;
   begin
     if not(forOutput) and (L^.literalType=lt_string)
     then result:=P_stringLiteral(L)^.value
@@ -1030,6 +1054,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
 
 INITIALIZATION
   BLANK_ABSTRACT_PACKAGE.create(newVirtualFileCodeProvider('',C_EMPTY_STRING_ARRAY));
+  MNH_PSEUDO_PACKAGE.create();
   {$ifdef fullVersion}
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   {$endif}
@@ -1037,5 +1062,6 @@ INITIALIZATION
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tokenArray');{$endif}
   BLANK_ABSTRACT_PACKAGE.destroy;
+  MNH_PSEUDO_PACKAGE.destroy;
 
 end.

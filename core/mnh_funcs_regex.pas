@@ -8,23 +8,67 @@ USES sysutils,Classes,
      mnh_out_adapters,
      mnh_litVar,
      mnh_funcs,
-     mnh_contexts;
+     mnh_contexts, mnh_tokens;
 
 IMPLEMENTATION
 {$i mnh_func_defines.inc}
 TYPE T_triplet=record
        x,y,z:ansistring;
      end;
-     T_regexMap=specialize G_stringKeyMap<TRegExpr>;
-VAR regexCache:T_regexMap;
-PROCEDURE disposeRegex(VAR r:TRegExpr); begin r.free; end;
+     T_regexMapEntry=record
+       entryCS:TRTLCriticalSection;
+       temporary:boolean;
+       RegExpr:TRegExpr;
+     end;
 
-FUNCTION regexForExpression(CONST expression:ansistring):TRegExpr;
+     T_regexMap=specialize G_stringKeyMap<T_regexMapEntry>;
+VAR regexCache:T_regexMap;
+    regexCacheCs:TRTLCriticalSection;
+PROCEDURE disposeRegex(VAR r:T_regexMapEntry);
   begin
-    if not(regexCache.containsKey(expression,result)) then begin
-      result:=TRegExpr.create(expression);
+    enterCriticalSection(r.entryCS);
+    r.RegExpr.free;
+    leaveCriticalSection(r.entryCS);
+    doneCriticalSection(r.entryCS);
+  end;
+
+PROCEDURE hardDisposeRegex(VAR r:T_regexMapEntry);
+  begin
+    r.RegExpr.free;
+    doneCriticalSection(r.entryCS);
+  end;
+
+FUNCTION regexForExpression(CONST expression:ansistring):T_regexMapEntry;
+  begin
+    enterCriticalSection(regexCacheCs);
+    if regexCache.containsKey(expression,result) then begin
+      //contained in map:
+      if (tryEnterCriticalsection(result.entryCS)<>0) then begin
+        leaveCriticalSection(regexCacheCs);
+        exit(result);
+      end;
+      //contained in map but not accessible
+      result.temporary:=true;
+      result.RegExpr:=TRegExpr.create(expression);
+      result.RegExpr.expression:=expression;
+    end else begin
+      //not contained in map:
+      initCriticalSection(result.entryCS);
+      enterCriticalSection(result.entryCS);
+      result.temporary:=false;
+      result.RegExpr:=TRegExpr.create(expression);
+      result.RegExpr.expression:=expression;
       regexCache.put(expression,result);
-      result.expression:=expression;
+    end;
+    leaveCriticalSection(regexCacheCs);
+  end;
+
+PROCEDURE doneRegex(VAR entry:T_regexMapEntry); inline;
+  begin
+    if entry.temporary
+    then entry.RegExpr.free
+    else begin
+      leaveCriticalSection(entry.entryCS);
     end;
   end;
 
@@ -66,7 +110,7 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   end;
 
 FUNCTION regexValidate_imp intFuncSignature;
-  VAR regex:TRegExpr;
+  VAR regex:T_regexMapEntry;
       message:string='';
       feedbackMethod:P_expressionLiteral=nil;
       feedbackInput :P_stringLiteral;
@@ -77,10 +121,11 @@ FUNCTION regexValidate_imp intFuncSignature;
     end else exit(nil);
     regex:=regexForExpression(str0^.value);
     try
-      regex.Exec(str0^.value+str0^.value);
+      regex.RegExpr.Exec(str0^.value+str0^.value);
     except
       on e:Exception do begin message:=e.message; end;
     end;
+    doneRegex(regex);
     if feedbackMethod=nil then exit(newBoolLiteral(message=''));
     if message<>'' then begin
       feedbackInput:=newStringLiteral(message);
@@ -93,17 +138,18 @@ FUNCTION regexValidate_imp intFuncSignature;
 
 FUNCTION regexMatch_imp intFuncSignature;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
-    VAR regex:TRegExpr;
+    VAR regex:T_regexMapEntry;
     begin
       regex:=regexForExpression(trip.x);
-      regex.inputString:=trip.y;
+      regex.RegExpr.inputString:=trip.y;
       try
-        result:=regex.Exec(trip.y);
+        result:=regex.RegExpr.Exec(trip.y);
       except
         on e:Exception do begin
           context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
+      doneRegex(regex);
     end;
   VAR i,i1:longint;
   begin
@@ -122,26 +168,27 @@ FUNCTION regexMatch_imp intFuncSignature;
 FUNCTION regexMatchComposite_imp intFuncSignature;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
-        regex:TRegExpr;
+        regex:T_regexMapEntry;
     begin
       regex:=regexForExpression(trip.x);
-      regex.inputString:=trip.y;
+      regex.RegExpr.inputString:=trip.y;
       result:=newListLiteral;
       try
-        if regex.Exec(trip.y) then repeat
-          for i:=0 to regex.SubExprMatchCount do begin
+        if regex.RegExpr.Exec(trip.y) then repeat
+          for i:=0 to regex.RegExpr.SubExprMatchCount do begin
             result^.append(
               newListLiteral^.
-              appendString(regex.match   [i])^.
-              appendInt   (regex.MatchPos[i])^.
-              appendInt   (regex.MatchLen[i]),false);
+              appendString(regex.RegExpr.match   [i])^.
+              appendInt   (regex.RegExpr.MatchPos[i])^.
+              appendInt   (regex.RegExpr.MatchLen[i]),false);
           end;
-        until not(regex.ExecNext);
+        until not(regex.RegExpr.ExecNext);
       except
         on e:Exception do begin
           context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
+      doneRegex(regex);
     end;
 
   VAR i,i1:longint;
@@ -162,17 +209,18 @@ FUNCTION regexSplit_imp intFuncSignature;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
     VAR i:longint;
         pieces : TStrings;
-        regex:TRegExpr;
+        regex:T_regexMapEntry;
     begin
       regex:=regexForExpression(trip.x);
       pieces:=TStringList.create;
       try
-        regex.split(trip.y,pieces);
+        regex.RegExpr.split(trip.y,pieces);
       except
         on e:Exception do begin
           context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
+      doneRegex(regex);
       result:=newListLiteral;
       for i:=0 to pieces.count-1 do result^.appendString(pieces[i]);
       pieces.free;
@@ -194,16 +242,17 @@ FUNCTION regexSplit_imp intFuncSignature;
 
 FUNCTION regexReplace_imp intFuncSignature;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
-    VAR regex:TRegExpr;
+    VAR regex:T_regexMapEntry;
     begin
       regex:=regexForExpression(trip.x);
       try
-        result:=regex.Replace(trip.y,trip.z,false);
+        result:=regex.RegExpr.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
           context.messages.raiseError(e.message,tokenLocation,mt_el4_systemError);
         end;
       end;
+      doneRegex(regex);
     end;
 
   VAR i,i1:longint;
@@ -227,8 +276,11 @@ INITIALIZATION
   mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,ak_binary ,'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,ak_binary ,'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK, true);
   mnh_funcs.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary,'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
+  initCriticalSection(regexCacheCs);
   regexCache.create(@disposeRegex)
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_regex');{$endif}
+  regexCache.overrideDisposer(@hardDisposeRegex);
   regexCache.destroy;
+  doneCriticalSection(regexCacheCs);
 end.

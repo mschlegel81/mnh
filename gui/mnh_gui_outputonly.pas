@@ -75,7 +75,6 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
     mnh_evalThread.initUnit(@guiAdapters);
-    setupCallbacks;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     outputEdit.highlighter:=outputHighlighter;

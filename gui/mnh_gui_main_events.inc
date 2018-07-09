@@ -145,8 +145,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     initIpcServer(self);
     //Initialize other units
-    setupCallbacks;
-
     initGuiOutAdapters(MnhForm,outputEdit,true);
     quick.adapters:=createSecondaryAdapters(QuickOutputEdit);
     {$ifdef debugMode}
@@ -412,7 +410,7 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
     if quick.task.processing then exit;
     updateWordWrap;
     if runnerModel.canRun then runnerModel.rerun(miProfile.checked)
-    else if runEvaluator.context.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
+    else if runEvaluator.globals.isPaused then runnerModel.doDebuggerAction(runUntilBreakpoint)
                                           else runnerModel.doDebuggerAction(breakSoonest);
     currentSnapshot:=nil;
   end;

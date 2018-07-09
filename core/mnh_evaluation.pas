@@ -1,5 +1,9 @@
 UNIT mnh_evaluation;
 INTERFACE
+{$ifndef debugMode}
+  {$define useTryCatchBlocks}
+{$endif}
+
 USES sysutils,
      myGenerics,
      {$ifndef debugMode}
@@ -221,9 +225,9 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         if t^.next=nil then begin
           case t^.tokType of
             tt_comparatorEq..tt_operatorConcatAlt: aggregator:=newAggregator(t^.tokType);
-            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            tt_aggregatorExpressionLiteral: aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
             tt_literal: if isPureAggregator and (P_literal(t^.data)^.literalType=lt_expression)
-              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context)
+              then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data))
               else if isPureAggregator then context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
             tt_intrinsicRule:
               if (P_intFuncCallback(t^.data)=BUILTIN_MIN)      then aggregator:=newMinAggregator      else
@@ -237,7 +241,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           if t^.tokType=tt_expBraceOpen then begin
             digestInlineExpression(t,context);
             if context.messages.continueEvaluation
-            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data),@context);
+            then aggregator:=newCustomAggregator(P_expressionLiteral(t^.data));
           end else context.messages.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
         end;
         result:=true;
@@ -401,14 +405,14 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         try
         {$endif}
           if not(P_rule(first^.data)^.replaces(first^.tokType,first^.location,parameterListLiteral,firstReplace,lastReplace,@context)) then begin
             context.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
             exit;
           end;
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         except
           on e:Exception do begin
             context.messages.raiseError('Severe error trying to apply user defined rule '+P_rule(first^.data)^.getId+C_lineBreakChar+e.message,first^.location);
@@ -429,11 +433,18 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           lastReplace:=firstReplace;
         end else context.messages.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
       end else if (first^.tokType=tt_intrinsicRule) then begin
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         try
         {$endif}
+        {$ifdef fullVersion}
+        if tco_profiling in context.threadOptions then begin
+          context.callStackPush(first^.location,getIntrinsicRuleAsExpression(first^.data),nil);
+          newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+          context.callStackPop(nil);
+        end else
+        {$endif}
         newLiteral:=P_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
-        {$ifndef debugMode}
+        {$ifdef useTryCatchBlocks}
         except
           on e:Exception do begin
             context.messages.raiseError('Severe error trying to apply builtin rule '+first^.txt+C_lineBreakChar+e.message,first^.location);
@@ -779,7 +790,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     end;
 
   PROCEDURE resolvePseudoFuncPointer;
-    VAR exRule:P_builtinExpression;
+    VAR exRule:P_expressionLiteral;
         ruleToken:P_token;
         temp:P_token;
         location:T_tokenLocation;
@@ -794,7 +805,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         ruleToken^.tokType:=tt_literal;
         first:=ruleToken;
       end else begin
-        new(exRule,create(P_intFuncCallback(ruleToken^.data),ruleToken^.location));
+        exRule:=getIntrinsicRuleAsExpression(ruleToken^.data);
         disposeToken(ruleToken);
         first:=newToken(location,'',tt_literal,exRule); // {f@$params}
       end;
@@ -905,7 +916,7 @@ end}
     result:=rr_ok;
     inc(context.callDepth);
     stack.create;
-    {$ifndef debugMode}try{$endif}
+    {$ifdef useTryCatchBlocks}try{$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
@@ -1202,7 +1213,7 @@ end}
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
               // || aggregator ( + )
               first^.tokType:=tt_aggregatorExpressionLiteral;
-              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next);
+              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next,context);
               first^.next:=disposeToken(first^.next); //drop (
               first^.next:=disposeToken(first^.next); //drop +
               first^.next:=disposeToken(first^.next); //drop )
@@ -1247,7 +1258,7 @@ end}
         tt_pseudoFuncPointer: case cTokType[1] of
           tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule: resolvePseudoFuncPointer;
           low(intFuncForOperator)..high(intFuncForOperator): begin
-            first^.data:=createPrimitiveAggregatorLiteral(first^.next);
+            first^.data:=createPrimitiveAggregatorLiteral(first^.next,context);
             first^.tokType:=tt_literal;
             first^.next:=disposeToken(first^.next);
             didSubstitution:=true;
@@ -1264,7 +1275,7 @@ end}
         end;
       end;
     until not(didSubstitution) or not(context.messages.continueEvaluation);
-    {$ifndef debugMode}
+    {$ifdef useTryCatchBlocks}
     except
       on e:Exception do begin
         context.messages.raiseError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(context.callDepth)+C_lineBreakChar+e.message,errorLocation(first),mt_el4_systemError);

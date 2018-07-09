@@ -55,7 +55,7 @@ TYPE
     {$endif}
     DESTRUCTOR destroy;
     {Loads the specified package using the appropriate T_packageLoadUsecase}
-    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationGlobals; CONST forCodeAssistance:boolean);
+    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST forCodeAssistance:boolean);
   end;
 
   T_packageList=array of P_package;
@@ -78,7 +78,7 @@ TYPE
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
 
-      PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR context:T_evaluationGlobals);
+      PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
@@ -86,11 +86,11 @@ TYPE
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_threadLocalMessages; VAR metaData:T_ruleMetaData):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
-      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
+      PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
-      PROCEDURE load(usecase:T_packageLoadUsecase; VAR context:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
+      PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       FUNCTION getHelpOnMain:ansistring;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
@@ -98,7 +98,7 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
-      FUNCTION literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -177,7 +177,7 @@ TYPE
   P_sandbox=^T_sandbox;
   T_sandbox=object
     private
-      evaluationContext:T_evaluationGlobals;
+      globals:T_evaluationGlobals;
       adapters:T_messageConnector;
       collector:T_collectingOutAdapter;
       busy:boolean;
@@ -193,7 +193,6 @@ TYPE
       FUNCTION execute(CONST input:T_arrayOfString; CONST randomSeed:dword=4294967295):T_storedMessages;
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST mainParameters:T_arrayOfString; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_threadContext; CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
-      FUNCTION runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
@@ -315,14 +314,14 @@ FUNCTION postEvalThread(p:pointer):ptrint;
       enterCriticalSection(cs);
       currentlyProcessing:=true;
       evaluationContext.create(connector);
-      evaluationContext.setAllowedSideEffectsReturningPrevious([
+      evaluationContext.primaryContext.setAllowedSideEffectsReturningPrevious([
                 se_output,
                 se_sleep,
                 se_detaching,
                 se_readPackageState,
                 se_readFile]);
-      currentThreadLocals:=@evaluationContext.messages;
-      while (sleepCount<100) and evaluationContext.messages.continueEvaluation do begin
+      currentThreadLocals:=@evaluationContext.primaryContext.messages;
+      while (sleepCount<100) and evaluationContext.primaryContext.messages.continueEvaluation do begin
         while inputChanged do begin
           sleepCount:=0;
           leaveCriticalSection(cs);
@@ -651,20 +650,20 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     {$endif}
     new(newPackage,create(provider,nil));
     adapters.clear;
-    evaluationContext.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
+    globals.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
     new(newLocalIdInfos,create);
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - load');
     {$endif}
-    newPackage^.load(lu_forCodeAssistance,evaluationContext,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
+    newPackage^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
     enterCriticalSection(caData.cs);
     {$ifdef debugMode}
     writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - copy package');
     {$endif}
     if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
     if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
-    evaluationContext.messages.escalateErrors;
-    caData.packageIsValid:=not(evaluationContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
+    globals.primaryContext.messages.escalateErrors;
+    caData.packageIsValid:=not(globals.primaryContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
     caData.currentlyProcessing:=false;
     caData.package^.updateLists(caData.userRules);
     updateErrors;
@@ -687,7 +686,7 @@ CONSTRUCTOR T_sandbox.create;
     plotSystem.create(nil);
     adapters.addOutAdapter(@plotSystem,false);
     {$endif}
-    evaluationContext.create(@adapters);
+    globals.create(@adapters);
     package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
     busy:=false;
   end;
@@ -696,7 +695,7 @@ DESTRUCTOR T_sandbox.destroy;
   begin
     enterCriticalSection(cs);
     package.destroy;
-    evaluationContext.destroy;
+    globals.destroy;
     adapters.destroy;
     collector.destroy;
     {$ifdef fullVersion}
@@ -713,10 +712,10 @@ FUNCTION T_sandbox.execute(CONST input: T_arrayOfString; CONST randomSeed: dword
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
     package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-    evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
-    if randomSeed<>4294967295 then evaluationContext.prng.resetSeed(randomSeed);
-    package.load(lu_forDirectExecution,evaluationContext,C_EMPTY_STRING_ARRAY);
-    evaluationContext.afterEvaluation;
+    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+    if randomSeed<>4294967295 then globals.prng.resetSeed(randomSeed);
+    package.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
+    globals.afterEvaluation;
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
@@ -727,9 +726,9 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package):T_store
     {$ifdef fullVersion}
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
-    evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
-    packageToInspect.load(lu_forCodeAssistance,evaluationContext,C_EMPTY_STRING_ARRAY);
-    evaluationContext.afterEvaluation;
+    globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
+    packageToInspect.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY);
+    globals.afterEvaluation;
     result:=collector.storedMessages;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
@@ -750,56 +749,22 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST mainParameters:T_a
     plotSystem.resetOnEvaluationStart(true);
     {$endif}
     //one-way-link to propagate stop-signal:
-    callerContext^.messages.addChild(@evaluationContext.messages);
+    callerContext^.messages.addChild(@globals.primaryContext.messages);
     //filtered link for messages
     if connectLevel>0 then c:=adapters.connectToOther(callerContext^.messages.globalMessages,connectLevel>=1,connectLevel>=2,connectLevel>=3);
-    if enforceDeterminism then evaluationContext.prng.resetSeed(0);
+    if enforceDeterminism then globals.prng.resetSeed(0);
     package.replaceCodeProvider(newFileCodeProvider(filenameOrId));
     try
-      evaluationContext.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
-      package.load(lu_forCallingMain,evaluationContext,mainParameters);
-      evaluationContext.afterEvaluation;
+      globals.resetForEvaluation({$ifdef fullVersion}@package,{$endif}ect_silent,mainParameters);
+      package.load(lu_forCallingMain,globals,mainParameters);
+      globals.afterEvaluation;
     finally
       result:=messagesToLiteralForSandbox(collector.storedMessages,C_textMessages);
       if c<>nil then callerContext^.messages.globalMessages^.removeOutAdapter(c);
-      evaluationContext.afterEvaluation;
-      evaluationContext.finalizeTaskAndDetachFromParent;
+      globals.afterEvaluation;
+      globals.primaryContext.finalizeTaskAndDetachFromParent;
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
     end;
-  end;
-
-FUNCTION T_sandbox.runToString(CONST L:P_literal; CONST inPack:P_package; CONST escape:boolean):string;
-  VAR toStringRule:P_rule;
-      toReduce,dummy:P_token;
-      parameters:P_listLiteral;
-      stringOut:P_literal=nil;
-  begin
-    if inPack^.packageRules .containsKey('toString',toStringRule)
-    or inPack^.importedRules.containsKey('toString',toStringRule)
-    then begin
-      adapters.clear;
-      {$ifdef fullVersion}
-      plotSystem.resetOnEvaluationStart(true);
-      {$endif}
-      evaluationContext.resetForEvaluation({$ifdef fullVersion}inPack,{$endif}ect_silent,C_EMPTY_STRING_ARRAY);
-      evaluationContext.setAllowedSideEffectsReturningPrevious([]);
-      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
-      if toStringRule^.replaces(tt_localUserRule,packageTokenLocation(inPack),parameters,toReduce,dummy,@evaluationContext)
-      then stringOut:=evaluationContext.reduceToLiteral(toReduce).literal;
-      disposeLiteral(parameters);
-    end;
-
-    if stringOut=nil then begin
-      if (L^.literalType=lt_string) and not(escape)
-      then result:=P_stringLiteral(L)^.value
-      else result:=L^.toString();
-    end else begin
-      if stringOut^.literalType=lt_string
-      then result:=P_stringLiteral(stringOut)^.value
-      else result:=stringOut^.toString();
-      disposeLiteral(stringOut);
-    end;
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
 {$ifdef fullVersion}
@@ -851,7 +816,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
 {$define include_implementation}
 {$include mnh_funcs.inc}
 
-PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationGlobals; CONST forCodeAssistance:boolean);
+PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST forCodeAssistance:boolean);
   CONST usecase:array[false..true] of T_packageLoadUsecase = (lu_forImport,lu_forCodeAssistance);
   VAR i:longint;
   begin
@@ -863,18 +828,18 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
             if secondaryPackages[i]^.readyForUsecase<>usecase[forCodeAssistance] then
-            secondaryPackages[i]^.load(usecase[forCodeAssistance],context,C_EMPTY_STRING_ARRAY);
+            secondaryPackages[i]^.load(usecase[forCodeAssistance],globals,C_EMPTY_STRING_ARRAY);
             pack:=secondaryPackages[i];
             exit;
           end else begin
-            context.messages.raiseError('Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
+            globals.primaryContext.messages.raiseError('Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
             exit;
           end;
         end;
       new(pack,create(newFileCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
-      pack^.load(usecase[forCodeAssistance],context,C_EMPTY_STRING_ARRAY);
+      pack^.load(usecase[forCodeAssistance],globals,C_EMPTY_STRING_ARRAY);
     end;
   end;
 
@@ -924,7 +889,7 @@ DESTRUCTOR T_packageReference.destroy;
     pack:=nil;
   end;
 
-PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
+PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
   VAR extendsLevel:byte=0;
       profile:boolean=false;
 
@@ -941,7 +906,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         stmt:T_enhancedStatement;
     begin
       if statement.firstToken^.next=nil then begin
-        context.messages.raiseError('Empty include clause',statement.firstToken^.location);
+        globals.primaryContext.messages.raiseError('Empty include clause',statement.firstToken^.location);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
@@ -955,18 +920,18 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       end;
       {$endif}
       if extendsLevel>=32 then begin
-        context.messages.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
+        globals.primaryContext.messages.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
       end;
       first:=disposeToken(first);
       if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
-        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,@context.messages);
+        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,@globals.primaryContext.messages);
       end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
         newId:=P_stringLiteral(first^.data)^.value;
-        helperUse.createWithSpecifiedPath(newId,first^.location,@context.messages);
+        helperUse.createWithSpecifiedPath(newId,first^.location,@globals.primaryContext.messages);
       end else begin
-        context.messages.raiseError('Invalid include clause ',locationForErrorFeedback);
+        globals.primaryContext.messages.raiseError('Invalid include clause ',locationForErrorFeedback);
         exit;
       end;
       cascadeDisposeToken(first);
@@ -976,11 +941,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
       helperUse.destroy;
       lexer.create(importWrapper,@self);
-      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
       inc(extendsLevel);
-      while (context.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
-        interpret(stmt,usecase,context);
-        stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
+      while (globals.primaryContext.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
+        interpret(stmt,usecase,globals);
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
       end;
       dec(extendsLevel);
       lexer.destroy;
@@ -1001,13 +966,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           dummyRule:P_rule;
       begin
         {$ifdef fullVersion}
-        context.callStackPush(@self,pc_importing,pseudoCallees);
+        globals.primaryContext.callStackPushCategory(@self,pc_importing,pseudoCallees);
         {$endif}
-        if profile then context.timeBaseComponent(pc_importing);
-        for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context,usecase=lu_forCodeAssistance);
-        if profile then context.timeBaseComponent(pc_importing);
+        if profile then globals.timeBaseComponent(pc_importing);
+        for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,globals,usecase=lu_forCodeAssistance);
+        if profile then globals.timeBaseComponent(pc_importing);
         {$ifdef fullVersion}
-        context.callStackPop(nil);
+        globals.primaryContext.callStackPop(nil);
         {$endif}
         i:=0;
         while i<length(packageUses) do begin
@@ -1016,7 +981,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             setLength(packageUses,length(packageUses)-1);
           end else inc(i);
         end;
-        if context.messages.continueEvaluation then for i:=length(packageUses)-1 downto 0 do begin
+        if globals.primaryContext.messages.continueEvaluation then for i:=length(packageUses)-1 downto 0 do begin
           rulesSet:=packageUses[i].pack^.packageRules.entrySet;
           for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
             if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
@@ -1024,13 +989,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
           end;
         end;
-        for i:=0 to length(packageUses)-1 do if mergeCustomOps(packageUses[i].pack,context.messages.globalMessages)
+        for i:=0 to length(packageUses)-1 do if mergeCustomOps(packageUses[i].pack,globals.primaryContext.messages.globalMessages)
         then {$ifdef fullVersion} packageUses[i].pack^.anyCalled:=true; {$else} begin end;{$endif}
       end;
 
     begin
       if statement.firstToken^.next=nil then begin
-        context.messages.raiseError('Empty use clause',statement.firstToken^.location);
+        globals.primaryContext.messages.raiseError('Empty use clause',statement.firstToken^.location);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
@@ -1051,13 +1016,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           {$ifdef fullVersion}
           if localIdInfos<>nil then localIdInfos^.add(first^.txt,first^.location,clauseEnd,tt_use);
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
-            if not(gui_started) and (usecase<>lu_forCodeAssistance) then context.messages.logGuiNeeded;
+            if not(gui_started) and (usecase<>lu_forCodeAssistance) then globals.primaryContext.messages.logGuiNeeded;
           end else
           {$endif}
           begin
             j:=length(packageUses);
             setLength(packageUses,j+1);
-            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,@context.messages);
+            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,@globals.primaryContext.messages);
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
           {$ifdef fullVersion}
@@ -1066,16 +1031,16 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
           setLength(packageUses,j+1);
-          packageUses[j].createWithSpecifiedPath(newId,first^.location,@context.messages);
+          packageUses[j].createWithSpecifiedPath(newId,first^.location,@globals.primaryContext.messages);
         end else if first^.tokType<>tt_separatorComma then
-          context.messages.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
+          globals.primaryContext.messages.raiseError('Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
         if (j>0) then for i:=0 to j-1 do
           if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
                          or (packageUses[i].id   =               packageUses[j].id)
-          then context.messages.globalMessages^.postTextMessage(mt_el2_warning,first^.location,'Duplicate import: '+newId);
+          then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el2_warning,first^.location,'Duplicate import: '+newId);
         first:=disposeToken(first);
       end;
-      if not(context.messages.continueEvaluation) then begin
+      if not(globals.primaryContext.messages.continueEvaluation) then begin
         for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
         setLength(packageUses,0);
       end;
@@ -1104,7 +1069,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     PROCEDURE addRuleToRunAfter(CONST ex:P_subruleExpression);
       begin
         if not(ex^.canApplyToNumberOfParameters(0)) then begin
-          context.messages.raiseError('Attribute //@'+EXECUTE_AFTER_ATTRIBUTE+' is only allowed for nullary functions',ex^.getLocation);
+          globals.primaryContext.messages.raiseError('Attribute //@'+EXECUTE_AFTER_ATTRIBUTE+' is only allowed for nullary functions',ex^.getLocation);
           exit;
         end;
         setLength(runAfter,length(runAfter)+1);
@@ -1118,7 +1083,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       begin
         new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup^.getLocation));
         if packageRules.containsKey(castRule^.getId,otherRule) then begin
-          context.messages.raiseError(
+          globals.primaryContext.messages.raiseError(
             'Cannot declare implicit typecast rule '+castRule^.getId+C_lineBreakChar+
             'because a rule of the same name already exists '+ansistring(otherRule^.getLocation)+C_lineBreakChar+
             'Please overload the implicit typecast rule after the type definition',
@@ -1134,7 +1099,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       assignmentToken^.next:=nil;
       //plausis:
       if (ruleBody=nil) then begin
-        context.messages.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
+        globals.primaryContext.messages.raiseError('Missing function body after assignment/declaration token.',assignmentToken^.location);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
@@ -1145,7 +1110,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       evaluateBody:=evaluateBody or (modifier_mutable in ruleModifiers);
 
       if not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_customTypeRule]) then begin
-        context.messages.raiseError('Declaration does not start with an identifier.',statement.firstToken^.location);
+        globals.primaryContext.messages.raiseError('Declaration does not start with an identifier.',statement.firstToken^.location);
         cascadeDisposeToken(statement.firstToken);
         cascadeDisposeToken(ruleBody);
         exit;
@@ -1153,7 +1118,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       p:=statement.firstToken;
       while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
         if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
-          context.messages.raiseError('Declaration head contains qualified ID.',p^.location);
+          globals.primaryContext.messages.raiseError('Declaration head contains qualified ID.',p^.location);
           cascadeDisposeToken(statement.firstToken);
           cascadeDisposeToken(ruleBody);
           exit;
@@ -1164,13 +1129,13 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       ruleId:=trim(statement.firstToken^.txt);
       statement.firstToken:=disposeToken(statement.firstToken);
       if not(statement.firstToken^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
-        context.messages.raiseError('Invalid declaration head.',statement.firstToken^.location);
+        globals.primaryContext.messages.raiseError('Invalid declaration head.',statement.firstToken^.location);
         cascadeDisposeToken(statement.firstToken);
         cascadeDisposeToken(ruleBody);
         exit;
       end;
       rulePattern.create;
-      if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,context);
+      if statement.firstToken^.tokType=tt_braceOpen then rulePattern.parse(statement.firstToken,ruleDeclarationStart,globals.primaryContext);
       {$ifdef fullVersion}
       if (localIdInfos<>nil) and (ruleBody<>nil) then begin
         ruleDeclarationEnd:=ruleBody^.last^.location;
@@ -1182,25 +1147,25 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       if statement.firstToken<>nil then begin
         statement.firstToken:=disposeToken(statement.firstToken);
       end else begin
-        context.messages.raiseError('Invalid declaration.',ruleDeclarationStart);
+        globals.primaryContext.messages.raiseError('Invalid declaration.',ruleDeclarationStart);
         cascadeDisposeToken(ruleBody);
         exit;
       end;
       rulePattern.toParameterIds(ruleBody);
 
       //[marker 1]
-      if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.messages.continueEvaluation) then context.reduceExpression(ruleBody);
+      if evaluateBody and (usecase<>lu_forCodeAssistance) and (globals.primaryContext.messages.continueEvaluation) then globals.primaryContext.reduceExpression(ruleBody);
 
-      if context.messages.continueEvaluation then begin
+      if globals.primaryContext.messages.continueEvaluation then begin
         metaData.create;
         metaData.setComment(join(statement.comments,C_lineBreakChar));
-        metaData.setAttributes(statement.attributes,ruleDeclarationStart,context.messages);
-        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,context.messages,metaData);
+        metaData.setAttributes(statement.attributes,ruleDeclarationStart,globals.primaryContext.messages);
+        ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext.messages,metaData);
 
-        if (context.messages.continueEvaluation) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
-        then context.messages.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
-        if context.messages.continueEvaluation then begin
-          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,context,metaData));
+        if (globals.primaryContext.messages.continueEvaluation) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
+        then globals.primaryContext.messages.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
+        if globals.primaryContext.messages.continueEvaluation then begin
+          new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,globals.primaryContext,metaData));
           //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
           if (ruleGroup^.getRuleType in C_mutableRuleTypes)
           then begin
@@ -1214,14 +1179,14 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             {$ifdef fullVersion}
             if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
               if (modifier_private in ruleModifiers)
-              then context.messages.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules')
+              then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules')
               else ruleGroup^.setIdResolved;
             end;
             {$endif}
             dispose(subRule,destroy);
           end else begin
             if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
-            P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,context);
+            P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,globals.primaryContext);
             if P_ruleWithSubrules(ruleGroup)^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then declareTypeCastRule;
           end;
           statement.firstToken:=nil;
@@ -1241,7 +1206,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         metaData:T_ruleMetaData;
     begin
       if (getCodeProvider^.isPseudoFile) then begin
-        context.messages.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
+        globals.primaryContext.messages.raiseError('data stores require the package to be saved to a file.',statement.firstToken^.location);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
@@ -1253,16 +1218,16 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       if (statement.firstToken=nil) or not(statement.firstToken^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
          (statement.firstToken^.next<>nil) then begin
         if statement.firstToken<>nil then loc:=statement.firstToken^.location;
-        context.messages.raiseError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
+        globals.primaryContext.messages.raiseError('Invalid datastore definition: '+tokensToString(statement.firstToken),loc);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       metaData.create;
       metaData.setComment(join(statement.comments,C_lineBreakChar));
-      metaData.setAttributes(statement.attributes,statement.firstToken^.location,context.messages);
+      metaData.setAttributes(statement.attributes,statement.firstToken^.location,globals.primaryContext.messages);
       ensureRuleId(statement.firstToken^.txt,
                    ruleModifiers,
-                   statement.firstToken^.location,context.messages,metaData);
+                   statement.firstToken^.location,globals.primaryContext.messages,metaData);
     end;
 
   FUNCTION getDeclarationOrAssignmentToken: P_token;
@@ -1294,11 +1259,11 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
     end;
 
   begin
-    profile:=context.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
+    profile:=globals.primaryContext.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.firstToken=nil then exit;
-    if usecase=lu_forCodeAssistance then context.messages.clearFlagsForCodeAssistance;
+    if usecase=lu_forCodeAssistance then globals.primaryContext.messages.clearFlagsForCodeAssistance;
 
-    if (usecase<>lu_forCodeAssistance) and not(context.messages.continueEvaluation) then begin
+    if (usecase<>lu_forCodeAssistance) and not(globals.primaryContext.messages.continueEvaluation) then begin
       cascadeDisposeToken(statement.firstToken);
       exit;
     end;
@@ -1315,88 +1280,88 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
 
     assignmentToken:=getDeclarationOrAssignmentToken;
     if (assignmentToken<>nil) then begin
-      if not(se_alterPackageState in context.sideEffectWhitelist) then begin
-        context.messages.raiseError('Rule declaration is not allowed here',assignmentToken^.location);
+      if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
+        globals.primaryContext.messages.raiseError('Rule declaration is not allowed here',assignmentToken^.location);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       {$ifdef fullVersion}
-      context.callStackPush(@self,pc_declaration,pseudoCallees);
+      globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
       {$endif}
-      if profile then context.timeBaseComponent(pc_declaration);
-      if not ((assignmentToken^.next<>nil) and (usecase=lu_forCodeAssistance) or (assignmentToken^.next^.areBracketsPlausible(context.messages))) then begin
+      if profile then globals.timeBaseComponent(pc_declaration);
+      if not ((assignmentToken^.next<>nil) and (usecase=lu_forCodeAssistance) or (assignmentToken^.next^.areBracketsPlausible(globals.primaryContext.messages))) then begin
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
-      predigest(assignmentToken,@self,context.messages);
-      if context.messages.globalMessages^.isCollecting(mt_echo_declaration) then context.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
+      predigest(assignmentToken,@self,globals.primaryContext.messages);
+      if globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
       parseRule;
-      if profile then context.timeBaseComponent(pc_declaration);
+      if profile then globals.timeBaseComponent(pc_declaration);
       {$ifdef fullVersion}
-      context.callStackPop(nil);
+      globals.primaryContext.callStackPop(nil);
       {$endif}
     end else if statement.firstToken^.tokType=tt_modifier then begin
-      if not(se_alterPackageState in context.sideEffectWhitelist) then begin
-        context.messages.raiseError('Datastore declaration is not allowed here',statement.firstToken^.location);
+      if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
+        globals.primaryContext.messages.raiseError('Datastore declaration is not allowed here',statement.firstToken^.location);
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
       {$ifdef fullVersion}
-      context.callStackPush(@self,pc_declaration,pseudoCallees);
+      globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
       {$endif}
-      if profile then context.timeBaseComponent(pc_declaration);
-      if context.messages.globalMessages^.isCollecting(mt_echo_declaration) then context.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
+      if profile then globals.timeBaseComponent(pc_declaration);
+      if globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_declaration) then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_declaration,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
       parseDataStore;
-      if profile then context.timeBaseComponent(pc_declaration);
+      if profile then globals.timeBaseComponent(pc_declaration);
       {$ifdef fullVersion}
-      context.callStackPop(nil);
+      globals.primaryContext.callStackPop(nil);
       {$endif}
-    end else if context.messages.continueEvaluation then begin
+    end else if globals.primaryContext.messages.continueEvaluation then begin
       case usecase of
         lu_forDirectExecution:begin
           {$ifdef fullVersion}
-          context.callStackPush(@self,pc_interpretation,pseudoCallees);
+          globals.primaryContext.callStackPushCategory(@self,pc_interpretation,pseudoCallees);
           {$endif}
-          if profile then context.timeBaseComponent(pc_interpretation);
-          if not ((statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.messages)) then begin
+          if profile then globals.timeBaseComponent(pc_interpretation);
+          if not ((statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(globals.primaryContext.messages)) then begin
             cascadeDisposeToken(statement.firstToken);
             exit;
           end;
-          predigest(statement.firstToken,@self,context.messages);
-          if context.messages.globalMessages^.isCollecting(mt_echo_input) then context.messages.globalMessages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
-          context.reduceExpression(statement.firstToken);
-          if profile then context.timeBaseComponent(pc_interpretation);
+          predigest(statement.firstToken,@self,globals.primaryContext.messages);
+          if globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_input) then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_input,C_nilTokenLocation,tokensToString(statement.firstToken)+';');
+          globals.primaryContext.reduceExpression(statement.firstToken);
+          if profile then globals.timeBaseComponent(pc_interpretation);
           {$ifdef fullVersion}
-          context.callStackPop(nil);
+          globals.primaryContext.callStackPop(nil);
           {$endif}
-          if (statement.firstToken<>nil) and context.messages.globalMessages^.isCollecting(mt_echo_output) then begin
+          if (statement.firstToken<>nil) and globals.primaryContext.messages.globalMessages^.isCollecting(mt_echo_output) then begin
             {$ifdef fullVersion}
             if (statement.firstToken<>nil) and
                (statement.firstToken^.next=nil) and
                (statement.firstToken^.tokType=tt_literal) and
-               (context.messages.globalMessages^.preferredEchoLineLength>10) then begin
-              context.messages.globalMessages^.postTextMessage(mt_echo_output,C_nilTokenLocation,
+               (globals.primaryContext.messages.globalMessages^.preferredEchoLineLength>10) then begin
+              globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_output,C_nilTokenLocation,
                 serializeToStringList(P_literal(statement.firstToken^.data),
                                       statement.firstToken^.location,
                                       nil,
-                                      context.messages.globalMessages^.preferredEchoLineLength));
+                                      globals.primaryContext.messages.globalMessages^.preferredEchoLineLength));
             end else {$endif}
-              context.messages.globalMessages^.postTextMessage(mt_echo_output,C_nilTokenLocation,tokensToString(statement.firstToken));
+              globals.primaryContext.messages.globalMessages^.postTextMessage(mt_echo_output,C_nilTokenLocation,tokensToString(statement.firstToken));
           end;
         end;
-        lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(context.messages) then begin
-          predigest(statement.firstToken,@self,context.messages);
-          resolveBuiltinIDs(statement.firstToken,@context.messages);
+        lu_forCodeAssistance: if (statement.firstToken<>nil) and statement.firstToken^.areBracketsPlausible(globals.primaryContext.messages) then begin
+          predigest(statement.firstToken,@self,globals.primaryContext.messages);
+          resolveBuiltinIDs(statement.firstToken,@globals.primaryContext.messages);
         end
-        else context.messages.globalMessages^.postTextMessage(mt_el1_note,statement.firstToken^.location,'Skipping expression '+tokensToString(statement.firstToken,50));
+        else globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el1_note,statement.firstToken^.location,'Skipping expression '+tokensToString(statement.firstToken,50));
       end;
     end;
     if statement.firstToken<>nil then cascadeDisposeToken(statement.firstToken);
     statement.firstToken:=nil;
-    if usecase=lu_forCodeAssistance then context.messages.clearFlagsForCodeAssistance;
+    if usecase=lu_forCodeAssistance then globals.primaryContext.messages.clearFlagsForCodeAssistance;
   end;
 
-PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
+PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos{$endif});
   VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
@@ -1406,39 +1371,39 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
         i:longint;
         {$ifdef fullVersion}displayedHelp:boolean=false;{$endif}
     begin
-      if not(readyForUsecase=lu_forCallingMain) or not(context.messages.continueEvaluation) then exit;
+      if not(readyForUsecase=lu_forCallingMain) or not(globals.primaryContext.messages.continueEvaluation) then exit;
       if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
-        context.messages.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
+        globals.primaryContext.messages.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
         parametersForMain:=newListLiteral(length(mainParameters));
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
 
         {$ifdef fullVersion}
-        context.callStackPush(@self,pc_interpretation,pseudoCallees);
+        globals.primaryContext.callStackPushCategory(@self,pc_interpretation,pseudoCallees);
         {$endif}
-        if profile then context.timeBaseComponent(pc_interpretation);
+        if profile then globals.timeBaseComponent(pc_interpretation);
 
-        if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@context)
-        then context.reduceExpression(t)
+        if mainRule^.replaces(tt_localUserRule,packageTokenLocation(@self),parametersForMain,t,dummy,@globals.primaryContext)
+        then globals.primaryContext.reduceExpression(t)
         else if (length(mainParameters)=1) and (mainParameters[0]='-h') then begin
           writeln(getHelpOnMain);
           {$ifdef fullVersion}displayedHelp:=true;{$endif}
         end else begin
-          context.raiseCannotApplyError('user defined rule '+mainRule^.getId,
+          globals.primaryContext.raiseCannotApplyError('user defined rule '+mainRule^.getId,
                                         parametersForMain,
                                         mainRule^.getLocation,
                                         C_lineBreakChar+join(mainRule^.getCmdLineHelpText,C_lineBreakChar),true);
           if (length(mainParameters)=1) and (mainParameters[0]='-h') then writeln(getHelpOnMain);
         end;
-        if profile then context.timeBaseComponent(pc_interpretation);
+        if profile then globals.timeBaseComponent(pc_interpretation);
         {$ifdef fullVersion}
-        context.callStackPop(nil);
+        globals.primaryContext.callStackPop(nil);
         {$endif}
 
         {$ifdef fullVersion}
         //error handling if main returns more than one token:------------------
-        if not(displayedHelp) and ((t=nil) or (t^.next<>nil)) and (FlagGUINeeded in context.messages.getFlags)
-          then context.messages.globalMessages^.postTextMessage(mt_el1_note,packageTokenLocation(@self),'Evaluation requires GUI-startup. Re-evaluating.');
+        if not(displayedHelp) and ((t=nil) or (t^.next<>nil)) and (FlagGUINeeded in globals.primaryContext.messages.getFlags)
+          then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el1_note,packageTokenLocation(@self),'Evaluation requires GUI-startup. Re-evaluating.');
         //------------------:error handling if main returns more than one token
         {$endif}
         cascadeDisposeToken(t);
@@ -1452,8 +1417,8 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
     VAR rule:P_rule;
         pack:P_package;
     begin
-      for pack in secondaryPackages do for rule in pack^.packageRules.valueSet do rule^.checkParameters(context);
-      for rule in packageRules.valueSet do rule^.checkParameters(context);
+      for pack in secondaryPackages do for rule in pack^.packageRules.valueSet do rule^.checkParameters(globals.primaryContext);
+      for rule in packageRules.valueSet do rule^.checkParameters(globals.primaryContext);
     end;
   {$endif}
 
@@ -1474,33 +1439,33 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
     commentOnPlainMain:='Undocumented plain script';
     if usecase = lu_NONE        then raise Exception.create('Invalid usecase: lu_NONE');
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
-    if isMain then context.messages.clear;
-    profile:=context.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
+    if isMain then globals.primaryContext.messages.clear;
+    profile:=globals.primaryContext.messages.globalMessages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     clear(false);
     readyForUsecase:=lu_beingLoaded;
 
-    if profile then context.timeBaseComponent(pc_tokenizing);
+    if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.create(@self);
     newCodeHash:=getCodeProvider^.stateHash;
-    if profile then context.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
+    if profile then globals.timeBaseComponent(pc_tokenizing);
+    stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
     isPlainScript:=isPlainScriptStatement;
     if isPlainScript then begin
       case usecase of
-        lu_forImport         : context.messages.raiseError('Cannot import package declared as "plain script"',stmt.firstToken^.location);
+        lu_forImport         : globals.primaryContext.messages.raiseError('Cannot import package declared as "plain script"',stmt.firstToken^.location);
         lu_forCallingMain    : usecase:=lu_forDirectExecution;
       end;
       commentOnPlainMain:=join(stmt.comments,C_lineBreakChar);
       cascadeDisposeToken(stmt.firstToken);
-      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
     end;
-    if profile then context.timeBaseComponent(pc_tokenizing);
+    if profile then globals.timeBaseComponent(pc_tokenizing);
 
-    while ((usecase=lu_forCodeAssistance) or (context.messages.continueEvaluation)) and (stmt.firstToken<>nil) do begin
-      interpret(stmt,usecase,context{$ifdef fullVersion},localIdInfos{$endif});
-      if profile then context.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},localIdInfos{$endif});
-      if profile then context.timeBaseComponent(pc_tokenizing);
+    while ((usecase=lu_forCodeAssistance) or (globals.primaryContext.messages.continueEvaluation)) and (stmt.firstToken<>nil) do begin
+      interpret(stmt,usecase,globals{$ifdef fullVersion},localIdInfos{$endif});
+      if profile then globals.timeBaseComponent(pc_tokenizing);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},localIdInfos{$endif});
+      if profile then globals.timeBaseComponent(pc_tokenizing);
     end;
     lexer.destroy;
     if usecase=lu_forCodeAssistance then begin
@@ -1508,20 +1473,20 @@ PROCEDURE T_package.load(usecase:T_packageLoadUsecase; VAR context:T_evaluationG
       logReady(newCodeHash);
       {$ifdef fullVersion}
       if gui_started then begin
-        resolveRuleIds(@context.messages);
-        complainAboutUnused(context.messages);
+        resolveRuleIds(@globals.primaryContext.messages);
+        complainAboutUnused(globals.primaryContext.messages);
         checkParameters;
       end;
       {$endif}
       exit;
     end;
-    if context.messages.continueEvaluation then begin
+    if globals.primaryContext.messages.continueEvaluation then begin
       readyForUsecase:=usecase;
       logReady(newCodeHash);
       if usecase=lu_forCallingMain then executeMain;
     end else readyForUsecase:=lu_NONE;
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
-    then finalize(context);
+    then finalize(globals.primaryContext);
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -1593,9 +1558,31 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     if isMain then context.getGlobals^.stopWorkers;
   end;
 
-FUNCTION T_package.literalToString(CONST L:P_literal; CONST forOutput:boolean=false):string;
+FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string;
+  VAR toStringRule:P_rule;
+      toReduce,dummy:P_token;
+      parameters:P_listLiteral;
+      stringOut:P_literal=nil;
   begin
-    result:=sandbox^.runToString(L,@self,forOutput);
+    if packageRules .containsKey('toString',toStringRule)
+    or importedRules.containsKey('toString',toStringRule)
+    then begin
+      parameters:=P_listLiteral(newListLiteral(1)^.append(L,true));
+      if toStringRule^.replaces(tt_localUserRule,location,parameters,toReduce,dummy,context)
+      then stringOut:=P_threadContext(context)^.reduceToLiteral(toReduce).literal;
+      disposeLiteral(parameters);
+    end;
+
+    if stringOut=nil then begin
+      if (L^.literalType=lt_string) and not(forOutput)
+      then result:=P_stringLiteral(L)^.value
+      else result:=L^.toString();
+    end else begin
+      if stringOut^.literalType=lt_string
+      then result:=P_stringLiteral(stringOut)^.value
+      else result:=stringOut^.toString();
+      disposeLiteral(stringOut);
+    end;
   end;
 
 FUNCTION T_package.getTypeMap:T_typeMap;
@@ -1931,18 +1918,18 @@ FUNCTION T_package.declaredRules: T_ruleList;
     end;
   end;
 
-PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR context:T_evaluationGlobals);
+PROCEDURE T_package.interpretInPackage(CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
   VAR lexer:T_lexer;
       stmt :T_enhancedStatement;
   begin
     if not(readyForUsecase in [lu_forImport,lu_forCallingMain,lu_forDirectExecution]) or (codeChanged) then
-      load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+      load(lu_forImport,globals,C_EMPTY_STRING_ARRAY);
 
     lexer.create(input,packageTokenLocation(@self),@self);
-    stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
-    while (context.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
-      interpret(stmt,lu_forDirectExecution,context);
-      stmt:=lexer.getNextStatement(context.messages{$ifdef fullVersion},nil{$endif});
+    stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
+    while (globals.primaryContext.messages.continueEvaluation) and (stmt.firstToken<>nil) do begin
+      interpret(stmt,lu_forDirectExecution,globals);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages{$ifdef fullVersion},nil{$endif});
     end;
     lexer.destroy;
   end;

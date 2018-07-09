@@ -16,6 +16,7 @@ USES //basic classes
      {$ifdef fullVersion}
      mnh_plotData,mnh_funcs_plot,plotMath,
      mnh_debuggingVar,
+     mnh_profiling,
      {$endif}
      mnh_funcs,mnh_funcs_math,mnh_funcs_mnh, mnh_funcs_strings,
      mnh_messages,
@@ -139,22 +140,6 @@ TYPE
       PROPERTY isPublic:boolean read publicSubrule;
   end;
 
-  P_builtinExpression=^T_builtinExpression;
-  T_builtinExpression=object(T_expression)
-    private
-      func:P_intFuncCallback;
-      FUNCTION getEquivalentInlineExpression(VAR context:T_threadContext):P_inlineExpression;
-      FUNCTION getParameterNames:P_listLiteral; virtual;
-    public
-      CONSTRUCTOR create(CONST f:P_intFuncCallback; CONST location:T_tokenLocation);
-      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
-      FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
-      FUNCTION arity:longint; virtual;
-      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
-      FUNCTION getId:T_idString; virtual;
-      FUNCTION equals(CONST other:P_literal):boolean; virtual;
-  end;
-
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)
     private
@@ -170,7 +155,6 @@ TYPE
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST threadLocalMessages:P_threadLocalMessages);
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
 FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocation; VAR context:T_threadContext):P_literal;
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; VAR context:T_threadContext):P_token;
@@ -178,6 +162,24 @@ FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONS
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:pointer):P_literal;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
 IMPLEMENTATION
+TYPE
+P_builtinExpression=^T_builtinExpression;
+T_builtinExpression=object(T_expression)
+  private
+    id:T_idString;
+    func:P_intFuncCallback;
+    FUNCTION getEquivalentInlineExpression(VAR context:T_threadContext):P_inlineExpression;
+    FUNCTION getParameterNames:P_listLiteral; virtual;
+  public
+    CONSTRUCTOR create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
+    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
+    FUNCTION arity:longint; virtual;
+    FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+    FUNCTION getId:T_idString; virtual;
+    FUNCTION equals(CONST other:P_literal):boolean; virtual;
+end;
+
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_threadContext);
   VAR t,prev,inlineRuleTokens:P_token;
       bracketLevel:longint=0;
@@ -429,16 +431,6 @@ FUNCTION T_inlineExpression.isInRelationTo(CONST relation: T_tokenType; CONST ot
     result:=(myTxt=otherTxt) and (relation in [tt_comparatorEq,  tt_comparatorLeq, tt_comparatorGeq])
          or (myTxt<otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
          or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
-  end;
-
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
-  begin
-    if      tok^.tokType in C_operators   then new(P_builtinExpression(result),create(intFuncForOperator[tok^.tokType],tok^.location))
-    else if tok^.tokType=tt_intrinsicRule then new(P_builtinExpression(result),create( P_intFuncCallback(tok^.data   ),tok^.location))
-    else begin
-      result:=nil;
-      raise Exception.create('Invalid argument for createPrimitiveAggregatorLiteral('+safeTokenToString(tok)+')');
-    end;
   end;
 
 FUNCTION T_inlineExpression.replaces(CONST param: P_listLiteral; CONST callLocation: T_tokenLocation; OUT firstRep, lastRep: P_token; VAR context: T_threadContext): boolean;
@@ -888,9 +880,21 @@ FUNCTION T_builtinExpression.getParameterNames: P_listLiteral;
 
 FUNCTION T_builtinGeneratorExpression.getParameterNames: P_listLiteral; begin result:=newListLiteral(); end;
 
-CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST location:T_tokenLocation);
+FUNCTION newBuiltinExpression(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData):P_expressionLiteral;
   begin
-    inherited create(et_builtin,location);
+    new(P_builtinExpression(result),create(f,meta));
+  end;
+
+VAR identifiedInternalFunctionTally:longint=0;
+CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
+  VAR loc:T_tokenLocation;
+  begin
+    loc.package:=@MNH_PSEUDO_PACKAGE;
+    loc.column:=1;
+    loc.line:=identifiedInternalFunctionTally;
+    interLockedIncrement(identifiedInternalFunctionTally);
+    inherited create(et_builtin,loc);
+    id:=C_namespaceString[meta.namespace]+ID_QUALIFY_CHARACTER+meta.unqualifiedId;
     func:=f;
   end;
 
@@ -956,12 +960,11 @@ FUNCTION T_builtinGeneratorExpression.evaluate(CONST location: T_tokenLocation; 
   begin
     if (parameters<>nil) and (parameters^.size<>0) then exit(NIL_EVAL_RESULT);
     {$ifdef fullVersion} P_threadContext(context)^.callStackPush(location,@self,nil); {$endif}
-    result:=evaluateToLiteral(location,context);
+    result:=evaluateToLiteral(location,P_threadContext(context));
     {$ifdef fullVersion} P_threadContext(context)^.callStackPop(nil); {$endif}
   end;
 
-FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation;
-  CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_expression.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
@@ -1022,11 +1025,8 @@ FUNCTION T_subruleExpression.getId: T_idString;
   end;
 
 FUNCTION T_builtinExpression.getId:T_idString;
-  VAR unqalified:string;
   begin
-    result:=getMeta(func).qualifiedId;
-    unqalified:=unqualifiedId(result);
-    if startsWith(unqalified,'::') then result:=copy(unqalified,3,length(unqalified)-2);
+    result:=id;
   end;
 
 FUNCTION T_builtinGeneratorExpression.getId:T_idString;
@@ -1255,7 +1255,6 @@ PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalM
   end;
 
 {$ifdef fullVersion}
-VAR generateRowIdentification:T_identifiedInternalFunction;
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):T_dataRow;
   VAR tRow :T_arrayOfDouble;
       TList:P_listLiteral=nil;
@@ -1632,18 +1631,14 @@ FUNCTION interpret_imp intFuncSignature;
 
 INITIALIZATION
   {$ifdef fullVersion}
-  generateRowIdentification.create(PLOT_NAMESPACE,'generate-row-for-plot');
   mnh_funcs_plot.generateRow:=@generateRow;
+  mnh_profiling.mnhSysPseudopackagePrefix:=MNH_PSEUDO_PACKAGE.getPath;
   {$endif}
+  mnh_funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   subruleReplacesCallback   :=@subruleReplaces;
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary,'arity(e:expression);//Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary,'parameterNames(e:expression);//Returns the IDs of named parameters of e');
   registerRule(STRINGS_NAMESPACE        ,'tokenSplit'    ,@tokenSplit_impl   ,ak_variadic_1,'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>');
   registerRule(TYPECAST_NAMESPACE       ,'toExpression'  ,@toExpression_imp  ,ak_unary,'toExpression(S);//Returns an expression parsed from string or list S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'interpret'     ,@interpret_imp     ,ak_unary,'interpret(S);//Interprets a string or list S');
-FINALIZATION
-  {$ifdef fullVersion}
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_subrules');{$endif}
-  generateRowIdentification.destroy;
-  {$endif}
 end.

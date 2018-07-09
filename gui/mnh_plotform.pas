@@ -551,7 +551,7 @@ PROCEDURE initializePlotForm;
     reregisterRule(PLOT_NAMESPACE,'clearAnimation'   ,@clearPlotAnim_impl   );
     reregisterRule(PLOT_NAMESPACE,'addAnimationFrame',@addAnimFrame_impl    );
     reregisterRule(PLOT_NAMESPACE,'display'          ,@display_imp          );
-    reregisterRule(PLOT_NAMESPACE,'postDisplay'      ,@postDisplay_imp      );
+    reregisterRule(PLOT_NAMESPACE,'postDisplay'      ,@postdisplay_imp      );
   end;
 
 PROCEDURE executePlot;

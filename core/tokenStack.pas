@@ -219,7 +219,7 @@ FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):
       with dat[fill-1] do begin
         timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
         timeForProfiling_inclusive:=wallclockTime-timeForProfiling_inclusive;
-        profiler^.add(calleeId,calleeLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
+        profiler^.add(calleeId,callLocation,calleeLocation,timeForProfiling_inclusive, timeForProfiling_exclusive);
       end;
       if fill>1 then with dat[fill-2] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;
     end;

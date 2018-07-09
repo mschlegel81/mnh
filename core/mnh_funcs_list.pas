@@ -14,8 +14,6 @@ VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING:P_intFuncCallback;
 
 FUNCTION flatten_imp intFuncSignature;
 IMPLEMENTATION
-VAR builtinLocation_sort,
-    builtinLocation_group:T_identifiedInternalFunction;
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;
@@ -72,7 +70,7 @@ SUB_LIST_IMPL;
 {$undef SCALAR_FALLBACK}
 
 {$define cloneOrCopyList0:=if arg0^.getReferenceCount=1 then result:=arg0^.rereferenced else result:=list0^.clone}
-
+{$ifdef fullVersion}VAR sortLoc:P_intFuncCallback;{$endif}
 FUNCTION sort_imp intFuncSignature;
   begin
     result:=nil;
@@ -88,7 +86,7 @@ FUNCTION sort_imp intFuncSignature;
       then cloneOrCopyList0
       else result:=compound0^.toList;
       {$ifdef fullVersion}
-      context.callStackPush(tokenLocation,@builtinLocation_sort,nil);
+      context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(sortLoc),nil);
       {$endif}
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,@context,context.messages);
       {$ifdef fullVersion}
@@ -381,6 +379,7 @@ FUNCTION cross_impl intFuncSignature;
     end;
   end;
 
+{$ifdef fullVersion}VAR groupLoc:P_intFuncCallback;{$endif}
 FUNCTION group_imp intFuncSignature;
   TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
   VAR listToGroup:P_listLiteral;
@@ -459,7 +458,7 @@ FUNCTION group_imp intFuncSignature;
       if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
                           else aggregator:=nil;
       {$ifdef fullVersion}
-      if aggregator<>nil then context.callStackPush(tokenLocation,@builtinLocation_group,nil);
+      if (aggregator<>nil) then context.callStackPush(tokenLocation,getIntrinsicRuleAsExpression(groupLoc),nil);
       {$endif}
       groupMap.create();
       for inputIndex:=0 to length(keyList)-1 do if context.messages.continueEvaluation then
@@ -513,7 +512,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'leading' ,@leading_imp ,ak_variadic_1,'leading(L);//Returns L without the last element or [] if L is empty#leading(L,k);//Returns L without the last k elements or [] if L is empty');
   BUILTIN_TRAILING:=
   registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,ak_variadic_1,'trailing(L);//Returns the last element of L#trailing(L,k);//Returns the last k elements of L');
-  builtinLocation_sort.create(LIST_NAMESPACE,'sort');
+  {$ifdef fullVersion}sortLoc:={$endif}
   registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,ak_variadic_1,
                                                'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
                                                'sort(L,leqExpression:expression);//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
@@ -536,7 +535,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2,'getInner(L:list,index);');
   registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     ,'indexOf(B:booleanList);//Returns the indexes for which B is true.');
   registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2,'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)');
-  builtinLocation_group.create(DEFAULT_BUILTIN_NAMESPACE,'group');
+  {$ifdef fullVersion}groupLoc:={$endif}
   registerRule(DEFAULT_BUILTIN_NAMESPACE,
                               'group',  @group_imp ,ak_variadic_2,'group(list,grouping);//Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);//Groups by grouping using aggregator on a per group basis');
   registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary,'map(L,f:expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)');
@@ -544,7 +543,5 @@ INITIALIZATION
 
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_list');{$endif}
-  builtinLocation_sort.destroy;
-  builtinLocation_group .destroy;
 
 end.

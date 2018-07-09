@@ -110,9 +110,9 @@ TYPE
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
       {$ifdef fullVersion}
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
-      PROCEDURE callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
-      PROCEDURE callStackPop(CONST first:P_token);
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode); inline;
+      PROCEDURE callStackPushCategory(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls); inline;
+      PROCEDURE callStackPop(CONST first:P_token); inline;
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
@@ -158,7 +158,7 @@ TYPE
     PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   end;
 
-  T_evaluationGlobals=object(T_threadContext)
+  T_evaluationGlobals=object
     private
       wallClock:TEpikTimer;
       globalOptions :T_evaluationContextOptions;
@@ -173,6 +173,7 @@ TYPE
       end;
       disposeAdaptersOnDestruction:boolean;
     public
+      primaryContext:T_threadContext;
       taskQueue:T_taskQueue;
       prng:T_xosPrng;
       CONSTRUCTOR create(CONST outAdapters:P_messageConnector);
@@ -251,7 +252,7 @@ FUNCTION workerThreadCount:longint;
 
 CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
   begin
-    inherited create();
+    primaryContext.create();
     prng.create;
     prng.randomize;
     wallClock:=nil;
@@ -261,13 +262,13 @@ CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
     {$endif}
     taskQueue.create;
 
-    related.evaluation:=@self;
-    related.parent:=nil;
-    setLength(related.children,0);
+    primaryContext.related.evaluation:=@self;
+    primaryContext.related.parent:=nil;
+    setLength(primaryContext.related.children,0);
 
-    messages.globalMessages:=outAdapters;
+    primaryContext.messages.globalMessages:=outAdapters;
     disposeAdaptersOnDestruction:=false;
-    allowedSideEffects:=C_allSideEffects;
+    primaryContext.allowedSideEffects:=C_allSideEffects;
     mainParameters:=C_EMPTY_STRING_ARRAY;
   end;
 
@@ -277,11 +278,13 @@ DESTRUCTOR T_evaluationGlobals.destroy;
     if wallClock<>nil then FreeAndNil(wallClock);
     {$ifdef fullVersion}
     if profiler<>nil then dispose(profiler,destroy);
+    profiler:=nil;
     if debuggingStepper<>nil then dispose(debuggingStepper,destroy);
+    debuggingStepper:=nil;
     {$endif}
     taskQueue.destroy;
-    if disposeAdaptersOnDestruction then dispose(messages.globalMessages,destroy);
-    inherited destroy;
+    if disposeAdaptersOnDestruction then dispose(primaryContext.messages.globalMessages,destroy);
+    primaryContext.destroy;
   end;
 
 PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST package:P_objectWithPath; {$endif}CONST evaluationContextType:T_evaluationContextType; CONST mainParams:T_arrayOfString; CONST enforceWallClock:boolean=false);
@@ -292,7 +295,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     for i:=0 to length(mainParams)-1 do mainParameters[i]:=mainParams[i];
     //global options
     globalOptions:=C_evaluationContextOptions[evaluationContextType];
-    if messages.globalMessages^.isCollecting(mt_timing_info)
+    if primaryContext.messages.globalMessages^.isCollecting(mt_timing_info)
     then globalOptions:=globalOptions+[eco_timing];
     {$ifdef fullVersion}
     //prepare or dispose profiler:
@@ -305,7 +308,7 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     //prepare or dispose stepper:
     if eco_debugging in globalOptions then begin
-      if debuggingStepper=nil then new(debuggingStepper,create(@messages));
+      if debuggingStepper=nil then new(debuggingStepper,create(@primaryContext.messages));
       debuggingStepper^.resetForDebugging(package);
     end else if debuggingStepper<>nil then begin
       dispose(debuggingStepper,destroy);
@@ -322,23 +325,23 @@ PROCEDURE T_evaluationGlobals.resetForEvaluation({$ifdef fullVersion}CONST packa
     end;
     //evaluation state
     if evaluationContextType=ect_silent
-    then allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
-    else allowedSideEffects:=C_allSideEffects;
+    then primaryContext.allowedSideEffects:=C_allSideEffects-[se_inputViaAsk]
+    else primaryContext.allowedSideEffects:=C_allSideEffects;
 
-    setThreadOptions(globalOptions);
-    disposeScope(valueScope);
-    valueScope:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
-    messages.clear;
-    with related do begin
+    primaryContext.setThreadOptions(globalOptions);
+    disposeScope(primaryContext.valueScope);
+    primaryContext.valueScope:=newValueScopeAsChildOf(nil,ACCESS_BLOCKED);
+    primaryContext.messages.clear;
+    with primaryContext.related do begin
       evaluation:=@self;
       parent:=nil;
       setLength(children,0);
     end;
     {$ifdef fullVersion}
-    callStack.clear;
-    parentCustomForm:=nil;
+    primaryContext.callStack.clear;
+    primaryContext.parentCustomForm:=nil;
     {$endif}
-    state:=fts_evaluating;
+    primaryContext.state:=fts_evaluating;
   end;
 
 PROCEDURE T_evaluationGlobals.stopWorkers;
@@ -346,8 +349,8 @@ PROCEDURE T_evaluationGlobals.stopWorkers;
   VAR timeout:double;
   begin
     timeout:=now+TIME_OUT_AFTER;
-    messages.setStopFlag;
-    while (now<timeout) and ((length(related.children)>0) or (taskQueue.queuedCount>0)) do begin
+    primaryContext.messages.setStopFlag;
+    while (now<timeout) and ((length(primaryContext.related.children)>0) or (taskQueue.queuedCount>0)) do begin
       taskQueue.activeDeqeue();
       ThreadSwitch;
       sleep(1);
@@ -397,25 +400,25 @@ PROCEDURE T_evaluationGlobals.afterEvaluation;
         if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
         append(timingMessage,timeString[cat]);
       end;
-      messages.globalMessages^.postTextMessage(mt_timing_info,C_nilTokenLocation,timingMessage);
+      primaryContext.messages.globalMessages^.postTextMessage(mt_timing_info,C_nilTokenLocation,timingMessage);
     end;
 
   begin
     stopWorkers;
-    messages.escalateErrors;
-    messages.globalMessages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
-    if (messages.globalMessages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
+    primaryContext.messages.escalateErrors;
+    primaryContext.messages.globalMessages^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
+    if (primaryContext.messages.globalMessages^.isCollecting(mt_timing_info)) and (wallClock<>nil) then logTimingInfo;
     {$ifdef fullVersion}
-    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(@messages);
+    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages.globalMessages);
     {$endif}
-    if not(suppressBeep) and (eco_beepOnError in globalOptions) and messages.globalMessages^.triggersBeep then beep;
-    while valueScope<>nil do scopePop(valueScope);
+    if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages.globalMessages^.triggersBeep then beep;
+    while primaryContext.valueScope<>nil do scopePop(primaryContext.valueScope);
   end;
 
 {$ifdef fullVersion}
 FUNCTION T_evaluationGlobals.stepper:P_debuggingStepper;
   begin
-    if debuggingStepper=nil then new(debuggingStepper,create(messages.globalMessages));
+    if debuggingStepper=nil then new(debuggingStepper,create(primaryContext.messages.globalMessages));
     result:=debuggingStepper;
   end;
 
@@ -429,13 +432,13 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
   begin
     if related.evaluation^.wallClock=nil then begin
       if forceInit then begin
-        enterCriticalSection(related.evaluation^.contextCS);
+        enterCriticalSection(related.evaluation^.primaryContext.contextCS);
         if related.evaluation^.wallClock=nil then begin
           related.evaluation^.wallClock:=TEpikTimer.create(nil);
           related.evaluation^.wallClock.clear;
           related.evaluation^.wallClock.start;
         end;
-        leaveCriticalSection(related.evaluation^.contextCS);
+        leaveCriticalSection(related.evaluation^.primaryContext.contextCS);
       end else exit(0);
     end;
     result:=related.evaluation^.wallClock.elapsed;
@@ -443,7 +446,7 @@ FUNCTION T_threadContext.wallclockTime(CONST forceInit: boolean): double;
 
 PROCEDURE T_evaluationGlobals.timeBaseComponent(CONST component: T_profileCategory);
   begin
-    with timingInfo do timeSpent[component]:=wallclockTime-timeSpent[component];
+    with timingInfo do timeSpent[component]:=primaryContext.wallclockTime-timeSpent[component];
   end;
 
 FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean): P_threadContext;
@@ -456,30 +459,29 @@ FUNCTION T_threadContext.getNewAsyncContext(CONST local: boolean): P_threadConte
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation;
-  CONST callee: P_objectWithIdAndLocation;
-  CONST callParameters: P_variableTreeEntryCategoryNode);
+PROCEDURE T_threadContext.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_variableTreeEntryCategoryNode);
   begin
-    if not(tco_stackTrace in options) then exit;
-    callStack.push(wallclockTime,callParameters,callerLocation,callee);
+    if (tco_stackTrace in options) then callStack.push(wallclockTime,callParameters,callerLocation,callee);
   end;
 
-PROCEDURE T_threadContext.callStackPush(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
+PROCEDURE T_threadContext.callStackPushCategory(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls);
   begin
-    if not(tco_stackTrace in options) then exit;
-    if calls[category]=nil then new(calls[category],create(package,category));
-    callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
+    if tco_stackTrace in options then begin
+      if calls[category]=nil then new(calls[category],create(package,category));
+      callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
+    end;
   end;
 
 PROCEDURE T_threadContext.callStackPop(CONST first: P_token);
   VAR loc:T_tokenLocation;
   begin
-    if not(tco_stackTrace in options) then exit;
-    loc:=callStack.pop(wallclockTime,related.evaluation^.profiler);
-    if (loc.package<>nil) and (first<>nil) then first^.location:=loc;
+    if (tco_stackTrace in options) then begin
+      loc:=callStack.pop(wallclockTime,related.evaluation^.profiler);
+      if (loc.package<>nil) and (first<>nil) then first^.location:=loc;
+    end;
   end;
 
-FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
+FUNCTION T_threadContext.stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean;
   begin
     if (related.evaluation=nil) or (related.evaluation^.debuggingStepper=nil) then exit(false);
     if first<>nil then related.evaluation^.debuggingStepper^.stepping(first,stack,@callStack);
@@ -508,8 +510,7 @@ FUNCTION T_threadContext.reduceToLiteral(VAR first: P_token): T_evaluationResult
     end;
   end;
 
-FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(
-  CONST se: T_sideEffects): T_sideEffects;
+FUNCTION T_threadContext.setAllowedSideEffectsReturningPrevious(CONST se: T_sideEffects): T_sideEffects;
   begin
     result:=allowedSideEffects;
     allowedSideEffects:=se;
@@ -594,7 +595,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
             P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
             for s in mainParameters do P_listLiteral(newValue)^.appendString(s);
           end else begin
-            messages.raiseError('Invalid parameter identifier',first^.location);
+            primaryContext.messages.raiseError('Invalid parameter identifier',first^.location);
             exit;
           end;
         end else if parameterIndex=0 then
@@ -605,7 +606,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token);
           newValue:=newVoidLiteral;
         first^.data:=newValue;
         first^.tokType:=tt_literal;
-      end else messages.raiseError('Invalid parameter identifier',first^.location);
+      end else primaryContext.messages.raiseError('Invalid parameter identifier',first^.location);
     end;
   end;
 
@@ -624,9 +625,7 @@ PROCEDURE T_threadContext.raiseCannotApplyError(CONST ruleWithType: string;
     else messages.raiseError(message,location);
   end;
 
-FUNCTION T_threadContext.checkSideEffects(CONST id: string;
-  CONST location: T_tokenLocation; CONST functionSideEffects: T_sideEffects
-  ): boolean;
+FUNCTION T_threadContext.checkSideEffects(CONST id: string; CONST location: T_tokenLocation; CONST functionSideEffects: T_sideEffects): boolean;
   VAR messageText:string='';
       eff:T_sideEffect;
       violations:T_sideEffects;
@@ -663,7 +662,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
           end else currentTask^.evaluate;
           sleepTime:=0;
         end;
-      until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue.destructionPending) or not(messages.continueEvaluation);
+      until (sleepTime>=SLEEP_TIME_TO_QUIT) or (taskQueue.destructionPending) or not(primaryContext.messages.continueEvaluation);
       result:=0;
       interlockedDecrement(taskQueue.poolThreadsRunning);
     end;

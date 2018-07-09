@@ -91,7 +91,7 @@ TYPE
       PROCEDURE postEval; virtual;
       FUNCTION pendingRequest:T_evalRequest;
     public
-      context:T_evaluationGlobals;
+      globals:T_evaluationGlobals;
       CONSTRUCTOR create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE haltEvaluation; virtual;
@@ -168,17 +168,17 @@ FUNCTION main(p:pointer):ptrint;
       context.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY);
     end;
 
-  PROCEDURE doneEdit(VAR context:T_evaluationGlobals);
+  PROCEDURE doneEdit(VAR globals:T_evaluationGlobals);
     VAR collector:P_collectingOutAdapter;
         successful:boolean=true;
     begin
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: mnhEvalThread - doneEdit'); {$endif}
-      P_runEvaluator(p)^.utilityScriptPackage^.finalize(context);
-      context.afterEvaluation;
-      if context.messages.globalMessages^.hasCollected(mt_printline) or
-         context.messages.globalMessages^.hasCollected(mt_printdirect) or
-         (([FlagError,FlagFatalError]*context.messages.getFlags)<>[]) then begin
-        collector:=P_collectingOutAdapter(context.messages.globalMessages^.getAdapter(0));
+      P_runEvaluator(p)^.utilityScriptPackage^.finalize(globals.primaryContext);
+      globals.afterEvaluation;
+      if globals.primaryContext.messages.globalMessages^.hasCollected(mt_printline) or
+         globals.primaryContext.messages.globalMessages^.hasCollected(mt_printdirect) or
+         (([FlagError,FlagFatalError]*globals.primaryContext.messages.getFlags)<>[]) then begin
+        collector:=P_collectingOutAdapter(globals.primaryContext.messages.globalMessages^.getAdapter(0));
         P_runEvaluator(p)^.adapter^.postSingal(mt_clearConsole,C_nilTokenLocation);
         P_runEvaluator(p)^.adapter^.postCustomMessages(collector^.storedMessages);
         successful:=false;
@@ -186,7 +186,7 @@ FUNCTION main(p:pointer):ptrint;
       if P_runEvaluator(p)^.currentEdit<>nil
       then P_runEvaluator(p)^.adapter^.postCustomMessage(P_runEvaluator(p)^.currentEdit^.withSuccessFlag(successful))
       else P_runEvaluator(p)^.adapter^.postSingal(mt_endOfEvaluation,C_nilTokenLocation);
-      context.destroy;
+      globals.destroy;
       P_runEvaluator(p)^.currentEdit:=nil;
     end;
 
@@ -206,11 +206,11 @@ FUNCTION main(p:pointer):ptrint;
       setLength(utilityScriptList,0);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: Loading script package: ',utilityScriptPackage^.getPath); {$endif}
       utilityScriptPackage^.load(lu_forImport,editContext,C_EMPTY_STRING_ARRAY);
-      if editContext.messages.continueEvaluation then begin
+      if editContext.primaryContext.messages.continueEvaluation then begin
         for scriptType in T_scriptType do
         for subRule in utilityScriptPackage^.getSubrulesByAttribute(C_scriptTypeMeta[scriptType].nameAttribute) do begin
           {$ifdef debugMode} writeln(stdErr,'        DEBUG: Found script: ',subRule^.getId); {$endif}
-          new(script,create(subRule,isValid,editContext.messages));
+          new(script,create(subRule,isValid,editContext.primaryContext.messages));
           if isValid then begin
             setLength(utilityScriptList,length(utilityScriptList)+1);
             utilityScriptList[length(utilityScriptList)-1]:=script;
@@ -236,11 +236,11 @@ FUNCTION main(p:pointer):ptrint;
         sleepTime:=0;
         preEval;
         case r of
-          er_evaluate: package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
-          er_callMain: package.load(lu_forCallingMain    ,context,parametersForMainCall);
+          er_evaluate: package.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
+          er_callMain: package.load(lu_forCallingMain    ,globals,parametersForMainCall);
           er_reEvaluateWithGUI: begin
             package.replaceCodeProvider(newFileCodeProvider(getFileOrCommandToInterpretFromCommandLine));
-            package.load(lu_forCallingMain,context,parametersForMainCall);
+            package.load(lu_forCallingMain,globals,parametersForMainCall);
           end;
           er_ensureEditScripts: ensureEditScripts_impl;
           er_runEditScript: executeEditScript_impl;
@@ -323,7 +323,7 @@ PROCEDURE T_editScriptTask.execute(VAR context:T_evaluationGlobals);
     output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@context,input).literal;
     disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
-      context.messages.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
+      context.primaryContext.messages.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
       disposeLiteral(output);
     end;
     done:=true;
@@ -359,7 +359,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_messageConnector; threadFunc: T
     thread:=threadFunc;
     package.create(newVirtualFileCodeProvider('?',C_EMPTY_STRING_ARRAY),nil);
     adapter:=adapters;
-    context.create(adapter);
+    globals.create(adapter);
   end;
 
 CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
@@ -379,7 +379,7 @@ CONSTRUCTOR T_runEvaluator.create(CONST adapters:P_messageConnector; threadFunc:
 DESTRUCTOR T_evaluator.destroy;
   begin
     system.enterCriticalSection(cs);
-    if state in C_runningStates then context.messages.setStopFlag;
+    if state in C_runningStates then globals.primaryContext.messages.setStopFlag;
     repeat
       request:=er_die;
       system.leaveCriticalSection(cs);
@@ -388,7 +388,7 @@ DESTRUCTOR T_evaluator.destroy;
       system.enterCriticalSection(cs);
     until state=es_dead;
     package.destroy;
-    context.destroy;
+    globals.destroy;
     system.leaveCriticalSection(cs);
     system.doneCriticalSection(cs);
   end;
@@ -408,9 +408,9 @@ PROCEDURE T_evaluator.haltEvaluation;
   begin
     system.enterCriticalSection(cs);
     haltedByUser:=true;
-    context.messages.setStopFlag;
-    context.stepper^.haltEvaluation;
-    context.stopWorkers;
+    globals.primaryContext.messages.setStopFlag;
+    globals.stepper^.haltEvaluation;
+    globals.stopWorkers;
     request:=er_none;
     system.leaveCriticalSection(cs);
   end;
@@ -559,7 +559,7 @@ FUNCTION T_runEvaluator.getRunnerStateInfo: T_runnerStateInfo;
   begin
     system.enterCriticalSection(cs);
     result.state:=state;
-    if (context.isPaused) then result.state:=es_debugHalted;
+    if (globals.isPaused) then result.state:=es_debugHalted;
     if (requestedContextType in [ect_debugging,ect_debuggingAndProfiling]) and (result.state=es_running) then result.state:=es_debugRunning;
     result.request:=request;
     case result.state of
@@ -608,14 +608,14 @@ PROCEDURE T_runEvaluator.preEval;
     system.enterCriticalSection(cs);
     inherited preEval;
     startOfEvaluation:=now;
-    context.resetForEvaluation(@package,requestedContextType,mainParameters);
+    globals.resetForEvaluation(@package,requestedContextType,mainParameters);
     system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.postEval;
   begin
     system.enterCriticalSection(cs);
-    if not(state in [es_editEnsuring,es_editRunning]) then context.afterEvaluation;
+    if not(state in [es_editEnsuring,es_editRunning]) then globals.afterEvaluation;
     state:=es_idle;
     system.leaveCriticalSection(cs);
   end;

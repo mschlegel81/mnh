@@ -574,10 +574,10 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
   begin
     for i:=0 to editor_.Marks.count-1 do if editor_.Marks[i].line=editor_.CaretY then begin
       editor_.Marks.remove(editor.Marks[i]);
-      runEvaluator.context.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
+      runEvaluator.globals.stepper^.removeBreakpoint(pseudoName,editor_.CaretY);
       exit;
     end;
-    runEvaluator.context.stepper^.addBreakpoint(pseudoName,editor_.CaretY);
+    runEvaluator.globals.stepper^.addBreakpoint(pseudoName,editor_.CaretY);
     _add_breakpoint_(editor_.CaretY);
   end;
 
@@ -602,7 +602,7 @@ FUNCTION T_editorMeta.defaultExtensionByLanguage: ansistring;
 PROCEDURE T_editorMeta.setStepperBreakpoints;
   VAR i:longint;
   begin
-    for i:=0 to editor.Marks.count-1 do runEvaluator.context.stepper^.addBreakpoint(pseudoName,editor.Marks[i].line);
+    for i:=0 to editor.Marks.count-1 do runEvaluator.globals.stepper^.addBreakpoint(pseudoName,editor.Marks[i].line);
   end;
 
 PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
@@ -990,7 +990,7 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
     getEditor^.setWorkingDir;
     if debugMode then begin
       updateEditorsByGuiStatus;
-      runEvaluator.context.stepper^.clearBreakpoints;
+      runEvaluator.globals.stepper^.clearBreakpoints;
       for m in editorMetaData do m^.setStepperBreakpoints;
     end;
     if profiling then begin
@@ -1038,12 +1038,12 @@ PROCEDURE T_runnerModel.rerun(CONST profiling:boolean);
 
 PROCEDURE T_runnerModel.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=runEvaluator.context.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=runEvaluator.globals.isPaused and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 PROCEDURE T_runnerModel.doDebuggerAction(CONST newState: T_debuggerState);
   begin
-    runEvaluator.context.stepper^.setState(newState);
+    runEvaluator.globals.stepper^.setState(newState);
     mainForm.onDebuggerEvent;
     if hasEditor then with getEditor^ do begin
       editor.Gutter.MarksPart.visible:=debugMode_ and (language=LANG_MNH);
@@ -1060,7 +1060,7 @@ PROCEDURE T_runnerModel.markDebugLine(CONST editor:TSynEdit; CONST line:longint)
 PROCEDURE T_runnerModel.haltEvaluation;
   begin
     runEvaluator.haltEvaluation;
-    if debugMode_ then runEvaluator.context.stepper^.haltEvaluation;
+    if debugMode_ then runEvaluator.globals.stepper^.haltEvaluation;
   end;
 
 FUNCTION getSafeAssistant(CONST editor:P_editorMeta):P_codeAssistanceData;
