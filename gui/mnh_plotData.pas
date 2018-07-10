@@ -2,6 +2,8 @@ UNIT mnh_plotData;
 INTERFACE
 USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
+     FPReadBMP,FPWriteBMP,
+     IntfGraphics,
      mnh_basicTypes, mnh_constants,
      mnh_settings,
      mnh_messages,
@@ -125,21 +127,35 @@ TYPE
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
+  end;
 
-      PROCEDURE processMessage(VAR m:T_addRowMessage);
-      PROCEDURE processMessage(VAR m:T_addTextMessage);
-      PROCEDURE processMessage(VAR m:T_plotOptionsMessage);
-      PROCEDURE processMessage(VAR m:T_plotRenderRequest);
-      PROCEDURE processMessage(VAR m:T_plotDropRowRequest);
+  P_plotSeriesFrame=^T_plotSeriesFrame;
+  T_plotSeriesFrame=object
+    private
+      backgroundPreparation:boolean;
+      frameCS:TRTLCriticalSection;
+      image:TImage;
+      dumpIsUpToDate:boolean;
+      dumpName:string;
+      postedWidth  ,renderedWidth  ,
+      postedHeight ,renderedHeight :longint;
+      postedQuality,renderedQuality:byte;
+      plotData:T_plot;
+      PROCEDURE performPostedPreparation;
+    public
+      CONSTRUCTOR create(VAR currentPlot:T_plot);
+      DESTRUCTOR destroy;
+      PROCEDURE invalidate;
+      PROCEDURE clearImage(CONST doDump:boolean=false);
+      PROCEDURE obtainImage(VAR target:TImage; CONST quality:byte);
+      PROCEDURE prepareImage(CONST width,height:longint; CONST quality:byte);
+      PROCEDURE postPreparation(CONST width,height:longint; CONST quality:byte);
   end;
 
   T_plotSeries=object
     private
-      frame:array of record
-        image:TImage;
-        quality:byte;
-        plotData:T_plot;
-      end;
+      frame:array of P_plotSeriesFrame;
+      framesWithImagesAllocated:array[0..7] of P_plotSeriesFrame;
       seriesCs:TRTLCriticalSection;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
@@ -148,10 +164,10 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       FUNCTION frameCount:longint;
-      PROCEDURE getFrame(CONST target:TImage; CONST frameIndex:longint; CONST quality:byte);
+      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST quality:byte);
       PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint);
       PROCEDURE addFrame(VAR plot:T_plot);
-      FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean):boolean;
+      FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
   end;
 
@@ -191,6 +207,132 @@ FUNCTION getOptionsViaAdapters(VAR threadLocalMessages:T_threadLocalMessages):T_
     threadLocalMessages.globalMessages^.postCustomMessage(request);
     result:=request^.getOptionsWaiting(threadLocalMessages);
     disposeMessage(request);
+  end;
+
+CONSTRUCTOR T_plotSeriesFrame.create(VAR currentPlot: T_plot);
+  begin
+    initCriticalSection(frameCS);
+    enterCriticalSection(frameCS);
+    image:=nil;
+    dumpIsUpToDate:=false;
+    dumpName:='';
+    renderedWidth :=-1;
+    renderedHeight:=-1;
+    renderedQuality:=255;
+    backgroundPreparation:=false;
+    plotData.createWithDefaults;
+    plotData.copyFrom(currentPlot);
+    leaveCriticalSection(frameCS);
+  end;
+
+DESTRUCTOR T_plotSeriesFrame.destroy;
+  begin
+    enterCriticalSection(frameCS);
+    clearImage(false);
+    if dumpName<>'' then DeleteFile(dumpName);
+    dumpName:='';
+    renderedWidth :=-1;
+    renderedHeight:=-1;
+    renderedQuality:=255;
+    plotData.destroy;
+    leaveCriticalSection(frameCS);
+    doneCriticalSection(frameCS);
+  end;
+
+PROCEDURE T_plotSeriesFrame.invalidate;
+  begin
+    enterCriticalSection(frameCS);
+    clearImage(false);
+    renderedWidth :=-1;
+    renderedHeight:=-1;
+    renderedQuality:=255;
+    leaveCriticalSection(frameCS);
+  end;
+
+PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
+  VAR tempIntfImage: TLazIntfImage;
+      bmpWriter:TFPWriterBMP;
+  begin
+    enterCriticalSection(frameCS);
+    if doDump and not(dumpIsUpToDate) then begin
+      bmpWriter:=TFPWriterBMP.create;
+      if dumpName='' then dumpName:=getTempFileName;
+      tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
+      tempIntfImage.saveToFile(dumpName,bmpWriter);
+      tempIntfImage.free;
+      bmpWriter.free;
+    end;
+    if image<>nil then FreeAndNil(image);
+    leaveCriticalSection(frameCS);
+  end;
+
+PROCEDURE T_plotSeriesFrame.prepareImage(CONST width,height:longint; CONST quality:byte);
+  VAR tempIntfImage: TLazIntfImage;
+      bmpReader:TFPReaderBMP;
+  begin
+    enterCriticalSection(frameCS);
+    if (renderedQuality=quality) and
+       (renderedHeight =height) and
+       (renderedWidth  =width) and
+       ((image<>nil) or (dumpName<>'') and fileExists(dumpName)) then begin
+      if image=nil then begin
+        //load image
+        image:=TImage.create(nil);
+        image.SetInitialBounds(0,0,width,height);
+        tempIntfImage:=image.picture.Bitmap.CreateIntfImage;
+        bmpReader:=TFPReaderBMP.create;
+        tempIntfImage.loadFromFile(dumpName,bmpReader);
+        bmpReader.destroy;
+        image.picture.Bitmap.LoadFromIntfImage(tempIntfImage);
+        dumpIsUpToDate:=true;
+        tempIntfImage.free;
+      end;
+    end else begin
+      if image<>nil then FreeAndNil(image);
+      image:=plotData.obtainPlot(width,height,quality);
+      dumpIsUpToDate:=false;
+      renderedQuality:=quality;
+      renderedHeight :=height;
+      renderedWidth  :=width;
+    end;
+    leaveCriticalSection(frameCS);
+  end;
+
+PROCEDURE T_plotSeriesFrame.performPostedPreparation;
+  begin
+    enterCriticalSection(frameCS);
+    try
+      prepareImage(postedWidth,postedHeight,postedQuality);
+    finally
+      backgroundPreparation:=false;
+      leaveCriticalSection(frameCS);
+    end;
+  end;
+
+FUNCTION preparationThread(p:pointer):ptrint;
+  begin
+    P_plotSeriesFrame(p)^.performPostedPreparation;
+    result:=0
+  end;
+
+PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint; CONST quality:byte);
+  begin
+    if backgroundPreparation then exit;
+    enterCriticalSection(frameCS);
+    backgroundPreparation:=true;
+    postedHeight:=height;
+    postedWidth:=width;
+    postedQuality:=quality;
+    beginThread(@preparationThread,@self);
+    leaveCriticalSection(frameCS);
+  end;
+
+PROCEDURE T_plotSeriesFrame.obtainImage(VAR target: TImage; CONST quality: byte);
+  begin
+    enterCriticalSection(frameCS);
+    prepareImage(target.width,target.height,quality);
+    target.Canvas.draw(0,0,image.picture.Bitmap);
+    leaveCriticalSection(frameCS);
   end;
 
 FUNCTION T_plotDisplayRequest.internalType: shortstring;
@@ -350,15 +492,15 @@ CONSTRUCTOR T_addRowMessage.create(CONST styleOptions_: string; CONST rowData_: 
 FUNCTION T_plotSeries.getOptions(CONST index: longint): T_scalingOptions;
   begin
     enterCriticalSection(seriesCs);
-    result:=frame[index].plotData.scalingOptions;
+    result:=frame[index]^.plotData.scalingOptions;
     leaveCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.setOptions(CONST index: longint; CONST value: T_scalingOptions);
   begin
     enterCriticalSection(seriesCs);
-    frame[index].plotData.scalingOptions:=value;
-    frame[index].quality:=255;
+    frame[index]^.plotData.scalingOptions:=value;
+    frame[index]^.invalidate;
     leaveCriticalSection(seriesCs);
   end;
 
@@ -366,6 +508,7 @@ CONSTRUCTOR T_plotSeries.create;
   begin
     setLength(frame,0);
     initCriticalSection(seriesCs);
+    clear;
   end;
 
 DESTRUCTOR T_plotSeries.destroy;
@@ -375,14 +518,12 @@ DESTRUCTOR T_plotSeries.destroy;
   end;
 
 PROCEDURE T_plotSeries.clear;
-  VAR i:longint;
+  VAR k:longint;
   begin
     enterCriticalSection(seriesCs);
-    for i:=0 to length(frame)-1 do with frame[i] do begin
-      if image<>nil then FreeAndNil(image);
-      plotData.destroy;
-    end;
+    for k:=0 to length(frame)-1 do dispose(frame[k],destroy);
     setLength(frame,0);
+    for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
     leaveCriticalSection(seriesCs);
   end;
 
@@ -393,25 +534,44 @@ FUNCTION T_plotSeries.frameCount: longint;
     leaveCriticalSection(seriesCs);
   end;
 
-PROCEDURE T_plotSeries.getFrame(CONST target: TImage; CONST frameIndex: longint; CONST quality: byte);
+PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST quality: byte);
+  VAR current:P_plotSeriesFrame;
+
+  PROCEDURE handleImagesToFree;
+    VAR k,j:longint;
+    begin
+      //remove current from list
+      k:=0;
+      while k<length(framesWithImagesAllocated)-1 do
+      if framesWithImagesAllocated[k]=current then begin
+        for j:=k to length(framesWithImagesAllocated)-2 do
+        framesWithImagesAllocated[j]:=framesWithImagesAllocated[j+1];
+        framesWithImagesAllocated[length(framesWithImagesAllocated)-1]:=nil;
+      end else inc(k);
+      //deallocate the last one, dump to file
+      k:=length(framesWithImagesAllocated)-1;
+      if framesWithImagesAllocated[k]<>nil then framesWithImagesAllocated[k]^.clearImage(true);
+      //shift
+      move(framesWithImagesAllocated[0],
+           framesWithImagesAllocated[1],
+           (length(framesWithImagesAllocated)-1)*sizeOf(P_plotSeriesFrame));
+      //insert
+      framesWithImagesAllocated[0]:=current;
+    end;
+
   begin
     enterCriticalSection(seriesCs);
     if (frameIndex<0) or (frameIndex>=length(frame)) then begin
       leaveCriticalSection(seriesCs);
       exit;
     end;
-    with frame[frameIndex] do if (image<>nil) and
-        ((image.width <>target.width) or
-         (image.height<>target.height)) then FreeAndNil(image);
-    if frame[frameIndex].image=nil then begin
-      frame[frameIndex].image:=frame[frameIndex].plotData.obtainPlot(target.width,target.height,quality);
-      frame[frameIndex].quality:=quality;
-    end else if frame[frameIndex].quality<>quality then begin
-      frame[frameIndex].plotData.renderPlot(frame[frameIndex].image,quality);
-      frame[frameIndex].quality:=quality;
+    try
+      current:=frame[frameIndex];
+      handleImagesToFree;
+      current^.obtainImage(target,quality);
+    finally
+      leaveCriticalSection(seriesCs);
     end;
-    target.Canvas.draw(0,0,frame[frameIndex].image.picture.Bitmap);
-    leaveCriticalSection(seriesCs);
   end;
 
 PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint);
@@ -421,7 +581,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       leaveCriticalSection(seriesCs);
       exit;
     end;
-    frame[index].plotData.renderToFile(fileName,width,height,quality);
+    frame[index]^.plotData.renderToFile(fileName,width,height,quality);
     leaveCriticalSection(seriesCs);
   end;
 
@@ -431,14 +591,11 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
     enterCriticalSection(seriesCs);
     newIdx:=length(frame);
     setLength(frame,newIdx+1);
-    frame[newIdx].plotData.createWithDefaults;
-    frame[newIdx].plotData.copyFrom(plot);
-    frame[newIdx].quality:=255;
-    frame[newIdx].image:=nil;
+    new(frame[newIdx],create(plot));
     leaveCriticalSection(seriesCs);
   end;
 
-FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean):boolean;
+FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
   begin
     enterCriticalSection(seriesCs);
     if length(frame)=0 then begin
@@ -454,6 +611,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean):bo
                    result:=false;
                  end;
       end;
+      if result then frame[(frameIndex+3) mod length(frame)]^.postPreparation(width,height,quality);
     end;
     leaveCriticalSection(seriesCs);
   end;
@@ -996,8 +1154,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
     end;
   end;
 
-FUNCTION T_plot.obtainPlot(CONST width, height: longint;
-  CONST quality: T_plotQuality): TImage;
+FUNCTION T_plot.obtainPlot(CONST width, height: longint; CONST quality: T_plotQuality): TImage;
   begin
     result:=TImage.create(nil);
     result.SetInitialBounds(0,0,width,height);
@@ -1051,48 +1208,30 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.processMessage(VAR m: T_addRowMessage);
-  begin
-    addRow(m.styleOptions,m.rowData);
-  end;
-
-PROCEDURE T_plot.processMessage(VAR m: T_addTextMessage);
-  begin
-    addCustomText(m.customText);
-  end;
-
-PROCEDURE T_plot.processMessage(VAR m: T_plotOptionsMessage);
-  begin
-    if m.messageType=mt_plot_retrieveOptions
-    then m.setOptions(scalingOptions)
-    else scalingOptions:=m.options;
-  end;
-
-PROCEDURE T_plot.processMessage(VAR m: T_plotRenderRequest);
-  begin
-    if m.isRenderToStringRequest
-    then m.setString(renderToString(m.width,m.height,m.quality))
-    else renderToFile(m.fileName,   m.width,m.height,m.quality);
-  end;
-
-PROCEDURE T_plot.processMessage(VAR m: T_plotDropRowRequest);
-  begin
-    removeRows(m.count);
-  end;
-
 PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
   begin
     isProcessingMessage:=true;
     case message^.messageType of
-      mt_plot_addText:           currentPlot.processMessage(P_addTextMessage    (message)^);
-      mt_plot_addRow :           currentPlot.processMessage(P_addRowMessage     (message)^);
-      mt_plot_dropRow:           currentPlot.processMessage(P_plotDropRowRequest(message)^);
-      mt_plot_renderRequest:     currentPlot.processMessage(P_plotRenderRequest (message)^);
-      mt_plot_retrieveOptions,
-      mt_plot_setOptions:        currentPlot.processMessage(P_plotOptionsMessage(message)^);
-      mt_plot_clear:             currentPlot.clear;
-      mt_plot_clearAnimation:    animation.clear;
-      mt_plot_addAnimationFrame: animation.addFrame(currentPlot);
+      mt_plot_addText:
+        currentPlot.addCustomText(P_addTextMessage(message)^.customText);
+      mt_plot_addRow :
+        currentPlot.addRow(P_addRowMessage(message)^.styleOptions,P_addRowMessage(message)^.rowData);
+      mt_plot_dropRow:
+        currentPlot.removeRows(P_plotDropRowRequest(message)^.count);
+      mt_plot_renderRequest:
+        with P_plotRenderRequest(message)^ do if isRenderToStringRequest
+        then setString(currentPlot.renderToString(width,height,quality))
+        else currentPlot.renderToFile(fileName,   width,height,quality);
+      mt_plot_retrieveOptions:
+        P_plotOptionsMessage(message)^.setOptions(currentPlot.scalingOptions);
+      mt_plot_setOptions:
+        currentPlot.scalingOptions:=P_plotOptionsMessage(message)^.options;
+      mt_plot_clear:
+        currentPlot.clear;
+      mt_plot_clearAnimation:
+        animation.clear;
+      mt_plot_addAnimationFrame:
+        animation.addFrame(currentPlot);
       mt_plot_postDisplay:       begin
         if doPlot<>nil then doPlot();
         displayImmediate:=true;

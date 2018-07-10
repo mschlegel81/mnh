@@ -477,7 +477,7 @@ FUNCTION TplotForm.timerTick:boolean;
     result:=false;
     plotSystem.startGuiInteraction;
     if gui_started and (showing) and (plotSystem.animation.frameCount>0) then begin
-      if animateCheckBox.checked and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked) then begin
+      if animateCheckBox.checked and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
         plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
         inc(framesSampled);
         if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin

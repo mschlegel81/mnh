@@ -1,6 +1,6 @@
 UNIT mnh_constants;
 INTERFACE
-USES sysutils;
+USES sysutils,FileUtil;
 CONST
   STACK_DEPTH_LIMIT={$ifdef Windows}43000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
   {$i code_hash.inc}
@@ -601,6 +601,7 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION unqualifiedId(CONST qualifiedId:string):string;
 FUNCTION configDir:string;
 FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
+FUNCTION getTempFileName:string;
 IMPLEMENTATION
 FUNCTION isSideEffectName(CONST s:string; OUT sideEffect:T_sideEffect):boolean;
   VAR se:T_sideEffect;
@@ -650,7 +651,41 @@ FUNCTION configDir:string;
     {$endif}
   end;
 
+VAR tempFilesCs:TRTLCriticalSection;
+FUNCTION getTempFileName:string;
+  VAR tempFolder:string;
+      handle:file of byte;
+  begin
+    tempFolder:=configDir+'temp';
+    ForceDirectories(tempFolder);
+    tempFolder+=DirectorySeparator;
+    enterCriticalSection(tempFilesCs);
+    repeat result:=tempFolder+IntToHex(random(maxLongint),8) until not(fileExists(result));
+    //touch file:
+    assign(handle,result);
+    rewrite(handle);
+    close(handle);
+    leaveCriticalSection(tempFilesCs);
+  end;
+
+PROCEDURE cleanupTemp;
+  VAR fileName:string;
+  begin
+    enterCriticalSection(tempFilesCs);
+    for fileName in FindAllFiles(configDir+'temp') do try
+      DeleteFile(fileName);
+    except end;
+    leaveCriticalSection(tempFilesCs);
+  end;
+
 INITIALIZATION
   OnGetApplicationName:=@getAppName;
   ForceDirectories(configDir);
+  initialize(tempFilesCs);
+  initCriticalSection(tempFilesCs);
+  cleanupTemp;
+
+FINALIZATION
+  cleanupTemp;
+  doneCriticalSection(tempFilesCs);
 end.
