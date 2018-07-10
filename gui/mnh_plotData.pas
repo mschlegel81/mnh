@@ -611,7 +611,9 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
                    result:=false;
                  end;
       end;
+      {$ifndef unix}
       if result then frame[(frameIndex+3) mod length(frame)]^.postPreparation(width,height,quality);
+      {$endif}
     end;
     leaveCriticalSection(seriesCs);
   end;
