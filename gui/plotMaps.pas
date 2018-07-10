@@ -9,7 +9,6 @@ TYPE
       data:PFPColor;
       xRes,yRes:longint;
       sampleCount:longint;
-      tempIntfImage: TLazIntfImage;
     public
       CONSTRUCTOR create(CONST width,height:longint);
       DESTRUCTOR destroy;
@@ -24,7 +23,6 @@ CONSTRUCTOR T_wordColMap.create(CONST width, height: longint);
     yRes:=height;
     sampleCount:=0;
     getMem(data,sizeOf(TFPColor)*xRes*yRes);
-    tempIntfImage:=nil;
     for i:=0 to xRes*yRes-1 do with data[i] do begin
       RED:=0;
       GREEN:=0;
@@ -35,21 +33,17 @@ CONSTRUCTOR T_wordColMap.create(CONST width, height: longint);
 
 DESTRUCTOR T_wordColMap.destroy;
   begin
-    if tempIntfImage<>nil then FreeAndNil(tempIntfImage);
     freeMem(data,sizeOf(TFPColor)*xRes*yRes);
   end;
 
 PROCEDURE T_wordColMap.addSample(CONST Bitmap:TBitmap);
-  VAR X, Y: integer;
+  VAR tempIntfImage: TLazIntfImage;
+      X, Y: integer;
       p:PFPColor;
       b:PByte;
   begin
     try
-      if tempIntfImage=nil then tempIntfImage:=Bitmap.CreateIntfImage
-                           else begin
-                             tempIntfImage.cleanupInstance;
-                             tempIntfImage.LoadFromBitmap(Bitmap.handle,Bitmap.MaskHandle);
-                           end;
+      tempIntfImage:=Bitmap.CreateIntfImage;
       for y:=0 to min(yRes,Bitmap.height)-1 do begin
         p:=data+y*xRes;
         b:=tempIntfImage.GetDataLineStart(y);
@@ -61,6 +55,7 @@ PROCEDURE T_wordColMap.addSample(CONST Bitmap:TBitmap);
         end;
       end;
     finally
+      tempIntfImage.free;
       inc(sampleCount);
     end;
   end;
@@ -69,9 +64,10 @@ PROCEDURE T_wordColMap.obtainAveragedResult(CONST picture:TPicture);
   VAR X, Y: integer;
       p:PFPColor;
       b:PByte;
+      tempIntfImage: TLazIntfImage;
   begin
     try
-      if tempIntfImage=nil then tempIntfImage:=picture.Bitmap.CreateIntfImage;
+      tempIntfImage:=picture.Bitmap.CreateIntfImage;
       if sampleCount=4
       then for y:=0 to min(yRes,picture.Bitmap.height)-1 do begin
         p:=data+y*xRes;
@@ -95,6 +91,7 @@ PROCEDURE T_wordColMap.obtainAveragedResult(CONST picture:TPicture);
       end;
       picture.Bitmap.LoadFromIntfImage(tempIntfImage);
     finally
+      tempIntfImage.free;
       inc(sampleCount);
     end;
   end;
