@@ -336,6 +336,7 @@ PROCEDURE T_valueScope.reportVariables(VAR variableReport:T_variableTreeEntryCat
 {$endif}
 
 INITIALIZATION
+  initialize(scopeRecycler);
   with scopeRecycler do begin
     initCriticalSection(recyclerCS);
     fill:=0;

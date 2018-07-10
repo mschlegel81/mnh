@@ -14,7 +14,7 @@ FUNCTION getMnhInfo:string;
 VAR BUILTIN_MYPATH:P_intFuncCallback;
 IMPLEMENTATION
 FUNCTION sleep_imp intFuncSignature;
-  VAR sleepUntil:double;
+  VAR sleepUntil:double=0;
       sleepInt:longint;
   begin
     result:=nil;
@@ -35,7 +35,7 @@ FUNCTION sleep_imp intFuncSignature;
   end;
 
 FUNCTION sleepUntil_imp intFuncSignature;
-  VAR sleepUntil:double;
+  VAR sleepUntil:double=0;
       sleepInt:longint;
   begin
     result:=nil;

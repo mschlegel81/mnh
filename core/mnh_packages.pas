@@ -310,6 +310,7 @@ FUNCTION postEvalThread(p:pointer):ptrint;
     end;
 
   begin
+    initialize(lastInput);
     with P_postEvaluationData(p)^ do begin
       enterCriticalSection(cs);
       currentlyProcessing:=true;

@@ -943,13 +943,13 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
     dest.Canvas.StretchDraw(ARect, source.picture.Bitmap);
   end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality
-  );
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality);
   VAR renderImage:TImage;
       gridTics:T_ticInfos;
       average:T_wordColMap;
       k:byte;
   begin
+    initialize(gridTics);
     system.enterCriticalSection(cs);
     try
       scalingOptions.updateForPlot(plotImage.Canvas,plotImage.width,plotImage.height,row,gridTics);

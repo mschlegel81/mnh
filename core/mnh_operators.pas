@@ -239,6 +239,7 @@ FUNCTION outerFunc_id intFuncSignature;
       ruleOut:P_token=nil;
       dummy  :P_token=nil;
   begin
+    result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
@@ -335,6 +336,7 @@ FUNCTION outerFunc_id intFuncSignature;
       ruleOut:P_token=nil;
       dummy  :P_token=nil;
   begin
+    result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin
@@ -382,6 +384,7 @@ boolIntOperator;
       ruleOut:P_token=nil;
       dummy  :P_token=nil;
   begin
+    result:=nil;
     rule:=P_abstractPackage(tokenLocation.package)^.customOperatorRule[op];
     if (rule<>nil) then begin
       if context.callDepth>=STACK_DEPTH_LIMIT then begin

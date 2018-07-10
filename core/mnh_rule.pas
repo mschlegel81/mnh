@@ -603,7 +603,12 @@ FUNCTION T_datastoreRule.getValue(VAR context:T_threadContext):P_literal;
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext):P_mapLiteral;
   begin
-
+    result:=newMapLiteral^
+      .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
+      .put(newStringLiteral('location'),newStringLiteral(getLocation                ),false)
+      {$ifdef fullVersion}
+      ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
+      {$endif};
   end;
 
 FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR context:T_threadContext): P_mapLiteral;
@@ -615,13 +620,8 @@ FUNCTION T_ruleWithSubrules.inspect(CONST includeFunctionPointer:boolean; VAR co
     end;
 
   begin
-    result:=newMapLiteral^
-      .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
-      .put(newStringLiteral('location'),newStringLiteral(getLocation                  ),false)^
-      .put(newStringLiteral('subrules'),subrulesList               ,false)
-      {$ifdef fullVersion}
-      ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
-      {$endif};
+    result:=inherited inspect(includeFunctionPointer,context)^
+            .put(newStringLiteral('subrules'),subrulesList,false);
     if includeFunctionPointer then
     result^.put(newStringLiteral('function'),getFunctionPointer(context,tt_localUserRule,getLocation),false);
   end;
@@ -650,13 +650,8 @@ FUNCTION T_mutableRule.inspect(CONST includeFunctionPointer:boolean; VAR context
     end;
 
   begin
-    result:=newMapLiteral^
-      .put(newStringLiteral('type'    ),newStringLiteral(C_ruleTypeText[getRuleType]),false)^
-      .put(newStringLiteral('location'),newStringLiteral(getLocation)                  ,false)^
-      .put(newStringLiteral('subrules'),subrulesList                                   ,false)
-      {$ifdef fullVersion}
-      ^.put(newStringLiteral('used'),newBoolLiteral(isIdResolved),false)
-      {$endif};
+    result:=inherited inspect(includeFunctionPointer,context)^
+      .put(newStringLiteral('subrules'),subrulesList,false);
     if includeFunctionPointer then begin
       if getRuleType=rt_customTypeCheck
       then result^.put(newStringLiteral('function'),getFunctionPointer(context,tt_customTypeRule,getLocation),false)
