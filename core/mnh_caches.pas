@@ -32,16 +32,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-VAR globalMemoryLimit:int64={$ifdef Windows}
-                              {$ifdef CPU32}
-                              1000000000;
-                              {$else}
-                              int64(maxLongint)*2;
-                              {$endif}
-                            {$else}
-                            1000000000;
-                            {$endif}
-    allCaches:T_arrayOfPointer;
+VAR allCaches:T_arrayOfPointer;
     allCacheCs:TRTLCriticalSection;
 PROCEDURE polishAllCaches;
   VAR i:longint;
@@ -57,7 +48,6 @@ PROCEDURE polishAllCaches;
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
   begin
     criticalSection:=ruleCS;
-    {$ifdef fullVersion}globalMemoryLimit:=settings.value^.memoryLimit;{$endif}
     fill := 0;
     useCounter:=0;
     setLength(cached,MIN_BIN_COUNT);
@@ -161,7 +151,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       data[i].lastUse :=useCounter;
     end;
     inc(useCounter);
-    if (MemoryUsed>globalMemoryLimit) then polishAllCaches
+    if not(isMemoryInComfortZone) then polishAllCaches
     else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
 

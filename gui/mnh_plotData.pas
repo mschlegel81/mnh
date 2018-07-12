@@ -4,6 +4,7 @@ USES sysutils,
      Interfaces, Classes, ExtCtrls, Graphics, types,
      FPReadBMP,FPWriteBMP,
      IntfGraphics,
+     mySys,
      mnh_basicTypes, mnh_constants,
      mnh_settings,
      mnh_messages,
@@ -156,6 +157,7 @@ TYPE
     private
       frame:array of P_plotSeriesFrame;
       framesWithImagesAllocated:array[0..7] of P_plotSeriesFrame;
+      tryToKeepMemoryLow:boolean;
       seriesCs:TRTLCriticalSection;
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
@@ -525,6 +527,7 @@ PROCEDURE T_plotSeries.clear;
     setLength(frame,0);
     for k:=0 to length(framesWithImagesAllocated)-1 do framesWithImagesAllocated[k]:=nil;
     leaveCriticalSection(seriesCs);
+    tryToKeepMemoryLow:=not(isMemoryInComfortZone);
   end;
 
 FUNCTION T_plotSeries.frameCount: longint;
@@ -540,6 +543,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
   PROCEDURE handleImagesToFree;
     VAR k,j:longint;
     begin
+      tryToKeepMemoryLow:=tryToKeepMemoryLow or not(isMemoryInComfortZone);
       //remove current from list
       k:=0;
       while k<length(framesWithImagesAllocated)-1 do
@@ -550,7 +554,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one, dump to file
       k:=length(framesWithImagesAllocated)-1;
-      if framesWithImagesAllocated[k]<>nil then framesWithImagesAllocated[k]^.clearImage(true);
+      if (framesWithImagesAllocated[k]<>nil) and tryToKeepMemoryLow then framesWithImagesAllocated[k]^.clearImage(true);
       //shift
       move(framesWithImagesAllocated[0],
            framesWithImagesAllocated[1],

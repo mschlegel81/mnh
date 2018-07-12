@@ -223,7 +223,7 @@ DESTRUCTOR T_contextRecycler.destroy;
 PROCEDURE T_contextRecycler.disposeContext(VAR context: P_threadContext);
   begin
     enterCriticalSection(recyclerCS);
-    if fill<length(contexts) then begin
+    if (fill<length(contexts)) and isMemoryInComfortZone then begin
       contexts[fill]:=context;
       inc(fill);
     end else dispose(context,destroy);
