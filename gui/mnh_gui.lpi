@@ -142,6 +142,11 @@
               <OptimizationLevel Value="0"/>
             </Optimizations>
           </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <UseHeaptrc Value="True"/>
+            </Debugging>
+          </Linking>
           <Other>
             <Verbosity>
               <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
