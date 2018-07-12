@@ -171,7 +171,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="68">
+    <Units Count="70">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -500,6 +500,15 @@
         <Filename Value="mnh_debuggingVar.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit67>
+      <Unit68>
+        <Filename Value="plotmath.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="plotMath"/>
+      </Unit68>
+      <Unit69>
+        <Filename Value="plotMaps.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit69>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -532,6 +541,11 @@
         <OptimizationLevel Value="0"/>
       </Optimizations>
     </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <UseHeaptrc Value="True"/>
+      </Debugging>
+    </Linking>
     <Other>
       <Verbosity>
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>

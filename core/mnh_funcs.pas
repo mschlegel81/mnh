@@ -141,7 +141,7 @@ FUNCTION getStringToPrint(CONST params:P_listLiteral; CONST doFormatTabs:formatT
             resultParts[i]:=params^.value[i]^.toString;
         end;
       end;
-    end;
+    end else setLength(resultParts,0);
     if doFormatTabs=ft_never then exit(join(resultParts,''));
     setLength(result,1);
     result[0]:=join(resultParts,'');

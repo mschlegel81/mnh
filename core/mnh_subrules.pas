@@ -1426,7 +1426,6 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
 
   VAR m:P_storedMessage;
   begin
-    dataRow.init();
     collector.create(at_unknown,[mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError]);
     constructInitialTList;
 

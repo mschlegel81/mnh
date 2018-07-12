@@ -3,8 +3,7 @@ PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-USES {$ifdef UNIX} cthreads,{$else}
-  {$ifdef debugMode}heaptrc,{$endif}{$endif}
+USES {$ifdef UNIX} cthreads,{$endif}
   sysutils,
   Interfaces, // this includes the LCL widgetset
   Forms,

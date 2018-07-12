@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, ExtCtrls, mnh_funcs, mnh_out_adapters, mnh_constants,
+  StdCtrls, ExtCtrls, mySys,mnh_funcs, mnh_out_adapters, mnh_constants,
   mnh_packages,mnh_settings,mnh_doc;
 
 CONST MINIMUM_OUTPUT_LINES=16;
@@ -167,6 +167,7 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
 PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
   begin
     settings.value^.memoryLimit:=StrToInt64Def(trim(memLimitEdit.text),1) shl 20;
+    memoryComfortThreshold:=settings.value^.memoryLimit;
     memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
   end;
 

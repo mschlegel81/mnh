@@ -155,7 +155,7 @@ PROCEDURE T_dataRow.init(CONST initialSize: longint);
 
 PROCEDURE T_dataRow.free;
   begin
-    freeMem(dat);
+    freeMem(dat,sizeOf(T_point)*alloc);
     alloc:=0;
   end;
 

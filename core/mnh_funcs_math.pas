@@ -886,7 +886,7 @@ FUNCTION gcd_impl intFuncSignature;
     end;
 
   VAR bigR,bigTemp:T_bigInt;
-      r:int64;
+      r:int64=0;
       workingSmall:boolean;
       k:longint;
   begin

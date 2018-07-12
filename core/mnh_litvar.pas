@@ -800,17 +800,19 @@ DESTRUCTOR G_literalKeyMap.destroy;
 
 PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
   VAR i,i0,j,c0,c1:longint;
+      hashMask:dword;
   begin
     if grow then begin
       i0:=length(bin);
       setLength(bin,i0+i0);
+      hashMask:=length(bin)-1;
       for i:=0 to i0-1 do begin
         bin[i+i0].binAlloc:=bin[i].binFill;
         getMem(bin[i+i0].entry,bin[i+i0].binAlloc*sizeOf(CACHE_ENTRY));
         c0:=0;
         c1:=0;
         for j:=0 to bin[i].binFill-1 do begin
-          if (bin[i].entry[j].keyHash and (length(bin)-1)=i)
+          if (bin[i].entry[j].keyHash and hashMask=i)
           then begin bin[i   ].entry[c0]:=bin[i].entry[j]; inc(c0); end
           else begin bin[i+i0].entry[c1]:=bin[i].entry[j]; inc(c1); end;
         end;

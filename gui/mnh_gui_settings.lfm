@@ -7,11 +7,12 @@ object SettingsForm: TSettingsForm
   Caption = 'MNH - Settings'
   ClientHeight = 240
   ClientWidth = 320
+  DesignTimePPI = 144
   FormStyle = fsStayOnTop
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.8.0.6'
+  LCLVersion = '1.8.4.0'
   object PageControl: TPageControl
     Left = 0
     Height = 240
@@ -182,19 +183,22 @@ object SettingsForm: TSettingsForm
           Left = 0
           Height = 33
           Top = 0
-          Width = 135
+          Width = 155
           Align = alLeft
-          Caption = 'Cache Limit (MB):'
+          Caption = 'Memory Limit (MB):'
           ParentColor = False
         end
         object memLimitEdit: TEdit
-          Left = 135
+          Left = 155
           Height = 33
+          Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
           Top = 0
-          Width = 177
+          Width = 157
           Align = alClient
           NumbersOnly = True
           OnEditingDone = memLimitEditEditingDone
+          ParentShowHint = False
+          ShowHint = True
           TabOrder = 0
           Text = 'memLimitEdit'
         end
