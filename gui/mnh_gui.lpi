@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="70">
+    <Units Count="72">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -426,6 +426,14 @@
         <Filename Value="plotMaps.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit69>
+      <Unit70>
+        <Filename Value="..\common\bigint.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit70>
+      <Unit71>
+        <Filename Value="..\core\mnh_patterns.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit71>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
