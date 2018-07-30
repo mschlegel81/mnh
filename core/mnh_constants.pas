@@ -223,15 +223,15 @@ CONST
     {tt_expBraceClose}      tt_EOL,
     {tt_iifCheck}           tt_iifElse);
 
-  C_opPrecedence: array[tt_comparatorEq..tt_unaryOpMinus] of byte =
-   (6, 6, 6, 6, 6, 6, 6, //comparators
-    7,                   //in
-    8, 9, 9,             //logical operators
-    8, 9,                //lazy logical operators
-    4, 4, 3, 3, 3, 3, 2, //arthmetical operators
-    5, 9,                //special: string concatenation
-   10,11,
-   1,1,1);               //unary (prefix) operators
+  C_opPrecedence: array[tt_comparatorEq..tt_unaryOpMinus,0..1] of byte =
+   ((6,6),(6,6),(6,6),(6,6),(6,6),(6,6),(6,6), //comparators
+    (7,7),                      //in
+    (8,8),(9,9),(9,9),          //logical operators
+    (8,8),(9,9),                //lazy logical operators
+    (4,4),(4,4),(3,3),(3,3),(3,3),(3,3),(2,3), //arthmetical operators
+    (5,5),(9,9),                   //special: string concatenation
+    (10,10),(11,11),
+    (1,1),(1,1),(1,1));            //unary (prefix) operators
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginExpression] of T_tokenType=(tt_endBlock,tt_endRule,tt_endExpression);
   C_compatibleBegin:array[tt_endBlock..tt_endExpression] of T_tokenType=(tt_beginBlock,tt_beginRule,tt_beginExpression);

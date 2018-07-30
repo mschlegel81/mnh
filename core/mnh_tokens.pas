@@ -148,12 +148,17 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
         result[length(result)-1].last:=p; //end of body part is token before comma
         setLength(result,length(result)+1);
         result[length(result)-1].first:=t^.next; //start of next body part is token after comma
+        if (t^.next^.tokType in C_closingBrackets) and (bracketLevel=1) then adapters.raiseError('Empty body part.',result[length(result)-1].first^.location);
         partLength:=-1; //excluding delimiting separators
       end;
       p:=t; t:=t^.next; inc(partLength);
     end;
+    if not(adapters.continueEvaluation) then begin
+      setLength(result,0);
+      exit;
+    end;
     result[length(result)-1].last:=p; //end of body part is token before comma
-    if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+    if (p=nil) or (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
       adapters.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
       setLength(result,0);
       exit;
