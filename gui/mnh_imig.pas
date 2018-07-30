@@ -140,6 +140,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       logLinesDisplayed:longint=0;
       outputMethod:P_expressionLiteral=nil;
       thisWorkflow:T_imageManipulationWorkflow;
+      hasDelayMessage:boolean=false;
 
       obtainedImage:P_rawImage;
 
@@ -205,8 +206,12 @@ FUNCTION executeWorkflow_imp intFuncSignature;
       end;
       if isValid then begin
         enterCriticalSection(workflowCs);
-        while (workflowsActive>0) and (not(isMemoryInComfortZone) or (lastWorkflowStart+5*ONE_SECOND<now)) do begin
+        while (workflowsActive>0) and (not(isMemoryInComfortZone) or (lastWorkflowStart+5*ONE_SECOND>now)) do begin
           leaveCriticalSection(workflowCs);
+          if not(hasDelayMessage) then begin
+            hasDelayMessage:=true;
+            context.messages.globalMessages^.postTextMessage(mt_el1_note,tokenLocation,'Start of workflow delayed.');
+          end;
           sleep(random(5000));
           ThreadSwitch;
           enterCriticalSection(workflowCs);
