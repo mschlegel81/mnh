@@ -327,7 +327,7 @@ FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint): boolean
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
       if tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in C_operators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType]>outerPrecedence) then exit(true);
+      else if (tokType in C_operators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType,0]>outerPrecedence) then exit(true);
     end;
     result:=false;
   end;
@@ -667,7 +667,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
         r:=P_inlineExpression(LHS);
         if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
         if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
-        embrace:=r^.needEmbrace(C_opPrecedence[op]);
+        embrace:=r^.needEmbrace(C_opPrecedence[op,0]);
         if embrace then appendToExpression(tt_braceOpen);
         for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
         if embrace then appendToExpression(tt_braceClose);
@@ -679,7 +679,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST LHS: P_literal; CONST op: T_to
       if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
       if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
       embrace:=ignoreLHS and (length(r^.preparedBody)>1) or
-          not(ignoreLHS) and r^.needEmbrace(C_opPrecedence[op]-1);
+          not(ignoreLHS) and r^.needEmbrace(C_opPrecedence[op,0]-1);
       if embrace then appendToExpression(tt_braceOpen);
       for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
       if embrace then appendToExpression(tt_braceClose);

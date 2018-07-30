@@ -657,7 +657,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     begin
       case cTokType[1] of
         tt_comparatorEq..tt_operatorConcatAlt:
-          if C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]] then begin
+          if C_opPrecedence[cTokType[1],0]>=C_opPrecedence[cTokType[-1],1] then begin
             case cTokType[-1] of
               tt_unaryOpMinus : newLit:=arithmeticNegationOf(first^.data,stack.dat[stack.topIndex]^.location,context);
               tt_unaryOpNegate: newLit:=logicalNegationOf   (first^.data,stack.dat[stack.topIndex]^.location,context);
