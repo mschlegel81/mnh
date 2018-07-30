@@ -2,7 +2,7 @@ UNIT mnh_imig;
 INTERFACE
 USES sysutils,   //system
      ExtCtrls,
-     myGenerics,myTools, //common
+     myGenerics,myTools,mySys, //common
      //mnh:
      mnh_constants, mnh_basicTypes,
      mnh_funcs,mnh_litVar,mnh_contexts,mnh_funcs_list,mnh_plotData,
@@ -122,6 +122,9 @@ FUNCTION validateWorkflow_imp intFuncSignature;
     end else result:=nil;
   end;
 
+VAR workflowsActive:longint=0;
+    workflowCs:TRTLCriticalSection;
+    lastWorkflowStart:double=0;
 FUNCTION executeWorkflow_imp intFuncSignature;
   CONST aditionalOutputInterval=1/(24*60); //one minute
   VAR isValid:boolean=true;
@@ -201,6 +204,17 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         dispose(obtainedImage,destroy);
       end;
       if isValid then begin
+        enterCriticalSection(workflowCs);
+        while (workflowsActive>0) and (not(isMemoryInComfortZone) or (lastWorkflowStart+5*ONE_SECOND<now)) do begin
+          leaveCriticalSection(workflowCs);
+          sleep(random(5000));
+          ThreadSwitch;
+          enterCriticalSection(workflowCs);
+        end;
+        lastWorkflowStart:=now;
+        inc(workflowsActive);
+        leaveCriticalSection(workflowCs);
+
         if source<>'' then begin
                              doOutput('Executing workflow with input="'+source+'", output="'+dest+'"');
                              thisWorkflow.executeForTarget(source,sizeLimit,dest);
@@ -232,6 +246,9 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         if not(context.messages.continueEvaluation) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,'Image calculation incomplete');
         thisWorkflow.progressQueue.ensureStop;
+        enterCriticalSection(workflowCs);
+        dec(workflowsActive);
+        leaveCriticalSection(workflowCs);
       end;
       if (context.messages.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
         postNewImage(context.messages,newFromWorkflowImage);
@@ -571,6 +588,7 @@ PROCEDURE T_imageSystem.processPendingMessages;
   end;
 
 INITIALIZATION
+  initCriticalSection(workflowCs);
   registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
@@ -588,4 +606,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
   //registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
   registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary,'randomIfs;//returns a random IFS to be fed to executeWorkflow');
+  lastWorkflowStart:=now-ONE_MINUTE;
+FINALIZATION
+  doneCriticalSection(workflowCs);
 end.
