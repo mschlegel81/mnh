@@ -19,6 +19,9 @@ PROCEDURE displayHelp;
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     {$ifdef fullVersion}
+    {$ifdef imig}
+    imigAdapters:P_abstractOutAdapter=nil;
+    {$endif}
     plotAdapters:P_abstractOutAdapter=nil;
     profilingRun:boolean=false;
     reEvaluationWithGUIrequired:boolean=false;
@@ -134,6 +137,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       globals.create(@consoleAdapters);
       {$ifdef fullVersion}
       consoleAdapters.addOutAdapter(plotAdapters,false);
+      {$ifdef imig}
+      consoleAdapters.addOutAdapter(imigAdapters,false);
+      {$endif}
       {$endif}
       globals.resetForEvaluation({$ifdef fullVersion}@package,contextType[profilingRun]{$else}ect_normal{$endif},mainParameters);
       if wantHelpDisplay then begin
