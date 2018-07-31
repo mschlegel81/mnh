@@ -1,0 +1,35 @@
+private listOf(value,count=0)->[];
+private listOf(value,count>0)->[1..count].map({value});
+
+private asSumOfPrimes(value> 0,gotAlready:IntList,set:IntList)->begin
+  local restSet:=set[set<=value]; //only work with coins >= amount
+  local p:=head(restSet);
+  size(restSet)=0 ? void :
+  size(restSet)=1
+  ? value mod p = 0
+    ? [gotAlready|listOf(p,value div p)]
+    : void
+  : [0..value div p].pEach(i,asSumOfPrimes(value-i*p,gotAlready|listOf(p,i),tail(restSet)),|);
+end;
+private asSumOfPrimes(value=0,gotAlready:IntList,set:IntList)->[gotAlready];
+
+descendants(n)->n.asSumOfPrimes([],primes(n)).map({$x.agg(*)}).sort;
+ancestors(4)->[];
+ancestors(n)->begin
+  local r:=[];
+  local x:=n;
+  while(!x.isPrime,r|=(x:=x.factorize.agg(+)));
+  r;
+end;
+
+//*see http://rosettacode.org/wiki/Primes_-_allocate_descendants_to_their_ancestors
+main(number)->begin
+  local numAsInt:=number.toInt;
+  numAsInt>=2 ? void : fail('number must be an integer >=2');
+  local anc:=ancestors(numAsInt);
+  local dec:=descendants(numAsInt);
+  printf('[%s] level %s',number,anc.size);
+  print('Ancestors: ',anc.join(", "));
+  print('Descendants: ',dec.size);
+  print(dec.join(", "));
+end;

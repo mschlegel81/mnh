@@ -34,6 +34,7 @@ testParameters((demosRoot&'knightsTour.mnh'    ))->['8','0','0'];
 testParameters((demosRoot&'oeis.mnh'           ))->['gen','A061358','100'];
 testParameters((demosRoot&'pascal.mnh'         ))->['12'];
 testParameters((demosRoot&'pangrams.mnh'       ))->['check','The quick brown fox jumps over the lazy dog.'];
+testParameters((demosRoot&'prime_descendants.mnh'))->['46'];
 testParameters((demosRoot&'randomWords.mnh'    ))->["16"];
 testParameters((demosRoot&'shannonEntropy.mnh' ))->["1223334444"];
 testParameters((demosRoot&'sierpinskiTriangle.mnh'))->["5"];
