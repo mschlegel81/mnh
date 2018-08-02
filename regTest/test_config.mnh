@@ -26,6 +26,7 @@ testParameters((demosRoot&'combinations.mnh'   ))->['3','5'];
 testParameters((demosRoot&'countInFactors.mnh' ))->['25'];
 testParameters((demosRoot&'diff.mnh'           ))->[dict,editedDict];
 testParameters((demosRoot&'emptyFolders.mnh'   ))->['.'];
+testParameters((demosRoot&'erastothenes.mnh'   ))->['2900'];
 testParameters((demosRoot&'fannkuch.mnh'       ))->['7'];
 testParameters((demosRoot&'findDuplicates.mnh' ))->['.'];
 testParameters((demosRoot&'gol.mnh'            ))->['40','40','9'];

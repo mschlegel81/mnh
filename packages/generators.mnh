@@ -31,3 +31,17 @@ listIterator(l:List)->{begin
   local index:=rangeGenerator(0,l.size);
   local value:=l;
 save; value[index() orElse -1]; end}.toGenerator;
+
+//*Returns a chunk iterator
+@SuppressUnusedWarning
+chunkIterator(iter:Iteratable,chunkSize>=1)->{begin
+  local g:=iter.isIteratableExpression
+           ? iter
+           : listIterator(iter.toList);
+  local next:={begin
+    local r:=g.head(chunkSize);
+    r==[] ? void : r;
+  end};
+save;
+  next();
+end}.toGenerator;
