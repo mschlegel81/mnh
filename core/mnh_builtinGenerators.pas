@@ -24,16 +24,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
   end;
 
-  P_singleValueIterator=^T_singleValueIterator;
-  T_singleValueIterator=object(T_builtinGeneratorExpression)
-    didDeliver:boolean;
-    value:P_literal;
-    CONSTRUCTOR create(CONST v:P_literal);
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-    FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
-    DESTRUCTOR destroy; virtual;
-  end;
-
 CONSTRUCTOR T_listIterator.create(CONST v: P_compoundLiteral);
   begin
     init(lt_expression);
@@ -61,6 +51,17 @@ DESTRUCTOR T_listIterator.destroy;
     disposeLiteral(underlying);
     disposeLiteral(values);
   end;
+
+TYPE
+P_singleValueIterator=^T_singleValueIterator;
+T_singleValueIterator=object(T_builtinGeneratorExpression)
+  didDeliver:boolean;
+  value:P_literal;
+  CONSTRUCTOR create(CONST v:P_literal);
+  FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+  FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+  DESTRUCTOR destroy; virtual;
+end;
 
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal);
   begin
