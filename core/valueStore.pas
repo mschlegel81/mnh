@@ -121,7 +121,6 @@ PROCEDURE scopePop(VAR scope:P_valueScope);
   begin
     if scope=nil then exit;
     newScope:=scope^.parentScope;
-    if scope=nil then exit;
     if interlockedDecrement(scope^.refCount)<=0 then begin
       with scopeRecycler do if (tryEnterCriticalsection(recyclerCS)=0)
       then dispose(scope,destroy)
@@ -225,9 +224,6 @@ DESTRUCTOR T_valueScope.destroy;
   VAR k:longint;
   begin
     enterCriticalSection(cs);
-    {$ifdef debugMode}
-    if refCount<>0 then raise Exception.create('Disposing a scope with pending references!');
-    {$endif}
     for k:=0 to varFill-1 do dispose(variables[k],destroy);
     setLength(variables,0);
     varFill:=0;
@@ -240,9 +236,6 @@ PROCEDURE T_valueScope.insteadOfDestroy;
   VAR k:longint;
   begin
     enterCriticalSection(cs);
-    {$ifdef debugMode}
-    if refCount<>0 then raise Exception.create('Disposing a scope with pending references!');
-    {$endif}
     for k:=0 to varFill-1 do dispose(variables[k],destroy);
     varFill:=0;
     leaveCriticalSection(cs);
