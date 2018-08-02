@@ -814,29 +814,10 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
     end;
 
   PROCEDURE cleanupStackAndExpression;
-    VAR clean:boolean=true;
     begin
-      while (first<>nil) and clean do begin
-        case first^.tokType of
-          tt_beginBlock,tt_beginExpression:  scopePush(context.valueScope,ACCESS_READWRITE);
-          tt_beginRule:                      scopePush(context.valueScope,ACCESS_BLOCKED);
-          tt_endBlock,tt_endExpression,tt_endRule: begin
-            while (stack.topIndex>=0) and not(stack.topType in [tt_beginBlock,tt_beginExpression,tt_beginRule]) do
-            stack.popDestroy;
-            if (stack.topIndex>=0) and (first^.tokType=C_compatibleEnd[stack.topType]) then begin
-              {$ifdef fullVersion}
-              if (stack.topType in [tt_beginRule,tt_beginExpression]) then context.callStackPop(nil);
-              {$endif}
-              stack.popDestroy;
-              scopePop(context.valueScope);
-            end else clean:=false;
-            if first^.tokType=tt_endRule then context.setSideEffectsByEndToken(first);
-          end;
-        end;
-        first:=disposeToken(first);
-      end;
-      while (stack.topIndex>=0) do stack.popDestroy;
-      if first<>nil then cascadeDisposeToken(first);
+      while stack.topIndex>=0 do stack.popDestroy();
+      cascadeDisposeToken(first);
+      while context.valueScope<>nil do scopePop(context.valueScope);
     end;
 
   PROCEDURE resolveElementAccess;
