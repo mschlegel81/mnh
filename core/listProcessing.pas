@@ -507,14 +507,18 @@ PROCEDURE T_eachTask.defineAndEnqueue(CONST taskEnv:P_threadContext; CONST expr:
   end;
 
 PROCEDURE T_eachTask.evaluate;
+  VAR oldScope:P_valueScope;
   begin
+    enterCriticalSection(taskCs);
     env^.beginEvaluation;
+    leaveCriticalSection(taskCs);
     try
       if env^.messages.continueEvaluation then with eachPayload do begin
+        oldScope:=env^.valueScope;
         scopePush(env^.valueScope,ACCESS_READWRITE);
         env^.valueScope^.createVariable(EACH_INDEX_IDENTIFIER,eachIndex,true);
         evaluationResult:=eachRule^.evaluateToLiteral(eachRule^.getLocation,env,eachParameter);
-        scopePop(env^.valueScope);
+        while (env^.valueScope<>oldScope) and (env^.valueScope<>nil) do scopePop(env^.valueScope);
       end;
     finally
       enterCriticalSection(taskCs);
