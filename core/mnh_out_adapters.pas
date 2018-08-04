@@ -283,6 +283,7 @@ PROCEDURE T_threadLocalMessages.propagateFlags(CONST up:boolean=true; CONST down
 PROCEDURE T_threadLocalMessages.raiseError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
   VAR message:P_errorMessage;
   begin
+    if (kind<>mt_el4_systemError) and (FlagQuietHalt in flags) then exit;
     new(message,create(kind,location,split(text,C_lineBreakChar)));
     {$ifdef fullVersion}
     if traceCallback<>nil then traceCallback(message^);
