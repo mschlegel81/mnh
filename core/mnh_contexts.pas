@@ -521,7 +521,7 @@ PROCEDURE T_threadContext.setSideEffectsByEndToken(CONST token:P_token);
     {$ifdef debugMode}
     if (not(token^.tokType in [tt_endRule,tt_endExpression])) then raise Exception.create('Invalid parameter for setSideEffectsByEndToken; not an end-token but '+safeTokenToString(token));
     {$endif}
-    move(token^.data,allowedSideEffects,sizeOf(pointer));
+    move(token^.data,allowedSideEffects,sizeOf(allowedSideEffects));
   end;
 
 FUNCTION T_threadContext.getNewEndToken(CONST blocking: boolean;
