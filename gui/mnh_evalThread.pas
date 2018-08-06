@@ -56,7 +56,7 @@ TYPE
       done  :boolean;
       succeeded:boolean;
       CONSTRUCTOR create(CONST script_:P_scriptMeta; CONST inputIndex:longint; CONST inputEditFile:string; CONST input_:TStrings; CONST inputLang:string);
-      PROCEDURE execute(VAR context:T_evaluationGlobals);
+      PROCEDURE execute(VAR globals:T_evaluationGlobals);
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION getOutput:P_literal;
@@ -161,11 +161,11 @@ FUNCTION main(p:pointer):ptrint;
   VAR sleepTime:longint=0;
       r:T_evalRequest;
 
-  PROCEDURE setupEdit(OUT context:T_evaluationGlobals);
+  PROCEDURE setupEdit(OUT globals:T_evaluationGlobals);
     begin
       P_runEvaluator(p)^.editAdapters^.clear;
-      context.create(P_runEvaluator(p)^.editAdapters);
-      context.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY);
+      globals.create(P_runEvaluator(p)^.editAdapters);
+      globals.resetForEvaluation(nil,ect_normal,C_EMPTY_STRING_ARRAY);
     end;
 
   PROCEDURE doneEdit(VAR globals:T_evaluationGlobals);
@@ -318,12 +318,12 @@ DESTRUCTOR T_editScriptTask.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_editScriptTask.execute(VAR context:T_evaluationGlobals);
+PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals);
   begin
-    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@context,input).literal;
+    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,input).literal;
     disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
-      context.primaryContext.messages.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
+      globals.primaryContext.messages.raiseError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
       disposeLiteral(output);
     end;
     done:=true;

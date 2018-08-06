@@ -2699,11 +2699,12 @@ FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;
 
 FUNCTION setUnion(CONST params:P_listLiteral):P_setLiteral;
   VAR i:longint;
+      expectedSetSize:longint=0;
   begin
     if not((params<>nil) and (params^.size>=1)) then exit(nil);
-    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil);
+    for i:=0 to params^.size-1 do if not(params^.value[i]^.literalType in C_compoundTypes) then exit(nil) else inc(expectedSetSize,P_compoundLiteral(params^.value[i])^.size);
     if params^.size=1 then exit(P_compoundLiteral(params^.value[0])^.toSet());
-    result:=newSetLiteral(P_compoundLiteral(params^.value[0])^.size);
+    result:=newSetLiteral(expectedSetSize);
     for i:=0 to params^.size-1 do result^.appendAll(P_compoundLiteral(params^.value[i]));
   end;
 
