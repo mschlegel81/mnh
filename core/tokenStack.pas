@@ -226,8 +226,8 @@ FUNCTION T_callStack.pop(CONST wallclockTime: double;CONST profiler:P_profiler):
     if dat[fill-1].parameters<>nil then begin
       dispose(dat[fill-1].parameters,destroy);
       dat[fill-1].parameters:=nil;
-      result:=dat[fill-1].callLocation;
     end;
+    result:=dat[fill-1].callLocation;
     dec(fill);
   end;
 

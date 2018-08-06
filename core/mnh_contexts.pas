@@ -110,9 +110,9 @@ TYPE
       //Misc.:
       PROPERTY threadOptions:T_threadContextOptions read options;
       {$ifdef fullVersion}
-      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode); inline;
-      PROCEDURE callStackPushCategory(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls); inline;
-      PROCEDURE callStackPop(CONST first:P_token); inline;
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode); {$ifndef debugMode} inline; {$endif}
+      PROCEDURE callStackPushCategory(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls); {$ifndef debugMode} inline; {$endif}
+      PROCEDURE callStackPop(CONST first:P_token); {$ifndef debugMode} inline; {$endif}
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
       PROCEDURE reportVariables(VAR variableReport: T_variableTreeEntryCategoryNode);
       {$endif}
