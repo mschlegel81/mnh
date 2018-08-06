@@ -873,8 +873,8 @@ tt_separatorComma: context.messages.raiseError('Token , is only allowed in param
 
 {$WARN 2005 OFF}
 //COMMON_SEMICOLON_HANDLING is defined for cTokType[0]=tt_literal; case C_tokType[1] of ...
-{$define COMMON_SEMICOLON_HANDLING:=
-tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
+{$define COMMON_SEMICOLON_HANDLING:=tt_semicolon:
+if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
     if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then begin
       {$ifdef fullVersion}
