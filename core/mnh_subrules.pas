@@ -115,12 +115,12 @@ TYPE
   P_subruleExpression=^T_subruleExpression;
   T_subruleExpression=object(T_inlineExpression)
     private
-      parent:P_objectWithIdAndLocation;
+      parent:P_abstractRule;
       publicSubrule:boolean;
     public
       PROPERTY metaData:T_ruleMetaData read meta;
 
-      CONSTRUCTOR create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
+      CONSTRUCTOR create(CONST parent_:P_abstractRule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
       DESTRUCTOR destroy; virtual;
       FUNCTION hasValidMainPattern:boolean;
       FUNCTION hasValidValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
@@ -293,10 +293,9 @@ CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: 
     init(et_whileBody,declAt);
     pattern.create;
     constructExpression(rep,context);
-    resolveIds(nil);
   end;
 
-CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
+CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_abstractRule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_threadContext; VAR meta_:T_ruleMetaData);
   begin
     init(et_subrule,declAt);
     meta.destroy;
@@ -305,7 +304,6 @@ CONSTRUCTOR T_subruleExpression.create(CONST parent_:P_objectWithIdAndLocation; 
     pattern:=pat;
     constructExpression(rep,context);
     parent:=parent_;
-    resolveIds(nil);
   end;
 
 CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; VAR context: T_threadContext);
@@ -314,7 +312,6 @@ CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; 
     pattern.create;
     pattern.appendFreeId(parameterId,rep^.location);
     constructExpression(rep,context);
-    resolveIds(nil);
   end;
 
 FUNCTION T_inlineExpression.needEmbrace(CONST outerPrecedence: longint): boolean;
@@ -1219,6 +1216,8 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST threadLocalMessages:P_thr
 PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalMessages);
   VAR i:longint;
       bracketStack:T_TokenStack;
+      inlineValue:P_literal;
+
   FUNCTION isEachIdentifier(CONST id:string):boolean;
     VAR k:longint;
     begin
@@ -1247,6 +1246,13 @@ PROCEDURE T_inlineExpression.resolveIds(CONST threadLocalMessages:P_threadLocalM
           tt_customTypeCheck,
           tt_importedUserRule:P_abstractRule(token.data)^.setIdResolved;
           {$endif}
+        end;
+        if token.tokType in [tt_localUserRule,tt_importedUserRule] then begin
+          inlineValue:=P_abstractRule(token.data)^.getInlineValue;
+          if inlineValue<>nil then begin
+            token.data:=inlineValue;
+            token.tokType:=tt_literal;
+          end;
         end;
       end;
       bracketStack.destroy;
