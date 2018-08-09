@@ -74,7 +74,7 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
         result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter:=P_collectionLiteral(x)^.iteratableList;
         for y in iter do begin
-          yNeg:=logicalNegationOf(y,opLocation,context);
+          yNeg:=arithmeticNegationOf(y,opLocation,context);
           if yNeg=nil
           then P_collectionLiteral(result)^.containsError:=true
           else P_collectionLiteral(result)^.append(yNeg,false);
