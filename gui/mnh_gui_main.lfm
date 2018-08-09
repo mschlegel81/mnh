@@ -19,7 +19,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
   object inputPageControl: TPageControl
     Left = 175
     Height = 226

@@ -207,7 +207,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
 
   begin
     editorFont:=p_assistanceSynEdit.Font;
-    setupEditorMetaBase(p_mainForm,outputHighlighter,languageMenuRoot);
+    setupEditorMetaBase(outputHighlighter,languageMenuRoot);
 
     mainForm              :=p_mainForm              ;
     inputPageControl      :=p_inputPageControl      ;
@@ -291,7 +291,7 @@ PROCEDURE T_editorMeta.activate;
   begin
     if not(enabled) then exit;
     inherited activate;
-    mainForm.caption:=updateSheetCaption;
+    mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
 
     for l in T_language do if Assigned(fileTypeMeta[l].menuItem) then begin
       fileTypeMeta[l].menuItem.OnClick:=@languageMenuItemClick;
@@ -335,7 +335,7 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
       triggerCheck;
       invalidateWordUnderCursor;
     end;
-    mainForm.caption:=updateSheetCaption;
+    mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
   end;
 
 PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
@@ -354,7 +354,7 @@ FUNCTION T_editorMeta.saveAsWithDialog: boolean;
       SaveDialog.options:=SaveDialog.options-[ofExtensionDifferent];
     end;
     if SaveDialog.execute then begin
-      mainForm.caption:=saveFile(SaveDialog.fileName);
+      mainForm.activeFileChanged(saveFile(SaveDialog.fileName),language_=LANG_MNH,fileInfo.filePath='');
       result:=true;
     end else result:=false;
   end;
@@ -362,7 +362,7 @@ FUNCTION T_editorMeta.saveAsWithDialog: boolean;
 FUNCTION T_editorMeta.saveWithDialog: boolean;
   begin
     if isFile then begin
-      mainForm.caption:=saveFile();
+      mainForm.activeFileChanged(saveFile(),language_=LANG_MNH,fileInfo.filePath='');
       result:=true;
     end else result:=saveAsWithDialog;
   end;
@@ -465,7 +465,7 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       fileAge(fileInfo.filePath,fileInfo.fileAccessAge);
       editor.modified:=false;
       fileInfo.isChanged:=false;
-      mainForm.caption:=updateSheetCaption;
+      mainForm.activeFileChanged(updateSheetCaption,language_=LANG_MNH,fileInfo.filePath='');
       if language_=LANG_MNH then triggerCheck;
     end;
   end;

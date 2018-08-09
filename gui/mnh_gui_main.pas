@@ -163,6 +163,7 @@ TYPE
     PROCEDURE onDebuggerEvent;                                override;
     PROCEDURE onEndOfEvaluation;                              override;
     PROCEDURE triggerFastPolling;                             override;
+    PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); override;
     FUNCTION openLocation(CONST location:T_searchTokenLocation):boolean;
     PROCEDURE enableDynamicItems;
     PROCEDURE updateScriptMenus;
@@ -335,6 +336,12 @@ PROCEDURE TMnhForm.onEndOfEvaluation;
 PROCEDURE TMnhForm.triggerFastPolling;
   begin
     UpdateTimeTimer.interval:=1;
+  end;
+
+PROCEDURE TMnhForm.activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean);
+  begin
+    caption:=newCaption;
+    miRunExternally.enabled:=isMnhFile and not(isPseudoFile);
   end;
 
 FUNCTION TMnhForm.openLocation(CONST location: T_searchTokenLocation): boolean;

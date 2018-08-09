@@ -74,7 +74,7 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
         result:=P_collectionLiteral(x)^.newOfSameType(true);
         iter:=P_collectionLiteral(x)^.iteratableList;
         for y in iter do begin
-          yNeg:=logicalNegationOf(y,opLocation,context);
+          yNeg:=arithmeticNegationOf(y,opLocation,context);
           if yNeg=nil
           then P_collectionLiteral(result)^.containsError:=true
           else P_collectionLiteral(result)^.append(yNeg,false);
@@ -150,7 +150,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
         end else case first^.tokType of
           tt_beginBlock:            begin stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_beginExpression,
-          tt_beginRule: begin inc(level); stack.push(first); scopePush(context.valueScope,ACCESS_BLOCKED); end;
+          tt_beginRule: begin inc(level); stack.push(first); scopePush(context.valueScope,ACCESS_READWRITE); end;
           tt_endBlock:
             if stack.topType=tt_beginBlock
             then begin
@@ -1128,7 +1128,7 @@ end}
           end;
         end;
 {cT[0]=}tt_beginRule: begin
-          scopePush(context.valueScope,ACCESS_BLOCKED);
+          scopePush(context.valueScope,ACCESS_READWRITE);
           stack.push(first);
           didSubstitution:=true;
         end;

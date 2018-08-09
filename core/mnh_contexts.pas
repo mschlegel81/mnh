@@ -153,7 +153,7 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION  dequeue:P_queueTask;
-    PROCEDURE activeDeqeue;
+    FUNCTION  activeDeqeue:boolean;
     PROPERTY getQueuedCount:longint read queuedCount;
     PROCEDURE enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   end;
@@ -351,7 +351,7 @@ PROCEDURE T_evaluationGlobals.stopWorkers;
     timeout:=now+TIME_OUT_AFTER;
     primaryContext.messages.setStopFlag;
     while (now<timeout) and ((length(primaryContext.related.children)>0) or (taskQueue.queuedCount>0)) do begin
-      taskQueue.activeDeqeue();
+      while taskQueue.activeDeqeue() do begin end;
       ThreadSwitch;
       sleep(1);
     end;
@@ -914,11 +914,14 @@ FUNCTION T_taskQueue.dequeue: P_queueTask;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_taskQueue.activeDeqeue;
+FUNCTION T_taskQueue.activeDeqeue:boolean;
   VAR task:P_queueTask=nil;
   begin
     task:=dequeue;
-    if task<>nil then begin
+    if task=nil
+    then result:=false
+    else begin
+      result:=true;
       if task^.isVolatile then begin
         task^.evaluate;
         dispose(task,destroy);
