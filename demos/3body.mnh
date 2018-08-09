@@ -11,13 +11,22 @@ private initialState:=
 
 private force(delta:NumericList(2))->delta*sqr(delta).agg(+)^(-3/2);
 
-private F:={[$x[1],
-             force($x[2]-$x[0])+force($x[4]-$x[0]),
-             $x[3],
-             force($x[0]-$x[2])+force($x[4]-$x[2]),
-             $x[5],
-             force($x[0]-$x[4])+force($x[2]-$x[4])]};
+private F:={begin
+             [$x[1],
+              (local f20:=force($x[2]-$x[0]))+(local f40:=force($x[4]-$x[0])),
+              $x[3],
+              -f20+(local f42:=force($x[4]-$x[2])),
+              $x[5],
+              -f40-f42];
+            end};
 
+@SuppressUnusedWarning
+private asymmetryOf(x:List(6))->begin
+  local A:=[sqr(x[0]-x[2]).agg(+),
+            sqr(x[4]-x[2]).agg(+),
+            sqr(x[0]-x[4]).agg(+)];
+  max(A)-min(A);
+end;
 
 private newTrailPlotter(style)->{begin
   local trace:=[];
