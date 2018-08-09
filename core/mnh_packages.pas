@@ -646,34 +646,25 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     end;
   VAR newLocalIdInfos:P_localIdInfos;
   begin
-    {$ifdef debugMode}
-    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - reset');
-    {$endif}
     new(newPackage,create(provider,nil));
     adapters.clear;
     globals.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
     new(newLocalIdInfos,create);
-    {$ifdef debugMode}
-    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - load');
-    {$endif}
     newPackage^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
     enterCriticalSection(caData.cs);
-    {$ifdef debugMode}
-    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - copy package');
-    {$endif}
-    if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
-    if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
-    globals.primaryContext.messages.escalateErrors;
-    caData.packageIsValid:=not(globals.primaryContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
-    caData.currentlyProcessing:=false;
-    caData.package^.updateLists(caData.userRules);
-    updateErrors;
-    caData.stateHash:=caData.package^.getCodeState;
-    leaveCriticalSection(caData.cs);
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
-    {$ifdef debugMode}
-    writeln(stdErr,'        DEBUG: updateCodeAssistanceData ',provider^.getPath,' - done');
-    {$endif}
+    try
+      if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
+      if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
+      globals.primaryContext.messages.escalateErrors;
+      caData.packageIsValid:=not(globals.primaryContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
+      caData.currentlyProcessing:=false;
+      caData.package^.updateLists(caData.userRules);
+      updateErrors;
+      caData.stateHash:=caData.package^.getCodeState;
+    finally
+      leaveCriticalSection(caData.cs);
+      enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+    end;
   end;
 {$endif}
 

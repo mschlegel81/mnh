@@ -74,8 +74,7 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE setMarkedWord(CONST wordText:string);
   end;
 
-PROCEDURE setupEditorMetaBase(CONST mainForm         :TForm;
-                              CONST outputHighlighter:TSynMnhSyn;
+PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn;
                               CONST languageMenuRoot :TMenuItem);
 VAR fileTypeMeta:array[T_language] of record
       highlighter:TSynCustomHighlighter;
@@ -85,7 +84,7 @@ VAR fileTypeMeta:array[T_language] of record
     editorFont:TFont;
 IMPLEMENTATION
 
-PROCEDURE setupEditorMetaBase(CONST mainForm:TForm; CONST outputHighlighter:TSynMnhSyn; CONST languageMenuRoot        :TMenuItem);
+PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST languageMenuRoot        :TMenuItem);
   VAR SynBatSyn1            : TSynBatSyn            ;
       SynCppSyn1            : TSynCppSyn            ;
       SynCssSyn1            : TSynCssSyn            ;
@@ -105,22 +104,22 @@ PROCEDURE setupEditorMetaBase(CONST mainForm:TForm; CONST outputHighlighter:TSyn
 
   PROCEDURE initHighlighters;
     begin
-      SynBatSyn1            :=TSynBatSyn            .create(mainForm);
-      SynCppSyn1            :=TSynCppSyn            .create(mainForm);
-      SynCssSyn1            :=TSynCssSyn            .create(mainForm);
-      SynDiffSyn1           :=TSynDiffSyn           .create(mainForm);
-      SynFreePascalSyn1     :=TSynFreePascalSyn     .create(mainForm);
-      SynHTMLSyn1           :=TSynHTMLSyn           .create(mainForm);
-      SynIniSyn1            :=TSynIniSyn            .create(mainForm);
-      SynJScriptSyn1        :=TSynJScriptSyn        .create(mainForm);
-      SynJavaSyn1           :=TSynJavaSyn           .create(mainForm);
-      SynPHPSyn1            :=TSynPHPSyn            .create(mainForm);
-      SynPerlSyn1           :=TSynPerlSyn           .create(mainForm);
-      SynPythonSyn1         :=TSynPythonSyn         .create(mainForm);
-      SynSQLSyn1            :=TSynSQLSyn            .create(mainForm);
-      SynUNIXShellScriptSyn1:=TSynUNIXShellScriptSyn.create(mainForm);
-      SynVBSyn1             :=TSynVBSyn             .create(mainForm);
-      SynXMLSyn1            :=TSynXMLSyn            .create(mainForm);
+      SynBatSyn1            :=TSynBatSyn            .create(languageMenuRoot);
+      SynCppSyn1            :=TSynCppSyn            .create(languageMenuRoot);
+      SynCssSyn1            :=TSynCssSyn            .create(languageMenuRoot);
+      SynDiffSyn1           :=TSynDiffSyn           .create(languageMenuRoot);
+      SynFreePascalSyn1     :=TSynFreePascalSyn     .create(languageMenuRoot);
+      SynHTMLSyn1           :=TSynHTMLSyn           .create(languageMenuRoot);
+      SynIniSyn1            :=TSynIniSyn            .create(languageMenuRoot);
+      SynJScriptSyn1        :=TSynJScriptSyn        .create(languageMenuRoot);
+      SynJavaSyn1           :=TSynJavaSyn           .create(languageMenuRoot);
+      SynPHPSyn1            :=TSynPHPSyn            .create(languageMenuRoot);
+      SynPerlSyn1           :=TSynPerlSyn           .create(languageMenuRoot);
+      SynPythonSyn1         :=TSynPythonSyn         .create(languageMenuRoot);
+      SynSQLSyn1            :=TSynSQLSyn            .create(languageMenuRoot);
+      SynUNIXShellScriptSyn1:=TSynUNIXShellScriptSyn.create(languageMenuRoot);
+      SynVBSyn1             :=TSynVBSyn             .create(languageMenuRoot);
+      SynXMLSyn1            :=TSynXMLSyn            .create(languageMenuRoot);
       SynBatSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCppSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCssSyn1            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
@@ -197,7 +196,7 @@ PROCEDURE setupEditorMetaBase(CONST mainForm:TForm; CONST outputHighlighter:TSyn
       begin
         if menuCaption<>'' then begin
           if Assigned(languageMenuRoot) then begin
-            menuItem:=TMenuItem.create(mainForm);
+            menuItem:=TMenuItem.create(languageMenuRoot);
             menuItem.caption:=menuCaption;
             menuItem.Tag:=ord(language);
             languageMenuRoot.add(menuItem);

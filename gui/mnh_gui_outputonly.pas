@@ -32,6 +32,7 @@ TYPE
     PROCEDURE onDebuggerEvent;                                override;
     PROCEDURE onEndOfEvaluation;                              override;
     PROCEDURE triggerFastPolling;                             override;
+    PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); override;
   private
     outputHighlighter:TSynMnhSyn;
   end;
@@ -68,6 +69,10 @@ PROCEDURE ToutputOnlyForm.triggerFastPolling;
     Timer1.interval:=1;
   end;
 
+PROCEDURE ToutputOnlyForm.activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean);
+  begin
+  end;
+
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
     initGuiOutAdapters(outputOnlyForm,outputEdit,false);
@@ -89,7 +94,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
     {$endif}
-    setupEditorMetaBase(self,outputHighlighter,nil);
+    setupEditorMetaBase(outputHighlighter,nil);
     editorMetaBase.editorFont:=outputEdit.Font;
   end;
 
