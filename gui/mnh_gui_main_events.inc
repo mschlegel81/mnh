@@ -473,6 +473,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
 
   VAR flushedMessages:T_messageTypeSet;
+      intervalByAnimation:boolean=false;
   begin
     if processIpcMessages then exit;
     displayProgress;
@@ -480,7 +481,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if askForm.displayPending then askForm.Show;
 
     if plotFormIsInitialized and plotForm.timerTick
-    then UpdateTimeTimer.interval:=plotForm.wantTimerInterval
+    then begin UpdateTimeTimer.interval:=plotForm.wantTimerInterval; intervalByAnimation:=true; end
     else if UpdateTimeTimer.interval<MAX_INTERVAL then UpdateTimeTimer.interval:=UpdateTimeTimer.interval+1
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
@@ -488,12 +489,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
     if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
-    if flushedMessages<>[] then begin UpdateTimeTimer.interval:=1; exit; end;
+    if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;
 
     flushedMessages:=P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui;
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=QuickTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
-    if flushedMessages<>[] then begin UpdateTimeTimer.interval:=1; exit; end;
+    if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;
 
     while guiTaskQueue.executeTask do;
     autosaveSettings;
