@@ -1,0 +1,29 @@
+type TriBool(x:NumericList(1))->x[0] in [0,0.5,1];
+FALSE:=[0  ].toTriBool;
+MAYBE:=[0.5].toTriBool;
+TRUE :=[1  ].toTriBool;
+TRI_VALUES:=[FALSE,MAYBE,TRUE];
+
+@Override
+@SuppressUnusedWarning
+toString(b==FALSE)->'FALSE';
+toString(b==MAYBE)->'MAYBE';
+toString(b==TRUE )->'TRUE ';
+@Override
+toTriBool(b:Boolean)->[ord(b)].toTriBool;
+
+OPERATOR_OR (a:TriBool,b:TriBool)->[max(a.head,b.head)].toTriBool;
+OPERATOR_AND(a:TriBool,b:TriBool)->[min(a.head,b.head)].toTriBool;
+OPERATOR_XOR(a:TriBool,b:TriBool)->a and b or not(a) and not(b);
+not(a:TriBool)->toTriBool([1-a.head]);
+
+//*See http://rosettacode.org/wiki/Ternary_logic
+main->TRI_VALUES
+      .map({format("not(%s)\t=\t%s",$x,not($x))})
+      .join("\n")
+      .print orElse
+      cross(['and','or','xor'],TRI_VALUES,TRI_VALUES)
+      .map({format("%s\t%s\t%s",$x[1],$x[0],$x[2])})
+      .map({format("%s\t=\t%s",$x,$x.interpret)})
+      .join("\n")
+      .print;
