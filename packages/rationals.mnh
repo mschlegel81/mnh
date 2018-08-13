@@ -40,7 +40,7 @@ nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
 @Override
 toString(r:Rational)->r[1]=1 ? r[0].toString : r.join("/");
 
-@Override
+
 //*The result always is a rational number
 OPERATOR_PLUS(a:Rational,b:Rational)->[a[0]*b[1]+b[0]*a[1],a[1]*b[1]].shortenRational;
 OPERATOR_PLUS(a:Rational,b:Int     )->[a[0]+b*a[1],a[1]].toRational;
@@ -48,21 +48,18 @@ OPERATOR_PLUS(a:Rational,b:Real    )->a.toReal+b;
 OPERATOR_PLUS(a:Int     ,b:Rational)->[a*b[1]+b[0],b[1]].toRational;
 OPERATOR_PLUS(a:Real    ,b:Rational)->a+b.toReal;
 
-@Override
 OPERATOR_MINUS(a:Rational,b:Rational)->[a[0]*b[1]-b[0]*a[1],a[1]*b[1]].shortenRational;
 OPERATOR_MINUS(a:Rational,b:Int     )->[a[0]-b*a[1],a[1]].toRational;
 OPERATOR_MINUS(a:Rational,b:Real    )->a.toReal-b;
 OPERATOR_MINUS(a:Int     ,b:Rational)->[a*b[1]-b[0],b[1]].toRational;
 OPERATOR_MINUS(a:Real    ,b:Rational)->a-b.toReal;
 
-@Override
 OPERATOR_MULT(a:Rational,b:Rational)->shortenRational(a.toBuiltin*b);
 OPERATOR_MULT(a:Rational,b:Int     )->shortenRational(a*[b,1]);
 OPERATOR_MULT(a:Rational,b:Real    )->a.toReal*b;
 OPERATOR_MULT(a:Int     ,b:Rational)->shortenRational([a,1]*b);
 OPERATOR_MULT(a:Real    ,b:Rational)->a*b.toReal;
 
-@Override
 OPERATOR_DIVREAL(a:Rational,b:Rational)->shortenRational(a*b.reverseList);
 OPERATOR_DIVREAL(a:Int     ,b:Int     )->shortenRational([a,b]);
 OPERATOR_DIVREAL(a:Rational,b:Int     )->shortenRational(a*[1,b]);
@@ -70,7 +67,6 @@ OPERATOR_DIVREAL(a:Rational,b:Real    )->a.toReal/b;
 OPERATOR_DIVREAL(a:Int     ,b:Rational)->shortenRational([a,1]*b.reverseList);
 OPERATOR_DIVREAL(a:Real    ,b:Rational)->a/b.toReal;
 
-@Override
 OPERATOR_POT(a:Rational,p>=0)->(a.toBuiltin^p).toRational;
 
 //*Helper function returning adjacent values representable as a double
