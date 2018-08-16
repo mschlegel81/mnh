@@ -153,13 +153,11 @@ PROCEDURE conditionalShowCustomForms(VAR adapters:T_messageConnector);
     enterCriticalSection(scriptedFormCs);
     while index<length(scriptedForms) do begin
       if scriptedForms[index].markedForCleanup then begin
-        {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: conditionalShowCustomForms - clearing a form which is registered for cleanup #',index,' ',scriptedForms[index].caption); {$endif}
         unregisterForm(scriptedForms[index]);
         FreeAndNil(    scriptedForms[index]);
         for k:=index to length(scriptedForms)-2 do scriptedForms[k]:=scriptedForms[k+1];
         setLength(scriptedForms,length(scriptedForms)-1);
       end else begin
-        {$ifdef debug_mnhCustomForm} writeln(stdErr,'        DEBUG: conditionalShowCustomForms - updating custom form #',index,' ',scriptedForms[index].caption); {$endif}
         scriptedForms[index].conditionalShow(adapters);
         inc(index);
       end;

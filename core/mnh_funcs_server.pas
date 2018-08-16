@@ -346,7 +346,7 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     except
       on E : Exception do begin
         resultText:='';
-        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with:'+E.message);
+        context.messages.globalMessages^.postTextMessage(mt_el2_warning,tokenLocation,methodName[method]+' failed with: '+E.message);
       end;
     end;
     result:=newStringLiteral(resultText);

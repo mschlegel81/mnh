@@ -1278,10 +1278,6 @@ end}
         cleanupStackAndExpression;
         result:=rr_fail;
       end;
-    //end else if (FlagFatalError in context.messages.getFlags) then begin
-    //  result:=rr_fail;
-    //  while (stack.topIndex>=0) do stack.popDestroy;
-    //  if (context.callDepth=0) then cascadeDisposeToken(first);
     end else begin
       result:=rr_fail;
       cleanupStackAndExpression;

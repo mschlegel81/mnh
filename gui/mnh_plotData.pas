@@ -1347,6 +1347,7 @@ PROCEDURE T_plotSystem.resetOnEvaluationStart(CONST startedFromSandbox:boolean);
     if settings.value^.doResetPlotOnEvaluation or startedFromSandbox
     then currentPlot.setDefaults
     else currentPlot.clear;
+    animation.clear;
     if pullSettingsToGui<>nil then pullSettingsToGui();
   end;
 

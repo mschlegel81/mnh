@@ -11,7 +11,7 @@ USES
   mnhFormHandler,
   mnh_messages,
   mnh_plotData, mnh_settings, mnh_out_adapters, mnh_litVar, mnh_funcs,
-  mnh_contexts, mnh_evalThread, plotstyles, plotMath,
+  mnh_contexts, mnh_evalThread, plotstyles, plotMath, EpikTimer,
   plotExport;
 
 TYPE
@@ -85,9 +85,10 @@ TYPE
     fpsSamplingStart:double;
     framesSampled:longint;
     closedByUser:boolean;
-
+    etimer:TEpikTimer;
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
+
     FUNCTION getPlotQuality:byte;
   public
     onPlotRescale:TNotifyEvent;
@@ -161,6 +162,9 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     onPlotMouseMove:=nil;
     onPlotMouseClick:=nil;
     plotSystem.registerPlotForm(@pullPlotSettingsToGui);
+    eTimer:=TEpikTimer.create(self);
+    eTimer.clear;
+    eTimer.start;
     if not(anyFormShowing(ft_main)) then ShowInTaskBar:=stAlways;
   end;
 
@@ -477,7 +481,9 @@ FUNCTION TplotForm.timerTick:boolean;
     result:=false;
     plotSystem.startGuiInteraction;
     if gui_started and (showing) and (plotSystem.animation.frameCount>0) then begin
-      if animateCheckBox.checked and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
+      if animateCheckBox.checked and (etimer.elapsed*1000>wantTimerInterval) and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
+        eTimer.clear;
+        eTimer.start;
         plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);
         inc(framesSampled);
         if (framesSampled>10) or (now-fpsSamplingStart>1/(24*60*60)) then begin
