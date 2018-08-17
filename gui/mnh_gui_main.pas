@@ -85,7 +85,7 @@ TYPE
     miFindPrevious,
     miFullscreen,
     miGoto,
-    miHaltEvalutaion,
+    miHaltEvaluation,
     miHelp,
     miIncFontSize,
     miMinErrorlevel1,
@@ -375,7 +375,7 @@ PROCEDURE TMnhForm.enableDynamicItems;
     halted   :=runEvaluator.getRunnerStateInfo.state=es_debugHalted;
     locked   :=runnerModel.areEditorsLocked;
 
-    miHaltEvalutaion.enabled:=running;
+    miHaltEvaluation.enabled:=running or quick.task.processing;
     miEvaluateNow   .enabled:=runnerModel.canRun;
     miCallMain      .enabled:=runnerModel.canRun;
 
