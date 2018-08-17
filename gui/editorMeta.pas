@@ -329,7 +329,6 @@ PROCEDURE T_editorMeta.InputEditChange(Sender: TObject);
     end;
 
   begin
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: T_editorMeta.InputEditChange for ',pseudoName(),'; language: ',language_); {$endif}
     if not(enabled) then exit;
     if language_=LANG_MNH then begin
       triggerCheck;

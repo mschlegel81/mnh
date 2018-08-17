@@ -2891,7 +2891,7 @@ object MnhForm: TMnhForm
     end
     object subMenuEvaluation: TMenuItem
       Caption = '&Evaluation'
-      object miHaltEvalutaion: TMenuItem
+      object miHaltEvaluation: TMenuItem
         Caption = 'HALT EVALUATION!'
         Enabled = False
         ShortCut = 123

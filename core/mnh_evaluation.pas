@@ -254,6 +254,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
           if isPureAggregator then begin
             result:=false;
             context.messages.raiseError('Invalid agg-construct: aggregator is missing.',eachToken^.location);
+            exit(result);
           end;
         end;
         //----------------------------------------------process aggregator part (if any)
@@ -1278,10 +1279,6 @@ end}
         cleanupStackAndExpression;
         result:=rr_fail;
       end;
-    //end else if (FlagFatalError in context.messages.getFlags) then begin
-    //  result:=rr_fail;
-    //  while (stack.topIndex>=0) do stack.popDestroy;
-    //  if (context.callDepth=0) then cascadeDisposeToken(first);
     end else begin
       result:=rr_fail;
       cleanupStackAndExpression;

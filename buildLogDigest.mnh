@@ -1,23 +1,16 @@
-ignoredCodes:=[1002,1008,1021,1022,1023,3018,3019,3100,3104,9015,9022,4055,4056,5044,5024];
+ignoredCodes:=[1002,1008,1021,1022,1023,
+               3018,3019,3100,3104,
+               4056,4035,4055,
+               5036,5044,
+               9015,9022];
 ignoredPatterns:=['3rd_party',
-                  '/igSrc/ig_.*\(5024\).*"(ix|iy|c)"',
                   '/gui/.*\(5024\)',
-                  '/core/.*\(5024\).*"(location|context)"',
-                  '/core/mnh_func_defines\.inc.*\(5024\).*"tokenLocation"',
+                  '/core/.*\(5024\).*"(location|context|tokenLocation)"',
                   '/core/mnh_litvar.*\(5024\).*"(adapters|lengthLimit|minusLocation|threadContext|relation|other)"',
-                  '/core/mnh_packages.*\(5036\).*Local variable \"clauseEnd\" does not seem to be initialized',
-                  '/core/mnh_funcs_list.*\(5036\).*Local variable "aggregator" does not seem to be initialized',
-                  '/core/mnh_func_defines\.inc.*\(5024\).*"params"',
-                  '/gui/mnh_evalThread\.pas.*\(5024\).*"params"',
-                  '/gui/ipcModel\.pas.*\(5024\).*"parameters"',
-                  '/core/mnh_funcs\.pas.*\(5024\).*"explanation"',
+                  '/core/mnh_func_defines\.inc.*\(5024\)',
                   '/core/mnh_builtinGenerators\.pas.*\(5024\).*"[a|b]"',
-                  '/core/mnh_builtinGenerators\.pas.*\(5024\).*"lengthLimit"',
-                  '/core/mnh_tokens\.pas.*\(5024\).*"adapters"',
-                  '/core/mnh_evaluation\.pas.*\(5024\).*"context_"',
-                  '/core/mnh_tokenArray\.pas.*\(5059\)',
-                  '/core/listProcessing\.pas.*\(5036\).*"lastToAggregate"',
-                  '/core/mnh_subrules\.pas.*\(5024\).*"(intrinsicRuleId|lengthLimit|threadContext)"'];
+                  '/core/mnh_builtinGenerators\.pas.*\(5024\).*"lengthLimit"'
+                  ];
 
 private currentViolations->'build.log'.fileLines
   .pEach(line,line.matches('\('&ignoredCodes&'\)').agg(OR) ? void : line)
@@ -26,15 +19,15 @@ private currentViolations->'build.log'.fileLines
   .pMap({[$line.matchComposite('\(....\)').trailing[0],$line]})
   .filter({$line.size=2})
   .elementFrequency
-  .pMap({[$f[1],$f[0,0]]|($f[0,1].split($f[0,0]))});
+  .pMap({[$f[1],$f[0,0]]|($f[0,1].split($f[0,0]).trim)});
 
 private datastore storedViolations:=[];
 
 //*Check for new violations
 main->currentViolations.minus(storedViolations)
   .sort(2)
-  .sort(0)
-  .pMap({"%{$0}sx\t%{$2}s\t%{$1}s\t%{$3}s".format@$x})
+  .sort(3)
+  .map({"%{$0}sx\t%{$2}s\t%{$1}s\t%{$3}s".format@$x})
   .join("\n")
   .print;
 

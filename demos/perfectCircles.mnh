@@ -57,7 +57,7 @@ end;
 //*Creates and displays an animation
 main('animate')->begin
   clearAnimation;
-  [2..50].each(k,plotCircles(k,'black polygon 0.5','red'),
+  [2..50].each(k,plotCircles(k,'orange polygon 0 fs','black'),
                  addAnimationFrame,
                  index=0 ? display : void);
   display;
@@ -71,7 +71,7 @@ begin
   local z:=      findSolution(k)[0]^((2*k+1) /50);
   local p:=(pi*4-findSolution(k)[1]* (2*k+1))/50;
   (anim=='zoomin' ? [0..49] : [49..0])
-  .each(i,plotCircles(k,'black polygon 0.5','red',z^i,p*i),
+  .each(i,plotCircles(k,'orange polygon 0 fs','black',z^i,p*i),
                  addAnimationFrame,
                  index=0 ? display : void);
 end;

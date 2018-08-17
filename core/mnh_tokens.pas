@@ -527,12 +527,16 @@ FUNCTION disposeToken(p: P_token): P_token;
     if p=nil then result:=nil
     else begin
       result:=p^.next;
-      with tokenRecycler do if (tryEnterCriticalsection(recyclerCS)=0) or (fill>=length(dat))
+      with tokenRecycler do if (tryEnterCriticalsection(recyclerCS)=0)
       then dispose(p,destroy)
       else begin
-        p^.undefine;
-        dat[fill]:=p;
-        inc(fill);
+        if (fill>=length(dat))
+        then dispose(p,destroy)
+        else begin
+          p^.undefine;
+          dat[fill]:=p;
+          inc(fill);
+        end;
         leaveCriticalSection(recyclerCS);
       end;
     end;
