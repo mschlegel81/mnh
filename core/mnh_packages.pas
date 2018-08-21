@@ -1716,7 +1716,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         then begin
           if op in overridableOperators then begin
             customOperatorRules[op]:=result;
-            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.globalMessages^.postTextMessage(mt_el1_note,ruleDeclarationStart,'Overloading operator '+C_tokenInfo[op].defaultId);
+            if not(metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) then adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Overloading operator '+C_tokenInfo[op].defaultId);
             result^.allowCurrying:=false;
             {$ifdef fullVersion}
             result^.setIdResolved;
