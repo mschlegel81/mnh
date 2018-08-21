@@ -3,34 +3,30 @@ private integrate1d(f,x0,f0,x1,f1,tolerance)->begin
   local M:=(x1-x0)*fm;          //approximate integral by midpoint rule
   local T:=(x1-x0)*0.5*(f0+f1); //approximate integral by trapezoidal rule
   abs(M-T)>tolerance
-  ? integrate(f,x0,f0,xm,fm,tolerance)+ //refine
-    integrate(f,xm,fm,x1,f1,tolerance)
+  ? integrate1d(f,x0,f0,xm,fm,tolerance)+ //refine
+    integrate1d(f,xm,fm,x1,f1,tolerance)
   : (T+M*2)/3; //return approximate integral by Simpson's rule
 end;
 
 private integrate2d(f,x0,x1,y0,y1,f00,f01,f10,f11,tolerance)->
 abs(x1-x0)<=abs(y1-y0)
 ? begin //split along y-axis
-    local fm0:=f(x0,local ym:=(y0+y1)*0.5);                            # y0  f00-------f01
-    local fm1:=f(x1,      ym             );                            #      |         |
-    local A1:=(f00+f01+f10+f11)*0.25*(x1-x0)*(y1-y0);                  # ym  fm0-------fm1
-    local A2:=A1/2+   (fm0+fm1)*0.25*(x1-x0)*(y1-y0);                  #      |         |
-    local fmm:=f((x0+x1)*0.5,ym)*(x1-x0)*(y1-y0);
-    abs(A1-fmm)>tolerance                                              # y1  f10-------f11
-    ? integrate2d(f,x0,x1,y0,ym,f00,f01,fm0,fm1,tolerance)+ //refine   #
-      integrate2d(f,x0,x1,ym,y1,fm0,fm1,f10,f11,tolerance)             #      x0        x1
-    : A2; //return approximate integral by Simpson's rule
+    local A0:=f(          (x0+x1)*0.5,
+                local ym:=(y0+y1)*0.5)*(x1-x0)*(y1-y0);
+    local A1:=(f00+f01+f10+f11)*0.25  *(x1-x0)*(y1-y0);
+    abs(A1-A0)>tolerance
+    ? integrate2d(f,x0,x1,y0,ym,f00,f01,local fm0:=f(x0,ym),local fm1:=f(x1,ym),tolerance)+
+      integrate2d(f,x0,x1,ym,y1,fm0,fm1,f10                ,f11                ,tolerance)
+    : (A0+A1*2)/3;
   end
 : begin //split along x-axis
-    local fm0:=f(local xm:=(x0+x1)*0.5,y0);                            # y0  f00--fm0--f01
-    local fm1:=f(      xm             ,y1);                            #      |    |    |
+    local A0:=f(local xm:=(x0+x1)*0.5,
+                          (y0+y1)*0.5)*(x1-x0)*(y1-y0);
     local A1:=(f00+f01+f10+f11)*0.25*(x1-x0)*(y1-y0);                  #      |    |    |
-    local A2:=A1/2+   (fm0+fm1)*0.25*(x1-x0)*(y1-y0);                  #      |    |    |
-    local fmm:=f(xm,(y0+y1)*0.5)*(x1-x0)*(y1-y0);                      # y1  f10--fm1--f11
-    abs(A1-fmm)>tolerance                                               #
-    ? integrate2d(f,x0,xm,y0,y1,f00,fm0,f10,fm1,tolerance)+ //refine   #      x0   xm   x1
-      integrate2d(f,xm,x1,y0,y1,fm0,f01,fm1,f11,tolerance)
-    : A2; //return approximate integral by Simpson's rule
+    abs(A1-A0)>tolerance                                               #
+    ? integrate2d(f,x0,xm,y0,y1,f00,local fm0:=f(xm,y0),f10,local fm1:=f(xm,y1),tolerance)+ //refine   #      x0   xm   x1
+      integrate2d(f,xm,x1,y0,y1,fm0,f01                ,fm1,f11                ,tolerance)
+    : (A0+A1*2)/3; //return approximate integral by Simpson's rule
   end;
 
 //*Recursively Integrates f in Range [x0,x1] until tolerance is reached

@@ -12,8 +12,11 @@ toString(b==TRUE )->'TRUE ';
 @Override
 toTriBool(b:Boolean)->[ord(b)].toTriBool;
 
+@Override
 OPERATOR_OR (a:TriBool,b:TriBool)->[max(a.head,b.head)].toTriBool;
+@Override
 OPERATOR_AND(a:TriBool,b:TriBool)->[min(a.head,b.head)].toTriBool;
+@Override
 OPERATOR_XOR(a:TriBool,b:TriBool)->a and b or not(a) and not(b);
 not(a:TriBool)->toTriBool([1-a.head]);
 
