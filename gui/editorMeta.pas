@@ -74,7 +74,6 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION defaultExtensionByLanguage:ansistring;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
-    PROCEDURE assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
     PROCEDURE pollAssistanceResult;
   private
     PROCEDURE ensureAssistant;
@@ -626,12 +625,6 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
 PROCEDURE T_editorMeta.ensureAssistant;
   begin
     if assistant=nil then new(assistant,create);
-    assistant^.updateHighlightingData(highlighter.highlightingData);
-  end;
-
-PROCEDURE T_editorMeta.assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
-  begin
-    assistant^.updateHighlightingData(additionalHighlighter.highlightingData);
   end;
 
 PROCEDURE T_editorMeta.dropAssistant;
