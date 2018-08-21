@@ -135,9 +135,15 @@ TYPE
       userRules:T_setOfString;
 
       editorForUpdate:P_codeProvider;
-      checkPending,currentlyProcessing:boolean;
-      cs:TRTLCriticalSection;
+      assistantCs:TRTLCriticalSection;
       localIdInfos:P_localIdInfos;
+
+      assistantState:record
+        killRequested,
+        checkPending,
+        currentlyLoading,
+        checkThreadIsRunning:boolean;
+      end;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -395,11 +401,14 @@ CONSTRUCTOR T_codeAssistanceData.create;
     stateHash:=0;
     userRules.create;
     editorForUpdate:=nil;
-    currentlyProcessing:=false;
-    checkPending:=false;
+    with assistantState do begin
+      currentlyLoading    :=false;
+      checkThreadIsRunning:=false;
+      checkPending        :=false;
+      killRequested       :=false;
+    end;
     new(localIdInfos,create);
-    initCriticalSection(cs);
-    {$ifdef debugMode} writeln(stdErr,'    T_codeAssistanceData created'); {$endif}
+    initCriticalSection(assistantCs);
   end;
 
 CONSTRUCTOR T_blankCodeAssistanceData.createBlank;
@@ -407,36 +416,45 @@ CONSTRUCTOR T_blankCodeAssistanceData.createBlank;
 
 DESTRUCTOR T_codeAssistanceData.destroy;
   begin
-    {$ifdef debugMode} writeln(stdErr,'    T_codeAssistanceData destroy...'); {$endif}
-    enterCriticalSection(cs);
-    while currentlyProcessing do begin
-      leaveCriticalSection(cs);
+    enterCriticalSection(assistantCs);
+    assistantState.killRequested:=true;
+    while assistantState.checkThreadIsRunning do begin
+      leaveCriticalSection(assistantCs);
       ThreadSwitch;
       sleep(1);
-      enterCriticalSection(cs);
+      enterCriticalSection(assistantCs);
     end;
     if package<>nil then dispose(package,destroy);
     userRules.destroy;
     if localIdInfos<>nil then dispose(localIdInfos,destroy);
-    leaveCriticalSection(cs);
-    doneCriticalSection(cs);
-    {$ifdef debugMode} writeln(stdErr,'    T_codeAssistanceData destroy done'); {$endif}
+    leaveCriticalSection(assistantCs);
+    doneCriticalSection(assistantCs);
   end;
 
 PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData:T_highlightingData);
   VAR k:longint;
+      e:P_storedMessage;
   begin
-    EnterCriticalsection(cs);
-    highlightingData.userRules.clear;
-    highlightingData.userRules.put(userRules);
-    highlightingData.localIdInfos.copyFrom(localIdInfos);
-    setLength(highlightingData.warnLocations,length(localErrors));
-    for k:=0 to length(localErrors)-1 do begin
-      highlightingData.warnLocations[k].line   :=localErrors[k]^.getLocation.line;
-      highlightingData.warnLocations[k].column :=localErrors[k]^.getLocation.column;
-      highlightingData.warnLocations[k].isError:=C_messageTypeMeta[localErrors[k]^.messageType].level>2;
+    {$ifdef debugMode} writeln(stdErr,'    updateHighlightingData ',ThreadID,'...'); {$endif}
+    enterCriticalSection(assistantCs);
+    try
+      highlightingData.userRules.clear;
+      highlightingData.userRules.put(userRules);
+      highlightingData.localIdInfos.copyFrom(localIdInfos);
+      setLength(highlightingData.warnLocations,length(localErrors));
+      k:=0;
+      for e in localErrors do begin
+        if k>=length(highlightingData.warnLocations) then setLength(highlightingData.warnLocations,k+1);
+        highlightingData.warnLocations[k].line   :=e^.getLocation.line;
+        highlightingData.warnLocations[k].column :=e^.getLocation.column;
+        highlightingData.warnLocations[k].isError:=C_messageTypeMeta[e^.messageType].level>2;
+        inc(k);
+      end;
+      setLength(highlightingData.warnLocations,k);
+    finally
+      leaveCriticalSection(assistantCs);
     end;
-    LeaveCriticalsection(cs);
+    {$ifdef debugMode} writeln(stdErr,'    updateHighlightingData ',ThreadID,' done'); {$endif}
   end;
 
 FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean; CONST lengthLimit: longint): T_arrayOfString;
@@ -488,7 +506,7 @@ FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean;
     end;
 
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     hasErrors:=false;
     hasWarnings:=false;
     setLength(result,length(localErrors)+length(externalErrors));
@@ -496,7 +514,7 @@ FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean;
     addErrors(localErrors);
     addErrors(externalErrors);
     setLength(result,k);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 CONSTRUCTOR T_highlightingData.create;
@@ -546,13 +564,13 @@ FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfStri
   VAR s:string;
       wc:longint;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     wc:=wordsInEditor.size;
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
     result:=wordsInEditor.size>wc;
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 PROCEDURE T_blankCodeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); begin end;
@@ -562,7 +580,7 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       enhanced:T_enhancedTokens;
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     loc.line:=CaretY;
     loc.column:=1;
     loc.package:=package;
@@ -572,7 +590,7 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
     info:=enhanced.getTokenAtIndex(CaretX).toInfo;
     enhanced.destroy;
     lexer.destroy;
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
@@ -580,7 +598,7 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location:T_searchToke
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     loc.line:=CaretY;
     loc.column:=1;
     loc.package:=package;
@@ -589,78 +607,99 @@ FUNCTION T_codeAssistanceData.renameIdentifierInLine(CONST location:T_searchToke
     result:=enhanced.renameInLine(lineText,location,newId);
     enhanced.destroy;
     lexer.destroy;
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 FUNCTION T_codeAssistanceData.getStateHash:T_hashInt;
   begin
-    enterCriticalSection(cs); result:=stateHash; leaveCriticalSection(cs);
+    enterCriticalSection(assistantCs); result:=stateHash; leaveCriticalSection(assistantCs);
   end;
 
 FUNCTION T_blankCodeAssistanceData.resolveImport(CONST id:string):string; begin result:=''; end;
 FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     if package=nil then result:=''
                    else result:=package^.getSecondaryPackageById(id);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 FUNCTION T_blankCodeAssistanceData.getImportablePackages:T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
 FUNCTION T_codeAssistanceData.getImportablePackages:T_arrayOfString;
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     result:=listScriptIds(extractFilePath(package^.getPath));
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 PROCEDURE T_codeAssistanceData.performWithPackage(CONST method:T_packageCallbackInObject);
   begin
-    enterCriticalSection(cs);
+    enterCriticalSection(assistantCs);
     method(package);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
+  VAR lastCheckStartedAt:double;
+  FUNCTION killRequested:boolean;
+    begin with P_codeAssistanceData(p)^ do begin
+      enterCriticalSection(assistantCs);
+      result:=assistantState.killRequested;
+      leaveCriticalSection(assistantCs);
+    end; end;
+
+  FUNCTION checkRequested:boolean;
+    begin with P_codeAssistanceData(p)^ do begin
+      enterCriticalSection(assistantCs);
+      result:=assistantState.checkPending;
+      leaveCriticalSection(assistantCs);
+    end; end;
+
   begin
-    sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
+    repeat
+      lastCheckStartedAt:=now;
+      sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
+      repeat sleep(10) until killRequested or (now>lastCheckStartedAt+0.000002) and checkRequested;
+    until killRequested;
+
+    with P_codeAssistanceData(p)^ do begin
+      enterCriticalSection(assistantCs);
+      try
+        assistantState.checkThreadIsRunning:=false;
+      finally
+        leaveCriticalSection(assistantCs);
+      end;
+    end;
     result:=0;
   end;
 
 PROCEDURE T_blankCodeAssistanceData.triggerUpdate(CONST editor:P_codeProvider); begin end;
 PROCEDURE T_codeAssistanceData.triggerUpdate(CONST editor:P_codeProvider);
   begin
-    enterCriticalSection(cs);
-    if (editor=nil) then begin
-      if not(checkPending) then begin
-        leaveCriticalSection(cs);
-        exit;
-      end;
-    end else editorForUpdate:=editor;
-    if currentlyProcessing then begin
-      checkPending:=true;
-      leaveCriticalSection(cs);
-      exit;
+    if editor=nil then exit;
+    enterCriticalSection(assistantCs);
+    editorForUpdate:=editor;
+    assistantState.checkPending:=true;
+    if not(assistantState.checkThreadIsRunning) and not(assistantState.killRequested) then begin
+      assistantState.checkThreadIsRunning:=true;
+      beginThread(@codeAssistantCheckThread,@self);
     end;
-    checkPending:=false;
-    currentlyProcessing:=true;
-    beginThread(@codeAssistantCheckThread,@self);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 PROCEDURE T_blankCodeAssistanceData.synchronousUpdate(CONST editor:P_codeProvider); begin end;
 PROCEDURE T_codeAssistanceData.synchronousUpdate(CONST editor:P_codeProvider);
   begin
     if editor=nil then exit;
-    enterCriticalSection(cs);
-    while currentlyProcessing do begin
-      leaveCriticalSection(cs);
+    enterCriticalSection(assistantCs);
+    while assistantState.currentlyLoading do begin
+      leaveCriticalSection(assistantCs);
       ThreadSwitch; sleep(1);
-      enterCriticalSection(cs);
+      enterCriticalSection(assistantCs);
     end;
     editorForUpdate:=editor;
     sandbox^.updateCodeAssistanceData(editor,self);
-    leaveCriticalSection(cs);
+    leaveCriticalSection(assistantCs);
   end;
 
 PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR caData:T_codeAssistanceData);
@@ -685,6 +724,10 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     end;
   VAR newLocalIdInfos:P_localIdInfos;
   begin
+    enterCriticalSection(caData.assistantCs);
+    caData.assistantState.currentlyLoading:=true;
+    caData.assistantState.checkPending:=false;
+    leaveCriticalSection(caData.assistantCs);
     new(newPackage,create(provider,nil));
     {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': init'); {$endif}
     adapters.clear;
@@ -693,7 +736,7 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': load'); {$endif}
     newPackage^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
     {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result'); {$endif}
-    enterCriticalSection(caData.cs);
+    enterCriticalSection(caData.assistantCs);
     try
       {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - update package'); {$endif}
       if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
@@ -707,9 +750,9 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
       {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - update state hash'); {$endif}
       caData.stateHash:=caData.package^.getCodeState;
       {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - mark as "not processing"'); {$endif}
-      caData.currentlyProcessing:=false;
+      caData.assistantState.currentlyLoading:=false;
     finally
-      leaveCriticalSection(caData.cs);
+      leaveCriticalSection(caData.assistantCs);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
       {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': done'); {$endif}
     end;
