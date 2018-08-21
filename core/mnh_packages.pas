@@ -114,11 +114,22 @@ TYPE
   {$ifdef fullVersion}
   T_packageCallbackInObject=PROCEDURE (CONST package:P_package) of object;
 
+  T_highlightingData=object
+    warnLocations:array of record line,column:longint; isError:boolean; end;
+    userRules    :T_setOfString;
+    localIdInfos :T_localIdInfos;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE clear;
+    FUNCTION isUserRule(CONST id: string): boolean;
+    FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
+    FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+  end;
+
   P_codeAssistanceData=^T_codeAssistanceData;
   T_codeAssistanceData=object
     private
       package:P_package;
-      packageIsValid:boolean;
       localErrors,externalErrors:T_storedMessages;
       stateHash:T_hashInt;
       userRules:T_setOfString;
@@ -131,9 +142,7 @@ TYPE
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       FUNCTION getErrorHints(OUT hasErrors,hasWarnings:boolean; CONST lengthLimit:longint): T_arrayOfString;
-      FUNCTION isUserRule(CONST id: string): boolean;
-      FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
-      FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+      PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       FUNCTION updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
       PROCEDURE explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo); virtual;
       FUNCTION renameIdentifierInLine(CONST location:T_searchTokenLocation; CONST newId:string; VAR lineText:ansistring; CONST CaretY:longint):boolean;
@@ -142,7 +151,6 @@ TYPE
       PROCEDURE synchronousUpdate(CONST editor:P_codeProvider); virtual;
       FUNCTION resolveImport(CONST id:string):string; virtual;
       FUNCTION getImportablePackages:T_arrayOfString; virtual;
-
       PROCEDURE performWithPackage(CONST method:T_packageCallbackInObject);
   end;
 
@@ -382,7 +390,6 @@ FUNCTION T_postEvaluationData.processing:boolean;
 CONSTRUCTOR T_codeAssistanceData.create;
   begin
     package:=nil;
-    packageIsValid:=false;
     setLength(localErrors,0);
     setLength(externalErrors,0);
     stateHash:=0;
@@ -392,6 +399,7 @@ CONSTRUCTOR T_codeAssistanceData.create;
     checkPending:=false;
     new(localIdInfos,create);
     initCriticalSection(cs);
+    {$ifdef debugMode} writeln(stdErr,'    T_codeAssistanceData created'); {$endif}
   end;
 
 CONSTRUCTOR T_blankCodeAssistanceData.createBlank;
@@ -399,6 +407,7 @@ CONSTRUCTOR T_blankCodeAssistanceData.createBlank;
 
 DESTRUCTOR T_codeAssistanceData.destroy;
   begin
+    {$ifdef debugMode} writeln(stdErr,'    T_codeAssistanceData destroy...'); {$endif}
     enterCriticalSection(cs);
     while currentlyProcessing do begin
       leaveCriticalSection(cs);
@@ -411,6 +420,23 @@ DESTRUCTOR T_codeAssistanceData.destroy;
     if localIdInfos<>nil then dispose(localIdInfos,destroy);
     leaveCriticalSection(cs);
     doneCriticalSection(cs);
+    {$ifdef debugMode} writeln(stdErr,'    T_codeAssistanceData destroy done'); {$endif}
+  end;
+
+PROCEDURE T_codeAssistanceData.updateHighlightingData(VAR highlightingData:T_highlightingData);
+  VAR k:longint;
+  begin
+    EnterCriticalsection(cs);
+    highlightingData.userRules.clear;
+    highlightingData.userRules.put(userRules);
+    highlightingData.localIdInfos.copyFrom(localIdInfos);
+    setLength(highlightingData.warnLocations,length(localErrors));
+    for k:=0 to length(localErrors)-1 do begin
+      highlightingData.warnLocations[k].line   :=localErrors[k]^.getLocation.line;
+      highlightingData.warnLocations[k].column :=localErrors[k]^.getLocation.column;
+      highlightingData.warnLocations[k].isError:=C_messageTypeMeta[localErrors[k]^.messageType].level>2;
+    end;
+    LeaveCriticalsection(cs);
   end;
 
 FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean; CONST lengthLimit: longint): T_arrayOfString;
@@ -473,32 +499,47 @@ FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_codeAssistanceData.isUserRule(CONST id: string): boolean;
+CONSTRUCTOR T_highlightingData.create;
   begin
-    enterCriticalSection(cs);
-    result:=userRules.contains(id);
-    leaveCriticalSection(cs);
+    userRules   .create;
+    localIdInfos.create;
+    setLength(warnLocations,0);
   end;
 
-FUNCTION T_codeAssistanceData.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
-  VAR e:P_storedMessage;
+PROCEDURE T_highlightingData.clear;
   begin
-    enterCriticalSection(cs);
+    userRules   .clear;
+    localIdInfos.clear;
+    setLength(warnLocations,0);
+  end;
+
+DESTRUCTOR T_highlightingData.destroy;
+  begin
+    userRules   .destroy;
+    localIdInfos.destroy;
+    setLength(warnLocations,0);
+  end;
+
+FUNCTION T_highlightingData.isUserRule(CONST id: string): boolean;
+  begin
+    result:=userRules.contains(id);
+  end;
+
+FUNCTION T_highlightingData.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
+  VAR k:longint;
+  begin
     result:=0;
-    for e in localErrors do
-    if (result=0) and (lineIndex=e^.getLocation.line-1) and ((e^.getLocation.column<0) or (tokenStart<=e^.getLocation.column-1) and (tokenEnd>e^.getLocation.column-1)) then begin
-      if C_messageTypeMeta[e^.messageType].level>2 then result:=2
+    for k:=0 to length(warnLocations)-1 do with warnLocations[k] do
+    if (result=0) and (lineIndex=line-1) and ((column<0) or (tokenStart<=column-1) and (tokenEnd>column-1)) then begin
+      if isError then result:=2
       else if result<1 then result:=1;
     end;
-    leaveCriticalSection(cs);
   end;
 
-FUNCTION T_codeAssistanceData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+FUNCTION T_highlightingData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
   VAR dummyLocation:T_tokenLocation;
   begin
-    enterCriticalSection(cs);
-    result:=localIdInfos^.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
-    leaveCriticalSection(cs);
+    result:=localIdInfos.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
   end;
 
 FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
@@ -654,14 +695,19 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result'); {$endif}
     enterCriticalSection(caData.cs);
     try
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - update package'); {$endif}
       if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - update local id infos'); {$endif}
       if caData.localIdInfos<>nil then dispose(caData.localIdInfos,destroy); caData.localIdInfos:=newLocalIdInfos;
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - collect errors and warnings'); {$endif}
       globals.primaryContext.messages.escalateErrors;
-      caData.packageIsValid:=not(globals.primaryContext.messages.globalMessages^.hasCollected(mt_el3_evalError));
-      caData.currentlyProcessing:=false;
-      caData.package^.updateLists(caData.userRules);
       updateErrors;
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - update rules list'); {$endif}
+      caData.package^.updateLists(caData.userRules);
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - update state hash'); {$endif}
       caData.stateHash:=caData.package^.getCodeState;
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result - mark as "not processing"'); {$endif}
+      caData.currentlyProcessing:=false;
     finally
       leaveCriticalSection(caData.cs);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
