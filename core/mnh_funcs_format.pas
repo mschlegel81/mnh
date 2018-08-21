@@ -338,7 +338,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         oldSideEffectWhitelist:T_sideEffects;
     begin
       //prepare parameters
-      fpar:=newListLiteral;
+      fpar:=newListLiteral(params^.size-1);
       for k:=1 to params^.size-1 do
       if params^.value[k]^.literalType in C_compoundTypes
       then fpar^.append(iter[k][index],true)

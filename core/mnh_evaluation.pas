@@ -814,19 +814,12 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       didSubstitution:=true;
     end;
 
+  VAR initialScope:P_valueScope;
   PROCEDURE cleanupStackAndExpression;
     begin
-      while stack.topIndex>=0 do
-        if stack.topType in [tt_endRule,tt_endExpression,tt_endBlock,tt_beginRule,tt_beginExpression,tt_beginBlock]
-        then stack.popLink(first)
-        else stack.popDestroy();
-      while first<>nil do begin
-        case first^.tokType of
-          tt_beginRule,tt_beginExpression,tt_beginBlock: scopePush(context.valueScope,ACCESS_READONLY);
-          tt_endRule  ,tt_endExpression  ,tt_endBlock  : scopePop (context.valueScope);
-        end;
-        first:=disposeToken(first);
-      end;
+      while context.valueScope<>initialScope do scopePop(context.valueScope);
+      while stack.topIndex>=0 do stack.popDestroy();
+      cascadeDisposeToken(first);
     end;
 
   PROCEDURE resolveElementAccess;
@@ -906,6 +899,7 @@ end}
     result:=rr_ok;
     inc(context.callDepth);
     stack.create;
+    initialScope:=context.valueScope;
     {$ifdef useTryCatchBlocks}try{$endif}
     repeat
       didSubstitution:=false;
