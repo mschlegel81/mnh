@@ -667,7 +667,7 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
                    else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'+SHORTCUT_SUFFIX
                                              else assistanceTabSheet.caption:='(no warnings)'+SHORTCUT_SUFFIX; end;
       for s in hints do assistanceSynEdit.lines.add(s);
-      outlineModel^.update(assistant);
+      assistant^.performWithPackage(@outlineModel^.update);
     end;
     assistant^.triggerUpdate(nil);
   end;

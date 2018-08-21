@@ -24,7 +24,7 @@ TYPE
       CONSTRUCTOR create(CONST tree:TTreeView; CONST showPrivateCB,showImportedCB:TCheckBox; CONST openLocationCallback:T_openLocationCallback);
       DESTRUCTOR destroy;
       PROCEDURE refresh;
-      PROCEDURE update(CONST assistant:P_codeAssistanceData);
+      PROCEDURE update(CONST mainPackage:P_package);
       PROCEDURE checkboxClick(Sender: TObject);
       PROCEDURE treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   end;
@@ -190,13 +190,11 @@ PROCEDURE T_outlineTreeModel.refresh;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_outlineTreeModel.update(CONST assistant:P_codeAssistanceData);
-  VAR mainPackage:P_package;
-      imported:T_packageList;
+PROCEDURE T_outlineTreeModel.update(CONST mainPackage:P_package);
+  VAR imported:T_packageList;
       i:longint;
   begin
     enterCriticalSection(cs);
-    mainPackage:=assistant^.getPackageLocking;
     if mainPackage=nil then begin
       for i:=0 to length(packageNodes)-1 do dispose(packageNodes[i],destroy);
       setLength(packageNodes,0);
@@ -218,7 +216,6 @@ PROCEDURE T_outlineTreeModel.update(CONST assistant:P_codeAssistanceData);
       packageNodes[0]^.updateWithPackage(mainPackage,true);
       for i:=0 to length(imported)-1 do packageNodes[i+1]^.updateWithPackage(imported[i],false);
     end;
-    assistant^.releaseLock;
     refresh;
     leaveCriticalSection(cs);
   end;

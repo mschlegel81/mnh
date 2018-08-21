@@ -112,6 +112,7 @@ TYPE
     end;
 
   {$ifdef fullVersion}
+  T_packageCallbackInObject=PROCEDURE (CONST package:P_package) of object;
 
   P_codeAssistanceData=^T_codeAssistanceData;
   T_codeAssistanceData=object
@@ -142,8 +143,7 @@ TYPE
       FUNCTION resolveImport(CONST id:string):string; virtual;
       FUNCTION getImportablePackages:T_arrayOfString; virtual;
 
-      FUNCTION getPackageLocking:P_package;
-      PROCEDURE releaseLock;
+      PROCEDURE performWithPackage(CONST method:T_packageCallbackInObject);
   end;
 
   P_blankCodeAssistanceData=^T_blankCodeAssistanceData;
@@ -496,7 +496,9 @@ FUNCTION T_codeAssistanceData.isErrorLocation(CONST lineIndex, tokenStart, token
 FUNCTION T_codeAssistanceData.isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
   VAR dummyLocation:T_tokenLocation;
   begin
+    enterCriticalSection(cs);
     result:=localIdInfos^.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
+    leaveCriticalSection(cs);
   end;
 
 FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfString; CONST lineIndex, colIdx: longint):boolean;
@@ -566,19 +568,15 @@ FUNCTION T_codeAssistanceData.resolveImport(CONST id:string):string;
 FUNCTION T_blankCodeAssistanceData.getImportablePackages:T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
 FUNCTION T_codeAssistanceData.getImportablePackages:T_arrayOfString;
   begin
+    enterCriticalSection(cs);
     result:=listScriptIds(extractFilePath(package^.getPath));
+    leaveCriticalSection(cs);
   end;
 
-FUNCTION T_codeAssistanceData.getPackageLocking:P_package;
+PROCEDURE T_codeAssistanceData.performWithPackage(CONST method:T_packageCallbackInObject);
   begin
     enterCriticalSection(cs);
-    currentlyProcessing:=true;
-    result:=package;
-  end;
-
-PROCEDURE T_codeAssistanceData.releaseLock;
-  begin
-    currentlyProcessing:=false;
+    method(package);
     leaveCriticalSection(cs);
   end;
 
@@ -647,10 +645,13 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
   VAR newLocalIdInfos:P_localIdInfos;
   begin
     new(newPackage,create(provider,nil));
+    {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': init'); {$endif}
     adapters.clear;
     globals.resetForEvaluation(newPackage,ect_silent,C_EMPTY_STRING_ARRAY);
     new(newLocalIdInfos,create);
+    {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': load'); {$endif}
     newPackage^.load(lu_forCodeAssistance,globals,C_EMPTY_STRING_ARRAY,newLocalIdInfos);
+    {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': prepare result'); {$endif}
     enterCriticalSection(caData.cs);
     try
       if caData.package     <>nil then dispose(caData.package     ,destroy); caData.package     :=newPackage;
@@ -664,6 +665,7 @@ PROCEDURE T_sandbox.updateCodeAssistanceData(CONST provider:P_codeProvider; VAR 
     finally
       leaveCriticalSection(caData.cs);
       enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
+      {$ifdef debugMode} writeln(stdErr,'    ASSIST ',ThreadID,': done'); {$endif}
     end;
   end;
 {$endif}
