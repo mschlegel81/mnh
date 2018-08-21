@@ -1947,7 +1947,6 @@ FUNCTION T_package.getExtended(CONST idOrPath:string):P_abstractPackage;
 INITIALIZATION
   setupSandboxes;
 {$define include_initialization}
-  //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
   {$endif}
@@ -1955,6 +1954,5 @@ INITIALIZATION
 {$undef include_initialization}
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_packages');{$endif}
   doneSandboxes;
 end.

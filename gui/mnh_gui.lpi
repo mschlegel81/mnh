@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="73">
+    <Units Count="74">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -438,6 +438,10 @@
         <Filename Value="..\core\mnh_builtinGenerators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit72>
+      <Unit73>
+        <Filename Value="outlines.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit73>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

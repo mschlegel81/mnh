@@ -1060,7 +1060,6 @@ INITIALIZATION
   {$endif}
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tokenArray');{$endif}
   BLANK_ABSTRACT_PACKAGE.destroy;
   MNH_PSEUDO_PACKAGE.destroy;
 
