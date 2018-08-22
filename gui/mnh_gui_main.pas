@@ -49,7 +49,6 @@ USES
   mnhCustomForm;
 TYPE
   {$define includeInterface}
-  {$include guiEditorInterface.inc}
   {$WARN 5024 OFF}
 
   { TMnhForm }
@@ -201,7 +200,6 @@ IMPLEMENTATION
 
 {$R *.lfm}
 {$define includeImplementation}
-{$include guiEditorInterface.inc}
 {$i settingsLogic.inc}
 
 FUNCTION TMnhForm.focusedEditor: TSynEdit;
@@ -233,17 +231,6 @@ FUNCTION editorContent_impl intFuncSignature;
       if meta=nil then exit(newVoidLiteral);
       result:=newListLiteral(meta^.editor.lines.count);
       for i:=0 to meta^.editor.lines.count-1 do listResult^.appendString(meta^.editor.lines[i]);
-    end;
-  end;
-
-FUNCTION openInEditor_impl intFuncSignature;
-  VAR task:P_openEditorTask;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      new(task,create(str0^.value));
-      guiTaskQueue.enqueueTask(task);
-      result:=newVoidLiteral;
     end;
   end;
 

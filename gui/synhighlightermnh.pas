@@ -66,7 +66,7 @@ TYPE
   public
     class FUNCTION GetLanguageName: ansistring; override;
   public
-    codeAssistant:P_codeAssistanceData;
+    highlightingData:T_highlightingData;
     CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour); reintroduce;
     DESTRUCTOR destroy; override;
     {$WARN 5024 OFF}
@@ -96,6 +96,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       s:T_tokenSubKind;
   begin
     inherited create(AOwner);
+    highlightingData.create;
     flavour:=flav;
     for s:=low(T_tokenSubKind) to high(T_tokenSubKind) do begin
       styleTable[tkComment         ,s]:=TSynHighlighterAttributes.create('Comment');
@@ -138,7 +139,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkDefault         ,s].foreground:=$00000000;
       styleTable[tkDollarIdentifier,s].foreground:=$00000000;
       styleTable[tkUserRule        ,s].foreground:=$00FF0000;
-      styleTable[tkLocalVar        ,s].foreground:=$00880000;
+      styleTable[tkLocalVar        ,s].foreground:=$00AA0000;
       styleTable[tkBultinRule      ,s].foreground:=$00FF0000;
       styleTable[tkSpecialRule     ,s].foreground:=$00FF0000;
       styleTable[tkOperator        ,s].foreground:=$00880000;
@@ -175,6 +176,7 @@ DESTRUCTOR TSynMnhSyn.destroy;
   begin
     for t:=low(T_tokenKind)    to high(T_tokenKind) do
     for s:=low(T_tokenSubKind) to high(T_tokenSubKind) do styleTable[t,s].destroy;
+    highlightingData.destroy;
     inherited destroy;
   end; { Destroy }
 
@@ -318,8 +320,8 @@ PROCEDURE TSynMnhSyn.next;
         end;
         if localId=markedWord then fTokenId:=tkHighlightedItem
         else if tokenTypeMap.containsKey(localId,fTokenId) then begin end
-        else if (codeAssistant<>nil) and codeAssistant^.isUserRule(localId)                then fTokenId:=tkUserRule
-        else if (codeAssistant<>nil) and codeAssistant^.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
+        else if highlightingData.isUserRule(localId)                then fTokenId:=tkUserRule
+        else if highlightingData.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
         else fTokenId := tkDefault;
       end;
       '@': if fTokenPos=0 then begin
@@ -387,7 +389,7 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
       end;
     end;
-    if (flavour=msf_input) and (codeAssistant<>nil) then case codeAssistant^.isErrorLocation(fLineNumber,fTokenPos,run) of
+    if (flavour=msf_input) then case highlightingData.isErrorLocation(fLineNumber,fTokenPos,run) of
       2: fTokenSubId:=skError;
       1: fTokenSubId:=skWarn;
     end;

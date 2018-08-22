@@ -74,7 +74,6 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION defaultExtensionByLanguage:ansistring;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
-    PROCEDURE assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
     PROCEDURE pollAssistanceResult;
   private
     PROCEDURE ensureAssistant;
@@ -626,18 +625,12 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
 PROCEDURE T_editorMeta.ensureAssistant;
   begin
     if assistant=nil then new(assistant,create);
-    highlighter.codeAssistant:=assistant;
-  end;
-
-PROCEDURE T_editorMeta.assignAdditionalHighlighter(CONST additionalHighlighter:TSynMnhSyn);
-  begin
-    additionalHighlighter.codeAssistant:=assistant;
   end;
 
 PROCEDURE T_editorMeta.dropAssistant;
   begin
     if (assistant<>nil) then dispose(assistant,destroy);
-    highlighter.codeAssistant:=nil;
+    highlighter.highlightingData.clear;
     assistant:=nil;
   end;
 
@@ -656,7 +649,7 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
     if language_<>LANG_MNH then exit;
     if (paintedWithStateHash<>assistant^.getStateHash) then begin
       paintedWithStateHash:=assistant^.getStateHash;
-      highlighter.codeAssistant:=assistant;
+      assistant^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
       editor.Repaint;
       assistanceSynEdit.clearAll;
@@ -667,7 +660,7 @@ PROCEDURE T_editorMeta.pollAssistanceResult;
                    else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'+SHORTCUT_SUFFIX
                                              else assistanceTabSheet.caption:='(no warnings)'+SHORTCUT_SUFFIX; end;
       for s in hints do assistanceSynEdit.lines.add(s);
-      outlineModel^.update(assistant);
+      assistant^.performWithPackage(@outlineModel^.update);
     end;
     assistant^.triggerUpdate(nil);
   end;

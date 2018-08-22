@@ -335,7 +335,6 @@ INITIALIZATION
     fill:=0;
   end;
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing valueStore');{$endif}
   with scopeRecycler do begin
     enterCriticalSection(recyclerCS);
     while fill>0 do begin

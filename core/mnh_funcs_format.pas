@@ -338,7 +338,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         oldSideEffectWhitelist:T_sideEffects;
     begin
       //prepare parameters
-      fpar:=newListLiteral;
+      fpar:=newListLiteral(params^.size-1);
       for k:=1 to params^.size-1 do
       if params^.value[k]^.literalType in C_compoundTypes
       then fpar^.append(iter[k][index],true)
@@ -553,7 +553,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_format');{$endif}
   clearCachedFormats;
   cachedFormats.destroy;
   system.doneCriticalSection(cachedFormatCS);

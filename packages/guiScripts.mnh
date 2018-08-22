@@ -9,7 +9,7 @@ trimTrailingSpaces(s:StringList)->s.trimRight;
 
 @SuppressUnusedWarning
 @editScript=edit/Remove double blank lines
-removeDoubleBlanks(s:StringList)->s.join("\n").replace("\n\n\n","\n\n").split("\n");
+removeDoubleBlanks(s:StringList)->s.trimRight.join("\n").replace("\n\n\n","\n\n").split("\n");
 
 @SuppressUnusedWarning
 @editScript=edit/Sort lines and remove duplicates
@@ -46,25 +46,34 @@ end;
 @utility=diff/print
 editDiffPrint(editorFile:String)->printf("%s",editDiff(editorFile));
 
+private printFileLink(filename:String,lineIndex,rowIndex)->print('@',filename,':',lineIndex+1,',',rowIndex+1);
+private printFileLink(filename:String,lineIndex)->printFileLink(filename,lineIndex,0);
+private printFileLink(filename:String)->printFileLink(filename,0,0);
+
 @SuppressUnusedWarning
 @utility=search/find in all open files
 @SuppressUnusedParameterWarning
 findInAll(editorFile:String)->begin
   local searchRegex:=ask('Please enter regex for search.');
   searchRegex<>''
-  ? editors.each(editor,editor.editorContent.each(line,line.matches(searchRegex) ? print('@',editor,':',index+1,',',1) : void))
+  ? editors.each(editor,editor.editorContent.each(line,line.matches(searchRegex) ? printFileLink('@',editor,':',index+1,',',1) : void))
   : print('No regex given - search cancelled');
   void;
 end;
 
 @SuppressUnusedWarning
 @utility=dependencies/open all imported files
-openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent).useAndIncPaths.map(::openInEditor);
+openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent).useAndIncPaths.map(::printFileLink);
 
 private plain datastore scriptFolders:=void;
 
-findAllMnhScripts->begin
-  scriptFolders.isVoid OR (ask("Do you want to rescan all drives for .mnh files?\nIt might take a while if you choose yes.",['Yes','No'])=='Yes')
+@SuppressUnusedWarning
+@SuppressUnusedParameterWarning
+@utility=dependencies/clear file cache
+clearFileCache(editorFile:String)->scriptFolders:=void;
+
+findAllMnhScripts->
+  scriptFolders.isVoid
   ? begin
       local result:=(mnhInfo['targetOs']=='Linux'
                      ? driveInfo.map({$x[1,'type']='fixed' ? $x[0] : void})&':'
@@ -74,7 +83,6 @@ findAllMnhScripts->begin
       result;
     end
   : scriptFolders.pEach(root,allFiles(root,'*.mnh',false),|);
-end;
 
 private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','includes']).each(x,x.getInner(1),|);
 
@@ -82,7 +90,7 @@ private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','i
 @utility=dependencies/open all importing files
 openImporting(editorFile:String)->begin
   print(editorFile);
-  findAllMnhScripts.minus([editorFile]).pEach(script,note(script),editorFile in inspect(script).useAndIncPaths ? script.openInEditor : void);
+  findAllMnhScripts.minus([editorFile]).pEach(script,note(script),editorFile in inspect(script).useAndIncPaths ? script.printFileLink : void);
   void;
 end;
 

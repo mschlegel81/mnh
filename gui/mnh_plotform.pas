@@ -85,7 +85,7 @@ TYPE
     fpsSamplingStart:double;
     framesSampled:longint;
     closedByUser:boolean;
-    etimer:TEpikTimer;
+    eTimer:TEpikTimer;
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
 
@@ -481,7 +481,7 @@ FUNCTION TplotForm.timerTick:boolean;
     result:=false;
     plotSystem.startGuiInteraction;
     if gui_started and (showing) and (plotSystem.animation.frameCount>0) then begin
-      if animateCheckBox.checked and (etimer.elapsed*1000>wantTimerInterval) and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
+      if animateCheckBox.checked and (eTimer.elapsed*1000>wantTimerInterval) and plotSystem.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height,getPlotQuality) then begin
         eTimer.clear;
         eTimer.start;
         plotSystem.animation.getFrame(plotImage,animationFrameIndex,getPlotQuality);

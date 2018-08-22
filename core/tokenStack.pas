@@ -87,6 +87,7 @@ TYPE
       PROCEDURE add(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
       PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
       FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
+      PROCEDURE copyFrom(CONST original:P_localIdInfos);
       PROCEDURE clear;
   end;
   {$endif}
@@ -115,6 +116,19 @@ CONSTRUCTOR T_localIdInfos.create;
 
 DESTRUCTOR T_localIdInfos.destroy;
   begin clear; end;
+
+PROCEDURE T_localIdInfos.copyFrom(CONST original:P_localIdInfos);
+  VAR k:longint;
+  begin
+    if original=nil then begin
+      clear;
+      exit;
+    end;
+    setLength(infos,length(original^.infos));
+    for k:=0 to length(infos)-1 do infos[k]:=original^.infos[k];
+    setLength(blobLines,length(original^.blobLines));
+    for k:=0 to length(blobLines)-1 do blobLines[k]:=original^.blobLines[k];
+  end;
 
 FUNCTION T_localIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): T_tokenType;
   VAR entry:T_localIdInfo;
