@@ -659,8 +659,10 @@ FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
     repeat
       lastCheckStartedAt:=now;
       sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
-      repeat sleep(10) until killRequested or (now>lastCheckStartedAt+0.000002) and checkRequested;
-    until killRequested;
+      repeat sleep(10) until killRequested or
+                            (now>lastCheckStartedAt+0.000002) and checkRequested or
+                            (now>lastCheckStartedAt+0.0002  );
+    until killRequested or (now>lastCheckStartedAt+0.0002) and not(checkRequested);
 
     with P_codeAssistanceData(p)^ do begin
       enterCriticalSection(assistantCs);
