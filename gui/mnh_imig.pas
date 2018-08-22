@@ -2,6 +2,7 @@ UNIT mnh_imig;
 INTERFACE
 USES sysutils,   //system
      ExtCtrls,
+     Classes,
      myGenerics,myTools,mySys, //common
      //mnh:
      mnh_constants, mnh_basicTypes,
@@ -426,40 +427,42 @@ FUNCTION getThumbnail_imp intFuncSignature;
     end;
   end;
 
-//FUNCTION renderPlotToCurrentImage intFuncSignature;
-//  VAR width, height, quality: longint;
-//      plotImage:TImage;
-//      plotPic  :P_rawImage;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size>=2) and
-//      (arg0^.literalType in [lt_smallint,lt_bigint]) and
-//      (arg1^.literalType in [lt_smallint,lt_bigint]) and
-//      ((params^.size = 2) or (params^.size = 3) and
-//      (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
-//      width:=int0^.intValue;
-//      height:=int1^.intValue;
-//      if params^.size>2 then quality:=int2^.intValue
-//                        else quality:=0;
-//      if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
-//
-//      plotImage:=context.adapters^.plot^.obtainPlot(width,height,quality);
-//      new(plotPic,create(1,1));
-//      plotPic^.copyFromImage(plotImage);
-//      FreeAndNil(plotImage);
-//
-//      enterCriticalSection(imigCS);
-//      result:=nil;
-//      with context.getGlobals^.picture do begin
-//        lock;
-//        if value<>nil then dispose(value,destroy);
-//        value:=plotPic;
-//        unlock;
-//      end;
-//      leaveCriticalSection(imigCS);
-//      result:=newVoidLiteral;
-//    end;
-//  end;
+FUNCTION renderPlotToCurrentImage intFuncSignature;
+  VAR width, height, quality: longint;
+      renderRequest:P_plotRenderRequest;
+
+      imgStream:TStringStream;
+      plotImage:TImage;
+      plotPic  :P_rawImage;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and
+      (arg0^.literalType in [lt_smallint,lt_bigint]) and
+      (arg1^.literalType in [lt_smallint,lt_bigint]) and
+      ((params^.size = 2) or (params^.size = 3) and
+      (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
+      width:=int0^.intValue;
+      height:=int1^.intValue;
+      if params^.size>2 then quality:=int2^.intValue
+                        else quality:=0;
+      if  (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
+
+      new(renderRequest,createRenderToStringRequest(width,height,quality));
+      context.messages.globalMessages^.postCustomMessage(renderRequest^.rereferenced);
+      plotImage:=TImage.create(nil);
+      plotImage.SetInitialBounds(0,0,width,height);
+      imgStream:=TStringStream.create(renderRequest^.getStringWaiting(context.messages));
+      disposeMessage(renderRequest);
+      imgStream.position:=0;
+      plotImage.picture.PNG.loadFromStream(imgStream);
+      imgStream.free;
+      new(plotPic,create(1,1));
+      plotPic^.copyFromImage(plotImage);
+      FreeAndNil(plotImage);
+      postNewImage(context.messages,plotPic);
+      result:=newVoidLiteral;
+    end;
+  end;
 
 FUNCTION randomIfs_impl intFuncSignature;
   VAR ifs:T_ifs;
@@ -609,7 +612,7 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
   registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
   registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
-  //registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
+  registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_ternary,'renderPlotToCurrentImage(width,height,quality in [0..3]);//Renders the current plot to the current image');
   registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary,'randomIfs;//returns a random IFS to be fed to executeWorkflow');
   lastWorkflowStart:=now-ONE_MINUTE;
 FINALIZATION
