@@ -118,7 +118,9 @@ FUNCTION T_calleeEntry.toString(CONST withHeader: boolean): T_arrayOfString;
 
   VAR callers:T_callerMap.KEY_VALUE_LIST;
       temp   :T_callerMap.KEY_VALUE_PAIR;
+      firstCaller:boolean=true;
       i,j:longint;
+      shortId:string;
   begin
     callers:=callerMap.entrySet;
     for j:=0 to length(callers)-1 do for i:=0 to j-1 do
@@ -131,6 +133,7 @@ FUNCTION T_calleeEntry.toString(CONST withHeader: boolean): T_arrayOfString;
     if withHeader then inc(j);
     setLength(result,j);
     j:=0;
+    if length(id)>50 then shortId:=copy(id,1,47)+'...' else shortId:=id;
     if withHeader then begin
       result[0]:='id'       +C_tabChar+
                  'location' +C_tabChar+
@@ -139,18 +142,19 @@ FUNCTION T_calleeEntry.toString(CONST withHeader: boolean): T_arrayOfString;
                  'exclusive ms';
       inc(j);
     end;
-    result[j]:=id                              +C_tabChar+
+    result[j]:=shortId                         +C_tabChar+
                profiledLocation(calleeLocation)+C_tabChar+
                intToStr  (callCount)           +C_tabChar+
                nicestTime(timeSpent_inclusive) +C_tabChar+
                nicestTime(timeSpent_exclusive);
     inc(j);
     for temp in callers do begin
-      result[j]:=' '                                       +C_tabChar+
+      result[j]:=BoolToStr(firstCaller,C_shiftInChar+'called at',' ')    +C_tabChar+
                  profiledLocation(temp.key)                +C_tabChar+
                  intToStr  (temp.value.callCount)          +C_tabChar+
                  nicestTime(temp.value.timeSpent_inclusive)+C_tabChar+
                  nicestTime(temp.value.timeSpent_exclusive);
+      firstCaller:=false;
       inc(j);
     end;
   end;
@@ -229,9 +233,9 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messageConnector);
       lines:=formatTabs(lines);
       adapters^.postTextMessage(mt_printline,C_nilTokenLocation,'Profiling output:');
       for txt in lines do begin
-        if (length(txt)=0) or (txt[1]=' ')
-        then adapters^.postTextMessage(mt_printline  ,C_nilTokenLocation,txt)
-        else adapters^.postTextMessage(mt_timing_info,C_nilTokenLocation,txt);
+        if (length(txt)=0) or (txt[1]=' ') or (copy(txt,1,9)='called at')
+        then adapters^.postTextMessage(mt_profile_call_info,C_nilTokenLocation,txt)
+        else adapters^.postTextMessage(mt_timing_info      ,C_nilTokenLocation,txt);
       end;
     finally
       leaveCriticalSection(cs);

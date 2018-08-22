@@ -32,14 +32,6 @@ CONST
   '  TRegExpr lib   (c) 1999-2004 by Andrey V. Sorokin            http://RegExpStudio.com',
   '  Lazarus Component Library (LCL) ');
 
-  //UTF-8 zero width and invisible characters
-  ECHO_MARKER   =#226#128#139;
-  NOTE_MARKER   =#226#128#140;
-//UNUSED_MARKER =#226#128#141;
-  ERROR_MARKER  =#226#129#162;
-  WARNING_MARKER=#226#129#163;
-  TIMING_MARKER =#226#129#164;
-
   APP_NAME             ='MNH';
   APP_TITLE            ='MNH5';
   SCRIPT_EXTENSION     ='.mnh';

@@ -34,16 +34,16 @@ TYPE
   T_tokenSubKind =(skNormal,skWarn,skError);
   T_mnhSynFlavour=(msf_input,msf_output,msf_help,msf_debug);
 
-CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
-{mc_echo   }tkDefault,
-{mc_print  }tkDefault,
-{mc_timing }tkTimingNote,
-{mc_note   }tkNote,
-{mc_warning}tkWarning,
-{mc_error  }tkError,
-{mc_fatal  }tkError,
-{mc_plot   }tkNote,
-{mc_gui    }tkNote);
+CONST tokenKindByPrefix:array [0..6] of record marker:string[3]; tokenkind:T_tokenKind; end=(
+         (marker:''            ; tokenkind:tkDefault),
+         (marker:ECHO_MARKER   ; tokenkind:tkDefault),
+         (marker:NOTE_MARKER   ; tokenkind:tkNote),
+         (marker:ERROR_MARKER  ; tokenkind:tkError),
+         (marker:WARNING_MARKER; tokenkind:tkWarning),
+         (marker:TIMING_MARKER ; tokenkind:tkTimingNote),
+         (marker:TIMING_MARKER2; tokenkind:tkTimingNote));
+     SPECIAL_LINE_CASE_ECHO=1;
+     SPECIAL_LINE_CASE_TM2 =6;
 
 TYPE
   TSynMnhSyn = class(TSynCustomHighlighter)
@@ -152,10 +152,12 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
       styleTable[tkHighlightedItem ,s].background:=$00AAFF00;
     end;
+    styleTable[tkTimingNote,skWarn].style:=[];
+    styleTable[tkTimingNote,skWarn].background:=$00F6F6F6;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
       if flavour=msf_debug
       then styleTable[t,skWarn].background:=$00EEEEEE
-      else begin
+      else if t<>tkTimingNote then begin
         styleTable[t,skWarn].FrameColor:=clRed;
         styleTable[t,skWarn].FrameStyle:=slsWaved;
         styleTable[t,skWarn].FrameEdges:=sfeBottom;
@@ -208,9 +210,8 @@ FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterA
 PROCEDURE TSynMnhSyn.next;
   CONST RUN_LIMIT=10000;
   VAR localId: shortstring;
-      i: longint;
-      lc: T_messageClass;
-      specialLineCase:T_messageClass;
+      i,j: longint;
+      specialLineCase:byte=0;
 
   FUNCTION continuesWith(CONST part:shortstring; CONST offset:longint):boolean;
     VAR k:longint;
@@ -253,14 +254,12 @@ PROCEDURE TSynMnhSyn.next;
     end;
 
     if (run = 0) and (flavour in [msf_output,msf_help]) then begin
-      specialLineCase:=mc_print;
       i:=-1;
-      for lc in T_messageClass do if (C_messageClassMeta[lc].guiMarker<>'') and startsWith(C_messageClassMeta[lc].guiMarker) then begin
-        specialLineCase:=lc;
-      end;
+      for j:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[j].marker) then specialLineCase:=j;
       if i>=0 then run:=i+1;
-      fTokenId:=tokenKindForClass[specialLineCase];
-      if (specialLineCase=mc_echo) then begin
+      fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
+      if specialLineCase=SPECIAL_LINE_CASE_TM2 then fTokenSubId:=skWarn;
+      if (specialLineCase=SPECIAL_LINE_CASE_ECHO) then begin
         if (flavour=msf_output) then begin
           while (run<RUN_LIMIT) and not(fLine[run] in [#0,'>']) do inc(run);
           if fLine[run]='>' then inc(run);

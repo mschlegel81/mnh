@@ -493,12 +493,12 @@ FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean;
         for s in m^.messageText do begin
           head:=ansistring(m^.getLocation);
           if length(head)>=lengthLimit-3 then begin
-            resultAppend(C_messageClassMeta[m^.messageClass].guiMarker+head);
+            resultAppend(C_messageTypeMeta[m^.messageType].guiMarker+head);
             head:='. '+s;
           end else head:=head+' '+s;
           repeat
             splitAtSpace(head,rest,3,lengthLimit);
-            resultAppend(C_messageClassMeta[m^.messageClass].guiMarker+head);
+            resultAppend(C_messageTypeMeta[m^.messageType].guiMarker+head);
             head:='. '+rest;
           until rest='';
         end;
@@ -893,7 +893,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
         else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
       end;
       if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
-        for tmp in m^.messageText do append(textOut,C_messageClassMeta[m^.messageClass].guiMarker+m^.prefix+' '+tmp);
+        for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
     end;
   end;
 {$endif}

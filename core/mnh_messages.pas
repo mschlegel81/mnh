@@ -24,17 +24,25 @@ TYPE
                   mc_gui
                   {$endif});
 CONST
-  C_messageClassMeta:array[T_messageClass] of record guiMarker:string; htmlSpan:string; includeLocation:boolean; triggeredFlags:T_stateFlags; end=
-    {mc_echo   }((guiMarker: ECHO_MARKER   ; htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_print  } (guiMarker: ''            ; htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_timing } (guiMarker: TIMING_MARKER ; htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_note   } (guiMarker: NOTE_MARKER   ; htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
-    {mc_warning} (guiMarker: WARNING_MARKER; htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
-    {mc_error  } (guiMarker: ERROR_MARKER  ; htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagQuietHalt,FlagError]),
-    {mc_fatal  } (guiMarker: ERROR_MARKER  ; htmlSpan:'error'; includeLocation:false; triggeredFlags:[FlagFatalError,FlagQuietHalt])
+  //UTF-8 zero width and invisible characters
+  ECHO_MARKER   =#226#128#139;
+  NOTE_MARKER   =#226#128#140;
+  ERROR_MARKER  =#226#129#162;
+  WARNING_MARKER=#226#129#163;
+  TIMING_MARKER =#226#129#164;
+  TIMING_MARKER2=#226#128#141;
+
+  C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; includeLocation:boolean; triggeredFlags:T_stateFlags; end=
+    {mc_echo   }((htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
+    {mc_print  } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
+    {mc_timing } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
+    {mc_note   } (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
+    {mc_warning} (htmlSpan:''     ; includeLocation:true;  triggeredFlags:[]),
+    {mc_error  } (htmlSpan:'error'; includeLocation:true;  triggeredFlags:[FlagQuietHalt,FlagError]),
+    {mc_fatal  } (htmlSpan:'error'; includeLocation:false; triggeredFlags:[FlagFatalError,FlagQuietHalt])
     {$ifdef fullVersion},
-    {mc_plot   } (guiMarker: ''            ; htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
-    {mc_gui}     (guiMarker: ''            ; htmlSpan:''     ; includeLocation:false; triggeredFlags:[])
+    {mc_plot   } (htmlSpan:''     ; includeLocation:false; triggeredFlags:[]),
+    {mc_gui}     (htmlSpan:''     ; includeLocation:false; triggeredFlags:[])
     {$endif});
 
 TYPE
@@ -55,6 +63,7 @@ TYPE
     mt_el3_userDefined,
     mt_el4_systemError,
     mt_endOfEvaluation,
+    mt_profile_call_info,
     mt_timing_info
     {$ifdef fullVersion},
     mt_debugger_breakpoint,
@@ -87,43 +96,45 @@ CONST
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
   C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messageTypeMeta:array[T_messageType] of record
+    guiMarker:string[3];
     level:shortint;
     mClass:T_messageClass;
     systemErrorLevel:byte;
   end = (
-{mt_clearConsole      }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
-{mt_printline         }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
-{mt_print             }  (level:-2; mClass:mc_print;   systemErrorLevel:0),
-{mt_echo_input        }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_echo_declaration  }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_echo_output       }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_echo_continued    }  (level:-1; mClass:mc_echo;    systemErrorLevel:0),
-{mt_el1_note          }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
-{mt_el1_userNote      }  (level: 1; mClass:mc_note;    systemErrorLevel:0),
-{mt_el2_warning       }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
-{mt_el2_userWarning   }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
-{mt_el3_evalError     }  (level: 3; mClass:mc_error;   systemErrorLevel:3),
-{mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   systemErrorLevel:1),
-{mt_el3_userDefined   }  (level: 3; mClass:mc_error;   systemErrorLevel:2),
-{mt_el4_systemError   }  (level: 4; mClass:mc_error;   systemErrorLevel:5),
-{mt_endOfEvaluation   }  (level:-1; mClass:mc_note;    systemErrorLevel:0),
-{mt_timing_info       }  (level:-1; mClass:mc_timing;  systemErrorLevel:0)
+{mt_clearConsole      }  (guiMarker: ''            ; level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_printline         }  (guiMarker: ''            ; level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_print             }  (guiMarker: ''            ; level:-2; mClass:mc_print;   systemErrorLevel:0),
+{mt_echo_input        }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_declaration  }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_output       }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_echo_continued    }  (guiMarker: ECHO_MARKER   ; level:-1; mClass:mc_echo;    systemErrorLevel:0),
+{mt_el1_note          }  (guiMarker: NOTE_MARKER   ; level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el1_userNote      }  (guiMarker: NOTE_MARKER   ; level: 1; mClass:mc_note;    systemErrorLevel:0),
+{mt_el2_warning       }  (guiMarker: WARNING_MARKER; level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el2_userWarning   }  (guiMarker: WARNING_MARKER; level: 2; mClass:mc_warning; systemErrorLevel:0),
+{mt_el3_evalError     }  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:3),
+{mt_el3_noMatchingMain}  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:1),
+{mt_el3_userDefined   }  (guiMarker: ERROR_MARKER  ; level: 3; mClass:mc_error;   systemErrorLevel:2),
+{mt_el4_systemError   }  (guiMarker: ERROR_MARKER  ; level: 4; mClass:mc_fatal;   systemErrorLevel:5),
+{mt_endOfEvaluation   }  (guiMarker: NOTE_MARKER   ; level:-1; mClass:mc_note;    systemErrorLevel:0),
+{mt_profile_call_info }  (guiMarker: TIMING_MARKER2; level:-1; mClass:mc_timing;  systemErrorLevel:0),
+{mt_timing_info       }  (guiMarker: TIMING_MARKER ; level:-1; mClass:mc_timing;  systemErrorLevel:0)
 {$ifdef fullVersion},
-{mt_debugger_breakpoint} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayTable}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_plot_addText}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_addRow}         (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_dropRow}        (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_renderRequest}  (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_retrieveOptions}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_setOptions}     (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_clear}          (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_clearAnimation} (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_addAnimation...}(level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    systemErrorLevel:0),
-{mt_guiEdit_done}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
-{mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0)
+{mt_debugger_breakpoint} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayTable}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_plot_addText}        (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addRow}         (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_dropRow}        (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_renderRequest}  (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_retrieveOptions}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_setOptions}     (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clear}          (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_clearAnimation} (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_addAnimation...}(guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_plot_postDisplay}    (guiMarker: ''            ; level:-1; mClass:mc_plot;    systemErrorLevel:0),
+{mt_guiEdit_done}        (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayVariableTree} (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_displayCustomForm}   (guiMarker: ''            ; level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
 
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
@@ -294,7 +305,7 @@ FUNCTION T_storedMessageWithText.toString({$ifdef fullVersion}CONST forGui:boole
       marker:string;
   begin
     if kind in [mt_printline,mt_printdirect] then exit(txt);
-    {$ifdef fullVersion}if forGui then marker:=C_messageClassMeta[C_messageTypeMeta[kind].mClass].guiMarker else {$endif} marker:='';
+    {$ifdef fullVersion}if forGui then marker:=C_messageTypeMeta[kind].guiMarker else {$endif} marker:='';
     setLength(result,length(txt));
     with C_messageTypeMeta[kind] do begin
       if C_messageClassMeta[mClass].includeLocation then loc:=ansistring(location)+' ';
@@ -310,7 +321,7 @@ FUNCTION T_errorMessage.toString({$ifdef fullVersion}CONST forGui:boolean{$endif
       marker:string;
   begin
     result:=inherited toString({$ifdef fullVersion}forGui{$endif});
-    {$ifdef fullVersion}if forGui then marker:=C_messageClassMeta[C_messageTypeMeta[kind].mClass].guiMarker else {$endif}marker:='';
+    {$ifdef fullVersion}if forGui then marker:=C_messageTypeMeta[kind].guiMarker else {$endif}marker:='';
     i0:=length(result);
     setLength(result,i0+length(stacktrace));
     for i:=0 to length(stacktrace)-1 do begin
