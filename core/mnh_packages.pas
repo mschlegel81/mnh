@@ -569,7 +569,7 @@ FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfStri
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-    result:=wordsInEditor.size>wc;
+    result:=(userRules.size>0) or not(localIdInfos^.isEmpty);
     leaveCriticalSection(assistantCs);
   end;
 
