@@ -579,7 +579,6 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
-    if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     enterCriticalSection(assistantCs);
     loc.line:=CaretY;
     loc.column:=1;
@@ -660,9 +659,9 @@ FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
       lastCheckStartedAt:=now;
       sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
       repeat sleep(10) until killRequested or
-                            (now>lastCheckStartedAt+0.000002) and checkRequested or
-                            (now>lastCheckStartedAt+0.0002  );
-    until killRequested or (now>lastCheckStartedAt+0.0002) and not(checkRequested);
+                            (now>lastCheckStartedAt+0.000006) and checkRequested or
+                            (now>lastCheckStartedAt+0.002  );
+    until killRequested or (now>lastCheckStartedAt+0.002) and not(checkRequested);
 
     with P_codeAssistanceData(p)^ do begin
       enterCriticalSection(assistantCs);
