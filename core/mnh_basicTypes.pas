@@ -3,7 +3,7 @@ INTERFACE
 USES sysutils;
 TYPE
   T_hashInt  =dword;
-  T_idString =shortstring;
+  T_idString =ansistring;
   T_myFloat = extended;
 
   P_objectWithPath=^T_objectWithPath;
