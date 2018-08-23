@@ -747,6 +747,12 @@ For built-in rules:<code>
   out> {sin($0)}
 <!--end-->
 </code>
+For local variables:<code>
+<!--mnh-->
+   in> begin local x:=0; ::x; end;
+  out> 'x'
+<!--end-->
+</code>
 
 <h3><br><a name="opOverloading"> Operator overloading</a></h3>
 
@@ -1725,10 +1731,13 @@ Most shortcuts are accessible via the menu. The exceptions are...<br>
   <tr><td>Ctrl+Shift+I</td><td>Unindent selection</td></tr>
   <tr><td>Ctrl+Enter</td><td>Jump to declaration</td></tr>  
   <tr><td>Alt+Enter</td><td>Highlight word under cursor</td></tr>  
+  <tr><td>Ctrl+Shift+U</td><td>Convert selection to uppercase</td></tr>
+  <tr><td>Ctrl+Shift+L</td><td>Convert selection to lowercase</td></tr>  
   <tr><td>Ctrl+Z</td><td>Undo</td></tr>
   <tr><td>Ctrl+Shift+Z</td><td>Redo</td></tr>  
   <tr><td>Alt+Up/Down</td><td>Move Line/Selection up/down</td></tr>
   <tr><td>Alt+Shift+Up/Down/Left/Right</td><td>Block selection</td></tr>
+  <tr><td>Ctrl+Space</td><td>Auto completion</td></tr>  
 </table>
 <br>
 Apart from that there are of course the usual shortcuts for copy (Strg+C), paste (Strg+V), etc.
