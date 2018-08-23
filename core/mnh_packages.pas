@@ -98,7 +98,7 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
-      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -1642,7 +1642,7 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     if isMain then context.getGlobals^.stopWorkers;
   end;
 
-FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string;
+FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string;
   VAR toStringRule:P_rule;
       toReduce,dummy:P_token;
       parameters:P_listLiteral;
@@ -1658,7 +1658,7 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
     end;
 
     if stringOut=nil then begin
-      if (L^.literalType=lt_string) and not(forOutput)
+      if (L^.literalType=lt_string)
       then result:=P_stringLiteral(L)^.value
       else result:=L^.toString();
     end else begin
