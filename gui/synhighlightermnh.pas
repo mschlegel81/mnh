@@ -89,6 +89,7 @@ PROCEDURE initLists;
 IMPLEMENTATION
 VAR listsAreInitialized:boolean=false;
     tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
+    builtinRules:T_setOfString;
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   VAR t:T_tokenKind;
@@ -320,6 +321,7 @@ PROCEDURE TSynMnhSyn.next;
         else if tokenTypeMap.containsKey(localId,fTokenId) then begin end
         else if highlightingData.isUserRule(localId)                then fTokenId:=tkUserRule
         else if highlightingData.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
+        else if builtinRules.contains(localId) then fTokenId:=tkBultinRule
         else fTokenId := tkDefault;
       end;
       '@': if fTokenPos=0 then begin
@@ -480,7 +482,6 @@ PROCEDURE initLists;
       tc:T_typeCheck;
       md:T_modifier;
       i:longint;
-      builtin:T_arrayOfString;
   begin
     if listsAreInitialized then exit;
     tokenTypeMap.create();
@@ -488,12 +489,13 @@ PROCEDURE initLists;
     for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
     for tc in T_typeCheck do put(rwc_type,C_typeCheckInfo[tc].name);
     for md in T_modifier do put(rwc_modifier,C_modifierInfo[md].name);
-    builtin:=intrinsicRuleMap.keySet;
-    for i:=0 to length(builtin)-1 do put(rwc_not_reserved,builtin[i]);
+    builtinRules.create;
+    builtinRules.put(intrinsicRuleMap.keySet);
     listsAreInitialized:=true;
   end;
 
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing SynHighlighterMnh');{$endif}
   if listsAreInitialized then tokenTypeMap.destroy;
+  builtinRules.destroy;
 end.
