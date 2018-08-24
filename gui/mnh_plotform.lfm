@@ -16,13 +16,13 @@ object plotForm: TplotForm
   OnResize = FormResize
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
   object plotImage: TImage
     Cursor = crCross
     Left = 0
-    Height = 2000
+    Height = 9999
     Top = 0
-    Width = 2000
+    Width = 9999
     OnMouseDown = plotImageMouseDown
     OnMouseMove = plotImageMouseMove
     OnMouseUp = plotImageMouseUp
