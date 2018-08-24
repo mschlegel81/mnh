@@ -551,11 +551,18 @@ PROCEDURE T_basicEditorMeta.setMarkedWord(CONST wordText: string);
 
 PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper:boolean);
   VAR txt:string;
+      oldBegin,oldEnd,oldCaret:TPoint;
   begin
+    oldBegin:=editor.BlockBegin;
+    oldEnd  :=editor.BlockEnd;
+    oldCaret:=editor.CaretXY;
     txt:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
     if upper then txt:=uppercase(txt)
              else txt:=lowercase(txt);
     editor.SetTextBetweenPoints(editor.BlockBegin,editor.BlockEnd,txt);
+    editor.BlockBegin:=oldBegin;
+    editor.BlockEnd  :=oldEnd  ;
+    editor.CaretXY   :=oldCaret;
   end;
 
 end.
