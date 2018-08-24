@@ -300,17 +300,14 @@ PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButto
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
-    if command=ecUserDefinedFirst   then getEditor^.toggleComment;
-    if command=ecUserDefinedFirst+1 then cycleEditors(true);
-    if command=ecUserDefinedFirst+2 then cycleEditors(false);
+    if command=ecUserDefinedFirst+1 then cycleEditors(true) else
+    if command=ecUserDefinedFirst+2 then cycleEditors(false) else
     if command=ecUserDefinedFirst+3 then begin
       getEditor^.toggleBreakpoint;
       miDebug.checked:=true;
       runnerModel.debugMode:=true;
       onDebuggerEvent;
-    end;
-    if command=ecUserDefinedFirst+4 then getEditor^.moveLine(true);
-    if command=ecUserDefinedFirst+5 then getEditor^.moveLine(false);
+    end else getEditor^.processUserCommand(Sender,command,AChar,data);
   end;
 
 PROCEDURE TMnhForm.miFindClick        (Sender: TObject); begin searchReplaceModel.beginFindOrReplace(focusedEditor,true);  end;
@@ -559,7 +556,7 @@ PROCEDURE TMnhForm.miUserErrorsClick(Sender: TObject);
 PROCEDURE TMnhForm.miDeclarationEchoClick (Sender: TObject); begin setSpecificMessageType(miDeclarationEcho .checked,mt_echo_declaration); end;
 PROCEDURE TMnhForm.miExpressionEchoClick  (Sender: TObject); begin setSpecificMessageType(miExpressionEcho  .checked,mt_echo_input);       end;
 PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMessageType(miExpressionResult.checked,mt_echo_output);      end;
-PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info);      end;
+PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info); setSpecificMessageType(miTimingInfo.checked,mt_profile_call_info);         end;
 PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
   begin
     settings.value^.wordWrapEcho:=miWrapEcho.checked;

@@ -17,6 +17,7 @@ TYPE
   TtableForm = class(TForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
+    mi_exportIncHeader: TMenuItem;
     miIncreaseFontSize: TMenuItem;
     miDecreaseFontSize: TMenuItem;
     mi_exportText: TMenuItem;
@@ -181,25 +182,27 @@ PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
 
 PROCEDURE TtableForm.mi_exportCsvSemicolonClick(Sender: TObject);
   begin
-    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,';',false,true);
+    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,';',mi_exportIncHeader.checked,true);
   end;
 
 PROCEDURE TtableForm.mi_exportCsvTabClick(Sender: TObject);
   begin
-    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,C_tabChar,false,true);
+    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,C_tabChar,mi_exportIncHeader.checked,true);
   end;
 
 PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
-  VAR i,j:longint;
+  VAR i0:longint=1;
+      i,j:longint;
       content:T_arrayOfString;
       row:ansistring;
   begin
     if SaveTableDialog.execute then begin
-      setLength(content,StringGrid.RowCount-1);
-      for i:=1 to StringGrid.RowCount-1 do begin
+      if mi_exportIncHeader.checked then i0:=0;
+      setLength(content,StringGrid.RowCount-i0);
+      for i:=i0 to StringGrid.RowCount-1 do begin
         row:='';
         for j:=0 to StringGrid.colCount-1 do row:=row+StringGrid.Cells[j,i]+C_tabChar;
-        content[i-1]:=row;
+        content[i-i0]:=row;
       end;
       content:=formatTabs(content);
       writeFileLines(SaveTableDialog.fileName,formatTabs(content),LineEnding,false);
@@ -260,6 +263,8 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
       byColumn:=-1;
     end;
     firstIsHeader:=firstIsHeader_;
+    mi_exportIncHeader.enabled:=firstIsHeader_;
+    mi_exportIncHeader.checked:=mi_exportIncHeader.checked and firstIsHeader_;
     if firstIsHeader and (L^.size>0) and (L^.value[0]^.literalType in C_listTypes) then begin
       headerLiteral:=P_listLiteral(L^.value[0]);
       setLength(headerData,headerLiteral^.size);

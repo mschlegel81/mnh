@@ -48,10 +48,10 @@ TYPE T_language=(LANG_MNH   = 0,
       editor_     : TSynEdit;
       plugin      : TSynPluginMultiCaret;
       highlighter : TSynMnhSyn;
-      PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
       PROCEDURE setLanguage(CONST languageIndex:T_language);
       FUNCTION currentBlockOrLine:T_lineRange;
     public
+      PROCEDURE processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
       CONSTRUCTOR createWithParent(CONST parent:TWinControl);
       DESTRUCTOR destroy; virtual;
       //T_codeProvider:
@@ -72,6 +72,7 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE moveLine(CONST up:boolean);
       PROCEDURE insertText(CONST s: string);
       PROCEDURE setMarkedWord(CONST wordText:string);
+      PROCEDURE upperLowerCaseBlock(CONST upper:boolean);
   end;
 
 PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn;
@@ -242,9 +243,11 @@ PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST language
 
 PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
-    if      command=ecUserDefinedFirst   then toggleComment
-    else if command=ecUserDefinedFirst+4 then moveLine(true)
-    else if command=ecUserDefinedFirst+5 then moveLine(false);
+    if      command=ecUserDefinedFirst   then begin command:=ecNone; toggleComment;              end
+    else if command=ecUserDefinedFirst+4 then begin command:=ecNone; moveLine(true);             end
+    else if command=ecUserDefinedFirst+5 then begin command:=ecNone; moveLine(false);            end
+    else if command=ecUpperCaseBlock     then begin command:=ecNone; upperLowerCaseBlock(true);  end
+    else if command=ecLowerCaseBlock     then begin command:=ecNone; upperLowerCaseBlock(false); end;
   end;
 
 PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
@@ -317,15 +320,12 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     addKeystroke(ecDeleteChar,46);
     addKeystroke(ecCut,8238);
     addKeystroke(ecDeleteLastChar,8);
-    addKeystroke(ecDeleteLastChar,8200);
-    addKeystroke(ecDeleteLastWord,16392);
     addKeystroke(ecUndo,32776);
     addKeystroke(ecRedo,40968);
     addKeystroke(ecLineBreak,13);
     addKeystroke(ecSelectAll,16449);
     addKeystroke(ecCopy,16451);
     addKeystroke(ecLineBreak,16461);
-    addKeystroke(ecDeleteWord,16468);
     addKeystroke(ecBlockUnindent,16469);
     addKeystroke(ecPaste,16470);
     addKeystroke(ecCut,16472);
@@ -333,8 +333,6 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     addKeystroke(ecUndo,16474);
     addKeystroke(ecRedo,24666);
     addKeystroke(ecUserDefinedFirst,24643);
-    addKeystroke(ecLineSelect,24652);
-    addKeystroke(ecTab,9);
     addKeystroke(ecShiftTab,8201);
     addKeystroke(ecUserDefinedFirst+3,24642);
     addKeystroke(ecColSelUp,40998);
@@ -345,11 +343,11 @@ CONSTRUCTOR T_basicEditorMeta.createWithParent(CONST parent: TWinControl);
     addKeystroke(ecColSelPageBottom,57378);
     addKeystroke(ecColSelPageUp,40993);
     addKeystroke(ecColSelPageTop,57377);
-    addKeystroke(ecColSelLineStart,40996);
-    addKeystroke(ecColSelLineEnd,40995);
     addKeystroke(ecColSelEditorTop,57380);
     addKeystroke(ecColSelEditorBottom,57379);
     addKeystroke(ecBlockIndent,16457);
+    addKeystroke(ecUpperCaseBlock,scCtrl+scShift+ord('U'));
+    addKeystroke(ecLowerCaseBlock,scCtrl+scShift+ord('L'));
     addKeystroke(ecUserDefinedFirst+4,32806);//Alt+Up
     addKeystroke(ecUserDefinedFirst+5,32808);//Alt+Down
     highlighter:=TSynMnhSyn.create(parent,msf_input);
@@ -549,6 +547,22 @@ PROCEDURE T_basicEditorMeta.insertText(CONST s: string);
 PROCEDURE T_basicEditorMeta.setMarkedWord(CONST wordText: string);
   begin
     if (language_=LANG_MNH) then highlighter.setMarkedWord(wordText);
+  end;
+
+PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper:boolean);
+  VAR txt:string;
+      oldBegin,oldEnd,oldCaret:TPoint;
+  begin
+    oldBegin:=editor.BlockBegin;
+    oldEnd  :=editor.BlockEnd;
+    oldCaret:=editor.CaretXY;
+    txt:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
+    if upper then txt:=uppercase(txt)
+             else txt:=lowercase(txt);
+    editor.SetTextBetweenPoints(editor.BlockBegin,editor.BlockEnd,txt);
+    editor.BlockBegin:=oldBegin;
+    editor.BlockEnd  :=oldEnd  ;
+    editor.CaretXY   :=oldCaret;
   end;
 
 end.

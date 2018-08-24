@@ -270,7 +270,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       defaultOutputBehavior:=verbosityString;
     end;
     {$ifdef fullVersion}
-    if profilingRun then defaultOutputBehavior:=defaultOutputBehavior+[mt_timing_info];
+    if profilingRun then defaultOutputBehavior:=defaultOutputBehavior+[mt_timing_info,mt_profile_call_info];
     {$endif}
     //-----------------------------------------------------
     wantConsoleAdapter:=wantConsoleAdapter or wantHelpDisplay;

@@ -2,6 +2,7 @@ UNIT mnh_doc;
 INTERFACE
 USES sysutils,
      myStringUtil, myGenerics, serializationUtil,
+     mnh_messages,
      mnh_settings,
      mnh_basicTypes, mnh_constants,
      mnh_litVar, mnh_html;

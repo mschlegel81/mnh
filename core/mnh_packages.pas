@@ -98,7 +98,7 @@ TYPE
       FUNCTION isMain:boolean;
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE finalize(VAR context:T_threadContext);
-      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string; virtual;
+      FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
@@ -493,12 +493,12 @@ FUNCTION T_codeAssistanceData.getErrorHints(OUT hasErrors, hasWarnings: boolean;
         for s in m^.messageText do begin
           head:=ansistring(m^.getLocation);
           if length(head)>=lengthLimit-3 then begin
-            resultAppend(C_messageClassMeta[m^.messageClass].guiMarker+head);
+            resultAppend(C_messageTypeMeta[m^.messageType].guiMarker+head);
             head:='. '+s;
           end else head:=head+' '+s;
           repeat
             splitAtSpace(head,rest,3,lengthLimit);
-            resultAppend(C_messageClassMeta[m^.messageClass].guiMarker+head);
+            resultAppend(C_messageTypeMeta[m^.messageType].guiMarker+head);
             head:='. '+rest;
           until rest='';
         end;
@@ -569,7 +569,7 @@ FUNCTION T_codeAssistanceData.updateCompletionList(VAR wordsInEditor:T_setOfStri
     wordsInEditor.put(userRules);
     for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
-    result:=wordsInEditor.size>wc;
+    result:=(userRules.size>0) or not(localIdInfos^.isEmpty);
     leaveCriticalSection(assistantCs);
   end;
 
@@ -579,7 +579,6 @@ PROCEDURE T_codeAssistanceData.explainIdentifier(CONST fullLine: ansistring; CON
       loc:T_tokenLocation;
       enhanced:T_enhancedTokens;
   begin
-    if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
     enterCriticalSection(assistantCs);
     loc.line:=CaretY;
     loc.column:=1;
@@ -660,9 +659,9 @@ FUNCTION codeAssistantCheckThread(p:pointer):ptrint;
       lastCheckStartedAt:=now;
       sandbox^.updateCodeAssistanceData(P_codeAssistanceData(p)^.editorForUpdate,P_codeAssistanceData(p)^);
       repeat sleep(10) until killRequested or
-                            (now>lastCheckStartedAt+0.000002) and checkRequested or
+                            (now>lastCheckStartedAt+0.000006) and checkRequested or
                             (now>lastCheckStartedAt+0.0002  );
-    until killRequested or (now>lastCheckStartedAt+0.0002) and not(checkRequested);
+    until killRequested or  (now>lastCheckStartedAt+0.0002) and not(checkRequested);
 
     with P_codeAssistanceData(p)^ do begin
       enterCriticalSection(assistantCs);
@@ -893,7 +892,7 @@ PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBu
         else for tmp in m^.messageText do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,m^.prefix+' '+escapeHtml(tmp)));
       end;
       if not(m^.messageType in [mt_echo_input,mt_timing_info]) then
-        for tmp in m^.messageText do append(textOut,C_messageClassMeta[m^.messageClass].guiMarker+m^.prefix+' '+tmp);
+        for tmp in m^.messageText do append(textOut,C_messageTypeMeta[m^.messageType].guiMarker+m^.prefix+' '+tmp);
     end;
   end;
 {$endif}
@@ -1643,7 +1642,7 @@ PROCEDURE T_package.finalize(VAR context:T_threadContext);
     if isMain then context.getGlobals^.stopWorkers;
   end;
 
-FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer; CONST forOutput:boolean=false):string;
+FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:pointer):string;
   VAR toStringRule:P_rule;
       toReduce,dummy:P_token;
       parameters:P_listLiteral;
@@ -1659,7 +1658,7 @@ FUNCTION T_package.literalToString(CONST L:P_literal; CONST location:T_tokenLoca
     end;
 
     if stringOut=nil then begin
-      if (L^.literalType=lt_string) and not(forOutput)
+      if (L^.literalType=lt_string)
       then result:=P_stringLiteral(L)^.value
       else result:=L^.toString();
     end else begin

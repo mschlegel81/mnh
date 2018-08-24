@@ -1247,6 +1247,12 @@ end}
             first^.next:=disposeToken(first^.next);
             didSubstitution:=true;
           end;
+          tt_blockLocalVariable: begin
+            first^.data:=newStringLiteral(first^.next^.txt);
+            first^.tokType:=tt_literal;
+            first^.next:=disposeToken(first^.next);
+            didSubstitution:=true;
+          end;
         end;
 {cT[0]=}tt_save: if cTokType[1]=tt_semicolon then begin
           first:=disposeToken(first);

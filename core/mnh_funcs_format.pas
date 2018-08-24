@@ -1,7 +1,7 @@
 UNIT mnh_funcs_format;
 INTERFACE
 USES sysutils,
-     myGenerics,myStringUtil,
+     myGenerics,myStringUtil,mySys,
      mnh_basicTypes,mnh_constants,
      mnh_tokenArray,
      mnh_litVar,
@@ -9,6 +9,7 @@ USES sysutils,
      mnh_messages,
      mnh_contexts,
      mnh_funcs;
+CONST MAX_FORMATS_TO_CACHE=4096;
 TYPE
   T_format=object
     category:(fmtCat_decimal,
@@ -32,7 +33,8 @@ TYPE
     parts:T_arrayOfString;
     formats:array of T_format;
     formatSubrule:P_literal;
-    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
+    isTemporary:boolean;
+    CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST temp:boolean=false);
     DESTRUCTOR destroy;
     FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):T_arrayOfString;
   end;
@@ -162,7 +164,11 @@ DESTRUCTOR T_format.destroy;
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext):P_preparedFormatStatement;
   begin;
     if not(context.messages.continueEvaluation) then exit(nil);
-    system.enterCriticalSection(cachedFormatCS);
+    if tryEnterCriticalsection(cachedFormatCS)=0 then begin
+      new(result,create(formatString,tokenLocation,context,true));
+      exit(result);
+    end;
+    if (cachedFormats.size>MAX_FORMATS_TO_CACHE) or not(isMemoryInComfortZone) then clearCachedFormats;
     if cachedFormats.containsKey(formatString,result) then begin
       system.leaveCriticalSection(cachedFormatCS);
       exit(result);
@@ -176,7 +182,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     system.leaveCriticalSection(cachedFormatCS);
   end;
 
-CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext);
+CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_threadContext; CONST temp:boolean=false);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
     CONST FORMAT_CHARS:T_charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
@@ -290,6 +296,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
 
   VAR i:longint;
   begin
+    isTemporary:=temp;
     inPackage:=tokenLocation.package;
     parts:=splitFormatString(formatString);
     formatSubrule:=getFormatSubrule(parts);
@@ -418,6 +425,7 @@ FUNCTION format_imp intFuncSignature;
       {$endif}
       if not(context.messages.continueEvaluation) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context);
+      if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
       else begin
         result:=newListLiteral;
@@ -444,6 +452,7 @@ FUNCTION printf_imp intFuncSignature;
       system.enterCriticalSection(print_cs);
       context.messages.globalMessages^.postTextMessage(mt_printline,C_nilTokenLocation,formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context))));
       system.leaveCriticalSection(print_cs);
+      if preparedStatement^.isTemporary then dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
       {$ifdef fullVersion}context.callStackPop(nil);{$endif}
     end;

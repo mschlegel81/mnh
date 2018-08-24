@@ -2477,10 +2477,17 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint;
       i, j0, j1, k: longint;
   FUNCTION isLeq(a,b:P_literal):boolean; inline;
     begin
-      if (a^.literalType in C_listTypes) and (P_listLiteral(a)^.fill>innerIndex) and
-         (b^.literalType in C_listTypes) and (P_listLiteral(b)^.fill>innerIndex)
-      then result:=P_listLiteral(a)^.dat[innerIndex]^.leqForSorting(P_listLiteral(b)^.dat[innerIndex])
-      else begin
+      if (a^.literalType in C_listTypes) and (b^.literalType in C_listTypes) then begin
+        if (P_listLiteral(a)^.fill>innerIndex) then begin
+          if (P_listLiteral(b)^.fill>innerIndex)
+          then result:=P_listLiteral(a)^.dat[innerIndex]^.leqForSorting(P_listLiteral(b)^.dat[innerIndex])
+          else result:=P_listLiteral(a)^.dat[innerIndex]^.leqForSorting(@voidLit)
+        end else begin
+          if (P_listLiteral(b)^.fill>innerIndex)
+          then result:=voidLit.leqForSorting(P_listLiteral(b)^.dat[innerIndex])
+          else result:=false;
+        end;
+      end else begin
         result:=false;
         adapters.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString(50)+' and '+b^.toString(50),location);
       end;

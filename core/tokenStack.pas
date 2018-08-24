@@ -89,6 +89,7 @@ TYPE
       FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
       PROCEDURE copyFrom(CONST original:P_localIdInfos);
       PROCEDURE clear;
+      FUNCTION isEmpty:boolean;
   end;
   {$endif}
 
@@ -185,6 +186,11 @@ PROCEDURE T_localIdInfos.clear;
   begin
     setLength(infos,0);
     setLength(blobLines,0);
+  end;
+
+FUNCTION T_localIdInfos.isEmpty:boolean;
+  begin
+    result:=(length(infos)=0) and (length(blobLines)=0);
   end;
 
 CONSTRUCTOR T_callStack.create;

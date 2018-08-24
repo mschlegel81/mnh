@@ -21,8 +21,8 @@ TYPE
 CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
-    {at_console}  [mt_clearConsole..mt_el4_systemError,mt_timing_info],
-    {at_textFile} [mt_printline..mt_el4_systemError,mt_timing_info],
+    {at_console}  [mt_clearConsole..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
+    {at_textFile} [mt_printline..mt_el4_systemError,mt_profile_call_info,mt_timing_info],
     {$ifdef fullVersion}
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_plot}     [mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
@@ -225,8 +225,8 @@ OPERATOR :=(s:string):T_messageTypeSet;
       'D': result:=result-[mt_echo_declaration];
       'o': result:=result+[mt_echo_output];
       'O': result:=result-[mt_echo_output];
-      't': result:=result+[mt_timing_info];
-      'T': result:=result-[mt_timing_info];
+      't': result:=result+[mt_timing_info,mt_profile_call_info];
+      'T': result:=result-[mt_timing_info,mt_profile_call_info];
       'e': result:=result+[mt_echo_input,mt_echo_declaration,mt_echo_output];
       'E': result:=result-[mt_echo_input,mt_echo_declaration,mt_echo_output];
       'n': result:=result+[mt_el1_note,mt_el1_userNote];

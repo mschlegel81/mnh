@@ -100,7 +100,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
 
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
     {$MACRO ON}
-    {$define marker:=C_messageClassMeta[C_messageTypeMeta[messageType].mClass].guiMarker}
+    {$define marker:=C_messageTypeMeta[messageType].guiMarker}
     VAR txt:string;
         tokens:T_arrayOfString;
         k:longint=0;

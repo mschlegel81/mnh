@@ -34,17 +34,16 @@ TYPE
   T_tokenSubKind =(skNormal,skWarn,skError);
   T_mnhSynFlavour=(msf_input,msf_output,msf_help,msf_debug);
 
-CONST tokenKindForClass:array[T_messageClass] of T_tokenKind=(
-{mc_echo   }tkDefault,
-{mc_print  }tkDefault,
-{mc_timing }tkTimingNote,
-{mc_note   }tkNote,
-{mc_warning}tkWarning,
-{mc_error  }tkError,
-{mc_fatal  }tkError,
-{mc_plot   }tkNote,
-{$ifdef imig}tkNote,{$endif}
-{mc_gui    }tkNote);
+CONST tokenKindByPrefix:array [0..6] of record marker:string[3]; tokenkind:T_tokenKind; end=(
+         (marker:''            ; tokenkind:tkDefault),
+         (marker:ECHO_MARKER   ; tokenkind:tkDefault),
+         (marker:NOTE_MARKER   ; tokenkind:tkNote),
+         (marker:ERROR_MARKER  ; tokenkind:tkError),
+         (marker:WARNING_MARKER; tokenkind:tkWarning),
+         (marker:TIMING_MARKER ; tokenkind:tkTimingNote),
+         (marker:TIMING_MARKER2; tokenkind:tkTimingNote));
+     SPECIAL_LINE_CASE_ECHO=1;
+     SPECIAL_LINE_CASE_TM2 =6;
 
 TYPE
   TSynMnhSyn = class(TSynCustomHighlighter)
@@ -90,6 +89,7 @@ PROCEDURE initLists;
 IMPLEMENTATION
 VAR listsAreInitialized:boolean=false;
     tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
+    builtinRules:T_setOfString;
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   VAR t:T_tokenKind;
@@ -153,10 +153,12 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
       styleTable[tkHighlightedItem ,s].background:=$00AAFF00;
     end;
+    styleTable[tkTimingNote,skWarn].style:=[];
+    styleTable[tkTimingNote,skWarn].background:=$00F6F6F6;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
       if flavour=msf_debug
       then styleTable[t,skWarn].background:=$00EEEEEE
-      else begin
+      else if t<>tkTimingNote then begin
         styleTable[t,skWarn].FrameColor:=clRed;
         styleTable[t,skWarn].FrameStyle:=slsWaved;
         styleTable[t,skWarn].FrameEdges:=sfeBottom;
@@ -209,9 +211,8 @@ FUNCTION TSynMnhSyn.getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterA
 PROCEDURE TSynMnhSyn.next;
   CONST RUN_LIMIT=10000;
   VAR localId: shortstring;
-      i: longint;
-      lc: T_messageClass;
-      specialLineCase:T_messageClass;
+      i,j: longint;
+      specialLineCase:byte=0;
 
   FUNCTION continuesWith(CONST part:shortstring; CONST offset:longint):boolean;
     VAR k:longint;
@@ -254,14 +255,12 @@ PROCEDURE TSynMnhSyn.next;
     end;
 
     if (run = 0) and (flavour in [msf_output,msf_help]) then begin
-      specialLineCase:=mc_print;
       i:=-1;
-      for lc in T_messageClass do if (C_messageClassMeta[lc].guiMarker<>'') and startsWith(C_messageClassMeta[lc].guiMarker) then begin
-        specialLineCase:=lc;
-      end;
+      for j:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[j].marker) then specialLineCase:=j;
       if i>=0 then run:=i+1;
-      fTokenId:=tokenKindForClass[specialLineCase];
-      if (specialLineCase=mc_echo) then begin
+      fTokenId:=tokenKindByPrefix[specialLineCase].tokenkind;
+      if specialLineCase=SPECIAL_LINE_CASE_TM2 then fTokenSubId:=skWarn;
+      if (specialLineCase=SPECIAL_LINE_CASE_ECHO) then begin
         if (flavour=msf_output) then begin
           while (run<RUN_LIMIT) and not(fLine[run] in [#0,'>']) do inc(run);
           if fLine[run]='>' then inc(run);
@@ -322,6 +321,7 @@ PROCEDURE TSynMnhSyn.next;
         else if tokenTypeMap.containsKey(localId,fTokenId) then begin end
         else if highlightingData.isUserRule(localId)                then fTokenId:=tkUserRule
         else if highlightingData.isLocalId(localId,lineIndex+1,run) then fTokenId:=tkLocalVar
+        else if builtinRules.contains(localId) then fTokenId:=tkBultinRule
         else fTokenId := tkDefault;
       end;
       '@': if fTokenPos=0 then begin
@@ -482,7 +482,6 @@ PROCEDURE initLists;
       tc:T_typeCheck;
       md:T_modifier;
       i:longint;
-      builtin:T_arrayOfString;
   begin
     if listsAreInitialized then exit;
     tokenTypeMap.create();
@@ -490,12 +489,15 @@ PROCEDURE initLists;
     for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
     for tc in T_typeCheck do put(rwc_type,C_typeCheckInfo[tc].name);
     for md in T_modifier do put(rwc_modifier,C_modifierInfo[md].name);
-    builtin:=intrinsicRuleMap.keySet;
-    for i:=0 to length(builtin)-1 do put(rwc_not_reserved,builtin[i]);
+    builtinRules.create;
+    builtinRules.put(intrinsicRuleMap.keySet);
     listsAreInitialized:=true;
   end;
 
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing SynHighlighterMnh');{$endif}
-  if listsAreInitialized then tokenTypeMap.destroy;
+  if listsAreInitialized then begin
+    tokenTypeMap.destroy;
+    builtinRules.destroy;
+  end;
 end.
