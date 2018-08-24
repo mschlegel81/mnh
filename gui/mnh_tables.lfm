@@ -4,8 +4,9 @@ object tableForm: TtableForm
   Top = 217
   Width = 320
   Caption = '-'
-  ClientHeight = 220
+  ClientHeight = 210
   ClientWidth = 320
+  DesignTimePPI = 144
   Menu = tableMenu
   OnClose = FormClose
   OnCreate = FormCreate
@@ -13,10 +14,10 @@ object tableForm: TtableForm
   OnKeyUp = FormKeyUp
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '1.8.4.0'
   object stringGrid: TStringGrid
     Left = 0
-    Height = 220
+    Height = 210
     Top = 0
     Width = 320
     Align = alClient
@@ -64,6 +65,11 @@ object tableForm: TtableForm
       object mi_exportText: TMenuItem
         Caption = 'Export to text...'
         OnClick = mi_exportTextClick
+      end
+      object mi_exportIncHeader: TMenuItem
+        AutoCheck = True
+        Caption = 'Include Header in Export'
+        RadioItem = True
       end
     end
   end
