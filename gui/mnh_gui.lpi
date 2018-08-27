@@ -176,7 +176,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="76">
+    <Units Count="75">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -511,33 +511,29 @@
         <UnitName Value="plotMath"/>
       </Unit68>
       <Unit69>
-        <Filename Value="plotMaps.pas"/>
+        <Filename Value="..\common\bigint.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit69>
       <Unit70>
-        <Filename Value="..\common\bigint.pas"/>
+        <Filename Value="..\core\mnh_patterns.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit70>
       <Unit71>
-        <Filename Value="..\core\mnh_patterns.pas"/>
+        <Filename Value="..\core\mnh_builtinGenerators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit71>
       <Unit72>
-        <Filename Value="..\core\mnh_builtinGenerators.pas"/>
+        <Filename Value="outlines.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit72>
       <Unit73>
-        <Filename Value="outlines.pas"/>
+        <Filename Value="synOutAdapter.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit73>
       <Unit74>
-        <Filename Value="synOutAdapter.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit74>
-      <Unit75>
         <Filename Value="..\common\myStringUtil.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit75>
+      </Unit74>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

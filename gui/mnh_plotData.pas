@@ -9,7 +9,7 @@ USES sysutils,
      mnh_settings,
      mnh_messages,
      mnh_out_adapters,
-     plotstyles,plotMath,plotMaps;
+     plotstyles,plotMath;
 TYPE
   T_plotQuality=0..3;
 CONST
@@ -1106,10 +1106,38 @@ PROCEDURE scale(source: TImage; VAR dest: TImage; CONST factor: double);
   end;
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality);
-  VAR renderImage:TImage;
+  VAR renderImage:array[0..3] of TImage;
+      temp:TImage;
       gridTics:T_ticInfos;
-      average:T_wordColMap;
       k:byte;
+
+  PROCEDURE avgRenderImages;
+    VAR src:array[0..3] of TLazIntfImage;
+        dest:TLazIntfImage;
+        srcLine :array[0..3] of PByte;
+        destLine:PByte;
+
+        x,y,k:longint;
+    begin
+      dest:=plotImage.picture.Bitmap.CreateIntfImage;
+      for k:=0 to 3 do src[k]:=renderImage[k].picture.Bitmap.CreateIntfImage;
+      for y:=0 to renderImage[k].height-1 do begin
+        for k:=0 to 3 do srcLine[k]:=src[k].GetDataLineStart(y);
+        destLine                   :=dest  .GetDataLineStart(y);
+        for x:=0 to {$ifdef UNIX}4{$else}3{$endif}*plotImage.width-1 do begin
+          destLine^:=(longint(srcLine[0]^)+
+                      longint(srcLine[1]^)+
+                      longint(srcLine[2]^)+
+                      longint(srcLine[3]^)) shr 2;
+          for k:=0 to 3 do inc(srcLine[k]);
+          inc(destLine);
+        end;
+      end;
+      for k:=0 to 3 do src[k].destroy;
+      plotImage.picture.Bitmap.LoadFromIntfImage(dest);
+      dest.destroy;
+    end;
+
   begin
     initialize(gridTics);
     system.enterCriticalSection(cs);
@@ -1117,42 +1145,54 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
       scalingOptions.updateForPlot(plotImage.Canvas,plotImage.width,plotImage.height,row,gridTics);
       case quality of
         PLOT_QUALITY_LOW:
-          drawGridAndRows(plotImage.Canvas,plotImage.width,plotImage.height,1,gridTics,SINGLE_SAMPLE_INDEX);
+          begin
+            renderImage[0]:=TImage.create(nil);
+            renderImage[0].SetInitialBounds(0,0,plotImage.width,plotImage.height);
+            drawGridAndRows(renderImage[0].Canvas,plotImage.width,plotImage.height,1,gridTics,SINGLE_SAMPLE_INDEX);
+            drawCoordSys(renderImage[0].Canvas,plotImage.width,plotImage.height,gridTics);
+            drawCustomText(renderImage[0].Canvas,plotImage.width,plotImage.height);
+            scale(renderImage[0],plotImage,1);
+            renderImage[0].destroy;
+          end;
         PLOT_QUALITY_MEDIUM_1:
           begin
-            renderImage:=TImage.create(nil);
-            renderImage.SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
-            drawGridAndRows(renderImage.Canvas,plotImage.width,plotImage.height,2,gridTics,SINGLE_SAMPLE_INDEX);
-            scale(renderImage,plotImage,0.5);
-            renderImage.destroy;
+            renderImage[0]:=TImage.create(nil);
+            renderImage[0].SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
+            drawGridAndRows(renderImage[0].Canvas,plotImage.width,plotImage.height,2,gridTics,SINGLE_SAMPLE_INDEX);
+            scale(renderImage[0],plotImage,0.5);
+            renderImage[0].destroy;
+            drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
+            drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
         PLOT_QUALITY_MEDIUM_2:
           begin
-            average.create(plotImage.width,plotImage.height);
             for k:=0 to 3 do begin
-              drawGridAndRows(plotImage.Canvas,plotImage.width,plotImage.height,1,gridTics,k);
-              average.addSample(plotImage.picture.Bitmap);
+              renderImage[k]:=TImage.create(nil);
+              renderImage[k].SetInitialBounds(0,0,plotImage.width,plotImage.height);
+              drawGridAndRows(renderImage[k].Canvas,plotImage.width,plotImage.height,1,gridTics,k);
             end;
-            average.obtainAveragedResult(plotImage.picture);
-            average.destroy;
+            avgRenderImages;
+            for k:=0 to 3 do renderImage[k].destroy;
+            drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
+            drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
         PLOT_QUALITY_HIGH:
           begin
-            renderImage:=TImage.create(nil);
-            renderImage.SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
-            average.create(plotImage.width*2,plotImage.height*2);
+            temp:=TImage.create(nil);
+            temp.SetInitialBounds(0,0,plotImage.width*2,plotImage.height*2);
             for k:=0 to 3 do begin
-              drawGridAndRows(renderImage.Canvas,plotImage.width,plotImage.height,2,gridTics,k);
-              scale(renderImage,plotImage,0.5);
-              average.addSample(plotImage.picture.Bitmap);
+              drawGridAndRows(temp.Canvas,plotImage.width,plotImage.height,2,gridTics,k);
+              renderImage[k]:=TImage.create(nil);
+              renderImage[k].SetInitialBounds(0,0,plotImage.width,plotImage.height);
+              scale(temp,renderImage[k],0.5);
             end;
-            renderImage.destroy;
-            average.obtainAveragedResult(plotImage.picture);
-            average.destroy;
+            temp.destroy;
+            avgRenderImages;
+            for k:=0 to 3 do renderImage[k].destroy;
+            drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
+            drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
       end;
-      drawCoordSys(plotImage.Canvas,plotImage.width,plotImage.height,gridTics);
-      drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
     finally
       system.leaveCriticalSection(cs);
     end;

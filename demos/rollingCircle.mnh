@@ -2,17 +2,31 @@
 plain script;
 USE GUI;
 
+triangle(t)->(t+2*pi/3*[0..3]).each(phi,[t-sin(phi),1-cos(phi)]);
+
+triangleFootpoint(x,t)->begin
+  local x0:=t-sin(4*pi/3+t);
+  local x1:=t-sin(t);
+  local y0:=1-cos(4*pi/3+t);
+  local y1:=1-cos(t);
+  y0+(y1-y0)/(x1-x0)*(x-x0);
+end;
+
+triangleFootpoint(x<0.0     )->triangleFootpoint(-x);
+triangleFootpoint(x>(2*pi/3))->triangleFootpoint(x-2*pi/3);
+triangleFootpoint(x         )->triangleFootpoint(x,([-80..80]/400+x)).min;
+
 @demo_for=plotting, animation
 private rollAt(t:Numeric,doPlot:Boolean)->begin
   local center:=[t,1];
   local line:=[center,center+[-sin(t),-cos(t)]];
-  local otherLines:=(t+pi/6*[1..11]).each(phi,center+0.95*[-sin(phi),-cos(phi)],center+[-sin(phi),-cos(phi)],[Nan,Nan]);
   local circle:=center+{[sin($x),cos($x)]};
   doPlot
   ? begin
       plot(line,'. l');
-      addPlot(otherLines,'black');
       addPlot(circle,0,2*pi,100,'black');
+      triangle(t).addPlot('blue');
+      addPlot(::triangleFootpoint,t-2*pi,t+1,1000,'blue');
     end
   : void;
   [line[1]];
@@ -23,14 +37,15 @@ begin
   clearAnimation;
   [['autoscaleX',false],['autoscaleY',false],
    ['logscaleX',false],['logscaleY',false],
-   ['axisStyleX',3],
-   ['preserveAspect',true],['axisStyleY',3],
+   ['axisStyleX',0],
+   ['preserveAspect',true],['axisStyleY',2],
    ['y0',0],['y1',2.0]].toMap.setOptions;
   ([0..199]/200*2*pi).each(t,begin
     [['x0',t-2*pi],['x1',t+1.0]].setOptions;
     curve|=rollAt(t,true);
     addPlot(curve,'red 0.5 . l');
     addAnimationFrame;
+    postDisplay;
   end);
   display;
 end;
