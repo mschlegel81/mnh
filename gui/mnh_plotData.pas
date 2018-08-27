@@ -1112,9 +1112,6 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
       temp:TImage;
       gridTics:T_ticInfos;
       k:byte;
-      {$ifdef debugMode}
-      startOfRendering:double;
-      {$endif}
 
   PROCEDURE avgRenderImages;
     VAR src:array[0..3] of TLazIntfImage;
@@ -1129,7 +1126,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
       for y:=0 to renderImage[k].height-1 do begin
         for k:=0 to 3 do srcLine[k]:=src[k].GetDataLineStart(y);
         destLine                   :=dest  .GetDataLineStart(y);
-        for x:=0 to 3*plotImage.width-1 do begin
+        for x:=0 to {$ifdef UNIX}4{$else}3{$endif}*plotImage.width-1 do begin
           destLine^:=(longint(srcLine[0]^)+
                       longint(srcLine[1]^)+
                       longint(srcLine[2]^)+
@@ -1146,9 +1143,6 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
   begin
     initialize(gridTics);
     system.enterCriticalSection(cs);
-    {$ifdef debugMode}
-    startOfRendering:=now;
-    {$endif}
     try
       scalingOptions.updateForPlot(plotImage.Canvas,plotImage.width,plotImage.height,row,gridTics);
       case quality of
@@ -1201,9 +1195,6 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST quality: T_plotQuality)
             drawCustomText(plotImage.Canvas,plotImage.width,plotImage.height);
           end;
       end;
-      {$ifdef debugMode}
-      writeln('Time for rendering @',plotImage.width,'x',plotImage.height,' (quality ',quality,'): ',(now-startOfRendering)*24*60*60:0:3,'s');
-      {$endif}
     finally
       system.leaveCriticalSection(cs);
     end;
