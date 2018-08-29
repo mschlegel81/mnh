@@ -1,5 +1,4 @@
 private datastore sequences:=[];
-private memoized sequencesAsString->sequences.pMap(::toString);
 private datastore names    :=[];
 private datastore foundImplementations:=[].toMap;
 ipcId:=myPath.extractFileNameOnly&format('%x',myPath.fileStats).join;
@@ -37,7 +36,9 @@ private formatInfo(numericId:Int)->
     ? format("ID\v:\t"&IDFormat&"\nName\v:\t%s\nSequence\v:\t%s\nInfo\v:\t%s",
       numericId,
       names[numericId] orElse '- not found -',
-      sequencesAsString[numericId] orElse '- not found -',
+      (SEQ_AS_STRING.isVoid
+       ? (sequences[numericId].toString)
+       :  SEQ_AS_STRING[numericId]       ) orElse '- not found -',
       classify(sequences[numericId] orElse [])&' series of '&size(sequences[numericId] orElse [])&' elements')&(isVoid(implementationOf(numericId)) ? void : "\nImpl.\v:\tgen "&numericId&" <elements>\n\v\t"&toString(implementationOf(numericId)))
     : format("ID\v:\t"&IDFormat&" - not found",numericId)).join("\n");
 private formatInfo([])->'No matches';
@@ -113,7 +114,14 @@ end; //downloadData
 
 private serve_('id',...)->map(...,{$s.clean(['0'..'9'],'').softCast}).filter(::isInt).formatInfo;
 private serve_('name',...)->... .each(pattern,names.matches(pattern),or).indexOf.formatInfo;
-private serve_('part',part)->sequencesAsString.matches(part).indexOf.formatInfo;
+
+private mutable SEQ_AS_STRING:=void;
+private synchronized getSeqAsString->SEQ_AS_STRING orElse begin
+  SEQ_AS_STRING:=sequences.pMap(::toString);
+  SEQ_AS_STRING;
+end;
+
+private serve_('part',part)->getSeqAsString.matches(part).indexOf.formatInfo;
 private serve_('continue',start:IntList,additional>0)->begin
   local matching:=sequences.pEach(seq,
     seq.head(start.size)==start
@@ -243,8 +251,14 @@ main('scan')->begin
     ? void
     : [index,imp,printf(IDFormat&'=%s',index,imp.toString)];
     end : void).toMap;
-  print(foundImplementations.size,'Implementations found');
+  print(foundImplementations.size,' Implementations found');
   resetTimeout;
   while(time<timeout,sleep(1));
   print("\nIPC Server stopped. ",ipcId);
 end;
+
+
+async({names.size});
+async({sequences.size});
+async({foundImplementations.size});
+serve_('name','Friedman').map(::print);
