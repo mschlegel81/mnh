@@ -6,7 +6,7 @@ USES
   //basic classes
   Classes, sysutils, LCLType, lclintf, types,
   //my utilities:
-  mnhFormHandler, myStringUtil, myGenerics,
+  mnhFormHandler, myStringUtil, myGenerics,mySys,
   //GUI: LCL components
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
   //GUI: SynEdit

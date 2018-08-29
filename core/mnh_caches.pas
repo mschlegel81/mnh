@@ -151,8 +151,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       data[i].lastUse :=useCounter;
     end;
     inc(useCounter);
-    if not(isMemoryInComfortZone) then polishAllCaches
-    else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
+    if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
@@ -193,6 +192,7 @@ INITIALIZATION
   allCaches:=C_EMPTY_POINTER_ARRAY;
   initialize(allCacheCs);
   initCriticalSection(allCacheCs);
+  memoryCleaner.registerCleanupMethod(@polishAllCaches);
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing mnh_caches');{$endif}
   doneCriticalSection(allCacheCs);

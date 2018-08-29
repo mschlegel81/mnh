@@ -245,9 +245,9 @@ FUNCTION renderToFile_impl intFuncSignature;
       height:=int2^.intValue;
       if params^.size>3 then quality:=int3^.intValue
                         else quality:=0;
-      if (fileName = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
+      if (str0^.value = '') or (width<1) or (height<1) or (quality<PLOT_QUALITY_LOW) or (quality>PLOT_QUALITY_HIGH) then exit(nil);
       try
-        fileName:=ChangeFileExt(fileName,'.png');
+        fileName:=ChangeFileExt(str0^.value,'.png');
         new(renderRequest,createRenderToFileRequest(fileName,width,height,quality));
         context.messages.globalMessages^.postCustomMessage(renderRequest,true);
       except
