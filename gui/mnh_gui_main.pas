@@ -440,7 +440,7 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
   VAR edit:P_editorMeta;
   begin
     edit:=getEditor;
-    quick.completion.assignEditor(quick.meta.editor,getSafeAssistant(edit));
+    quick.completion.assignEditor(quick.meta.editor,edit^.getCodeAssistanceData);
     if runnerModel.canRun(true) then begin
       if edit<>nil then edit^.setWorkingDir;
       quick.evaluationDeferred:=false;

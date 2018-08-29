@@ -28,7 +28,8 @@ USES  //basic classes
   mnh_packages,
   guiOutAdapters,
   mnh_datastores,
-  editorMetaBase;
+  editorMetaBase,
+  codeAssistance;
 
 TYPE
 P_editorMeta=^T_editorMeta;
@@ -43,12 +44,14 @@ T_editorMeta=object(T_basicEditorMeta)
       ignoreDeleted:boolean;
     end;
     strictlyReadOnly:boolean;
-    assistant   : P_codeAssistanceData;
+
+    latestAssistanceReponse:P_codeAssistanceResponse;
     tabsheet    : TTabSheet;
     PROCEDURE guessLanguage(CONST fallback:T_language);
     CONSTRUCTOR create(CONST idx:longint);
     CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
   public
+    PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     FUNCTION enabled:boolean;
     DESTRUCTOR destroy; virtual;
     FUNCTION getPath:ansistring; virtual;
@@ -74,10 +77,9 @@ T_editorMeta=object(T_basicEditorMeta)
     FUNCTION defaultExtensionByLanguage:ansistring;
     PROCEDURE updateContentAfterEditScript(CONST stringListLiteral:P_listLiteral);
     FUNCTION resolveImport(CONST text:string):string;
+    PROCEDURE updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
     PROCEDURE pollAssistanceResult;
   private
-    PROCEDURE ensureAssistant;
-    PROCEDURE dropAssistant;
     PROCEDURE triggerCheck;
 
     PROCEDURE initWithState(VAR state:T_editorState);
@@ -157,7 +159,6 @@ PROCEDURE closeAllUnmodifiedEditors;
 PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
 
-FUNCTION getSafeAssistant(CONST editor:P_editorMeta):P_codeAssistanceData;
 VAR runnerModel:T_runnerModel;
     recentlyActivated:T_fileHistory;
 IMPLEMENTATION
@@ -173,7 +174,6 @@ VAR mainForm              :T_abstractMnhForm;
 
     outlineModel          :P_outlineTreeModel=nil;
     outlineGroupBox       :TGroupBox;
-    fallbackCodeAssistant :P_blankCodeAssistanceData=nil;
 
 VAR editorMetaData:array of P_editorMeta;
     underCursor:T_tokenInfo;
@@ -225,6 +225,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   begin
+    latestAssistanceReponse:=nil;
     paintedWithStateHash:=0;
     index:=idx;
     tabsheet:=TTabSheet.create(inputPageControl);
@@ -272,7 +273,7 @@ PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
 DESTRUCTOR T_editorMeta.destroy;
   begin
     inherited destroy;
-    dropAssistant;
+    disposeCodeAssistanceResponse(latestAssistanceReponse);
   end;
 
 FUNCTION T_editorMeta.getPath: ansistring;
@@ -304,14 +305,14 @@ PROCEDURE T_editorMeta.activate;
         paintedWithStateHash:=0;
         assistanceTabSheet.tabVisible:=true;
         triggerCheck;
-        completionLogic.assignEditor(editor_,assistant);
+        completionLogic.assignEditor(editor_,nil);
       end else begin
         outlineGroupBox.visible:=false;
         editor.highlighter:=fileTypeMeta[language_].highlighter;
         assistanceSynEdit.clearAll;
         assistanceTabSheet.caption:='';
         assistanceTabSheet.tabVisible:=false;
-        dropAssistant;
+        disposeCodeAssistanceResponse(latestAssistanceReponse);
         completionLogic.assignEditor(editor_,nil);
       end;
       editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
@@ -485,10 +486,8 @@ PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker,forHelpOrJump: boolean;
       for m in editorMetaData do m^.setMarkedWord(wordUnderCursor);
       editor.Repaint;
     end;
-    if forHelpOrJump then with editor do begin
-      ensureAssistant;
-      assistant^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
-    end;
+    if forHelpOrJump and (latestAssistanceReponse<>nil) then with editor do
+      latestAssistanceReponse^.explainIdentifier(lines[caret.y-1],caret.y,caret.x,underCursor);
   end;
 
 PROCEDURE T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean);
@@ -523,13 +522,12 @@ PROCEDURE T_editorMeta.doRename(CONST ref:T_searchTokenLocation; CONST newId:str
     if not(enabled) or (language<>LANG_MNH) then exit;
 
     if renameInOtherEditors then saveFile();
-    ensureAssistant;
-    assistant^.synchronousUpdate(@self);
+    updateAssistanceResponse(doCodeAssistanceSynchronously(@self));
 
     editor.BeginUpdate(true);
     with editor do for lineIndex:=0 to lines.count-1 do begin
       lineTxt:=lines[lineIndex];
-      if assistant^.renameIdentifierInLine(ref,newId,lineTxt,lineIndex+1) then updateLine;
+      if latestAssistanceReponse^.renameIdentifierInLine(ref,newId,lineTxt,lineIndex+1) then updateLine;
     end;
     editor.EndUpdate;
 
@@ -622,47 +620,40 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
-PROCEDURE T_editorMeta.ensureAssistant;
-  begin
-    if assistant=nil then new(assistant,create);
-  end;
-
-PROCEDURE T_editorMeta.dropAssistant;
-  begin
-    if (assistant<>nil) then dispose(assistant,destroy);
-    highlighter.highlightingData.clear;
-    assistant:=nil;
-  end;
-
 PROCEDURE T_editorMeta.triggerCheck;
   begin
-    ensureAssistant;
-    assistant^.triggerUpdate(@self);
+    postCodeAssistanceRequest(@self);
   end;
 
-PROCEDURE T_editorMeta.pollAssistanceResult;
+PROCEDURE T_editorMeta.updateAssistanceResponse(CONST response:P_codeAssistanceResponse);
   CONST SHORTCUT_SUFFIX=' (F2)';
-  VAR s:string;
-      hints:T_arrayOfString;
-      hasErrors,hasWarnings:boolean;
+  VAR  hasErrors,hasWarnings:boolean;
   begin
-    if language_<>LANG_MNH then exit;
-    if (paintedWithStateHash<>assistant^.getStateHash) then begin
-      paintedWithStateHash:=assistant^.getStateHash;
-      assistant^.updateHighlightingData(highlighter.highlightingData);
+    if (response=nil) or (language_<>LANG_MNH) then exit;
+    disposeCodeAssistanceResponse(latestAssistanceReponse);
+    latestAssistanceReponse:=response;
+    completionLogic.assignEditor(editor_,latestAssistanceReponse);
+    if (paintedWithStateHash<>latestAssistanceReponse^.stateHash) then begin
+      paintedWithStateHash:=latestAssistanceReponse^.stateHash;
+      latestAssistanceReponse^.updateHighlightingData(highlighter.highlightingData);
       editor.highlighter:=highlighter;
       editor.Repaint;
       assistanceSynEdit.clearAll;
-      assistanceSynEdit.lines.clear;
-      hints:=assistant^.getErrorHints(hasErrors,hasWarnings,assistanceSynEdit.charsInWindow);
+      latestAssistanceReponse^.getErrorHints(assistanceSynEdit,hasErrors,hasWarnings);
       if hasErrors then begin if hasWarnings then assistanceTabSheet.caption:='Errors + Warnings'+SHORTCUT_SUFFIX
                                              else assistanceTabSheet.caption:='Errors'+SHORTCUT_SUFFIX; end
                    else begin if hasWarnings then assistanceTabSheet.caption:='Warnings'+SHORTCUT_SUFFIX
                                              else assistanceTabSheet.caption:='(no warnings)'+SHORTCUT_SUFFIX; end;
-      for s in hints do assistanceSynEdit.lines.add(s);
-      assistant^.performWithPackage(@outlineModel^.update);
+      outlineModel^.update(latestAssistanceReponse^.package);
     end;
-    assistant^.triggerUpdate(nil);
+  end;
+
+PROCEDURE T_editorMeta.pollAssistanceResult;
+  VAR response:P_codeAssistanceResponse;
+  begin
+    if language_<>LANG_MNH then exit;
+    response:=getLatestAssistanceResponse(@self);
+    if response<>nil then updateAssistanceResponse(response);
   end;
 
 FUNCTION T_editorMeta.changed: boolean;
@@ -722,7 +713,7 @@ PROCEDURE T_editorMeta.updateContentAfterEditScript(
 
 FUNCTION T_editorMeta.resolveImport(CONST text: string): string;
   begin
-    if assistant=nil then result:='' else result:=assistant^.resolveImport(text);
+    if latestAssistanceReponse=nil then result:='' else result:=latestAssistanceReponse^.resolveImport(text);
   end;
 
 PROCEDURE T_editorMeta.exportToHtml;
@@ -1055,15 +1046,6 @@ PROCEDURE T_runnerModel.haltEvaluation;
     if debugMode_ then runEvaluator.globals.stepper^.haltEvaluation;
   end;
 
-FUNCTION getSafeAssistant(CONST editor:P_editorMeta):P_codeAssistanceData;
-  begin
-    if editor=nil then result:=nil else result:=editor^.assistant;
-    if result=nil then begin
-      if fallbackCodeAssistant=nil then new(fallbackCodeAssistant,createBlank);
-      result:=fallbackCodeAssistant;
-    end;
-  end;
-
 INITIALIZATION
   setLength(editorMetaData,0);
   doNotCheckFileBefore:=now;
@@ -1071,5 +1053,4 @@ INITIALIZATION
 FINALIZATION
   {$ifdef debugMode}writeln(stdErr,'finalizing editorMeta');{$endif}
   recentlyActivated.destroy;
-  if fallbackCodeAssistant<>nil then dispose(fallbackCodeAssistant,destroy);
 end.

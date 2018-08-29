@@ -8,7 +8,8 @@ USES
   mnh_constants,
   mnh_messages,
   mnh_funcs,
-  mnh_packages;
+  mnh_packages,
+  codeAssistance;
 
 TYPE
   T_tokenKind = (

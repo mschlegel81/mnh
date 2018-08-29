@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="75">
+    <Units Count="76">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -446,6 +446,11 @@
         <Filename Value="..\common\myStringUtil.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit74>
+      <Unit75>
+        <Filename Value="codeassistance.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="codeAssistance"/>
+      </Unit75>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
