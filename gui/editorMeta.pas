@@ -918,6 +918,7 @@ PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
   VAR i:longint;
   begin
+    finalizeCodeAssistance;
     if outlineModel<>nil then begin
       dispose(outlineModel,destroy);
       outlineModel:=nil;

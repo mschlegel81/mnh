@@ -496,7 +496,6 @@ PROCEDURE initLists;
   end;
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing SynHighlighterMnh');{$endif}
   if listsAreInitialized then begin
     tokenTypeMap.destroy;
     builtinRules.destroy;
