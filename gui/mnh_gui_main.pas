@@ -6,7 +6,7 @@ USES
   //basic classes
   Classes, sysutils, LCLType, lclintf, types,
   //my utilities:
-  mnhFormHandler, myStringUtil, myGenerics,
+  mnhFormHandler, myStringUtil, myGenerics,mySys,
   //GUI: LCL components
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, StdCtrls,
   //GUI: SynEdit
@@ -440,7 +440,7 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
   VAR edit:P_editorMeta;
   begin
     edit:=getEditor;
-    quick.completion.assignEditor(quick.meta.editor,getSafeAssistant(edit));
+    quick.completion.assignEditor(quick.meta.editor,edit^.getCodeAssistanceData);
     if runnerModel.canRun(true) then begin
       if edit<>nil then edit^.setWorkingDir;
       quick.evaluationDeferred:=false;

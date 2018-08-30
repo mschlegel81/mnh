@@ -8,7 +8,7 @@ USES Classes, sysutils, LCLType, types,
      mnh_constants,
      mnh_litVar,
      mnh_funcs,
-     mnh_packages;
+     codeAssistance;
 
 TYPE
 T_completionLogic=object
@@ -17,12 +17,12 @@ T_completionLogic=object
     editor:TSynEdit;
     SynCompletion:TSynCompletion;
     completionStart:longint;
-    relatedAssistant:P_codeAssistanceData;
+    assistanceResponse:P_codeAssistanceResponse;
     PROCEDURE ensureWordsInEditorForCompletion;
   public
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData);
+    PROCEDURE assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
@@ -88,16 +88,16 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
   begin
     caret:=editor.CaretXY;
     wordsInEditor.clear;
-    if relatedAssistant<>nil then begin
+    if assistanceResponse<>nil then begin
       //Completion for assistant...
       isUseClause:=(pos(C_tokenInfo[tt_use    ].defaultId,editor.lines[caret.y-1])>0)
                 or (pos(C_tokenInfo[tt_include].defaultId,editor.lines[caret.y-1])>0);
       if isUseClause
-      then wordsInEditor.put(relatedAssistant^.getImportablePackages)
+      then wordsInEditor.put(assistanceResponse^.getImportablePackages)
       else begin
         initIntrinsicRuleList;
         wordsInEditor.put(intrinsicRulesForCompletion);
-        if not(relatedAssistant^.updateCompletionList(wordsInEditor,caret.y,caret.x))
+        if not(assistanceResponse^.updateCompletionList(wordsInEditor,caret.y,caret.x))
         then collectAllIdentifiers;
       end;
     end else collectAllIdentifiers;
@@ -106,7 +106,7 @@ PROCEDURE T_completionLogic.ensureWordsInEditorForCompletion;
 CONSTRUCTOR T_completionLogic.create;
   begin
     editor:=nil;
-    relatedAssistant:=nil;
+    assistanceResponse:=nil;
     wordsInEditor.create;
     SynCompletion:=TSynCompletion.create(nil);
     SynCompletion.OnCodeCompletion:=@SynCompletionCodeCompletion;
@@ -121,10 +121,10 @@ DESTRUCTOR T_completionLogic.destroy;
     SynCompletion.destroy;
   end;
 
-PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceData);
+PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAssistanceResponse);
   begin
     editor:=edit;
-    relatedAssistant:=ad;
+    assistanceResponse:=ad;
     wordsInEditor.clear;
     SynCompletion.editor:=editor;
   end;

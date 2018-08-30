@@ -168,7 +168,6 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
       new(result,create(formatString,tokenLocation,context,true));
       exit(result);
     end;
-    if (cachedFormats.size>MAX_FORMATS_TO_CACHE) or not(isMemoryInComfortZone) then clearCachedFormats;
     if cachedFormats.containsKey(formatString,result) then begin
       system.leaveCriticalSection(cachedFormatCS);
       exit(result);
@@ -560,6 +559,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1,'format(formatString:string,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    ,'formatTime(formatString:string,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    ,'parseTime(formatString:string,input:string);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  memoryCleaner.registerCleanupMethod(@clearCachedFormats)
 
 FINALIZATION
   clearCachedFormats;

@@ -453,6 +453,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         then aid:=''
         else aid:=C_tabChar+intToStr(meta^.editor.CaretY)+
                         ','+intToStr(meta^.editor.CaretX);
+        aid+=C_tabChar+'Memory used: '+getMemoryUsedAsString;
       end;
       if quick.task.processing
       then StatusBar.SimpleText:='Processing quick task'+aid
