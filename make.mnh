@@ -32,8 +32,8 @@ private templateToInc(inFile,outFile<>inFile)->templateToInc(inFile,fileLines(in
 
 private ensurePackagesLines->'{'|
     sort(files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
-    .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file).compress)&']'))|
-    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],decompress(f[1])))}";
+    .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file).compress.base64encode)&']'))|
+    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],decompress(f[1].base64decode)))}";
 
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->

@@ -2,7 +2,7 @@ USE inputs;
 @demo_for=file processing, string processing, list processing
 @AllowOnly=read file, http
 readDict(filename)->fileLineIterator(filename).pEach(word,begin
-  local l:=word.lower; [join(l.chars.sort),l]; end);
+  local l:=word.lower; [join(l.chars.sort),l]; end).unique;
 
 private anagramsInDict(list)->list
                      .group(0)
