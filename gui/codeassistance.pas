@@ -51,6 +51,7 @@ FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenG
 FUNCTION getLatestAssistanceResponse(CONST source:P_codeProvider):P_codeAssistanceResponse;
 PROCEDURE postCodeAssistanceRequest(CONST source:P_codeProvider);
 PROCEDURE disposeCodeAssistanceResponse(VAR r:P_codeAssistanceResponse);
+PROCEDURE finalizeCodeAssistance;
 IMPLEMENTATION
 FUNCTION doCodeAssistanceSynchronously(CONST source:P_codeProvider; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenCollector:P_collectingOutAdapter=nil):P_codeAssistanceResponse;
   VAR //temporary
@@ -335,14 +336,6 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
     dispose(package,destroy);
   end;
 
-//
-//PROCEDURE T_codeAssistanceData.performWithPackage(CONST method:T_packageCallbackInObject);
-//  begin
-//    enterCriticalSection(assistantCs);
-//    method(package);
-//    leaveCriticalSection(assistantCs);
-//  end;
-
 PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean);
   VAR lengthLimit:longint;
 
@@ -395,19 +388,24 @@ PROCEDURE T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasError
     addErrors(externalErrors);
   end;
 
+VAR isFinalized:boolean=false;
+PROCEDURE finalizeCodeAssistance;
+  begin
+    enterCriticalSection(codeAssistanceCs);
+    shuttingDown:=true;
+    while codeAssistantIsRunning do begin
+      leaveCriticalSection(codeAssistanceCs);
+      sleep(1); ThreadSwitch;
+      enterCriticalSection(codeAssistanceCs);
+    end;
+    doneCriticalSection(codeAssistanceCs);
+    disposeCodeAssistanceResponse(codeAssistanceResponse);
+    isFinalized:=true;
+  end;
+
 INITIALIZATION
   initCriticalSection(codeAssistanceCs);
-
 FINALIZATION
-  enterCriticalSection(codeAssistanceCs);
-  shuttingDown:=true;
-  while codeAssistantIsRunning do begin
-    leaveCriticalSection(codeAssistanceCs);
-    sleep(1); ThreadSwitch;
-    enterCriticalSection(codeAssistanceCs);
-  end;
-  doneCriticalSection(codeAssistanceCs);
-  disposeCodeAssistanceResponse(codeAssistanceResponse);
-
+  if not(isFinalized) then finalizeCodeAssistance;
 end.
 

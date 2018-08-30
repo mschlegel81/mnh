@@ -423,7 +423,7 @@ FUNCTION T_lexer.getToken(CONST line: ansistring; VAR threadLocalMessages:T_thre
       threadLocalMessages.raiseError(message,inputLocation);
     end;
 
-  FUNCTION leadingId:ansistring;
+  FUNCTION leadingId:T_idString;
     VAR i:longint;
         tt:T_tokenType;
         match:boolean;
@@ -960,7 +960,9 @@ CONSTRUCTOR T_extendedPackage.create(CONST provider:P_codeProvider; CONST extend
 
 DESTRUCTOR T_abstractPackage.destroy;
   begin
-    if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+    try
+      if codeProvider^.disposeOnPackageDestruction then dispose(codeProvider,destroy);
+    except end;
     codeProvider:=nil;
   end;
 
