@@ -114,7 +114,6 @@ TYPE
   {$ifdef fullVersion}
   T_packageCallbackInObject=PROCEDURE (CONST package:P_package) of object;
 
-
   P_postEvaluationData=^T_postEvaluationData;
   T_postEvaluationData=object
     private
