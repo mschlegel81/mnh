@@ -6,7 +6,7 @@ private ensureFile(path,URL)->fileExists(path) ? path : begin
 end;
 
 kjv ->ensureFile(extractFileDirectory(myPath)&"/kjv.txt"     ,'http://schlegel.bplaced.net/data/kjv.dat');
-dict->ensureFile(extractFileDirectory(myPath)&"/unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');
+dict->ensureFile(extractFileDirectory(myPath)&"/unixdict.txt",'http://schlegel.bplaced.net/data/dict.dat');
 editedDict->begin
   local path:=dict.changeFileExt('2.txt');
   fileExists(path)
