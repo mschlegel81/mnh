@@ -576,8 +576,7 @@ FUNCTION perform_divReal(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoc
       defaultLHScases;
       lt_smallint,lt_bigint: case RHS^.literalType of
         defaultRHSCases;
-        lt_smallint,lt_bigint: exit(newRealLiteral(P_abstractIntLiteral(LHS)^.floatValue/
-                                                   P_abstractIntLiteral(RHS)^.floatValue));
+        lt_smallint,lt_bigint: exit(divideInts(P_abstractIntLiteral(LHS),P_abstractIntLiteral(RHS)));
         lt_real:   exit(newRealLiteral(P_abstractIntLiteral(LHS)^.floatValue/P_realLiteral(RHS)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList,
         lt_set ,lt_intSet ,lt_realSet ,lt_numSet ,lt_emptySet: exit(recurse_SL);
@@ -618,10 +617,10 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(P_smallIntLiteral(LHS)^.value div P_smallIntLiteral(RHS)^.value));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(bigint.divide(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_SL);
@@ -629,10 +628,10 @@ FUNCTION perform_divInt(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLoca
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(bigint.divide(P_bigIntLiteral(LHS)^.value,P_smallIntLiteral(RHS)^.value)));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(P_bigIntLiteral(LHS)^.value.divide(P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_SL);
@@ -666,10 +665,10 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
       lt_smallint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(P_smallIntLiteral(LHS)^.value mod P_smallIntLiteral(RHS)^.value));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(bigint.modulus(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_SL);
@@ -677,10 +676,10 @@ FUNCTION perform_mod(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
       lt_bigint: case RHS^.literalType of
         defaultRHSCases;
         lt_smallint: if P_smallIntLiteral(RHS)^.value=0
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(bigint.modulus(P_bigIntLiteral(LHS)^.value,P_smallIntLiteral(RHS)^.value)));
         lt_bigint  : if P_bigIntLiteral(RHS)^.value.isZero
-                     then exit(newRealLiteral(Nan))
+                     then exit(nanLit.rereferenced)
                      else exit(newIntLiteral(bigint.modulus(P_smallIntLiteral(LHS)^.value,P_bigIntLiteral(RHS)^.value)));
         lt_list,lt_intList,lt_emptyList,
         lt_set ,lt_intSet ,lt_emptySet: exit(recurse_SL);
