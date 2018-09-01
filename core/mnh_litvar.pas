@@ -470,15 +470,75 @@ FUNCTION setIntersect(CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
 FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
+FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
 
 VAR emptyStringSingleton: T_stringLiteral;
 VAR boolLit       : array[false..true] of T_boolLiteral;
     charLit       : array[#0..#255] of T_stringLiteral;
+    nanLit,
+    infLit,
+    negInfLit     : T_realLiteral;
 CONST maxSingletonInt=4000;
 IMPLEMENTATION
 VAR
   intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
   voidLit: T_voidLiteral;
+
+FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
+  VAR bigRHS,quotient,rest:T_bigInt;
+  begin
+    if RHS^.literalType=lt_bigint then begin
+      if LHS^.literalType=lt_bigint then begin
+        if P_bigIntLiteral(RHS)^.val.isZero then begin
+          if      P_bigIntLiteral(LHS)^.val.isZero     then result:=P_realLiteral(   nanLit.rereferenced)
+          else if P_bigIntLiteral(LHS)^.val.isNegative then result:=P_realLiteral(negInfLit.rereferenced)
+          else                                              result:=P_realLiteral(   infLit.rereferenced);
+        end else begin
+          P_bigIntLiteral(LHS)^.val.divMod(P_bigIntLiteral(RHS)^.value,quotient,rest);
+          if rest.isZero
+          then begin
+            rest.destroy;
+            result:=newIntLiteral(quotient);
+          end else begin
+            rest.destroy;
+            quotient.destroy;
+            result:=newRealLiteral(P_bigIntLiteral(LHS)^.val.toFloat/P_bigIntLiteral(RHS)^.val.toFloat);
+          end;
+        end;
+      end else result:=newRealLiteral(P_smallIntLiteral(LHS)^.val/P_bigIntLiteral(RHS)^.val.toFloat);
+        //LHS is small, RHS is big, so |LHS/RHS| < 1
+    end else begin
+      if LHS^.literalType=lt_bigint then begin
+        if P_smallIntLiteral(RHS)^.val=0 then begin
+          if      P_bigIntLiteral(LHS)^.val.isZero     then result:=P_realLiteral(   nanLit.rereferenced)
+          else if P_bigIntLiteral(LHS)^.val.isNegative then result:=P_realLiteral(negInfLit.rereferenced)
+          else                                              result:=P_realLiteral(   infLit.rereferenced);
+        end else begin
+          bigRHS.fromInt(P_smallIntLiteral(RHS)^.val);
+          P_bigIntLiteral(LHS)^.val.divMod(bigRHS,quotient,rest);
+          bigRHS.destroy;
+          if rest.isZero
+          then begin
+            rest.destroy;
+            result:=newIntLiteral(quotient);
+          end else begin
+            rest.destroy;
+            quotient.destroy;
+            result:=newRealLiteral(P_smallIntLiteral(LHS)^.val/P_bigIntLiteral(RHS)^.val.toFloat);
+          end;
+        end;
+      end else begin
+        if P_smallIntLiteral(RHS)^.val=0 then begin
+          if      P_smallIntLiteral(LHS)^.val>0 then result:=P_realLiteral(   infLit.rereferenced)
+          else if P_smallIntLiteral(LHS)^.val<0 then result:=P_realLiteral(negInfLit.rereferenced)
+          else                                       result:=P_realLiteral(   nanLit.rereferenced);
+        end else
+          if P_smallIntLiteral(LHS)^.val mod P_smallIntLiteral(RHS)^.val=0
+          then result:=newIntLiteral (P_smallIntLiteral(LHS)^.val div P_smallIntLiteral(RHS)^.val)
+          else result:=newRealLiteral(P_smallIntLiteral(LHS)^.val  /  P_smallIntLiteral(RHS)^.val);
+      end;
+    end;
+  end;
 
 FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet):P_listLiteral;
   FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
@@ -570,7 +630,14 @@ FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolea
     end else new(result, create(value));
   end;
 
-FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;       begin new(result,create(value));       end;
+FUNCTION newRealLiteral(CONST value: T_myFloat)     : P_realLiteral;
+  begin
+    if isNan(value) then result:=P_realLiteral(nanLit.rereferenced)
+    else if isInfinite(value) then begin
+      if value>0 then result:=P_realLiteral(   infLit.rereferenced)
+                 else result:=P_realLiteral(negInfLit.rereferenced);
+    end else new(result,create(value));
+  end;
 FUNCTION newListLiteral(CONST initialSize:longint=2): P_listLiteral;       begin new(result,create(initialSize)); end;
 FUNCTION newListLiteral(CONST a:P_literal; CONST b:P_literal=nil): P_listLiteral;
   VAR initialSize:longint=2;
@@ -3621,6 +3688,9 @@ INITIALIZATION
   for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+  nanLit   .create(Nan);
+  infLit   .create(infinity);
+  negInfLit.create(-infinity);
 
 FINALIZATION
   boolLit[false].destroy;
@@ -3629,4 +3699,7 @@ FINALIZATION
   emptyStringSingleton.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
   for i:=0 to 255 do charLit[chr(i)].destroy;
+  nanLit   .destroy;
+  infLit   .destroy;
+  negInfLit.destroy;
 end.
