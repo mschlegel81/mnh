@@ -283,6 +283,7 @@ PROCEDURE T_token.undefine;
       tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
     end;
     data:=nil;
+    txt:='';
     tokType:=tt_EOL;
     location.package:=nil;
     location.column:=0;
