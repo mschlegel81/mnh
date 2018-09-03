@@ -349,8 +349,10 @@ PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR
 PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
   VAR rulePattern:T_patternElement;
   begin
-    if (getRuleType=rt_customTypeCheck) and not(rule^.hasValidValidCustomTypeCheckPattern(getRuleType=rt_duckTypeCheck))
-       then context.messages.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one List, Set, Map or Expression parameter.',rule^.getLocation);
+    if (getRuleType=rt_customTypeCheck) and not(rule^.hasValidValidCustomTypeCheckPattern(getRuleType=rt_duckTypeCheck)) then begin
+     context.messages.raiseError('Invalid pattern/signature for custom type check! Must accept exactly one List, Set, Map or Expression parameter.',rule^.getLocation);
+     exit;
+    end;
     if length(subrules)>0 then begin
       context.messages.raiseError('Type definitions must have only one subrule and may not be overridden',rule^.getLocation);
       exit;
