@@ -271,13 +271,17 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
     end;
   end;
 
-FUNCTION T_codeAssistanceResponse.updateCompletionList(
-  VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
+FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
+  PROCEDURE putTwice(CONST s:string);
+    begin
+      wordsInEditor.put(s);
+      if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
+    end;
+
   VAR s:string;
   begin
-    wordsInEditor.put(package^.packageRules .keySet);
-    wordsInEditor.put(package^.importedRules.keySet);
-    //for s in userRules.values do if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
+    for s in package^.packageRules .keySet do putTwice(s);
+    for s in package^.importedRules.keySet do putTwice(s);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
     result:=(package^.packageRules .size>0) or (package^.importedRules.size>0) or not(localIdInfos^.isEmpty);
   end;
