@@ -289,7 +289,6 @@ PROCEDURE T_threadLocalMessages.raiseError(CONST text: string; CONST location: T
     if traceCallback<>nil then traceCallback(message^);
     {$endif}
     flags:=flags+C_messageClassMeta[message^.messageClass].triggeredFlags;
-    propagateFlags;
     if kind=mt_el4_systemError then escalateErrors;
     append(message);
     disposeMessage(message);
