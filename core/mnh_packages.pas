@@ -825,7 +825,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
         ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,globals.primaryContext.messages,metaData);
 
         if (globals.primaryContext.messages.continueEvaluation) and (ruleGroup^.getRuleType in C_mutableRuleTypes) and not(rulePattern.isValidMutablePattern)
-        then globals.primaryContext.messages.raiseError('Mutable rules are quasi variables and must therfore not accept any arguments',ruleDeclarationStart);
+        then globals.primaryContext.messages.raiseError('Mutable rules are quasi variables and must therefore not accept any arguments',ruleDeclarationStart);
         if globals.primaryContext.messages.continueEvaluation then begin
           new(subRule,create(ruleGroup,rulePattern,ruleBody,ruleDeclarationStart,modifier_private in ruleModifiers,globals.primaryContext,metaData));
           //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]

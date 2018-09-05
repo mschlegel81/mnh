@@ -1,7 +1,6 @@
 UNIT mnh_operators;
 INTERFACE
-USES math,
-     sysutils,
+USES sysutils,
      bigint,
      mnh_constants,
      mnh_basicTypes,
