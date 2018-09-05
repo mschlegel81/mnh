@@ -20,6 +20,7 @@ private flavourDependentScripts:=
    'numDiff',
    'montyHall',
    'rk4',
+   'relevantDigitsTest',
    'root',
    'shannonEntropy',
    'thieleInterpolation',
