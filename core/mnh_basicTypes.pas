@@ -2,9 +2,9 @@ UNIT mnh_basicTypes;
 INTERFACE
 USES sysutils;
 TYPE
-  T_hashInt  =dword;
-  T_idString =ansistring;
-  T_myFloat = extended;
+  T_hashInt  = dword;
+  T_idString = ansistring;
+  T_myFloat  = extended;
 
   P_objectWithPath=^T_objectWithPath;
   T_objectWithPath=object
