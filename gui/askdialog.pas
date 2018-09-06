@@ -259,7 +259,6 @@ INITIALIZATION
   system.initCriticalSection(cs);
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing askDialog');{$endif}
   system.doneCriticalSection(cs);
   if myAskForm<>nil then FreeAndNil(myAskForm);
 

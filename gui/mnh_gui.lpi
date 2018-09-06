@@ -88,7 +88,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="76">
+    <Units Count="80">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -451,6 +451,22 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="codeAssistance"/>
       </Unit75>
+      <Unit76>
+        <Filename Value="mnh_doc.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit76>
+      <Unit77>
+        <Filename Value="mnhCompletion.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit77>
+      <Unit78>
+        <Filename Value="mnh_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit78>
+      <Unit79>
+        <Filename Value="mnhFormHandler.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit79>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

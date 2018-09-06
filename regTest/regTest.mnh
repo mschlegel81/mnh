@@ -6,14 +6,13 @@ private printCase(s:String)->begin
   printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
 end;
 
-@SuppressUnusedWarning
-startedMyOwnServer:=begin
-  isIpcServerRunning(oeis_server.ipcId) OR $1=='stopServer'
-  ? false
+ensureServer->begin
+  isIpcServerRunning(oeis_server.ipcId)
+  ? void
   : begin
       executor.execAsync([inspect['uses'].each(i,i[0].matches('(?i)oeis_server') ? i[1] : void,head)]);
       sleep(1);
-      true;
+      void;
     end;
 end;
 
@@ -83,6 +82,7 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
   local toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({forceRun OR !isTestAlreadyPassed(extractFileNameOnly($script))});
+  toRun.matches('oeis\.mnh').agg(or) orElse false ? ensureServer : void;
   local allPassed:=
   (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR !isTestAlreadyPassed(EXAMPLES_LOG_NAME)) ? executeExamples(logging) : void)).agg(AND);
   printCase("");
@@ -117,6 +117,7 @@ main('only',case)->begin
   local toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({includeTest($script)});
+  toRun.matches('oeis\.mnh').agg(or) ? ensureServer : void;
   local allPassed:=
   (toRun.map({testFile($script,false)})|((local runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
   printCase("");
@@ -139,7 +140,9 @@ main('makebat',exeName)->begin
           .map(::extractFileNameOnly)
           .|(EXAMPLES_LOG_NAME)
           .each(d,exeName&' regTest\regTest.mnh only '&d)
-          .each(cmd,'echo '&cmd&' >> test.log',cmd&' 2>> test.log');
+          .each(cmd,cmd.matches('only oeis') ? '@start demos\oeis_server.mnh' : void,
+                    '@echo '&cmd,
+                    '@'&cmd);
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
   void;
