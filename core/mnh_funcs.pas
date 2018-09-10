@@ -196,28 +196,6 @@ FUNCTION fail_impl intFuncSignature;
     result:=nil;
   end;
 
-//CONSTRUCTOR T_identifiedInternalFunction.create(CONST namespace:T_namespace; CONST unqualifiedId:T_idString);
-//  begin
-//    id:=C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+unqualifiedId;
-//    location.package:=mnhSystemPseudoPackage;
-//    location.column:=1;
-//    location.line:=identifiedInternalFunctionTally;
-//    interLockedIncrement(identifiedInternalFunctionTally);
-//  end;
-//
-//DESTRUCTOR T_identifiedInternalFunction.destroy;
-//  begin end;
-//
-//FUNCTION T_identifiedInternalFunction.getId: T_idString;
-//  begin
-//    result:=id;
-//  end;
-//
-//FUNCTION T_identifiedInternalFunction.getLocation: T_tokenLocation;
-//  begin
-//    result:=location;
-//  end;
-
 FUNCTION getIntrinsicRuleAsExpression(CONST p:pointer):P_expressionLiteral;
   begin
     if builtinExpressionMap.containsKey(p,result) then exit(P_expressionLiteral(result^.rereferenced));
@@ -244,7 +222,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic,'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message');
   system.initCriticalSection(print_cs);
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs');{$endif}
   builtinExpressionMap.destroy;
   builtinMetaMap.destroy;
   intrinsicRuleMap.destroy;

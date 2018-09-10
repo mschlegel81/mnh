@@ -1,6 +1,6 @@
 UNIT mnh_constants;
 INTERFACE
-USES sysutils,FileUtil;
+USES sysutils,FileUtil,Classes;
 CONST
   STACK_DEPTH_LIMIT={$ifdef Windows}43000{$else}{$ifdef debugMode}2000{$else}4100{$endif}{$endif};
   {$i code_hash.inc}
@@ -665,11 +665,14 @@ FUNCTION getTempFileName:string;
 
 PROCEDURE cleanupTemp;
   VAR fileName:string;
+      allFiles:TStringList;
   begin
     enterCriticalSection(tempFilesCs);
-    for fileName in FindAllFiles(configDir+'temp') do try
+    allFiles:=FindAllFiles(configDir+'temp');
+    for fileName in allFiles do try
       DeleteFile(fileName);
     except end;
+    allFiles.free;
     leaveCriticalSection(tempFilesCs);
   end;
 

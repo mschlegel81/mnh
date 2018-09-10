@@ -280,7 +280,6 @@ INITIALIZATION
   initCriticalSection(regexCacheCs);
   regexCache.create(@disposeRegex)
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_funcs_regex');{$endif}
   regexCache.overrideDisposer(@hardDisposeRegex);
   regexCache.destroy;
   doneCriticalSection(regexCacheCs);

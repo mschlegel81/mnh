@@ -9,7 +9,7 @@ USES SynEdit,SynEditKeyCmds,Forms,
      mnh_messages,
      mnh_evalThread,
      synOutAdapter,
-     variableTreeViews,mnhCustomForm;
+     variableTreeViews,mnhCustomForm, askDialog;
 
 {$ifdef debugMode}
   {define debug_guiOutAdapters}
@@ -203,7 +203,6 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
   end;
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing guiOutAdapters');{$endif}
   if unitIsInitialized then begin
     guiAdapters.destroy;
     guiOutAdapter.destroy;

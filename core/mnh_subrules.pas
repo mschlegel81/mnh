@@ -172,6 +172,7 @@ T_builtinExpression=object(T_expression)
     FUNCTION getParameterNames:P_listLiteral; virtual;
   public
     CONSTRUCTOR create(CONST f: P_intFuncCallback; CONST meta:T_builtinFunctionMetaData);
+    DESTRUCTOR destroy; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:pointer; CONST parameters:P_listLiteral):T_evaluationResult;  virtual;
     FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:pointer):P_expressionLiteral; virtual;
     FUNCTION arity:longint; virtual;
@@ -893,6 +894,14 @@ CONSTRUCTOR T_builtinExpression.create(CONST f: P_intFuncCallback; CONST meta:T_
     inherited create(et_builtin,loc);
     id:=C_namespaceString[meta.namespace]+ID_QUALIFY_CHARACTER+meta.unqualifiedId;
     func:=f;
+  end;
+
+DESTRUCTOR T_builtinExpression.destroy;
+  begin
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: destroying T_builtinExpression "',id,'"'); {$endif}
+    inherited destroy;
+    id:='';
+    func:=nil;
   end;
 
 CONSTRUCTOR T_builtinGeneratorExpression.create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);

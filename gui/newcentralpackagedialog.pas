@@ -5,8 +5,10 @@ UNIT newCentralPackageDialog;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, myStringUtil, mnh_constants, mnh_fileWrappers, myGenerics, LazFileUtils, mnh_doc;
+  sysutils,
+  Classes, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls, LazFileUtils,
+  myStringUtil, myGenerics,
+  mnh_constants, mnh_fileWrappers, mnh_doc;
 
 TYPE
   TnewCentralPackageForm = class(TForm)
@@ -118,7 +120,6 @@ PROCEDURE TnewCentralPackageForm.updatePackageList;
   end;
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing newCentralPackageDialog');{$endif}
   if myNewCentralPackageForm<>nil then FreeAndNil(myNewCentralPackageForm);
 
 end.

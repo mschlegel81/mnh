@@ -194,7 +194,6 @@ INITIALIZATION
   initCriticalSection(allCacheCs);
   memoryCleaner.registerCleanupMethod(@polishAllCaches);
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_caches');{$endif}
   doneCriticalSection(allCacheCs);
 
 end.

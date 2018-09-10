@@ -241,6 +241,7 @@ CONSTRUCTOR T_token.create;
 DESTRUCTOR T_token.destroy;
   begin
     undefine;
+    txt:='';
   end;
 
 PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: T_idString; CONST tokenType: T_tokenType; CONST ptr: pointer);
@@ -589,7 +590,6 @@ INITIALIZATION
   initCriticalSection(tokenRecycler.recyclerCS);
 
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_tokens');{$endif}
   cleanupTokenRecyclerInstance;
   doneCriticalSection(tokenRecycler.recyclerCS);
 

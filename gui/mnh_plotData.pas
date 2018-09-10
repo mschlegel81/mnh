@@ -1407,7 +1407,6 @@ INITIALIZATION
   MAJOR_TIC_STYLE.create(0); MAJOR_TIC_STYLE.styleModifier:=0.2;
   MINOR_TIC_STYLE.create(0); MINOR_TIC_STYLE.styleModifier:=0.1;
 FINALIZATION
-  {$ifdef debugMode}writeln(stdErr,'finalizing mnh_plotData');{$endif}
   MAJOR_TIC_STYLE.destroy;
   MINOR_TIC_STYLE.destroy;
 end.

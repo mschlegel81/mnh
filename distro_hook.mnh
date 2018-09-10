@@ -8,7 +8,7 @@ main->begin
    .map({begin
       deleteFile($f[1]);
       copyFile@$f
-      ? print('Copied ',$f[0],' -> C:\bin\',$f[1])
-      : fail('Copy ',$f[0],' -> C:\bin\',$f[1],' failed');
+      ? print('Copied ',$f[0],' -> ',$f[1])
+      : fail('Copy ',$f[0],' -> ',$f[1],' failed');
     end});
 end;
