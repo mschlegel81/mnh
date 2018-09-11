@@ -103,7 +103,7 @@ TYPE
       {$ifdef fullVersion}
       FUNCTION usedPackages:T_packageList;
       FUNCTION declaredRules:T_ruleList;
-      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString);
+      PROCEDURE updateLists(VAR userDefinedRules:T_setOfString; CONST forCompletion:boolean);
       PROCEDURE complainAboutUnused(VAR adapters:T_threadLocalMessages);
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
       FUNCTION getImport(CONST idOrPath:string):P_abstractPackage; virtual;
@@ -1371,7 +1371,7 @@ PROCEDURE T_package.resolveRuleIds(CONST adapters: P_threadLocalMessages);
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
+PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString; CONST forCompletion:boolean);
   FUNCTION typeToIsType(CONST id:T_idString):T_idString;
     begin
       result:=id;
@@ -1379,16 +1379,22 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString);
       result:='is'+result;
     end;
 
+  PROCEDURE wput(CONST s:ansistring); inline;
+    begin
+      userDefinedRules.put(s);
+      if forCompletion and (pos(ID_QUALIFY_CHARACTER,s)<=0) then userDefinedRules.put(ID_QUALIFY_CHARACTER+s);
+    end;
+
   VAR rule:P_rule;
   begin
     userDefinedRules.clear;
     for rule in packageRules.valueSet do begin
-      userDefinedRules.put(rule^.getId);
-      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then userDefinedRules.put(typeToIsType(rule^.getId));
+      wput(rule^.getId);
+      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId));
     end;
     for rule in importedRules.valueSet do  begin
-      userDefinedRules.put(rule^.getId);
-      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then userDefinedRules.put(typeToIsType(rule^.getId));
+      wput(rule^.getId);
+      if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId));
     end;
   end;
 
