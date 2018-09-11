@@ -951,7 +951,16 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
       {$endif}
       if profile then globals.timeBaseComponent(pc_declaration);
-      if not ((assignmentToken^.next<>nil) and (usecase=lu_forCodeAssistance) or (assignmentToken^.next^.areBracketsPlausible(globals.primaryContext.messages))) then begin
+      if assignmentToken^.next=nil then begin
+        globals.primaryContext.messages.raiseError('Missing rule body',assignmentToken^.location);
+        cascadeDisposeToken(statement.firstToken);
+        exit;
+      end;
+      if usecase=lu_forCodeAssistance then begin
+        //check, but ignore result
+        assignmentToken^.next^.areBracketsPlausible(globals.primaryContext.messages);
+        globals.primaryContext.messages.clearFlagsForCodeAssistance;
+      end else if not(assignmentToken^.next^.areBracketsPlausible(globals.primaryContext.messages)) then begin
         cascadeDisposeToken(statement.firstToken);
         exit;
       end;
@@ -1387,7 +1396,6 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_setOfString; CONST forCo
 
   VAR rule:P_rule;
   begin
-    userDefinedRules.clear;
     for rule in packageRules.valueSet do begin
       wput(rule^.getId);
       if rule^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then wput(typeToIsType(rule^.getId));
