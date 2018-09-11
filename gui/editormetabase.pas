@@ -83,6 +83,7 @@ VAR fileTypeMeta:array[T_language] of record
       menuItem:TMenuItem;
     end;
     editorFont:TFont;
+    disposeHighlighters:boolean=false;
 IMPLEMENTATION
 
 PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST languageMenuRoot        :TMenuItem);
@@ -239,6 +240,7 @@ PROCEDURE setupEditorMetaBase(CONST outputHighlighter:TSynMnhSyn; CONST language
   begin
     initHighlighters;
     initFileTypes;
+    disposeHighlighters:=not(Assigned(languageMenuRoot));
   end;
 
 PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
@@ -565,5 +567,24 @@ PROCEDURE T_basicEditorMeta.upperLowerCaseBlock(CONST upper:boolean);
     editor.CaretXY   :=oldCaret;
   end;
 
+FINALIZATION
+  if disposeHighlighters then begin
+    fileTypeMeta[LANG_CPP   ].highlighter.destroy;
+    fileTypeMeta[LANG_CSS   ].highlighter.destroy;
+    fileTypeMeta[LANG_DIFF  ].highlighter.destroy;
+    fileTypeMeta[LANG_HTML  ].highlighter.destroy;
+    fileTypeMeta[LANG_INI   ].highlighter.destroy;
+    fileTypeMeta[LANG_JAVA  ].highlighter.destroy;
+    fileTypeMeta[LANG_JS    ].highlighter.destroy;
+    fileTypeMeta[LANG_PAS   ].highlighter.destroy;
+    fileTypeMeta[LANG_PERL  ].highlighter.destroy;
+    fileTypeMeta[LANG_PHP   ].highlighter.destroy;
+    fileTypeMeta[LANG_PYTHON].highlighter.destroy;
+    fileTypeMeta[LANG_SHELL ].highlighter.destroy;
+    fileTypeMeta[LANG_SQL   ].highlighter.destroy;
+    fileTypeMeta[LANG_VB    ].highlighter.destroy;
+    fileTypeMeta[LANG_BAT   ].highlighter.destroy;
+    fileTypeMeta[LANG_XML   ].highlighter.destroy;
+  end;
 end.
 

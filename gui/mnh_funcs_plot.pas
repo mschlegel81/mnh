@@ -291,7 +291,7 @@ FUNCTION removePlot_imp intFuncSignature;
        (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) and (int0^.isBetween(1,maxLongint)) then begin
       if (params<>nil) and (params^.size=1) then toDrop:=int0^.intValue;
       new(dropPlotMessage,create(toDrop));
-      context.messages.globalMessages^.postCustomMessage(dropPlotMessage);
+      context.messages.globalMessages^.postCustomMessage(dropPlotMessage,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
