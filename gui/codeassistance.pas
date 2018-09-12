@@ -189,8 +189,7 @@ PROCEDURE T_codeAssistanceResponse.updateHighlightingData(VAR highlightingData: 
       e:P_storedMessage;
   begin
     highlightingData.userRules.clear;
-    highlightingData.userRules.put(package^.packageRules .keySet);
-    highlightingData.userRules.put(package^.importedRules.keySet);
+    package^.updateLists(highlightingData.userRules,false);
     highlightingData.localIdInfos.copyFrom(localIdInfos);
     setLength(highlightingData.warnLocations,length(localErrors));
     k:=0;
@@ -272,16 +271,9 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
   end;
 
 FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
-  PROCEDURE putTwice(CONST s:string);
-    begin
-      wordsInEditor.put(s);
-      if pos(ID_QUALIFY_CHARACTER,s)<=0 then wordsInEditor.put(ID_QUALIFY_CHARACTER+s);
-    end;
-
   VAR s:string;
   begin
-    for s in package^.packageRules .keySet do putTwice(s);
-    for s in package^.importedRules.keySet do putTwice(s);
+    package^.updateLists(wordsInEditor,true);
     for s in localIdInfos^.allLocalIdsAt(lineIndex,colIdx) do wordsInEditor.put(s);
     result:=(package^.packageRules .size>0) or (package^.importedRules.size>0) or not(localIdInfos^.isEmpty);
   end;

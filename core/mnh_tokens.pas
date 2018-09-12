@@ -437,6 +437,26 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_threadLocalMe
       end;
       if      t^.tokType in C_openingBrackets then push(t)
       else if t^.tokType in C_closingBrackets then result:=result and popPlausible(t);
+      if t^.next<>nil then begin
+        if (t^.tokType=tt_iifCheck) and (t^.next^.tokType=tt_iifElse) then begin
+          adaptersForComplaints.raiseError('Inline-if with empty then-clause',t^.location);
+          result:=false;
+        end;
+        if (t^.tokType=tt_iifElse) and (t^.next^.tokType in [tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_semicolon,
+                                                             tt_separatorComma ..tt_operatorLazyOr,tt_operatorMult..tt_operatorConcatAlt,tt_listToParameterList]) then begin
+          adaptersForComplaints.raiseError('Inline-if with empty else-clause',t^.location);
+          result:=false;
+        end;
+        if (t^.tokType       in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
+           (t^.next^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression  ,tt_expBraceClose,tt_iifElse]) then begin
+          adaptersForComplaints.raiseError('Empty '+t^.singleTokenToString+'-'+t^.next^.singleTokenToString+' block',t^.location);
+          result:=false;
+        end;
+        if (t^.tokType in [tt_separatorCnt,tt_separatorComma]) and (t^.next^.tokType in C_closingBrackets) then begin
+          adaptersForComplaints.raiseError('Missing element in '+t^.singleTokenToString+'-separated list',t^.location);
+          result:=false;
+        end;
+      end;
       t:=t^.next;
     end;
     result:=result and stackIsEmpty;

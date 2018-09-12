@@ -9,5 +9,5 @@ main-> begin
   local nonSquaresInRange:=[seriesElements.head..seriesElements.trailing].minus(squares);
   nonSquaresInRange==seriesElements.toSet
   ? print('  The series contains all non-square integers')
-  : print('  Some non-square integers are missing: ',);
+  : print('  Some non-square integers are missing: ',nonSquaresInRange.minus(seriesElements).join(","));
 end;
