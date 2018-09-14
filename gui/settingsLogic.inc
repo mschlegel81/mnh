@@ -3,21 +3,21 @@ PROCEDURE initializeOutputSettings;
       maxLevel:byte=5;
   begin
     with MnhForm do begin
-      miDeclarationEcho .checked:=mt_echo_declaration in settings.value^.outputBehaviour;
-      miExpressionEcho  .checked:=mt_echo_input       in settings.value^.outputBehaviour;
-      miExpressionResult.checked:=mt_echo_output      in settings.value^.outputBehaviour;
-      miTimingInfo      .checked:=mt_timing_info      in settings.value^.outputBehaviour;;
-      miWrapEcho        .checked:=                       settings.value^.wordWrapEcho;
-      for j:=4 downto 1 do if (C_errorMessageTypes[j] * settings.value^.outputBehaviour <> []) then maxLevel:=j;
+      miDeclarationEcho .checked:=mt_echo_declaration in settings.outputBehaviour;
+      miExpressionEcho  .checked:=mt_echo_input       in settings.outputBehaviour;
+      miExpressionResult.checked:=mt_echo_output      in settings.outputBehaviour;
+      miTimingInfo      .checked:=mt_timing_info      in settings.outputBehaviour;;
+      miWrapEcho        .checked:=                       settings.wordWrapEcho;
+      for j:=4 downto 1 do if (C_errorMessageTypes[j] * settings.outputBehaviour <> []) then maxLevel:=j;
       miMinErrorlevel1.checked:=maxLevel= 1;
       miMinErrorlevel2.checked:=maxLevel= 2;
       miMinErrorlevel3.checked:=maxLevel= 3;
       miMinErrorlevel4.checked:=maxLevel>=4;
-      miUserErrors    .checked:=(mt_el1_userNote    in settings.value^.outputBehaviour)
-                            and (mt_el2_userWarning in settings.value^.outputBehaviour)
-                            and (mt_el3_userDefined in settings.value^.outputBehaviour);
+      miUserErrors    .checked:=(mt_el1_userNote    in settings.outputBehaviour)
+                            and (mt_el2_userWarning in settings.outputBehaviour)
+                            and (mt_el3_userDefined in settings.outputBehaviour);
     end;
-    guiOutAdapter.outputBehavior:=settings.value^.outputBehaviour+C_messagesAlwaysProcessedInGuiMode;
+    guiOutAdapter.outputBehavior:=settings.outputBehaviour+C_messagesAlwaysProcessedInGuiMode;
     MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
     setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
   end;
@@ -44,20 +44,20 @@ PROCEDURE setVerbosity(level:byte);
     end;
     if level in [1..4] then for j:=1 to 4 do guiOutAdapter.enableMessageType(j>=level,C_errorMessageTypes[j]);
     if MnhForm.miUserErrors.checked then guiOutAdapter.enableMessageType(true,[mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined]);
-    settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
+    settings.outputBehaviour:=guiOutAdapter.outputBehavior;
     MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
   end;
 
 PROCEDURE setSpecificMessageType(CONST enable:boolean; CONST messageType:T_messageType);
   begin
     guiOutAdapter.enableMessageType(enable,[messageType]);
-    settings.value^.outputBehaviour:=guiOutAdapter.outputBehavior;
+    settings.outputBehaviour:=guiOutAdapter.outputBehavior;
     MnhForm.quick.adapters^.getAdapter(0)^.outputBehavior:=guiOutAdapter.outputBehavior;
   end;
 
 PROCEDURE updateWordWrap;
   begin
-    if settings.value^.wordWrapEcho
+    if settings.wordWrapEcho
     then guiAdapters.preferredEchoLineLength:=MnhForm.outputEdit.charsInWindow-6
     else guiAdapters.preferredEchoLineLength:=-1;
     MnhForm.quick.adapters^.preferredEchoLineLength:=guiAdapters.preferredEchoLineLength;
@@ -66,7 +66,7 @@ PROCEDURE updateWordWrap;
 PROCEDURE processFontSettings;
   begin
     with MnhForm do begin
-      outputEdit.Font.name:=settings.value^.editorFontname;
+      outputEdit.Font.name:=settings.editorFontname;
       outputEdit.Font.size:=SettingsForm.fontSize;
       if SettingsForm.AntialiasCheckbox.checked
       then outputEdit.Font.quality:=fqCleartypeNatural
@@ -90,8 +90,8 @@ PROCEDURE initializeSettings;
     MnhForm.miIncFontSize.ShortCut:=16605;
     {$endif}
 
-    if settings.value^.loaded then begin
-      formPosition:=settings.value^.mainForm;
+    if settings.loaded then begin
+      formPosition:=settings.mainForm;
       MnhForm.top   :=formPosition.top;
       MnhForm.Left  :=formPosition.Left;
       MnhForm.width :=formPosition.width;
@@ -99,7 +99,7 @@ PROCEDURE initializeSettings;
       if formPosition.isFullscreen then MnhForm.WindowState:=wsMaximized;
       MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*formPosition.relativeSplitterPosition);
       MnhForm.StatusBar.top:=MnhForm.BottomPanel.top+MnhForm.BottomPanel.height;
-    end else settings.value^.mainForm.relativeSplitterPosition:=MnhForm.BottomPanel.height/MnhForm.ClientHeight;
+    end else settings.mainForm.relativeSplitterPosition:=MnhForm.BottomPanel.height/MnhForm.ClientHeight;
     SettingsForm.ensureFont(MnhForm.outputEdit.Font);
     initializeOutputSettings;
     processFontSettings;
@@ -107,12 +107,12 @@ PROCEDURE initializeSettings;
 
 PROCEDURE updateFormPositionInSettings;
   begin
-    with settings.value^ do begin
+    with settings do begin
       mainForm.top   :=MnhForm.top;
       mainForm.Left  :=MnhForm.Left;
       mainForm.width :=MnhForm.width;
       mainForm.height:=MnhForm.height;
       mainForm.isFullscreen:=(MnhForm.WindowState=wsMaximized);
-      MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*settings.value^.mainForm.relativeSplitterPosition);
+      MnhForm.BottomPanel.height:=round(MnhForm.ClientHeight*settings.mainForm.relativeSplitterPosition);
     end;
   end;

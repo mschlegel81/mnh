@@ -103,7 +103,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     end;
     runnerModel.haltEvaluation;
     quick.task.ensureStop;
-    storeEditorsToSettings;
+    saveWorkspace;
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
@@ -421,7 +421,7 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
-    if not(firstShow) then settings.value^.mainForm.relativeSplitterPosition:=BottomPanel.height/ClientHeight;
+    if not(firstShow) then settings.mainForm.relativeSplitterPosition:=BottomPanel.height/ClientHeight;
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
@@ -438,8 +438,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
   PROCEDURE autosaveSettings;
     begin
-      if not(settings.value^.savingRequested) then exit;
-      storeEditorsToSettings;
+      if not(settings.savingRequested) then exit;
+      saveWorkspace;
       saveSettings;
     end;
 
@@ -560,7 +560,7 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject); begin setSpecificMe
 PROCEDURE TMnhForm.miTimingInfoClick      (Sender: TObject); begin setSpecificMessageType(miTimingInfo      .checked,mt_timing_info); setSpecificMessageType(miTimingInfo.checked,mt_profile_call_info);         end;
 PROCEDURE TMnhForm.miWrapEchoClick        (Sender: TObject);
   begin
-    settings.value^.wordWrapEcho:=miWrapEcho.checked;
+    settings.wordWrapEcho:=miWrapEcho.checked;
     updateWordWrap;
   end;
 
@@ -584,7 +584,7 @@ PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
   VAR historyIdx:longint;
   begin
     historyIdx:=TMenuItem(Sender).Tag;
-    with settings.value^.workspace.fileHistory do begin
+    with fileHistory do begin
       if fileExists(historyItem(historyIdx))
       then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(historyItem(historyIdx),true)
       else if polishHistory then updateFileHistory;

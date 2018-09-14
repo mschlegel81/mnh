@@ -83,9 +83,9 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     outputEdit.highlighter:=outputHighlighter;
-    outputEdit.Font.name:=settings.value^.editorFontname;
-    outputEdit.Font.size:=settings.value^.fontSize;
-    if settings.value^.antialiasedFonts
+    outputEdit.Font.name:=settings.editorFontname;
+    outputEdit.Font.size:=settings.fontSize;
+    if settings.antialiasedFonts
     then outputEdit.Font.quality:=fqCleartypeNatural
     else outputEdit.Font.quality:=fqNonAntialiased;
 

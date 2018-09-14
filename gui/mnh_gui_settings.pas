@@ -78,22 +78,19 @@ FUNCTION SettingsForm: TSettingsForm;
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
-    if settings.value^.editorFontname<>'' then begin
-      EditorFontDialog.Font.name := settings.value^.editorFontname;
-      FontButton.Font.name := settings.value^.editorFontname;
+    if settings.editorFontname<>'' then begin
+      EditorFontDialog.Font.name := settings.editorFontname;
+      FontButton.Font.name := settings.editorFontname;
     end;
-    AntialiasCheckbox.checked := settings.value^.antialiasedFonts;
-    setFontSize(settings.value^.fontSize);
-    setOutputLimit(settings.value^.outputLinesLimit);
-    if not(settings.value^.loaded) then begin
-      settings.value^.workspace.activePage:=0;
-      ensureDemos;
-    end;
-    workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
-    memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
+    AntialiasCheckbox.checked := settings.antialiasedFonts;
+    setFontSize(settings.fontSize);
+    setOutputLimit(settings.outputLinesLimit);
+    if not(settings.loaded) then ensureDemos;
+    workerThreadCountEdit.text:=intToStr(settings.cpuCount);
+    memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
-    FontButton.caption := settings.value^.editorFontname;
-    with settings.value^.mainForm do begin
+    FontButton.caption := settings.editorFontname;
+    with settings.mainForm do begin
       if top<0  then top := 0;
       if Left<0 then Left := 0;
       if height>screen.height-top then height := screen.height-top;
@@ -105,21 +102,20 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         height := 480;
       end;
     end;
-    settings.value^.workspace.fileHistory.polishHistory;
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
-    autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
+    autosaveComboBox.ItemIndex:=settings.saveIntervalIdx;
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
   begin
     if EditorFontDialog.execute then begin
       setFontSize(EditorFontDialog.Font.size);
-      settings.value^.editorFontname := EditorFontDialog.Font.name;
+      settings.editorFontname := EditorFontDialog.Font.name;
 
-      FontButton.Font.name := settings.value^.editorFontname;
+      FontButton.Font.name := settings.editorFontname;
       FontButton.Font.size := getFontSize;
-      FontButton.caption := settings.value^.editorFontname;
+      FontButton.caption := settings.editorFontname;
     end;
   end;
 
@@ -140,13 +136,13 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
   begin
-    if settings.value^.editorFontname<>'' then exit;
-    settings.value^.editorFontname:=editorFont.name;
-    EditorFontDialog.Font.name := settings.value^.editorFontname;
-    FontButton.Font.name := settings.value^.editorFontname;
+    if settings.editorFontname<>'' then exit;
+    settings.editorFontname:=editorFont.name;
+    EditorFontDialog.Font.name := settings.editorFontname;
+    FontButton.Font.name := settings.editorFontname;
     setFontSize(editorFont.size);
     FontButton.Font.size := getFontSize;
-    FontButton.caption := settings.value^.editorFontname;
+    FontButton.caption := settings.editorFontname;
   end;
 
 PROCEDURE TSettingsForm.Button1Click(Sender: TObject);
@@ -166,9 +162,9 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
 
 PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
   begin
-    settings.value^.memoryLimit:=StrToInt64Def(trim(memLimitEdit.text),1) shl 20;
-    memoryComfortThreshold:=settings.value^.memoryLimit;
-    memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
+    settings.memoryLimit:=StrToInt64Def(trim(memLimitEdit.text),1) shl 20;
+    memoryComfortThreshold:=settings.memoryLimit;
+    memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
   end;
 
 PROCEDURE TSettingsForm.outputSizeLimitEditingDone(Sender: TObject);
@@ -180,18 +176,18 @@ PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
   VAR newValue:longint;
   begin
     newValue:=strToIntDef(workerThreadCountEdit.text,0);
-    if newValue<=0 then workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount)
-                   else settings.value^.cpuCount:=newValue;
+    if newValue<=0 then workerThreadCountEdit.text:=intToStr(settings.cpuCount)
+                   else settings.cpuCount:=newValue;
   end;
 
 PROCEDURE TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
   begin
-    settings.value^.antialiasedFonts:=AntialiasCheckbox.checked;
+    settings.antialiasedFonts:=AntialiasCheckbox.checked;
   end;
 
 PROCEDURE TSettingsForm.autosaveComboBoxChange(Sender: TObject);
   begin
-    settings.value^.saveIntervalIdx:=autosaveComboBox.ItemIndex;
+    settings.saveIntervalIdx:=autosaveComboBox.ItemIndex;
   end;
 
 FUNCTION TSettingsForm.getFontSize: longint;
@@ -203,7 +199,7 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
   begin
     FontSizeEdit.text := intToStr(value);
     EditorFontDialog.Font.size := value;
-    settings.value^.fontSize:=value;
+    settings.fontSize:=value;
   end;
 
 FUNCTION TSettingsForm.getOutputLimit: longint;
@@ -218,7 +214,7 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
     then setOutputLimit(MINIMUM_OUTPUT_LINES)
     else begin
       outputSizeLimit.text := intToStr(value);
-      settings.value^.outputLinesLimit:=value;
+      settings.outputLinesLimit:=value;
     end;
   end;
 

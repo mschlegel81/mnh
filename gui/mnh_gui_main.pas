@@ -408,7 +408,7 @@ PROCEDURE TMnhForm.updateFileHistory;
       miFileHistoryRoot.remove(historyMenuItems[i]);
       FreeAndNil(historyMenuItems[i]);
     end;
-    histItems:=settings.value^.workspace.fileHistory.items;
+    histItems:=fileHistory.items;
     setLength(historyMenuItems,length(histItems));
     for i:=0 to length(histItems)-1 do begin
       historyMenuItems[i]:=TMenuItem.create(MainMenu1);

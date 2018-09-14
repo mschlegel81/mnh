@@ -1384,7 +1384,7 @@ FUNCTION T_plotSystem.processPendingMessages:boolean;
 
 PROCEDURE T_plotSystem.resetOnEvaluationStart(CONST startedFromSandbox:boolean);
   begin
-    if settings.value^.doResetPlotOnEvaluation or startedFromSandbox
+    if settings.doResetPlotOnEvaluation or startedFromSandbox
     then currentPlot.setDefaults
     else currentPlot.clear;
     animation.clear;

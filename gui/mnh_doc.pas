@@ -395,7 +395,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         with outFile do begin
           if isOpen then close(handle);
           cmdParam:=htmlRoot+DirectorySeparator+cmdParam;
-          if (templateFileName<>'') or not(fileExists(cmdParam)) or (CODE_HASH<>settings.value^.htmlDocGeneratedForCodeHash) then begin
+          if (templateFileName<>'') or not(fileExists(cmdParam)) or (CODE_HASH<>settings.htmlDocGeneratedForCodeHash) then begin
             assign(handle,cmdParam);
             rewrite(handle);
             isOpen:=true;
@@ -451,7 +451,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         inc(templateLineCount);
       end;
       close(templateFileHandle);
-      settings.value^.htmlDocGeneratedForCodeHash:='';
+      settings.htmlDocGeneratedForCodeHash:='';
     end else for templateLine in html_template_txt do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
@@ -459,7 +459,7 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
         definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
       end;
       inc(templateLineCount);
-      settings.value^.htmlDocGeneratedForCodeHash:=CODE_HASH;
+      settings.htmlDocGeneratedForCodeHash:=CODE_HASH;
     end;
     with outFile do if isOpen then close(handle);
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}

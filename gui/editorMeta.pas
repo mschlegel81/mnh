@@ -3,6 +3,7 @@ INTERFACE
 USES  //basic classes
   Classes, sysutils, LazUTF8, LCLType, types,
   //my utilities:
+  serializationUtil,
   myGenerics,
   //GUI: LCL components
   Controls, Graphics, Dialogs, Menus, ComCtrls, StdCtrls,
@@ -49,7 +50,9 @@ T_editorMeta=object(T_basicEditorMeta)
     tabsheet    : TTabSheet;
     PROCEDURE guessLanguage(CONST fallback:T_language);
     CONSTRUCTOR create(CONST idx:longint);
-    CONSTRUCTOR create(CONST idx:longint; VAR state:T_editorState);
+    CONSTRUCTOR create(CONST idx:longint; VAR stream:T_bufferedInputStreamWrapper);
+
+    PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
   public
     PROPERTY getCodeAssistanceData:P_codeAssistanceResponse read latestAssistanceReponse;
     FUNCTION enabled:boolean;
@@ -82,14 +85,12 @@ T_editorMeta=object(T_basicEditorMeta)
   private
     PROCEDURE triggerCheck;
 
-    PROCEDURE initWithState(VAR state:T_editorState);
     PROCEDURE closeEditorQuietly;
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE languageMenuItemClick(Sender: TObject);
     FUNCTION isFile:boolean;
     PROCEDURE setFile(CONST fileName:string);
     PROCEDURE initForNewFile;
-    PROCEDURE writeToEditorState(CONST settings:P_Settings);
     PROCEDURE setStepperBreakpoints;
     PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
     FUNCTION updateSheetCaption:ansistring;
@@ -149,7 +150,6 @@ FUNCTION addOrGetEditorMetaForFiles(CONST FileNames: array of string; CONST useC
 PROCEDURE updateFonts(CONST Font:TFont);
 FUNCTION allPseudoNames:T_arrayOfString;
 FUNCTION getMeta(CONST nameOrPseudoName:string):P_editorMeta;
-PROCEDURE storeEditorsToSettings;
 FUNCTION getHelpPopupText:string;
 FUNCTION getHelpLocation:T_searchTokenLocation;
 PROCEDURE cycleEditors(CONST cycleForward:boolean);
@@ -158,9 +158,10 @@ PROCEDURE closeAllEditorsButCurrent;
 PROCEDURE closeAllUnmodifiedEditors;
 PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
-
+PROCEDURE saveWorkspace;
 VAR runnerModel:T_runnerModel;
     recentlyActivated:T_fileHistory;
+    fileHistory           :T_fileHistory;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
@@ -178,6 +179,63 @@ VAR mainForm              :T_abstractMnhForm;
 VAR editorMetaData:array of P_editorMeta;
     underCursor:T_tokenInfo;
 
+CONST workspaceSerialVersion=2661226500;
+FUNCTION loadWorkspace:boolean;
+  VAR stream:T_bufferedInputStreamWrapper;
+      i:longint;
+  begin
+    stream.createToReadFromFile(configDir+'workspace.0');
+    fileHistory.create;
+    if not(stream.readDWord=workspaceSerialVersion) then begin
+      stream.destroy;
+      exit(false);
+    end;
+    if not(fileHistory.loadFromStream(stream)) then exit(false);
+    setLength(editorMetaData,stream.readNaturalNumber);
+    if not(stream.allOkay) then begin
+      setLength(editorMetaData,0);
+      stream.destroy;
+      exit(false);
+    end;
+    result:=true;
+    for i:=0 to length(editorMetaData)-1 do begin
+      new(editorMetaData[i],create(i,stream));
+      result:=result and stream.allOkay;
+    end;
+    inputPageControl.activePageIndex:=stream.readLongint;
+    result:=result and stream.allOkay;
+    stream.destroy;
+  end;
+
+PROCEDURE saveWorkspace;
+  VAR stream:T_bufferedOutputStreamWrapper;
+      i:longint;
+      visibleEditorCount:longint=0;
+      pageIndex:longint=0;
+  begin
+    stream.createToWriteToFile(configDir+'workspace.0');
+    stream.writeDWord(workspaceSerialVersion);
+    fileHistory.saveToStream(stream);
+    pageIndex:=inputPageControl.activePageIndex;
+    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled
+    then inc(visibleEditorCount)
+    else if i<inputPageControl.activePageIndex then dec(pageIndex);
+    stream.writeNaturalNumber(visibleEditorCount);
+    for i:=0 to length(editorMetaData)-1 do if editorMetaData[i]^.enabled then editorMetaData[i]^.saveToStream(stream);
+    stream.writeLongint(pageIndex);
+    stream.destroy;
+  end;
+
+PROCEDURE initNewWorkspace;
+  VAR i:longint;
+  begin
+    for i:=0 to length(editorMetaData)-1 do dispose(editorMetaData[i],destroy);
+    setLength(editorMetaData,1);
+    new(editorMetaData[0],create(0));
+    inputPageControl.activePageIndex:=0;
+    setLength(fileHistory.items,0);
+  end;
+
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
                     CONST p_SaveDialog            :TSaveDialog;
@@ -193,16 +251,6 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_outlineTreeView       :TTreeView;
                     CONST p_outlineFilterPrivateCb,p_outlineFilterImportedCb:TCheckBox;
                     CONST p_openlocation          :T_openLocationCallback);
-
-  PROCEDURE restoreEditors;
-    VAR i:longint;
-    begin
-      setLength(editorMetaData,length(settings.value^.workspace.editorState));
-      for i:=0 to length(editorMetaData)-1 do new(editorMetaData[i],create(i,settings.value^.workspace.editorState[i]));
-      i:=settings.value^.workspace.activePage;
-      inputPageControl.activePageIndex:=i;
-      inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
-    end;
 
   begin
     editorFont:=p_assistanceSynEdit.Font;
@@ -220,7 +268,7 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
     outlineGroupBox       :=p_outlineGroupBox       ;
     new(outlineModel,create(p_outlineTreeView,p_outlineFilterPrivateCb,p_outlineFilterImportedCb,p_openlocation));
 
-    restoreEditors;
+    if not(loadWorkspace) then initNewWorkspace;
   end;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
@@ -243,31 +291,63 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     initForNewFile;
   end;
 
-CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR state: T_editorState);
+CONST editorMetaSerial=1417366167;
+
+CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputStreamWrapper);
+  VAR lineCount,markCount:longint;
+      i:longint;
   begin
     create(idx);
-    initWithState(state);
-  end;
-
-PROCEDURE T_editorMeta.initWithState(VAR state: T_editorState);
-  VAR i:longint;
-  begin
+    if not(stream.readDWord=editorMetaSerial) then begin //#0
+      stream.logWrongTypeError;
+      exit;
+    end;
     tabsheet.tabVisible:=true;
     with fileInfo do begin
-      isChanged    :=state.changed;
-      fileAccessAge:=state.fileAccessAge;
-      filePath     :=state.filePath;
+      filePath     :=stream.readAnsiString; //#1
+      isChanged    :=stream.readBoolean;    //#2
+      strictlyReadOnly:=stream.readBoolean; //#3
+      if isChanged then fileAccessAge:=stream.readDouble;  //#4
       ignoreDeleted:=false;
-      strictlyReadOnly:=state.strictReadOnly;
     end;
+    editor.clearAll;
     if fileInfo.isChanged
-    then state.getLines(editor.lines)
-    else setFile(state.filePath);
-    for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
-    editor.CaretX:=state.caret['x'];
-    editor.CaretY:=state.caret['y'];
-    language_:=T_language(state.language);
+    then begin
+      editor.lines.clear;
+      lineCount:=stream.readNaturalNumber; //#5
+      for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
+    end else setFile(fileInfo.filePath);
+    markCount:=stream.readNaturalNumber; //#7
+    for i:=1 to markCount do  _add_breakpoint_(stream.readLongint); //#8
+    editor.CaretX:=stream.readNaturalNumber; //#9
+    editor.CaretY:=stream.readNaturalNumber; //#10
+    language_:=T_language(stream.readByte);  //#11
+    editor.modified:=fileInfo.isChanged;
     updateSheetCaption;
+  end;
+
+PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
+  VAR i:longint;
+      editorLine:string;
+      saveChanged:boolean;
+  begin
+    stream.writeDWord(editorMetaSerial); //#0
+    if fileInfo.filePath=''
+    then stream.writeAnsiString(               fileInfo.filePath )  //#1
+    else stream.writeAnsiString(expandFileName(fileInfo.filePath)); //#1
+    saveChanged:=changed;
+    stream.writeBoolean(saveChanged); //#2
+    stream.writeBoolean(strictlyReadOnly);   //#3
+    if saveChanged then begin
+      stream.writeDouble(fileInfo.fileAccessAge);  //#4
+      stream.writeNaturalNumber(editor.lines.count); //#5
+      for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
+    end;
+    stream.writeNaturalNumber(editor.Marks.count); //#7
+    for i:=0 to editor.Marks.count-1 do stream.writeLongint(editor.Marks[i].line); //#8
+    stream.writeNaturalNumber(editor.CaretX); //#9
+    stream.writeNaturalNumber(editor.CaretY); //#10
+    stream.writeByte(ord(language));          //#11
   end;
 
 DESTRUCTOR T_editorMeta.destroy;
@@ -317,7 +397,6 @@ PROCEDURE T_editorMeta.activate;
       end;
       editor.Gutter.MarksPart.visible:=runnerModel.debugMode and (language_=LANG_MNH);
       editor.readonly                :=runnerModel.areEditorsLocked;
-      settings.value^.workspace.activePage:=index;
       mainForm.onDebuggerEvent;
     except end; //catch and ignore all exceptions
   end;
@@ -388,7 +467,7 @@ PROCEDURE T_editorMeta.closeEditorWithDialogs;
       if mr=mrOk then if not(saveWithDialog) then exit;
       if mr=mrCancel then exit;
     end;
-    if isFile then settings.value^.workspace.fileHistory.fileClosed(fileInfo.filePath);
+    if isFile then fileHistory.fileClosed(fileInfo.filePath);
     closeEditorQuietly;
   end;
 
@@ -416,7 +495,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
     fileInfo.filePath:=fileName;
     fileInfo.ignoreDeleted:=false;
     editor.clearAll;
-    try
+    if fileName<>'' then try
       strictlyReadOnly:=false;
       if isDatastore then begin
         datastore:=true;
@@ -540,31 +619,6 @@ PROCEDURE T_editorMeta.setWorkingDir;
                             else SetCurrentDir(ExtractFileDir(fileInfo.filePath));
   end;
 
-PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
-  VAR i:longint;
-  begin
-    i:=length(settings^.workspace.editorState);
-    while i<=index do begin
-      setLength(settings^.workspace.editorState,i+1);
-      settings^.workspace.editorState[i].create;
-      inc(i);
-    end;
-    settings^.workspace.editorState[index].visible:=enabled;
-    if not(settings^.workspace.editorState[index].visible) then exit;
-    setLength(settings^.workspace.editorState[index].markedLines,0);
-    for i:=0 to editor.Marks.count-1 do appendIfNew(settings^.workspace.editorState[index].markedLines,editor.Marks[i].line);
-
-    settings^.workspace.editorState[index].filePath:=fileInfo.filePath;
-    settings^.workspace.editorState[index].fileAccessAge:=fileInfo.fileAccessAge;
-    settings^.workspace.editorState[index].changed:=changed;
-    settings^.workspace.editorState[index].strictReadOnly:=strictlyReadOnly;
-    setLength(settings^.workspace.editorState[index].lines,editor.lines.count);
-    for i:=0 to length(settings^.workspace.editorState[index].lines)-1 do settings^.workspace.editorState[index].lines[i]:=editor.lines[i];
-    settings^.workspace.editorState[index].caret['x']:=editor.CaretX;
-    settings^.workspace.editorState[index].caret['y']:=editor.CaretY;
-    settings^.workspace.editorState[index].language:=ord(language);
-  end;
-
 PROCEDURE T_editorMeta.toggleBreakpoint;
   VAR i:longint;
   begin
@@ -668,7 +722,7 @@ FUNCTION T_editorMeta.saveFile(CONST fileName: string): string;
   begin
     previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
-    if (previousName<>'') and (previousName<>fileInfo.filePath) then settings.value^.workspace.fileHistory.fileClosed(previousName);
+    if (previousName<>'') and (previousName<>fileInfo.filePath) then fileHistory.fileClosed(previousName);
     setLength(arr,editor.lines.count);
     for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
     with fileInfo do begin
@@ -830,12 +884,6 @@ FUNCTION getMeta(CONST nameOrPseudoName:string):P_editorMeta;
   begin
     result:=nil;
     for m in editorMetaData do if (m^.enabled) and (m^.pseudoName()=nameOrPseudoName) then exit(m);
-  end;
-
-PROCEDURE storeEditorsToSettings;
-  VAR e:P_editorMeta;
-  begin
-    for e in editorMetaData do e^.writeToEditorState(settings.value);
   end;
 
 FUNCTION getHelpPopupText:string;
