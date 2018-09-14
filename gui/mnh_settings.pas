@@ -107,7 +107,7 @@ FUNCTION workerThreadCount:longint;
     settings.cpuCount:=result+1;
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235076; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235077; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -130,7 +130,6 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     wordWrapEcho:=stream.readBoolean;
     memoryLimit:=stream.readInt64;
     outputLinesLimit:=stream.readLongint;
-    {workspaceFileName:=}stream.readAnsiString;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     doShowSplashScreen:=stream.readBoolean or (CODE_HASH<>htmlDocGeneratedForCodeHash);
     if not(stream.allOkay) then cleanExit else result:=true;
@@ -152,7 +151,6 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeBoolean(wordWrapEcho);
     stream.writeInt64(memoryLimit);
     stream.writeLongint(outputLinesLimit);
-    stream.writeAnsiString('');
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(doShowSplashScreen);
     savedAt:=now;

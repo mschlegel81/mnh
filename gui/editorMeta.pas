@@ -179,7 +179,7 @@ VAR mainForm              :T_abstractMnhForm;
 VAR editorMetaData:array of P_editorMeta;
     underCursor:T_tokenInfo;
 
-CONST workspaceSerialVersion=2661226500;
+CONST workspaceSerialVersion=2661226501;
 FUNCTION loadWorkspace:boolean;
   VAR stream:T_bufferedInputStreamWrapper;
       i:longint;
@@ -291,7 +291,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     initForNewFile;
   end;
 
-CONST editorMetaSerial=1417366167;
+CONST editorMetaSerial=1417366168;
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputStreamWrapper);
   VAR lineCount,markCount:longint;
@@ -318,7 +318,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; VAR stream:T_bufferedInputSt
       for i:=1 to lineCount do editor.lines.append(stream.readAnsiString); //#6
     end else setFile(fileInfo.filePath);
     markCount:=stream.readNaturalNumber; //#7
-    for i:=1 to markCount do  _add_breakpoint_(stream.readLongint); //#8
+    for i:=1 to markCount do  _add_breakpoint_(stream.readNaturalNumber); //#8
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
     language_:=T_language(stream.readByte);  //#11
@@ -344,7 +344,7 @@ PROCEDURE T_editorMeta.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
       for editorLine in editor.lines do stream.writeAnsiString(editorLine); //#6
     end;
     stream.writeNaturalNumber(editor.Marks.count); //#7
-    for i:=0 to editor.Marks.count-1 do stream.writeLongint(editor.Marks[i].line); //#8
+    for i:=0 to editor.Marks.count-1 do stream.writeNaturalNumber(editor.Marks[i].line); //#8
     stream.writeNaturalNumber(editor.CaretX); //#9
     stream.writeNaturalNumber(editor.CaretY); //#10
     stream.writeByte(ord(language));          //#11
