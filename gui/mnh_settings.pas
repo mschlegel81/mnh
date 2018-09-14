@@ -25,25 +25,6 @@ T_formPosition=object(T_serializable)
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
 end;
 
-T_editorState=object(T_serializable)
-  visible:boolean;
-  strictReadOnly:boolean;
-  filePath:ansistring;
-  fileAccessAge:double;
-  changed:boolean;
-  lines:T_arrayOfString;
-  markedLines:T_arrayOfLongint;
-  caret:array['x'..'y'] of longint;
-  language:byte;
-
-  CONSTRUCTOR create;
-  DESTRUCTOR destroy;
-  PROCEDURE getLines(CONST dat: TStrings);
-  FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
-  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper; CONST saveAll:boolean); reintroduce;
-end;
-
 T_fileHistory=object(T_serializable)
   items: T_arrayOfString;
 
@@ -57,36 +38,12 @@ T_fileHistory=object(T_serializable)
   FUNCTION historyItem(CONST index:longint):ansistring;
 end;
 
-T_workspaceMeta=record
-  fileName:string;
-  name:string;
-end;
-T_workspaceMetaArray=array of T_workspaceMeta;
-
-T_workspace=object(T_serializable)
-  exporting:boolean;
-
-  name:string;
-  fileHistory:T_fileHistory;
-  editorState: array of T_editorState;
-  activePage:longint;
-
-  CONSTRUCTOR create;
-  DESTRUCTOR destroy;
-  FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
-  FUNCTION loadNameOnly(CONST fileName:string):boolean;
-  PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
-  PROCEDURE initDefaults(CONST withEditor:boolean);
-end;
-
 P_Settings=^T_settings;
 T_settings=object(T_serializable)
   private
     //Nonpersistent:
     wasLoaded:boolean;
     savedAt:double;
-    workspaceFileName:string;
   public
   //Global:
   memoryLimit:int64;
@@ -103,9 +60,6 @@ T_settings=object(T_serializable)
 
   htmlDocGeneratedForCodeHash:string;
   doShowSplashScreen:boolean;
-  //Workspace:
-  workspace:T_workspace;
-  FUNCTION currentWorkspaceFilename:string;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -116,18 +70,11 @@ T_settings=object(T_serializable)
 
   FUNCTION savingRequested:boolean;
   PROPERTY loaded:boolean read wasLoaded;
-
-  PROCEDURE createNewWorkspace;
-  FUNCTION importWorkspace(CONST fileName:string):boolean;
-  PROCEDURE exportWorkspace(CONST fileName:string);
-  PROCEDURE switchWorkspace(CONST fileName:string);
-  FUNCTION deleteWorkspace(CONST meta:T_workspaceMeta):boolean;
 end;
 
 PROCEDURE saveSettings;
 FUNCTION workerThreadCount:longint;
-FUNCTION avaliableWorkspaces:T_workspaceMetaArray;
-VAR settings:specialize G_lazyVar<P_Settings>;
+VAR settings:T_settings;
 IMPLEMENTATION
 
 FUNCTION settingsFileName: string;
@@ -135,151 +82,32 @@ FUNCTION settingsFileName: string;
     result:=configDir+'mnh.settings';
   end;
 
-FUNCTION defaultWorkspaceFileName: string;
-  begin
-    result:=configDir+'workspace.0';
-  end;
-
-FUNCTION newWorkspaceFileName: string;
-  VAR i:longint;
-  begin
-    for i:=1 to maxLongint do begin
-      result:=ChangeFileExt(defaultWorkspaceFileName,'.'+intToStr(i));
-      if not(fileExists(result)) then exit(result);
-    end;
-    result:='';
-  end;
-
-FUNCTION avaliableWorkspaces:T_workspaceMetaArray;
-  VAR files:T_arrayOfString;
-      w:T_workspace;
-      i:longint;
-  begin
-    files:=find(configDir+'workspace.*',true,false);
-    w.create;
-    setLength(result,0);
-    for i:=0 to length(files)-1 do if w.loadNameOnly(files[i]) then begin
-      setLength(result,length(result)+1);
-      with result[length(result)-1] do begin
-        fileName:=files[i];
-        name:=w.name;
-      end;
-    end;
-    w.destroy;
-  end;
-
 PROCEDURE saveSettings;
   begin
-    settings.value^.saveToFile(settingsFileName);
-  end;
-
-CONSTRUCTOR T_workspace.create;
-  begin
-    fileHistory.create;
-    setLength(editorState,0);
-    initDefaults(false);
-  end;
-
-DESTRUCTOR T_workspace.destroy;
-  begin
-    initDefaults(false);
-    fileHistory.destroy;
-    setLength(editorState,0);
-  end;
-
-FUNCTION T_workspace.getSerialVersion: dword;
-  begin
-    result:=2661226500;
-  end;
-
-FUNCTION T_workspace.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
-  VAR i:longint;
-  begin
-    if not(inherited loadFromStream(stream)) then exit(false);
-    initDefaults(false);
-    name:=stream.readAnsiString;
-    if not(fileHistory.loadFromStream(stream)) then exit(false);
-    setLength(editorState,stream.readNaturalNumber);
-    result:=stream.allOkay;
-    for i:=0 to length(editorState)-1 do begin
-      editorState[i].create;
-      result:=result and editorState[i].loadFromStream(stream);
-    end;
-    activePage:=stream.readLongint;
-    result:=result and stream.allOkay;
-    if not(result) then initDefaults(true);
-  end;
-
-FUNCTION T_workspace.loadNameOnly(CONST fileName:string): boolean;
-  VAR stream:T_bufferedInputStreamWrapper;
-  begin
-    stream.createToReadFromFile(fileName);
-    result:=stream.allOkay and inherited loadFromStream(stream);
-    if result then name:=stream.readAnsiString;
-    result:=stream.allOkay;
-    stream.destroy;
-  end;
-
-PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
-  VAR i:longint;
-      visibleEditorCount:longint=0;
-  begin
-    inherited saveToStream(stream);
-    stream.writeAnsiString(name);
-    fileHistory.saveToStream(stream);
-    for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
-    stream.writeNaturalNumber(visibleEditorCount);
-    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToStream(stream,exporting);
-    stream.writeLongint(activePage);
-  end;
-
-PROCEDURE T_workspace.initDefaults(CONST withEditor:boolean);
-  VAR i:longint;
-  begin
-    name:='';
-    fileHistory.items:=C_EMPTY_STRING_ARRAY;
-    for i:=0 to length(editorState)-1 do editorState[i].destroy;
-    if withEditor then begin
-      setLength(editorState,1);
-      editorState[0].create;
-      activePage:=0;
-    end else begin
-      setLength(editorState,0);
-      activePage:=-1;
-    end;
-    exporting:=false;
-  end;
-
-FUNCTION T_settings.currentWorkspaceFilename: string;
-  begin
-    if workspaceFileName=''
-    then result:=defaultWorkspaceFileName
-    else result:=workspaceFileName;
+    settings.saveToFile(settingsFileName);
   end;
 
 CONSTRUCTOR T_settings.create;
   begin
     cpuCount:=getNumberOfCPUs;
     mainForm.create;
-    workspace.create;
     wasLoaded:=false;
   end;
 
 DESTRUCTOR T_settings.destroy;
   begin
-    workspace.destroy;
   end;
 
 FUNCTION workerThreadCount:longint;
   begin
-    result:=settings.value^.cpuCount-1;
+    result:=settings.cpuCount-1;
     if result>=0 then exit(result);
     result:=getNumberOfCPUs-1;
     if result<0 then result:=0;
-    settings.value^.cpuCount:=result+1;
+    settings.cpuCount:=result+1;
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235076; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235077; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -302,14 +130,9 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     wordWrapEcho:=stream.readBoolean;
     memoryLimit:=stream.readInt64;
     outputLinesLimit:=stream.readLongint;
-    workspaceFileName:=stream.readAnsiString;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     doShowSplashScreen:=stream.readBoolean or (CODE_HASH<>htmlDocGeneratedForCodeHash);
     if not(stream.allOkay) then cleanExit else result:=true;
-    if result then begin
-      if not(fileExists(currentWorkspaceFilename)) then workspaceFileName:='';
-      if not(workspace.loadFromFile(currentWorkspaceFilename)) then workspace.initDefaults(true);
-    end;
     savedAt:=now;
     wasLoaded:=result;
   end;
@@ -328,10 +151,8 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeBoolean(wordWrapEcho);
     stream.writeInt64(memoryLimit);
     stream.writeLongint(outputLinesLimit);
-    stream.writeAnsiString(workspaceFileName);
     stream.writeAnsiString(htmlDocGeneratedForCodeHash);
     stream.writeBoolean(doShowSplashScreen);
-    workspace.saveToFile(currentWorkspaceFilename);
     savedAt:=now;
   end;
 
@@ -354,7 +175,6 @@ PROCEDURE T_settings.initDefaults;
     saveIntervalIdx:=0;
     wasLoaded:=false;
     savedAt:=now;
-    workspace.initDefaults(true);
     memoryLimit:={$ifdef Windows}
                    {$ifdef CPU32}
                    1000000000;
@@ -372,50 +192,6 @@ PROCEDURE T_settings.initDefaults;
 FUNCTION T_settings.savingRequested: boolean;
   begin
     result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
-  end;
-
-PROCEDURE T_settings.createNewWorkspace;
-  begin
-    workspace.saveToFile(currentWorkspaceFilename);
-    workspace.initDefaults(true);
-    workspaceFileName:=newWorkspaceFileName;
-  end;
-
-FUNCTION T_settings.importWorkspace(CONST fileName: string):boolean;
-  begin
-    workspace.saveToFile(currentWorkspaceFilename);
-    result:=workspace.loadFromFile(fileName);
-    if result then workspaceFileName:=newWorkspaceFileName
-              else workspace.loadFromFile(currentWorkspaceFilename);
-  end;
-
-PROCEDURE T_settings.exportWorkspace(CONST fileName: string);
-  begin
-    workspace.exporting:=true;
-    workspace.saveToFile(fileName);
-    workspace.exporting:=false;
-  end;
-
-PROCEDURE T_settings.switchWorkspace(CONST fileName: string);
-  begin
-    workspace.saveToFile(currentWorkspaceFilename);
-    if fileName='' then begin
-      if not(workspace.loadFromFile(defaultWorkspaceFileName)) then workspace.initDefaults(true);
-    end else begin
-      if fileExists(fileName) and workspace.loadFromFile(fileName)
-      then workspaceFileName:=fileName
-      else workspace.loadFromFile(currentWorkspaceFilename);
-    end;
-  end;
-
-FUNCTION T_settings.deleteWorkspace(CONST meta:T_workspaceMeta): boolean;
-  begin
-    result:=(meta.fileName<>'') and (fileExists(meta.fileName));
-    if result then begin
-      result:=workspaceFileName=meta.fileName;
-      if result then switchWorkspace('');
-      DeleteFile(meta.fileName);
-    end;
   end;
 
 CONSTRUCTOR T_fileHistory.create;
@@ -518,94 +294,12 @@ PROCEDURE T_formPosition.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     stream.writeBoolean(isFullscreen);
   end;
 
-CONSTRUCTOR T_editorState.create;
-  begin
-    visible:=false;
-    strictReadOnly:=false;
-    setLength(lines,0);
-    filePath:='';
-    fileAccessAge:=0;
-    changed:=false;
-    setLength(lines,0);
-    setLength(markedLines,0);
-  end;
-
-DESTRUCTOR T_editorState.destroy;
-  begin
-    filePath:='';
-    fileAccessAge:=0;
-    setLength(lines,0);
-    setLength(markedLines,0);
-  end;
-
-PROCEDURE T_editorState.getLines(CONST dat: TStrings);
-  VAR i:longint;
-  begin
-    dat.clear;
-    for i:=0 to length(lines)-1 do dat.append(lines[i]);
-  end;
-
-FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366167; end;
-
-FUNCTION T_editorState.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean;
-  VAR i:longint;
-  begin
-    if not inherited loadFromStream(stream) then exit(false);
-    visible:=true;
-    filePath:=stream.readAnsiString;
-    changed:=stream.readBoolean;
-    strictReadOnly:=stream.readBoolean;
-    if changed then begin
-      fileAccessAge:=stream.readDouble;
-      setLength(lines,stream.readNaturalNumber);
-      for i:=0 to length(lines)-1 do lines[i]:=stream.readAnsiString;
-    end else begin
-      lines:=C_EMPTY_STRING_ARRAY;
-    end;
-    setLength(markedLines,stream.readNaturalNumber);
-    for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
-    caret['x']:=stream.readNaturalNumber;
-    caret['y']:=stream.readNaturalNumber;
-    language:=stream.readByte;
-    result:=stream.allOkay;
-  end;
-
-PROCEDURE T_editorState.saveToStream(VAR stream:T_bufferedOutputStreamWrapper; CONST saveAll:boolean);
-  VAR i:longint;
-  begin
-    inherited saveToStream(stream);
-    if filePath<>'' then filePath:=expandFileName(filePath);
-    stream.writeAnsiString(filePath);
-    stream.writeBoolean(changed);
-    stream.writeBoolean(strictReadOnly);
-    if changed or saveAll then begin
-      stream.writeDouble(fileAccessAge);
-      stream.writeNaturalNumber(length(lines));
-      for i:=0 to length(lines)-1 do stream.writeAnsiString(lines[i]);
-    end;
-    stream.writeNaturalNumber(length(markedLines));
-    for i:=0 to length(markedLines)-1 do stream.writeLongint(markedLines[i]);
-    stream.writeNaturalNumber(caret['x']);
-    stream.writeNaturalNumber(caret['y']);
-    stream.writeByte(language);
-  end;
-
-FUNCTION obtainSettings:P_Settings;
-  begin
-    ensurePath(settingsFileName);
-    new(result,create);
-    if fileExists(settingsFileName)
-    then result^.loadFromFile(settingsFileName)
-    else result^.initDefaults;
-  end;
-
-PROCEDURE disposeSettings(settings:P_Settings);
-  begin
-    dispose(settings,destroy);
-  end;
-
 INITIALIZATION
-  settings.create(@obtainSettings,@disposeSettings);
+  settings.create;
+  ensurePath(settingsFileName);
+  if fileExists(settingsFileName)
+  then settings.loadFromFile(settingsFileName)
+  else settings.initDefaults;
 
 FINALIZATION
   settings.destroy;

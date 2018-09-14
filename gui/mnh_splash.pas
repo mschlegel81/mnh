@@ -40,12 +40,12 @@ FUNCTION splashForm:TSplashForm;
 
 PROCEDURE splashOnStartup;
   begin
-    if settings.value^.doShowSplashScreen then splashForm.ShowModal;
+    if settings.doShowSplashScreen then splashForm.ShowModal;
   end;
 
 PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   begin
-    settings.value^.doShowSplashScreen:=CheckBox1.checked;
+    settings.doShowSplashScreen:=CheckBox1.checked;
   end;
 
 VAR docThreadsRunning:longint=0;
@@ -65,7 +65,7 @@ PROCEDURE TSplashForm.FormShow(Sender: TObject);
   VAR l:T_arrayOfString;
       i:longint;
   begin
-    CheckBox1.checked:=settings.value^.doShowSplashScreen;
+    CheckBox1.checked:=settings.doShowSplashScreen;
     l:=C_EMPTY_STRING_ARRAY;
     for i:=7 to length(LOGO)-1 do append(l,LOGO[i]);
     l[0]:=trim(l[0]);

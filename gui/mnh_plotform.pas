@@ -154,7 +154,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
-    miAutoReset.checked:=settings.value^.doResetPlotOnEvaluation;
+    miAutoReset.checked:=settings.doResetPlotOnEvaluation;
     fpsSamplingStart:=now;
     framesSampled:=0;
     closedByUser:=false;
@@ -212,7 +212,7 @@ PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
   begin
     miAutoReset.checked:=not(miAutoReset.checked);
-    settings.value^.doResetPlotOnEvaluation:=miAutoReset.checked;
+    settings.doResetPlotOnEvaluation:=miAutoReset.checked;
   end;
 
 PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);

@@ -319,7 +319,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     if (getId=MAIN_RULE_ID) and not(rule^.hasValidMainPattern) then context.messages.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.getLocation);
     if (getRuleType=rt_customOperator) then begin
       if not(rule^.canApplyToNumberOfParameters(2)) then context.messages.raiseError('Overloaded operators must accept two parameters',rule^.getLocation);
-      if rule^.getPattern.usesDucktyping then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
+      if not(rule^.getPattern.usesStrictCustomTyping) then context.messages.globalMessages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is strongly discouraged! Use explicit types instead.');
     end;
     i:=0;
     while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);

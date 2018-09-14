@@ -116,7 +116,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR globals:T_evaluationGlobals;
         package:P_package;
     begin
-      {$ifdef fullVersion}memoryComfortThreshold:=settings.value^.memoryLimit;{$endif}
+      {$ifdef fullVersion}memoryComfortThreshold:=settings.memoryLimit;{$endif}
       globals.create(@consoleAdapters);
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
@@ -132,7 +132,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR globals:T_evaluationGlobals;
         package:T_package;
     begin
-      {$ifdef fullVersion}memoryComfortThreshold:=settings.value^.memoryLimit;{$endif}
+      {$ifdef fullVersion}memoryComfortThreshold:=settings.memoryLimit;{$endif}
       package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
       globals.create(@consoleAdapters);
       {$ifdef fullVersion}

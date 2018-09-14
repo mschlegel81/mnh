@@ -115,7 +115,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
         first:=false;
       end else begin
         message:=messageList[0];
-        if settings.value^.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
+        if settings.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
           if length(messageList)=1
           then tokens:=tokenSplit(message)
           else tokens:=message;
@@ -162,7 +162,7 @@ FUNCTION T_guiOutAdapter.flushToGui: T_messageTypeSet;
     try
       flushing:=true;
       result:=[];
-      if length(storedMessages)>0 then outputLinesLimit:=settings.value^.outputLinesLimit;
+      if length(storedMessages)>0 then outputLinesLimit:=settings.outputLinesLimit;
       startOutput;
       for message in storedMessages do
       if not(message^.messageType in redirectedMessages) then begin

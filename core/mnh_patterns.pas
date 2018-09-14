@@ -85,7 +85,7 @@ TYPE
       {$endif}
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
       FUNCTION getFirst:T_patternElement;
-      FUNCTION usesDucktyping:boolean;
+      FUNCTION usesStrictCustomTyping:boolean;
   end;
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
@@ -735,11 +735,11 @@ FUNCTION T_pattern.getFirst:T_patternElement;
     result:=sig[0];
   end;
 
-FUNCTION T_pattern.usesDucktyping:boolean;
+FUNCTION T_pattern.usesStrictCustomTyping:boolean;
   VAR s:T_patternElement;
   begin
     result:=false;
-    for s in sig do if (s.customTypeCheck<>nil) and (s.customTypeCheck^.isDucktyping) then exit(true);
+    for s in sig do if (s.customTypeCheck<>nil) and not(s.customTypeCheck^.isDucktyping) then exit(true);
   end;
 
 end.
