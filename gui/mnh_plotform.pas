@@ -27,6 +27,7 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    miCacheFrames: TMenuItem;
     miRenderToFile: TMenuItem;
     miAntiAliasing4: TMenuItem;
     miIncFontSize: TMenuItem;
@@ -64,6 +65,7 @@ TYPE
     PROCEDURE miAutoResetClick(Sender: TObject);
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
+    PROCEDURE miCacheFramesClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miLogscaleXClick(Sender: TObject);
@@ -155,6 +157,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     miAutoReset.checked:=settings.doResetPlotOnEvaluation;
+    miCacheFrames.checked:=settings.cacheAnimationFrames;
     fpsSamplingStart:=now;
     framesSampled:=0;
     closedByUser:=false;
@@ -225,6 +228,12 @@ PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
   begin
     miAutoscaleY.checked:=not(miAutoscaleY.checked);
     pushSettingsToPlotContainer;
+  end;
+
+PROCEDURE TplotForm.miCacheFramesClick(Sender: TObject);
+  begin
+    miCacheFrames.checked:=not(miCacheFrames.checked);
+    settings.cacheAnimationFrames:=miCacheFrames.checked;
   end;
 
 PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);

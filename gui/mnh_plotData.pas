@@ -264,6 +264,7 @@ PROCEDURE T_plotSeriesFrame.clearImage(CONST doDump:boolean=false);
       tempIntfImage.free;
       bmpWriter.free;
     end;
+    if not(doDump) then dumpName:='';
     if image<>nil then FreeAndNil(image);
     leaveCriticalSection(frameCS);
   end;
@@ -554,7 +555,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
       end else inc(k);
       //deallocate the last one, dump to file
       k:=length(framesWithImagesAllocated)-1;
-      if (framesWithImagesAllocated[k]<>nil) and tryToKeepMemoryLow then framesWithImagesAllocated[k]^.clearImage(true);
+      if (framesWithImagesAllocated[k]<>nil) and (tryToKeepMemoryLow or not(settings.cacheAnimationFrames)) then framesWithImagesAllocated[k]^.clearImage(settings.cacheAnimationFrames);
       //shift
       move(framesWithImagesAllocated[0],
            framesWithImagesAllocated[1],

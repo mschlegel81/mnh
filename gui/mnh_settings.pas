@@ -7,12 +7,12 @@ USES Classes,sysutils,dateutils,typinfo,
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
-   (text:'1 minute';   interval:1/(24*60)),
-   (text:'2 minutes';  interval:2/(24*60)),
-   (text:'5 minutes';  interval:5/(24*60)),
+   (text:'1 minute';   interval: 1/(24*60)),
+   (text:'2 minutes';  interval: 2/(24*60)),
+   (text:'5 minutes';  interval: 5/(24*60)),
    (text:'10 minutes'; interval:10/(24*60)),
    (text:'30 minutes'; interval:30/(24*60)),
-   (text:'1 hour';     interval:1/24));
+   (text:'1 hour';     interval: 1/24));
   FILE_HISTORY_MAX_SIZE=20;
 TYPE
 T_formPosition=object(T_serializable)
@@ -57,6 +57,7 @@ T_settings=object(T_serializable)
   wordWrapEcho:boolean;
   outputLinesLimit:longint;
   doResetPlotOnEvaluation: boolean;
+  cacheAnimationFrames: boolean;
 
   htmlDocGeneratedForCodeHash:string;
   doShowSplashScreen:boolean;
@@ -107,7 +108,7 @@ FUNCTION workerThreadCount:longint;
     settings.cpuCount:=result+1;
   end;
 
-FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235077; end;
+FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235078; end;
 FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   {$MACRO ON}
   {$define cleanExit:=begin initDefaults; exit(false) end}
@@ -126,6 +127,7 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     outputBehaviour:=stream.readNaturalNumber;
     outputBehaviour:=outputBehaviour+[mt_clearConsole,mt_printline];
     doResetPlotOnEvaluation := stream.readBoolean;
+    cacheAnimationFrames    := stream.readBoolean;
     saveIntervalIdx:=stream.readByte;
     wordWrapEcho:=stream.readBoolean;
     memoryLimit:=stream.readInt64;
@@ -147,6 +149,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     mainForm.saveToStream(stream);
     stream.writeNaturalNumber(outputBehaviour);
     stream.writeBoolean(doResetPlotOnEvaluation);
+    stream.writeBoolean(cacheAnimationFrames);
     stream.writeByte(saveIntervalIdx);
     stream.writeBoolean(wordWrapEcho);
     stream.writeInt64(memoryLimit);
@@ -172,6 +175,7 @@ PROCEDURE T_settings.initDefaults;
     end;
     outputBehaviour:=C_defaultOutputBehavior_interactive;
     doResetPlotOnEvaluation:=true;
+    cacheAnimationFrames:=true;
     saveIntervalIdx:=0;
     wasLoaded:=false;
     savedAt:=now;
