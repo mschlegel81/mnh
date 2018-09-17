@@ -81,13 +81,13 @@ TYPE
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
-      PROCEDURE clear(CONST includeSecondaries:boolean);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_threadLocalMessages; VAR metaData:T_ruleMetaData):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
       packageRules,importedRules:T_ruleMap;
+      PROCEDURE clear(CONST includeSecondaries:boolean);
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
@@ -1260,9 +1260,7 @@ FUNCTION T_package.getTypeMap:T_typeMap;
   VAR r:P_rule;
 
   PROCEDURE addDef(CONST def:P_typedef);
-    begin
-      result.put(def^.getName,def);
-    end;
+    begin result.put(def^.getName,def); end;
   begin
     result.create();
     for r in importedRules.valueSet do if r^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then addDef(r^.getTypedef);

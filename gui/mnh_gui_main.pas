@@ -444,7 +444,7 @@ PROCEDURE TMnhForm.QuickEditChange(Sender: TObject);
     if runnerModel.canRun(true) then begin
       if edit<>nil then edit^.setWorkingDir;
       quick.evaluationDeferred:=false;
-      quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit));
+      quick.task.triggerUpdate(runEvaluator.getPackageForPostEvaluation(edit,runnerModel.firstCallAfterActivation));
     end else quick.evaluationDeferred:=true;
   end;
 

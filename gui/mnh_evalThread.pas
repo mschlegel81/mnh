@@ -123,9 +123,9 @@ TYPE
       CONSTRUCTOR create(CONST adapters:P_messageConnector; threadFunc:TThreadFunc);
       DESTRUCTOR destroy; virtual;
       PROCEDURE reEvaluateWithGUI;
-      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
-      FUNCTION getPackageForPostEvaluation(CONST provider:P_codeProvider):P_package;
-      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
+      PROCEDURE evaluate         (CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
+      FUNCTION getPackageForPostEvaluation(CONST provider:P_codeProvider; CONST firstRun:boolean):P_package;
+      PROCEDURE callMain         (CONST provider:P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
       PROCEDURE ensureEditScripts();
       PROCEDURE runUtilScript    (CONST scriptIndex,editorIndex:longint; CONST L:TStrings; CONST inputLang:string; CONST editorFileName:string);
       FUNCTION getRunnerStateInfo:T_runnerStateInfo;
@@ -431,7 +431,7 @@ PROCEDURE T_runEvaluator.reEvaluateWithGUI;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType);
+PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
   begin
     system.enterCriticalSection(cs);
     if (state in C_runningStates) then begin
@@ -440,12 +440,13 @@ PROCEDURE T_runEvaluator.evaluate(CONST provider:P_codeProvider; CONST contextTy
     end;
     requestedContextType:=contextType;
     request:=er_evaluate;
+    if firstRun then package.clear(true);
     package.replaceCodeProvider(provider);
     ensureThread;
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvider): P_package;
+FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvider; CONST firstRun:boolean): P_package;
   begin
     system.enterCriticalSection(cs);
     while state in C_runningStates do begin
@@ -453,12 +454,13 @@ FUNCTION T_runEvaluator.getPackageForPostEvaluation(CONST provider: P_codeProvid
       sleep(1); ThreadSwitch;
       system.enterCriticalSection(cs);
     end;
+    if firstRun then package.clear(true);
     package.replaceCodeProvider(provider);
     result:=@package;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType);
+PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansistring; CONST contextType:T_evaluationContextType; CONST firstRun:boolean);
   VAR sp:longint;
   begin
     system.enterCriticalSection(cs);
@@ -479,6 +481,7 @@ PROCEDURE T_runEvaluator.callMain(CONST provider: P_codeProvider; params: ansist
         params:=trim(copy(params,sp+1,length(params)));
       end;
     end;
+    if firstRun then package.clear(true);
     package.replaceCodeProvider(provider);
     request:=er_callMain;
     ensureThread;

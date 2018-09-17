@@ -938,7 +938,7 @@ FUNCTION T_abstractPackage.mergeCustomOps(CONST importedPackage:P_abstractPackag
     if customOperatorRules[op] =nil then begin
       customOperatorRules[op]:=importedPackage^.customOperatorRules[op];
       result:=result or (customOperatorRules[op]<>nil);
-    end else if importedPackage^.customOperatorRules[op]<>nil then begin
+    end else if (importedPackage^.customOperatorRules[op]<>nil) and (importedPackage^.customOperatorRules[op]<>customOperatorRules[op]) then begin
       connector^.postTextMessage(mt_el2_warning,customOperatorRules[op]^.getLocation,
         'Custom operator '+C_tokenInfo[op].defaultId+' hides operator defined '
         + ansistring(importedPackage^.customOperatorRules[op]^.getLocation));

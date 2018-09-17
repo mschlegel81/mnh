@@ -114,6 +114,7 @@ T_runnerModel=object
     PROCEDURE setDebugMode(CONST value:boolean);
   public
     stackTracing:boolean;
+    firstCallAfterActivation:boolean;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION areEditorsLocked:boolean;
@@ -202,8 +203,8 @@ FUNCTION loadWorkspace:boolean;
       new(editorMetaData[i],create(i,stream));
       result:=result and stream.allOkay;
     end;
-    inputPageControl.activePageIndex:=stream.readLongint;
     result:=result and stream.allOkay;
+    inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
     stream.destroy;
   end;
 
@@ -386,6 +387,7 @@ PROCEDURE T_editorMeta.activate;
         assistanceTabSheet.tabVisible:=true;
         triggerCheck;
         completionLogic.assignEditor(editor_,nil);
+        runnerModel.firstCallAfterActivation:=true;
       end else begin
         outlineGroupBox.visible:=false;
         editor.highlighter:=fileTypeMeta[language_].highlighter;
@@ -1034,8 +1036,9 @@ PROCEDURE T_runnerModel.customRun(CONST mainCall, profiling: boolean; CONST main
                            else contextType:=ect_normal;
     end;
 
-    if mainCall then runEvaluator.callMain(getEditor,mainParameters,contextType)
-                else runEvaluator.evaluate(getEditor,               contextType);
+    if mainCall then runEvaluator.callMain(getEditor,mainParameters,contextType,firstCallAfterActivation)
+                else runEvaluator.evaluate(getEditor,               contextType,firstCallAfterActivation);
+    firstCallAfterActivation:=false;
     lastStart.mainCall:=mainCall;
     lastStart.parameters:=mainParameters;
   end;

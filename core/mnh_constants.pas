@@ -530,7 +530,7 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
       'ducktype ',
       'typecast ',
       'custom operator ');
-      C_validModifierCombinations:array[0..17] of record
+      C_validModifierCombinations:array[0..15] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
       end=((modifiers:[];                                                   ruleType:rt_normal),
@@ -548,9 +548,7 @@ CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable,rt_datastore];
            (modifiers:[modifier_synchronized];                              ruleType:rt_synchronized),
            (modifiers:[modifier_synchronized,modifier_private];             ruleType:rt_synchronized),
            (modifiers:[modifier_customType];                                ruleType:rt_customTypeCheck),
-           (modifiers:[modifier_customType,modifier_private];               ruleType:rt_customTypeCheck),
-           (modifiers:[modifier_customDuckType];                            ruleType:rt_duckTypeCheck),
-           (modifiers:[modifier_customDuckType,modifier_private];           ruleType:rt_duckTypeCheck));
+           (modifiers:[modifier_customDuckType];                            ruleType:rt_duckTypeCheck));
 
 TYPE
   T_sideEffect=(se_inputViaAsk,
