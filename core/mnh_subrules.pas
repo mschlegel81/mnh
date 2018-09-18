@@ -52,6 +52,9 @@ TYPE
       comment:ansistring;
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
+      {$ifdef fullVersion}
+      PROCEDURE addSuppressUnusedWarningAttribute;
+      {$endif}
       FUNCTION hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
       FUNCTION getAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):T_subruleAttribute;
       PROCEDURE setAttributes(CONST attributeLines:T_arrayOfString; CONST location:T_tokenLocation; VAR threadLocalMessages:T_threadLocalMessages);
@@ -1072,6 +1075,16 @@ PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
     comment:=commentText;
   end;
+{$ifdef fullVersion}
+PROCEDURE T_ruleMetaData.addSuppressUnusedWarningAttribute;
+  CONST supressUnusedAttribute:T_subruleAttribute=(key:SUPPRESS_UNUSED_WARNING_ATTRIBUTE;value:'');
+  begin
+    if not(hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE)) then begin
+      setLength(attributes,length(attributes)+1);
+      attributes[length(attributes)-1]:=supressUnusedAttribute;
+    end;
+  end;
+{$endif}
 
 FUNCTION T_ruleMetaData.hasAttribute(CONST attributeKey:string; CONST caseSensitive:boolean=true):boolean;
   begin

@@ -2,7 +2,7 @@ type RegularContinuedFraction(x:IntList)->x.size>=1;
 type Rational(x:IntList(2))->!x.isRegularContinuedFraction;
 
 //*Returns rational number r in canonical form or as integer
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 shortenRational(r:IntList)->begin
   local x:=abs(r);
   x:=x div gcd@x;
@@ -151,7 +151,6 @@ decimalForm(r:Real                     )->r.toRational.decimalForm;
 decimalForm(cf:RegularContinuedFraction)->cf.toRational.decimalForm;
 
 //*Lists the first 30 approximations for r
-@SuppressUnusedWarning
 listApprox(cf:RegularContinuedFraction)->begin
   local r:=cf.toReal;
   [1..min(30,cf.size)].each(k,cf.head(k).toRegularContinuedFraction)
@@ -170,11 +169,9 @@ memoized private cfFormat(count>1)->'%s+1/('+cfFormat(count-1)+')';
 //*Returns a continued fraction in the form cf[0]+1/(cf[0]+1/(...))
 toString(cf:RegularContinuedFraction)->cfFormat(cf.size).format@cf;
 
-@SuppressUnusedWarning
 convergents(cf:RegularContinuedFraction)->
   [1..cf.size].pEach(k,cf.head(k).toRegularContinuedFraction.toRational);
 
-@SuppressUnusedWarning
 parseRational(s:String)->
   s.matches('^ *-?\d+ */ *-?\d+ *$')
   ? begin

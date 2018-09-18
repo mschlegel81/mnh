@@ -1,5 +1,5 @@
 type Matrix(M:List)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
-type SquareMatrix(M:Matrix)->M.each(row,row.isNumericList(M.size),AND);
+ducktype SquareMatrix(M:Matrix)->M.each(row,row.isNumericList(M.size),AND);
 
 private subMatrix(M:List,skipRow,skipCol)->
   M.each(row,index=skipRow
@@ -35,7 +35,7 @@ randomVec3OnSphere->begin
   x/euclidNorm(x);
 end;
 
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 randomOrthoMatrix->begin
   local x:=randomVec3OnSphere;
   local y:=x.crossProd(randomVec3OnSphere);
@@ -44,10 +44,10 @@ randomOrthoMatrix->begin
   [x,y,z];
 end;
 
-@SuppressUnusedWarning
 printMatrix(M)->M.each(row,row.join("\t")).join("\n").print;
 
-@SuppressUnusedWarning
+private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).abs)];
+
 invert(M:SquareMatrix)->begin
   //Gauss-Jordan Algorithm
   local aid:=M.each(row,begin local i:=index; row|(row.each(i,index=i ? 1 : 0)); end);
@@ -55,7 +55,7 @@ invert(M:SquareMatrix)->begin
     begin
       //Pivot
       aid:=aid.head(rowIndex) | //upper rows remain untouched
-           aid.tail(rowIndex).sort(rowIndex).reverseList;
+           aid.tail(rowIndex).sortByValueInRowDescending(rowIndex);
       //Divide by diagonal element
       aid[rowIndex]:=aid[rowIndex]/aid[rowIndex,rowIndex];
       //Subtract
@@ -64,22 +64,19 @@ invert(M:SquareMatrix)->begin
         aid[i]:=aid[i]-aid[i,rowIndex]*x);
       void;
     end);
-  aid.each(row,row.tail(M.size));
+  aid.each(row,row.tail(M.size)).toSquareMatrix;
 end;
 
-@SuppressUnusedWarning
 isUnitMatrix(M:SquareMatrix)->M.each(row,begin local rowIndex:=index; row.each(x,index=rowIndex ? x=1 : x=0,AND); end,AND);
 isUnitMatrix(M:Matrix)->false;
 
-@SuppressUnusedWarning
 rotZ(angle)->[[ cos(angle),sin(angle),0],
               [-sin(angle),cos(angle),0],
               [         0 ,        0 ,1]].toSquareMatrix;
-@SuppressUnusedWarning
 rotY(angle)->[[ cos(angle),0,sin(angle)],
               [         0 ,1,        0 ],
               [-sin(angle),0,cos(angle)]].toSquareMatrix;
-@SuppressUnusedWarning
 rotX(angle)->[[1,         0 ,        0 ],
               [0, cos(angle),sin(angle)],
               [0,-sin(angle),cos(angle)]].toSquareMatrix;
+

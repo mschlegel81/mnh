@@ -76,6 +76,7 @@ TYPE
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
+      suppressAllUnusedWarnings:boolean;
 
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
       {$endif}
@@ -840,14 +841,20 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
             {$ifdef fullVersion}
             if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
+              if P_mutableRule(ruleGroup)^.metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE then suppressAllUnusedWarnings:=true;
               if (modifier_private in ruleModifiers)
               then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules')
               else ruleGroup^.setIdResolved;
-            end;
+            end else if suppressAllUnusedWarnings then P_mutableRule(ruleGroup)^.metaData.addSuppressUnusedWarningAttribute;
             {$endif}
             dispose(subRule,destroy);
           end else begin
             if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
+            {$ifdef fullVersion}
+            if subRule^.metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE
+            then suppressAllUnusedWarnings:=true
+            else if suppressAllUnusedWarnings then subRule^.metaData.addSuppressUnusedWarningAttribute;
+            {$endif}
             P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,globals.primaryContext);
             if (P_ruleWithSubrules(ruleGroup)^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) and globals.primaryContext.messages.continueEvaluation then declareTypeCastRule;
           end;
@@ -1187,6 +1194,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
   begin
     {$ifdef fullVersion}
     anyCalled:=false;
+    suppressAllUnusedWarnings:=false;
     {$endif}
     for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
     setLength(runAfter,0);

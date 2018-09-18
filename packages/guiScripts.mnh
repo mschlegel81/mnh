@@ -1,17 +1,14 @@
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 @insertScript=Pick file or directory
 @SuppressUnusedParameterWarning
 pickFile(s:String)->ask('Pick file or directory').escape;
 
-@SuppressUnusedWarning
 @editScript=edit/Trim trailing spaces
 trimTrailingSpaces(s:StringList)->s.trimRight;
 
-@SuppressUnusedWarning
 @editScript=edit/Remove double blank lines
 removeDoubleBlanks(s:StringList)->s.trimRight.join("\n").replace("\n\n\n","\n\n").split("\n");
 
-@SuppressUnusedWarning
 @editScript=edit/Sort lines and remove duplicates
 sortLines(s:StringList)->s.unique.sort;
 
@@ -42,7 +39,6 @@ editDiff(editorFile:String)->begin
   unifiedDiff(compareWith,editorFile,editorContent(compareWith),editorContent(editorFile),2);
 end;
 
-@SuppressUnusedWarning
 @utility=diff/print
 editDiffPrint(editorFile:String)->printf("%s",editDiff(editorFile));
 
@@ -50,7 +46,6 @@ private printFileLink(filename:String,lineIndex,rowIndex)->print('@',filename,':
 private printFileLink(filename:String,lineIndex)->printFileLink(filename,lineIndex,0);
 private printFileLink(filename:String)->printFileLink(filename,0,0);
 
-@SuppressUnusedWarning
 @utility=search/find in all open files
 @SuppressUnusedParameterWarning
 findInAll(editorFile:String)->begin
@@ -61,13 +56,11 @@ findInAll(editorFile:String)->begin
   void;
 end;
 
-@SuppressUnusedWarning
 @utility=dependencies/open all imported files
 openImported(editorFile:String)->inspect(editorFile,editorFile.editorContent).useAndIncPaths.map(::printFileLink);
 
 private plain datastore scriptFolders:=void;
 
-@SuppressUnusedWarning
 @SuppressUnusedParameterWarning
 @utility=dependencies/clear file cache
 clearFileCache(editorFile:String)->scriptFolders:=void;
@@ -86,7 +79,6 @@ findAllMnhScripts->
 
 private useAndIncPaths(inspectionResult:Map)->inspectionResult.getAll(['uses','includes']).each(x,x.getInner(1),|);
 
-@SuppressUnusedWarning
 @utility=dependencies/open all importing files
 openImporting(editorFile:String)->begin
   print(editorFile);
@@ -94,7 +86,6 @@ openImporting(editorFile:String)->begin
   void;
 end;
 
-@SuppressUnusedWarning
 @utility=diff/Compare folders (new editor)
 @newEdit
 @language=diff
@@ -111,7 +102,6 @@ compareFolders(editorFile:String)->begin
   toCompare.each(file,unifiedDiff(folder1&file,folder2&file,fileLines(folder1&file),fileLines(folder2&file),2),' ',|);
 end;
 
-@SuppressUnusedWarning
 @utility=List demos by category
 @SuppressUnusedParameterWarning
 demosByCategory(dummyParameter)->
@@ -125,7 +115,6 @@ allFiles(mnhInfo['configDir'],'*.mnh')
    .each(demoGroup,
      print('Demos for: ',demoGroup[0],"\n  ",demoGroup[1].join("\n  ")));
 
-@SuppressUnusedWarning
 @utility=diff/file changes
 @newEdit
 @language=diff
@@ -135,7 +124,6 @@ editDiff2(editorFile:String)->
               fileLines(editorFile),
               editorContent(editorFile),2);
 
-@SuppressUnusedWarning
 @utility=Check for updates
 @SuppressUnusedParameterWarning
 checkForUpdates(editorFile:String)->begin

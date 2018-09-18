@@ -6,15 +6,13 @@ i:=[0,1].toComplex;
 @Override
 toString(x:Complex)->x[1]=0 ? x[0].toString : format("(%{$re}s%{$im<0 ? '' : '+'}s%{$im}s*i)",x[0],x[1]);
 
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 //*Returns the real part of a complex number x
 Re(x:Complex)->x[0];
 
-@SuppressUnusedWarning
 //*Returns the imaginary part of a complex number x
 Im(x:Complex)->x[1];
 
-@SuppressUnusedWarning
 @Override
 //*Returns the absolute value of a complex number
 abs(x:Complex)->x.toBuiltin.sqr.agg(+).sqrt;
@@ -60,7 +58,6 @@ OPERATOR_POT(x:Complex,y:Real)->y=0 ? [1,0].toComplex :exp(ln(x)*y);
 OPERATOR_POT(x:Complex,y:Complex)->exp(ln(x)*y);
 
 @Override
-@SuppressUnusedWarning
 //*Returns cosinus of complex x
 cos(x:Complex)->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
@@ -69,7 +66,6 @@ cos(x:Complex)->begin
 end;
 
 @Override
-@SuppressUnusedWarning
 //*Returns sinus of complex x
 sin(x:Complex)->begin
   //sin(x)=(e^(ix)-e^(-ix))/2i

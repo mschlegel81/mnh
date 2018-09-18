@@ -1,5 +1,5 @@
 USE linAlg;
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 //*Returns a polynomial function in x, interpolating the given points
 interpolatePolynomial(X:NumericList,Y:NumericList)->
 X.size<>Y.size ? fail('X and Y must have the same number of elements') :
@@ -12,7 +12,6 @@ begin
   end,+);
 end;
 
-@SuppressUnusedWarning
 //*Returns a piecewise function expression in x, interpolating the given points
 interpolatePiecewise(X:NumericList,Y:NumericList)->
 X.size<>Y.size ? fail('X and Y must have the same number of elements') :
@@ -54,7 +53,6 @@ end;
 private IPgen(thresholds:NumericList,coefficients:List)->
   {($x^[0..3]*coefficients[indexOf(thresholds<$x).trailing]).agg(+)};
 
-@SuppressUnusedWarning
 //*Returns a piecewise linear function in x, interpolating the given points
 interpolateLineSegments(X:NumericList,Y:NumericList)->begin
   local slopes:=(Y.tail-Y.leading)/(X.tail-X.leading);
