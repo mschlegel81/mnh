@@ -74,7 +74,6 @@ T_settings=object(T_serializable)
 end;
 
 PROCEDURE saveSettings;
-FUNCTION workerThreadCount:longint;
 VAR settings:T_settings;
 IMPLEMENTATION
 
@@ -85,27 +84,19 @@ FUNCTION settingsFileName: string;
 
 PROCEDURE saveSettings;
   begin
+    ensurePath(settingsFileName);
     settings.saveToFile(settingsFileName);
   end;
 
 CONSTRUCTOR T_settings.create;
   begin
-    cpuCount:=getNumberOfCPUs;
+    cpuCount:=1;
     mainForm.create;
     wasLoaded:=false;
   end;
 
 DESTRUCTOR T_settings.destroy;
   begin
-  end;
-
-FUNCTION workerThreadCount:longint;
-  begin
-    result:=settings.cpuCount-1;
-    if result>=0 then exit(result);
-    result:=getNumberOfCPUs-1;
-    if result<0 then result:=0;
-    settings.cpuCount:=result+1;
   end;
 
 FUNCTION T_settings.getSerialVersion: dword; begin result:=1644235078; end;
@@ -300,7 +291,6 @@ PROCEDURE T_formPosition.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
 
 INITIALIZATION
   settings.create;
-  ensurePath(settingsFileName);
   if fileExists(settingsFileName)
   then settings.loadFromFile(settingsFileName)
   else settings.initDefaults;

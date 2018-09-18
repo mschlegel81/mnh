@@ -198,9 +198,6 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; VAR context:T_threadCon
     subruleReplacesCallback :FUNCTION(CONST subrulePointer:pointer; CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_threadContext):boolean;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;
-{$ifndef fullVersion}
-FUNCTION workerThreadCount:longint;
-{$endif}
 IMPLEMENTATION
 
 CONSTRUCTOR T_contextRecycler.create;
@@ -242,13 +239,6 @@ FUNCTION T_contextRecycler.newContext(CONST parentThread:P_threadContext; CONST 
     leaveCriticalSection(recyclerCS);
     result^.initAsChildOf(parentThread,parentScopeAccess);
   end;
-
-{$ifndef fullVersion}
-FUNCTION workerThreadCount:longint;
-  begin
-    result:=getNumberOfCPUs-1;
-  end;
-{$endif}
 
 CONSTRUCTOR T_evaluationGlobals.create(CONST outAdapters:P_messageConnector);
   begin
@@ -838,7 +828,7 @@ DESTRUCTOR T_taskQueue.destroy;
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_threadContext);
   PROCEDURE ensurePoolThreads();
     begin
-      if (poolThreadsRunning<workerThreadCount) then begin
+      if (poolThreadsRunning<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}-1) then begin
         interLockedIncrement(poolThreadsRunning);
         beginThread(@threadPoolThread,context^.related.evaluation);
       end;
