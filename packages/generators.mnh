@@ -1,5 +1,5 @@
 //*Wraps sourceGenerator so that it generates (at max) for the given period of time
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
 {begin
    local gen:=sourceGenerator;
@@ -11,7 +11,6 @@ timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
  end}.toGenerator;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b)<=finalSum and a,b>=minElementValue, ordered by (a+b)
-@SuppressUnusedWarning
 pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
   local k:=initialSum;
   local i:=minElementValue-1;
@@ -22,18 +21,15 @@ end}.toGenerator;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b) and a,b>=1, ordered by (a+b)
 //*Warning: (potentially) infinite generator!
-@SuppressUnusedWarning
 pairGenerator(initialSum)->pairGenerator(initialSum,2^63-1,1);
 
 //*Returns an iterator returning all elements of the input list
-@SuppressUnusedWarning
 listIterator(l:List)->{begin
   local index:=rangeGenerator(0,l.size);
   local value:=l;
 save; value[index() orElse -1]; end}.toGenerator;
 
 //*Returns a chunk iterator
-@SuppressUnusedWarning
 chunkIterator(iter:Iteratable,chunkSize>=1)->{begin
   local g:=iter.isIteratableExpression
            ? iter

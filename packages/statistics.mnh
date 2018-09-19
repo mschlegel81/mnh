@@ -3,11 +3,9 @@ mean    (X:NumericList)->X.agg(+)/size(X);
 //*Returns the (statistical) variance X
 variance(X:NumericList)->mean(X^2)-mean(X)^2;
 //*Returns the standardVariation of X
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 standardVariation(X:NumericList)->sqrt(X.variance);
 //*Returns the median of numeric list X
-@SuppressUnusedWarning
 median(X:NumericList)->sort(X).get(size(X) div 2);
 //*Returns the decils of L
-@SuppressUnusedWarning
 decils(L)->sort(L).get(round([0..10]/10*(size(L)-1)));

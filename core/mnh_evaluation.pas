@@ -15,7 +15,7 @@ USES sysutils,
      mnh_tokenArray,
      tokenStack,
      mnh_messages,
-     {$ifdef fullVersion}mnh_settings,{$endif}
+     {$ifdef fullVersion}mnh_settings,{$else}mySys,{$endif}
      valueStore,
      mnh_contexts,
      mnh_funcs,
@@ -282,7 +282,7 @@ FUNCTION reduceExpression(VAR first:P_token; VAR context:T_threadContext):T_redu
       if (eachType=tt_parallelEach) and
          ((context.callDepth>=STACK_DEPTH_LIMIT-16) or
          not(tco_spawnWorker in context.threadOptions) or
-         (workerThreadCount<=0))
+         ({$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}<=1))
       then eachType:=tt_each;
       eachLocation:=first^.next^.location;
       initialize(bodyRule);

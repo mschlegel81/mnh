@@ -281,8 +281,10 @@ PROCEDURE T_threadLocalMessages.propagateFlags(CONST up:boolean=true; CONST down
     if (parentMessages=nil) and (globalMessages<>nil) then globalMessages^.flags:=globalMessages^.flags+flags;
     {$endif}
     if down then for child in childMessages do begin
-      child^.flags:=child^.flags+flags;
-      child^.propagateFlags(false,true);
+      try
+        child^.flags:=child^.flags+flags;
+        child^.propagateFlags(false,true);
+      except end;
     end;
   end;
 

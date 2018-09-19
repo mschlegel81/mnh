@@ -76,18 +76,19 @@ TYPE
       {$ifdef fullVersion}
       pseudoCallees:T_packageProfilingCalls;
       anyCalled:boolean;
+      suppressAllUnusedWarnings:boolean;
 
       PROCEDURE interpretInPackage(CONST input:T_arrayOfString; VAR globals:T_evaluationGlobals);
       {$endif}
 
       PROCEDURE resolveRuleIds(CONST adapters:P_threadLocalMessages);
-      PROCEDURE clear(CONST includeSecondaries:boolean);
       FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart:T_tokenLocation; VAR adapters:T_threadLocalMessages; VAR metaData:T_ruleMetaData):P_rule;
       PROCEDURE writeDataStores(VAR adapters:T_threadLocalMessages; CONST recurse:boolean);
       FUNCTION inspect(CONST includeRulePointer:boolean; VAR context:T_threadContext):P_mapLiteral;
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
     public
       packageRules,importedRules:T_ruleMap;
+      PROCEDURE clear(CONST includeSecondaries:boolean);
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST localIdInfos:P_localIdInfos=nil{$endif});
@@ -840,14 +841,20 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
             else P_mutableRule(ruleGroup)^.setMutableValue(newVoidLiteral,true);
             {$ifdef fullVersion}
             if P_mutableRule(ruleGroup)^.metaData.hasAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
+              if P_mutableRule(ruleGroup)^.metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE then suppressAllUnusedWarnings:=true;
               if (modifier_private in ruleModifiers)
               then globals.primaryContext.messages.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Attribute '+SUPPRESS_UNUSED_WARNING_ATTRIBUTE+' is ignored for private rules')
               else ruleGroup^.setIdResolved;
-            end;
+            end else if suppressAllUnusedWarnings then P_mutableRule(ruleGroup)^.metaData.addSuppressUnusedWarningAttribute;
             {$endif}
             dispose(subRule,destroy);
           end else begin
             if subRule^.metaData.hasAttribute(EXECUTE_AFTER_ATTRIBUTE) then addRuleToRunAfter(subRule);
+            {$ifdef fullVersion}
+            if subRule^.metaData.getAttribute(SUPPRESS_UNUSED_WARNING_ATTRIBUTE).value=SUPPRESS_ALL_UNUSED_VALUE
+            then suppressAllUnusedWarnings:=true
+            else if suppressAllUnusedWarnings then subRule^.metaData.addSuppressUnusedWarningAttribute;
+            {$endif}
             P_ruleWithSubrules(ruleGroup)^.addOrReplaceSubRule(subRule,globals.primaryContext);
             if (P_ruleWithSubrules(ruleGroup)^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck]) and globals.primaryContext.messages.continueEvaluation then declareTypeCastRule;
           end;
@@ -1187,6 +1194,7 @@ PROCEDURE T_package.clear(CONST includeSecondaries: boolean);
   begin
     {$ifdef fullVersion}
     anyCalled:=false;
+    suppressAllUnusedWarnings:=false;
     {$endif}
     for i:=0 to length(runAfter)-1 do disposeLiteral(runAfter[i]);
     setLength(runAfter,0);
@@ -1260,9 +1268,7 @@ FUNCTION T_package.getTypeMap:T_typeMap;
   VAR r:P_rule;
 
   PROCEDURE addDef(CONST def:P_typedef);
-    begin
-      result.put(def^.getName,def);
-    end;
+    begin result.put(def^.getName,def); end;
   begin
     result.create();
     for r in importedRules.valueSet do if r^.getRuleType in [rt_customTypeCheck,rt_duckTypeCheck] then addDef(r^.getTypedef);

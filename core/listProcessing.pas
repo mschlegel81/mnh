@@ -2,7 +2,7 @@ UNIT listProcessing;
 INTERFACE
 USES sysutils,
      mnh_constants, mnh_basicTypes,
-     {$ifdef fullVersion}mnh_settings,{$endif}
+     {$ifdef fullVersion}mnh_settings,{$else}mySys,{$endif}
      mnh_litVar,valueStore,mnh_subrules,
      mnh_aggregators,mnh_contexts;
 TYPE
@@ -170,7 +170,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
       proceed:boolean=true;
   begin
     recycling.fill:=0;
-    aimEnqueueCount:=workerThreadCount*2+1;
+    aimEnqueueCount:={$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}*2+1;
     x:=inputIterator^.evaluateToLiteral(eachLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
 
@@ -179,7 +179,7 @@ PROCEDURE processListParallel(CONST inputIterator:P_expressionLiteral;
         if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
           if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
           //if there is not enough pending after dequeuing, increase aimEnqueueCount
-          if context.getGlobals^.taskQueue.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
+          if context.getGlobals^.taskQueue.getQueuedCount<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif} then inc(aimEnqueueCount,{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif});
         end;
         proceed:=context.messages.continueEvaluation and not(aggregator^.earlyAbort);
       end;
@@ -273,7 +273,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
     isExpressionNullary:=not(expr^.canApplyToNumberOfParameters(1));
     resultLiteral:=newListLiteral();
     recycling.fill:=0;
-    aimEnqueueCount:=workerThreadCount*2+1;
+    aimEnqueueCount:={$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}*2+1;
     x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
       if isExpressionNullary
@@ -282,7 +282,7 @@ FUNCTION processMapParallel(CONST inputIterator,expr:P_expressionLiteral;
       if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
         if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
         //if there is not enough pending after dequeuing, increase aimEnqueueCount
-        if context.getGlobals^.taskQueue.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
+        if context.getGlobals^.taskQueue.getQueuedCount<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif} then inc(aimEnqueueCount,{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif});
       end;
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(mapLocation,@context).literal;
@@ -356,14 +356,14 @@ PROCEDURE processFilterParallel(CONST inputIterator,filterExpression:P_expressio
       aimEnqueueCount:longint;
   begin
     recycling.fill:=0;
-    aimEnqueueCount:=workerThreadCount*2+1;
+    aimEnqueueCount:={$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif}*2+1;
     x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;
     while (x<>nil) and (x^.literalType<>lt_void) and (context.messages.continueEvaluation) do begin
       enqueueForAggregation(createTask(x));
       if context.getGlobals^.taskQueue.getQueuedCount>aimEnqueueCount then begin
         if not(canAggregate) then context.getGlobals^.taskQueue.activeDeqeue;
         //if there is not enough pending after dequeuing, increase aimEnqueueCount
-        if context.getGlobals^.taskQueue.getQueuedCount<workerThreadCount then inc(aimEnqueueCount,workerThreadCount);
+        if context.getGlobals^.taskQueue.getQueuedCount<{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif} then inc(aimEnqueueCount,{$ifdef fullVersion}settings.cpuCount{$else}getNumberOfCPUs{$endif});
       end;
       disposeLiteral(x);
       x:=inputIterator^.evaluateToLiteral(filterLocation,@context).literal;

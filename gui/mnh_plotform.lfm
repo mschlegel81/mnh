@@ -4,7 +4,7 @@ object plotForm: TplotForm
   Top = 351
   Width = 700
   Caption = 'MNH plot'
-  ClientHeight = 421
+  ClientHeight = 431
   ClientWidth = 700
   DesignTimePPI = 144
   Menu = MainMenu
@@ -29,36 +29,36 @@ object plotForm: TplotForm
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 36
-    Top = 385
+    Height = 23
+    Top = 408
     Width = 700
     Panels = <>
   end
   object AnimationGroupBox: TGroupBox
     Left = 0
-    Height = 59
+    Height = 45
     Top = 0
     Width = 700
     Align = alTop
     Anchors = []
     AutoSize = True
     Caption = 'Animation'
-    ClientHeight = 29
+    ClientHeight = 25
     ClientWidth = 696
     TabOrder = 1
     object animateCheckBox: TCheckBox
       Left = 0
-      Height = 29
+      Height = 25
       Top = 0
-      Width = 93
+      Width = 63
       Align = alLeft
       Caption = 'animate'
       OnKeyUp = FormKeyUp
       TabOrder = 0
     end
     object animationSpeedTrackbar: TTrackBar
-      Left = 161
-      Height = 29
+      Left = 110
+      Height = 25
       Top = 0
       Width = 100
       Position = 6
@@ -67,17 +67,17 @@ object plotForm: TplotForm
       TabOrder = 2
     end
     object animationFPSLabel: TLabel
-      Left = 261
-      Height = 29
+      Left = 210
+      Height = 25
       Top = 0
-      Width = 149
+      Width = 101
       Align = alLeft
       Caption = 'animationFPSLabel'
       ParentColor = False
     end
     object frameTrackBar: TTrackBar
-      Left = 410
-      Height = 29
+      Left = 311
+      Height = 25
       Top = 0
       Width = 200
       Frequency = 5
@@ -88,20 +88,20 @@ object plotForm: TplotForm
       TabOrder = 3
     end
     object cycleCheckbox: TCheckBox
-      Left = 93
-      Height = 29
+      Left = 63
+      Height = 25
       Top = 0
-      Width = 68
+      Width = 47
       Align = alLeft
       Caption = 'cycle'
       OnKeyUp = FormKeyUp
       TabOrder = 1
     end
     object frameIndexLabel: TLabel
-      Left = 610
-      Height = 29
+      Left = 511
+      Height = 25
       Top = 0
-      Width = 10
+      Width = 6
       Align = alLeft
       Caption = '0'
       ParentColor = False
@@ -129,6 +129,10 @@ object plotForm: TplotForm
       object miRenderToFile: TMenuItem
         Caption = 'Render to file...'
         OnClick = miRenderToFileClick
+      end
+      object miCacheFrames: TMenuItem
+        Caption = 'Cache animation Frames'
+        OnClick = miCacheFramesClick
       end
     end
     object MenuItem1: TMenuItem

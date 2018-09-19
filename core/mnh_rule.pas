@@ -85,6 +85,7 @@ TYPE
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
+      FUNCTION hasPublicSubrule:boolean; virtual;
   end;
 
   P_typecheckRule=^T_typecheckRule;
@@ -97,6 +98,7 @@ TYPE
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet; virtual;
       FUNCTION getTypedef:P_typedef; virtual;
+      FUNCTION hasPublicSubrule:boolean; virtual;
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -387,6 +389,9 @@ FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
     for s in subrules do if s^.isPublic then exit(true);
     result:=false;
   end;
+
+FUNCTION T_typeCastRule .hasPublicSubrule:boolean; begin result:=true; end;
+FUNCTION T_typecheckRule.hasPublicSubrule:boolean; begin result:=true; end;
 
 FUNCTION T_ruleWithSubrules.getCmdLineHelpText: T_arrayOfString;
   VAR i:longint;

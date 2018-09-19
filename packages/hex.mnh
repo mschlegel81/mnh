@@ -1,6 +1,6 @@
 private HEX_DIGITS:=['0'..'9','A'..'F'];
 private HEX_MAP:=HEX_DIGITS.each(i,[i,index]).toMap;
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 //*Converts i to hexadecimal representation with an even number of digits
 intToHex(i:Int)->begin
   local h:=format('%x',i);
@@ -11,7 +11,6 @@ end;
 
 private hexToDigits(h:String)->HEX_MAP.getAll(h.upper.clean(HEX_DIGITS,'').chars);
 
-@SuppressUnusedWarning
 //*Converts hexadecimal string h to bytes
 hexToBytes(h:String)->begin
   local d:=h.hexToDigits.reverseList;
@@ -20,11 +19,9 @@ hexToBytes(h:String)->begin
   d[i]+d[i+1]*16;
 end;
 
-@SuppressUnusedWarning
 //*Converts hexadecimal string h to an integer if in range or to a real otherwise
 hexToNumeric(h:String)->h.hexToDigits.composeDigits(16);
 
-@SuppressUnusedWarning
 hexPlus(a:String,b:String)->begin
   local A:=hexToDigits(a).reverseList;
   local B:=hexToDigits(b).reverseList;

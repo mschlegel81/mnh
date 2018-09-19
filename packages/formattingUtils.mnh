@@ -1,13 +1,10 @@
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 #*Format for a frame of ---; accepts one parameter
 MINUS_FRAME_FMT   :="+%{repeat('-',$0.length+2)}s+\n| %{$0}s |\n+%{repeat('-',$0.length+2)}s+";
-@SuppressUnusedWarning
 #*Format for a frame of ===; accepts one parameter
 EQUALS_FRAME_FMT  :="#%{repeat('=',$0.length+2)}s#\n# %{$0}s #\n#%{repeat('=',$0.length+2)}s#";
-@SuppressUnusedWarning
 #*Format for a frame of ***; accepts one parameter
 ASTERISK_FRAME_FMT:="*%{repeat('*',$0.length+2)}s*\n* %{$0}s *\n*%{repeat('*',$0.length+2)}s*";
-@SuppressUnusedWarning
 #*Format for a pretty frame of diagonal outline; accepts one parameter
 SKEWED_FRAME_FMT:="   %{repeat('_',$0.length+3)}s\n  /%{repeat(' ',$0.length+2)}s/\n / %{$0}s /\n/%{repeat('_',$0.length+2)}s/";
 
@@ -30,7 +27,6 @@ end;
 //*Formats a list as a table for printout. The result is a stringList
 formatTable(L:List,header:StringList)->formatTable([header]|L);
 
-@SuppressUnusedWarning
 //*Rounds value to digits relevant digits
 //*e.g. roundToRelvantDigits(1.234,2) -> 1.2
 roundToRelevantDigits(value:Numeric,digits>0)->
