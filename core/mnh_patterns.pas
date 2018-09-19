@@ -22,6 +22,7 @@ TYPE
       restrictionId    :T_idString;
       builtinTypeCheck :T_typeCheck;
       customTypeCheck  :P_typedef;
+      skipCustomCheck  :boolean;
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; CONST location:T_tokenLocation; VAR context:T_threadContext):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
@@ -128,6 +129,7 @@ CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
     customTypeCheck :=nil;
     typeWhitelist   :=[lt_boolean..lt_emptyMap];
     elementLocation:=loc;
+    skipCustomCheck:=false;
   end;
 
 CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString; CONST loc:T_tokenLocation);
@@ -143,7 +145,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     if not(L^.literalType in typeWhitelist) then exit(false);
     result:=true;
     case restrictionType of
-      tt_customTypeCheck:    exit(customTypeCheck^.matchesLiteral(L,location,@context));
+      tt_customTypeCheck:    exit(skipCustomCheck or customTypeCheck^.matchesLiteral(L,location,@context));
       tt_typeCheck:          exit(typeCheckAccept(L,builtinTypeCheck,restrictionIdx));
       tt_comparatorEq..tt_comparatorListEq,tt_operatorIn:begin
         if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
@@ -661,6 +663,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.customTypeCheck:=P_abstractRule(parts[i].first^.data)^.getTypedef;
+              rulePatternElement.skipCustomCheck:=rulePatternElement.customTypeCheck^.isAlwaysTrue;
               {$ifdef debugMode}
               if rulePatternElement.customTypeCheck=nil then raise Exception.create('Rule '+P_abstractRule(parts[i].first^.data)^.getId+' did not return a type definition');
               {$endif}

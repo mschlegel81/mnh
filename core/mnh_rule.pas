@@ -355,6 +355,8 @@ PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR
 
 PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext);
   VAR rulePattern:T_patternElement;
+      inlineValue:P_literal;
+      alwaysTrue:boolean=false;
   begin
     if not(rule^.hasValidValidCustomTypeCheckPattern(getRuleType=rt_duckTypeCheck)) then begin
      if (getRuleType=rt_customTypeCheck)
@@ -374,11 +376,17 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
     {$endif}
     if typedef=nil then begin
       rulePattern:=rule^.getPattern.getFirst;
+      inlineValue:=rule^.getInlineValue;
+      if inlineValue<>nil then begin
+        alwaysTrue:=boolLit[true].equals(inlineValue);
+        disposeLiteral(inlineValue);
+      end;
       new(typedef,create(getId,
                          rulePattern.getWhitelist,
                          rulePattern.getCustomTypeCheck,
                          P_expressionLiteral(rule^.rereferenced),
-                         getRuleType=rt_duckTypeCheck));
+                         getRuleType=rt_duckTypeCheck,
+                         alwaysTrue));
     end;
   end;
 
