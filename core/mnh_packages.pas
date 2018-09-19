@@ -744,7 +744,7 @@ PROCEDURE T_package.interpret(VAR statement:T_enhancedStatement; CONST usecase:T
       VAR castRule:P_typeCastRule;
           otherRule:P_rule;
       begin
-        new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup^.getLocation));
+        new(castRule,create(P_typecheckRule(ruleGroup)^.getTypedef,ruleGroup));
         if packageRules.containsKey(castRule^.getId,otherRule) then begin
           globals.primaryContext.messages.raiseError(
             'Cannot declare implicit typecast rule '+castRule^.getId+C_lineBreakChar+

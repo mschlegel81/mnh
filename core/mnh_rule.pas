@@ -80,12 +80,16 @@ TYPE
   T_typeCastRule=object(T_ruleWithSubrules)
     private
       typedef:P_typedef;
+      {$ifdef fullVersion}related:P_rule;{$endif}
     public
-      CONSTRUCTOR create(CONST def:P_typedef; CONST startAt:T_tokenLocation);
+      CONSTRUCTOR create(CONST def:P_typedef; CONST relatedCheckRule:P_rule);
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; VAR context:T_threadContext); virtual;
       FUNCTION replaces(CONST ruleTokenType:T_tokenType; CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT firstRep,lastRep:P_token;CONST threadContextPointer:pointer):boolean; virtual;
       FUNCTION getFunctionPointer(VAR context:T_threadContext; CONST ruleTokenType:T_tokenType; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
       FUNCTION hasPublicSubrule:boolean; virtual;
+      {$ifdef fullVersion}
+      PROCEDURE setIdResolved; virtual;
+      {$endif}
   end;
 
   P_typecheckRule=^T_typecheckRule;
@@ -240,12 +244,13 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
     cache.create(rule_cs);
   end;
 
-CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST startAt:T_tokenLocation);
+CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_rule);
   begin
-    inherited create('to'+def^.getName,startAt,rt_customTypeCast);
+    inherited create('to'+def^.getName,relatedCheckRule^.getLocation,rt_customTypeCast);
     typedef:=def;
     allowCurrying:=false;
     {$ifdef fullVersion}
+    related:=relatedCheckRule;
     if def^.isDucktyping then setIdResolved;
     {$endif}
   end;
@@ -392,6 +397,14 @@ FUNCTION T_ruleWithSubrules.hasPublicSubrule: boolean;
 
 FUNCTION T_typeCastRule .hasPublicSubrule:boolean; begin result:=true; end;
 FUNCTION T_typecheckRule.hasPublicSubrule:boolean; begin result:=true; end;
+
+{$ifdef fullVersion}
+PROCEDURE T_typeCastRule.setIdResolved;
+  begin
+    inherited setIdResolved;
+    related^.setIdResolved;
+  end;
+{$endif}
 
 FUNCTION T_ruleWithSubrules.getCmdLineHelpText: T_arrayOfString;
   VAR i:longint;
