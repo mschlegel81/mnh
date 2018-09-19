@@ -20,12 +20,12 @@ TYPE
       alloc:longint;
       FUNCTION getPoint(CONST index:longint):T_point;               inline;
       PROCEDURE setPoint(CONST index:longint; CONST value:T_point); inline;
-      PROCEDURE SetSize(CONST newSize:longint);
+      PROCEDURE setSize(CONST newSize:longint);
     public
       PROCEDURE init(CONST initialSize:longint=0);
       PROCEDURE free;
       PROPERTY point[index:longint]:T_point read getPoint write setPoint; default;
-      PROPERTY size:longint read alloc write SetSize;
+      PROPERTY size:longint read alloc write setSize;
       PROCEDURE cloneTo(OUT other:T_dataRow);
   end;
 
@@ -137,11 +137,11 @@ FUNCTION T_dataRow.getPoint(CONST index: longint): T_point;
 
 PROCEDURE T_dataRow.setPoint(CONST index: longint; CONST value: T_point);
   begin
-    if index>=alloc then SetSize(index+1);
+    if index>=alloc then setSize(index+1);
     dat[index]:=value;
   end;
 
-PROCEDURE T_dataRow.SetSize(CONST newSize: longint);
+PROCEDURE T_dataRow.setSize(CONST newSize: longint);
   begin
     alloc:=newSize;
     ReAllocMem(dat,sizeOf(T_point)*alloc);
@@ -427,14 +427,14 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TCanvas; CONST aimWidth,a
   PROCEDURE initTics(CONST axis: char);
 
     FUNCTION niceText(CONST value, scale: longint): string;
-      CONST suf: array[0..3] of string = ('', '0', '00', '000');
+      CONST suf: array[0..5] of string = ('', '0', '00', '000', '0000', '00000');
       begin
         if value = 0 then exit('0');
-        if (scale>=-3) and (scale<0) then begin
+        if (scale>=-5) and (scale<0) then begin
           result:=intToStr(value);
           while length(result)<-scale do result:='0'+result;
           exit(copy(result, 1, length(result)+scale)+'.'+copy(result, length(result)+1+scale, -scale));
-        end else if (scale>=0) and (scale<3)
+        end else if (scale>=0) and (scale<5)
         then exit(intToStr(value)+suf[scale])
         else exit(intToStr(value)+'E'+intToStr(scale));
       end;
