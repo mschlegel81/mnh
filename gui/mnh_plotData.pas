@@ -1055,8 +1055,7 @@ PROCEDURE T_plot.drawCustomText(CONST target: TCanvas; CONST intendedWidth,
     for txt in customText do txt.renderText(intendedWidth,intendedHeight,scalingOptions,target);
   end;
 
-PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,
-  intendedHeight: longint; VAR gridTic: T_ticInfos);
+PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intendedHeight: longint; VAR gridTic: T_ticInfos);
   VAR i, x, y: longint;
       cSysX,cSysY:longint;
   begin
