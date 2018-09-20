@@ -55,7 +55,7 @@ TYPE
     public
       CONSTRUCTOR createGetSizeRequest;
       FUNCTION getSizeWaiting(VAR errorFlagProvider:T_threadLocalMessages):T_imageDimensions;
-      PROCEDURE SetSize(CONST width,height:longint);
+      PROCEDURE setSize(CONST width,height:longint);
   end;
 
 {$i mnh_func_defines.inc}
@@ -493,7 +493,7 @@ FUNCTION T_imageDimensionsMessage.getSizeWaiting(VAR errorFlagProvider:T_threadL
     leaveCriticalSection(messageCs);
   end;
 
-PROCEDURE T_imageDimensionsMessage.SetSize(CONST width, height: longint);
+PROCEDURE T_imageDimensionsMessage.setSize(CONST width, height: longint);
   begin
     enterCriticalSection(messageCs);
     newWidth:=width;
@@ -552,8 +552,8 @@ PROCEDURE T_imageSystem.processMessage(CONST message: P_storedMessage);
         if currentImage<>nil then P_replaceImageMessage(message)^.setImage(P_rawImage(currentImage^.getClone))
                              else P_replaceImageMessage(message)^.setImage(nil);
       mt_image_obtainDimensions:
-        if currentImage<>nil then P_imageDimensionsMessage(message)^.SetSize(currentImage^.dimensions.width,currentImage^.dimensions.height)
-                             else P_imageDimensionsMessage(message)^.SetSize(0,0);
+        if currentImage<>nil then P_imageDimensionsMessage(message)^.setSize(currentImage^.dimensions.width,currentImage^.dimensions.height)
+                             else P_imageDimensionsMessage(message)^.setSize(0,0);
     end;
   end;
 

@@ -247,9 +247,10 @@ TYPE
       builtinsuper:T_literalTypeSet;
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
+      alwaysTrue:boolean;
       FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer):P_typableLiteral;
     public
-      CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_:boolean);
+      CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
       FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_typableLiteral;
@@ -258,6 +259,7 @@ TYPE
       PROPERTY getSuper:P_typedef read super;
       PROPERTY getWhitelist:T_literalTypeSet read builtinsuper;
       PROPERTY isDucktyping:boolean read ducktyping;
+      PROPERTY isAlwaysTrue:boolean read alwaysTrue;
   end;
 
   generic G_literalKeyMap<VALUE_TYPE>= object
@@ -759,13 +761,14 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
-CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinType:T_literalTypeSet; CONST super_: P_typedef; CONST typerule: P_expressionLiteral; CONST ducktyping_:boolean);
+CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinType:T_literalTypeSet; CONST super_: P_typedef; CONST typerule: P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
   begin
     name        :=id;
     super       :=super_;
     builtinsuper:=builtinType;
     ducktyperule:=typerule;
     ducktyping  :=ducktyping_;
+    alwaysTrue  :=alwaysTrue_;
   end;
 
 DESTRUCTOR T_typedef.destroy;
@@ -785,7 +788,7 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
         else T:=T^.super;
       end;
     end;
-    if ducktyping then result:=ducktyperule^.evaluateToBoolean(location,threadContext,false,L);
+    if ducktyping then result:=alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,L);
   end;
 
 FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer):P_typableLiteral;
@@ -813,13 +816,13 @@ FUNCTION T_typedef.cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST
     if P_typableLiteral(L)^.customType=@self then begin
       exit(P_typableLiteral(L^.rereferenced));
     end;
-    if ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
+    if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,L) then begin
       result:=cloneLiteral(P_typableLiteral(L),location,threadContext);
       if result<>nil then result^.customType:=@self;
     end else if (super<>nil) then begin
       result:=super^.cast(L,location,threadContext,adapters);
       if (result<>nil) then begin
-        if ducktyperule^.evaluateToBoolean(location,threadContext,false,result)
+        if alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,result)
         then result^.customType:=@self
         else disposeLiteral(result);
       end;

@@ -241,7 +241,7 @@ FUNCTION execSync_impl intFuncSignature;
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.messages.continueEvaluation do begin
-          memStream.SetSize(BytesRead+READ_BYTES);
+          memStream.setSize(BytesRead+READ_BYTES);
           if not(includeStdErr) then begin
             while tempProcess.stdErr.NumBytesAvailable>0 do
             tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
@@ -258,7 +258,7 @@ FUNCTION execSync_impl intFuncSignature;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
-          memStream.SetSize(BytesRead+READ_BYTES);
+          memStream.setSize(BytesRead+READ_BYTES);
           if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
@@ -268,7 +268,7 @@ FUNCTION execSync_impl intFuncSignature;
         result := $ffffffff;
       end;
       tempProcess.free;
-      memStream.SetSize(BytesRead);
+      memStream.setSize(BytesRead);
       output := TStringList.create;
       output.loadFromStream(memStream);
       memStream.free;

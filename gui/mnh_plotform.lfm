@@ -4,7 +4,7 @@ object plotForm: TplotForm
   Top = 351
   Width = 700
   Caption = 'MNH plot'
-  ClientHeight = 431
+  ClientHeight = 421
   ClientWidth = 700
   DesignTimePPI = 144
   Menu = MainMenu
@@ -29,36 +29,36 @@ object plotForm: TplotForm
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 408
+    Height = 36
+    Top = 385
     Width = 700
     Panels = <>
   end
   object AnimationGroupBox: TGroupBox
     Left = 0
-    Height = 45
+    Height = 59
     Top = 0
     Width = 700
     Align = alTop
     Anchors = []
     AutoSize = True
     Caption = 'Animation'
-    ClientHeight = 25
+    ClientHeight = 29
     ClientWidth = 696
     TabOrder = 1
     object animateCheckBox: TCheckBox
       Left = 0
-      Height = 25
+      Height = 29
       Top = 0
-      Width = 63
+      Width = 93
       Align = alLeft
       Caption = 'animate'
       OnKeyUp = FormKeyUp
       TabOrder = 0
     end
     object animationSpeedTrackbar: TTrackBar
-      Left = 110
-      Height = 25
+      Left = 161
+      Height = 29
       Top = 0
       Width = 100
       Position = 6
@@ -67,42 +67,42 @@ object plotForm: TplotForm
       TabOrder = 2
     end
     object animationFPSLabel: TLabel
-      Left = 210
-      Height = 25
+      Left = 261
+      Height = 29
       Top = 0
-      Width = 101
+      Width = 149
       Align = alLeft
       Caption = 'animationFPSLabel'
       ParentColor = False
     end
     object frameTrackBar: TTrackBar
-      Left = 311
-      Height = 25
+      Left = 410
+      Height = 29
       Top = 0
-      Width = 200
+      Width = 276
       Frequency = 5
       OnChange = frameTrackBarChange
       Position = 0
-      Align = alLeft
+      Align = alClient
       OnKeyUp = FormKeyUp
       TabOrder = 3
     end
     object cycleCheckbox: TCheckBox
-      Left = 63
-      Height = 25
+      Left = 93
+      Height = 29
       Top = 0
-      Width = 47
+      Width = 68
       Align = alLeft
       Caption = 'cycle'
       OnKeyUp = FormKeyUp
       TabOrder = 1
     end
     object frameIndexLabel: TLabel
-      Left = 511
-      Height = 25
+      Left = 686
+      Height = 29
       Top = 0
-      Width = 6
-      Align = alLeft
+      Width = 10
+      Align = alRight
       Caption = '0'
       ParentColor = False
     end
