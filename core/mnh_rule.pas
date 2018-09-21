@@ -382,7 +382,8 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
         disposeLiteral(inlineValue);
       end;
       new(typedef,create(getId,
-                         rulePattern.getWhitelist,
+                         rulePattern.getBuiltinTypeCheck,
+                         rulePattern.getBuiltinCheckParameter,
                          rulePattern.getCustomTypeCheck,
                          P_expressionLiteral(rule^.rereferenced),
                          getRuleType=rt_duckTypeCheck,

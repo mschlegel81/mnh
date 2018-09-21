@@ -391,7 +391,8 @@ TYPE
                tc_typeCheckStatelessExpression,
                tc_typeCheckStatefulExpression,
                tc_typeCheckIteratableExpression,
-               tc_typeCheckIteratable);
+               tc_typeCheckIteratable,
+               tc_any);
 
 CONST
   C_typeCheckInfo:array[T_typeCheck] of record
@@ -461,8 +462,9 @@ CONST
                                   (name:'IteratableExpression'; helpText:'Matches iteratable expressions';
                                    modifiable:false;  matching:[lt_expression]),
   {tc_typeCheckIteratable}        (name:'Iteratable'; helpText:'Matches iteratable expressions, collections and maps';
-                                   modifiable:false;  matching:[lt_expression..lt_emptyMap]));
-
+                                   modifiable:false;  matching:[lt_expression..lt_emptyMap]),
+  {tc_any}                        (name:''; helpText:'';
+                                   modifiable:false;  matching:[lt_boolean..lt_emptyMap]));
 TYPE
   T_modifier=(
     modifier_private,
