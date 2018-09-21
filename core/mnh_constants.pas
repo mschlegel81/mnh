@@ -474,7 +474,7 @@ TYPE
     modifier_local,
     modifier_customType,
     modifier_customDuckType,
-    modifier_noCurry);
+    modifier_curry);
   T_modifierSet=set of T_modifier;
 CONST
   C_modifierInfo:array[T_modifier] of record
@@ -489,7 +489,7 @@ CONST
        (name:'local';         helpText:'Used for declaring block-local variables'                                       ; isRuleModifier:false),
        (name:'type';          helpText:'Used for declaring custom types'                                                ; isRuleModifier:true ),
        (name:'ducktype';      helpText:'Used for declaring custom duck type checks'                                     ; isRuleModifier:true ),
-       (name:'nocurry';       helpText:'Used to suppress currying/uncurrying'                                           ; isRuleModifier:true ));
+       (name:'curry';         helpText:'Used to enable currying/uncurrying'                                             ; isRuleModifier:true ));
 
   C_specialWordInfo:array[0..5] of record
     txt:string;

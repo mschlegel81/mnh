@@ -16,7 +16,7 @@ shortenRational(r:IntList)->begin
 end;
 
 @Override
-nocurry toReal(rat:Rational)->toReal(rat[0])/toReal(rat[1]);
+toReal(rat:Rational)->toReal(rat[0])/toReal(rat[1]);
 //*Converts continued fraction f to a real number
 private toReal(f:RegularContinuedFraction)->begin
   local r:=0;
@@ -25,9 +25,9 @@ private toReal(f:RegularContinuedFraction)->begin
 end;
 
 @Override
-nocurry toRational(i:Int)->[i,1];
+toRational(i:Int)->[i,1];
 @Override
-nocurry toRational(f:RegularContinuedFraction)->begin
+toRational(f:RegularContinuedFraction)->begin
   local r:=void;
   f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
   r;
@@ -35,7 +35,7 @@ end;
 
 @Override
 //*Converts continued fraction f to a rational number
-nocurry toRational(x:Real)->x.toRegularContinuedFraction.toRational;
+toRational(x:Real)->x.toRegularContinuedFraction.toRational;
 
 @Override
 toString(r:Rational)->r[1]=1 ? r[0].toString : r.join("/");

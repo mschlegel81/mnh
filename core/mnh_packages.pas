@@ -1303,7 +1303,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
       m:T_modifier;
   begin
     i:=0;
-    while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers-[modifier_noCurry]) do inc(i);
+    while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers-[modifier_curry]) do inc(i);
     if i<length(C_validModifierCombinations) then ruleType:=C_validModifierCombinations[i].ruleType
     else begin
       raiseModifierComplaint;
@@ -1325,9 +1325,9 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
                   modifier_synchronized,
                   modifier_customType,
                   modifier_customDuckType] do if m in modifiers then adapters.raiseError('modifier '+C_modifierInfo[m].name+' is not allowed when overriding operators',ruleDeclarationStart);
-        if modifier_noCurry  in modifiers then adapters.globalMessages^.postTextMessage(mt_el1_note   ,ruleDeclarationStart,'nocurry modifier is implicit when overloading operators');
-        if modifier_private  in modifiers then adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'private modifier is ignored when overloading operators' );
-        if modifier_memoized in modifiers then adapters.globalMessages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'memoized modifier is ignored when overloading operators');
+        if modifier_curry    in modifiers then adapters.globalMessages^.postTextMessage(mt_el3_evalError,ruleDeclarationStart,'curry modifier is forbidden when overloading operators');
+        if modifier_private  in modifiers then adapters.globalMessages^.postTextMessage(mt_el2_warning  ,ruleDeclarationStart,'private modifier is ignored when overloading operators' );
+        if modifier_memoized in modifiers then adapters.globalMessages^.postTextMessage(mt_el2_warning  ,ruleDeclarationStart,'memoized modifier is ignored when overloading operators');
       end;
 
       if (ruleType=rt_customTypeCheck) and not(ruleId[1] in ['A'..'Z']) then
@@ -1346,7 +1346,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers: T_mod
         rt_synchronized   : new(P_protectedRuleWithSubrules(result),create(ruleId,ruleDeclarationStart));
         else                new(P_ruleWithSubrules         (result),create(ruleId,ruleDeclarationStart,ruleType));
       end;
-      if modifier_noCurry in modifiers then result^.allowCurrying:=false;
+      if modifier_curry in modifiers then result^.allowCurrying:=true;
       packageRules.put(ruleId,result);
       if intrinsicRuleMap.containsKey(ruleId,hidden) then begin
         for op in allOperators do if operatorName[op]=ruleId
