@@ -15,6 +15,7 @@ TYPE
     VarTreeView: TTreeView;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     displayPending:boolean;
     rootNode:P_variableTreeEntryAnonymousValue;
@@ -90,6 +91,11 @@ PROCEDURE TVarTreeViewForm.FormDestroy(Sender: TObject);
     if rootNode<>nil then dispose(rootNode,destroy);
     model.destroy;
     VarTreeView.items.clear;
+  end;
+
+PROCEDURE TVarTreeViewForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
   end;
 
 PROCEDURE TVarTreeViewForm.FormCreate(Sender: TObject);
