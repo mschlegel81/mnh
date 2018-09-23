@@ -37,6 +37,8 @@ TYPE
       DESTRUCTOR destroy;
       PROPERTY getCustomTypeCheck:P_typedef read customTypeCheck;
       PROPERTY getWhitelist:T_literalTypeSet read typeWhitelist;
+      FUNCTION getBuiltinTypeCheck:T_typeCheck;
+      FUNCTION getBuiltinCheckParameter:longint;
   end;
 
   T_patternElementLocation=object
@@ -89,35 +91,7 @@ TYPE
       FUNCTION usesStrictCustomTyping:boolean;
   end;
 
-FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
-
 IMPLEMENTATION
-FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
-  begin
-    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) then exit(false);
-    if modifier<0 then case check of
-      tc_typeCheckStatelessExpression : result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
-      tc_typeCheckStatefulExpression  : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
-      tc_typeCheckIteratableExpression: result:=    P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes;
-      tc_typeCheckIteratable          : result:=   (valueToCheck^.literalType<>lt_expression) or
-                                                   (P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes);
-      else result:=true;
-    end else case check of
-      tc_typeCheckList,       tc_typeCheckSet,       tc_typeCheckCollection,
-      tc_typeCheckBoolList,   tc_typeCheckBoolSet,   tc_typeCheckBoolCollection,
-      tc_typeCheckIntList,    tc_typeCheckIntSet,    tc_typeCheckIntCollection,
-      tc_typeCheckRealList,   tc_typeCheckRealSet,   tc_typeCheckRealCollection,
-      tc_typeCheckStringList, tc_typeCheckStringSet, tc_typeCheckStringCollection,
-      tc_typeCheckNumList,    tc_typeCheckNumSet,    tc_typeCheckNumCollection,
-      tc_typeCheckMap:                 result:=P_compoundLiteral  (valueToCheck)^.size =                       modifier ;
-      tc_typeCheckExpression:          result:=P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
-      tc_typeCheckStatelessExpression: result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes) and
-                                                   P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
-      tc_typeCheckStatefulExpression : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes) and
-                                                   P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
-      else result:=false;
-    end;
-  end;
 CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
   begin
     id:='';
@@ -125,7 +99,7 @@ CONSTRUCTOR T_patternElement.createAnonymous(CONST loc:T_tokenLocation);
     restrictionValue:=nil;
     restrictionIdx  :=-1;
     restrictionId   :='';
-    builtinTypeCheck:=tc_typeCheckScalar;
+    builtinTypeCheck:=tc_any;
     customTypeCheck :=nil;
     typeWhitelist   :=[lt_boolean..lt_emptyMap];
     elementLocation:=loc;
@@ -145,7 +119,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
     if not(L^.literalType in typeWhitelist) then exit(false);
     result:=true;
     case restrictionType of
-      tt_customTypeCheck:    exit(skipCustomCheck or customTypeCheck^.matchesLiteral(L,location,@context));
+      tt_customTypeCheck:    exit(skipCustomCheck and typeCheckAccept(L,builtinTypeCheck,restrictionIdx) or customTypeCheck^.matchesLiteral(L,location,@context));
       tt_typeCheck:          exit(typeCheckAccept(L,builtinTypeCheck,restrictionIdx));
       tt_comparatorEq..tt_comparatorListEq,tt_operatorIn:begin
         if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
@@ -236,7 +210,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
     if restrictionType = tt_customTypeCheck then begin
-      typeWhitelist:=customTypeCheck^.getWhitelist;
+      typeWhitelist:=C_typeCheckInfo[customTypeCheck^.builtinTypeCheck].matching;
       exit;
     end;
     if restrictionType = tt_typeCheck then typeWhitelist:=C_typeCheckInfo[builtinTypeCheck].matching;
@@ -317,6 +291,20 @@ FUNCTION T_patternElement.hides(CONST e:T_patternElement):boolean;
 DESTRUCTOR T_patternElement.destroy;
   begin
     if restrictionValue<>nil then disposeLiteral(restrictionValue);
+  end;
+
+FUNCTION T_patternElement.getBuiltinTypeCheck:T_typeCheck;
+  begin
+    if      restrictionType=tt_typeCheck       then result:=builtinTypeCheck
+    else if restrictionType=tt_customTypeCheck then result:=customTypeCheck^.builtinTypeCheck
+                                               else result:=tc_any;
+  end;
+
+FUNCTION T_patternElement.getBuiltinCheckParameter:longint;
+  begin
+    if      restrictionType=tt_typeCheck then result:=restrictionIdx
+    else if restrictionType=tt_customTypeCheck then result:=customTypeCheck^.builtinSuperParameter
+    else    result:=-1;
   end;
 
 CONSTRUCTOR T_pattern.create;
@@ -663,6 +651,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.customTypeCheck:=P_abstractRule(parts[i].first^.data)^.getTypedef;
+              rulePatternElement.builtinTypeCheck:=rulePatternElement.customTypeCheck^.builtinTypeCheck;
+              rulePatternElement.restrictionIdx  :=rulePatternElement.customTypeCheck^.builtinSuperParameter;
               rulePatternElement.skipCustomCheck:=rulePatternElement.customTypeCheck^.isAlwaysTrue;
               {$ifdef debugMode}
               if rulePatternElement.customTypeCheck=nil then raise Exception.create('Rule '+P_abstractRule(parts[i].first^.data)^.getId+' did not return a type definition');

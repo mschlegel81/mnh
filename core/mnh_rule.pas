@@ -228,7 +228,7 @@ CONSTRUCTOR T_ruleWithSubrules.create(CONST ruleId: T_idString; CONST startAt: T
   begin
     inherited create(ruleId,startAt,ruleTyp);
     hiddenRule:=nil;
-    allowCurrying:=true;
+    allowCurrying:=false;
     setLength(subrules,0);
   end;
 
@@ -268,7 +268,7 @@ CONSTRUCTOR T_mutableRule.create(CONST ruleId: T_idString; CONST startAt: T_toke
   begin
     inherited create(ruleId,startAt,ruleType);
     hiddenRule:=nil;
-    allowCurrying:=true;
+    allowCurrying:=false;
     meta:=meta_;
     privateRule:=isPrivate;
     namedValue.create(ruleId,newVoidLiteral,false);
@@ -382,7 +382,8 @@ PROCEDURE T_typecheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; VA
         disposeLiteral(inlineValue);
       end;
       new(typedef,create(getId,
-                         rulePattern.getWhitelist,
+                         rulePattern.getBuiltinTypeCheck,
+                         rulePattern.getBuiltinCheckParameter,
                          rulePattern.getCustomTypeCheck,
                          P_expressionLiteral(rule^.rereferenced),
                          getRuleType=rt_duckTypeCheck,

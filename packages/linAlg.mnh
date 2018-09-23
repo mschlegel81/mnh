@@ -1,5 +1,7 @@
 type Matrix(M:List)->M.pEach(row,row.isNumericList,AND) AND M.pEach(row,row.size).unique.size=1;
 ducktype SquareMatrix(M:Matrix)->M.each(row,row.isNumericList(M.size),AND);
+@SuppressUnusedParameterWarning
+ducktype Vector(V:NumericList)->true;
 
 private subMatrix(M:List,skipRow,skipCol)->
   M.each(row,index=skipRow
@@ -17,9 +19,10 @@ mult(x:Matrix,y:Matrix)->begin
                      : fail('Matrices must have compatible sizes for multiplication.');
 end;
 //*Matrix+vector multiplication
-mult(x:Matrix,vec:NumericList)->x.mult(vec.each(c,[c]));
+@Override
+OPERATOR_MULT(x:Matrix,vec:Vector)->x.mult(vec.each(c,[c]));
 //*Vector+matrix multiplication
-mult(vec:NumericList,y:Matrix)->[vec].mult(y);
+OPERATOR_MULT(vec:NumericList,y:Matrix)->[vec].mult(y);
 
 determinant(M:SquareMatrix)->
   M.size=1 ? M[0,0] :
@@ -48,7 +51,14 @@ printMatrix(M)->M.each(row,row.join("\t")).join("\n").print;
 
 private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).abs)];
 
-invert(M:SquareMatrix)->begin
+cramerInvert(M:SquareMatrix)->begin
+(abs(local determinant:=M[0,0]*M[1,1]-M[1,0]*M[0,1])>1E-30
+   ? [[ M[1,1],-M[0,1]],
+      [-M[1,0], M[0,0]]]/determinant
+   : [[Nan,Nan],[Nan,Nan]]).toSquareMatrix;
+end;
+
+invert(M:SquareMatrix)->M.size=2 ? M.cramerInvert : begin
   //Gauss-Jordan Algorithm
   local aid:=M.each(row,begin local i:=index; row|(row.each(i,index=i ? 1 : 0)); end);
   [0..M.size-1].each(rowIndex,
@@ -79,3 +89,5 @@ rotY(angle)->[[ cos(angle),0,sin(angle)],
 rotX(angle)->[[1,         0 ,        0 ],
               [0, cos(angle),sin(angle)],
               [0,-sin(angle),cos(angle)]].toSquareMatrix;
+rot2D(angle)->[[ cos(angle),sin(angle)],
+               [-sin(angle),cos(angle)]].toSquareMatrix;

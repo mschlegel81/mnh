@@ -3,7 +3,7 @@ type WorldSize(i:IntList(2))->i[0]>0<i[1];
 private initWorld(s:WorldSize)->intRandom(2,s.agg(*));
 
 //*Prints out the given world (including a clearprint)
-private printWorld(s:WorldSize,w:IntList)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
+private curry printWorld(s:WorldSize,w:IntList)->printf("%s","\f"|copy(join([' ','#'][w]),s[0]*[0..s[1]-1],s[0]));
 
 private plotWorld(worldWidth:Int,world:IntList)->
 begin

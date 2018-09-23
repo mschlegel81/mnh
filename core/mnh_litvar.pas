@@ -244,20 +244,22 @@ TYPE
     private
       name:T_idString;
       super:P_typedef;
-      builtinsuper:T_literalTypeSet;
+      builtinsuper:T_typeCheck;
+      builtinsuperModifier:longint;
       ducktyperule:P_expressionLiteral;
       ducktyping:boolean;
       alwaysTrue:boolean;
       FUNCTION cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer):P_typableLiteral;
     public
-      CONSTRUCTOR create(CONST id:T_idString; CONST builtinType:T_literalTypeSet; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
+      CONSTRUCTOR create(CONST id:T_idString; CONST builtinCheck:T_typeCheck; CONST builtinCheckPar:longint; CONST super_:P_typedef; CONST typerule:P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
       DESTRUCTOR destroy;
       FUNCTION matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer):boolean;
       FUNCTION cast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_typableLiteral;
       FUNCTION uncast(CONST L:P_literal; CONST location:T_tokenLocation; CONST threadContext:pointer; CONST adapters:P_threadLocalMessages):P_literal;
       PROPERTY getName:T_idString read name;
       PROPERTY getSuper:P_typedef read super;
-      PROPERTY getWhitelist:T_literalTypeSet read builtinsuper;
+      PROPERTY builtinTypeCheck:T_typeCheck read builtinsuper;
+      PROPERTY builtinSuperParameter:longint read builtinsuperModifier;
       PROPERTY isDucktyping:boolean read ducktyping;
       PROPERTY isAlwaysTrue:boolean read alwaysTrue;
   end;
@@ -473,6 +475,7 @@ FUNCTION setMinus    (CONST params:P_listLiteral):P_setLiteral;
 FUNCTION mapMerge    (CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:pointer):P_mapLiteral;
 FUNCTION mutateVariable(VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; VAR adapters:T_threadLocalMessages; CONST threadContext:pointer):P_literal;
 FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
+FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
 
 VAR emptyStringSingleton: T_stringLiteral;
 VAR boolLit       : array[false..true] of T_boolLiteral;
@@ -485,6 +488,34 @@ IMPLEMENTATION
 VAR
   intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
   voidLit: T_voidLiteral;
+
+FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
+  begin
+    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) then exit(false);
+    if modifier<0 then case check of
+      tc_typeCheckStatelessExpression : result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
+      tc_typeCheckStatefulExpression  : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
+      tc_typeCheckIteratableExpression: result:=    P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes;
+      tc_typeCheckIteratable          : result:=   (valueToCheck^.literalType<>lt_expression) or
+                                                   (P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes);
+      else result:=true;
+    end else case check of
+      tc_any: result:=true;
+      tc_typeCheckList,       tc_typeCheckSet,       tc_typeCheckCollection,
+      tc_typeCheckBoolList,   tc_typeCheckBoolSet,   tc_typeCheckBoolCollection,
+      tc_typeCheckIntList,    tc_typeCheckIntSet,    tc_typeCheckIntCollection,
+      tc_typeCheckRealList,   tc_typeCheckRealSet,   tc_typeCheckRealCollection,
+      tc_typeCheckStringList, tc_typeCheckStringSet, tc_typeCheckStringCollection,
+      tc_typeCheckNumList,    tc_typeCheckNumSet,    tc_typeCheckNumCollection,
+      tc_typeCheckMap:                 result:=P_compoundLiteral  (valueToCheck)^.size =                       modifier ;
+      tc_typeCheckExpression:          result:=P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
+      tc_typeCheckStatelessExpression: result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes) and
+                                                   P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
+      tc_typeCheckStatefulExpression : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes) and
+                                                   P_expressionLiteral(valueToCheck)^.canApplyToNumberOfParameters(modifier);
+      else result:=false;
+    end;
+  end;
 
 FUNCTION divideInts(CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
   VAR bigRHS,quotient,rest:T_bigInt;
@@ -761,14 +792,15 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
-CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinType:T_literalTypeSet; CONST super_: P_typedef; CONST typerule: P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
+CONSTRUCTOR T_typedef.create(CONST id: T_idString; CONST builtinCheck:T_typeCheck; CONST builtinCheckPar:longint; CONST super_: P_typedef; CONST typerule: P_expressionLiteral; CONST ducktyping_,alwaysTrue_:boolean);
   begin
     name        :=id;
     super       :=super_;
-    builtinsuper:=builtinType;
+    builtinsuper        :=builtinCheck;
+    builtinsuperModifier:=builtinCheckPar;
     ducktyperule:=typerule;
     ducktyping  :=ducktyping_;
-    alwaysTrue  :=alwaysTrue_;
+    alwaysTrue  :=alwaysTrue_ and (super=nil);
   end;
 
 DESTRUCTOR T_typedef.destroy;
@@ -788,7 +820,7 @@ FUNCTION T_typedef.matchesLiteral(CONST L:P_literal; CONST location:T_tokenLocat
         else T:=T^.super;
       end;
     end;
-    if ducktyping then result:=alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,L);
+    if ducktyping then result:=typeCheckAccept(L,builtinsuper,builtinsuperModifier) and (alwaysTrue or ducktyperule^.evaluateToBoolean(location,threadContext,false,L));
   end;
 
 FUNCTION T_typedef.cloneLiteral(CONST L:P_typableLiteral; CONST location:T_tokenLocation; CONST threadContext:pointer):P_typableLiteral;
