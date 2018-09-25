@@ -515,13 +515,16 @@ PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
+  VAR currentEdit:P_editorMeta;
+      currentPath:string;
   begin
     UpdateTimeTimer.enabled:=false;
-    OpenDialog.FilterIndex:=1;
-    OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
-    OpenDialog.title:='Open file';
-    if OpenDialog.execute and fileExists(OpenDialog.fileName)
-    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(OpenDialog.fileName,true);
+    currentEdit:=getEditor;
+    if (currentEdit=nil) or (currentEdit^.isPseudoFile)
+    then currentPath:=GetCurrentDir
+    else currentPath:=ExtractFileDir(currentEdit^.getPath);
+    if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
+    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     UpdateTimeTimer.enabled:=true;
   end;
 

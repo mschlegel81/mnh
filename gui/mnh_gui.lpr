@@ -12,7 +12,7 @@ USES {$ifdef UNIX} cthreads,{$endif}
   ipcModel,
   mnh_gui_main,
   mnh_gui_outputOnly,
-  mnh_plotForm;
+  mnh_plotForm, openFile;
 
 {$R *.res}
 
@@ -29,6 +29,7 @@ begin
       showConsole;
       halt;
     end else Application.CreateForm(TMnhForm, MnhForm);
+  Application.CreateForm(TopenFileDialog, openFileDialog);
     Application.run;
     showConsole;
   end;

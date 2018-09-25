@@ -62,6 +62,7 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
+FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
@@ -127,13 +128,20 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   end;
 
 FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
+  VAR s:string;
+  begin
+    setLength(result,0);
+    for s in listScriptFileNames(rootPath) do appendIfNew(result,filenameToPackageId(s));
+  end;
+
+FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
       if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0)
       then repeat
         if ((info.Attr and faDirectory)<>faDirectory) then
-        appendIfNew(result,filenameToPackageId(info.name));
+        appendIfNew(result,path+info.name);
       until (findNext(info)<>0) ;
       sysutils.findClose(info);
 

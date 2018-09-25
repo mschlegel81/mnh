@@ -46,7 +46,8 @@ USES
   menuUtil,
   guiOutAdapters,
   renameDialog,
-  mnhCustomForm;
+  mnhCustomForm,
+  openFile;
 TYPE
   {$define includeInterface}
   {$WARN 5024 OFF}

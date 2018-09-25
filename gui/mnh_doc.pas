@@ -29,8 +29,8 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
 PROCEDURE ensureDemosAndPackages;
-FUNCTION isRestorable(CONST filename:String):longint;
-PROCEDURE restroreDefaultFile(CONST filename:String);
+FUNCTION isRestorable(CONST fileName:string):longint;
+PROCEDURE restroreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
@@ -40,41 +40,41 @@ VAR functionDocExamplesReady:boolean=false;
 PROCEDURE ensureDemosAndPackages;
   VAR i:longint;
       baseDir:string;
-      filename:string;
+      fileName:string;
       fileContent:string;
   begin
     baseDir:=configDir;
     for i:=0 to length(DEFAULT_FILES)-1 do begin
       fileName:=baseDir+'/'+DEFAULT_FILES[i,0];
-      if not(FileExists(filename)) then begin
+      if not(fileExists(fileName)) then begin
         fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[i,1]));
-        writeFile(filename,fileContent);
+        writeFile(fileName,fileContent);
       end;
     end;
   end;
 
-FUNCTION isRestorable(CONST filename:String):longint;
+FUNCTION isRestorable(CONST fileName:string):longint;
   VAR i:longint;
       baseDir:string;
-      expanded:String;
+      expanded:string;
   begin
-    expanded:=ExpandFileName(filename);
+    expanded:=expandFileName(fileName);
     baseDir:=configDir;
     for i:=0 to length(DEFAULT_FILES)-1 do
       if (expandFileName(baseDir+'/'+DEFAULT_FILES[i,0])=expanded)
-      or (not(FileNameCaseSensitive) and (UpperCase(expandFileName(baseDir+'/'+DEFAULT_FILES[i,0]))
-                                        = UpperCase(expanded))) then exit(i);
+      or (not(FileNameCaseSensitive) and (uppercase(expandFileName(baseDir+'/'+DEFAULT_FILES[i,0]))
+                                        = uppercase(expanded))) then exit(i);
     result:=-1;
   end;
 
-PROCEDURE restroreDefaultFile(CONST filename:String);
+PROCEDURE restroreDefaultFile(CONST fileName:string);
   VAR fileIndex:longint;
       fileContent:string;
   begin
-    fileIndex:=isRestorable(filename);
+    fileIndex:=isRestorable(fileName);
     if fileIndex<0 then exit;
     fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[fileIndex,1]));
-    writeFile(filename,fileContent);
+    writeFile(fileName,fileContent);
   end;
 
 FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;
