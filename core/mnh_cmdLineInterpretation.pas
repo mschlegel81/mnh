@@ -184,7 +184,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         {$ifdef fullVersion}
         else if (paramStr(i)='-install') then begin
           writeln('Updating scripts and demos');
-          ensureDemos;
+          ensureDemosAndPackages;
           {$ifdef Windows}
           writeln('Updating file associations');
           sandbox^.runInstallScript;

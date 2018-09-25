@@ -104,7 +104,7 @@ PROCEDURE TnewCentralPackageForm.remButtonClick(Sender: TObject);
 
 PROCEDURE TnewCentralPackageForm.restoreButtonClick(Sender: TObject);
   begin
-    ensureDemos;
+    ensureDemosAndPackages;
     updatePackageList;
   end;
 

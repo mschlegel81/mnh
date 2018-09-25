@@ -52,7 +52,7 @@ PROCEDURE TopenDemoDialogForm.FormShow(Sender: TObject);
   VAR files:T_arrayOfString;
       i:longint;
   begin
-    ensureDemos;
+    ensureDemosAndPackages;
     files:=find(demosFolder+'*.mnh',true,false);
     ListBox.items.clear;
     for i:=0 to length(files)-1 do ListBox.items.add(ExtractFileNameOnly(files[i]));

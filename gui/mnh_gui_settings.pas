@@ -85,7 +85,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     AntialiasCheckbox.checked := settings.antialiasedFonts;
     setFontSize(settings.fontSize);
     setOutputLimit(settings.outputLinesLimit);
-    if not(settings.loaded) then ensureDemos;
+    if not(settings.loaded) then ensureDemosAndPackages;
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
