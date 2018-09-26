@@ -1,7 +1,8 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils,
+USES sysutils,base64,
      myStringUtil, myGenerics, serializationUtil,
+     mnh_fileWrappers,
      mnh_messages,
      mnh_settings,
      mnh_basicTypes, mnh_constants,
@@ -27,22 +28,53 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
-PROCEDURE ensureDemos;
+PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
+FUNCTION isRestorable(CONST fileName:string):longint;
+PROCEDURE restoreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
     htmlRoot:ansistring;
 
-PROCEDURE ensureDemos;
-  {$i res_ensurePackages.inc}
-  VAR code:T_arrayOfString;
-      html,txt,ids:T_arrayOfString;
-      i:longint;
+{$i res_defaultFiles.inc}
+PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
+  VAR i:longint;
+      baseDir:string;
+      fileName:string;
+      fileContent:string;
   begin
-    setLength(code,length(ensurePackages_mnh));
-    for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
-    append(code,'('+escapeString(configDir,es_dontCare)+')');
-    demoCodeToHtmlCallback(code,txt,html,ids);
+    baseDir:=configDir;
+    for i:=0 to length(DEFAULT_FILES)-1 do begin
+      fileName:=baseDir+DEFAULT_FILES[i,0];
+      if not(fileExists(fileName)) or overwriteExisting then begin
+        fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[i,1]));
+        writeFile(fileName,fileContent);
+      end;
+    end;
+  end;
+
+FUNCTION isRestorable(CONST fileName:string):longint;
+  VAR i:longint;
+      baseDir:string;
+      expanded:string;
+  begin
+    expanded:=expandFileName(fileName);
+    baseDir:=configDir;
+    for i:=0 to length(DEFAULT_FILES)-1 do
+      if (expandFileName(baseDir+DEFAULT_FILES[i,0])=expanded)
+      or (not(FileNameCaseSensitive) and (uppercase(expandFileName(baseDir+DEFAULT_FILES[i,0]))
+                                        = uppercase(expanded))) then exit(i);
+    result:=-1;
+  end;
+
+PROCEDURE restoreDefaultFile(CONST fileName:string);
+  VAR fileIndex:longint;
+      fileContent:string;
+  begin
+    fileIndex:=isRestorable(fileName);
+    if fileIndex<0 then exit;
+    fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[fileIndex,1]));
+    writeFile(fileName,fileContent);
   end;
 
 FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;

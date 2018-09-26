@@ -1,6 +1,7 @@
 UNIT mnh_evalThread;
 INTERFACE
 USES sysutils,Classes,
+     mySys,
      myGenerics,myStringUtil,
      mnh_constants,mnh_basicTypes,mnh_fileWrappers,
      mnh_messages,
@@ -153,7 +154,7 @@ OPERATOR =(CONST x,y:T_runnerStateInfo):boolean;
 FUNCTION utilityScriptFileName:string;
   begin
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then ensureDemos;
+    if not(fileExists(result)) then ensureDemosAndPackages;
   end;
 {$WARN 5024 OFF}
 FUNCTION main(p:pointer):ptrint;
@@ -618,7 +619,10 @@ PROCEDURE T_runEvaluator.preEval;
 PROCEDURE T_evaluator.postEval;
   begin
     system.enterCriticalSection(cs);
-    if not(state in [es_editEnsuring,es_editRunning]) then globals.afterEvaluation;
+    if not(state in [es_editEnsuring,es_editRunning]) then begin
+      globals.afterEvaluation;
+      memoryCleaner.callCleanupMethods;
+    end;
     state:=es_idle;
     system.leaveCriticalSection(cs);
   end;

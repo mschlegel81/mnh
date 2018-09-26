@@ -107,6 +107,25 @@ object plotForm: TplotForm
       ParentColor = False
     end
   end
+  object exportingGroupBox: TGroupBox
+    Left = 187
+    Height = 86
+    Top = 216
+    Width = 430
+    Caption = 'Exporting'
+    ClientHeight = 56
+    ClientWidth = 426
+    TabOrder = 2
+    Visible = False
+    object exportingProgressBar: TProgressBar
+      Left = 0
+      Height = 56
+      Top = 0
+      Width = 426
+      Align = alClient
+      TabOrder = 0
+    end
+  end
   object MainMenu: TMainMenu
     left = 8
     top = 8

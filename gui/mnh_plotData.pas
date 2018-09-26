@@ -167,7 +167,7 @@ TYPE
       PROCEDURE clear;
       FUNCTION frameCount:longint;
       PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST quality:byte);
-      PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint);
+      PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint; CONST exportingAll:boolean);
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
       PROPERTY options[index:longint]:T_scalingOptions read getOptions write setOptions;
@@ -577,14 +577,23 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
     end;
   end;
 
-PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint);
+PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height,quality:longint; CONST exportingAll:boolean);
+  VAR storeImage:TImage;
   begin
     enterCriticalSection(seriesCs);
     if (index<0) or (index>=length(frame)) then begin
       leaveCriticalSection(seriesCs);
       exit;
     end;
-    frame[index]^.plotData.renderToFile(fileName,width,height,quality);
+    {$ifndef unix}
+    if exportingAll and (index+settings.cpuCount<length(frame)) then frame[index+settings.cpuCount]^.postPreparation(width,height,quality);
+    {$endif}
+
+    storeImage:=TImage.create(nil);
+    storeImage.SetInitialBounds(0,0,width,height);
+    frame[index]^.obtainImage(storeImage,quality);
+    storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+    storeImage.destroy;
     leaveCriticalSection(seriesCs);
   end;
 
@@ -615,7 +624,7 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
                  end;
       end;
       {$ifndef unix}
-      if result then frame[(frameIndex+3) mod length(frame)]^.postPreparation(width,height,quality);
+      if result then frame[(frameIndex+settings.cpuCount) mod length(frame)]^.postPreparation(width,height,quality);
       {$endif}
     end;
     leaveCriticalSection(seriesCs);

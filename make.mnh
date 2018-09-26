@@ -18,8 +18,9 @@ private delp->(isLinux ? 'delp' : DelpPath).exec(
         '../art.source/im/lib/x86_64-win64',
         '../art.source/igSrc']);
 
-private templateToInc(inFile,inLines,outFile<>inFile)->begin
+private templateToInc(inFile,outFile<>inFile)->begin
   local pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
+  local inLines:=fileLines(inFile);
   local outText:=
   'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
   inLines.each(line,line='' ? "''" : join('#'&(line.bytes.ord))).join(",\n")&');';
@@ -28,13 +29,18 @@ private templateToInc(inFile,inLines,outFile<>inFile)->begin
   : writeFile(outFile,outText);
 end;
 
-private templateToInc(inFile,outFile<>inFile)->templateToInc(inFile,fileLines(inFile),outFile);
+private ensureDefaultFilesSource->begin
+  local code:=
+  format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress.base64encode)}s)',
+  sort(allFiles('demos\','*.mnh')|allFiles('packages\','*.mnh')));
+  local header:='CONST DEFAULT_FILES:array[0..'&(code.size-1)&',0..1] of string=(';
+  code:=header|code.each(f,f&(index=code.size-1 ? ');':','));
 
-private ensurePackagesLines->'{'|
-    sort(files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
-    .each(file,(index=0 ? '[' : ',') & ('['&escape(file)&','&escape(fileContents(file).compress.base64encode)&']'))|
-    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],decompress(f[1].base64decode)))}";
-
+  local filename:='gui/res_defaultFiles.inc';
+  fileExists(filename) AND fileLines(filename)==code
+  ? void
+  : writeFileLines(filename,code);
+end;
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
@@ -51,7 +57,7 @@ currentCodeHash:=begin
   templateToInc('resources/ensureNotepad++Highlighting.mnh','gui/res_ensureNppHighlighting.inc');
   templateToInc('resources/ensureAssoc.mnh'                ,'gui/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'gui/res_removeAssoc.inc');
-  templateToInc('resources/ensurePackages.mnh',ensurePackagesLines,'gui/res_ensurePackages.inc');
+  ensureDefaultFilesSource;
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
   local result:=format('%8.8x',fileStats(hashFiles).getInner(3).agg(+)).copy(0,8);
@@ -227,5 +233,3 @@ end;
 main(...)->... .each(step,
   printf(SKEWED_FRAME_FMT,step),
   main(step));
-
-BUILDS.map({[$x[1],needBuild($x)]});

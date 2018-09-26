@@ -176,7 +176,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="80">
+    <Units Count="82">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -555,6 +555,22 @@
         <Filename Value="mnhFormHandler.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit79>
+      <Unit80>
+        <Filename Value="openfile.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="openFileDialog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="openFile"/>
+      </Unit80>
+      <Unit81>
+        <Filename Value="savefile.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="SaveFileDialog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="saveFile"/>
+      </Unit81>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -1,9 +1,11 @@
 UNIT mnh_settings;
 INTERFACE
 USES Classes,sysutils,dateutils,typinfo,
+     FileUtil,
      myGenerics,serializationUtil,mySys,
+     mnh_fileWrappers,
      mnh_constants,mnh_messages,
-     mnh_fileWrappers,mnh_out_adapters;
+     mnh_out_adapters;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -13,7 +15,7 @@ CONST
    (text:'10 minutes'; interval:10/(24*60)),
    (text:'30 minutes'; interval:30/(24*60)),
    (text:'1 hour';     interval: 1/24));
-  FILE_HISTORY_MAX_SIZE=20;
+  FILE_HISTORY_MAX_SIZE=1000;
 TYPE
 T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
@@ -35,7 +37,9 @@ T_fileHistory=object(T_serializable)
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   FUNCTION polishHistory: boolean;
   PROCEDURE fileClosed(CONST fileName:ansistring);
+  FUNCTION recentFolders:T_arrayOfString;
   FUNCTION historyItem(CONST index:longint):ansistring;
+  FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
 end;
 
 P_Settings=^T_settings;
@@ -252,6 +256,32 @@ FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
     if (index>=0) and (index<length(items))
     then result:=items[index]
     else result:='';
+  end;
+
+FUNCTION T_fileHistory.recentFolders:T_arrayOfString;
+  VAR fileName:string;
+  begin
+    setLength(result,0);
+    for fileName in items do appendIfNew(result,ExtractFileDir(fileName));
+  end;
+
+FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
+  VAR allPathsToScan:T_arrayOfString;
+      fileName:string;
+      pathToScan:string;
+      list:TStringList;
+  begin
+    allPathsToScan:=recentFolders;
+    result:=C_EMPTY_STRING_ARRAY;
+    listScriptFileNames(rootPath);
+    for pathToScan in allPathsToScan do begin
+      list:=FindAllFiles(pathToScan+DirectorySeparator,'',false);
+      for fileName in list do begin
+        append(result,fileName);
+      end;
+      list.free;
+    end;
+    sortUnique(result);
   end;
 
 CONSTRUCTOR T_formPosition.create;

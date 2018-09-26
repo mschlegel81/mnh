@@ -15,11 +15,9 @@ USES
   SynHighlighterMnh,
   SynExportHTML,
   //Other Forms:
-  newCentralPackageDialog,
   mnh_gui_settings,
   askDialog,
   mnh_tables,
-  openDemoDialog,
   mnh_plotForm,
   mnh_splash,
   closeDialog,
@@ -46,7 +44,9 @@ USES
   menuUtil,
   guiOutAdapters,
   renameDialog,
-  mnhCustomForm;
+  mnhCustomForm,
+  openFile,
+  saveFile;
 TYPE
   {$define includeInterface}
   {$WARN 5024 OFF}
@@ -60,7 +60,6 @@ TYPE
     callStackGroupBox,
     currentExpressionGroupBox,
     outlineGroupBox:                 TGroupBox;
-    miRename: TMenuItem;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;
@@ -91,9 +90,7 @@ TYPE
     miMinErrorlevel2,
     miMinErrorlevel3,
     miMinErrorlevel4,
-    miNewCentralPackage,
     miOpen,
-    miOpenDemo,
     miOpenDocumentation,
     miProfile,
     miReload,
@@ -116,6 +113,8 @@ TYPE
     miFileHistoryRoot,
     miHtmlExport,
     miRecentFileRoot,
+    miRename,
+    miRestoreDefaultFile,
     miShowQuickEval,
     miShowOutput,
     miShowAssistance:          TMenuItem;
@@ -126,7 +125,6 @@ TYPE
     Panel1,
     Panel2:                    TPanel;
     ReplaceDialog:             TReplaceDialog;
-    SaveDialog:                TSaveDialog;
     Splitter1,
     Splitter2,
     Splitter3,
@@ -387,7 +385,6 @@ PROCEDURE TMnhForm.enableDynamicItems;
     miEditGuiScripts   .enabled:=not(locked);
     miFileHistoryRoot  .enabled:=not(locked);
     miReplace          .enabled:=not(locked);
-    miOpenDemo         .enabled:=not(locked);
   end;
 
 PROCEDURE TMnhForm.updateScriptMenus;

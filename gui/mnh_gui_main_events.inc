@@ -26,6 +26,7 @@ PROCEDURE miCallMainClick(Sender: TObject);
 PROCEDURE miEvaluateNowClick(Sender: TObject);
 PROCEDURE miProfileClick(Sender: TObject);
 PROCEDURE miDebugClick(Sender: TObject);
+PROCEDURE miRestoreDefaultFileClick(Sender: TObject);
 PROCEDURE miRunExternallyClick(Sender: TObject);
 PROCEDURE miShowAssistanceClick(Sender: TObject);
 PROCEDURE miShowOutputClick(Sender: TObject);
@@ -77,8 +78,6 @@ PROCEDURE miGotoClick(Sender: TObject);
 PROCEDURE miHelpClick(Sender: TObject);
 PROCEDURE miHelpExternallyClick(Sender: TObject);
 PROCEDURE miHtmlExportClick(Sender: TObject);
-PROCEDURE miNewCentralPackageClick(Sender: TObject);
-PROCEDURE miOpenDemoClick(Sender: TObject);
 PROCEDURE miRunCustomUtilScript(Sender: TObject);
 PROCEDURE miUtilityScriptRootClick(Sender: TObject);
 PROCEDURE mi_settingsClick(Sender: TObject);
@@ -208,12 +207,12 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       {$ifdef debugMode} writeln(stdErr,'        DEBUG: first TMnhForm.FormShow - begin'); {$endif}
       editorMeta.setupUnit(self,
                            inputPageControl,
-                           SaveDialog,
                            breakpointsImagesList,
                            assistanceSynEdit,
                            assistanceTabSheet,
                            outputHighlighter,
                            miLanguageRoot,
+                           miRestoreDefaultFile,
                            @InputEditKeyDown,
                            @InputEditMouseDown,
                            @InputEditProcessUserCommand,
@@ -360,6 +359,11 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     miDebug.checked:=not(miDebug.checked);
     runnerModel.debugMode:=miDebug.checked;
     onDebuggerEvent;
+  end;
+
+PROCEDURE TMnhForm.miRestoreDefaultFileClick(Sender: TObject);
+  begin
+    restoreDefaultFile(getEditor^.getPath);
   end;
 
 PROCEDURE TMnhForm.miRunExternallyClick(Sender: TObject);
@@ -515,13 +519,16 @@ PROCEDURE TMnhForm.miEditGuiScriptsClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
+  VAR currentEdit:P_editorMeta;
+      currentPath:string;
   begin
     UpdateTimeTimer.enabled:=false;
-    OpenDialog.FilterIndex:=1;
-    OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
-    OpenDialog.title:='Open file';
-    if OpenDialog.execute and fileExists(OpenDialog.fileName)
-    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(OpenDialog.fileName,true);
+    currentEdit:=getEditor;
+    if (currentEdit=nil) or (currentEdit^.isPseudoFile)
+    then currentPath:=GetCurrentDir
+    else currentPath:=ExtractFileDir(currentEdit^.getPath);
+    if (openFileDialog.showForRoot(currentPath)=mrOk) and fileExists(openFileDialog.getSelectedFile)
+    then inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openFileDialog.getSelectedFile,true);
     UpdateTimeTimer.enabled:=true;
   end;
 
@@ -634,17 +641,6 @@ PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject); begin if hasEditor then getEditor^.exportToHtml; end;
-PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
-  begin
-    if newCentralPackageForm.ShowModal=mrOk then
-        inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(newCentralPackageForm.fileNameEdit.text,true);
-  end;
-
-PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
-  begin
-    if openDemoDialogForm.ShowModal=mrOk then
-       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openDemoDialogForm.selectedFile,true);
-  end;
 
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
   VAR k:longint;

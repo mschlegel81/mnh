@@ -152,38 +152,6 @@ PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourc
     end;
   end;
 
-FUNCTION getListOfSimilarWords(CONST typedSoFar:string; CONST completionList:T_arrayOfString; CONST targetResultSize:longint):T_arrayOfString;
-  VAR k:longint;
-      j:longint=0;
-      s:string;
-  begin
-    if typedSoFar='' then exit(completionList);
-    setLength(result,targetResultSize);
-    for k:=1 to 8 do begin
-      for s in completionList do if (pos(typedSoFar,s)=k) then begin
-        if j>=length(result) then setLength(result,j+8);
-        result[j]:=s;
-        inc(j);
-      end;
-      if (j>=targetResultSize) then begin
-        setLength(result,j);
-        exit(result);
-      end;
-    end;
-    for k:=1 to 8 do begin
-      for s in completionList do if (pos(typedSoFar,s)<=0) and (pos(uppercase(typedSoFar),uppercase(s))=k) then begin
-        if j>=length(result) then setLength(result,j+8);
-        result[j]:=s;
-        inc(j);
-      end;
-      if (j>=targetResultSize) then begin
-        setLength(result,j);
-        exit(result);
-      end;
-    end;
-    setLength(result,j);
-  end;
-
 PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
   VAR s:string;
       w:string;
@@ -207,7 +175,7 @@ PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
 
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
-    for w in getListOfSimilarWords(s,wordsInEditor.values,32) do SynCompletion.ItemList.add(w);
+    for w in getListOfSimilarWords(s,wordsInEditor.values,32,false) do SynCompletion.ItemList.add(w);
   end;
 
 PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
@@ -218,7 +186,7 @@ PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
 
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
-    for w in getListOfSimilarWords(s,wordsInEditor.values,32) do  SynCompletion.ItemList.add(w);
+    for w in getListOfSimilarWords(s,wordsInEditor.values,32,false) do  SynCompletion.ItemList.add(w);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
