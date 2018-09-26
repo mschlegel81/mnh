@@ -1,6 +1,7 @@
 UNIT valueStore;
 INTERFACE
 USES sysutils,
+     mySys,
      mnh_basicTypes,mnh_constants,
      mnh_messages,
      mnh_out_adapters,
@@ -328,24 +329,30 @@ PROCEDURE T_valueScope.reportVariables(VAR variableReport:T_variableTreeEntryCat
   end;
 {$endif}
 
+PROCEDURE clearScopeRecycler;
+  begin
+    with scopeRecycler do begin
+      enterCriticalSection(recyclerCS);
+      while fill>0 do begin
+        dec(fill);
+        try
+          dispose(dat[fill],destroy);
+        except
+          dat[fill]:=nil;
+        end;
+      end;
+      leaveCriticalSection(recyclerCS);
+    end;
+  end;
+
 INITIALIZATION
   initialize(scopeRecycler);
   with scopeRecycler do begin
     initCriticalSection(recyclerCS);
     fill:=0;
   end;
+  memoryCleaner.registerCleanupMethod(@clearScopeRecycler);
 FINALIZATION
-  with scopeRecycler do begin
-    enterCriticalSection(recyclerCS);
-    while fill>0 do begin
-      dec(fill);
-      try
-        dispose(dat[fill],destroy);
-      except
-        dat[fill]:=nil;
-      end;
-    end;
-    leaveCriticalSection(recyclerCS);
-  end;
+  clearScopeRecycler;
   doneCriticalSection(scopeRecycler.recyclerCS);
 end.
