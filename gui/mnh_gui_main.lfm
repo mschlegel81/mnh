@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 985
+  Left = 270
   Height = 659
-  Top = 222
+  Top = 360
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
@@ -2804,10 +2804,6 @@ object MnhForm: TMnhForm
         ShortCut = 16464
         OnClick = mi_settingsClick
       end
-      object miNewCentralPackage: TMenuItem
-        Caption = 'Manage central &utility packages'
-        OnClick = miNewCentralPackageClick
-      end
       object miClear: TMenuItem
         Caption = 'New'
         ShortCut = 16462
@@ -2821,6 +2817,10 @@ object MnhForm: TMnhForm
       object miReload: TMenuItem
         Caption = 'Reload from filesystem'
         OnClick = miReloadClick
+      end
+      object miRestoreDefaultFile: TMenuItem
+        Caption = 'Restore included file'
+        OnClick = miRestoreDefaultFileClick
       end
       object miClose: TMenuItem
         Caption = 'Close'
@@ -3059,13 +3059,6 @@ object MnhForm: TMnhForm
     Filter = 'MNH Package|*.mnh|All Files|*.*'
     Options = [ofOverwritePrompt, ofPathMustExist, ofFileMustExist, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofNoDereferenceLinks, ofEnableSizing]
     left = 400
-    top = 136
-  end
-  object SaveDialog: TSaveDialog
-    Title = 'Save as'
-    Filter = 'MNH Package|*.mnh|Any File|*.*|html|*.html'
-    Options = [ofOverwritePrompt, ofExtensionDifferent, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofNoDereferenceLinks, ofEnableSizing]
-    left = 272
     top = 136
   end
   object debugItemsImageList: TImageList

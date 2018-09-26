@@ -16,6 +16,7 @@ TYPE
   { TopenFileDialog }
 
   TopenFileDialog = class(TForm)
+    CancelButton: TButton;
     OpenDialog1: TOpenDialog;
     openViaDialogButton: TButton;
     searchEdit: TEdit;
@@ -23,8 +24,11 @@ TYPE
     Label1: TLabel;
     searchResultsListBox: TListBox;
     Panel1: TPanel;
+    PROCEDURE FormShow(Sender: TObject);
     PROCEDURE openViaDialogButtonClick(Sender: TObject);
     PROCEDURE searchEditChange(Sender: TObject);
+    PROCEDURE searchEditKeyDown(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
     PROCEDURE searchEditKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE searchResultsListBoxKeyPress(Sender: TObject; VAR key: char);
   private
@@ -35,10 +39,15 @@ TYPE
     FUNCTION showForRoot(CONST rootPath:string):longint;
   end;
 
-VAR
-  openFileDialog: TopenFileDialog;
-
+FUNCTION openFileDialog:TopenFileDialog;
 IMPLEMENTATION
+VAR myOpenFileDialog: TopenFileDialog=nil;
+FUNCTION openFileDialog:TopenFileDialog;
+  begin
+    if myOpenFileDialog=nil then
+      myOpenFileDialog:=TopenFileDialog.create(nil);
+    result:=myOpenFileDialog;
+  end;
 
 {$R *.lfm}
 
@@ -50,13 +59,26 @@ PROCEDURE TopenFileDialog.openViaDialogButtonClick(Sender: TObject);
     end else ModalResult:=mrCancel;
   end;
 
+PROCEDURE TopenFileDialog.FormShow(Sender: TObject);
+  begin
+    searchEdit.SetFocus;
+  end;
+
 PROCEDURE TopenFileDialog.searchEditChange(Sender: TObject);
   VAR newList:T_arrayOfString;
       s:string;
   begin
-    newList:=getListOfSimilarWords(searchEdit.text,fileList,100);
+    newList:=getListOfSimilarWords(searchEdit.text,fileList,32,true);
     searchResultsListBox.items.clear;
     for s in newList do searchResultsListBox.items.add(s);
+  end;
+
+PROCEDURE TopenFileDialog.searchEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if key=40 then begin
+      searchResultsListBox.SetFocus;
+      key:=0;
+    end;
   end;
 
 PROCEDURE TopenFileDialog.searchEditKeyPress(Sender: TObject; VAR key: char);
@@ -84,6 +106,9 @@ FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;
     selectedFile:='';
     result:=ShowModal;
   end;
+
+FINALIZATION
+  if myOpenFileDialog<>nil then FreeAndNil(myOpenFileDialog);
 
 end.
 

@@ -28,16 +28,16 @@ PROCEDURE makeHtmlFromTemplate(CONST templateFileName:string='');
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
-PROCEDURE ensureDemosAndPackages;
+PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
 FUNCTION isRestorable(CONST fileName:string):longint;
-PROCEDURE restroreDefaultFile(CONST fileName:string);
+PROCEDURE restoreDefaultFile(CONST fileName:string);
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR functionDocExamplesReady:boolean=false;
     htmlRoot:ansistring;
 
 {$i res_defaultFiles.inc}
-PROCEDURE ensureDemosAndPackages;
+PROCEDURE ensureDemosAndPackages(CONST overwriteExisting:boolean=false);
   VAR i:longint;
       baseDir:string;
       fileName:string;
@@ -45,8 +45,8 @@ PROCEDURE ensureDemosAndPackages;
   begin
     baseDir:=configDir;
     for i:=0 to length(DEFAULT_FILES)-1 do begin
-      fileName:=baseDir+'/'+DEFAULT_FILES[i,0];
-      if not(fileExists(fileName)) then begin
+      fileName:=baseDir+DEFAULT_FILES[i,0];
+      if not(fileExists(fileName)) or overwriteExisting then begin
         fileContent:=decompressString(DecodeStringBase64(DEFAULT_FILES[i,1]));
         writeFile(fileName,fileContent);
       end;
@@ -61,13 +61,13 @@ FUNCTION isRestorable(CONST fileName:string):longint;
     expanded:=expandFileName(fileName);
     baseDir:=configDir;
     for i:=0 to length(DEFAULT_FILES)-1 do
-      if (expandFileName(baseDir+'/'+DEFAULT_FILES[i,0])=expanded)
-      or (not(FileNameCaseSensitive) and (uppercase(expandFileName(baseDir+'/'+DEFAULT_FILES[i,0]))
+      if (expandFileName(baseDir+DEFAULT_FILES[i,0])=expanded)
+      or (not(FileNameCaseSensitive) and (uppercase(expandFileName(baseDir+DEFAULT_FILES[i,0]))
                                         = uppercase(expanded))) then exit(i);
     result:=-1;
   end;
 
-PROCEDURE restroreDefaultFile(CONST fileName:string);
+PROCEDURE restoreDefaultFile(CONST fileName:string);
   VAR fileIndex:longint;
       fileContent:string;
   begin

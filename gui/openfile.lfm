@@ -3,10 +3,13 @@ object openFileDialog: TopenFileDialog
   Height = 360
   Top = 441
   Width = 480
+  BorderStyle = bsDialog
   Caption = 'Open file'
   ClientHeight = 360
   ClientWidth = 480
   DesignTimePPI = 144
+  FormStyle = fsStayOnTop
+  OnShow = FormShow
   LCLVersion = '1.8.4.0'
   object Panel1: TPanel
     Left = 0
@@ -35,23 +38,24 @@ object openFileDialog: TopenFileDialog
       Width = 424
       Align = alClient
       OnChange = searchEditChange
+      OnKeyDown = searchEditKeyDown
       OnKeyPress = searchEditKeyPress
       TabOrder = 0
     end
   end
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 289
+    Height = 251
     Top = 33
     Width = 480
     Align = alClient
     Caption = 'Found'
-    ClientHeight = 259
+    ClientHeight = 221
     ClientWidth = 476
     TabOrder = 1
     object searchResultsListBox: TListBox
       Left = 0
-      Height = 259
+      Height = 221
       Top = 0
       Width = 476
       Align = alClient
@@ -63,12 +67,23 @@ object openFileDialog: TopenFileDialog
   object openViaDialogButton: TButton
     Left = 0
     Height = 38
-    Top = 322
+    Top = 284
     Width = 480
     Align = alBottom
     Caption = 'Open from file system'
     OnClick = openViaDialogButtonClick
     TabOrder = 2
+  end
+  object cancelButton: TButton
+    Left = 0
+    Height = 38
+    Top = 322
+    Width = 480
+    Align = alBottom
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 3
   end
   object OpenDialog1: TOpenDialog
     Filter = 'MNH Package|*.mnh|All Files|*.*'

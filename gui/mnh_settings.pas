@@ -37,6 +37,7 @@ T_fileHistory=object(T_serializable)
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   FUNCTION polishHistory: boolean;
   PROCEDURE fileClosed(CONST fileName:ansistring);
+  FUNCTION recentFolders:T_arrayOfString;
   FUNCTION historyItem(CONST index:longint):ansistring;
   FUNCTION findFiles(CONST rootPath:string):T_arrayOfString;
 end;
@@ -257,14 +258,20 @@ FUNCTION T_fileHistory.historyItem(CONST index: longint): ansistring;
     else result:='';
   end;
 
+FUNCTION T_fileHistory.recentFolders:T_arrayOfString;
+  VAR fileName:string;
+  begin
+    setLength(result,0);
+    for fileName in items do appendIfNew(result,ExtractFileDir(fileName));
+  end;
+
 FUNCTION T_fileHistory.findFiles(CONST rootPath:string):T_arrayOfString;
   VAR allPathsToScan:T_arrayOfString;
       fileName:string;
       pathToScan:string;
       list:TStringList;
   begin
-    allPathsToScan:=C_EMPTY_STRING_ARRAY;
-    for fileName in items do appendIfNew(allPathsToScan,ExtractFileDir(fileName));
+    allPathsToScan:=recentFolders;
     result:=C_EMPTY_STRING_ARRAY;
     listScriptFileNames(rootPath);
     for pathToScan in allPathsToScan do begin

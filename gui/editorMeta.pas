@@ -1,7 +1,7 @@
 UNIT editorMeta;
 INTERFACE
 USES  //basic classes
-  Classes, sysutils, LazUTF8, LCLType, types,
+  Classes, sysutils, LazUTF8, LCLType, types, LazFileUtils,
   //my utilities:
   serializationUtil,
   myGenerics,
@@ -17,6 +17,7 @@ USES  //basic classes
   variableTreeViews,
   mnh_plotForm,
   //MNH:
+  mnh_doc,
   outlines,
   mnh_constants, mnh_basicTypes, mnh_fileWrappers,mnh_settings,
   mnh_tokenArray,
@@ -131,12 +132,12 @@ T_runnerModel=object
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
-                    CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
+                    CONST p_restoreMenuItem       :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
@@ -160,20 +161,21 @@ PROCEDURE closeAllUnmodifiedEditors;
 PROCEDURE checkForFileChanges;
 PROCEDURE finalizeEditorMeta;
 PROCEDURE saveWorkspace;
-VAR runnerModel:T_runnerModel;
+TYPE F_safeCallback=FUNCTION(CONST path,name,ext:string):string;
+VAR safeCallback:F_safeCallback;
+    runnerModel:T_runnerModel;
     recentlyActivated:T_fileHistory;
-    fileHistory           :T_fileHistory;
+    fileHistory      :T_fileHistory;
 IMPLEMENTATION
 VAR mainForm              :T_abstractMnhForm;
     inputPageControl      :TPageControl;
-    SaveDialog            :TSaveDialog;
     breakpointsImagesList :TImageList;
     EditKeyUp             :TKeyEvent;
     EditMouseDown         :TMouseEvent;
     EditProcessUserCommand:TProcessCommandEvent;
     assistanceSynEdit     :TSynEdit;
     assistanceTabSheet    :TTabSheet;
-
+    restoreMenuItem       :TMenuItem;
     outlineModel          :P_outlineTreeModel=nil;
     outlineGroupBox       :TGroupBox;
 
@@ -239,12 +241,12 @@ PROCEDURE initNewWorkspace;
 
 PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
                     CONST p_inputPageControl      :TPageControl;
-                    CONST p_SaveDialog            :TSaveDialog;
                     CONST p_breakpointsImagesList :TImageList;
                     CONST p_assistanceSynEdit     :TSynEdit;
                     CONST p_assistanceTabSheet    :TTabSheet;
                     CONST outputHighlighter       :TSynMnhSyn;
                     CONST languageMenuRoot        :TMenuItem;
+                    CONST p_restoreMenuItem       :TMenuItem;
                     CONST p_EditKeyUp             :TKeyEvent;
                     CONST p_EditMouseDown         :TMouseEvent;
                     CONST p_EditProcessUserCommand:TProcessCommandEvent;
@@ -259,11 +261,11 @@ PROCEDURE setupUnit(CONST p_mainForm              :T_abstractMnhForm;
 
     mainForm              :=p_mainForm              ;
     inputPageControl      :=p_inputPageControl      ;
-    SaveDialog            :=p_SaveDialog            ;
     breakpointsImagesList :=p_breakpointsImagesList ;
     EditKeyUp             :=p_EditKeyUp             ;
     EditMouseDown         :=p_EditMouseDown         ;
     EditProcessUserCommand:=p_EditProcessUserCommand;
+    restoreMenuItem       :=p_restoreMenuItem;
     assistanceSynEdit     :=p_assistanceSynEdit     ;
     assistanceTabSheet    :=p_assistanceTabSheet    ;
     outlineGroupBox       :=p_outlineGroupBox       ;
@@ -379,6 +381,7 @@ PROCEDURE T_editorMeta.activate;
       fileTypeMeta[l].menuItem.checked:=(l=language);
     end;
     try
+      restoreMenuItem.enabled:=isRestorable(getPath)>=0;
       recentlyActivated.fileClosed(getPath);
       if language_=LANG_MNH then begin
         outlineGroupBox.visible:=true;
@@ -424,17 +427,22 @@ PROCEDURE T_editorMeta.languageMenuItemClick(Sender: TObject);
   end;
 
 FUNCTION T_editorMeta.saveAsWithDialog: boolean;
+  VAR path,name,ext:string;
   begin
-    if language=LANG_MNH
-    then begin
-      SaveDialog.FilterIndex:=0;
-      SaveDialog.options:=SaveDialog.options+[ofExtensionDifferent];
+    if isFile then begin
+      path:=ExtractFileDir(fileInfo.filePath);
+      name:=ExtractFileNameOnly(fileInfo.filePath);
+      ext :=extractFileExt(fileInfo.filePath);
     end else begin
-      SaveDialog.FilterIndex:=1;
-      SaveDialog.options:=SaveDialog.options-[ofExtensionDifferent];
+      path:=GetCurrentDir;
+      name:='';
+      if length(fileTypeMeta[language].extensions)>0
+      then ext:='.'+lowercase(fileTypeMeta[language].extensions[0])
+      else ext:='';
     end;
-    if SaveDialog.execute then begin
-      mainForm.activeFileChanged(saveFile(SaveDialog.fileName),language_=LANG_MNH,fileInfo.filePath='');
+    name:=safeCallback(path,name,ext);
+    if name<>'' then begin
+      mainForm.activeFileChanged(saveFile(name),language_=LANG_MNH,fileInfo.filePath='');
       result:=true;
     end else result:=false;
   end;
@@ -774,14 +782,15 @@ FUNCTION T_editorMeta.resolveImport(CONST text: string): string;
 
 PROCEDURE T_editorMeta.exportToHtml;
   VAR SynExporterHTML: TSynExporterHTML;
+      name:string;
   begin
-    SaveDialog.FilterIndex:=2;
-    if not(SaveDialog.execute) then exit;
+    name:=safeCallback(GetCurrentDir,'','.html');
+    if name='' then exit;
     SynExporterHTML:=TSynExporterHTML.create(nil);
     SynExporterHTML.title:=pseudoName();
     SynExporterHTML.highlighter:=editor.highlighter;
     SynExporterHTML.ExportAll(editor.lines);
-    SynExporterHTML.saveToFile(SaveDialog.fileName);
+    SynExporterHTML.saveToFile(name);
     SynExporterHTML.free;
   end;
 

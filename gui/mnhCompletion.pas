@@ -175,7 +175,7 @@ PROCEDURE T_completionLogic.SynCompletionExecute(Sender: TObject);
 
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
-    for w in getListOfSimilarWords(s,wordsInEditor.values,32) do SynCompletion.ItemList.add(w);
+    for w in getListOfSimilarWords(s,wordsInEditor.values,32,false) do SynCompletion.ItemList.add(w);
   end;
 
 PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
@@ -186,7 +186,7 @@ PROCEDURE T_completionLogic.SynCompletionSearchPosition(VAR APosition: integer);
 
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
-    for w in getListOfSimilarWords(s,wordsInEditor.values,32) do  SynCompletion.ItemList.add(w);
+    for w in getListOfSimilarWords(s,wordsInEditor.values,32,false) do  SynCompletion.ItemList.add(w);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 

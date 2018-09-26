@@ -1,0 +1,117 @@
+object SaveFileDialog: TSaveFileDialog
+  Left = 1116
+  Height = 173
+  Top = 186
+  Width = 480
+  AutoSize = True
+  BorderStyle = bsDialog
+  Caption = 'Save File'
+  ClientHeight = 173
+  ClientWidth = 480
+  Constraints.MinWidth = 500
+  DesignTimePPI = 144
+  FormStyle = fsStayOnTop
+  OnShow = FormShow
+  LCLVersion = '1.8.4.0'
+  object Panel1: TPanel
+    Left = 0
+    Height = 33
+    Top = 0
+    Width = 480
+    Align = alTop
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 33
+    ClientWidth = 480
+    TabOrder = 0
+    object Label1: TLabel
+      Left = 0
+      Height = 33
+      Top = 0
+      Width = 51
+      Align = alLeft
+      Caption = 'Name:'
+      ParentColor = False
+    end
+    object nameEdit: TEdit
+      Left = 51
+      Height = 33
+      Top = 0
+      Width = 311
+      Align = alClient
+      OnKeyPress = dirComboBoxKeyPress
+      TabOrder = 0
+      Text = 'nameEdit'
+    end
+    object extEdit: TComboBox
+      Left = 362
+      Height = 33
+      Top = 0
+      Width = 118
+      Align = alRight
+      ItemHeight = 25
+      TabOrder = 1
+      Text = 'extEdit'
+    end
+  end
+  object Panel2: TPanel
+    Left = 0
+    Height = 33
+    Top = 33
+    Width = 480
+    Align = alTop
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 33
+    ClientWidth = 480
+    TabOrder = 1
+    object Label2: TLabel
+      Left = 0
+      Height = 33
+      Top = 0
+      Width = 54
+      Align = alLeft
+      Caption = 'Folder:'
+      ParentColor = False
+    end
+    object dirComboBox: TComboBox
+      Left = 54
+      Height = 33
+      Top = 0
+      Width = 426
+      Align = alClient
+      ItemHeight = 25
+      OnKeyPress = dirComboBoxKeyPress
+      TabOrder = 0
+      Text = 'dirComboBox'
+    end
+  end
+  object Button1: TButton
+    Left = 0
+    Height = 38
+    Top = 66
+    Width = 480
+    Align = alTop
+    Caption = 'Classical dialog...'
+    OnClick = Button1Click
+    TabOrder = 2
+  end
+  object cancelButton: TButton
+    Left = 0
+    Height = 38
+    Top = 104
+    Width = 480
+    Align = alTop
+    Cancel = True
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 3
+  end
+  object SaveDialog1: TSaveDialog
+    Title = 'Save as'
+    Filter = 'MNH Package|*.mnh|Any File|*.*|html|*.html'
+    Options = [ofOverwritePrompt, ofExtensionDifferent, ofCreatePrompt, ofShareAware, ofNoNetworkButton, ofEnableSizing]
+    left = 89
+    top = 32
+  end
+end
