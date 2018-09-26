@@ -68,7 +68,7 @@ PROCEDURE TopenFileDialog.searchEditChange(Sender: TObject);
   VAR newList:T_arrayOfString;
       s:string;
   begin
-    newList:=getListOfSimilarWords(searchEdit.text,fileList,32,true);
+    newList:=getListOfSimilarWords(searchEdit.text,fileList,100,true);
     searchResultsListBox.items.clear;
     for s in newList do searchResultsListBox.items.add(s);
   end;

@@ -18,7 +18,6 @@ USES
   mnh_gui_settings,
   askDialog,
   mnh_tables,
-  openDemoDialog,
   mnh_plotForm,
   mnh_splash,
   closeDialog,
@@ -92,7 +91,6 @@ TYPE
     miMinErrorlevel3,
     miMinErrorlevel4,
     miOpen,
-    miOpenDemo,
     miOpenDocumentation,
     miProfile,
     miReload,
@@ -387,7 +385,6 @@ PROCEDURE TMnhForm.enableDynamicItems;
     miEditGuiScripts   .enabled:=not(locked);
     miFileHistoryRoot  .enabled:=not(locked);
     miReplace          .enabled:=not(locked);
-    miOpenDemo         .enabled:=not(locked);
   end;
 
 PROCEDURE TMnhForm.updateScriptMenus;

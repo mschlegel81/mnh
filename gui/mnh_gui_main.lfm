@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 270
+  Left = 785
   Height = 659
-  Top = 360
+  Top = 202
   Width = 717
   AllowDropFiles = True
   Caption = 'MNH5'
@@ -3028,10 +3028,6 @@ object MnhForm: TMnhForm
         Caption = 'Open documentation'
         ShortCut = 8304
         OnClick = miHelpExternallyClick
-      end
-      object miOpenDemo: TMenuItem
-        Caption = 'Open demo'
-        OnClick = miOpenDemoClick
       end
       object miAbout: TMenuItem
         Caption = 'About'

@@ -18,9 +18,9 @@ object SettingsForm: TSettingsForm
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet_global
+    ActivePage = TabSheet_install
     Align = alClient
-    TabIndex = 1
+    TabIndex = 2
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
@@ -272,6 +272,17 @@ object SettingsForm: TSettingsForm
         Caption = 'Remove file associations and program folder'
         OnClick = uninstallButtonClick
         TabOrder = 2
+      end
+      object restorePacksAndDemosButton: TButton
+        Left = 0
+        Height = 35
+        Top = 105
+        Width = 312
+        Align = alTop
+        AutoSize = True
+        Caption = 'Restore default packages and demos'
+        OnClick = restorePacksAndDemosButtonClick
+        TabOrder = 3
       end
     end
   end

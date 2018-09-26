@@ -15,6 +15,7 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    restorePacksAndDemosButton: TButton;
     installButton: TButton;
     Panel1: TPanel;
     Panel2: TPanel;
@@ -42,6 +43,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE restorePacksAndDemosButtonClick(Sender: TObject);
     PROCEDURE installButtonClick(Sender: TObject);
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FontSizeEditEditingDone(Sender: TObject);
@@ -127,6 +129,11 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
   begin
     sandbox^.runInstallScript;
+  end;
+
+PROCEDURE TSettingsForm.restorePacksAndDemosButtonClick(Sender: TObject);
+  begin
+    ensureDemosAndPackages(true);
   end;
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);

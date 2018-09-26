@@ -78,7 +78,6 @@ PROCEDURE miGotoClick(Sender: TObject);
 PROCEDURE miHelpClick(Sender: TObject);
 PROCEDURE miHelpExternallyClick(Sender: TObject);
 PROCEDURE miHtmlExportClick(Sender: TObject);
-PROCEDURE miOpenDemoClick(Sender: TObject);
 PROCEDURE miRunCustomUtilScript(Sender: TObject);
 PROCEDURE miUtilityScriptRootClick(Sender: TObject);
 PROCEDURE mi_settingsClick(Sender: TObject);
@@ -642,12 +641,6 @@ PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miHtmlExportClick(Sender: TObject); begin if hasEditor then getEditor^.exportToHtml; end;
-
-PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
-  begin
-    if openDemoDialogForm.ShowModal=mrOk then
-       inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(openDemoDialogForm.selectedFile,true);
-  end;
 
 PROCEDURE TMnhForm.miRunCustomUtilScript(Sender: TObject);
   VAR k:longint;
