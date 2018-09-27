@@ -57,7 +57,9 @@ nextSecond->sleep(1-formatTime('0.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
-  async({while(true,begin (asciiArtTime(systime-floor(systime))|'Press Enter to quit').printOnce; nextSecond; end)});
+  async({while(true,begin (asciiArtTime(systime-floor(systime))|'Press Enter to quit').printOnce;
+  exec('cmd',['/C','title',formatTime('c',systime)]);
+  nextSecond; end)});
   ask('Press enter to quit');
 end;
 

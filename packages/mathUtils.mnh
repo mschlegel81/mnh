@@ -9,6 +9,10 @@ end;
 sum(L:NumericList)->L.agg(+) orElse 0;
 prod(L:NumericList)->L.agg(*) orElse 1;
 
+runningSum(L:NumericList)->begin
+  (local s:=0)|(L.each(x,s+=x));
+end;
+
 factorial(i=0)->1;
 factorial(i>=21)->2.43290200817664E18*(1.0*[21..i]).agg(*);
 factorial(i in [1..20])->[1..i].agg(*);

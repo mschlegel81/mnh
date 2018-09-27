@@ -22,7 +22,7 @@ main->begin
   local inputText:='';
   showDialog('Calculator',
     [newInputEditor('mnh')
-      .bind('inputText'),
+      .bind(::inputText),
      newOutputEditor('output')
       .withCaption({prettyExecute(inputText)})]);
 end;
