@@ -60,6 +60,7 @@ TYPE
     callStackGroupBox,
     currentExpressionGroupBox,
     outlineGroupBox:                 TGroupBox;
+    outlineImageList: TImageList;
     breakpointsImagesList,
     debugItemsImageList:       TImageList;
     callStackList:             TListBox;

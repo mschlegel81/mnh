@@ -4,6 +4,7 @@ USES Classes,
      StdCtrls,
      ComCtrls,
      mnh_litVar,
+     mnh_operators,
      mnh_constants,mnh_basicTypes,
      mnh_subrules,mnh_rule,mnh_packages;
 TYPE
@@ -42,7 +43,7 @@ TYPE
       children:array of P_outlineNode;
 
       PROCEDURE updateWithRule(CONST rule:P_rule; CONST inMainPackage:boolean);
-      PROCEDURE updateWithSubrule(CONST subRule:P_subruleExpression; CONST ruleIdAndModifiers:string; CONST inMainPackage:boolean);
+      PROCEDURE updateWithSubrule(CONST subRule:P_subruleExpression; CONST ruleId:string; CONST inMainPackage:boolean);
       PROCEDURE updateWithPackage(CONST package:P_package; CONST mainPackage:boolean);
       CONSTRUCTOR createBlank(CONST inModel:P_outlineTreeModel; CONST node:TTreeNode);
       DESTRUCTOR destroy;
@@ -50,39 +51,54 @@ TYPE
   end;
 
 IMPLEMENTATION
+CONST outlineIconIndex:array[T_ruleType] of longint=(-1,
+              {rt_memoized}        0,
+              {rt_mutable}         1,
+              {rt_datastore}       2,
+              {rt_synchronized}    3,
+              {rt_customTypeCheck} 4,
+              {rt_duckTypeCheck}   4,
+              {rt_customTypeCast}  5,
+              {rt_customOperator}  6);
 
-FUNCTION privatePrefix(CONST isPrivate:boolean):string;
-  begin
-    if isPrivate then result:=PRIVATE_TEXT+' ' else result:='';
-  end;
-
-PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CONST ruleIdAndModifiers: string; CONST inMainPackage:boolean);
+PROCEDURE T_outlineNode.updateWithSubrule(CONST subRule: P_subruleExpression; CONST ruleId: string; CONST inMainPackage:boolean);
   begin
     isLocal:=inMainPackage;
     isPublic:=subRule^.isPublic;
     location:=subRule^.getLocation;
-    associatedNode.text:=privatePrefix(not(isPublic))+ruleIdAndModifiers+subRule^.patternString;
+    associatedNode.text:=ruleId+subRule^.patternString;
   end;
 
 PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:boolean);
-  VAR idAndModifiers:string;
+  VAR ruleId:string;
       subrules:T_subruleArray;
       subRule:P_subruleExpression;
       relevantSubruleCount:longint=0;
       childIdx:longint=0;
       keepCount:longint;
+  FUNCTION opRuleName:string;
+    VAR tt:T_tokenType;
+    begin
+      if rule^.getRuleType=rt_customOperator then begin
+        for tt:=low(operatorName) to high(operatorName) do if
+        operatorName[tt]=rule^.getId then exit(C_tokenInfo[tt].defaultId);
+      end else result:=rule^.getId;
+    end;
+
   begin
     isLocal:=inMainPackage;
     isPublic:=rule^.hasPublicSubrule;
     location:=rule^.getLocation;
 
-    idAndModifiers:=C_ruleTypeText[rule^.getRuleType]+rule^.getId;
+    ruleId:=opRuleName;
     if rule^.getRuleType in C_mutableRuleTypes then begin
-      associatedNode.text:=privatePrefix(not(isPublic))+idAndModifiers;
+      associatedNode.text:=ruleId;
+      associatedNode.ImageIndex:=outlineIconIndex[rule^.getRuleType];
       for childIdx:=0 to length(children)-1 do dispose(children[childIdx],destroy);
       setLength(children,0);
     end else begin
-      associatedNode.text:=idAndModifiers;
+      associatedNode.text:=ruleId;
+      associatedNode.ImageIndex:=outlineIconIndex[rule^.getRuleType];
       subrules:=P_ruleWithSubrules(rule)^.getSubrules;
       for subRule in subrules do if inMainPackage or (subRule^.isPublic) then inc(relevantSubruleCount);
       if relevantSubruleCount<=1 then begin
@@ -90,14 +106,14 @@ PROCEDURE T_outlineNode.updateWithRule(CONST rule: P_rule; CONST inMainPackage:b
            isLocal:=inMainPackage;
            isPublic:=subRule^.isPublic;
            location:=subRule^.getLocation;
-           associatedNode.text:=privatePrefix(not(isPublic))+idAndModifiers+subRule^.patternString;
+           associatedNode.text:=ruleId+subRule^.patternString;
          end;
       end else for subRule in P_ruleWithSubrules(rule)^.getSubrules do if inMainPackage or (subRule^.isPublic) then begin
         if childIdx>=length(children) then begin
           setLength(children,childIdx+1);
           new(children[childIdx],createBlank(containingModel,containingModel^.view.items.addChild(associatedNode,'')));
         end;
-        children[childIdx]^.updateWithSubrule(subRule,idAndModifiers,inMainPackage);
+        children[childIdx]^.updateWithSubrule(subRule,ruleId,inMainPackage);
         inc(childIdx);
       end;
       keepCount:=childIdx;
@@ -231,8 +247,9 @@ PROCEDURE T_outlineTreeModel.checkboxClick(Sender: TObject);
 PROCEDURE T_outlineTreeModel.openSelectedLocation;
   begin
     enterCriticalSection(cs);
+    if Assigned(view.Selected) and (view.Selected.data<>nil) then
     openLocation(P_outlineNode(view.Selected.data)^.location);
-    LeaveCriticalsection(cs);
+    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_outlineTreeModel.treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
