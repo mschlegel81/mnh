@@ -56,9 +56,9 @@ PROCEDURE TSaveFileDialog.dirComboBoxKeyPress(Sender: TObject; VAR key: char);
   begin
     if key=#13 then begin
       selectedFile:=dirComboBox.text+DirectorySeparator+nameEdit.text+extEdit.text;
-      if FileExists(selectedFile) then begin
+      if fileExists(selectedFile) then begin
          mr:=closeDialogForm.showOnOverwrite(selectedFile);
-         if      mr=mrOK    then ModalResult:=mrOK
+         if      mr=mrOk    then ModalResult:=mrOk
          else if mr=mrClose then ModalResult:=mrCancel;
       end else ModalResult:=mrOk;
     end;
@@ -109,7 +109,6 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
 
 FUNCTION saveFile(CONST rootPath,fname,ext: string): string;
   begin
-    writeln('Calling saveFile ',rootPath,'/',fname,'/',ext,'; initialized=',mySaveFileDialog<>nil);
     result:=saveFileDialog.showForRoot(rootPath,fname,ext);
   end;
 

@@ -70,16 +70,16 @@ object plotForm: TplotForm
       Left = 261
       Height = 29
       Top = 0
-      Width = 149
+      Width = 25
       Align = alLeft
-      Caption = 'animationFPSLabel'
+      Caption = '     '
       ParentColor = False
     end
     object frameTrackBar: TTrackBar
-      Left = 410
+      Left = 286
       Height = 29
       Top = 0
-      Width = 276
+      Width = 400
       Frequency = 5
       OnChange = frameTrackBarChange
       Position = 0

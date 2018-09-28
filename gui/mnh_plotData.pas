@@ -322,6 +322,10 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint; CONST qu
   begin
     if backgroundPreparation then exit;
     enterCriticalSection(frameCS);
+    if backgroundPreparation then begin
+      leaveCriticalSection(frameCS);
+      exit;
+    end;
     backgroundPreparation:=true;
     postedHeight:=height;
     postedWidth:=width;
@@ -588,7 +592,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       exit;
     end;
     {$ifndef unix}
-    if exportingAll and (index+settings.cpuCount<length(frame)) then frame[index+settings.cpuCount]^.postPreparation(width,height,quality);
+    if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height,quality);
     {$endif}
 
     storeImage:=TImage.create(nil);
@@ -610,6 +614,7 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
+  VAR nextToPrepare:longint;
   begin
     enterCriticalSection(seriesCs);
     if length(frame)=0 then begin
@@ -626,7 +631,13 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
                  end;
       end;
       {$ifndef unix}
-      if result then frame[(frameIndex+settings.cpuCount) mod length(frame)]^.postPreparation(width,height,quality);
+      if result then begin
+        nextToPrepare:=frameIndex+(settings.cpuCount div 2);
+        if nextToPrepare=frameIndex then inc(nextToPrepare);
+        if cycle then nextToPrepare:=nextToPrepare mod length(frame);
+        if (nextToPrepare>=0) and (nextToPrepare<length(frame))
+        then frame[nextToPrepare]^.postPreparation(width,height,quality);
+      end;
       {$endif}
     end;
     leaveCriticalSection(seriesCs);
@@ -752,6 +763,8 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
     system.leaveCriticalSection(cs);
   end; end;
 
+VAR penAndBrushCs:TRTLCriticalSection;
+
 PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
   intendedHeight, scalingFactor: longint; VAR gridTic: T_ticInfos;
   CONST sampleIndex: byte);
@@ -772,9 +785,11 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         i:longint;
     begin
       if (i0<0) or (i1<i0+1) then exit;
+      enterCriticalSection(penAndBrushCs);
       target.Brush.color:=scaleAndColor.solidColor;
       if solid then target.Brush.style:=bsSolid
                else target.Brush.style:=scaleAndColor.solidStyle;
+      leaveCriticalSection(penAndBrushCs);
       if (target.Brush.style=bsClear) and not(withBorder) then exit;
 
       setLength(points,i1-i0+1);
@@ -782,17 +797,21 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         points[i].x:=screenRow[i0+i].x;
         points[i].y:=screenRow[i0+i].y;
       end;
+      enterCriticalSection(penAndBrushCs);
       if not(withBorder) then target.Pen.style:=psClear;
       target.Polygon(points);
       if not(withBorder) then target.Pen.style:=psSolid;
+      leaveCriticalSection(penAndBrushCs);
     end;
 
   PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST solid,withBorder:boolean);
     VAR points:array[0..4] of TPoint;
     begin
+      enterCriticalSection(penAndBrushCs);
       target.Brush.color:=scaleAndColor.solidColor;
       if solid then target.Brush.style:=bsSolid
                else target.Brush.style:=scaleAndColor.solidStyle;
+      leaveCriticalSection(penAndBrushCs);
       if (target.Brush.style=bsClear) and not(withBorder) then exit;
       points[0].x:=x0; points[0].y:=y0;
       points[1].x:=x1; points[1].y:=y1;
@@ -815,10 +834,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
   begin
     target.LockCanvas;
     //Clear:------------------------------------------------------------------
+    enterCriticalSection(penAndBrushCs);
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.EndCap:=pecSquare;
+    leaveCriticalSection(penAndBrushCs);
     target.FillRect(0, 0, intendedWidth*scalingFactor-1, intendedHeight*scalingFactor-1);
     target.clear;
     //------------------------------------------------------------------:Clear
@@ -826,8 +847,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
     target.Pen.style:=psSolid;
     //minor grid:-------------------------------------------------------------
     scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
+    enterCriticalSection(penAndBrushCs);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
+    leaveCriticalSection(penAndBrushCs);
     if (gse_fineGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if not(major) then begin
       lastY:=round(pos*scalingFactor);
@@ -841,8 +864,10 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
     //-------------------------------------------------------------:minor grid
     //major grid:-------------------------------------------------------------
     scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,SINGLE_SAMPLE_INDEX);
+    enterCriticalSection(penAndBrushCs);
     target.Pen.color:=scaleAndColor.lineColor;
     target.Pen.width:=scaleAndColor.lineWidth;
+    leaveCriticalSection(penAndBrushCs);
     if (gse_coarseGrid in scalingOptions.axisStyle['y']) then
     for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
       {$Q-}
@@ -873,10 +898,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
       screenRow:=scalingOptions.transformRow(row[rowId].sample,scalingFactor,darts_delta[sampleIndex mod 5,0],darts_delta[sampleIndex mod 5,1]);
       scaleAndColor:=row[rowId].style.getLineScaleAndColor(intendedWidth*scalingFactor,intendedHeight*scalingFactor,sampleIndex);
       if ps_straight in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        leaveCriticalSection(penAndBrushCs);
         lastWasValid:=false;
         for i:=0 to length(screenRow)-1 do begin
           if screenRow[i].valid then begin
@@ -892,10 +919,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
           lastWasValid:=screenRow[i].valid;
         end;
       end else if ps_stepLeft in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        leaveCriticalSection(penAndBrushCs);
         lastWasValid:=false;
         for i:=0 to length(screenRow)-1 do begin
           if screenRow[i].valid then begin
@@ -911,10 +940,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
           lastWasValid:=screenRow[i].valid;
         end;
       end else if ps_stepRight in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        leaveCriticalSection(penAndBrushCs);
         lastWasValid:=false;
         for i:=0 to length(screenRow)-1 do begin
           if screenRow[i].valid then begin
@@ -930,11 +961,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
           lastWasValid:=screenRow[i].valid;
         end;
       end else if ps_bar in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
-
+        leaveCriticalSection(penAndBrushCs);
         lastWasValid:=false;
         for i:=0 to length(screenRow)-1 do begin
           if screenRow[i].valid then begin
@@ -947,9 +979,11 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
           end;
         end;
       end else if ps_box in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psClear;
         target.Brush.style:=bsSolid;
         target.Brush.color:=scaleAndColor.solidColor;
+        leaveCriticalSection(penAndBrushCs);
         lastWasValid:=false;
         i:=0;
         while i+1<length(screenRow) do begin
@@ -963,10 +997,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
       end else if ps_tube in row[rowId].style.style then begin
         i:=0;
         while i+3<length(screenRow) do begin
+          enterCriticalSection(penAndBrushCs);
           target.Pen.style:=psSolid;
           target.Pen.color:=scaleAndColor.lineColor;
           target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
+          leaveCriticalSection(penAndBrushCs);
           if screenRow[i  ].valid and screenRow[i+2].valid then target.line(screenRow[i  ].x,screenRow[i  ].y,
                                                                             screenRow[i+2].x,screenRow[i+2].y);
           if screenRow[i+1].valid and screenRow[i+3].valid then target.line(screenRow[i+1].x,screenRow[i+1].y,
@@ -981,10 +1017,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         end;
       end;
       if ps_polygon in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        leaveCriticalSection(penAndBrushCs);
         j:=-1;
         for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
           if j>=0 then screenRowPoly(j,i-1,ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>=1);
@@ -994,9 +1032,11 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         if j>=0 then screenRowPoly(j,i,ps_fillSolid in row[rowId].style.style,scaleAndColor.lineWidth>=1);
       end;
       if ps_dot in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psClear;
         target.Brush.style:=bsSolid;
         target.Brush.color:=scaleAndColor.solidColor;
+        leaveCriticalSection(penAndBrushCs);
         if scaleAndColor.symbolWidth>=1 then begin
           for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
             target.Ellipse(screenRow[i].x-scaleAndColor.symbolWidth,
@@ -1010,10 +1050,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         end;
       end;
       if ps_plus in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        leaveCriticalSection(penAndBrushCs);
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
           target.line(screenRow[i].x-scaleAndColor.symbolWidth,
                       screenRow[i].y,
@@ -1026,10 +1068,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         end;
       end;
       if ps_cross in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        leaveCriticalSection(penAndBrushCs);
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
           target.line(screenRow[i].x-scaleAndColor.symbolRadius,
                       screenRow[i].y-scaleAndColor.symbolRadius,
@@ -1042,10 +1086,12 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         end;
       end;
       if ps_impulse in row[rowId].style.style then begin
+        enterCriticalSection(penAndBrushCs);
         target.Pen.style:=psSolid;
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecSquare;
+        leaveCriticalSection(penAndBrushCs);
         for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
           target.line(screenRow[i].x,
                       yBaseLine,
@@ -1073,19 +1119,23 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TCanvas; CONST intendedWidth,intende
     cSysX:=scalingOptions.axisTrafo['x'].screenMin;
     cSysY:=scalingOptions.axisTrafo['y'].screenMin;
     //clear border:-----------------------------------------------------------
+    enterCriticalSection(penAndBrushCs);
     target.Brush.style:=bsSolid;
     target.Brush.color:=clWhite;
     target.Pen.style:=psClear;
     target.Pen.width:=1;
     target.Pen.EndCap:=pecSquare;
+    leaveCriticalSection(penAndBrushCs);
     if (scalingOptions.axisStyle['y']<>[]) then target.FillRect(0,0,cSysX,intendedHeight);
     if (scalingOptions.axisStyle['x']<>[]) then target.FillRect(cSysX,cSysY,intendedWidth,intendedHeight);
     //-----------------------------------------------------------:clear border
     //coordinate system:======================================================
     //axis:-------------------------------------------------------------------
+    enterCriticalSection(penAndBrushCs);
     target.Pen.style:=psSolid;
     target.Pen.color:=clBlack;
     target.Pen.width:=1;
+    leaveCriticalSection(penAndBrushCs);
     if (scalingOptions.axisStyle['y']<>[]) then target.line(cSysX, 0, cSysX, cSysY);
     if (scalingOptions.axisStyle['x']<>[]) then target.line(intendedWidth, cSysY, cSysX, cSysY);
     //-------------------------------------------------------------------:axis
@@ -1417,7 +1467,9 @@ PROCEDURE T_plotSystem.registerPlotForm(CONST pullSetingsToGuiCB:F_pullSettingsT
 INITIALIZATION
   MAJOR_TIC_STYLE.create(0); MAJOR_TIC_STYLE.styleModifier:=0.2;
   MINOR_TIC_STYLE.create(0); MINOR_TIC_STYLE.styleModifier:=0.1;
+  initCriticalSection(penAndBrushCs);
 FINALIZATION
   MAJOR_TIC_STYLE.destroy;
   MINOR_TIC_STYLE.destroy;
+  doneCriticalSection(penAndBrushCs);
 end.
