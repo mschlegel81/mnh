@@ -20,6 +20,7 @@ TYPE
       showPrivateCheckbox,
       showImportedCheckbox:TCheckBox;
       packageNodes:array of P_outlineNode;
+      PROCEDURE openSelectedLocation;
     public
       CONSTRUCTOR create(CONST tree:TTreeView; CONST showPrivateCB,showImportedCB:TCheckBox; CONST openLocationCallback:T_openLocationCallback);
       DESTRUCTOR destroy;
@@ -27,6 +28,7 @@ TYPE
       PROCEDURE update(CONST mainPackage:P_package);
       PROCEDURE checkboxClick(Sender: TObject);
       PROCEDURE treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+      PROCEDURE treeViewDblClick(Sender: TObject);
   end;
 
   T_outlineNode=object
@@ -166,6 +168,7 @@ CONSTRUCTOR T_outlineTreeModel.create(CONST tree: TTreeView; CONST showPrivateCB
     showPrivateCB .OnClick:=@checkboxClick;
     showImportedCB.OnClick:=@checkboxClick;
     tree.OnKeyDown:=@treeViewKeyDown;
+    tree.OnDblClick:=@treeViewDblClick;
     openLocation:=openLocationCallback;
     initCriticalSection(cs);
     setLength(packageNodes,0);
@@ -225,11 +228,21 @@ PROCEDURE T_outlineTreeModel.checkboxClick(Sender: TObject);
     refresh;
   end;
 
-PROCEDURE T_outlineTreeModel.treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE T_outlineTreeModel.openSelectedLocation;
   begin
     enterCriticalSection(cs);
-    if key=13 then openLocation(P_outlineNode(view.Selected.data)^.location);
-    leaveCriticalSection(cs);
+    openLocation(P_outlineNode(view.Selected.data)^.location);
+    LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_outlineTreeModel.treeViewKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if key=13 then openSelectedLocation;
+  end;
+
+PROCEDURE T_outlineTreeModel.treeViewDblClick(Sender: TObject);
+  begin
+    openSelectedLocation;
   end;
 
 end.
