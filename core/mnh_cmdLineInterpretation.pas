@@ -1,11 +1,11 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
-     myStringUtil,myGenerics,{$ifdef fullVersion}mySys,{$endif}
+     myStringUtil,myGenerics,mySys,
      mnh_constants,
      mnh_fileWrappers,
      mnh_messages,
-     mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,mnh_settings,{$endif}
+     mnh_out_adapters,consoleAsk,{$ifdef fullVersion}mnh_doc,{$endif}mnh_settings,
      mnh_funcs_mnh,
      mnh_contexts,
      mnh_packages,
@@ -113,7 +113,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR globals:T_evaluationGlobals;
         package:P_package;
     begin
-      {$ifdef fullVersion}memoryComfortThreshold:=settings.memoryLimit;{$endif}
+      memoryComfortThreshold:=settings.memoryLimit;
       globals.create(@consoleAdapters);
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
@@ -129,7 +129,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     VAR globals:T_evaluationGlobals;
         package:T_package;
     begin
-      {$ifdef fullVersion}memoryComfortThreshold:=settings.memoryLimit;{$endif}
+      memoryComfortThreshold:=settings.memoryLimit;
       package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
       globals.create(@consoleAdapters);
       {$ifdef fullVersion}
