@@ -206,7 +206,9 @@ FUNCTION loadWorkspace:boolean;
       result:=result and stream.allOkay;
     end;
     result:=result and stream.allOkay;
-    inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
+    if length(filesToOpenInEditor)=0
+    then inputPageControl.activePageIndex:=stream.readLongint
+    else inputPageControl.activePageIndex:=addOrGetEditorMetaForFiles(filesToOpenInEditor,true);
     stream.destroy;
   end;
 
