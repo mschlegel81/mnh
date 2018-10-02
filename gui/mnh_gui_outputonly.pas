@@ -100,6 +100,7 @@ PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
 
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    while currentlyExporting do begin ThreadSwitch; sleep(1); end;
     if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
   end;
 
