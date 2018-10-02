@@ -90,7 +90,7 @@ PROCEDURE displayHelp;
     writeln('  -info             show info; same as -cmd mnhInfo.print');
     {$ifdef fullVersion}
     writeln('  -install          update packes and demos, ensure installation directory and file associations');
-    writeln('  -uninstall        remove packes and demos, remove installation directory and file associations');
+    writeln('  -uninstall        remove packes and demos, remove installation directory and file associations and the called executable itself');
     writeln('  -profile          do a profiling run - implies -vt');
     writeln('  -edit <filename>  opens file(s) in editor instead of interpreting directly');
     {$endif}

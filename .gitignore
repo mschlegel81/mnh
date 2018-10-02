@@ -28,3 +28,5 @@ mnh_prof
 versions/*.zip
 core/build_number.inc
 /regTest/testExpectation.datastore1
+/mnh_light_prof
+/callgrind.out.*

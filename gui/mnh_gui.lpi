@@ -26,7 +26,7 @@
       <UseVersionInfo Value="True"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE + interpreter" InternalName="mnh5" LegalCopyright="LGPL" OriginalFilename="mnh5" ProductName="MNH5"/>
     </VersionInfo>
-    <BuildModes Count="2">
+    <BuildModes Count="3">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="deployment">
         <CompilerOptions>
@@ -70,6 +70,38 @@
           </Other>
         </CompilerOptions>
       </Item2>
+      <Item3 Name="profiling">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <PathDelim Value="\"/>
+          <Target>
+            <Filename Value="mnh_prof"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir);..\core;..\3rd_party"/>
+            <OtherUnitFiles Value="..\core;..\common;..\3rd_party"/>
+            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <CStyleOperator Value="False"/>
+              <AllowLabel Value="False"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <UseValgrind Value="True"/>
+            </Debugging>
+            <LinkSmart Value="True"/>
+          </Linking>
+          <Other>
+            <CustomOptions Value="-dfullVersion -dprofilingFlavour"/>
+          </Other>
+        </CompilerOptions>
+      </Item3>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
