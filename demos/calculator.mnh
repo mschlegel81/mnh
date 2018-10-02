@@ -17,12 +17,15 @@ private prettyExecute(input:String)->
                        .formatTabs
                        .join("\n");
 
+plain datastore previousInput:='';
+
 @demo_for=custom forms
 main->begin
-  local inputText:='';
+  local inputText:=previousInput;
   showDialog('Calculator',
     [newInputEditor('mnh')
-      .bind('inputText'),
+      .bind(::inputText),
      newOutputEditor('output')
       .withCaption({prettyExecute(inputText)})]);
+  previousInput:=inputText;
 end;

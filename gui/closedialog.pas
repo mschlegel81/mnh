@@ -12,6 +12,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
   private
   public
+    FUNCTION showOnOverwrite(CONST fileName:string): integer;
     FUNCTION showOnLoad     (CONST fileName:string): integer;
     FUNCTION showOnClose    (CONST fileName:string): integer;
     FUNCTION showOnDeleted  (CONST fileName:string): integer;
@@ -33,6 +34,15 @@ FUNCTION closeDialogForm:TcloseDialogForm;
 {$R *.lfm}
 PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
   begin
+  end;
+
+FUNCTION TcloseDialogForm.showOnOverwrite(CONST fileName:string): integer;
+  begin
+    caption:=fileName+' already exists';
+    ButtonPanel1.OKButton.caption := 'Overwrite';
+    ButtonPanel1.CancelButton.caption := 'Pick another';
+    ButtonPanel1.CloseButton.caption := 'Cancel';
+    result := ShowModal;
   end;
 
 FUNCTION TcloseDialogForm.showOnLoad(CONST fileName:string): integer;

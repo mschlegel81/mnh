@@ -8,12 +8,9 @@ USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls,
   mnh_constants,
-  editorMeta,editorMetaBase;
+  editorMeta,editorMetaBase,closeDialog;
 
 TYPE
-
-  { TSaveFileDialog }
-
   TSaveFileDialog = class(TForm)
     Button1: TButton;
     CancelButton: TButton;
@@ -55,10 +52,15 @@ PROCEDURE TSaveFileDialog.Button1Click(Sender: TObject);
   end;
 
 PROCEDURE TSaveFileDialog.dirComboBoxKeyPress(Sender: TObject; VAR key: char);
+  VAR mr:TModalResult;
   begin
     if key=#13 then begin
       selectedFile:=dirComboBox.text+DirectorySeparator+nameEdit.text+extEdit.text;
-      ModalResult:=mrOk;
+      if fileExists(selectedFile) then begin
+         mr:=closeDialogForm.showOnOverwrite(selectedFile);
+         if      mr=mrOk    then ModalResult:=mrOk
+         else if mr=mrClose then ModalResult:=mrCancel;
+      end else ModalResult:=mrOk;
     end;
   end;
 
@@ -107,7 +109,6 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath,fname,ext: string): string;
 
 FUNCTION saveFile(CONST rootPath,fname,ext: string): string;
   begin
-    writeln('Calling saveFile ',rootPath,'/',fname,'/',ext,'; initialized=',mySaveFileDialog<>nil);
     result:=saveFileDialog.showForRoot(rootPath,fname,ext);
   end;
 

@@ -323,6 +323,10 @@ PROCEDURE T_plotSeriesFrame.postPreparation(CONST width,height:longint; CONST qu
   begin
     if backgroundPreparation then exit;
     enterCriticalSection(frameCS);
+    if backgroundPreparation then begin
+      leaveCriticalSection(frameCS);
+      exit;
+    end;
     backgroundPreparation:=true;
     postedHeight:=height;
     postedWidth:=width;
@@ -586,7 +590,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       exit;
     end;
     {$ifndef unix}
-    if exportingAll and (index+settings.cpuCount<length(frame)) then frame[index+settings.cpuCount]^.postPreparation(width,height,quality);
+    if exportingAll and (index+settings.cpuCount-1<length(frame)) then frame[index+settings.cpuCount-1]^.postPreparation(width,height,quality);
     {$endif}
 
     storeImage:=TImage.create(nil);
@@ -594,6 +598,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
     frame[index]^.obtainImage(storeImage,quality);
     storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     storeImage.destroy;
+    frame[index]^.clearImage(false);
     leaveCriticalSection(seriesCs);
   end;
 
@@ -608,6 +613,7 @@ PROCEDURE T_plotSeries.addFrame(VAR plot: T_plot);
   end;
 
 FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CONST width,height,quality:longint):boolean;
+  VAR nextToPrepare:longint;
   begin
     enterCriticalSection(seriesCs);
     if length(frame)=0 then begin
@@ -624,7 +630,13 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
                  end;
       end;
       {$ifndef unix}
-      if result then frame[(frameIndex+settings.cpuCount) mod length(frame)]^.postPreparation(width,height,quality);
+      if result then begin
+        nextToPrepare:=frameIndex+(settings.cpuCount div 2);
+        if nextToPrepare=frameIndex then inc(nextToPrepare);
+        if cycle then nextToPrepare:=nextToPrepare mod length(frame);
+        if (nextToPrepare>=0) and (nextToPrepare<length(frame))
+        then frame[nextToPrepare]^.postPreparation(width,height,quality);
+      end;
       {$endif}
     end;
     leaveCriticalSection(seriesCs);
@@ -932,7 +944,6 @@ PROCEDURE T_plot.drawGridAndRows(CONST target: TCanvas; CONST intendedWidth,
         target.Pen.color:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
-
         lastWasValid:=false;
         for i:=0 to length(screenRow)-1 do begin
           if screenRow[i].valid then begin

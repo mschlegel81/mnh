@@ -111,6 +111,7 @@ FUNCTION plotFormIsInitialized:boolean;
 PROCEDURE resetPlot(CONST hideWindow:boolean);
 PROCEDURE initializePlotForm;
 VAR plotSystem:T_plotSystem;
+    currentlyExporting:boolean=false;
 IMPLEMENTATION
 VAR myPlotForm:TplotForm=nil;
 
@@ -286,6 +287,8 @@ PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
       exportingGroupBox.width:=round(ClientWidth*0.9);
       exportingGroupBox.Left:=round(ClientWidth*0.05);
       exportingGroupBox.visible:=true;
+      enabled:=false;
+      currentlyExporting:=true;
       exportingProgressBar.position:=0;
       if (exportPlotForm.rbExportAll.checked) and (plotSystem.animation.frameCount>0) then begin
         exportingProgressBar.max:=plotSystem.animation.frameCount;
@@ -318,6 +321,8 @@ PROCEDURE TplotForm.miRenderToFileClick(Sender: TObject);
         Application.ProcessMessages;
       end;
       exportingGroupBox.visible:=false;
+      enabled:=true;
+      currentlyExporting:=false;
     end;
     plotSystem.doneGuiInteraction;
   end;
