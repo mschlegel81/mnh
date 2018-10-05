@@ -25,16 +25,17 @@ begin
   mnh_cmdLineInterpretation.imigAdapters:=@mnh_imig_form.imigSystem;
   {$endif}
   if wantMainLoopAfterParseCmdLine then begin
+    {$ifndef debugMode}
     hideConsole;
+    {$endif}
     Application.title:='MNH5 - GUI';
     RequireDerivedFormResource := true;
     Application.initialize;
     if reEvaluationWithGUIrequired
     then Application.CreateForm(ToutputOnlyForm, outputOnlyForm)
-    else if sendParametersToOtherInstance(filesToOpenInEditor) then begin
-      showConsole;
-      halt;
-    end else Application.CreateForm(TMnhForm, MnhForm);
+    else if sendParametersToOtherInstance(filesToOpenInEditor)
+    then halt
+    else Application.CreateForm(TMnhForm, MnhForm);
     Application.run;
     showConsole;
   end;

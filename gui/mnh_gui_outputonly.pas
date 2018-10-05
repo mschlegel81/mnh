@@ -18,13 +18,11 @@ USES
 
 TYPE
   ToutputOnlyForm = class(T_abstractMnhForm)
-    outputEdit: TSynEdit;
     Timer1: TTimer;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
-    PROCEDURE OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE Timer1Timer(Sender: TObject);
 
     PROCEDURE onEditFinished(CONST data:P_editScriptTask   ); override;
@@ -33,8 +31,9 @@ TYPE
     PROCEDURE onEndOfEvaluation;                              override;
     PROCEDURE triggerFastPolling;                             override;
     PROCEDURE activeFileChanged(CONST newCaption:string; CONST isMnhFile:boolean; CONST isPseudoFile:boolean); override;
-  private
-    outputHighlighter:TSynMnhSyn;
+    private
+      consoleAdapters:T_consoleOutAdapter;
+      outputHighlighter: TSynMnhSyn;
   end;
 
 VAR
@@ -47,9 +46,9 @@ PROCEDURE ToutputOnlyForm.Timer1Timer(Sender: TObject);
   VAR currentRunnerInfo:T_runnerStateInfo;
   begin
     currentRunnerInfo:=runEvaluator.getRunnerStateInfo;
-    guiOutAdapter.flushToGui;
     if askForm.displayPending then askForm.Show;
     if Timer1.interval<MAX_INTERVAL then Timer1.interval:=Timer1.interval+1;
+    guiEventsAdapter.flushToGui;
     if plotFormIsInitialized and plotForm.timerTick then Timer1.interval:=plotForm.wantTimerInterval
     else if Timer1.interval>MAX_INTERVAL then Timer1.interval:=MAX_INTERVAL;
     if not(currentRunnerInfo.state in C_runningStates) and not(anyFormShowing) then close;
@@ -61,7 +60,7 @@ PROCEDURE ToutputOnlyForm.onDebuggerEvent;                              begin en
 
 PROCEDURE ToutputOnlyForm.onEndOfEvaluation;
   begin
-    caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - done';
+    caption:='MNH - done';
   end;
 
 PROCEDURE ToutputOnlyForm.triggerFastPolling;
@@ -75,27 +74,26 @@ PROCEDURE ToutputOnlyForm.activeFileChanged(CONST newCaption:string; CONST isMnh
 
 PROCEDURE ToutputOnlyForm.FormCreate(Sender: TObject);
   begin
-    initGuiOutAdapters(outputOnlyForm,outputEdit,false);
-    setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter);
+    initGuiOutAdapters(outputOnlyForm,nil);
+    consoleAdapters.create(C_defaultOutputBehavior_fileMode);
+    setupOutputBehaviourFromCommandLineOptions(guiAdapters,@consoleAdapters);
+    if wantConsoleAdapter then guiAdapters.addOutAdapter(@consoleAdapters,false);
     reregisterRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl);
     SynHighlighterMnh.initLists;
     mnh_evalThread.initUnit(@guiAdapters);
 
+    editorMetaBase.editorFont:=TFont.create;
+
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
-    outputEdit.highlighter:=outputHighlighter;
-    outputEdit.Font.name:=settings.editorFontname;
-    outputEdit.Font.size:=settings.fontSize;
+    editorMetaBase.editorFont.name:=settings.editorFontname;
+    editorMetaBase.editorFont.size:=settings.fontSize;
     if settings.antialiasedFonts
-    then outputEdit.Font.quality:=fqCleartypeNatural
-    else outputEdit.Font.quality:=fqNonAntialiased;
+    then editorMetaBase.editorFont.quality:=fqCleartypeNatural
+    else editorMetaBase.editorFont.quality:=fqNonAntialiased;
 
     mnh_out_adapters.gui_started:=true;
-    caption:='MNH - '+getFileOrCommandToInterpretFromCommandLine+' - evaluating';
-    {$ifdef debugMode}
-    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
-    {$endif}
+    caption:='MNH';
     setupEditorMetaBase(outputHighlighter,nil);
-    editorMetaBase.editorFont:=outputEdit.Font;
   end;
 
 PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -107,9 +105,11 @@ PROCEDURE ToutputOnlyForm.FormClose(Sender: TObject; VAR CloseAction: TCloseActi
 PROCEDURE ToutputOnlyForm.FormDestroy(Sender: TObject);
   begin
     mnh_evalThread.earlyFinalization;
+    editorMetaBase.editorFont.free;
     Timer1.enabled:=false;
-    guiAdapters.removeOutAdapter(@guiOutAdapter);
+    guiAdapters.removeOutAdapter(@consoleAdapters);
     outputHighlighter.destroy;
+    consoleAdapters.destroy;
   end;
 
 VAR firstShow:boolean=true;
@@ -119,14 +119,7 @@ PROCEDURE ToutputOnlyForm.FormShow(Sender: TObject);
       runEvaluator.reEvaluateWithGUI;
       firstShow:=false;
       Hide;
-    end else registerForm(self,ft_main);
-  end;
-
-PROCEDURE ToutputOnlyForm.OutputEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
-  begin
-    if (key=9) and (ssCtrl in Shift) then formCycle(self,ssShift in Shift);
-    if ((key=187) or (key=107)) and (ssCtrl in Shift) then outputEdit.Font.size:=outputEdit.Font.size+1;
-    if ((key=189) or (key=109)) and (ssCtrl in Shift) then outputEdit.Font.size:=outputEdit.Font.size-1;
+    end;
   end;
 
 end.

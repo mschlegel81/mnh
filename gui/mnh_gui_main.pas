@@ -43,6 +43,7 @@ USES
   treeUtil,
   menuUtil,
   guiOutAdapters,
+  synOutAdapter,
   renameDialog,
   mnhCustomForm,
   openFile,
