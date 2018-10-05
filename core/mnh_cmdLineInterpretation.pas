@@ -118,7 +118,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:P_package;
     begin
       memoryComfortThreshold:=settings.memoryLimit;
-      if reEvaluationWithGUIrequired then exit;
+      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
       globals.create(@consoleAdapters);
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
       package:=packageFromCode(fileOrCommandToInterpret,CMD_LINE_PSEUDO_FILENAME);
@@ -136,7 +136,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     begin
       memoryComfortThreshold:=settings.memoryLimit;
       fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
-      if reEvaluationWithGUIrequired then exit;
+      {$ifdef fullVersion} if reEvaluationWithGUIrequired then exit; {$endif}
       package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
       globals.create(@consoleAdapters);
       {$ifdef fullVersion}
