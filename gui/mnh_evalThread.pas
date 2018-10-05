@@ -240,8 +240,14 @@ FUNCTION main(p:pointer):ptrint;
           er_evaluate: package.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
           er_callMain: package.load(lu_forCallingMain    ,globals,parametersForMainCall);
           er_reEvaluateWithGUI: begin
-            package.replaceCodeProvider(newFileCodeProvider(getFileOrCommandToInterpretFromCommandLine));
-            package.load(lu_forCallingMain,globals,parametersForMainCall);
+            if getFileToInterpretFromCommandLine<>''
+            then begin
+              package.replaceCodeProvider(newFileCodeProvider                                   (getFileToInterpretFromCommandLine));
+              package.load(lu_forCallingMain,globals,parametersForMainCall);
+            end else begin
+              package.replaceCodeProvider(newVirtualFileCodeProvider(CMD_LINE_PSEUDO_FILENAME,getCommandToInterpretFromCommandLine));
+              package.load(lu_forDirectExecution,globals,parametersForMainCall);
+            end;
           end;
           er_ensureEditScripts: ensureEditScripts_impl;
           er_runEditScript: executeEditScript_impl;

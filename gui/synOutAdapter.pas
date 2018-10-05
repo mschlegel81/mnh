@@ -6,6 +6,7 @@ USES
   myStringUtil,
   mnh_constants,mnh_basicTypes,
   mnh_messages,
+  mnh_settings,
   myGenerics,mnh_out_adapters;
 CONST
   C_synOutDefaultMessageTypes:T_messageTypeSet=[mt_clearConsole,
@@ -49,9 +50,11 @@ TYPE
                                                                        mt_el1_note,
                                                                        mt_el1_userNote,
                                                                        mt_el2_warning,
-                                                                       mt_el2_userWarning]);
+                                                                       mt_el2_userWarning,
+                                                                       mt_endOfEvaluation]);
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
+      PROPERTY ownerForm:TForm read synOwnerForm;
       PROCEDURE flushClear;
   end;
 
@@ -96,6 +99,7 @@ FUNCTION redirectedMessages:T_messageTypeSet;
 PROCEDURE T_synOutAdapter.startOutput;
   begin
     setLength(linesToWrite,0);
+    outputLinesLimit:=settings.outputLinesLimit;
     bufferOffset:=0;
     hadDirectPrint:=false;
     wroteToSyn:=false;
@@ -123,6 +127,49 @@ PROCEDURE T_synOutAdapter.appendInternal(CONST s:string);
   end;
 
 FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
+  PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST messageList:T_arrayOfString);
+    {$MACRO ON}
+    {$define marker:=C_messageTypeMeta[messageType].guiMarker}
+    VAR txt:string;
+        tokens:T_arrayOfString;
+        k:longint=0;
+        first:boolean=true;
+        firstInLine:boolean=true;
+        message:string;
+    begin
+      if length(messageList)<>1 then for message in messageList do begin
+        if first
+        then appendInternal(marker+getPrefix(messageType      )+' '+message)
+        else appendInternal(marker+getPrefix(mt_echo_continued)+' '+message);
+        first:=false;
+      end else begin
+        message:=messageList[0];
+        if settings.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
+          if length(messageList)=1
+          then tokens:=tokenSplit(message)
+          else tokens:=message;
+          while k<length(tokens) do begin
+            txt:='';
+            firstInLine:=true;
+            while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=syn.charsInWindow-5)) do begin
+              txt:=txt+tokens[k];
+              inc(k);
+              firstInLine:=false;
+            end;
+            if first
+            then appendInternal(marker+getPrefix(messageType      )+' '+txt)
+            else appendInternal(marker+getPrefix(mt_echo_continued)+' '+txt);
+            first:=false;
+          end;
+        end else begin
+          if first
+          then appendInternal(marker+getPrefix(messageType      )+' '+message)
+          else appendInternal(marker+getPrefix(mt_echo_continued)+' '+message);
+          first:=false;
+        end;
+      end;
+    end;
+
   PROCEDURE clearSynAndBuffer;
     begin
       linesToWrite:=C_EMPTY_STRING_ARRAY;
@@ -190,6 +237,9 @@ FUNCTION T_synOutAdapter.singleMessageOut(CONST m: P_storedMessage):boolean;
       mt_el4_systemError,
       mt_profile_call_info,
       mt_timing_info: for s in m^.toString(true) do appendInternal(s);
+      mt_echo_input,
+      mt_echo_declaration,
+      mt_echo_output: writeWrapped(m^.messageType,m^.messageText);
       else result:=false;
     end;
     if result then lastWasDirectPrint:=m^.messageType=mt_printdirect;
@@ -240,6 +290,7 @@ FUNCTION T_synOutAdapter.flushToGui:T_messageTypeSet;
       end;
       clear;
     finally
+      if (mt_endOfEvaluation in result) and hadDirectPrint then appendInternal('');
       doneOutput;
       system.leaveCriticalSection(cs);
     end;

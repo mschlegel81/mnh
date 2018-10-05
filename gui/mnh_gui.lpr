@@ -19,16 +19,17 @@ USES {$ifdef UNIX} cthreads,{$endif}
 begin
   mnh_cmdLineInterpretation.plotAdapters:=@mnh_plotForm.plotSystem;
   if wantMainLoopAfterParseCmdLine then begin
+    {$ifndef debugMode}
     hideConsole;
+    {$endif}
     Application.title:='MNH5 - GUI';
     RequireDerivedFormResource := true;
     Application.initialize;
     if reEvaluationWithGUIrequired
     then Application.CreateForm(ToutputOnlyForm, outputOnlyForm)
-    else if sendParametersToOtherInstance(filesToOpenInEditor) then begin
-      showConsole;
-      halt;
-    end else Application.CreateForm(TMnhForm, MnhForm);
+    else if sendParametersToOtherInstance(filesToOpenInEditor)
+    then halt
+    else Application.CreateForm(TMnhForm, MnhForm);
     Application.run;
     showConsole;
   end;

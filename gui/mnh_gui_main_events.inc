@@ -143,7 +143,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     initIpcServer(self);
     //Initialize other units
-    initGuiOutAdapters(MnhForm,outputEdit,true);
+    initGuiOutAdapters(MnhForm,outputEdit);
     quick.adapters:=createSecondaryAdapters(QuickOutputEdit);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter^.enableMessageType(false,[mt_clearConsole,mt_echo_input,mt_echo_output,mt_echo_declaration,mt_echo_continued]);
@@ -485,12 +485,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     else if UpdateTimeTimer.interval>MAX_INTERVAL then UpdateTimeTimer.interval:=MAX_INTERVAL;
 
     flushedMessages:=guiOutAdapter.flushToGui;
+    flushedMessages+=guiEventsAdapter.flushToGui;
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=outputTabSheet;
     if (mt_debugger_breakpoint in flushedMessages) then outputPageControl.activePage:=debugTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;
 
-    flushedMessages:=P_guiOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui;
+    flushedMessages:=P_synOutAdapter(quick.adapters^.getAdapter(0))^.flushToGui;
     if (flushedMessages*C_textMessages<>[]) or (mt_endOfEvaluation in flushedMessages) then outputPageControl.activePage:=QuickTabSheet;
     if (mt_endOfEvaluation in flushedMessages) and quitPosted then close;
     if flushedMessages<>[] then begin if not(intervalByAnimation) then UpdateTimeTimer.interval:=1; exit; end;

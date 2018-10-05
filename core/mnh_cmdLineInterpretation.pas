@@ -12,10 +12,14 @@ USES sysutils,{$ifdef fullVersion}{$ifdef debugMode}lclintf,{$endif}{$endif}
      mnh_evaluation;
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
-FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
+{$ifdef fullVersion}
+FUNCTION getFileToInterpretFromCommandLine:ansistring;
+FUNCTION getCommandToInterpretFromCommandLine:ansistring;
+{$endif}
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
 PROCEDURE displayHelp;
 
+CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
 VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     {$ifdef fullVersion}
@@ -27,11 +31,11 @@ VAR mainParameters:T_arrayOfString;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
+    directExecutionMode:boolean=false;
     deferredAdapterCreations:array of record
       nameAndOption:string;
       appending:boolean;
     end;
-    headless:boolean=false;
 //---------------:by command line parameters
 {$ifdef fullVersion}
 PROCEDURE addFileToOpen(CONST pathOrPattern:string);
@@ -41,12 +45,10 @@ PROCEDURE addFileToOpen(CONST pathOrPattern:string);
       for info in findFileInfo(pathOrPattern) do if (info.size>0) and not(aDirectory in info.attributes) then append(filesToOpenInEditor,info.filePath);
     end else append(filesToOpenInEditor,pathOrPattern);
   end;
-{$endif}
 
-FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
-  begin
-    result:=fileOrCommandToInterpret;
-  end;
+FUNCTION getFileToInterpretFromCommandLine   :ansistring; begin if not(directExecutionMode) then result:=fileOrCommandToInterpret else result:=''; end;
+FUNCTION getCommandToInterpretFromCommandLine:ansistring; begin if     directExecutionMode  then result:=fileOrCommandToInterpret else result:=''; end;
+{$endif}
 
 PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_messageConnector; CONST guiAdapterOrNil:P_abstractOutAdapter);
   VAR i:longint;
@@ -70,7 +72,6 @@ PROCEDURE displayHelp;
     writeln('Accepted parameters: ');
     writeln('  [mnh_options] [(-cmd commandToExecute) | (filename [parameters])]');
     writeln('  filename          if present the file is interpreted; parameters are passed if present');
-    writeln('                    if not present, interactive mode is entered');
     writeln('  -v[options]       verbosity. options can consist of multiple characters.');
     writeln('                    Lowercase indicates enabling, uppercase indicates disabling.');
     writeln('                       p/P  : print out');
@@ -84,6 +85,9 @@ PROCEDURE displayHelp;
     writeln('                       u/U  : user defined notes, warnings and errors');
     writeln('                       1..4 : override minimum error level');
     writeln('                       v/V  : be verbose; same as pidot1 (uppercase means disabling all output)');
+    {$ifdef fullVersion}
+    writeln('  -GUI              force evaluation with GUI');
+    {$endif}
     writeln('  -h                display this help or help on the input file if present and quit');
     writeln('  -headless         forbid input via ask (scripts using ask will crash)');
     writeln('  -cmd              directly execute the following command');
@@ -105,7 +109,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR consoleAdapters:T_messageConnector;
       mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
-      directExecutionMode:boolean=false;
+      headless:boolean=false;
   {$ifdef fullVersion}
   CONST contextType:array[false..true] of T_evaluationContextType=(ect_normal,ect_profiling);
   {$endif}
@@ -114,9 +118,10 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:P_package;
     begin
       memoryComfortThreshold:=settings.memoryLimit;
+      if reEvaluationWithGUIrequired then exit;
       globals.create(@consoleAdapters);
       if headless then globals.primaryContext.setAllowedSideEffectsReturningPrevious(C_allSideEffects-[se_inputViaAsk]);
-      package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
+      package:=packageFromCode(fileOrCommandToInterpret,CMD_LINE_PSEUDO_FILENAME);
       globals.resetForEvaluation({$ifdef fullVersion}package,contextType[profilingRun]{$else}ect_normal{$endif},C_EMPTY_STRING_ARRAY);
       package^.load(lu_forDirectExecution,globals,C_EMPTY_STRING_ARRAY);
       globals.afterEvaluation;
@@ -130,7 +135,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:T_package;
     begin
       memoryComfortThreshold:=settings.memoryLimit;
-      package.create(newFileCodeProvider(expandFileName(fileOrCommandToInterpret)),nil);
+      fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
+      if reEvaluationWithGUIrequired then exit;
+      package.create(newFileCodeProvider(fileOrCommandToInterpret),nil);
       globals.create(@consoleAdapters);
       {$ifdef fullVersion}
       consoleAdapters.addOutAdapter(plotAdapters,false);
@@ -220,6 +227,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           exit(false);
         end
         {$endif}
+        else if (paramStr(i)='-GUI') then reEvaluationWithGUIrequired:=true
         {$endif}
         else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
         else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
