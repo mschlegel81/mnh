@@ -429,7 +429,7 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
-  CONST MAX_INTERVAL=50;
+  CONST MAX_INTERVAL=100;
   FUNCTION processIpcMessages:boolean;
     VAR filesToOpen:T_arrayOfString;
     begin

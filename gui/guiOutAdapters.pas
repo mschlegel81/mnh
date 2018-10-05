@@ -83,15 +83,16 @@ FUNCTION T_guiEventsAdapter.flushToGui: T_messageTypeSet;
     system.enterCriticalSection(cs);
     try
       result:=[];
-      for message in storedMessages do
-      include(result,message^.messageType);
-      case message^.messageType of
-        mt_displayTable:        conditionalShowTables;
-        mt_displayVariableTree: conditionalShowVarTrees;
-        mt_displayCustomForm:   showFormsAfter:=true;
-        mt_endOfEvaluation:     evaluationEnded:=true;
-        mt_guiEdit_done:        form.onEditFinished(P_editScriptTask(message));
-        mt_debugger_breakpoint: form.onBreakpoint(P_debuggingSnapshot(message));
+      for message in storedMessages do begin
+        include(result,message^.messageType);
+        case message^.messageType of
+          mt_displayTable:        conditionalShowTables;
+          mt_displayVariableTree: conditionalShowVarTrees;
+          mt_displayCustomForm:   showFormsAfter:=true;
+          mt_endOfEvaluation:     evaluationEnded:=true;
+          mt_guiEdit_done:        form.onEditFinished(P_editScriptTask(message));
+          mt_debugger_breakpoint: form.onBreakpoint(P_debuggingSnapshot(message));
+        end;
       end;
       if length(storedMessages)>0 then clear;
     finally
