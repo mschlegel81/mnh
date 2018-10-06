@@ -51,6 +51,10 @@ TYPE
                                                                        mt_el1_userNote,
                                                                        mt_el2_warning,
                                                                        mt_el2_userWarning,
+                                                                       mt_echo_input,
+                                                                       mt_echo_output,
+                                                                       mt_echo_declaration,
+                                                                       mt_echo_continued,
                                                                        mt_endOfEvaluation]);
       FUNCTION flushToGui:T_messageTypeSet; virtual;
       PROPERTY directPrintFlag:boolean read lastWasDirectPrint;
